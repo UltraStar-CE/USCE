@@ -104,6 +104,7 @@ uses
   ULuaParty,
   ULuaScreenSing,
   ULuaScreenSong,
+  ULuaMusic,
   UTime,
   UWebcam,
   ULibraryLockdown,
@@ -331,6 +332,7 @@ begin
     LuaCore.RegisterModule('Party', ULuaParty_Lib_f);
     LuaCore.RegisterModule('ScreenSing', ULuaScreenSing_Lib_f);
     LuaCore.RegisterModule('ScreenSong', ULuaScreenSong_Lib_f);
+    LuaCore.RegisterModule('Music', ULuaMusic_Lib_f);
 
     LuaCore.LoadPlugins;
 
