@@ -48,6 +48,7 @@ type
     procedure routeSongList(ARequest: TRequest; AResponse: TResponse);
     procedure routeSongsJSON(ARequest: TRequest; AResponse: TResponse);
     procedure routeFile(ARequest: TRequest; AResponse: TResponse);
+    procedure route404(ARequest: TRequest; AResponse: TResponse);
     function GenerateHTMLWithSongs: string;
     function GenerateJSONWithSongs: string;
     function LoadTemplate: string;
@@ -86,6 +87,22 @@ begin
   ResponseJSON := GenerateJSONWithSongs;
   AResponse.Content := ResponseJSON;
   AResponse.Code := 200;
+end;
+
+procedure TWebServer.route404(ARequest: TRequest; AResponse: TResponse);
+begin
+  if THTTPRouter.StringToRouteMethod(ARequest.Method) = rmGET then
+    begin
+      AResponse.ContentType := 'text/html; charset=UTF-8';
+      AResponse.Content := '<html><body><h1>404 - File not found</h1></body></html>';
+      AResponse.Code := 404;
+    end
+  else
+    begin
+      AResponse.ContentType := 'text/html; charset=UTF-8';
+      AResponse.Content := '<html><body><h1>405 - Method Not Allowed</h1></body></html>';
+      AResponse.Code := 405;
+    end;
 end;
 
 procedure TWebServer.routeFile(ARequest: TRequest; AResponse: TResponse);
@@ -142,6 +159,7 @@ begin
   FRouter.RegisterRoute('/jquery.min.map', rmGET, @routeFile);
   FRouter.RegisterRoute('/datatables.min.js', rmGET, @routeFile);
   FRouter.RegisterRoute('/datatables.min.css', rmGET, @routeFile);
+  FRouter.RegisterRoute('/404', @route404, true);
   try
     FServer.OnRequest := @HandleRequest;
     FServer.Port := FPort;
