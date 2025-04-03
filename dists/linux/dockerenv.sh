@@ -25,6 +25,19 @@ if [ "$targetarch" == "x86_64" ]; then
 	from="debian/eol:jessie"
 	fpcpackage="https://sourceforge.net/projects/freepascal/files/Linux/3.2.2/fpc-3.2.2.x86_64-linux.tar"
 	prefixcmd="linux64"
+	epelpkgs="cmake3 ninja-build patchelf"
+elif [ "$targetarch" == "i386" ] || [ "$targetarch" == "i686" ]; then
+	imagename="usdx/buildenv:centos7-i386"
+	from="i386/centos:7"
+	fpcpackage="https://sourceforge.net/projects/freepascal/files/Linux/3.2.2/fpc-3.2.2.i386-linux.tar"
+	prefixcmd="linux32"
+	epelpkgs=""
+elif [ "$targetarch" == "aarch64" ]; then
+	imagename="usdx/buildenv:centos7-aarch64"
+	from="centos:7"
+	fpcpackage="https://sourceforge.net/projects/freepascal/files/Linux/3.2.2/fpc-3.2.2.i386-linux.tar"
+	prefixcmd=""
+	epelpkgs="
 else
 	echo "Unsupported architecture: $targetarch"
 	exit 1
