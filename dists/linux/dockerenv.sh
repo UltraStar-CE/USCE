@@ -17,6 +17,15 @@ while true ; do
 		;;
 	esac
 done
+if ! tput setaf 6 || ! tput bold || ! tput sgr0 ; then
+	tput() { return 0 ; }
+fi >/dev/null 2>/dev/null
+
+SUDO=
+if docker -v > /dev/null && ! docker version >/dev/null 2>&1 ; then
+	echo Assuming sudo has to be used to be able to connect to Docker daemon
+	SUDO=sudo
+fi
 
 targetarch="${ARCH-$(uname -m)}"
 
