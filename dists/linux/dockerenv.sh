@@ -85,4 +85,4 @@ $SUDO docker run --rm ${USCE_DOCKER_TTY--it} \
 	-h "uscebuilder" \
 	-w /src/dists/linux \
 	"$imagename" \
-	"$prefixcmd" "$@"
+	$prefixcmd "$@"
