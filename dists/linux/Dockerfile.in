@@ -2,7 +2,10 @@ FROM %%from%%
 
 RUN echo deb http://archive.debian.org/debian jessie-backports main >> /etc/apt/sources.list
 
-RUN apt-get update
+RUN yum -y install util-linux
+
+RUN [ -z "%%epelpkgs%%" ] || yum install -y --setopt=tsflags=nodocs \
+    https://archives.fedoraproject.org/pub/archive/epel/7/x86_64/Packages/e/epel-release-7-14.noarch.rpm
 
 RUN apt-get upgrade -y
 
