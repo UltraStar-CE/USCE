@@ -9,21 +9,12 @@ RUN [ -z "%%epelpkgs%%" ] || yum install -y --setopt=tsflags=nodocs \
 
 RUN apt-get upgrade -y
 
-RUN apt-get install -y --no-install-recommends \
-    build-essential make automake autoconf patch file git unzip bzip2 xz-utils \
-    libgl1-mesa-dev libgbm-dev libgl1-mesa-glx \
-    mesa-common-dev libdrm-dev libegl1-mesa-dev libwayland-egl1-mesa \
-    libasound2-dev libx11-dev libxext-dev libxcursor-dev libxinerama-dev libxrandr-dev libxi-dev \
-    libdbus-1-dev libsystemd-dev zlib1g-dev libffi-dev libexpat1-dev libxml2-dev libssl-dev libtool python3-pip pkg-config \
-    wget curl ca-certificates vim-common desktop-file-utils libglib2.0-dev libcairo2-dev libfuse-dev libarchive-dev libgl1-mesa-glx
-
-RUN yum install -y --setopt=tsflags=nodocs centos-release-scl
-
-RUN yum install -y --setopt=tsflags=nodocs devtoolset-7-gcc*
-
-RUN scl enable devtoolset-7 bash
-
-RUN gcc --version
+RUN yum install -y --setopt=tsflags=nodocs \
+    make automake autoconf patch which file git unzip bzip2 gcc gcc-c++ \
+    glibc-devel mesa-libGL-devel mesa-libgbm-devel alsa-lib-devel \
+    libX11-devel libXext-devel libXcursor-devel libXinerama-devel libXrandr-devel libXi-devel libxkbcommon-devel \
+    dbus-devel systemd-devel zlib-devel libffi-devel expat-devel libxml2-devel libtool python3-pip \
+    wget vim-common desktop-file-utils glib2-devel cairo-devel fuse-devel libwebp-1.5.0 libarchive-devel %%epelpkgs%%
 
 RUN mkdir /tmp/fpcinst \
     && wget --progress=dot:giga -O - %%fpcpackage%% | tar xC /tmp/fpcinst --strip-components=1 \
