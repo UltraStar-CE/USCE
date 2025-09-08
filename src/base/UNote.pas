@@ -354,6 +354,8 @@ begin
       SetLength(Player[I].Note, 0);
     end;
   end;
+  
+  Ini.ReloadDelays;
 
   Screen.onSentenceChange(CP, CurrentSong.Tracks[CP].CurrentLine)
 end;
