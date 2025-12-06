@@ -676,6 +676,8 @@ function  MediaManager: TInterfaceList;
 
 procedure DumpMediaInterfaces();
 
+procedure ForcePlaySound(Stream: TAudioPlaybackStream);
+
 function FindNote(beat: integer): TPos;
 
 implementation
@@ -1232,6 +1234,22 @@ begin
   begin
     Soundlib.BGMusic.Pause;
   end;
+end;
+
+procedure ForcePlaySound(Stream: TAudioPlaybackStream);
+var
+  Playback: IAudioPlayback;
+begin
+  if (Stream = nil) then
+    Exit;
+
+  Playback := AudioPlayback();
+  if (Playback = nil) then
+    Exit;
+
+  Stream.Stop;
+  Stream.Position := 0;
+  Playback.PlaySound(Stream);
 end;
 
 { TAudioConverter }

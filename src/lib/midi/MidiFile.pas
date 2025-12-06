@@ -152,7 +152,7 @@ uses
   SDL2;
 
 const
-  TIMER_RESOLUTION = 10;
+  TIMER_RESOLUTION = 1;
 
 function GetMillisecondTime: integer;
 begin
