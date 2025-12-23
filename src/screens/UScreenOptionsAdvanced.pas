@@ -46,7 +46,7 @@ type
   TScreenOptionsAdvanced = class(TOptionsMenu)
     public
       constructor Create; override;
-      function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean): boolean; override;
+      function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       procedure OnShow; override;
     protected
       procedure LoadWidgets; override;
@@ -78,7 +78,7 @@ type
     iBackButton
   );
 
-function TScreenOptionsAdvanced.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean): boolean;
+function TScreenOptionsAdvanced.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
 begin
   Result := true;
   if (PressedDown) then
