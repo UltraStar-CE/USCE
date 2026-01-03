@@ -446,9 +446,8 @@ const
   IEffectSing:    array[0..1] of UTF8String = ('Off', 'On');
   IScreenFade:    array[0..1] of UTF8String = ('Off', 'On');
   IAskbeforeDel:  array[0..1] of UTF8String = ('Off', 'On');
-  ISingScores:    array[0..1] of UTF8String = ('Off', 'On');
-  IDuetScores:    array[0..1] of UTF8String = ('Off', 'On');
-  ITopScores:     array[0..1] of UTF8String = ('All', 'Player');
+  ISingScores:    array[0..3] of UTF8String = ('Off', 'On', 'Bar Rating', 'Remaining Score');
+  ITopScores:    array[0..1] of UTF8String = ('All', 'Player');
   IOnSongClick:   array[0..2] of UTF8String = ('Sing', 'Select Players', 'Open Menu');
   sStartSing = 0;
   sSelectPlayer = 1;
@@ -553,8 +552,7 @@ var
   IAskbeforeDelTranslated:     array[0..1] of UTF8String = ('Off', 'On');
   IOnSongClickTranslated:      array[0..2] of UTF8String = ('Sing', 'Select Players', 'Open Menu');
   IPartyPopupTranslated:       array[0..1] of UTF8String = ('Off', 'On');
-  ISingScoresTranslated:       array[0..1] of UTF8String = ('Off', 'On');
-  IDuetScoresTranslated:       array[0..1] of UTF8String = ('Off', 'On');
+  ISingScoresTranslated:       array[0..3] of UTF8String = ('Off', 'On', 'Bar Rating', 'Remaining Score');
   ITopScoresTranslated:        array[0..1] of UTF8String = ('All', 'Player');
 
   IJoypadTranslated:           array[0..1] of UTF8String = ('Off', 'On');
@@ -1046,10 +1044,8 @@ begin
 
   ISingScoresTranslated[0]          := ULanguage.Language.Translate('OPTION_VALUE_OFF');
   ISingScoresTranslated[1]          := ULanguage.Language.Translate('OPTION_VALUE_ON');
-
-  IDuetScoresTranslated[0]          := ULanguage.Language.Translate('OPTION_VALUE_OFF');
-  IDuetScoresTranslated[1]          := ULanguage.Language.Translate('OPTION_VALUE_ON');
-
+  ISingScoresTranslated[2]          := ULanguage.Language.Translate('OPTION_VALUE_BAR_RATING');
+  ISingScoresTranslated[3]          := ULanguage.Language.Translate('OPTION_VALUE_REMAINING_SCORE');
   ITopScoresTranslated[0]          := ULanguage.Language.Translate('OPTION_VALUE_ALL');
   ITopScoresTranslated[1]          := ULanguage.Language.Translate('OPTION_VALUE_PLAYER');
 
