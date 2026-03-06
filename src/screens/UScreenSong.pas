@@ -3654,6 +3654,8 @@ begin
 
      fCurrentVideo.Draw;
 
+     if (not CoverFull) and (Button[interaction].Reflection or (Theme.Song.Cover.SelectReflection)) then
+       fCurrentVideo.DrawReflection;
   end;
 
   // duet names
