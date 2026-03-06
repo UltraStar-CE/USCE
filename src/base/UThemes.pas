@@ -1289,6 +1289,7 @@ function GetPlayerColor(Color: integer): TRGB;
 function GetPlayerLightColor(Color: integer): TRGB;
 procedure LoadPlayersColors;
 procedure LoadTeamsColors;
+function ResolveThemeAsset(const RelativePath: IPath; IncludeBaseTheme: boolean = true): IPath;
 
 var
   //Skin:         TSkin;
@@ -1310,6 +1311,60 @@ uses
 
 const
   MAX_INHERITANCE = 10;
+var
+  CurrentThemeIndex: integer = -1;
+  CurrentBaseThemeIndex: integer = -1;
+
+function GetThemeFolder(ThemeIndex: integer): IPath;
+begin
+  Result := PATH_NONE;
+  if not Assigned(Theme) then
+    Exit;
+
+  if (ThemeIndex < Low(Theme.Themes)) or (ThemeIndex > High(Theme.Themes)) then
+    Exit;
+
+  Result := Theme.Themes[ThemeIndex].FileName.SetExtension('');
+  if not Result.IsDirectory then
+    Result := ThemePath.Append(Theme.Themes[ThemeIndex].Name);
+
+  if not Result.IsDirectory then
+    Result := PATH_NONE;
+end;
+
+function ResolveThemeAsset(const RelativePath: IPath; IncludeBaseTheme: boolean = true): IPath;
+var
+  ThemeDir, Candidate: IPath;
+begin
+  Result := PATH_NONE;
+
+  if not Assigned(Theme) then
+    Exit;
+  if (CurrentThemeIndex < Low(Theme.Themes)) or (CurrentThemeIndex > High(Theme.Themes)) then
+    Exit;
+
+  ThemeDir := GetThemeFolder(CurrentThemeIndex);
+  if ThemeDir.IsSet then
+  begin
+    Candidate := ThemeDir.Append(RelativePath);
+    if Candidate.IsFile then
+      Exit(Candidate);
+  end;
+
+  if not IncludeBaseTheme then
+    Exit;
+
+  if (CurrentBaseThemeIndex < Low(Theme.Themes)) or (CurrentBaseThemeIndex > High(Theme.Themes)) then
+    Exit;
+
+  ThemeDir := GetThemeFolder(CurrentBaseThemeIndex);
+  if ThemeDir.IsSet then
+  begin
+    Candidate := ThemeDir.Append(RelativePath);
+    if Candidate.IsFile then
+      Result := Candidate;
+  end;
+end;
 
 function ParseScaleMode(const Value: string; Default: TLayoutScaleMode): TLayoutScaleMode;
 begin
@@ -1748,6 +1803,8 @@ end;
 
 procedure TTheme.OpenFile(ThemeNum: integer);
 begin
+  CurrentThemeIndex := ThemeNum;
+  CurrentBaseThemeIndex := -1;
 
   ThemeIni := TMemIniFile.Create(Themes[ThemeNum].FileName.ToNative);
   SetLength(BaseThemeInis, 0);
