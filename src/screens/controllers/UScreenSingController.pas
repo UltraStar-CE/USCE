@@ -1181,6 +1181,7 @@ begin
     begin
       fCurrentVideo := fVideoClip;
       fCurrentVideo.SetAspectCorrection(BackgroundAspectCorrection);
+      fCurrentVideo.SetLoop(true);
       fShowVisualization := false;
       if ScreenSong.Mode = smMedley then
         fCurrentVideo.Position := CurrentSong.VideoGAP + MedleyStart

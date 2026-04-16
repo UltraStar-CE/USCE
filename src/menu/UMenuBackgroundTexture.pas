@@ -55,7 +55,7 @@ type
   end;
 
 const
-  SUPPORTED_EXTS_BACKGROUNDTEXTURE: array[0..13] of string = ('.png', '.bmp', '.jpg', '.jpeg', '.gif', '.pnm', '.ppm', '.pgm', '.pbm', '.xpm', '.lbm', '.pcx', '.tga', '.tiff');
+  SUPPORTED_EXTS_BACKGROUNDTEXTURE: array[0..12] of string = ('.png', '.bmp', '.jpg', '.jpeg', '.pnm', '.ppm', '.pgm', '.pbm', '.xpm', '.lbm', '.pcx', '.tga', '.tiff');
 
 implementation
 uses
