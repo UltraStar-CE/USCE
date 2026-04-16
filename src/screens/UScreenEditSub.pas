@@ -6023,7 +6023,7 @@ procedure TScreenEditSub.OnShow;
 const
   SUPPORTED_EXTS_AUDIO: array[0..4]  of string = ('.mp3', '.flac', '.wav', '.ogg', '.m4a');
   SUPPORTED_EXTS_IMAGE: array[0..1]  of string = ('.jpg', '.png');
-  SUPPORTED_EXTS_VIDEO: array[0..11] of string = ('.avi', '.mov', '.divx', '.mkv', '.mpeg', '.mpg', '.mp4', '.mpeg', '.m2v', '.ts', '.webm', '.wmv');
+  SUPPORTED_EXTS_VIDEO: array[0..12] of string = ('.avi', '.mov', '.divx', '.mkv', '.mpeg', '.mpg', '.mp4', '.mpeg', '.m2v', '.ts', '.webm', '.wmv', '.gif');
 var
   Files:       TPathDynArray;
   FileIndex:   Integer;

@@ -107,7 +107,7 @@ type }
 {var
   BGVideoPool: TBGVideoPool;  }
 const
-  SUPPORTED_EXTS_BACKGROUNDVIDEO: array[0..7] of string = ('.avi', '.mov', '.divx', '.mpg', '.mp4', '.mpeg', '.m2v', '.webm');
+  SUPPORTED_EXTS_BACKGROUNDVIDEO: array[0..8] of string = ('.avi', '.mov', '.divx', '.mpg', '.mp4', '.mpeg', '.m2v', '.webm', '.gif');
 
 procedure ClearMenuVideoCache(ReleaseTextures: boolean = false);
 
