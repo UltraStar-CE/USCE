@@ -92,6 +92,7 @@ type
     procedure AnnounceRemoteSongPaused;
     procedure AnnounceRemoteSongResumed;
     procedure AnnounceRemoteSongEnded;
+    procedure AnnounceRemoteSongPosition(const Reason: UTF8String);
     procedure SendRemoteScoreSnapshot(Force: boolean);
     function RemoteMediaStartUs: int64;
     procedure ResumeAfterScoringTail;
@@ -578,12 +579,14 @@ begin
       begin
         if ((SDL_ModState and KMOD_LCTRL) <> 0) then
           SeekTo(Min(AudioPlayback.Position + 5.0, LyricsState.TotalTime));
+
       end;
 
       SDLK_LEFT:
       begin
         if (SDL_ModState = KMOD_LCTRL) and (AudioPlayback.Position >= 20.0) then
           SeekTo(AudioPlayback.Position - 5.0);
+
       end;
 
       SDLK_TAB:
@@ -1537,6 +1540,20 @@ begin
     RemoteBridgeIPC.SendSongEnded(RemoteSongSeq, RemoteMediaStartUs);
     RemoteBridgeIPC.SendGameState('song_ended', RemoteSongSeq, 0);
   end;
+end;
+
+procedure TScreenSingController.AnnounceRemoteSongPosition(const Reason: UTF8String);
+begin
+  if (RemoteSongSeq <= 0) then
+    Exit;
+
+  RemoteBridgeIPC.SendJsonMessage(
+    '{"type":"song.position","protocol":1' +
+    ',"songSeq":' + IntToStr(RemoteSongSeq) +
+    ',"mediaStartUs":' + IntToStr(RemoteMediaStartUs) +
+    ',"reason":"' + RemoteJsonEscape(Reason) + '"' +
+    '}'
+  );
 end;
 
 procedure TScreenSingController.SendRemoteScoreSnapshot(Force: boolean);
