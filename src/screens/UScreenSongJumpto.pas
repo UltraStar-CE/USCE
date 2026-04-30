@@ -62,8 +62,10 @@ type
     function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
     procedure OnShow; override;
     procedure ResetFilters;
+    procedure SetSearchText(const Query: UTF8String);
     function Draw: boolean; override;
     property Visible: boolean read fVisible write SetVisible;
+
   end;
 
 implementation
@@ -395,6 +397,18 @@ begin
   fFocus := 0; fFirst := 0;
   fLastPlayed := ScreenSong.Interaction;
   RefreshRows;
+end;
+
+procedure TScreenSongJumpto.SetSearchText(const Query: UTF8String);
+begin
+  Visible := true;
+  Interaction := 0;
+  Button[0].Text[0].ColR := Theme.SongJumpto.ButtonSearchText.ColR;
+  Button[0].Text[0].ColG := Theme.SongJumpto.ButtonSearchText.ColG;
+  Button[0].Text[0].ColB := Theme.SongJumpto.ButtonSearchText.ColB;
+  Button[0].Text[0].Text := Query;
+  SetTextFound(CatSongs.SetFilter(Query, sfTitle));
+  ScreenSong.NextRandomSearchIdx := CatSongs.VisibleSongs;
 end;
 
 function TScreenSongJumpto.Draw: boolean;
