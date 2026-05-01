@@ -93,8 +93,10 @@ type
     procedure AnnounceRemoteSongResumed;
     procedure AnnounceRemoteSongEnded;
     procedure AnnounceRemoteSongPosition(const Reason: UTF8String);
+    procedure SendRemoteLyrics;
     procedure SendRemoteScoreSnapshot(Force: boolean);
     function RemoteMediaStartUs: int64;
+    function RemoteSongDurationUs: int64;
     procedure ResumeAfterScoringTail;
   public
     ScoringTailActive: boolean;
@@ -1507,10 +1509,12 @@ begin
     RemoteSongSeq,
     CatSongs.Selected,
     RemoteMediaStartUs,
+    RemoteSongDurationUs,
     CurrentSong.Title,
     CurrentSong.Artist
   );
   RemoteBridgeIPC.SendGameState('singing', RemoteSongSeq, 0);
+  SendRemoteLyrics;
   SendRemoteScoreSnapshot(true);
 end;
 
@@ -1518,7 +1522,7 @@ procedure TScreenSingController.AnnounceRemoteSongPaused;
 begin
   if (RemoteSongSeq > 0) then
   begin
-    RemoteBridgeIPC.SendSongPaused(RemoteSongSeq, RemoteMediaStartUs);
+    RemoteBridgeIPC.SendSongPaused(RemoteSongSeq, RemoteMediaStartUs, RemoteSongDurationUs);
     RemoteBridgeIPC.SendGameState('paused', RemoteSongSeq, 0);
   end;
 end;
@@ -1527,7 +1531,7 @@ procedure TScreenSingController.AnnounceRemoteSongResumed;
 begin
   if (RemoteSongSeq > 0) then
   begin
-    RemoteBridgeIPC.SendSongResumed(RemoteSongSeq, RemoteMediaStartUs);
+    RemoteBridgeIPC.SendSongResumed(RemoteSongSeq, RemoteMediaStartUs, RemoteSongDurationUs);
     RemoteBridgeIPC.SendGameState('singing', RemoteSongSeq, 0);
   end;
 end;
@@ -1537,7 +1541,7 @@ begin
   if (RemoteSongSeq > 0) then
   begin
     SendRemoteScoreSnapshot(true);
-    RemoteBridgeIPC.SendSongEnded(RemoteSongSeq, RemoteMediaStartUs);
+    RemoteBridgeIPC.SendSongEnded(RemoteSongSeq, RemoteMediaStartUs, RemoteSongDurationUs);
     RemoteBridgeIPC.SendGameState('song_ended', RemoteSongSeq, 0);
   end;
 end;
@@ -1551,7 +1555,46 @@ begin
     '{"type":"song.position","protocol":1' +
     ',"songSeq":' + IntToStr(RemoteSongSeq) +
     ',"mediaStartUs":' + IntToStr(RemoteMediaStartUs) +
+    ',"durationUs":' + IntToStr(RemoteSongDurationUs) +
     ',"reason":"' + RemoteJsonEscape(Reason) + '"' +
+    '}'
+  );
+end;
+
+procedure TScreenSingController.SendRemoteLyrics;
+var
+  TrackIndex: integer;
+  LineIndex: integer;
+  TracksJson: string;
+  LyricText: UTF8String;
+begin
+  if (RemoteSongSeq <= 0) or (Length(CurrentSong.Tracks) = 0) then
+    Exit;
+
+  TracksJson := '[';
+  for TrackIndex := 0 to High(CurrentSong.Tracks) do
+  begin
+    if (TrackIndex > 0) then
+      TracksJson := TracksJson + ',';
+
+    LineIndex := CurrentSong.Tracks[TrackIndex].CurrentLine;
+    if (LineIndex >= 0) and (LineIndex <= CurrentSong.Tracks[TrackIndex].High) then
+      LyricText := CurrentSong.Tracks[TrackIndex].Lines[LineIndex].Lyric
+    else
+      LyricText := '';
+
+    TracksJson := TracksJson +
+      '{"track":' + IntToStr(TrackIndex) +
+      ',"line":' + IntToStr(LineIndex) +
+      ',"text":"' + RemoteJsonEscape(LyricText) + '"}';
+  end;
+  TracksJson := TracksJson + ']';
+
+  RemoteBridgeIPC.SendJsonMessage(
+    '{"type":"song.lyrics","protocol":1' +
+    ',"songSeq":' + IntToStr(RemoteSongSeq) +
+    ',"mediaStartUs":' + IntToStr(RemoteMediaStartUs) +
+    ',"tracks":' + TracksJson +
     '}'
   );
 end;
@@ -1589,6 +1632,7 @@ begin
     '{"type":"score.snapshot","protocol":1' +
     ',"songSeq":' + IntToStr(RemoteSongSeq) +
     ',"mediaStartUs":' + IntToStr(RemoteMediaStartUs) +
+    ',"durationUs":' + IntToStr(RemoteSongDurationUs) +
     ',"players":' + PlayersJson +
     '}'
   );
@@ -1597,6 +1641,18 @@ end;
 function TScreenSingController.RemoteMediaStartUs: int64;
 begin
   Result := Round(AudioPlayback.Position * 1000000);
+  if (Result < 0) then
+    Result := 0;
+end;
+
+function TScreenSingController.RemoteSongDurationUs: int64;
+var
+  Duration: real;
+begin
+  Duration := LyricsState.TotalTime;
+  if (Duration <= 0) and Assigned(AudioPlayback) then
+    Duration := AudioPlayback.Length;
+  Result := Round(Duration * 1000000);
   if (Result < 0) then
     Result := 0;
 end;
@@ -2015,6 +2071,7 @@ begin
       tmp_Lyric.AddLine(nil);
   end;
 
+  SendRemoteLyrics;
 end;
 
 function TLyricsSyncSource.GetClock(): real;
