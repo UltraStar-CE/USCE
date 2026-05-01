@@ -149,6 +149,7 @@ var
 const
   MAX_SONG_SCORE = 10000;     // max. achievable points per song
   MAX_SONG_LINE_BONUS = 1000; // max. achievable line bonus per song
+  REMOTE_INPUT_LATE_BEAT_WINDOW = 8;
 
 procedure Sing(Screen: TScreenSingController);
 procedure NewSentence(CP: integer; Screen: TScreenSingController);
@@ -354,8 +355,6 @@ begin
       SetLength(Player[I].Note, 0);
     end;
   end;
-  
-  Ini.ReloadDelays;
 
   Screen.onSentenceChange(CP, CurrentSong.Tracks[CP].CurrentLine)
 end;
@@ -568,6 +567,9 @@ var
   DelayBeats:          real;
   PlayerOldBeat:       integer;
   PlayerCurBeat:       integer;
+  FirstBeatToAnalyze:  integer;
+  IsRemotePlayer:      boolean;
+  CanUpdatePlayerNote: boolean;
   SongTimeUs:          int64;
   RemoteTone:          TRemoteToneSample;
   EndLineIndex, SentenceEnd: integer;
@@ -589,21 +591,31 @@ begin
     if (not CurrentSong.isDuet) or (PlayerIndex mod 2 = CP) then
     begin
 
-      // delay in beats (Ini.PlayerDelay is ms)
-      if not Player[PlayerIndex].DetectionReady then
+      IsRemotePlayer := RemoteInputProcessor.HasAssignedPlayer(PlayerIndex);
+      if IsRemotePlayer then
       begin
-        Player[PlayerIndex].DetectionDelay := Ini.PlayerDelay[PlayerIndex];
-        Player[PlayerIndex].DetectionReady := true;
+        FirstBeatToAnalyze := Max(0, LyricsState.CurrentBeatD - REMOTE_INPUT_LATE_BEAT_WINDOW);
+        PlayerCurBeat := LyricsState.CurrentBeatD;
+      end
+      else
+      begin
+        // delay in beats (Ini.PlayerDelay is ms)
+        if not Player[PlayerIndex].DetectionReady then
+        begin
+          Player[PlayerIndex].DetectionDelay := Ini.PlayerDelay[PlayerIndex];
+          Player[PlayerIndex].DetectionReady := true;
+          DelayBeats := GetBeats(CurrentSong.BPM, Player[PlayerIndex].DetectionDelay / 1000);
+          Player[PlayerIndex].DetectionBeat := Floor(LyricsState.MidBeatD - DelayBeats) - 1;
+        end;
         DelayBeats := GetBeats(CurrentSong.BPM, Player[PlayerIndex].DetectionDelay / 1000);
-        Player[PlayerIndex].DetectionBeat := Floor(LyricsState.MidBeatD - DelayBeats) - 1;
+        PlayerOldBeat := Player[PlayerIndex].DetectionBeat;
+        PlayerCurBeat := Floor(LyricsState.MidBeatD - DelayBeats);
+        if Screen.ScoringTailActive then
+          PlayerCurBeat := Min(PlayerCurBeat, Screen.ScoringTailEndBeat);
+        FirstBeatToAnalyze := PlayerOldBeat + 1;
       end;
-      DelayBeats := GetBeats(CurrentSong.BPM, Player[PlayerIndex].DetectionDelay / 1000);
-      PlayerOldBeat := Player[PlayerIndex].DetectionBeat;
-      PlayerCurBeat := Floor(LyricsState.MidBeatD - DelayBeats);
-      if Screen.ScoringTailActive then
-        PlayerCurBeat := Min(PlayerCurBeat, Screen.ScoringTailEndBeat);
 
-      for ActualBeat := PlayerOldBeat+1 to PlayerCurBeat do
+      for ActualBeat := FirstBeatToAnalyze to PlayerCurBeat do
       begin
         // Finish each player's line after its last delayed beat and before
         // scoring any following line. Other players may still be singing it.
@@ -650,6 +662,41 @@ begin
           LastPlayerNote := @CurrentPlayer.Note[CurrentPlayer.HighNote]
         else
           LastPlayerNote := nil;
+        CanUpdatePlayerNote := (LastPlayerNote = nil) or
+          (ActualBeat >= LastPlayerNote.Start + LastPlayerNote.Duration);
+
+        Line := nil;
+        CurrentLineFragment := nil;
+        CurrentNoteType := ntNormal;
+
+        if NoteAvailable then
+        begin
+          Line := @CurrentSong.Tracks[CP].Lines[SentenceDetected];
+          for LineFragmentIndex := 0 to Line.HighNote do
+          begin
+            if (Line.Notes[LineFragmentIndex].StartBeat <= ActualBeat) and
+               (Line.Notes[LineFragmentIndex].StartBeat + Line.Notes[LineFragmentIndex].Duration > ActualBeat) then
+            begin
+              CurrentLineFragment := @Line.Notes[LineFragmentIndex];
+              CurrentNoteType := CurrentLineFragment.NoteType;
+              Break;
+            end;
+          end;
+        end;
+
+        CurNotePoints := 0;
+        if (CurrentLineFragment <> nil) and (CurrentSong.Tracks[CP].ScoreValue > 0) then
+        begin
+          MaxSongPoints := MAX_SONG_SCORE - MAX_SONG_LINE_BONUS;
+
+          // Note: ScoreValue is the sum of all note values of the song
+          // (MaxSongPoints / ScoreValue) is the points that a player
+          // gets for a hit of one beat of a normal note
+          // CurNotePoints is the amount of points that is meassured
+          // for a hit of the note per full beat
+          CurNotePoints := (MaxSongPoints / CurrentSong.Tracks[CP].ScoreValue) *
+            ScoreFactor[CurrentLineFragment.NoteType];
+        end;
 
         Line := nil;
         CurrentLineFragment := nil;
@@ -685,13 +732,22 @@ begin
         end;
 
         // analyze buffer
-        CurrentSound.AnalyzeBuffer;
-        SongTimeUs := Round(GetTimeFromBeat(ActualBeat) * 1000000);
-        if RemoteInputProcessor.TryGetTone(PlayerIndex, SongTimeUs, RemoteTone) then
+        if IsRemotePlayer then
         begin
+          if not NoteAvailable then
+            Continue;
+
+          SongTimeUs := Round(GetTimeFromBeat(ActualBeat) * 1000000);
+          if not RemoteInputProcessor.TryConsumeToneForBeat(PlayerIndex, ActualBeat, SongTimeUs, RemoteTone) then
+            Continue;
+
           CurrentSound.ToneValid := RemoteTone.ToneValid;
           CurrentSound.Tone := RemoteTone.Tone;
           CurrentSound.ToneAbs := RemoteTone.ToneAbs;
+        end
+        else
+        begin
+          CurrentSound.AnalyzeBuffer;
         end;
 
         // add some noise
@@ -738,7 +794,8 @@ begin
           end; // operation
 
           // check if we have to add a new note or extend the note's length
-          if (SentenceDetected = CurrentSong.Tracks[CP].CurrentLine) then
+          if (SentenceDetected = CurrentSong.Tracks[CP].CurrentLine) and
+             CanUpdatePlayerNote then
           begin
             // we will add a new note
             NewNote := true;
@@ -801,8 +858,11 @@ begin
 
         end; // if Detected
       end; // for ActualBeat
-      ConsumePerfectScorePotential(CP, PlayerOldBeat, PlayerCurBeat, Screen, PlayerIndex);
-      Player[PlayerIndex].DetectionBeat := Max(PlayerOldBeat, PlayerCurBeat);
+      if not IsRemotePlayer then
+      begin
+        ConsumePerfectScorePotential(CP, PlayerOldBeat, PlayerCurBeat, Screen, PlayerIndex);
+        Player[PlayerIndex].DetectionBeat := Max(PlayerOldBeat, PlayerCurBeat);
+      end;
     end;
   end; // for PlayerIndex
   //Log.LogStatus('EndBeat', 'NewBeat');
