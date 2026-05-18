@@ -253,6 +253,9 @@ type
       LastReadNames: LongInt;
       LastReadDelays: LongInt;
 
+      // Remote bridge
+      RemoteBridgeWebApp: UTF8String;
+
       procedure Load();
       procedure Save();
       procedure SaveNames;
@@ -1697,6 +1700,7 @@ begin
   AVDelay := IniFile.ReadInteger('Game', 'AVDelay', 0);
 
   MicDelay := IniFile.ReadInteger('Game', 'MicDelay', 140);
+  RemoteBridgeWebApp := Trim(IniFile.ReadString('RemoteBridge', 'WebApp', ''));
 
   // Read Users Info (Network)
   DataBase.ReadUsers;
@@ -1964,6 +1968,8 @@ begin
 
     IniFile.WriteInteger('Game', 'AVDelay', AVDelay);
     IniFile.WriteInteger('Game', 'MicDelay', MicDelay);
+    if (RemoteBridgeWebApp <> '') or IniFile.SectionExists('RemoteBridge') then
+      IniFile.WriteString('RemoteBridge', 'WebApp', RemoteBridgeWebApp);
 
     // MaxFramerate
     IniFile.WriteString('Graphics', 'MaxFramerate', IMaxFramerate[MaxFramerate]);
