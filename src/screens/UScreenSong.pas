@@ -438,6 +438,9 @@ var
   function SongToJson(const SongIndex: integer): string;
   var
     Item: TSong;
+    AudioPath: IPath;
+    AudioSource: UTF8String;
+    SongKey: UTF8String;
   begin
     Result := 'null';
     if (SongIndex < 0) or (SongIndex > High(CatSongs.Song)) then
@@ -446,8 +449,21 @@ var
     if not Assigned(Item) then
       Exit;
 
+    if Assigned(Item.Karaoke) and (Item.Karaoke <> PATH_NONE) then
+    begin
+      AudioPath := Item.Path.Append(Item.Karaoke);
+      AudioSource := 'instrumental';
+    end
+    else
+    begin
+      AudioPath := Item.Path.Append(Item.Audio);
+      AudioSource := 'audio';
+    end;
+    SongKey := LowerCase(Item.Artist + ' - ' + Item.Title);
+
     Result :=
       '{"songId":' + IntToStr(SongIndex) +
+      ',"songKey":"' + RemoteJsonEscape(SongKey) + '"' +
       ',"artist":"' + RemoteJsonEscape(Item.Artist) + '"' +
       ',"title":"' + RemoteJsonEscape(Item.Title) + '"' +
       ',"year":' + IntToStr(Item.Year) +
@@ -455,7 +471,8 @@ var
       ',"category":' + BoolJson(Item.Main) +
       ',"duet":' + BoolJson(Item.isDuet) +
       ',"previewStart":' + StringReplace(FloatToStr(Item.PreviewStart), ',', '.', []) +
-      ',"audioPath":"' + RemoteJsonEscape(UTF8String(Item.Path.Append(Item.Audio).ToNative)) + '"' +
+      ',"audioSource":"' + RemoteJsonEscape(AudioSource) + '"' +
+      ',"audioPath":"' + RemoteJsonEscape(UTF8String(AudioPath.ToNative)) + '"' +
       '}';
   end;
 
@@ -3353,6 +3370,9 @@ begin
     // stop preview
     StopMusicPreview();
     StopVideoPreview();
+    RemoteBridgeIPC.SendJsonMessage(
+      '{"type":"audio.stop","protocol":1,"reason":"song_select_left"}'
+    );
   end
   else
   begin

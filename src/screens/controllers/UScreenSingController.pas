@@ -1775,6 +1775,11 @@ end;
 procedure TScreenSingController.OnHide;
 begin
   StopSingClicks;
+  RemoteBridgeIPC.SendJsonMessage(
+    '{"type":"audio.stop","protocol":1,"reason":"sing_screen_left"}'
+  );
+
+
   // close video files
   fVideoClip := nil;
   fCurrentVideo := nil;
