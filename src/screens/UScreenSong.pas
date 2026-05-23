@@ -93,12 +93,24 @@ type
       RandomSearchOrder: CardinalArray;
       MarkedPlaylistSong: integer;
       KeepPreviewMusicOnHide: boolean;
+      LoopModeEnabled: boolean;
+      LoopForceFixedOrder: boolean;
+      LoopPaused: boolean;
+      LoopPreferredCoverFull: boolean;
 
       procedure SchedulePreview(SelectionSettled: boolean = false);
       procedure StartMusicPreview();
       procedure StartVideoPreview();
       function GetSongButtonMouseOverArea(ButtonIndex: integer): TMouseOverRect;
       function ReloadCurrentPlaylist(ForceCheck: boolean): boolean;
+      function IsLoopModeActive: boolean;
+      function IsLoopOrderEnabled: boolean;
+      function SelectLoopRandomSong: boolean;
+      function SelectLoopAdjacentSong(Direction: integer): boolean;
+      function SelectLoopNextSong: boolean;
+      procedure StartLoopPlaybackForCurrentSong(ForceFullscreen: boolean);
+      procedure ToggleLoopMode;
+      procedure ToggleLoopPause;
     public
       TextArtist:   integer;
       TextTitle:    integer;
@@ -392,6 +404,171 @@ begin
     Result := true
   else
     Result := false;
+end;
+
+function TScreenSong.IsLoopModeActive: boolean;
+begin
+  Result := LoopModeEnabled and FreeListMode and (Mode <> smJukebox);
+end;
+
+function TScreenSong.IsLoopOrderEnabled: boolean;
+begin
+  Result := LoopForceFixedOrder;
+  if (CatSongs.CatNumShow = -3) and (PlayListMan.CurPlaylist >= 0) and
+     (PlayListMan.CurPlaylist <= High(PlayListMan.Playlists)) then
+  begin
+    Result := Result or PlayListMan.Playlists[PlayListMan.CurPlaylist].FixedOrder;
+  end;
+end;
+
+function TScreenSong.SelectLoopAdjacentSong(Direction: integer): boolean;
+var
+  Step: integer;
+  Candidate: integer;
+  SongCount: integer;
+  FallbackCandidate: integer;
+begin
+  Result := false;
+  SongCount := Length(CatSongs.Song);
+  if (CatSongs.VisibleSongs <= 0) or (SongCount <= 0) then
+    Exit;
+
+  FallbackCandidate := -1;
+  for Step := 1 to SongCount do
+  begin
+    Candidate := (Interaction + (Direction * Step) + SongCount) mod SongCount;
+    if CatSongs.Song[Candidate].Visible and (not CatSongs.Song[Candidate].Main) then
+    begin
+      if (Candidate <> Interaction) then
+      begin
+        SkipTo(CatSongs.VisibleIndex(Candidate), Candidate, CatSongs.VisibleSongs);
+        SetScrollRefresh;
+        Result := true;
+        Exit;
+      end;
+      // only possible if there is no other playable visible song
+      FallbackCandidate := Candidate;
+    end;
+  end;
+
+  if (FallbackCandidate <> -1) then
+  begin
+    SkipTo(CatSongs.VisibleIndex(FallbackCandidate), FallbackCandidate, CatSongs.VisibleSongs);
+    SetScrollRefresh;
+    Result := true;
+  end;
+end;
+
+function TScreenSong.SelectLoopRandomSong: boolean;
+var
+  I: integer;
+  Pick: integer;
+  PlayableCount: integer;
+  EligibleCount: integer;
+  ExcludeCurrent: boolean;
+begin
+  Result := false;
+  if (CatSongs.VisibleSongs <= 0) then
+    Exit;
+
+  PlayableCount := 0;
+  for I := 0 to High(CatSongs.Song) do
+  begin
+    if CatSongs.Song[I].Visible and (not CatSongs.Song[I].Main) then
+      Inc(PlayableCount);
+  end;
+
+  if (PlayableCount <= 0) then
+    Exit;
+
+  ExcludeCurrent := (PlayableCount > 1);
+  if ExcludeCurrent then
+    EligibleCount := PlayableCount - 1
+  else
+    EligibleCount := PlayableCount;
+
+  Pick := Random(EligibleCount);
+  for I := 0 to High(CatSongs.Song) do
+  begin
+    if CatSongs.Song[I].Visible and (not CatSongs.Song[I].Main) then
+    begin
+      if ExcludeCurrent and (I = Interaction) then
+        Continue;
+      if (Pick = 0) then
+      begin
+        SkipTo(CatSongs.VisibleIndex(I), I, CatSongs.VisibleSongs);
+        SetScrollRefresh;
+        Result := true;
+        Exit;
+      end;
+      Dec(Pick);
+    end;
+  end;
+end;
+
+function TScreenSong.SelectLoopNextSong: boolean;
+begin
+  if IsLoopOrderEnabled then
+    Result := SelectLoopAdjacentSong(1)
+  else
+    Result := SelectLoopRandomSong;
+end;
+
+procedure TScreenSong.StartLoopPlaybackForCurrentSong(ForceFullscreen: boolean);
+begin
+  if (CatSongs.VisibleSongs <= 0) or CatSongs.Song[Interaction].Main then
+    Exit;
+
+  if ForceFullscreen then
+    CoverFull := LoopPreferredCoverFull;
+
+  LoopPaused := false;
+  ChangeMusic;
+  AudioPlayback.Position := 0;
+  if Assigned(fCurrentVideo) then
+    fCurrentVideo.Position := CatSongs.Song[Interaction].VideoGAP + AudioPlayback.Position;
+end;
+
+procedure TScreenSong.ToggleLoopMode;
+begin
+  LoopModeEnabled := not LoopModeEnabled;
+  LoopPaused := false;
+
+  if LoopModeEnabled then
+  begin
+    LoopPreferredCoverFull := true;
+    CoverFull := true;
+
+    if CatSongs.Song[Interaction].Main then
+      SelectLoopAdjacentSong(1);
+
+    StartLoopPlaybackForCurrentSong(false);
+  end;
+  if not LoopModeEnabled then
+  begin
+    CoverFull := false;
+  end;
+end;
+
+procedure TScreenSong.ToggleLoopPause;
+begin
+  if not IsLoopModeActive then
+    Exit;
+
+  if not LoopPaused then
+  begin
+    AudioPlayback.Pause;
+    if Assigned(fCurrentVideo) then
+      fCurrentVideo.Pause;
+    LoopPaused := true;
+  end
+  else
+  begin
+    AudioPlayback.Play;
+    if Assigned(fCurrentVideo) then
+      fCurrentVideo.Pause;
+    LoopPaused := false;
+  end;
 end;
 
 //Show Wrong Song when Tabs on Fix
@@ -1145,6 +1322,15 @@ begin
             PlayListMan.SetPlayList(PlayListMan.CurPlaylist);
             SetScrollRefresh;
           end;
+          // In non-playlist contexts, use O as loop-order toggle
+          if (CatSongs.CatNumShow <> -3) and FreeListMode and (Mode <> smJukebox) then
+            LoopForceFixedOrder := not LoopForceFixedOrder;
+        end;
+
+      SDLK_L:
+        begin
+          ToggleLoopMode;
+          Exit;
         end;
 
       SDLK_T:
@@ -1154,6 +1340,8 @@ begin
       SDLK_V:
         begin
           CoverFull := not CoverFull;
+          if IsLoopModeActive then
+            LoopPreferredCoverFull := CoverFull;
           Exit;
         end;
 
@@ -1187,6 +1375,12 @@ begin
       SDLK_ESCAPE,
       SDLK_BACKSPACE :
         begin
+          if (PressedKey = SDLK_ESCAPE) and IsLoopModeActive and CoverFull then
+          begin
+            CoverFull := false;
+            Exit;
+          end;
+
           CloseMessage();
 
           if (FreeListMode) then
@@ -1301,7 +1495,14 @@ begin
                   smPartyFree: FadeTo(@ScreenPartyNewRound);
                   smJukebox: FadeTo(@ScreenJukeboxPlaylist);
                   smPartyTournament: FadeTo(@ScreenPartyTournamentRounds);
-                  else FadeTo(@ScreenMain);
+                  else
+                  begin
+                    LoopModeEnabled := false;
+                    LoopPaused := false;
+                    LoopForceFixedOrder := false;
+                    CoverFull := false;
+                    FadeTo(@ScreenMain);
+                  end;
                 end;
 
               end;
@@ -1311,6 +1512,10 @@ begin
           //When in party Mode then Ask before Close
           else if (Mode = smPartyClassic) then
           begin
+            LoopModeEnabled := false;
+            LoopPaused := false;
+            LoopForceFixedOrder := false;
+            CoverFull := false;
             AudioPlayback.PlaySound(SoundLib.Back);
             CheckFadeTo(@ScreenMain,'MSG_END_PARTY');
           end;
@@ -1433,6 +1638,17 @@ begin
 
       SDLK_DOWN:
         begin
+          if IsLoopModeActive then
+          begin
+            LastSelectTime := SDL_GetTicks;
+            if SelectLoopAdjacentSong(1) then
+            begin
+              StartLoopPlaybackForCurrentSong(false);
+              AudioPlayback.PlaySound(SoundLib.Change);
+            end;
+            Exit;
+          end;
+
           LastSelectTime := SDL_GetTicks;
 
           if (CatSongs.CatNumShow = -3) and (MarkedPlaylistSong <> -1) then
@@ -1452,6 +1668,17 @@ begin
 
       SDLK_UP:
         begin
+          if IsLoopModeActive then
+          begin
+            LastSelectTime := SDL_GetTicks;
+            if SelectLoopAdjacentSong(-1) then
+            begin
+              StartLoopPlaybackForCurrentSong(false);
+              AudioPlayback.PlaySound(SoundLib.Change);
+            end;
+            Exit;
+          end;
+
           LastSelectTime := SDL_GetTicks;
 
           if (CatSongs.CatNumShow = -3) and (MarkedPlaylistSong <> -1) then
@@ -1471,6 +1698,17 @@ begin
 
       SDLK_RIGHT:
         begin
+          if IsLoopModeActive then
+          begin
+            LastSelectTime := SDL_GetTicks;
+            if SelectLoopAdjacentSong(1) then
+            begin
+              StartLoopPlaybackForCurrentSong(false);
+              AudioPlayback.PlaySound(SoundLib.Change);
+            end;
+            Exit;
+          end;
+
           LastSelectTime := SDL_GetTicks;
 
           if (CatSongs.CatNumShow = -3) and (MarkedPlaylistSong <> -1) then
@@ -1490,6 +1728,17 @@ begin
 
       SDLK_LEFT:
         begin
+          if IsLoopModeActive then
+          begin
+            LastSelectTime := SDL_GetTicks;
+            if SelectLoopAdjacentSong(-1) then
+            begin
+              StartLoopPlaybackForCurrentSong(false);
+              AudioPlayback.PlaySound(SoundLib.Change);
+            end;
+            Exit;
+          end;
+
           LastSelectTime := SDL_GetTicks;
 
           if (CatSongs.CatNumShow = -3) and (MarkedPlaylistSong <> -1) then
@@ -1508,6 +1757,11 @@ begin
         end;
       SDLK_SPACE:
         begin
+          if IsLoopModeActive then
+          begin
+            ToggleLoopPause;
+            Exit;
+          end;
           if (CatSongs.CatNumShow = -3) and (not CatSongs.Song[Interaction].Main) then
           begin
             if MarkedPlaylistSong = -1 then
@@ -1585,6 +1839,13 @@ begin
   if (X > RenderW) then
     X := X - RenderW;
   Y := Round((Y / ScreenH) * RenderH);
+
+  if CoverFull then
+  begin
+    // In fullscreen preview mode, ignore all other mouse interactions.
+    Result := true;
+    Exit;
+  end;
 
   if (ScreenSongMenu.Visible) then
   begin
@@ -2096,6 +2357,10 @@ begin
 
   NextRandomSongIdx := High(cardinal);
   NextRandomSearchIdx := High(cardinal);
+  LoopModeEnabled := false;
+  LoopForceFixedOrder := false;
+  LoopPaused := false;
+  LoopPreferredCoverFull := true;
 
   KeepPreviewMusicOnHide := false;
   KeepPreviewPositionOnShow := false;
@@ -3033,10 +3298,13 @@ begin
   KeepPreviewPositionOnShow := false;
   DuetChange := false;
   RapToFreestyle := false;
-  CoverFull := false;
   PreviewInteraction := -1;
   LastPreviewStartTime := 0;
   PreviewSettledTime := 0;
+  if IsLoopModeActive then
+    CoverFull := LoopPreferredCoverFull
+  else
+    CoverFull := false;
 
   // reset video playback engine
   fCurrentVideo := nil;
@@ -3176,6 +3444,15 @@ begin
 
   if (Mode = smPartyClassic) then
     SelectRandomSong;
+
+  if IsLoopModeActive then
+  begin
+    // Returning from sing/score should immediately restore loop fullscreen preview.
+    LoopPreferredCoverFull := true;
+    CoverFull := true;
+    if (CatSongs.VisibleSongs > 0) and (not CatSongs.Song[Interaction].Main) then
+      StartLoopPlaybackForCurrentSong(false);
+  end;
 
   FixSelected;
   SetScroll;
@@ -3468,6 +3745,14 @@ begin
       ReloadCurrentPlaylist(true);
     end;
     CoverTime := 0;
+    if IsLoopModeActive and (not LoopPaused) then
+    begin
+      if SelectLoopNextSong then
+      begin
+        StartLoopPlaybackForCurrentSong(true);
+        AudioPlayback.PlaySound(SoundLib.Change);
+      end;
+    end;
   end;
 
   //Fading Functions, Only if Covertime is under 5 Seconds
