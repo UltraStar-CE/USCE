@@ -432,6 +432,7 @@ type
       procedure ScheduleCuePlayback(StartTime, StopTime: real; StartLine, StopLine: Integer; IncludeMidi, IncludeClicks, SyncToAudio: boolean);
       procedure ScheduleCueNotePlayback(StartTime, StopTime: real; IncludeMidi, IncludeClick, SyncToAudio: boolean);
       procedure PlayScheduledCue;
+      procedure LoadCurrentLyricForTextEdit(CursorPosition: Integer);
       procedure StopMidiPlayback;
       procedure UpdateMidiPitchOffset;
       function  GetMidiPitch(NoteTone: Integer): Byte;
@@ -1734,11 +1735,7 @@ end;
 procedure TScreenEditSub.EnterTextEditMode(SDL_ModState: word);
 begin
   // Enter Text Edit Mode
-  BackupEditText := CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Text;
-  CurrentEditText := BackupEditText;
-  CurrentSlideId := LyricSlideId;
-  TextPosition := LengthUTF8(BackupEditText);
-  editLengthText := LengthUTF8(BackupEditText);
+  LoadCurrentLyricForTextEdit(-1);
   TextEditMode := true;
   StartTextInput;
 end;
@@ -1802,6 +1799,19 @@ begin
       Text[TextInfo].Text := Language.Translate('EDIT_INFO_PLAY_NOTE_MIDI');
   end;
 end;
+
+procedure TScreenEditSub.LoadCurrentLyricForTextEdit(CursorPosition: Integer);
+begin
+  BackupEditText := CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Text;
+  CurrentEditText := BackupEditText;
+  editLengthText := LengthUTF8(CurrentEditText);
+  CurrentSlideId := LyricSlideId;
+  if CursorPosition < 0 then
+    TextPosition := editLengthText
+  else
+    TextPosition := EnsureRange(CursorPosition, 0, editLengthText);
+end;
+
 
       // SDLK_RETURN: ToggleTextEditMode
 procedure TScreenEditSub.ToggleTextEditMode(SDL_ModState: word);
@@ -2985,15 +2995,17 @@ begin
   PrevClickIndex := VolumeClickIndex;
 
   Result := true;
-  nBut := InteractAt(X, Y);
   Action := maNone;
 
   if BtnDown and ((MouseButton = SDL_BUTTON_LEFT) or (MouseButton = SDL_BUTTON_RIGHT)) then
     StopMidiPlayback;
 
-  if BtnDown and (MouseButton = SDL_BUTTON_LEFT) and (nBut = -1) then
+  if BtnDown and (MouseButton = SDL_BUTTON_LEFT) then
   begin
-    if EditorLyrics[CurrentTrack].GetCursorFromPoint(CurrentX, CurrentY, CursorWordIndex, CursorCharIndex) then
+    if EditorLyrics[CurrentTrack].GetCursorFromPoint(CurrentX, CurrentY,
+      Theme.EditSub.SentenceBackground.Y,
+      Theme.EditSub.SentenceBackground.Y + Theme.EditSub.SentenceBackground.H,
+      CursorWordIndex, CursorCharIndex) then
     begin
       CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Color := 1;
       CurrentNote[CurrentTrack] := CursorWordIndex;
@@ -3023,6 +3035,7 @@ begin
     end;
   end;
 
+  nBut := InteractAt(X, Y);
   if nBut >= 0 then
   begin
     //select on mouse-over
