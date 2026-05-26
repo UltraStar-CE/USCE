@@ -525,6 +525,7 @@ begin
   for I := 1 to UIni.IMaxPlayerCount do
   begin
     NoAvatarTexture[I] := Renderer.GetTexture(Skin.GetTextureFileName('NoAvatar_P' + IntToStr(I)), TEXTURE_TYPE_TRANSPARENT, $FFFFFF);
+    NoAvatarTexture[I].ScaleMode := lsUniform;
   end;
 
   // create no-avatar

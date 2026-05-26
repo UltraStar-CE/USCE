@@ -42,6 +42,7 @@ uses
   URenderer,
   USongs,
   UThemes,
+  UScale,
   UWebSDK,
   math,
   sdl2,
@@ -1565,6 +1566,7 @@ begin
       Y := PosY - Width;
       W := 2 * Width;
       H := 2 * Width;
+      ScaleMode := lsUniform;
     end;
     Renderer.DrawTexture(Tex_Score_Ratings[Rating]);
   end;
