@@ -36,7 +36,8 @@ interface
 uses
   UIni,
   URenderer,
-  UPath;
+  UPath,
+  UScale;
 
 type
   TAvatar = class
@@ -91,6 +92,7 @@ end;
 function TAvatar.GetTexture(): TTexture;
 begin
   Result := Renderer.LoadTexture(Filename);
+  Result.ScaleMode := lsUniform;
 end;
 
 constructor TAvatarManager.Create();
