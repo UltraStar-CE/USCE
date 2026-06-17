@@ -987,7 +987,7 @@ begin
   PixelH := RenderH / ScreenH;
   VertexW := ScreenWPerScreen / RenderW;
   VertexH := ScreenH / RenderH;
-  UpdateUIScaleState(RenderW, RenderH, ScreenW, ScreenH);
+  UpdateUIScaleState(RenderW, RenderH, ScreenWPerScreen, ScreenH);
 end;
 
 procedure LoadLoadingScreen;
