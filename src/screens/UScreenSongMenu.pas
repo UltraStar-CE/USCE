@@ -323,7 +323,7 @@ begin
   for I:= 0 to High(CatSongs.Song) do
   begin
 
-    if (CatSongs.Song[I].Visible) and (CatSongs.Song[I].Medley.Source <> msNone) then
+    if (CatSongs.Song[I].Visible) and not CatSongs.Song[I].Main then
       Count := Count + 1;
 
     if (Count = 5) then
@@ -360,7 +360,8 @@ begin
         Text[0].Text := Language.Translate('SONG_MENU_NAME_MAIN');
 
         Button[0].Visible := true;
-        Button[1].Visible := ((Length(PlaylistMedley.Song) > 0) or (CatSongs.Song[ScreenSong.Interaction].Medley.Source > msNone));
+        Button[1].Visible := (Length(PlaylistMedley.Song) > 0) or
+          not CatSongs.Song[ScreenSong.Interaction].Main;
         Button[2].Visible := (CatSongs.CatNumShow = -2);
         Button[3].Visible := true;
         Button[4].Visible := false;
@@ -405,10 +406,10 @@ begin
 
         Text[0].Text := Language.Translate('SONG_MENU_NAME_MEDLEY');
 
-        Button[0].Visible := (CatSongs.Song[ScreenSong.Interaction].Medley.Source > msNone);
+        Button[0].Visible := not CatSongs.Song[ScreenSong.Interaction].Main;
         Button[1].Visible := (Length(PlaylistMedley.Song)>0);
         Button[2].Visible := (Length(PlaylistMedley.Song)>0) or
-          (CatSongs.Song[ScreenSong.Interaction].Medley.Source > msNone);
+          not CatSongs.Song[ScreenSong.Interaction].Main;
         Button[3].Visible := (not ScreenSong.MakeMedley) and (MSongs > 1);
         Button[4].Visible := true;
 
@@ -931,7 +932,7 @@ begin
           0: //Button 1
             begin
               ScreenSong.MakeMedley := true;
-              ScreenSong.StartMedley(99, msCalculated);
+              ScreenSong.StartMedley(99);
 
               Visible := False;
             end;
@@ -963,7 +964,7 @@ begin
                 end;
               end
               else
-                ScreenSong.StartMedley(0, msCalculated);
+                ScreenSong.StartMedley(0);
 
               Visible := False;
 
@@ -971,7 +972,7 @@ begin
 
           6: //Button 4
             begin
-              ScreenSong.StartMedley(5, msCalculated);
+              ScreenSong.StartMedley(5);
               Visible := False;
             end;
 
