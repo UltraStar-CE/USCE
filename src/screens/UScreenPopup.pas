@@ -1866,7 +1866,10 @@ begin
       SDLK_K:
         begin
           ApplyVolumeChanges(PrevAudio, PrevVocals, PrevSfx, PrevPreview);
-          ShowPopup(ResumeSingAfterPopup);
+          ToggleVocalsVolume;
+          SyncVolumeSliders;
+          if ScreenOptionsSound <> nil then
+            ScreenOptionsSound.SyncVolumeSlidersFromIni;
           Exit;
         end;
 
@@ -2208,7 +2211,7 @@ begin
 
   if VolumeVocalsIndex <> PrevVocals then
   begin
-    SetVocalsVolumePercent(EnsureRange(VolumeVocalsIndex, 0, 100));
+    SetVocalsVolumePercent(EnsureRange(VolumeVocalsIndex, 0, 100), true);
     VolumeChanged := true;
   end;
 
