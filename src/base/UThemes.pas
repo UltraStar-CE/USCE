@@ -1309,6 +1309,9 @@ uses
 const
   MAX_INHERITANCE = 10;
 
+var
+  CurrentBaseThemeIndex: integer = -1;
+
 function ParseScaleMode(const Value: string; Default: TLayoutScaleMode): TLayoutScaleMode;
 begin
   if SameText(Value, 'stretch') then
