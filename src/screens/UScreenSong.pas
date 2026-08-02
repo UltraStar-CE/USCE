@@ -3724,8 +3724,8 @@ begin
         fCurrentVideo.ReflectionSpacing := Reflectionspacing;
       end;
     end;
-    if Button[interaction].Reflection or (Theme.Song.Cover.SelectReflection) then
-      fCurrentVideo.Reflection := true;
+    fCurrentVideo.Reflection := (not CoverFull) and
+      (Button[interaction].Reflection or Theme.Song.Cover.SelectReflection);
 
     if CoverFull then
       fCurrentVideo.AspectCorrection := acoLetterBox
@@ -3734,8 +3734,6 @@ begin
 
      fCurrentVideo.Draw;
 
-     if (not CoverFull) and (Button[interaction].Reflection or (Theme.Song.Cover.SelectReflection)) then
-       fCurrentVideo.DrawReflection;
   end;
 
   // duet names
