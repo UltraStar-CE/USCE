@@ -79,9 +79,10 @@ type
 
       LastSelectMouse: integer;
       LastSelectTime: integer;
+      PreviewInteraction: integer;
       LastPreviewStartTime: integer;
       LastChangeSoundTime: integer;
-      LastScrollStopTime: integer;
+      PreviewSettledTime: integer;
       LastPlaylistReloadTime: cardinal;
       PreviewEndReloaded: boolean;
 
@@ -93,6 +94,7 @@ type
       MarkedPlaylistSong: integer;
       KeepPreviewMusicOnHide: boolean;
 
+      procedure SchedulePreview(SelectionSettled: boolean = false);
       procedure StartMusicPreview();
       procedure StartVideoPreview();
       function GetSongButtonMouseOverArea(ButtonIndex: integer): TMouseOverRect;
@@ -2083,9 +2085,10 @@ begin
 
   LastSelectMouse := 0;
   LastSelectTime := 0;
+  PreviewInteraction := -1;
   LastPreviewStartTime := 0;
   LastChangeSoundTime := 0;
-  LastScrollStopTime := 0;
+  PreviewSettledTime := 0;
   LastPlaylistReloadTime := 0;
   PreviewEndReloaded := false;
 
@@ -2318,6 +2321,8 @@ end;
 { called when song flows movement stops at a song }
 procedure TScreenSong.OnSongSelect;
 begin
+  SchedulePreview(true);
+
   // fade in detailed cover
   CoverTime := 0;
 
@@ -2339,6 +2344,9 @@ begin
   StopVideoPreview();
   PreviewOpened := -1;
   PreviewEndReloaded := false;
+  PreviewInteraction := -1;
+  LastPreviewStartTime := 0;
+  PreviewSettledTime := 0;
 
   //SetScrollRefresh;
 end;
@@ -3026,6 +3034,9 @@ begin
   DuetChange := false;
   RapToFreestyle := false;
   CoverFull := false;
+  PreviewInteraction := -1;
+  LastPreviewStartTime := 0;
+  PreviewSettledTime := 0;
 
   // reset video playback engine
   fCurrentVideo := nil;
@@ -3388,6 +3399,9 @@ begin
     CoverFull := false;
 
 
+  // Use the same preview scheduling for every way Interaction can change.
+  SchedulePreview;
+
   if (PreviewEnd > 0) and (AudioPlayback.Position >= PreviewEnd) then
     StopMusicPreview;
 
@@ -3405,18 +3419,28 @@ begin
     begin
       isScrolling := false;
       SongCurrent := SongTarget;
-      LastScrollStopTime := SDL_GetTicks;
       OnSongSelect;
     end;
   end;
 
-  // Check if we need to start preview after debounce period
-  if (not isScrolling) and (Ini.PreviewVolume <> 0) and
+  // Audio should react quickly, independently of the cover-scroll animation.
+  if (Ini.PreviewVolume <> 0) and
      (PreviewOpened <> Interaction) and  // No preview loaded for current song
-     (LastScrollStopTime > 0) and
-     (SDL_GetTicks - LastScrollStopTime >= PREVIEW_DEBOUNCE_MS) then
+     (LastPreviewStartTime > 0) and
+     (SDL_GetTicks - LastPreviewStartTime >= PREVIEW_DEBOUNCE_MS) then
   begin
+    LastPreviewStartTime := 0;
     StartMusicPreview;
+  end;
+
+  // Video opening may block the render thread, so wait until the screen
+  // transition and selection movement have finished.
+  if ShowFinish and (not isScrolling) and (Ini.PreviewVolume <> 0) and
+     (PreviewOpened = Interaction) and
+     (PreviewSettledTime > 0) and
+     (SDL_GetTicks - PreviewSettledTime >= PREVIEW_DEBOUNCE_MS) then
+  begin
+    PreviewSettledTime := 0;
     StartVideoPreview;
   end;
 
@@ -3939,6 +3963,19 @@ begin
   end;
 end;
 
+procedure TScreenSong.SchedulePreview(SelectionSettled: boolean);
+begin
+  if PreviewInteraction <> Interaction then
+  begin
+    PreviewInteraction := Interaction;
+    LastPreviewStartTime := SDL_GetTicks;
+    PreviewSettledTime := 0;
+  end;
+
+  if SelectionSettled then
+    PreviewSettledTime := SDL_GetTicks;
+end;
+
 procedure TScreenSong.StartMusicPreview();
 var
   Song: TSong;
@@ -4063,8 +4100,10 @@ begin
   StopMusicPreview();
   StopVideoPreview();
   PreviewOpened := -1;
-  StartMusicPreview();
-  StartVideoPreview();
+  PreviewInteraction := -1;
+  LastPreviewStartTime := 0;
+  PreviewSettledTime := 0;
+  SchedulePreview(not isScrolling);
 end;
 
 procedure TScreenSong.SkipTo(Target: cardinal; TargetInteraction: integer = -1; VS: integer = -1);
