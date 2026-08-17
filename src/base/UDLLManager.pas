@@ -98,6 +98,7 @@ uses
   {$ENDIF}
   UPathUtils,
   ULog,
+  UMusic,
   SysUtils;
 
 
@@ -241,7 +242,9 @@ end;
 
 function TDLLMan.WebsiteSendScore (var SendInfo: TSendInfo): byte;
 begin
-  if (@P_SendScore <> nil) then
+  if not HasStandardScoreFactors then
+    Result := WEBSITE_STATUS_NONSTANDARD_SCORE_FACTORS
+  else if (@P_SendScore <> nil) then
     Result := P_SendScore (SendInfo)
   else
     Result := 0;
@@ -249,7 +252,9 @@ end;
 
 function TDLLMan.WebsiteEncryptScore (var SendInfo: TSendInfo): string;
 begin
-  if (@P_EncryptScore <> nil) then
+  if not HasStandardScoreFactors then
+    Result := ''
+  else if (@P_EncryptScore <> nil) then
     Result := P_EncryptScore (SendInfo)
   else
     Result := '';
