@@ -167,8 +167,17 @@ function ULuaScreenSing_GetPlayerNotes(L: Plua_State): Integer; cdecl;
   returns Artist,Title,Year of currently selected song }
   function ULuaScreenSong_GetSelectedSong(L: Plua_State): Integer; cdecl;
 
+{ ScreenSing.GetSongInfo - returns a table identifying the song that is
+  currently being sung, or nil if there is none:
+    | Path: string     - absolute path of the song's directory
+    | FileName: string - absolute path of the song's .txt file
+    | Artist: string   - artist as given in the song header
+    | Title: string    - title as given in the song header
+  the path is authoritative; do not rebuild it from artist and title. }
+function ULuaScreenSing_GetSongInfo(L: Plua_State): Integer; cdecl;
+
 const
-  ULuaScreenSing_Lib_f: array [0..29] of lual_reg = (
+  ULuaScreenSing_Lib_f: array [0..30] of lual_reg = (
     (name:'GetScores';func:ULuaScreenSing_GetScores),
     (name:'GetNoteScores';func:ULuaScreenSing_GetNoteScores),
     (name:'GetGoldenScores';func:ULuaScreenSing_GetGoldenScores),
@@ -200,7 +209,8 @@ const
     (name:'GetVisibleSongs';func:ULuaScreenSong_GetVisibleSongs),
     (name:'GetSelectedIndex';func:ULuaScreenSong_GetSelectedIndex),
     (name:'GetSongNumbers';func:ULuaScreenSong_GetSongNumbers),
-    (name:'GetSelectedSong';func:ULuaScreenSong_GetSelectedSong)
+    (name:'GetSelectedSong';func:ULuaScreenSong_GetSelectedSong),
+    (name:'GetSongInfo';func:ULuaScreenSing_GetSongInfo)
   );
 
 implementation
@@ -213,6 +223,7 @@ uses
   UGraphic,
   UMusic,
   UParty,
+  UPath,
   ULuaUtils,
   {next imports are for ULuaScreenSong instead}
   USongs,
@@ -1030,6 +1041,41 @@ begin
   lua_setField(L, -2, 'Year');
 
   Result := 1;
+end;
+
+function ULuaScreenSing_GetSongInfo(L: Plua_State): Integer; cdecl;
+  var
+    PathStr: UTF8String;
+    FileStr: UTF8String;
+begin
+  Result := 1;
+
+  lua_ClearStack(L);
+
+  if (CurrentSong = nil) or (Display.CurrentScreen <> @ScreenSing) then
+  begin
+    lua_pushNil(L);
+    Exit;
+  end;
+
+  // resolve both before touching the stack, so a path error can not leave a
+  // half built table behind
+  PathStr := CurrentSong.Path.ToUTF8(true);
+  FileStr := CurrentSong.Path.Append(CurrentSong.FileName).ToUTF8(true);
+
+  lua_CreateTable(L, 0, 4);
+
+  lua_PushString(L, PChar(PathStr));
+  lua_SetField(L, -2, PChar('Path'));
+
+  lua_PushString(L, PChar(FileStr));
+  lua_SetField(L, -2, PChar('FileName'));
+
+  lua_PushString(L, PChar(CurrentSong.Artist));
+  lua_SetField(L, -2, PChar('Artist'));
+
+  lua_PushString(L, PChar(CurrentSong.Title));
+  lua_SetField(L, -2, PChar('Title'));
 end;
 
 end.
