@@ -103,6 +103,7 @@ uses
   ULuaText,
   ULuaParty,
   ULuaScreenSing,
+  ULuaScreenSong,
   UTime,
   UWebcam,
   ULibraryLockdown,
@@ -329,6 +330,7 @@ begin
     LuaCore.RegisterModule('Text', ULuaText_Lib_f);
     LuaCore.RegisterModule('Party', ULuaParty_Lib_f);
     LuaCore.RegisterModule('ScreenSing', ULuaScreenSing_Lib_f);
+    LuaCore.RegisterModule('ScreenSong', ULuaScreenSong_Lib_f);
 
     LuaCore.LoadPlugins;
 
