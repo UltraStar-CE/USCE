@@ -1045,8 +1045,9 @@ end;
 
 function ULuaScreenSing_GetSongInfo(L: Plua_State): Integer; cdecl;
   var
-    PathStr: UTF8String;
-    FileStr: UTF8String;
+    SongFile: IPath;
+    PathUtf8: UTF8String;
+    FileUtf8: UTF8String;
 begin
   Result := 1;
 
@@ -1058,18 +1059,25 @@ begin
     Exit;
   end;
 
-  // resolve both before touching the stack, so a path error can not leave a
-  // half built table behind
-  PathStr := CurrentSong.Path.ToUTF8(true);
-  FileStr := CurrentSong.Path.Append(CurrentSong.FileName).ToUTF8(true);
+  // resolve everything before touching the stack, so a path error can not
+  // leave a half built table behind
+  SongFile := CurrentSong.Path.Append(CurrentSong.FileName);
+  PathUtf8 := CurrentSong.Path.ToUTF8(true);
+  FileUtf8 := SongFile.ToUTF8(true);
 
-  lua_CreateTable(L, 0, 4);
+  lua_CreateTable(L, 0, 6);
 
-  lua_PushString(L, PChar(PathStr));
+  Lua_PushIOPath(L, CurrentSong.Path);
   lua_SetField(L, -2, PChar('Path'));
 
-  lua_PushString(L, PChar(FileStr));
+  Lua_PushIOPath(L, SongFile);
   lua_SetField(L, -2, PChar('FileName'));
+
+  lua_PushString(L, PChar(PathUtf8));
+  lua_SetField(L, -2, PChar('PathUTF8'));
+
+  lua_PushString(L, PChar(FileUtf8));
+  lua_SetField(L, -2, PChar('FileNameUTF8'));
 
   lua_PushString(L, PChar(CurrentSong.Artist));
   lua_SetField(L, -2, PChar('Artist'));
