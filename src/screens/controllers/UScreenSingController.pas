@@ -1748,19 +1748,58 @@ procedure TScreenSingController.SaveLocalScores;
 var
   I: integer;
   Sung: boolean;
-  Score: integer;
+  Name1, Name2, CombinedName: UTF8String;
+  Score1, Score2, CombinedScore, CombinedMask: integer;
 begin
   Sung := false;
 
-  if ScreenSing.SungToEnd and (not CurrentSong.isDuet or (Ini.DuetScores = 1)) then
+  if ScreenSing.SungToEnd then
   begin
-    for I := 0 to PlayersPlay - 1 do
+    if not CurrentSong.isDuet or (Ini.DuetScores in [1, 3]) then
     begin
-      Score := Round(Player[I].ScoreTotalInt);
-      if Score > 0 then
+      for I := 0 to PlayersPlay - 1 do
       begin
-        DataBase.AddScore(CurrentSong, Player[I].Level, Length(CurrentSong.Tracks), 1 shl Player[I].Track, Player[I].Name, Score);
-        Sung := true;
+        Score1 := Round(Player[I].ScoreTotalInt);
+        if Score1 > 0 then
+        begin
+          DataBase.AddScore(CurrentSong, Player[I].Level,
+              Length(CurrentSong.Tracks), 1 shl Player[I].Track,
+              Player[I].Name, Score1);
+          Sung := true;
+        end;
+      end;
+    end;
+
+    if CurrentSong.isDuet and (Ini.DuetScores in [2, 3]) then
+    begin
+      I := 0;
+      while I < PlayersPlay - 1 do
+      begin
+        if Player[I].Level = Player[I + 1].Level then
+        begin
+          Name1 := Player[I].Name;
+          Name2 := Player[I + 1].Name;
+          Score1 := Round(Player[I].ScoreTotalInt);
+          Score2 := Round(Player[I + 1].ScoreTotalInt);
+
+          if UTF8CompareStr(Name1, Name2) <= 0 then
+            CombinedName := Format('%s & %s', [Name1, Name2])
+          else
+            CombinedName := Format('%s & %s', [Name2, Name1]);
+
+          CombinedScore := (Score1 + Score2) div 2;
+          if CombinedScore > 0 then
+          begin
+            CombinedMask := (1 shl Player[I].Track) or
+                (1 shl Player[I + 1].Track);
+            DataBase.AddScore(CurrentSong, Player[I].Level,
+                Length(CurrentSong.Tracks), CombinedMask,
+                CombinedName, CombinedScore);
+            Sung := true;
+          end;
+        end;
+
+        Inc(I, 2);
       end;
     end;
   end;
