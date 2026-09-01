@@ -176,7 +176,7 @@ begin
         FilePath := Song.Path.Append(Song.Audio)
       else if RequestedFile = 'video' then
         FilePath := Song.Path.Append(Song.Video)
-      else if RequestedFile = 'file' then
+      else if (RequestedFile = 'file') or (RequestedFile = 'txt') then
         FilePath := Song.Path.Append(Song.FileName)
       else
         raise Exception.Create('Invalid file');
@@ -194,10 +194,12 @@ begin
         AResponse.ContentType := 'text/html; charset=UTF-8';
         AResponse.Content := '<html><body><h1>404 - File not found</h1></body></html>';
         AResponse.Code := 404;
+        AResponse.SendContent;
       end;
     end;
   finally
-    FileStream.Free;
+    if Assigned(FileStream) then
+      FileStream.Free;
   end;
 end;
 
