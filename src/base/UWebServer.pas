@@ -45,17 +45,15 @@ type
     procedure Execute; override;
     procedure HandleRequest(Sender: TObject; var ARequest: TFPHTTPConnectionRequest;
                              var AResponse: TFPHTTPConnectionResponse);
-    procedure routeSongList(ARequest: TRequest; AResponse: TResponse);
+    procedure routeIndex(ARequest: TRequest; AResponse: TResponse);
     procedure routeSongsJSON(ARequest: TRequest; AResponse: TResponse);
     procedure routeCurrentSongJSON(ARequest: TRequest; AResponse: TResponse);
     procedure routeFile(ARequest: TRequest; AResponse: TResponse);
     procedure routeSongFile(ARequest: TRequest; AResponse: TResponse);
     procedure route404(ARequest: TRequest; AResponse: TResponse);
     function ContentTypeForExt(Ext: IPath): string;
-    function GenerateHTMLWithSongs: string;
     function GenerateJSONWithSongs: string;
     function GenerateJSONWithCurrentSong: string;
-    function LoadTemplate: string;
   public
     constructor Create(APort: Integer);
     destructor Destroy; override;
@@ -75,13 +73,10 @@ begin
   inherited Destroy;
 end;
 
-procedure TWebServer.routeSongList(ARequest: TRequest; AResponse: TResponse);
-  var ResponseHTML: String;
+procedure TWebServer.routeIndex(ARequest: TRequest; AResponse: TResponse);
 begin
-  AResponse.ContentType := 'text/html; charset=UTF-8';
-  ResponseHTML := GenerateHTMLWithSongs;
-  AResponse.Content := ResponseHTML;
-  AResponse.Code := 200;
+  ARequest.URI := '/index.html';
+  routeFile(ARequest, AResponse);
 end;
 
 procedure TWebServer.routeSongsJSON(ARequest: TRequest; AResponse: TResponse);
@@ -207,15 +202,13 @@ procedure TWebServer.Execute;
 begin
   FServer := TLoopbackHTTPServer.Create(nil);
   FRouter := THTTPRouter.Create(nil);
-  FRouter.RegisterRoute('/', rmGET, @routeSongList);
+  FRouter.RegisterRoute('/', rmGET, @routeIndex);
+  FRouter.RegisterRoute('/index.html', rmGET, @routeFile);
+  FRouter.RegisterRoute('/app.js', rmGET, @routeFile);
   FRouter.RegisterRoute('/style.css', rmGET, @routeFile);
   FRouter.RegisterRoute('/theme.js', rmGET, @routeFile);
   FRouter.RegisterRoute('/currentSong.json', rmGET, @routeCurrentSongJSON);
   FRouter.RegisterRoute('/songs.json', rmGET, @routeSongsJSON);
-  FRouter.RegisterRoute('/jquery.min.js', rmGET, @routeFile);
-  FRouter.RegisterRoute('/jquery.min.map', rmGET, @routeFile);
-  FRouter.RegisterRoute('/datatables.min.js', rmGET, @routeFile);
-  FRouter.RegisterRoute('/datatables.min.css', rmGET, @routeFile);
   FRouter.RegisterRoute('/song/:id/:file', rmGET, @routeSongFile);
   FRouter.RegisterRoute('/404', @route404, true);
   try
@@ -235,54 +228,6 @@ procedure TWebServer.HandleRequest(Sender: TObject; var ARequest: TFPHTTPConnect
                                    var AResponse: TFPHTTPConnectionResponse);
 begin
   FRouter.RouteRequest(ARequest, AResponse);
-end;
-
-function TWebServer.LoadTemplate: string;
-var
-  TemplateFilePath: IPath;
-  TemplateFile: TStringList;
-begin
-  TemplateFile := TStringList.Create;
-  try
-    TemplateFilePath := ResourcesPath.Append('web').Append('index.html');
-    TemplateFile.LoadFromFile(TemplateFilePath.toNative);
-    Result := TemplateFile.Text;
-  finally
-    TemplateFile.Free;
-  end;
-end;
-
-function TWebServer.GenerateHTMLWithSongs: string;
-var
-  I: Integer;
-  SongRows: string;
-  Edition, Genre, Year: string;
-begin
-  SongRows := '';
-  for I := 0 to Songs.SongList.Count - 1 do
-  begin
-    Edition := UTF8Encode(TSong(Songs.SongList[I]).Edition);
-    Genre := UTF8Encode(TSong(Songs.SongList[I]).Genre);
-    Year := IntToStr(TSong(Songs.SongList[I]).Year);
-
-    if (Edition = 'Unknown') or (Edition = 'None') then
-      Edition := '';
-    if Genre = 'Unknown' then
-      Genre := '';
-    if Year = '0' then
-      Year := '';
-
-    SongRows := SongRows + '<tr>' + sLineBreak +
-                '<td>' + UTF8Encode(TSong(Songs.SongList[I]).Artist) + '</td>' + sLineBreak +
-                '<td>' + UTF8Encode(TSong(Songs.SongList[I]).Title) + '</td>' + sLineBreak +
-                '<td>' + Edition + '</td>' + sLineBreak +
-                '<td>' + Genre + '</td>' + sLineBreak +
-                '<td>' + Year + '</td>' + sLineBreak +
-                '</tr>' + sLineBreak;
-  end;
-
-  Result := LoadTemplate;
-  Result := StringReplace(Result, '<!--SONG_ROWS-->', SongRows, []);
 end;
 
 function TWebServer.GenerateJSONWithSongs: string;

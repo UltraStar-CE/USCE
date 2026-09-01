@@ -1,56 +1,36 @@
 const LIGHT_THEME = "light", DARK_THEME = "dark";
 
-function isValidTheme(theme) {
-    return theme === LIGHT_THEME || theme === DARK_THEME
-}
+const isValidTheme = theme => theme === LIGHT_THEME || theme === DARK_THEME;
 
-function getTheme() {
-    let theme = localStorage.getItem("theme");
-    if (isValidTheme(theme)) {
-        return theme;
-    }
+const systemTheme = () =>
+    window.matchMedia("(prefers-color-scheme: dark)").matches ? DARK_THEME : LIGHT_THEME;
 
-    if (window.matchMedia("(prefers-color-scheme: dark)")) {
-        return DARK_THEME;
-    }
+const storedTheme = () => localStorage.getItem("theme");
 
-    return LIGHT_THEME;
-}
+const getTheme = () => {
+    const stored = storedTheme();
+    return isValidTheme(stored) ? stored : systemTheme();
+};
 
-function isLightTheme() {
-    return getTheme() === LIGHT_THEME
-}
+const isLightTheme = () => getTheme() === LIGHT_THEME;
 
-function setTheme(theme) {
-    if (!isValidTheme(theme)) return;
-
+const applyTheme = theme => {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("theme", theme);
-}
+    return theme;
+};
 
-function toggleTheme() {
-    if (isLightTheme()) {
-        setTheme(DARK_THEME);
-    } else {
-        setTheme(LIGHT_THEME);
-    }
-}
+const setTheme = theme => isValidTheme(theme) ? applyTheme(theme) : theme;
+
+const toggleTheme = () => setTheme(isLightTheme() ? DARK_THEME : LIGHT_THEME);
+
+const syncToggle = toggle => { toggle.checked = isLightTheme(); };
 
 // initialize theme
 setTheme(getTheme());
 
-function updateToggle(toggle) {
-    toggle.checked = isLightTheme()
-}
-
-window.onload = function() {
-    let toggle = document.querySelector("#themeToggle");
-
-    toggle.addEventListener("change", () => {
-        toggleTheme();
-        updateToggle(toggle);
-    });
-
-    // initialize toggle
-    updateToggle(toggle);
-}
+window.onload = () => {
+    const toggle = document.querySelector("#themeToggle");
+    toggle.addEventListener("change", () => { toggleTheme(); syncToggle(toggle); });
+    syncToggle(toggle);
+};
