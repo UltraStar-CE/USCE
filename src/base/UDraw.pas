@@ -52,6 +52,9 @@ procedure SingDrawLine(Left, Top, Right: real; Track, PlayerIndex: integer; Line
 procedure SingDrawPlayerLine(Left, Top, W: real; Track, PlayerIndex: integer; LineSpacing: integer = 15);
 procedure SingDrawPlayerBGLine(Left, Top, Right: real; Track, PlayerIndex: integer; LineSpacing: integer = 15);
 
+procedure SingDrawPitchTrace(Left, Top, W: real; Track, PlayerIndex: integer; LineSpacing: integer = 15);
+procedure SingDrawPitchTraceReset;
+
 //Draw Editor NoteLines
 procedure EditDrawBackgroundVoices(X, YBaseNote, W, H: real; SelectedTrack, VoiceCount: integer);
 procedure EditDrawLine(X, YBaseNote, W, H: real; Track: integer; NumLines: integer = 10);
@@ -385,6 +388,110 @@ begin;
 
   Sound.UnlockAnalysisBuffer();
   Renderer.DrawLineStrip(PointList, MaxX/High(Sound.AnalysisBuffer), MaxY/Low(Smallint), Position.X, Position.Y + MaxY, Col.R, Col.G, Col.B, 1);
+end;
+
+const
+  // How many pitch samples are kept per player for the continuous trace.
+  // At 60 fps this is roughly the last 8 seconds of singing.
+  PitchTraceLength = 512;
+
+type
+  TPitchTraceSample = record
+    Beat:  real;     // beat the sample was taken at, so it lines up with the notes
+    Tone:  real;     // tone as reported by the analyser
+    Valid: boolean;  // false when the analyser only saw noise
+  end;
+
+var
+  PitchTraceBuffer: array[0..IMaxPlayerCount-1, 0..PitchTraceLength-1] of TPitchTraceSample;
+  PitchTraceCount:  array[0..IMaxPlayerCount-1] of integer;
+  PitchTraceNext:   array[0..IMaxPlayerCount-1] of integer;
+
+procedure SingDrawPitchTraceReset;
+var
+  PlayerIndex: integer;
+begin
+  for PlayerIndex := 0 to IMaxPlayerCount - 1 do
+  begin
+    PitchTraceCount[PlayerIndex] := 0;
+    PitchTraceNext[PlayerIndex] := 0;
+  end;
+end;
+
+procedure SingDrawPitchTrace(Left, Top, W: real; Track, PlayerIndex: integer; LineSpacing: integer);
+var
+  Sound:      TCaptureBuffer;
+  LineLength: real;
+  BeatToX:    real;
+  StartBeat:  real;
+  Centre:     real;
+  BaseNote:   integer;
+  Slot, N, Index: integer;
+  Tone, X, Y: real;
+  Col:        TRGB;
+begin
+  if (Ini.PitchTrace = 0) then
+    Exit;
+  if (PlayerIndex < 0) or (PlayerIndex >= IMaxPlayerCount) then
+    Exit;
+  if (PlayerIndex > High(AudioInputProcessor.Sound)) then
+    Exit;
+
+  Sound := AudioInputProcessor.Sound[PlayerIndex];
+
+  // Record this frame's pitch. The analyser runs continuously, so a tone is
+  // available even where the song has no note - that is the whole point of the
+  // trace: it keeps showing the voice between phrases.
+  Slot := PitchTraceNext[PlayerIndex];
+  PitchTraceBuffer[PlayerIndex][Slot].Beat  := LyricsState.MidBeat;
+  PitchTraceBuffer[PlayerIndex][Slot].Tone  := Sound.Tone;
+  PitchTraceBuffer[PlayerIndex][Slot].Valid := Sound.ToneValid;
+  PitchTraceNext[PlayerIndex] := (Slot + 1) mod PitchTraceLength;
+  if (PitchTraceCount[PlayerIndex] < PitchTraceLength) then
+    Inc(PitchTraceCount[PlayerIndex]);
+
+  if not CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine].HasLength(LineLength) then
+    Exit;
+  if (LineLength <= 0) then
+    Exit;
+
+  BeatToX   := W / LineLength;
+  StartBeat := CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine].Notes[0].StartBeat;
+  BaseNote  := CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine].BaseNote;
+
+  // Centre of the staff, used to fold the sung tone into the octave that is
+  // currently on screen - the same trick the scoring code uses.
+  Centre := BaseNote + 6;
+
+  if (Party.bPartyGame) then
+    Col := GetPlayerColor(Ini.TeamColor[PlayerIndex])
+  else
+    Col := GetPlayerColor(Ini.PlayerColor[PlayerIndex]);
+
+  for N := 0 to PitchTraceCount[PlayerIndex] - 1 do
+  begin
+    Index := (PitchTraceNext[PlayerIndex] - 1 - N + 2 * PitchTraceLength) mod PitchTraceLength;
+
+    if not PitchTraceBuffer[PlayerIndex][Index].Valid then
+      Continue;
+
+    if (PitchTraceBuffer[PlayerIndex][Index].Beat < StartBeat) then
+      Continue;
+
+    Tone := PitchTraceBuffer[PlayerIndex][Index].Tone;
+    while (Tone - Centre > 6) do
+      Tone := Tone - 12;
+    while (Tone - Centre < -6) do
+      Tone := Tone + 12;
+
+    X := Left + (PitchTraceBuffer[PlayerIndex][Index].Beat - StartBeat) * BeatToX;
+    if (X < Left) or (X > Left + W) then
+      Continue;
+
+    Y := Top - (Tone - BaseNote) * LineSpacing / 2;
+
+    Renderer.DrawQuad(X, Y - 1.5, 1, 3, 3, Col.R, Col.G, Col.B, 0.8);
+  end;
 end;
 
 procedure SingDrawNoteLines(Left, Top, Right: real; LineSpacing: integer; LineThickness: single);
@@ -1130,6 +1237,7 @@ begin
     SingDrawPlayerBGLine(LaneLeft, LineTop, LaneRight, TrackIndex, PlayerIndex, LineSpacing);
     SingDrawLine(LaneLeft, LineTop, LaneRight, TrackIndex, PlayerIndex, LineSpacing);
     SingDrawPlayerLine(LaneLeft, LineTop, LaneWidth, TrackIndex, PlayerIndex, LineSpacing);
+    SingDrawPitchTrace(LaneLeft, LineTop, LaneWidth, TrackIndex, PlayerIndex, LineSpacing);
   end;
 end;
 

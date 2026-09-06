@@ -729,6 +729,10 @@ begin
   ScoringTailActive := false;
   Log.LogStatus('Begin', 'OnShow');
 
+  // Drop any pitch history from the previous song, otherwise the trace would
+  // briefly show the last song's notes before it scrolls away.
+  SingDrawPitchTraceReset;
+
   if not Help.SetHelpID(ID) then
     Log.LogWarn('No Entry for Help-ID ' + ID, 'ScreenSingController');
 
