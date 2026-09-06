@@ -173,6 +173,7 @@ type
       FullScreen:     integer;
       TextureSize:    integer;
       Oscilloscope:   integer;
+      PitchTrace:     integer;
       // not used
       //Spectrum:       integer;
       //Spectrograph:   integer;
@@ -340,6 +341,7 @@ const
 
   // SingBar Mod
   IOscilloscope:     array[0..1] of UTF8String  = ('Off', 'On');
+  IPitchTrace:       array[0..1] of UTF8String  = ('Off', 'On');
 
   ISpectrum:         array[0..1] of UTF8String  = ('Off', 'On');
   ISpectrograph:     array[0..1] of UTF8String  = ('Off', 'On');
@@ -1748,6 +1750,10 @@ begin
   // Oscilloscope
   Oscilloscope := ReadArrayIndex(IOscilloscope, IniFile, 'Graphics', 'Oscilloscope', 1);
 
+  // PitchTrace - continuous display of the singer's pitch, including
+  // the gaps between notes where the game normally draws nothing
+  PitchTrace := ReadArrayIndex(IPitchTrace, IniFile, 'Graphics', 'PitchTrace', 1);
+
   // Spectrum
   //Spectrum := ReadArrayIndex(ISpectrum, IniFile, 'Graphics', 'Spectrum', IGNORE_INDEX, 'Off');
 
@@ -1996,6 +2002,9 @@ begin
 
     // Oscilloscope
     IniFile.WriteString('Graphics', 'Oscilloscope', IOscilloscope[Oscilloscope]);
+
+    // PitchTrace
+    IniFile.WriteString('Graphics', 'PitchTrace', IPitchTrace[PitchTrace]);
 
     // Spectrum
     //IniFile.WriteString('Graphics', 'Spectrum', ISpectrum[Spectrum]);
