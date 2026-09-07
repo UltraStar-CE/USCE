@@ -291,6 +291,7 @@ type
 
   TThemeSingPlayer = record
     Name: TThemeText;
+    NameEnabled: boolean;
     Score: TThemeText;
     ScoreBackground: TThemePosition;
     AvatarFrame: TThemeStatic; // TODO: is this actually the frame?
@@ -314,23 +315,19 @@ type
     MinFrameH: integer;
     MinScoreW: integer;
     MinScoreH: integer;
-    HeaderOffsetLeft: integer;
     HeaderOffsetTopBase: integer;
     HeaderOffsetTopPerExtraRow: integer;
-    MinAvatarInsetX: integer;
-    MinAvatarInsetY: integer;
-    NameGapBaseX: integer;
-    NameGapMinX: integer;
-    NamePaddingBaseX: integer;
-    NamePaddingMinX: integer;
-    NamePaddingBaseY: integer;
-    NamePaddingMinY: integer;
+    ReferenceX: integer;
+    ReferenceY: integer;
+    ReferenceW: integer;
+    AvatarAnchorX: real;
+    NameAnchorX: real;
+    ScoreAnchorX: real;
+    OscilloscopeAnchorX: real;
     NameMinW: integer;
     NameMinH: integer;
     NameMinSize: integer;
     ScoreWidthFraction: real;
-    OscilloscopeGapBaseY: integer;
-    OscilloscopeGapMinY: integer;
     OscilloscopeMinW: integer;
     OscilloscopeMinH: integer;
     PopupYOffsetSolo: integer;
@@ -1338,6 +1335,10 @@ function GetNamePlayerSelectSlotRect(PlayerIndex, PlayerCount: integer;
 function GetNamePlayerSelectMaxScale(PlayerCount: integer; const Layout: TThemeNamePlayerSelectLayout): real;
 function GetSingHeaderTopOffset(const Layout: TThemeSingPlayerWidgetLayout;
   RowCount: integer; Scale: real): integer;
+function GetSingPlayerWidgetX(BaseX, BaseW, ActualW, LaneLeft, LaneWidth: integer;
+  AnchorX, Scale: real; const Layout: TThemeSingPlayerWidgetLayout): integer;
+function GetSingPlayerWidgetY(BaseY, GroupTop: integer; Scale: real;
+  const Layout: TThemeSingPlayerWidgetLayout): integer;
 
 function GetPlayerColor(Color: integer): TRGB;
 function GetPlayerLightColor(Color: integer): TRGB;
@@ -1577,6 +1578,28 @@ begin
   BaseOffset := Layout.HeaderOffsetTopBase +
     Max(0, RowCount - 1) * Layout.HeaderOffsetTopPerExtraRow;
   Result := Round(BaseOffset * Scale);
+end;
+
+function GetSingPlayerWidgetX(BaseX, BaseW, ActualW, LaneLeft, LaneWidth: integer;
+  AnchorX, Scale: real; const Layout: TThemeSingPlayerWidgetLayout): integer;
+var
+  ClampedAnchor: real;
+  ReferenceAnchor: real;
+  ElementAnchor: real;
+  TargetAnchor: real;
+begin
+  ClampedAnchor := EnsureRange(AnchorX, 0.0, 1.0);
+  ReferenceAnchor := Layout.ReferenceX + Layout.ReferenceW * ClampedAnchor;
+  ElementAnchor := BaseX + BaseW * ClampedAnchor;
+  TargetAnchor := LaneLeft + LaneWidth * ClampedAnchor;
+  Result := Round(TargetAnchor + (ElementAnchor - ReferenceAnchor) * Scale -
+    ActualW * ClampedAnchor);
+end;
+
+function GetSingPlayerWidgetY(BaseY, GroupTop: integer; Scale: real;
+  const Layout: TThemeSingPlayerWidgetLayout): integer;
+begin
+  Result := GroupTop + Round((BaseY - Layout.ReferenceY) * Scale);
 end;
 
 function TransformNamePlayerSelectStatic(const Source: TThemeStatic; const SourceBounds, SlotRect: TPlayerSlotRect): TThemeStatic;
@@ -2277,24 +2300,24 @@ begin
       Sing.PlayerWidgetLayout.MinFrameH := ReadInteger(SectionList, 'MinFrameH', 26);
       Sing.PlayerWidgetLayout.MinScoreW := ReadInteger(SectionList, 'MinScoreW', 56);
       Sing.PlayerWidgetLayout.MinScoreH := ReadInteger(SectionList, 'MinScoreH', 18);
-      Sing.PlayerWidgetLayout.HeaderOffsetLeft := ReadInteger(SectionList, 'HeaderLeftOffset', 30);
       Sing.PlayerWidgetLayout.HeaderOffsetTopBase := ReadInteger(SectionList, 'HeaderTopOffsetBase', 40);
       Sing.PlayerWidgetLayout.HeaderOffsetTopPerExtraRow := ReadInteger(SectionList,
         'HeaderTopOffsetPerExtraRow', 0);
-      Sing.PlayerWidgetLayout.MinAvatarInsetX := ReadInteger(SectionList, 'AvatarInsetMinX', 1);
-      Sing.PlayerWidgetLayout.MinAvatarInsetY := ReadInteger(SectionList, 'AvatarInsetMinY', 1);
-      Sing.PlayerWidgetLayout.NameGapBaseX := ReadInteger(SectionList, 'NameGapX', 10);
-      Sing.PlayerWidgetLayout.NameGapMinX := ReadInteger(SectionList, 'NameGapMinX', 8);
-      Sing.PlayerWidgetLayout.NamePaddingBaseX := ReadInteger(SectionList, 'NamePaddingX', 6);
-      Sing.PlayerWidgetLayout.NamePaddingMinX := ReadInteger(SectionList, 'NamePaddingMinX', 4);
-      Sing.PlayerWidgetLayout.NamePaddingBaseY := ReadInteger(SectionList, 'NamePaddingY', 6);
-      Sing.PlayerWidgetLayout.NamePaddingMinY := ReadInteger(SectionList, 'NamePaddingMinY', 3);
+      Sing.PlayerWidgetLayout.ReferenceX := ReadInteger(SectionList, 'ReferenceX', 20);
+      Sing.PlayerWidgetLayout.ReferenceY := ReadInteger(SectionList, 'ReferenceY', 275);
+      Sing.PlayerWidgetLayout.ReferenceW := Max(1, ReadInteger(SectionList, 'ReferenceW', 760));
+      Sing.PlayerWidgetLayout.AvatarAnchorX := EnsureRange(
+        ReadFloat(SectionList, 'AvatarAnchorX', 0.0), 0.0, 1.0);
+      Sing.PlayerWidgetLayout.NameAnchorX := EnsureRange(
+        ReadFloat(SectionList, 'NameAnchorX', 0.0), 0.0, 1.0);
+      Sing.PlayerWidgetLayout.ScoreAnchorX := EnsureRange(
+        ReadFloat(SectionList, 'ScoreAnchorX', 1.0), 0.0, 1.0);
+      Sing.PlayerWidgetLayout.OscilloscopeAnchorX := EnsureRange(
+        ReadFloat(SectionList, 'OscilloscopeAnchorX', 0.0), 0.0, 1.0);
       Sing.PlayerWidgetLayout.NameMinW := ReadInteger(SectionList, 'NameMinW', 24);
       Sing.PlayerWidgetLayout.NameMinH := ReadInteger(SectionList, 'NameMinH', 14);
       Sing.PlayerWidgetLayout.NameMinSize := ReadInteger(SectionList, 'NameMinSize', 10);
       Sing.PlayerWidgetLayout.ScoreWidthFraction := ReadFloat(SectionList, 'ScoreWidthFractionOfLane', 0.36);
-      Sing.PlayerWidgetLayout.OscilloscopeGapBaseY := ReadInteger(SectionList, 'OscilloscopeGapY', 4);
-      Sing.PlayerWidgetLayout.OscilloscopeGapMinY := ReadInteger(SectionList, 'OscilloscopeGapMinY', 2);
       Sing.PlayerWidgetLayout.OscilloscopeMinW := ReadInteger(SectionList, 'OscilloscopeMinW', 40);
       Sing.PlayerWidgetLayout.OscilloscopeMinH := ReadInteger(SectionList, 'OscilloscopeMinH', 8);
       Sing.PlayerWidgetLayout.PopupYOffsetSolo := ReadInteger(SectionList, 'PopupYOffsetSolo', 65);
@@ -3411,7 +3434,9 @@ end;
 
 procedure TTheme.ThemeLoadSingPlayerStatics(var ThemeSingPlayer: TThemeSingPlayer; const Name: string);
 begin
-  ThemeLoadText(ThemeSingPlayer.Name, 'Sing' + Name + 'Text');
+  ThemeSingPlayer.NameEnabled := false;
+  if SectionExists('Sing' + Name + 'Text', ThemeSingPlayer.NameEnabled) and ThemeSingPlayer.NameEnabled then
+    ThemeLoadText(ThemeSingPlayer.Name, 'Sing' + Name + 'Text');
   ThemeLoadText(ThemeSingPlayer.Score, 'Sing' + Name + 'TextScore');
   ThemeLoadPosition(ThemeSingPlayer.ScoreBackground, 'Sing' + Name + 'Static2');
   ThemeLoadStatic(ThemeSingPlayer.AvatarFrame, 'Sing' + Name + 'Static');
