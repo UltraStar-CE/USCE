@@ -389,42 +389,27 @@ procedure SingDrawOscilloscopes;
   begin
     Result := Theme.Sing.PlayerTemplate.Oscilloscope;
   end;
-  function GetBaseSingPlayerTemplate: TThemeSingPlayer;
-  begin
-    Result := Theme.Sing.PlayerTemplate;
-  end;
   procedure GetLaneLayout(const PlayerCountOnScreen, PlayerIndexOnScreen: integer;
-    out LaneLeft, LaneRight, LaneTop, LaneWidth: integer);
+    out LaneLeft, LaneTop, LaneWidth: integer);
   var
     Layout: TSingLaneLayout;
   begin
     Layout := GetSingLaneLayout(PlayerCountOnScreen, PlayerIndexOnScreen, Theme.Sing.PlayerLayout,
       CurrentSong.isDuet and (PlayersPlay <> 1));
     LaneLeft := Layout.ColumnLeft;
-    LaneRight := Layout.ColumnRight;
     LaneTop := Layout.RowAnchorY;
     LaneWidth := Layout.ColumnWidth;
   end;
   function GetOscilloscopePosition(PlayerIndex: integer): TThemePosition;
   var
-    BaseTemplate: TThemeSingPlayer;
     BasePosition: TThemePosition;
     LocalPlayerCount: integer;
     LocalIndex: integer;
     LaneLeft: integer;
-    LaneRight: integer;
     LaneTop: integer;
     LaneWidth: integer;
     Scale: real;
-    FrameW: integer;
-    FrameH: integer;
-    ScoreW: integer;
-    ScoreH: integer;
-    NameX: integer;
-    NameY: integer;
-    NameW: integer;
     GroupTop: integer;
-    HeaderOffsetLeft: integer;
     Layout: TSingLaneLayout;
   begin
     if Screens > 1 then
@@ -438,38 +423,23 @@ procedure SingDrawOscilloscopes;
       LocalIndex := PlayerIndex;
     end;
 
-    BaseTemplate := GetBaseSingPlayerTemplate;
     BasePosition := GetBaseOscilloscopePosition;
     Layout := GetSingLaneLayout(LocalPlayerCount, LocalIndex, Theme.Sing.PlayerLayout,
       CurrentSong.isDuet and (PlayersPlay <> 1));
-    GetLaneLayout(LocalPlayerCount, LocalIndex, LaneLeft, LaneRight, LaneTop, LaneWidth);
+    GetLaneLayout(LocalPlayerCount, LocalIndex, LaneLeft, LaneTop, LaneWidth);
     Scale := Layout.WidgetScale;
 
-    FrameW := Max(Theme.Sing.PlayerWidgetLayout.MinFrameW, Round(BaseTemplate.AvatarFrame.W * Scale));
-    FrameH := Max(Theme.Sing.PlayerWidgetLayout.MinFrameH, Round(BaseTemplate.AvatarFrame.H * Scale));
-    ScoreW := Max(Theme.Sing.PlayerWidgetLayout.MinScoreW, Round(BaseTemplate.ScoreBackground.W * Scale));
-    ScoreH := Max(Theme.Sing.PlayerWidgetLayout.MinScoreH, Round(BaseTemplate.ScoreBackground.H * Scale));
-    HeaderOffsetLeft := Round(Theme.Sing.PlayerWidgetLayout.HeaderOffsetLeft * Scale);
     GroupTop := Max(10, LaneTop -
       GetSingHeaderTopOffset(Theme.Sing.PlayerWidgetLayout, Layout.GridRows, Scale));
-    NameX := Max(0, LaneLeft - HeaderOffsetLeft) + FrameW +
-      Max(Theme.Sing.PlayerWidgetLayout.NameGapMinX, Round(Theme.Sing.PlayerWidgetLayout.NameGapBaseX * Scale));
-    NameW := Max(Theme.Sing.PlayerWidgetLayout.NameMinW,
-      (LaneRight - ScoreW - Max(Theme.Sing.PlayerWidgetLayout.NameGapMinX,
-      Round(Theme.Sing.PlayerWidgetLayout.NameGapBaseX * Scale))) - NameX);
-    NameY := GroupTop + Max(0, (FrameH - Max(12, Round(BaseTemplate.Name.Size * Scale))) div 2);
-    NameX := Max(0, NameX - Max(Theme.Sing.PlayerWidgetLayout.NamePaddingMinX,
-      Round(Theme.Sing.PlayerWidgetLayout.NamePaddingBaseX * Scale)));
-    NameY := Max(0, NameY - Max(Theme.Sing.PlayerWidgetLayout.NamePaddingMinY,
-      Round(Theme.Sing.PlayerWidgetLayout.NamePaddingBaseY * Scale)));
 
     Result := BasePosition;
-    Result.X := NameX;
-    Result.Y := NameY + Max(12, Round(BaseTemplate.Name.H * Scale)) +
-      Max(Theme.Sing.PlayerWidgetLayout.OscilloscopeGapMinY,
-      Round(Theme.Sing.PlayerWidgetLayout.OscilloscopeGapBaseY * Scale));
-    Result.W := Min(NameW, Max(Theme.Sing.PlayerWidgetLayout.OscilloscopeMinW, Round(BasePosition.W * Scale)));
+    Result.W := Max(Theme.Sing.PlayerWidgetLayout.OscilloscopeMinW, Round(BasePosition.W * Scale));
     Result.H := Max(Theme.Sing.PlayerWidgetLayout.OscilloscopeMinH, Round(BasePosition.H * Scale));
+    Result.X := GetSingPlayerWidgetX(BasePosition.X, BasePosition.W, Result.W,
+      LaneLeft, LaneWidth, Theme.Sing.PlayerWidgetLayout.OscilloscopeAnchorX,
+      Scale, Theme.Sing.PlayerWidgetLayout);
+    Result.Y := GetSingPlayerWidgetY(BasePosition.Y, GroupTop, Scale,
+      Theme.Sing.PlayerWidgetLayout);
   end;
 var
   PlayerIndex: integer;
