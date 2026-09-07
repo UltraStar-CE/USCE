@@ -260,11 +260,8 @@ var
   PlayerCountOnScreen: integer;
   LocalIndex: integer;
   LaneLeft: integer;
-  LaneRight: integer;
   LaneWidth: integer;
   Scale: real;
-  FrameH: integer;
-  ScoreH: integer;
   ScoreScale: real;
   ScoreOffsetX: integer;
   ScoreOffsetY: integer;
@@ -289,7 +286,6 @@ begin
   Layout := GetSingLaneLayout(PlayerCountOnScreen, LocalIndex, Theme.Sing.PlayerLayout,
     CurrentSong.isDuet and (PlayersPlay <> 1));
   LaneLeft := Layout.ColumnLeft;
-  LaneRight := Layout.ColumnRight;
   LaneWidth := Layout.ColumnWidth;
 
   BaseTemplate := Theme.Sing.PlayerTemplate;
@@ -298,15 +294,18 @@ begin
   ScoreScale := Min(Scale, (LaneWidth * Theme.Sing.PlayerWidgetLayout.ScoreWidthFraction) /
     Max(1.0, BaseTemplate.ScoreBackground.W * 1.0));
 
-  FrameH := Max(Theme.Sing.PlayerWidgetLayout.MinFrameH, Round(BaseTemplate.AvatarFrame.H * Scale));
-  ScoreH := Max(Theme.Sing.PlayerWidgetLayout.MinScoreH, Round(BaseTemplate.ScoreBackground.H * Scale));
   Result.PlayerCount := 0;
-  Result.BGW := Round(BaseTemplate.ScoreBackground.W * ScoreScale);
-  Result.BGH := Round(BaseTemplate.ScoreBackground.H * ScoreScale);
-  Result.BGX := LaneRight - Result.BGW;
+  Result.BGW := Max(Theme.Sing.PlayerWidgetLayout.MinScoreW,
+    Round(BaseTemplate.ScoreBackground.W * ScoreScale));
+  Result.BGH := Max(Theme.Sing.PlayerWidgetLayout.MinScoreH,
+    Round(BaseTemplate.ScoreBackground.H * ScoreScale));
   GroupTop := Max(10, Layout.RowAnchorY -
     GetSingHeaderTopOffset(Theme.Sing.PlayerWidgetLayout, Layout.GridRows, Scale));
-  Result.BGY := GroupTop;
+  Result.BGX := GetSingPlayerWidgetX(BaseTemplate.ScoreBackground.X,
+    BaseTemplate.ScoreBackground.W, Round(Result.BGW), LaneLeft, LaneWidth,
+    Theme.Sing.PlayerWidgetLayout.ScoreAnchorX, ScoreScale, Theme.Sing.PlayerWidgetLayout);
+  Result.BGY := GetSingPlayerWidgetY(BaseTemplate.ScoreBackground.Y, Round(GroupTop),
+    ScoreScale, Theme.Sing.PlayerWidgetLayout);
 
   ScoreOffsetX := BaseTemplate.Score.X - BaseTemplate.ScoreBackground.X;
   ScoreOffsetY := BaseTemplate.Score.Y - BaseTemplate.ScoreBackground.Y;
