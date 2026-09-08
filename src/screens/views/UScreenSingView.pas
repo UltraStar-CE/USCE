@@ -605,10 +605,15 @@ var
   LastLineSungToEnd:      boolean;
   LocalPlayerCount:       integer;
   LocalStartIndex:        integer;
+  FrameSlots:             TSlotArray;
+  AvatarSlots:            TSlotArray;
   TextSlots:              TSlotArray;
+  FrameWasVisible:        array [0..UIni.IMaxPlayerCount-1] of boolean;
+  AvatarWasVisible:       array [0..UIni.IMaxPlayerCount-1] of boolean;
   IterLayoutPlayerCount:  integer;
   SlotIndex:              integer;
   SingPlayer:             TThemeSingPlayer;
+  DrawScorePanel:         boolean;
   procedure SetPlayerNameTexts(const Slots: TSlotArray; FirstPlayerIndex: integer; UseDuetNames: boolean);
   var
     J: integer;
@@ -651,6 +656,31 @@ var
     ScreenSing.LyricsDuetP2.LineColor_act.R := PlayerColor.R;
     ScreenSing.LyricsDuetP2.LineColor_act.G := PlayerColor.G;
     ScreenSing.LyricsDuetP2.LineColor_act.B := PlayerColor.B;
+  end;
+  procedure HidePlayerAvatarsForScorePanel;
+  var
+    J: integer;
+  begin
+    GetSingWidgetSlots(Self, LocalPlayerCount, FrameSlots, AvatarSlots);
+    for J := 0 to LocalPlayerCount - 1 do
+    begin
+      FrameWasVisible[J] := ScreenSing.Statics[FrameSlots[J]].Visible;
+      AvatarWasVisible[J] := ScreenSing.Statics[AvatarSlots[J]].Visible;
+      ScreenSing.Statics[FrameSlots[J]].Visible := false;
+      ScreenSing.Statics[AvatarSlots[J]].Visible := false;
+    end;
+  end;
+  procedure DrawPlayerAvatarsAfterScorePanel;
+  var
+    J: integer;
+  begin
+    for J := 0 to LocalPlayerCount - 1 do
+    begin
+      ScreenSing.Statics[FrameSlots[J]].Visible := FrameWasVisible[J];
+      ScreenSing.Statics[AvatarSlots[J]].Visible := AvatarWasVisible[J];
+      ScreenSing.Statics[FrameSlots[J]].Draw;
+      ScreenSing.Statics[AvatarSlots[J]].Draw;
+    end;
   end;
 begin
   ScreenSing.Background.Draw;
@@ -818,6 +848,11 @@ begin
     ScreenSing.fCurrentVideo.Draw;
   end;
 
+  DrawScorePanel := ScreenSing.Settings.ScoresVisible and
+    ((Ini.SingScores = 1) or Party.bPartyGame);
+  if DrawScorePanel then
+    HidePlayerAvatarsForScorePanel;
+
   // draw static menu (FG)
   ScreenSing.DrawFG;
 
@@ -862,8 +897,11 @@ begin
     DrawInfoLyricBar;
 
   // draw scores
-  if (ScreenSing.Settings.ScoresVisible) and ((Ini.SingScores = 1) or (Party.bPartyGame)) then
+  if DrawScorePanel then
+  begin
     ScreenSing.Scores.Draw;
+    DrawPlayerAvatarsAfterScorePanel;
+  end;
 
   // always draw custom items
   ScreenSing.Statics[StaticLyricsBar].Visible := ScreenSing.Settings.LyricsVisible;
