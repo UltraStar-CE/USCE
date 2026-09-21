@@ -757,7 +757,7 @@ begin
       // simulate sentence switch to clear props
       PreviousSentence;
 
-      CurrentBeat := Floor(GetMidBeat(CurrentSong.PreviewStart - (CurrentSong.GAP) / 1000));
+      CurrentBeat := Round(GetMidBeat(CurrentSong.PreviewStart - (CurrentSong.GAP) / 1000));
       LineIndex := 0;
       while (LineIndex <= CurrentSong.Tracks[CurrentTrack].High) and (CurrentBeat > CurrentSong.Tracks[CurrentTrack].Lines[LineIndex].EndBeat) do
         Inc(LineIndex);
