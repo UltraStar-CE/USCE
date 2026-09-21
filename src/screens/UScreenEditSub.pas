@@ -1254,10 +1254,6 @@ begin
                             GetTimeFromBeat(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].High].EndBeat),
                             GetTimeFromBeat(Notes[High(Notes)].EndBeat));
     end;
-    if (SDL_ModState = KMOD_LALT) then
-    begin
-      PlaySentenceMidi := true;
-    end;
     ScheduleCuePlayback(AudioPlayback.Position, PlayStopTime,
       CurrentSong.Tracks[CurrentTrack].CurrentLine,
       ifthen(SDL_ModState = KMOD_LALT,
