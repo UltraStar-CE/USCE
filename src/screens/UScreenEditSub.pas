@@ -951,7 +951,6 @@ begin
 
   if (SDL_ModState = KMOD_LALT) then
   begin
-    Writeln('ALT+J');
     // simulate sentence switch to clear props
     PreviousSentence;
 
