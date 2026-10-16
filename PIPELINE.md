@@ -1,8 +1,11 @@
 # USCE build and contribution pipeline
 
 We develop through PRs and our published governance, including the recorded solo
-bootstrap phase. Required checks cover Windows installer/portable builds,
-Linux AppImage, Intel and ARM macOS DMG builds, and source whitespace.
+bootstrap phase. Code and build changes require Windows installer/portable builds,
+Linux AppImage, Intel and ARM macOS DMG builds, plus whitespace validation.
+Documentation, banners and translation changes only require whitespace. The
+required gate waits for all builds needed by the changed files on the exact PR
+revision, so failed builds still block merging.
 
 Build jobs use read-only repository tokens. Windows dependencies are currently
 downloaded from the pinned public upstream MXE release by `dldlls.py`; the fork

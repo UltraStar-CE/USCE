@@ -63,16 +63,17 @@ outside the supported paths remain maintainer-led adaptations.
 
 The scheduled tracker is controlled by `USCE_AUTOMATION_ENABLED`. The separate
 API path requires `USCE_AI_ENABLED`, a reviewed `USCE_CODEX_VERSION` and scoped
-API credentials in the `usce-ai-reviews` and `usce-ai-candidates` environments.
+API credentials in the `usce-ai-candidates` environment.
 We keep API use disabled until its cost and end-to-end behavior are reviewed.
 Native Codex reviews do not use these API credentials.
 
-API review jobs read the trusted default-branch implementation and treat PR
-diffs as data. A separate job publishes COMMENT reviews only if the PR revision
-still matches. Tasks are limited to 60 KB of UTF-8 JSON without partial patches;
-responses use short-lived artifacts. Missing patches, binary files and oversized
-changes need manual review. The publisher boundary checks are covered by
-`node --test tools/usce-automation.test.cjs`.
+The upstream tracker has its own daily and manually requested workflow. Optional
+API candidates start only from a selected issue or a manual adaptation request;
+they do not add inactive agent jobs to every PR. Candidate preparation reads the
+trusted default-branch implementation. Tasks are limited to 60 KB of UTF-8 JSON
+without partial patches; responses use short-lived artifacts. Missing patches,
+binary files and oversized changes need manual review. The publisher boundary
+checks are covered by `node --test tools/usce-automation.test.cjs`.
 
 PRs created with GitHub's workflow token do not start ordinary PR CI by
 themselves. We validate them through the isolated path described in

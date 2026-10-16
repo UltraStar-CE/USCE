@@ -186,7 +186,7 @@ whitespace-check:
 	  exit 1; \
 	fi; \
 	base_sha=`git merge-base HEAD "$$base_ref"`; \
-	git --no-pager -c core.whitespace=blank-at-eol diff --no-ext-diff --color --check "$$base_sha" -- './src' ':!./src/lib' ':!./src/webSDK'
+	git --no-pager -c core.whitespace=blank-at-eol diff --no-ext-diff --color --check "$$base_sha" -- . ':!./src/lib' ':!./src/webSDK'
 
 # warning-only variant for local builds
 .PHONY: whitespace-warn

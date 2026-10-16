@@ -2,8 +2,28 @@
 
 We build the Windows installer and portable package, Linux AppImage, and macOS
 ARM and Intel DMGs. We inherited this platform coverage from USDX and retain its
-source whitespace check. Build results belong to the tested USCE commit; an
+whitespace check. Build results belong to the tested USCE commit; an
 upstream success does not substitute for a passing USCE build.
+
+## When builds run
+
+Changes to code, build scripts, workflows and embedded build resources run the
+four platform builds. Documentation, repository banners and translations alone
+run the whitespace check without starting platform builds or automation tests.
+The path definitions live in `tools/ci-build-paths.json`; a consistency check
+keeps workflow filters and the required validation gate aligned. We do not
+rebuild unchanged code on a daily schedule.
+
+GitHub evaluates path filters against at most 3,000 changed files. An unusually
+large PR may need splitting if GitHub omits a required build trigger. The gate
+reports this condition after a minute instead of waiting for a missing workflow
+for the full build timeout. It never treats the missing build as a pass.
+
+Linux AppImages use an older Debian base for compatibility and build their
+dependencies from source when the dependency cache is empty. The first build
+can therefore take substantially longer than compiling the game. Successful
+builds on `main` provide a dependency cache that subsequent PRs can restore.
+Caches saved by one PR cannot be restored by another PR.
 
 ## Windows dependencies
 
@@ -25,8 +45,8 @@ have built and validated matching artifacts and reviewed the downloader change.
 ## Candidate builds
 
 GitHub does not start ordinary PR workflows for PRs created by its workflow
-token. For those candidates, our Build workflow supports an isolated manual run
-from the protected `ci-validation-v1` tag, with the candidate branch or full SHA
+token. For those candidates, the separate Candidate validation workflow supports
+an isolated manual run from the protected `ci-validation-v2` tag, with the candidate branch or full SHA
 as its `ref` input. The tag points to a reviewed workflow revision. Only `main`
 remains as a permanent branch; the validation workflow uses a tag to keep cache
 writes outside the default branch's scope.
@@ -37,23 +57,23 @@ and no stored Git credentials. They receive no AI key or publishing token. A
 separate job that never executes candidate code publishes results on that exact
 SHA. A new candidate commit requires new build results.
 
-Manual jobs have distinct `Manual -` names. The publisher reports the required
-status names against the candidate SHA; it cannot satisfy default-branch checks
-with an unrelated dispatch result. Both macOS statuses require the whole macOS
-matrix to pass. Failed, cancelled or skipped candidate builds report failure.
+Candidate jobs appear only on manually requested validation runs. The publisher
+reports results against the resolved candidate SHA. Its required gate succeeds
+only when whitespace and all four platform jobs pass. Missing, failed,
+cancelled, skipped or ambiguous platform results cannot satisfy that gate.
 
 We review the changes, provenance, tests and reporter feedback before a human
 merge decision. No build or candidate job merges a PR.
 
 ## Required checks
 
-Our branch rules require these GitHub Actions checks:
+Our required GitHub Actions gate is `Check trailing whitespace`. For changes
+that need builds, this check also waits for the complete Build workflow on the
+exact PR head revision. Workflow and automation changes additionally require
+the automation tests. Any failed, cancelled or absent required workflow blocks
+the gate. A previous revision's passing build does not count.
 
-- Build for Windows
-- Build for Linux
-- Build for MacOS (macos-latest)
-- Build for MacOS (macos-15-intel)
-- Check trailing whitespace
-
-These checks use their exact workflow names. Required CI, resolved review
+For documentation-only changes, the same gate completes after whitespace.
+This avoids leaving irrelevant platform checks pending or listing skipped
+manual and agent jobs on ordinary PRs. Required validation, resolved review
 conversations and the published human approval policy apply to maintainers too.
