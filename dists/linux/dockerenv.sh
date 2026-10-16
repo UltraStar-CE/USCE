@@ -21,7 +21,7 @@ done
 targetarch="${ARCH-$(uname -m)}"
 
 if [ "$targetarch" == "x86_64" ]; then
-	imagename="usdx/buildenv:jessie"
+	imagename="usce/buildenv:jessie"
 	from="debian/eol:jessie"
 	fpcpackage="https://sourceforge.net/projects/freepascal/files/Linux/3.2.2/fpc-3.2.2.x86_64-linux.tar"
 	prefixcmd="linux64"
@@ -59,7 +59,7 @@ $SUDO docker run --rm -it \
 	--user $(id -u):$(id -g) \
 	-e "TERM=$TERM" \
 	-e "PS1=[\u@$(tput setaf 6)$(tput bold)\h:$(uname -m)$(tput sgr0) \W]\$ " \
-	-h "usdxbuilder" \
+	-h "uscebuilder" \
 	-w /src/dists/linux \
 	"$imagename" \
 	"$prefixcmd" "$@"

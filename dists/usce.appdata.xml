@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.ultrastarce.usce</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <name>UltraStar Community Edition</name>
+  <summary>Karaoke for your PC</summary>
+  <description>
+    <p>UltraStar Community Edition is a free open source karaoke game for your PC. It records the voice of the players and gives points if they hit the notes. Unlike the commercial alternatives, UltraStar Community Edition allows users to add their own songs.</p>
+  </description>
+  <project_license>GPL-2.0</project_license>
+  <developer id="org.ultrastarce">
+    <name>UltraStar Community Edition contributors</name>
+  </developer>
+  <url type="homepage">https://github.com/UltraStar-CE/USCE</url>
+  <url type="bugtracker">https://github.com/UltraStar-CE/USCE/issues</url>
+  <url type="vcs-browser">https://github.com/UltraStar-CE/USCE</url>
+  <launchable type="desktop-id">usce.desktop</launchable>
+  <content_rating type="oars-1.0" />
+  <requires>
+    <control>voice</control>
+  </requires>
+  <recommends>
+    <control>keyboard</control>
+  </recommends>
+  <supports>
+    <control>pointing</control>
+    <control>gamepad</control>
+  </supports>
+</component>

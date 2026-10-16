@@ -263,7 +263,7 @@ begin
     (ActualColor <> Ini.Color) then
   begin
     UGraphic.UnLoadScreens();
-    UGraphic.LoadScreens(USDXVersionStr);
+    UGraphic.LoadScreens(USCEVersionStr);
     Ini.Load;
     AudioInputProcessor.UpdateInputDeviceConfig();
   end;

@@ -12,3 +12,4 @@ jobs:
         with:
           persist-credentials: false
       - run: node --test tools/usce-automation.test.cjs
+      - run: python3 tools/check-usce-branding.py

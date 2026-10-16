@@ -35,21 +35,21 @@ RM_REC    ?= $(RM) -r
 # General package configuration
 #################################################
 
-USDX_PACKAGE_NAME := @PACKAGE_NAME@
-USDX_VERSION := @PACKAGE_VERSION@
-USDX_TARNAME := @PACKAGE_TARNAME@
+USCE_PACKAGE_NAME := @PACKAGE_NAME@
+USCE_VERSION := @PACKAGE_VERSION@
+USCE_TARNAME := @PACKAGE_TARNAME@
 
 #################################################
-# USDX Paths
+# USCE Paths
 #################################################
 
-USDX_SRC_DIR   := $(top_srcdir)/src
-USDX_GAME_DIR  := $(top_srcdir)/game
-USDX_TOOLS_DIR := $(top_srcdir)/tools
-USDX_BUILD_DIR := $(top_srcdir)/build
-USDX_LIB_DIR   := $(USDX_SRC_DIR)/lib
+USCE_SRC_DIR   := $(top_srcdir)/src
+USCE_GAME_DIR  := $(top_srcdir)/game
+USCE_TOOLS_DIR := $(top_srcdir)/tools
+USCE_BUILD_DIR := $(top_srcdir)/build
+USCE_LIB_DIR   := $(USCE_SRC_DIR)/lib
 
-INSTALL_DATADIR := $(datadir)/$(USDX_PACKAGE_NAME)
+INSTALL_DATADIR := $(datadir)/$(USCE_PACKAGE_NAME)
 
 #################################################
 # FPC config
@@ -65,11 +65,11 @@ PPROCESSOR := @FPC_PROCESSOR@
 PUNIT_FLAGS := -Fu.
 
 # Directory where compiled units (.ppu and .o files) are stored
-PCUNIT_DIR   := $(USDX_BUILD_DIR)/fpc-$(PPROCESSOR)-$(PPLATFORM)
+PCUNIT_DIR   := $(USCE_BUILD_DIR)/fpc-$(PPROCESSOR)-$(PPLATFORM)
 PCUNIT_FLAGS := -FU$(PCUNIT_DIR)
 
 # Directories added to the includes path
-PINC_FLAGS := -Fi$(USDX_LIB_DIR)/JEDI-SDL/SDL/Pas
+PINC_FLAGS := -Fi$(USCE_LIB_DIR)/JEDI-SDL/SDL/Pas
 
 ##
 # PFLAGS
@@ -139,20 +139,20 @@ endif
 PFLAGS_ALL = $(PFLAGS) $(PDEFINES) $(PLINKFLAGS) $(PLDFLAGS) $(PINC_FLAGS) $(PUNIT_FLAGS) $(PCUNIT_FLAGS) $(PFLAGS_WINDOWS_GUI)
 
 #################################################
-# USDX project config
+# USCE project config
 #################################################
 
 # dpr project file used as input
-USDX_PROJ := ultrastardx.dpr
+USCE_PROJ := usce.dpr
 # name of executable
-USDX_BIN_NAME ?= ultrastardx$(EXEEXT)
-USDX_BIN := $(USDX_GAME_DIR)/$(USDX_BIN_NAME)
+USCE_BIN_NAME ?= usce$(EXEEXT)
+USCE_BIN := $(USCE_GAME_DIR)/$(USCE_BIN_NAME)
 
 #################################################
 # ProjectM
 #################################################
 
-PROJECTM_CWRAPPER_DIR := $(USDX_LIB_DIR)/projectM/cwrapper
+PROJECTM_CWRAPPER_DIR := $(USCE_LIB_DIR)/projectM/cwrapper
 PROJECTM_CWRAPPER_LIB := $(PROJECTM_CWRAPPER_DIR)/libprojectM-cwrapper.a
 USE_PROJECTM_CWRAPPER := @USE_PROJECTM_CWRAPPER@
 
@@ -160,7 +160,7 @@ USE_PROJECTM_CWRAPPER := @USE_PROJECTM_CWRAPPER@
 # OpenCV
 #################################################
 
-OPENCV_CWRAPPER_DIR := $(USDX_LIB_DIR)/openCV3
+OPENCV_CWRAPPER_DIR := $(USCE_LIB_DIR)/openCV3
 OPENCV_CWRAPPER_LIB := $(OPENCV_CWRAPPER_DIR)/libopenCV-cwrapper.a
 USE_OPENCV_CWRAPPER := @USE_OPENCV_CWRAPPER@
 USE_OPENCV_CWRAPPER_DLL ?= no
@@ -230,7 +230,7 @@ rebuild: clean_obj
 # builds and renders debugging difficult (because FPC uses outdated
 # .ppu/.o data of files that have been changed).
 .PHONY: build
-build: $(USDX_BIN)
+build: $(USCE_BIN)
 
 #################################################
 # build
@@ -247,13 +247,13 @@ SRC_FILES = $(shell find $(srcdir) -name "*.inc" -o -name "*.pas" -o -name "*.pp
 # See [info autoconf], "19.5 How Do I `#define' Installation Directories?"
 #
 # Do NOT use paths.inc as target name as it is in the requisite list
-# of $(USDX_BIN).
+# of $(USCE_BIN).
 .PHONY: create-pathinfo
 create-pathinfo:
 	echo "INSTALL_DATADIR = '$(INSTALL_DATADIR)';" > paths.inc
 
 # check if any src-file changed and rebuild
-$(USDX_BIN): $(USDX_PROJ) $(STATIC_LIBS) $(SRC_FILES)
+$(USCE_BIN): $(USCE_PROJ) $(STATIC_LIBS) $(SRC_FILES)
 	@echo "==================================="
 	@echo "Changed files:"
 	@echo "$?"
@@ -267,7 +267,7 @@ $(USDX_BIN): $(USDX_PROJ) $(STATIC_LIBS) $(SRC_FILES)
 
 	$(MKDIR) "$(PCUNIT_DIR)"
 	$(MAKE) create-pathinfo
-	$(PPC) $(strip $(PFLAGS_ALL)) -o$@ $(USDX_PROJ)
+	$(PPC) $(strip $(PFLAGS_ALL)) -o$@ $(USCE_PROJ)
 
 #################################################
 # clean-up
@@ -283,4 +283,4 @@ clean_obj: clean_bin
 
 .PHONY: clean_bin
 clean_bin:
-	$(RM) "$(USDX_BIN)"
+	$(RM) "$(USCE_BIN)"

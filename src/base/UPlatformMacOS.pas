@@ -53,7 +53,7 @@ type
 
       {**
        * GetApplicationSupportPath returns the path to
-       * $HOME/Library/Application Support/UltraStarDeluxe_[USDX_VERSION].
+       * $HOME/Library/Application Support/UltraStarDeluxe_[USCE_VERSION].
        *}
       function GetApplicationSupportPath: IPath;
 
@@ -66,14 +66,14 @@ type
       {**
        * Init simply calls @link(CreateUserFolders), which in turn scans the
        * folder UltraStar Deluxe.app/Contents for all files and
-       * folders. $HOME/Library/Application Support/UltraStarDeluxe_[USDX_VERSION]
+       * folders. $HOME/Library/Application Support/UltraStarDeluxe_[USCE_VERSION]
        * is then checked for their presence and missing ones are copied.
        *}
       procedure Init; override;
 
       {**
        * GetLogPath returns the path for log messages. Currently it is set to
-       * $HOME/Library/Logs/UltraStar Deluxe/.
+       * $HOME/Library/Logs/UltraStar Community Edition/.
        *}
       function  GetLogPath:        IPath; override;
 
@@ -85,14 +85,14 @@ type
 
       {**
        * GetGameSharedPath returns the path for shared resources. Currently it
-       * is also set to $HOME/Library/Application Support/UltraStarDeluxe_[USDX_VERSION].
+       * is also set to $HOME/Library/Application Support/UltraStarDeluxe_[USCE_VERSION].
        * However it is not used.
        *}
       function  GetGameSharedPath: IPath; override;
 
       {**
        * GetGameUserPath returns the path for user resources. Currently it is
-       * set to $HOME/Library/Application Support/UltraStarDeluxe_[USDX_VERSION].
+       * set to $HOME/Library/Application Support/UltraStarDeluxe_[USCE_VERSION].
        * This is where a user can add themes, ....
        *}
       function  GetGameUserPath:   IPath; override;
@@ -155,7 +155,9 @@ end;
 function TPlatformMacOS.GetApplicationSupportPath: IPath;
 begin
 // append the version for conflict resolution
-  Result := GetHomeDir.Append('Library/Application Support/UltraStar Deluxe', pdAppend);
+  Result := GetHomeDir.Append('Library/Application Support/UltraStar Community Edition', pdAppend);
+  if not Result.Append('config.ini').Exists() and GetHomeDir.Append('Library/Application Support/UltraStar Deluxe/config.ini').Exists() then
+    Result := GetHomeDir.Append('Library/Application Support/UltraStar Deluxe', pdAppend);
 end;
 
 function TPlatformMacOS.GetLogPath: IPath;
@@ -163,12 +165,14 @@ begin
   if (IsLocal) then
     Result := Path(ExecutionDir.ToNative())
   else
-    Result := GetHomeDir.Append('Library/Logs/UltraStar Deluxe', pdAppend)
+    Result := GetHomeDir.Append('Library/Logs/UltraStar Community Edition', pdAppend)
 end;
 
 function TPlatformMacOS.GetMusicPath: IPath;
 begin
-  Result := GetHomeDir.Append('Music/UltraStar Deluxe', pdAppend);
+  Result := GetHomeDir.Append('Music/UltraStar Community Edition', pdAppend);
+  if not Result.Exists() and GetHomeDir.Append('Music/UltraStar Deluxe').Exists() then
+    Result := GetHomeDir.Append('Music/UltraStar Deluxe', pdAppend);
 end;
 
 function TPlatformMacOS.GetGameSharedPath: IPath;

@@ -9,3 +9,9 @@ Edit this USCE social banner. Preserve the USCE star/microphone mark, exact text
 
 ICON
 Use case: logo-brand. Asset: standalone square USCE desktop application icon, 1024x1024. Use the supplied identity board as visual reference. Reproduce the upper-right color app icon as a full square asset: same five-point star integrating the white microphone and cable notch, same cyan, violet, magenta treatment on deep navy background. One large centered symbol, 12 percent safe padding, clean crisp silhouette, no lettering, no subtitle, no mockup, no white surrounding margin. Full-bleed opaque navy background with subtly rounded inset icon treatment, simple enough to recognize at 32 pixels. Do not add any new symbol or embellishment.
+
+INSTALLER SIDEBAR
+Tall navy installer panel using the USCE star and microphone, white USCE wordmark and UltraStar Community Edition subtitle, cyan and magenta light and sound waves, no people, crowds, hands or gestures. See usce-installer-sidebar.png.
+
+MENU BACKGROUND EDITS
+For each blue, summer, winter and fall menu image: replace only the upper-right UltraStar Deluxe logo with a small white USCE wordmark and the reference star/microphone symbol; keep the background subject, framing, color and texture. No people, border or extra words. Generated with the built-in OpenAI image tool and converted to the original 800x600 JPEG dimensions.

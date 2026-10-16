@@ -129,18 +129,18 @@ jobs:
         run: |
           del game\*.debug
           xcopy game\*.dll installer\dependencies\dll /y
-          & 'C:\Program Files (x86)\NSIS\makensis.exe' "installer/UltraStar Deluxe.nsi"
-          mv installer\dist\UltraStar.Deluxe_*_installer.exe UltraStarDeluxe-windows-installer-${{ env.versionName }}.exe
+          & 'C:\Program Files (x86)\NSIS\makensis.exe' "installer/UltraStar Community Edition.nsi"
+          mv installer\dist\USCE_v*_installer.exe USCE-windows-installer-${{ env.versionName }}.exe
       - name: Upload Installer Artifact
         uses: actions/upload-artifact@v6
         with:
-          name: UltraStarDeluxe-windows-installer-${{ env.versionName }}
-          path: UltraStarDeluxe-windows-installer-${{ env.versionName }}.exe
+          name: USCE-windows-installer-${{ env.versionName }}
+          path: USCE-windows-installer-${{ env.versionName }}.exe
           if-no-files-found: error
       - name: Upload Portable Artifact
         uses: actions/upload-artifact@v6
         with:
-          name: UltraStarDeluxe-windows-portable-${{ env.versionName }}
+          name: USCE-windows-portable-${{ env.versionName }}
           path: game
           if-no-files-found: error
 
@@ -211,12 +211,12 @@ jobs:
       - name: Build
         run: make macos-dmg
       - name: Rename DMG
-        run: mv "UltraStar Deluxe.dmg" "UltraStarDeluxe-mac-${{ env.arch }}-${{ env.versionName }}.dmg"
+        run: mv "UltraStar Community Edition.dmg" "USCE-mac-${{ env.arch }}-${{ env.versionName }}.dmg"
       - name: Upload Image Artifact
         uses: actions/upload-artifact@v6
         with:
-          name: UltraStarDeluxe-mac-${{ env.arch }}-${{ env.versionName }}
-          path: UltraStarDeluxe-mac-${{ env.arch }}-${{ env.versionName }}.dmg
+          name: USCE-mac-${{ env.arch }}-${{ env.versionName }}
+          path: USCE-mac-${{ env.arch }}-${{ env.versionName }}.dmg
           if-no-files-found: error
 
   build_linux:
@@ -253,18 +253,18 @@ jobs:
           cache-from: ${{ github.event_name != 'workflow_dispatch' && 'type=gha' || '' }}
           cache-to: ${{ github.event_name != 'workflow_dispatch' && 'type=gha,mode=max,ignore-error=true' || '' }}
           load: true
-          tags: usdx/buildenv:latest
+          tags: usce/buildenv:latest
       - name: Build
         run: |
           cd dists/linux
           sed -i '/docker/s/-it\>//' dockerenv.sh
-          ./dockerenv.sh --use-existing=usdx/buildenv:latest make compress
-          mv UltraStar*.AppImage ../../UltraStarDeluxe-linux-${{ env.versionName }}.AppImage
+          ./dockerenv.sh --use-existing=usce/buildenv:latest make compress
+          mv USCE*.AppImage ../../USCE-linux-${{ env.versionName }}.AppImage
       - name: Upload Image Artifact
         uses: actions/upload-artifact@v6
         with:
-          name: UltraStarDeluxe-linux-${{ env.versionName }}
-          path: UltraStarDeluxe-linux-${{ env.versionName }}.AppImage
+          name: USCE-linux-${{ env.versionName }}
+          path: USCE-linux-${{ env.versionName }}.AppImage
           if-no-files-found: error
 
   manual_whitespace:

@@ -113,7 +113,7 @@ begin
       SDLK_R: begin
         UGraphic.UnLoadScreens();
         Theme.LoadTheme(Ini.Theme, Ini.Color);
-        UGraphic.LoadScreens(USDXVersionStr);
+        UGraphic.LoadScreens(USCEVersionStr);
       end;
 
       SDLK_T: begin
