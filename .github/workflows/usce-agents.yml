@@ -73,7 +73,7 @@ jobs:
             await require('./tools/usce-automation.cjs').prepare({github, context, core});
   agent:
     needs: prepare
-    if: needs.prepare.outputs.task != ''
+    if: needs.prepare.outputs.task != '' && needs.prepare.outputs.kind != 'manual'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: ${{ needs.prepare.outputs.kind == 'review' && 'usce-ai-reviews' || 'usce-ai-candidates' }}
@@ -131,7 +131,9 @@ jobs:
             human must validate candidates. Output the required JSON schema.
   publish:
     needs: [prepare, agent]
-    if: needs.agent.outputs.result != ''
+    if: >-
+      always() && needs.prepare.result == 'success' &&
+      (needs.prepare.outputs.kind == 'manual' || needs.agent.outputs.result != '')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -149,5 +151,9 @@ jobs:
           USCE_RESULT: ${{ needs.agent.outputs.result }}
         with:
           script: |
+            const task = JSON.parse(process.env.USCE_TASK);
+            const result = task.kind === 'manual'
+              ? JSON.stringify({summary: task.input.reason, validation: 'Not run. Preflight requires manual assessment.', files: []})
+              : process.env.USCE_RESULT;
             await require('./tools/usce-automation.cjs').publish(
-              {github, context, core}, process.env.USCE_TASK, process.env.USCE_RESULT);
+              {github, context, core}, process.env.USCE_TASK, result);
