@@ -5,16 +5,45 @@ on:
     branches:
       - master
   pull_request:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch or full SHA to build (for bot-created candidate PRs)'
+        type: string
+        default: master
+        required: true
   # Run every day at 5:40.
   schedule:
     - cron:  '40 5 * * *'
+permissions:
+  contents: read
 jobs:
+  resolve:
+    name: Resolve build source
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.source.outputs.sha }}
+    steps:
+      - id: source
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          script: |
+            let sha = context.sha;
+            if (context.eventName === 'workflow_dispatch') {
+              const r = await github.rest.repos.getCommit({...context.repo, ref: context.payload.inputs.ref});
+              sha = r.data.sha;
+            }
+            core.setOutput('sha', sha);
   build_windows:
+    needs: resolve
     name: Build for Windows
     runs-on: windows-2022
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+          persist-credentials: false
       - name: Determine version
         run: |
           $VNAME=$(cat VERSION | sed "s/+dev$/+dev-$(git rev-parse --short HEAD)/")
@@ -44,7 +73,6 @@ jobs:
           7z x -y usdx-dlls-x86_64.zip -ogame "*.dll"
           7z x -y usdx-dlls-x86_64.zip -osrc "config-win.inc"
         env:
-          ARTIFACT_ACCESS_TOKEN: ${{ secrets.MxeActionsReadAccessToken }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Build
         shell: msys2 {0}
@@ -77,6 +105,7 @@ jobs:
           if-no-files-found: error
 
   build_mac:
+    needs: resolve
     name: Build for MacOS (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
@@ -92,7 +121,10 @@ jobs:
       PROJECTM_SHA: 16e4610b4d58981f7a2351faa58d507d3f40163a7b26ba81e19aec928c66641f
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+          persist-credentials: false
       - name: Determine version
         run: |
           VNAME=$(cat VERSION | sed "s/+dev$/+dev-$(git rev-parse --short HEAD)/")
@@ -147,11 +179,15 @@ jobs:
           if-no-files-found: error
 
   build_linux:
+    needs: resolve
     name: Build for Linux
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+          persist-credentials: false
       - name: Determine version
         run: |
           VNAME=$(cat VERSION | sed "s/+dev$/+dev-$(git rev-parse --short HEAD)/")
@@ -188,3 +224,53 @@ jobs:
           name: UltraStarDeluxe-linux-${{ env.versionName }}
           path: UltraStarDeluxe-linux-${{ env.versionName }}.AppImage
           if-no-files-found: error
+
+  manual_whitespace:
+    name: Manual whitespace check
+    if: github.event_name == 'workflow_dispatch'
+    needs: resolve
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Check candidate against the default branch
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          git -c core.whitespace=blank-at-eol diff --check "origin/$DEFAULT_BRANCH...HEAD" -- './src' ':!./src/lib' ':!./src/webSDK'
+
+  publish_manual_status:
+    name: Publish manual candidate build statuses
+    if: always() && github.event_name == 'workflow_dispatch' && needs.resolve.result == 'success'
+    needs: [resolve, build_windows, build_mac, build_linux, manual_whitespace]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      statuses: write
+    steps:
+      # This fresh job never checks out or executes candidate code.
+      - uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          TARGET_SHA: ${{ needs.resolve.outputs.sha }}
+          WINDOWS_RESULT: ${{ needs.build_windows.result }}
+          MAC_RESULT: ${{ needs.build_mac.result }}
+          LINUX_RESULT: ${{ needs.build_linux.result }}
+          LINT_RESULT: ${{ needs.manual_whitespace.result }}
+        with:
+          script: |
+            const target_url = context.serverUrl + '/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId;
+            const results = [
+              ['Build for Windows', process.env.WINDOWS_RESULT],
+              ['Build for Linux', process.env.LINUX_RESULT],
+              ['Build for MacOS (macos-latest)', process.env.MAC_RESULT],
+              ['Build for MacOS (macos-15-intel)', process.env.MAC_RESULT],
+              ['Check trailing whitespace', process.env.LINT_RESULT],
+            ];
+            for (const [check, result] of results) {
+              await github.rest.repos.createCommitStatus({...context.repo, sha: process.env.TARGET_SHA,
+                context: check, state: result === 'success' ? 'success' : 'failure',
+                description: 'Manual candidate validation: ' + result, target_url});
+            }
