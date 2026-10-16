@@ -1,6 +1,8 @@
 # Instructions for coding and review agents
 
 Read CONTRIBUTING.md, GOVERNANCE.md, DEVELOPMENT.md, and COMPILING.md.
+Use threat-model.md to assess security findings against the desktop application's
+actual inputs, trust boundaries and expected user privileges.
 Preserve upstream copyright, licenses, authorship, and compatible song/config
 behavior. Do not bundle music or artwork without documented permission.
 
