@@ -33,11 +33,19 @@ that exact SHA. Both macOS checks require success of the entire macOS matrix.
 Any failed, cancelled, or skipped build is reported as failure. The ordinary
 source whitespace check is also run for manual candidate builds.
 
+Manual jobs use distinct `Manual -` check names on the dispatch ref. Only the
+separate publisher reports the normal required status names on the resolved
+candidate SHA. Candidate results therefore cannot satisfy the default branch's
+normal build checks. New PR pushes cancel obsolete builds for that PR; manual
+and default-branch builds are not cancelled by this policy.
+
 A human must inspect the PR, build results, tests, source provenance, and reporter
 feedback. New commits require another build. This is a manual validation path,
 not a merge action. No job enables automatic merging.
 
 ## Required checks
+
+The following names intentionally match the workflow exactly, including `MacOS`:
 
 - Build for Windows
 - Build for Linux
