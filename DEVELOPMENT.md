@@ -1,8 +1,8 @@
 [![License](https://img.shields.io/badge/license-GPLv2-blue.svg)](LICENSE)
 
-# Welcome to UltraStar Deluxe (USDX) development!
+# USCE development
 
-The intention of this document is to introduce you to USDX development.
+This guide introduces the inherited USDX codebase. For the USCE contribution and review process, read [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### Commits older than 2016
 In 2016 the project was moved from SourceForge (SVN) to Github (git).
@@ -13,13 +13,13 @@ A git version of this SVN can be found in the [legacy-sourceforge-svn-mirror](ht
 - Freepascal 3.0.0 or later is required for development
 - Please use CamelCase naming. Classes/Units/Types/Functions should start with a capital letter and constants/values/instances should start with small letters
 - You can use Windows or Linux or macOS for development just fine. See readme.md for Linux / macOS install instructions.
-- As soon as whatever you changed works somewhat and doesn't break much of general gameplay, please commit it to the  git code repository. If you work on bigger parts, please use a separate branch and commit your changes there often, so that your work in progress is visible. No one will judge you on work-in-progress code quality - we don't get paid for this so screw the other people if they complain ;-) .
+- Use a feature branch and open a draft PR early so others can help. All changes, including maintainer changes, require independent human review before merge.
 - There is Github Actions continuous integration set up. It will email project members if build of the master branch or some other branch is broken. This is quite helpful because linux users and other more tech savy users tend to run the most recent code so that they can use all the neat new features. Please keep them happy by not breaking too much of general singstar-like karaoke gameplay on the master branch. 
 - If you start working on something that is more then just a small code change, please create an issue in the git repository issue tracker for that and assign it to yourself, so the other developers don't touch it in the mean time.
 - Please write somewhat reusable code and split big problems into smaller functions. :)
-- If you have questions, feel free to ask them on Discord (https://discord.gg/qfS2b7VwDG) or on the Github issue tracker.
+- Ask development questions in the USCE issue tracker.
 - Don't let anyone else tell you what to work on. Do what you like and be free!
-Have fun and enjoy working on a game that easily can hit 5.000 downloads in a week. This is very rewarding work and you can learn a lot!
+Thank you for helping improve the game.
 
 ### Whitespace checks
 - CI checks trailing whitespace in changed lines under `src` (excluding `src/lib` and `src/webSDK`).
