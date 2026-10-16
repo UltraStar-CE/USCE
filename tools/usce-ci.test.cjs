@@ -24,7 +24,7 @@ test('README, policy, translation and banner changes need no build workflow', as
 });
 test('code, build files, resources and deleted code require platform validation', () => {
   for (const file of ['src/base/UMain.pas', 'new-code.pas', 'configure.ac', 'Makefile.in',
-    'dists/linux/Makefile', 'CMakeLists.txt', 'sub/CMakeLists.txt', 'icons/usce.ico', 'game/plugins/test.usdx']) {
+    'dists/linux/Makefile', 'CMakeLists.txt', 'sub/CMakeLists.txt', 'LICENSE', 'icons/usce.ico', 'game/plugins/test.usdx']) {
     assert(requiredWorkflows([file]).includes('main.yml'), file);
   }
   assert.deepEqual(requiredWorkflows(['src/deleted.pas', 'doc/renamed.md']), ['main.yml']);
@@ -58,6 +58,17 @@ test('missing build runs fail closed and queued runs can finish successfully', a
 test('successful platform builds do not hide failed automation checks', async () => {
   const f = fixture(['tools/usce-ci.cjs'], workflow => [run(workflow === 'main.yml' ? 'success' : 'failure')]);
   await assert.rejects(waitForBuilds(f.args), /Required usce-automation-check.yml finished/);
+});
+
+test('large PRs receive an actionable error when GitHub truncates the workflow path filter', async () => {
+  const files = Array.from({length: 3001}, (_, i) => `doc/${i}.md`).concat('src/a.pas');
+  const f = fixture(files, () => []);
+  f.args.timeoutMs = 120000;
+  f.args.pollMs = 20000;
+  await assert.rejects(waitForBuilds(f.args), /Split the change into smaller PRs/);
+  assert.equal(f.calls.length, 4);
+  const complete = fixture(files, () => [run('success')]);
+  await waitForBuilds(complete.args);
 });
 
 test('candidate publisher requires every platform and whitespace on the resolved revision', async () => {

@@ -14,6 +14,11 @@ The path definitions live in `tools/ci-build-paths.json`; a consistency check
 keeps workflow filters and the required validation gate aligned. We do not
 rebuild unchanged code on a daily schedule.
 
+GitHub evaluates path filters against at most 3,000 changed files. An unusually
+large PR may need splitting if GitHub omits a required build trigger. The gate
+reports this condition after a minute instead of waiting for a missing workflow
+for the full build timeout. It never treats the missing build as a pass.
+
 Linux AppImages use an older Debian base for compatibility and build their
 dependencies from source when the dependency cache is empty. The first build
 can therefore take substantially longer than compiling the game. Successful

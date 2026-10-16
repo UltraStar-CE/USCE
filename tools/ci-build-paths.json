@@ -30,6 +30,7 @@
     "**/*.cmake",
     "**/Makefile*",
     "configure.ac",
+    "LICENSE",
     "VERSION",
     ".gitmodules",
     "!**/*.md",

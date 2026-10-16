@@ -57,6 +57,10 @@ async function waitForBuilds({github, context, core, files, now = Date.now,
         core.info(`${workflow}: ${state}`);
         previous.set(workflow, state);
       }
+      if (!run && files.length > 3000 && now() - started >= 60000) {
+        throw Error(`GitHub did not start required ${workflow} for this PR with over 3,000 changed files. ` +
+          'Its path filter can omit files beyond that limit. Split the change into smaller PRs; validation has not passed.');
+      }
       if (!run || run.status !== 'completed') { complete = false; continue; }
       if (run.conclusion !== 'success') {
         throw Error(`Required ${workflow} finished with ${run.conclusion}: ${run.html_url || run.id}`);
