@@ -1,18 +1,28 @@
-# Publishing a USCE release
+# USCE releases
 
-1. Use a reviewed PR to update VERSION, the Pascal version in UConfig.pas,
-   macOS Info.plist, installer version settings, and dists/usce.appdata.xml.
-2. Confirm passing Windows, Linux, ARM macOS and Intel macOS CI on the release
-   commit. Download and test each artifact, including installation and launch.
-3. Verify songs, microphones, configuration reuse, themes and dependency notices.
-   Confirm the public MXE dependency pin has a matching reviewed release.
-4. Create a USCE tag only after review. Draft a release in UltraStar-CE/USCE
-   with the exact source SHA and honest test results. Attach only the matching
-   tested artifacts and their checksums. Publish through a human decision.
-5. Update the release branch VERSION and installer download naming only when
-   the matching USCE installer exists. Never redirect the updater to USDX.
+We publish releases through a human decision after review and testing. Successful
+CI runs provide development artifacts; they are not automatically releases.
 
-No USCE Flathub, distribution package, website or signing identity is assumed.
-The legacy Debian/Gentoo packaging and upstream release history remain source
-references until maintained USCE packages are prepared and tested separately.
-Preserve upstream credits, copyright notices and dependency licenses.
+## What a release includes
+
+Version changes arrive in a reviewed PR covering VERSION, UConfig.pas, macOS
+Info.plist, installer settings and dists/usce.appdata.xml. We require passing
+Windows, Linux, ARM macOS and Intel macOS builds on the release commit, followed
+by installation and launch testing of the actual artifacts.
+
+Our release checks include songs, microphones, themes, configuration reuse and
+dependency notices. The MXE dependency pin must identify a matching reviewed
+release. Published notes identify the exact source SHA, completed testing and
+known limitations. Downloads contain only matching tested artifacts and their
+checksums, with USCE tags identifying the source revision.
+
+The updater refers to the USCE repository and matching USCE installer names.
+Updater metadata changes only when the corresponding installer is available.
+We retain upstream credits, copyright notices and dependency licenses.
+
+## Package availability
+
+We have not published a USCE release yet. USCE Flathub packages, distribution
+packages and signing identities are not currently available. Historical
+Debian/Gentoo recipes and upstream release history remain source references;
+distribution-specific USCE packages need their own maintenance and testing.

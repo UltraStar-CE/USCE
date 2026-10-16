@@ -6,10 +6,9 @@ The executable is `usce` or `usce.exe`, the macOS bundle is
 Linux desktop metadata and the macOS bundle use `org.ultrastarce.usce`.
 
 The generated identity in `branding/` supplies the application, installer and
-package icons. PNG sizes, Windows ICO, macOS ICNS and installer BMP files are
-packaged from the reviewed raster source. Run `tools/package-usce-icons.ps1`
-on Windows to reproduce the format conversion and
-`python tools/check-usce-branding.py` to check platform references.
+package icons. We package PNG sizes, Windows ICO, macOS ICNS and installer BMP
+files from the reviewed raster source with `tools/package-usce-icons.ps1`.
+`python tools/check-usce-branding.py` checks the platform references.
 An editable vector master remains future design work.
 
 ## Existing user data
@@ -21,7 +20,8 @@ new USCE config exists. The macOS song folder similarly keeps an existing legacy
 collection discoverable. Portable builds continue using their writable game
 directory. No configuration, database or song files are moved or deleted.
 The USCE Windows uninstaller targets USCE data paths, not the upstream app's
-legacy data folder. Check data access before switching between editions.
+legacy data folder. We preserve existing configuration and song discovery when
+players switch editions.
 
 ## Intentional upstream references
 
@@ -37,6 +37,6 @@ community content. Legacy data-path strings remain only for discovery.
 
 Older Debian/Gentoo recipes and external Flathub identifiers are historical
 upstream package references. They do not identify a published USCE package.
-Prepare and test distribution-specific USCE packaging separately before use.
+We maintain and test distribution-specific USCE packages separately.
 The installer updater only refers to the USCE repository; publishing a release
 also requires matching installer assets and release metadata.
