@@ -1,0 +1,18 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["summary", "validation", "files"],
+  "properties": {
+    "summary": {"type": "string"},
+    "validation": {"type": "string"},
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "content"],
+        "properties": {"path": {"type": "string"}, "content": {"type": "string"}}
+      }
+    }
+  }
+}
