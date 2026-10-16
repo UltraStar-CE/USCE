@@ -7,12 +7,20 @@ AI reviews are advisory comments, never approvals. Automation never merges.
 
 ## Automatic reviews
 
-The `USCE human review` ruleset requests Copilot reviews on new PRs, draft PRs,
-and new pushes. GitHub makes this conditional on the author's Copilot access
-and available AI credits; verify coverage using an external contributor's PR.
-It is not a guarantee that every author receives a review.
+Use native Codex GitHub reviews with the maintainer's existing ChatGPT plan.
+Automatic Copilot review requests are disabled across USCE, MXE and Themes.
+Do not enable duplicate reviewers or paid API usage as a fallback for a quota
+failure.
 
-The optional Codex workflow covers PRs through `pull_request_target`. It checks
+In [Codex review settings](https://chatgpt.com/settings/code-review), connect
+`UltraStar-CE/USCE`, `UltraStar-CE/mxe` and `UltraStar-CE/Themes`. Enable automatic
+review for each repository, covering all PR authors where supported. Prefer a
+review when a PR is ready; request another after substantial changes rather than
+on every draft push. A maintainer can request a review with `@codex review`.
+Verify a review on a representative PR before treating the connection as active.
+Subscription usage limits still apply; a failed review is not a clean review.
+
+The separate optional API workflow covers PRs through `pull_request_target`. It checks
 out only trusted default-branch code, downloads diffs as data, gives the agent
 read-only access without a write token, and publishes a COMMENT review from a
 separate job. It discards feedback if the PR head changed. Oversized changes
@@ -81,8 +89,8 @@ in this first version covers only the supported USDX source paths.
 4. Set `USCE_CODEX_VERSION` to a reviewed CLI release and optionally set
    `USCE_AI_MODEL`. Set `USCE_AI_ENABLED=true` only after the environments,
    permissions, API budget, and first end-to-end trial have been checked.
-   Native Copilot reviews can remain the only reviewer to avoid duplicate
-   automated feedback. The optional Codex path provides broader author coverage.
+   Native Codex GitHub reviews are the preferred review path. Keep this separate
+   API path disabled unless its additional cost and coverage are needed.
 5. Run a small internal PR, a fork PR, a labeled test issue, and a known upstream
    commit. Check that generated PRs stay draft, approvals are required, and the
    original issue remains open. Inspect the full changes and provenance.
