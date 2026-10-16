@@ -866,8 +866,8 @@ begin
       AltJumpPrefix := '';
     AltJumpModifiers := SDL_ModState;
 
-    //Jump to Artist/Title
-    if ((SDL_ModState and KMOD_LALT <> 0) and (FreeListMode)) then
+    //Jump to Artist/Title (either Alt/Option key)
+    if (((SDL_ModState and (KMOD_LALT + KMOD_RALT)) <> 0) and (FreeListMode)) then
     begin
       if(PressedKey > 1114111) then
       begin
@@ -883,7 +883,7 @@ begin
         I2 := Length(CatSongs.Song);
 
         //Jump To Title
-        if (SDL_ModState = (KMOD_LALT or KMOD_LSHIFT)) then
+        if ((SDL_ModState and (KMOD_LSHIFT + KMOD_RSHIFT)) <> 0) then
         begin
           for I := JumpOffset to High(CatSongs.Song) do
           begin
@@ -904,22 +904,15 @@ begin
           end;
         end
         //Jump to Artist
-        else if (SDL_ModState = KMOD_LALT) then
+        else if ((SDL_ModState and (KMOD_LCTRL + KMOD_RCTRL)) = 0) then
         begin
           JumpStart := Interaction;
           for I := JumpOffset to High(CatSongs.Song) do
           begin
             if (CatSongs.Song[(I + JumpStart) mod I2].Visible) then
             begin
-              if (TSortingType(Ini.Sorting) = sFolder) then
-              begin
-                if CatSongs.Song[(I + JumpStart) mod I2].Main then
-                  TempStr := CatSongs.Song[(I + JumpStart) mod I2].Artist
-                else
-                  TempStr := CatSongs.Song[(I + JumpStart) mod I2].Folder;
-              end
-              else
-                TempStr := CatSongs.Song[(I + JumpStart) mod I2].Artist;
+              // Category buttons store their name in Artist; songs use their artist even inside a folder.
+              TempStr := CatSongs.Song[(I + JumpStart) mod I2].Artist;
               //in case of tabs, the artist string may be enclosed in brackets so we check the first charactere is a bracket then go to next
               // 91 -> '['
               if (Length(TempStr) > 1) and (TempStr[1] = '[') then
