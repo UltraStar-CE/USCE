@@ -29,6 +29,20 @@ maintainers assess review findings before acting on them. A human decides what
 is merged under our governance; an AI review never supplies a required human
 approval or authorizes an automatic merge.
 
+## Development direction and upstream
+
+Contributions to [UltraStar Deluxe](https://github.com/UltraStar-Deluxe/USDX) are
+welcome too. USDX has its own focus, priorities and development cadence. With
+USCE, we aim to move quickly on new features and community-led experiments,
+including ideas that need time to mature. AI-assisted reviews help us support
+that pace while keeping responsibility with the people contributing the code.
+
+We favor configurable additions and clear defaults, so players can try new
+features or keep the experience they prefer. We consider compatibility and
+existing workflows as part of each change. What we build next is shaped by
+community proposals, testing and discussion. We value upstream's work and
+preserve credit when incorporating improvements.
+
 ### Commits older than 2016
 In 2016 the project was moved from SourceForge (SVN) to Github (git).
 Generally, you don't need to look at commits that aren't in the git history, but sometimes you'll want to check something.
