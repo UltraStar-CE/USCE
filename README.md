@@ -1,5 +1,8 @@
 # UltraStar Community Edition
 
+[![Build status](https://github.com/UltraStar-CE/USCE/actions/workflows/main.yml/badge.svg?branch=main&event=push)](https://github.com/UltraStar-CE/USCE/actions/workflows/main.yml?query=branch%3Amain+event%3Apush)
+[![License](https://img.shields.io/badge/license-GPLv2-blue.svg)](LICENSE)
+
 ![USCE](branding/usce-logo-horizontal.png)
 
 An open-source karaoke game for Windows, macOS and Linux, developed by the community.
