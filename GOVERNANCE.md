@@ -51,7 +51,7 @@ feedback; a bare approval or automated review does not qualify.
 
 Review the roster monthly through a public PR with links to qualifying activity.
 People can correct omissions or appeal a decision using the public proposal
-process. Do not collect private activity or use commit counts as a proxy for
+process. Use public contribution evidence rather than commit counts as a proxy for
 contribution quality. The initial bootstrap roster is explicitly identified.
 
 Outside the solo bootstrap exception, every PR needs **one independent human
