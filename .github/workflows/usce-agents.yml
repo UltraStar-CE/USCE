@@ -116,6 +116,10 @@ jobs:
           if-no-files-found: error
           retention-days: 1
   publish:
+    concurrency:
+      group: usce-pr-publication
+      cancel-in-progress: false
+      queue: max
     needs: [prepare, agent]
     if: >-
       always() && needs.prepare.result == 'success' &&
