@@ -1,0 +1,12 @@
+CONCEPT
+Edit the supplied USCE identity concept board. Keep the top logo, top app icon, monochrome symbol, exact typography and spelling, palette and panel layout unchanged. In the bottom banner remove ALL crowds, people, hands, arms and silhouettes. Replace them with a simple deep navy stage gradient, abstract cyan and magenta sound waves and soft lighting, with no human figures or gestures anywhere. Preserve the star/microphone mark and white USCE wordmark and subtitle in that bottom banner. No new text.
+
+LOGO
+Use case: logo-brand. Edit the reference identity concept board into ONE production asset: the isolated primary horizontal USCE logo on a genuinely transparent background. Preserve exactly the star with integrated white microphone and its cyan through violet to magenta color treatment from the upper-left logo, and the heavy dark navy USCE wordmark and the subtitle "UltraStar Community Edition". Remove all other panels, banner, icon tiles, borders, white backdrop and shadows. Crisp clean edges, generous transparent margin, large landscape composition. Exact spelling. No additional words. This is the same identity, not a redesign.
+
+BANNER
+Edit this USCE social banner. Preserve the USCE star/microphone mark, exact text "USCE" and "UltraStar Community Edition", centered layout, cyan and magenta lighting and navy palette. Remove EVERY person, crowd, human silhouette, hand, arm and gesture. Replace the entire bottom crowd area with a calm deep navy stage-like gradient with restrained abstract sound waves and soft colored light haze. No people or body parts anywhere. Polished clean karaoke game banner, no new words, no watermark. Keep the same wide aspect ratio.
+
+ICON
+Use case: logo-brand. Asset: standalone square USCE desktop application icon, 1024x1024. Use the supplied identity board as visual reference. Reproduce the upper-right color app icon as a full square asset: same five-point star integrating the white microphone and cable notch, same cyan, violet, magenta treatment on deep navy background. One large centered symbol, 12 percent safe padding, clean crisp silhouette, no lettering, no subtitle, no mockup, no white surrounding margin. Full-bleed opaque navy background with subtly rounded inset icon treatment, simple enough to recognize at 32 pixels. Do not add any new symbol or embellishment.
+
