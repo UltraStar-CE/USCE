@@ -51,8 +51,14 @@ History rewrites fail for manual assessment rather than silently resetting.
 
 With AI enabled, daily runs also propose one USDX source-commit adaptation at a
 time, in commit order. Each source SHA has a stable candidate branch; open or
-closed PRs are not recreated automatically. Dependencies may require merging
-earlier adaptations first. Use workflow dispatch with kind `upstream` and a full
+closed PRs are not recreated automatically. The queue waits for earlier candidate
+PRs to be merged or explicitly deferred before processing dependent changes.
+Incomplete patches or an agent response without a candidate create a persistent
+manual-assessment draft PR. Scheduled runs then pause without repeating the
+agent call. Closing that PR alone does not clear the pause. Use workflow dispatch
+with kind `upstream` and a full source SHA to retry after resolving prerequisites,
+or record a deferral and advance the reviewed assessment checkpoint.
+Use workflow dispatch with kind `upstream` and a full
 source SHA for a selected commit. Large commits, merge commits with incomplete
 patches, unsupported paths, and MXE/Themes changes need maintainer-led adaptation.
 The automatic tracker covers all three repositories; automatic code adaptation
