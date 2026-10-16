@@ -1,4 +1,5 @@
 'use strict';
+const {isUpstreamProposal} = require('./usce-pr-policy.cjs');
 
 // This module runs only from the trusted default branch, never a PR checkout.
 const TRACKS = [
@@ -35,10 +36,37 @@ async function baseInfo(github, context) {
   return {branch, sha: commit.data.sha, tree: commit.data.tree.sha};
 }
 
+const QUEUED_PR_NOTICE = "\n\nThis proposal is queued because its author already has five open PRs across USCE, MXE and Themes. It can be reopened when a slot is available.";
+
+async function hasBotPRSlot(github, context, exclude) {
+  let count = 0;
+  for (const repo of ['USCE', 'mxe', 'Themes']) {
+    for (let page = 1; ; page++) {
+      const result = await github.rest.pulls.list({owner: context.repo.owner, repo,
+        state: 'open', per_page: 100, page});
+      count += result.data.filter(pr => pr.user?.login === 'github-actions[bot]' && !isUpstreamProposal(pr)
+        && !(exclude?.repo === repo && exclude.number === pr.number)).length;
+      if (count >= 5) return false;
+      if (result.data.length < 100) break;
+    }
+  }
+  return true;
+}
+
 async function openDraft(github, context, base, branch, files, title, body) {
   const repo = context.repo;
   const existing = await github.rest.pulls.list({...repo, state: 'all', head: repo.owner + ':' + branch, per_page: 100});
-  if (existing.data.length) return existing.data[0];
+  if (existing.data.length) {
+    const prior = existing.data[0];
+    if (prior.state === 'open' && prior.user?.login === 'github-actions[bot]' && !isUpstreamProposal(prior)
+        && !await hasBotPRSlot(github, context, {repo: repo.repo, number: prior.number})) {
+      const priorBody = prior.body || '';
+      return (await github.rest.pulls.update({...repo, pull_number: prior.number, state: 'closed',
+        body: priorBody.includes(QUEUED_PR_NOTICE) ? priorBody : priorBody + QUEUED_PR_NOTICE})).data;
+    }
+    return prior;
+  }
+  validateCandidateProse(title + '\n' + body);
   const now = await github.rest.git.getRef({...repo, ref: 'heads/' + base.branch});
   if (now.data.object.sha !== base.sha) throw Error('Default branch changed; rerun against its new head');
   // Refuse replacement of symlinks, submodules, directories, or executable files.
@@ -57,6 +85,12 @@ async function openDraft(github, context, base, branch, files, title, body) {
       }
     }
   }
+  // Workflow-token PR checks may await approval. Apply the cap ourselves.
+  // Publishers share a lock so proposals cannot claim the same slot concurrently.
+  const fullName = repo.owner + '/' + repo.repo;
+  const upstream = isUpstreamProposal({user: {login: 'github-actions[bot]'},
+    base: {repo: {full_name: fullName}}, head: {ref: branch, repo: {full_name: fullName}}});
+  const hasSlot = upstream || await hasBotPRSlot(github, context);
   const tree = await github.rest.git.createTree({...repo, base_tree: base.tree,
     tree: files.map(f => ({path: f.path, mode: '100644', type: 'blob', content: f.content}))});
   const commit = await github.rest.git.createCommit({...repo, message: title, tree: tree.data.sha, parents: [base.sha]});
@@ -69,7 +103,11 @@ async function openDraft(github, context, base, branch, files, title, body) {
     const prior = await github.rest.git.getCommit({...repo, commit_sha: ref.data.object.sha});
     if (prior.data.tree.sha !== tree.data.sha) throw Error('Candidate branch already exists with different content');
   }
-  return (await github.rest.pulls.create({...repo, base: base.branch, head: branch, title, body, draft: true})).data;
+  const publicationBody = body + (hasSlot ? '' : QUEUED_PR_NOTICE);
+  const pr = (await github.rest.pulls.create({...repo, base: base.branch, head: branch, title, body: publicationBody, draft: true})).data;
+  if (hasSlot) return pr;
+  // Keep the commits and discussion, matching the policy for excess human PRs.
+  return (await github.rest.pulls.update({...repo, pull_number: pr.number, state: 'closed'})).data;
 }
 
 async function checkpoint(github, context, base, track) {
@@ -113,8 +151,7 @@ async function trackUpstream({github, context, core}) {
     const pr = await openDraft(github, context, base, name,
       [{path: 'doc/upstream/' + track.id + '-checkpoint.json', content: JSON.stringify(content, null, 2) + '\n'}],
       'Assess upstream ' + track.id + ' changes through ' + delta.to.slice(0, 12),
-      'Upstream changes: ' + delta.url + '\n\nThis PR records an assessment checkpoint only. Before merging, link reviewed adaptation PRs in the appropriate USCE, MXE, or Themes repository for every commit, or record an explicit deferral with a reason. Do not treat this checkpoint as code integration. Preserve source authorship and license notices.\n\n' +
-      'For USDX code adaptation, run the USCE agent workflow with kind=upstream and the source commit SHA. Complex changes and MXE/Themes changes need maintainer-led adaptation PRs.\n\nNo automatic merge. Human approvals and required CI apply.');
+      'Upstream changes: ' + delta.url + '\n\nThis assessment lists the upstream commits for review. It does not change the game. Each commit needs a linked adaptation PR or a reason for deferral before we advance the checkpoint. Original authorship and license notices stay with adapted changes.');
     core.notice('Upstream assessment: ' + pr.html_url);
   }
 }
@@ -173,6 +210,8 @@ async function prepare({github, context, core}) {
         if (!sha) return;
       }
       if (!SHA.test(sha || '')) throw Error('Supply a full source commit SHA');
+      const ancestry = await github.rest.repos.compareCommits({...repoParts(TRACKS[0].repo), base: sha, head: TRACKS[0].ref});
+      if (!['ahead', 'identical'].includes(ancestry.data.status)) throw Error('Upstream source must already be merged into ' + TRACKS[0].ref);
       const source = await github.rest.repos.getCommit({...repoParts(TRACKS[0].repo), ref: sha});
       const files = source.data.files || [];
       const incomplete = !files.length || files.length > 30 || files.some(f => typeof f.patch !== 'string' || !f.patch || f.patch.length > 20000);
@@ -205,16 +244,20 @@ function validateResult(text, kind) {
   if (kind === 'review' && result.files.length) throw Error('Review may not propose file writes');
   // Generated prose must never silently turn a related issue into an issue
   // closed by merging the candidate. Reject all closing-keyword prose.
-  if (kind !== 'review' && /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b/i.test(result.summary + '\n' + result.validation)) {
+  if (kind !== 'review') validateCandidateProse(result.summary + '\n' + result.validation);
+  return result;
+}
+
+function validateCandidateProse(text) {
+  if (/\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b/i.test(text)) {
     throw Error('Candidate prose contains a closing keyword; rewrite without closing references');
   }
-  return result;
 }
 
 async function publish({github, context, core}, taskText, resultText) {
   const task = JSON.parse(taskText);
   const result = validateResult(resultText, task.kind);
-  const validation = '\n\nValidation reported by the agent (not independently verified):\n' + result.validation;
+  const validation = '\n\nAgent-reported validation (not independently verified):\n' + result.validation;
   if (task.kind === 'review') {
     const r = await github.rest.pulls.get({...context.repo, pull_number: task.number});
     if (r.data.state !== 'open' || r.data.head.sha !== task.head) throw Error('PR changed; discard stale review');
@@ -231,7 +274,7 @@ async function publish({github, context, core}, taskText, resultText) {
         [{path: 'doc/upstream/manual/' + task.input.sha + '.json', content: JSON.stringify(content, null, 2) + '\n'}],
         'Manual upstream assessment for ' + task.input.sha.slice(0, 12),
         'Upstream queue paused for ' + task.input.source + '\n\n' + result.summary + validation +
-        '\n\nNo source change was generated. This draft PR persists the pause so daily runs do not repeat the agent call or advance past potentially dependent changes. A maintainer can retry this SHA with workflow dispatch after resolving prerequisites, or record an explicit deferral and advance the reviewed assessment checkpoint. Closing this PR alone does not clear the pause. No automatic merge.');
+        '\n\nNo source change was generated. This draft records an upstream change that needs contributor-led adaptation or an explicit deferral. Dependent changes wait for that assessment.');
       core.notice('Upstream queue paused: ' + pr.html_url);
       return;
     }
@@ -244,20 +287,20 @@ async function publish({github, context, core}, taskText, resultText) {
   }
   const identity = task.kind === 'issue' ? 'issue-' + task.number : 'upstream-' + task.input.sha.slice(0, 12);
   const branch = 'automation/candidate-' + identity + (task.kind === 'issue' ? '-' + task.base.sha.slice(0, 8) : '');
-  const body = 'AI-generated candidate. Human review and required CI are needed.\n\n' + result.summary + validation +
-    (task.kind === 'issue' ? '\n\nRelated issue #' + task.number + '. Reporter confirmation is pending. Do not use closing keywords. A maintainer must provide a tested build or testing instructions.' :
-      '\n\nAdapted from ' + task.input.source + '. Preserve original authorship and credit in the final commit. Record omitted hunks and compatibility adjustments before merge.') +
-    '\n\nThe agent did not execute the candidate. A human must verify tests and provenance. No automatic merge.';
+  const body = 'AI-generated proposal for human review.\n\n' + result.summary + validation +
+    (task.kind === 'issue' ? '\n\nRelated issue #' + task.number + '. Reporter confirmation is pending a test build or testing instructions.' :
+      '\n\nAdapted from ' + task.input.source + '. Upstream author: ' + bounded(task.input.author?.name || 'see the linked source commit', 200) + '. We retain original authorship and credit in adaptation commits; omitted changes and compatibility adjustments are recorded during review.') +
+    '\n\nThe agent has not executed this candidate. Tests and provenance still need human verification.';
   const pr = await openDraft(github, context, task.base, branch, result.files, 'Candidate for ' + identity, body);
   core.notice('Candidate PR: ' + pr.html_url);
-  if (task.kind === 'issue') {
+  if (task.kind === 'issue' && pr.state !== 'closed') {
     const marker = '<!-- usce-candidate:' + pr.number + ' -->';
     const comments = await github.paginate(github.rest.issues.listComments, {...context.repo, issue_number: task.number, per_page: 100});
     if (!comments.some(c => c.body?.includes(marker) && c.user.type === 'Bot')) {
       await github.rest.issues.createComment({...context.repo, issue_number: task.number,
-        body: marker + '\nA candidate fix is available in ' + pr.html_url + '. It still needs maintainer review and a test build. Once a maintainer provides that build or testing instructions, please let us know whether it resolves the issue, still fails, or you cannot test it. No response will be treated as confirmation; this issue stays open for a human decision.'});
+        body: marker + '\nThere is a proposed fix in ' + pr.html_url + '. It needs review and a test build first. Once a build or testing steps are available, please let us know whether it works, still fails, or you cannot test it. Your feedback will help us decide whether the issue is resolved. Until then, it stays open for a human decision.'});
     }
   }
 }
 
-module.exports = {TRACKS, validateFiles, validateResult, openDraft, upstreamDelta, prepare, publish, trackUpstream};
+module.exports = {TRACKS, validateFiles, validateResult, openDraft, upstreamDelta, prepare, publish, trackUpstream, hasBotPRSlot};

@@ -10,6 +10,10 @@ concurrency:
   cancel-in-progress: false
 jobs:
   track:
+    concurrency:
+      group: usce-pr-publication
+      cancel-in-progress: false
+      queue: max
     if: vars.USCE_AUTOMATION_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15

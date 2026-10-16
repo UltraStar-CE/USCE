@@ -47,7 +47,9 @@ in order, with compatibility adjustments recorded in the PR.
 ## Validation and merge decisions
 
 Automated proposals follow our [contribution policy](CONTRIBUTING.md), including
-the five-open-PR limit, required validation and published human review rules.
+required validation and published human review rules. Automated issue candidates
+follow the five-open-PR limit. Automated upstream assessments and adaptations of
+merged upstream changes are exempt and do not count toward that limit.
 Build results identify the exact source revision tested. See
 [USCE-CI.md](USCE-CI.md) for platform coverage.
 
