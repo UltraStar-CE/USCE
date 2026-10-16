@@ -1,5 +1,5 @@
 ; ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~
-; UltraStar Deluxe Un/Installer: Variables
+; UltraStar Community Edition Un/Installer: Variables
 ; ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~
 
 ; Product Information:
@@ -21,7 +21,7 @@
 ;!define ReleaseApp " Stable"
 
 !define installername " Installer"
-!define installerexe "UltraStar.Deluxe_v${VersionStr}${ReleaseMeta}_installer"
+!define installerexe "USCE_v${VersionStr}${ReleaseMeta}_installer"
 
 
 ; generated
@@ -29,14 +29,14 @@
 !define meta StrLower($version)
 
 
-!define name "UltraStar Deluxe"
-!define publisher "USDX Team"
-!define homepage "https://usdx.eu"
+!define name "UltraStar Community Edition"
+!define publisher "USCE contributors"
+!define homepage "https://github.com/UltraStar-CE/USCE"
 !define song_editors "https://open-music-games.org/song-editors/"
-!define forum "https://github.com/UltraStar-Deluxe/USDX/issues"
-!define wiki "https://usdx.eu"
+!define forum "https://github.com/UltraStar-CE/USCE/issues"
+!define wiki "https://github.com/UltraStar-CE/USCE"
 
-!define exe "ultrastardx"
+!define exe "usce"
 !define exeuninstall "Uninstall"
 !define exeupdate "Update"
 
@@ -46,10 +46,10 @@
 
 ; Installer
 
-!define installer_version_path "$LOCALAPPDATA\Temp\usdxversion"
-!define installer_exe_path "$LOCALAPPDATA\Temp\usdxupdate.exe"
-!define version_url "https://raw.githubusercontent.com/UltraStar-Deluxe/USDX/release/VERSION"
-!define update_url "https://github.com/UltraStar-Deluxe/USDX/releases/download/%VERSION%/UltraStar.Deluxe_v%VERSION%+stable_installer.exe"
+!define installer_version_path "$LOCALAPPDATA\Temp\usceversion"
+!define installer_exe_path "$LOCALAPPDATA\Temp\usceupdate.exe"
+!define version_url "https://raw.githubusercontent.com/UltraStar-CE/USCE/release/VERSION"
+!define update_url "https://github.com/UltraStar-CE/USCE/releases/download/%VERSION%/USCE-windows-installer-%VERSION%.exe"
 !define update_mask_online_version "%VERSION%"
 
 ; debug - uncomment for testing

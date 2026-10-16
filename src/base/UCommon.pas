@@ -556,14 +556,14 @@ begin
     mtError: Flags := MB_ICONERROR or MB_OK;
     else Flags := MB_OK;
   end;
-  MessageBox(0, PChar(msg), PChar(USDXVersionStr()), Flags);
+  MessageBox(0, PChar(msg), PChar(USCEVersionStr()), Flags);
 {$ELSE}
   ConsoleWriteln(msg);
   case msgType of
     mtInfo:  Flags := SDL_MESSAGEBOX_INFORMATION;
     mtError: Flags := SDL_MESSAGEBOX_ERROR;
   end;
-  SDL_ShowSimpleMessageBox(Flags, PChar(USDXVersionStr()), PChar(msg), Screen);
+  SDL_ShowSimpleMessageBox(Flags, PChar(USCEVersionStr()), PChar(msg), Screen);
 {$IFEND}
 end;
 

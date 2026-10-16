@@ -1,7 +1,7 @@
-UltraStar Deluxe Linux builder
+UltraStar Community Edition Linux builder
 ==============================
 
-These scripts builds USDX and its dependencies. It copies the required dynamic libraries and outputs a distro-independent package that can be extracted and launched. Run this on Ubuntu 14.04.
+These scripts build USCE and its dependencies. It copies the required dynamic libraries and outputs a distro-independent package that can be extracted and launched. Run this on Ubuntu 14.04.
 
 How to use
 ----------

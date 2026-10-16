@@ -544,29 +544,27 @@ task_opencv() {
 	rm -r build
 }
 
-task_usdx() {
-	start_build ../../.. UltraStar Deluxe
+task_usce() {
+	start_build ../../.. UltraStar Community Edition
 	local OUTPUT="$root/build/$ARCH"
 	bash ./autogen.sh
 	./configure --prefix=/usr PKG_CONFIG_PATH="$PKG_CONFIG_PATH" CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH" CC="$CC" CXX="$CXX" --enable-debug --without-portaudio --with-libprojectM
 	sleep 1
-	make LDFLAGS="-O2 --sort-common --as-needed -z relro" INSTALL_DATADIR="../share/ultrastardx"
+	make LDFLAGS="-O2 --sort-common --as-needed -z relro" INSTALL_DATADIR="../share/usce"
 	rm -rf "$OUTPUT"
 	make DESTDIR="$OUTPUT/" install
 	for i in 32 256 512 ; do
 		mkdir -p "$OUTPUT/usr/share/icons/hicolor/${i}x${i}/apps"
-		cp "$root/../../icons/ultrastardx-icon_${i}.png" "$OUTPUT/usr/share/icons/hicolor/${i}x${i}/apps/ultrastardx.png"
+		cp "$root/../../icons/usce-icon_${i}.png" "$OUTPUT/usr/share/icons/hicolor/${i}x${i}/apps/usce.png"
 	done
-	ln -s "usr/share/icons/hicolor/256x256/apps/ultrastardx.png" "$OUTPUT/.DirIcon"
-	mkdir -p "$OUTPUT/usr/share/icons/hicolor/scalable/apps"
-	cp "$root/../../icons/ultrastardx-icon.svg" "$OUTPUT/usr/share/icons/hicolor/scalable/apps/ultrastardx.svg"
-	ln -s "usr/share/icons/hicolor/scalable/apps/ultrastardx.svg" "$OUTPUT/ultrastardx.svg"
+	ln -s "usr/share/icons/hicolor/256x256/apps/usce.png" "$OUTPUT/.DirIcon"
+	ln -s "usr/share/icons/hicolor/256x256/apps/usce.png" "$OUTPUT/usce.png"
 	mkdir -p "$OUTPUT/usr/share/applications"
-	cp "$root/../ultrastardx.desktop" "$OUTPUT/usr/share/applications"
-	ln -s "usr/share/applications/ultrastardx.desktop" "$OUTPUT/"
+	cp "$root/../usce.desktop" "$OUTPUT/usr/share/applications"
+	ln -s "usr/share/applications/usce.desktop" "$OUTPUT/"
 	mkdir -p "$OUTPUT/usr/share/metainfo"
-	appdata="$OUTPUT/usr/share/metainfo/ultrastardx.appdata.xml"
-	cp "$root/../ultrastardx.appdata.xml" "$appdata"
+	appdata="$OUTPUT/usr/share/metainfo/usce.appdata.xml"
+	cp "$root/../usce.appdata.xml" "$appdata"
 	version=`git describe --tags --match='v*' || true`
 	if [ -n "$version" ] ; then
 		version=${version#v}
@@ -584,7 +582,7 @@ task_usdx() {
 			fi
 		fi
 	fi
-	ln -s usr/bin/ultrastardx "$OUTPUT/AppRun"
+	ln -s usr/bin/usce "$OUTPUT/AppRun"
 	make clean
 }
 

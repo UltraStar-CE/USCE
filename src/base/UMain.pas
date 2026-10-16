@@ -112,7 +112,7 @@ begin
   try
   {$ENDIF}
     SetMultiByteConversionCodePage(CP_UTF8);
-    WindowTitle := USDXVersionStr;
+    WindowTitle := USCEVersionStr;
 
     Platform.Init;
     Log.Title := WindowTitle;
@@ -159,7 +159,7 @@ begin
     Language := TLanguage.Create;
 
     // add const values:
-    Language.AddConst('US_VERSION', USDXVersionStr);
+    Language.AddConst('US_VERSION', USCEVersionStr);
 
     // Skin
     Log.BenchmarkStart(1);

@@ -1,14 +1,14 @@
 [Desktop Entry]
 Version=1.0
 
-Name=UltraStar Deluxe
+Name=UltraStar Community Edition
 Comment=Karaoke program that evaluates your performance
 Comment[de]=Singe Karaoke und messe dich mit anderen Spielern
 
-Icon=ultrastardx
+Icon=usce
 
-TryExec=ultrastardx
-Exec=ultrastardx
+TryExec=usce
+Exec=usce
 StartupNotify=false
 Terminal=false
 

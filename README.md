@@ -1,5 +1,7 @@
 # UltraStar Community Edition
 
+![USCE](branding/usce-logo-horizontal.png)
+
 An open-source karaoke game for Windows, macOS and Linux, developed by the community.
 
 Sing along with your music, score points for pitch and timing, and play together
@@ -12,9 +14,8 @@ We are preparing the first USCE release. We will publish download links here
 after release testing. Until then, contributors can build from source using
 [COMPILING.md](COMPILING.md).
 
-The inherited executable names and configuration locations still use UltraStar
-Deluxe names. See the configuration notes below. Do not assume an upstream package is a
-USCE build.
+The executable is `usce` (`usce.exe` on Windows); the macOS bundle is
+`UltraStar Community Edition.app`. Do not assume an upstream package is a USCE build.
 
 ## Songs and setup
 
@@ -27,17 +28,18 @@ behavior while USCE documentation is being established.
 - To set additional song directories change your config.ini like this:
 ```ini
   [Directories]
-  SongDir1=C:\Users\My\Music\MyUSDXSongs
-  SongDir2=F:\EvenMoreUSDXSongs
+  SongDir1=C:\Users\My\Music\MyUSCESongs
+  SongDir2=F:\EvenMoreUSCESongs
   SongDir...=... (some more directories)
 ```
 - To enable joypad support change config.ini `Joypad=Off` to `Joypad=On`
 - To enable 2 or 3 player each on 2 screens, disable the full screen mode, extend your desktop horizontally and set the resolution to fill one screen. Then, in the config.ini set `Screens=2` and restart the game.
-- The primary folder for songs on macOS is `$HOME/Music/UltraStar Deluxe`, which is created when UltraStar Deluxe is run for the first time.
-- On macOS, by default the `config.ini` file is created in `$HOME/Library/Application Support/UltraStarDeluxe` when UltraStar Deluxe is run for the first time.
+- New macOS song collections use `$HOME/Music/UltraStar Community Edition`. An existing `Music/UltraStar Deluxe` folder remains discoverable until a new USCE folder is created.
+- New installed builds use `~/.usce` on Linux, `%APPDATA%/usce` on Windows when the game folder is not writable, and `$HOME/Library/Application Support/UltraStar Community Edition` on macOS. An existing legacy config is reused when no new USCE config exists. Portable builds continue using their writable game folder. No files are moved or deleted.
 - When running in borderless fullscreen mode, the monitor it runs on can be configured by setting `Graphics.PositionX/Y` to an offset in pixels.
-- If installed via the flatpak package, the primary song folder is `~/.var/app/eu.usdx.UltraStarDeluxe/.ultrastardx/songs/` and the config.ini is located in `~/.var/app/eu.usdx.UltraStarDeluxe/.ultrastardx/` by default. To configure additional song directories, they first need to be made accessible to the flatpak app using the command: `flatpak override eu.usdx.UltraStarDeluxe --filesystem=/your/new/songfolder` - Afterwards, the directory can be added to the config.ini file as usual.
 
+
+USCE has no published Flathub package yet.
 
 ## Help and feedback
 

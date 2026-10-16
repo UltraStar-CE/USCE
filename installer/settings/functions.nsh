@@ -58,7 +58,7 @@ Function un.DeleteIfEmpty
    FindClose $R0
 FunctionEnd
 
-; Finds UltraStar Deluxe process
+; Finds UltraStar Community Edition process
 ;
 
 !define nsProcess::FindProcess `!insertmacro nsProcess::FindProcess`

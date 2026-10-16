@@ -1,13 +1,15 @@
-# Pipeline
-This document lists some quirks and how-to's about the pipeline.
+# USCE build and contribution pipeline
 
-## Windows CI fails to download DLLs
-It fails with a message that it can't find some zip file, and a little further up is `HTTP Error 401: Unauthorized`.
+All changes use PRs and the published governance, including the recorded solo
+bootstrap phase. Required checks cover Windows installer/portable builds,
+Linux AppImage, Intel and ARM macOS DMG builds, and source whitespace.
 
-The pipeline uses a [fine-grained personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token) which expire at some point.
-To get a new one:
-* Go to [Settings - Personal access tokes](https://github.com/settings/personal-access-tokens)
-* Resource owner = UltraStar-Deluxe
-* Repository access = Only select repositories (`mxe`)
-* Permissions: readonly for Actions on the `mxe` repository
-* And then in the [USDX repository actions secrets](https://github.com/UltraStar-Deluxe/USDX/settings/secrets/actions) the token needs to be a `Repository secret` named `MXEACTIONSREADACCESSTOKEN`
+Build jobs use read-only repository tokens. Windows dependencies are currently
+downloaded from the pinned public upstream MXE release by `dldlls.py`; the fork
+does not yet publish an equivalent dependency release. No broad cross-repository
+personal access token is needed by these build jobs.
+
+See [USCE-CI.md](USCE-CI.md) for isolated manual validation of agent candidates
+and [AUTOMATION.md](AUTOMATION.md) for reviews, reporter confirmation, upstream
+tracking and adaptation. AI work stays disabled until its separate activation
+steps are completed. Successful builds create test artifacts, not public releases.

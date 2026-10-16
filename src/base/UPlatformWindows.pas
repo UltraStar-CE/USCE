@@ -182,7 +182,11 @@ begin
   if ExecutionDirWritable then
     Result := GetExecutionDir()
   else
-    Result := GetSpecialPath(CSIDL_APPDATA).Append('ultrastardx', pdAppend);
+  begin
+    Result := GetSpecialPath(CSIDL_APPDATA).Append('usce', pdAppend);
+    if not Result.Append('config.ini').Exists() and GetSpecialPath(CSIDL_APPDATA).Append('ultrastardx/config.ini').Exists() then
+      Result := GetSpecialPath(CSIDL_APPDATA).Append('ultrastardx', pdAppend);
+  end;
 end;
 
 function TPlatformWindows.GetModifiableAssetPaths: IInterfaceList;
@@ -190,7 +194,7 @@ begin
   Result := TInterfaceList.Create;
   if (IsInstalled) then
   begin
-    Result.Add(GetSpecialPath(CSIDL_APPDATA).Append('ultrastardx', pdAppend));
+    Result.Add(GetGameUserPath());
     Result.Add(GetExecutionDir());
   end
   else

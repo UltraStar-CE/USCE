@@ -1,5 +1,5 @@
 ; ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~
-; UltraStar Deluxe Installer: Update
+; UltraStar Community Edition Installer: Update
 ; ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~
 
 !include MUI2.nsh
@@ -486,7 +486,7 @@ Function .onInit
 	!define PRODUCT_NAME111 "${name} ${version}"
 
 	${UAC.I.Elevate.AdminOnly}
-	System::Call 'kernel32::CreateMutexA(i 0, i 0, t "USdx Update.exe") ?e'
+	System::Call 'kernel32::CreateMutexA(i 0, i 0, t "USCE Update.exe") ?e'
 
 	Pop $R0
 

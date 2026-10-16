@@ -42,7 +42,7 @@ type
     encLocale,  // current locale (needs cwstring on linux)
     encUTF8,    // UTF-8
     encCP1250,  // Windows-1250 Central/Eastern Europe (used by Ultrastar)
-    encCP1252,  // Windows-1252 Western Europe (used by UltraStar Deluxe < 1.1)
+    encCP1252,  // Windows-1252 Western Europe (used by UltraStar Community Edition < 1.1)
     encAuto     // try to match the w3c regex and decode as unicode on match
                 // and as fallback if not match
   );

@@ -5,25 +5,25 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleDisplayName</key>
-	<string>UltraStar Deluxe</string>
+	<string>UltraStar Community Edition</string>
 	<key>CFBundleExecutable</key>
-	<string>ultrastardx</string>
+	<string>usce</string>
 	<key>CFBundleGetInfoString</key>
-	<string>UltraStar Deluxe, a SingStar clone</string>
+	<string>UltraStar Community Edition karaoke game</string>
 	<key>CFBundleIconFile</key>
-	<string>ultrastardx.icns</string>
+	<string>usce.icns</string>
 	<key>CFBundleIdentifier</key>
-	<string>org.ultrastardeluxe.ultrastardeluxe</string>
+	<string>org.ultrastarce.usce</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>UltraStar Deluxe</string>
+	<string>UltraStar Community Edition</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>2026.9.0</string>
 	<key>CFBundleSignature</key>
-	<string>USDX</string>
+	<string>USCE</string>
 	<key>CFBundleVersion</key>
 	<string>2026.9.0</string>
 	<key>NSAppleScriptEnabled</key>

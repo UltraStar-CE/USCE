@@ -1,4 +1,4 @@
-// UltraStar Deluxe - Karaoke Game
+// UltraStar Community Edition - Karaoke Game
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 unit UAudioInput_SDL;

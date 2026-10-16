@@ -125,10 +125,10 @@ const
   VERSION_RELEASE = 1;
 
   (*
-   * Current version of UltraStar Deluxe
+   * Current version of UltraStar Community Edition
    *)
    // TODO: inline the contents of ../../VERSION instead
-   USDX_VERSION = '2026.9.0+dev';
+   USCE_VERSION = '2026.9.0+dev';
 
   (*
    * FPC version numbers are already defined as built-in macros:
@@ -194,13 +194,13 @@ const
                       (PORTAUDIO_VERSION_RELEASE * VERSION_RELEASE);
   {$ENDIF}
 
-function USDXVersionStr(): string;
+function USCEVersionStr(): string;
 
 implementation
 
-function USDXVersionStr(): string;
+function USCEVersionStr(): string;
 begin
-  Result := 'UltraStar Deluxe - www.usdx.eu - v' + USDX_VERSION;
+  Result := 'UltraStar Community Edition - github.com/UltraStar-CE/USCE - v' + USCE_VERSION;
 end;
 
 end.
