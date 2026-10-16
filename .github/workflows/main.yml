@@ -1,190 +1,99 @@
 name: Build
-
 on:
   push:
-    branches:
-      - master
+    branches: [main]
+    paths:
+      # ci-build-paths:start
+      - "src/**"
+      - "test/**"
+      - "tools/**"
+      - ".github/workflows/**"
+      - ".github/actions/**"
+      - "dists/**"
+      - "debian/**"
+      - "installer/**"
+      - "icons/**"
+      - "res/**"
+      - "game/plugins/**"
+      - "**/*.pas"
+      - "**/*.dpr"
+      - "**/*.lpr"
+      - "**/*.lpi"
+      - "**/*.inc"
+      - "**/*.c"
+      - "**/*.cpp"
+      - "**/*.h"
+      - "**/*.m"
+      - "**/*.mm"
+      - "**/*.rc"
+      - "**/*.res"
+      - "**/*.lua"
+      - "**/*.usdx"
+      - "**/*.py"
+      - "**/*.sh"
+      - "**/*.cmake"
+      - "**/Makefile*"
+      - "configure.ac"
+      - "LICENSE"
+      - "VERSION"
+      - ".gitmodules"
+      - "!**/*.md"
+      - "!**/*.MD"
+      - "!**/*.rst"
+      - "!**/*.txt"
+      - "**/CMakeLists.txt"
+      # ci-build-paths:end
   pull_request:
-  # Run every day at 5:40.
-  schedule:
-    - cron:  '40 5 * * *'
+    paths:
+      # ci-build-paths:start
+      - "src/**"
+      - "test/**"
+      - "tools/**"
+      - ".github/workflows/**"
+      - ".github/actions/**"
+      - "dists/**"
+      - "debian/**"
+      - "installer/**"
+      - "icons/**"
+      - "res/**"
+      - "game/plugins/**"
+      - "**/*.pas"
+      - "**/*.dpr"
+      - "**/*.lpr"
+      - "**/*.lpi"
+      - "**/*.inc"
+      - "**/*.c"
+      - "**/*.cpp"
+      - "**/*.h"
+      - "**/*.m"
+      - "**/*.mm"
+      - "**/*.rc"
+      - "**/*.res"
+      - "**/*.lua"
+      - "**/*.usdx"
+      - "**/*.py"
+      - "**/*.sh"
+      - "**/*.cmake"
+      - "**/Makefile*"
+      - "configure.ac"
+      - "LICENSE"
+      - "VERSION"
+      - ".gitmodules"
+      - "!**/*.md"
+      - "!**/*.MD"
+      - "!**/*.rst"
+      - "!**/*.txt"
+      - "**/CMakeLists.txt"
+      # ci-build-paths:end
+permissions:
+  contents: read
+concurrency:
+  group: build-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
-  build_windows:
-    name: Build for Windows
-    runs-on: windows-2022
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v6
-      - name: Determine version
-        run: |
-          $VNAME=$(cat VERSION | sed "s/+dev$/+dev-$(git rev-parse --short HEAD)/")
-          echo "versionName=$VNAME" >> $env:GITHUB_ENV
-      - name: Setup MSYS2
-        uses: msys2/setup-msys2@v2
-        with:
-          msystem: MSYS
-          update: false
-          install: >-
-            autoconf-wrapper
-            automake-wrapper
-            git
-            make
-            pkgconf
-            mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-tools
-      - name: Install Dependencies
-        run: |
-          curl.exe -L --max-time 60 -o fpc-installer.exe "https://sourceforge.net/projects/freepascal/files/Win32/3.2.2/fpc-3.2.2.win32.and.win64.exe/download"
-          curl.exe -L --max-time 60 -o nsis-3.05-setup.exe "https://sourceforge.net/projects/nsis/files/NSIS%203/3.05/nsis-3.05-setup.exe/download"
-          Start-Process -FilePath ".\\fpc-installer.exe" -ArgumentList "/TYPE=full /VERYSILENT /SP- /SUPPRESSMSGBOXES /NORESTART" -Wait
-          ./nsis-3.05-setup.exe /S
-      - name: Download prebuilt DLLs
-        run: |
-          python dldlls.py
-          7z x -y usdx-dlls-x86_64.zip -ogame "*.dll"
-          7z x -y usdx-dlls-x86_64.zip -osrc "config-win.inc"
-        env:
-          ARTIFACT_ACCESS_TOKEN: ${{ secrets.MxeActionsReadAccessToken }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build
-        shell: msys2 {0}
-        run: |
-          export PATH="/usr/bin:/mingw64/bin:/c/FPC/3.2.2/bin:/c/FPC/3.2.2/bin/i386-win32:$PATH"
-          export MAKE="/usr/bin/make"
-          export FPCCFG="/c/FPC/3.2.2/bin/i386-win32/fpc.cfg"
-          export FPCDIR="/c/FPC/3.2.2"
-          export FPCMAKE="/c/FPC/3.2.2/bin/i386-win32/fpcmake"
-          ./autogen.sh
-          ./configure
-          make
-      - name: Create installer
-        run: |
-          del game\*.debug
-          xcopy game\*.dll installer\dependencies\dll /y
-          & 'C:\Program Files (x86)\NSIS\makensis.exe' "installer/UltraStar Deluxe.nsi"
-          mv installer\dist\UltraStar.Deluxe_*_installer.exe UltraStarDeluxe-windows-installer-${{ env.versionName }}.exe
-      - name: Upload Installer Artifact
-        uses: actions/upload-artifact@v6
-        with:
-          name: UltraStarDeluxe-windows-installer-${{ env.versionName }}
-          path: UltraStarDeluxe-windows-installer-${{ env.versionName }}.exe
-          if-no-files-found: error
-      - name: Upload Portable Artifact
-        uses: actions/upload-artifact@v6
-        with:
-          name: UltraStarDeluxe-windows-portable-${{ env.versionName }}
-          path: game
-          if-no-files-found: error
-
-  build_mac:
-    name: Build for MacOS (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-latest, macos-15-intel]
-    env:
-      SDL2_VERSION: 2.32.10
-      SDL2_SHA: 5f5993c530f084535c65a6879e9b26ad441169b3e25d789d83287040a9ca5165
-      SDL2_IMAGE_VERSION: 2.8.12
-      SDL2_IMAGE_SHA: 393f5efb50536ec13ca4f4affb69cc9966d3c3f969e6c5e701faddf9f9785381
-      PROJECTM_VERSION: 4.1.7
-      PROJECTM_SHA: 16e4610b4d58981f7a2351faa58d507d3f40163a7b26ba81e19aec928c66641f
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v6
-      - name: Determine version
-        run: |
-          VNAME=$(cat VERSION | sed "s/+dev$/+dev-$(git rev-parse --short HEAD)/")
-          echo "versionName=$VNAME" >> $GITHUB_ENV
-      - name: Determine Arch
-        run: |
-          if [ "${{ matrix.os }}" = "macos-15-intel" ]; then
-            echo "arch=x86" >> $GITHUB_ENV
-          else
-            echo "arch=ARM" >> $GITHUB_ENV
-          fi
-      - name: Install Homebrew Dependencies
-        run: |
-          brew install fpc sdl2-compat sdl2_image automake portaudio lua ffmpeg opencv
-      - name: Cache ProjectM
-        id: cache-projectm
-        uses: actions/cache@v6
-        with:
-          path: ${{github.workspace}}/projectm
-          key: projectm-${{matrix.os}}-${{env.PROJECTM_VERSION}}
-      - name: Build ProjectM
-        if: steps.cache-projectm.outputs.cache-hit != 'true'
-        run: |
-          curl -L -O https://github.com/projectM-visualizer/projectm/releases/download/v$PROJECTM_VERSION/libprojectM-$PROJECTM_VERSION.tar.gz
-          echo "$PROJECTM_SHA libprojectM-$PROJECTM_VERSION.tar.gz" | sha256sum -c -
-          tar -xf libprojectM-$PROJECTM_VERSION.tar.gz
-          cmake -S libprojectM-$PROJECTM_VERSION \
-            -B libprojectM-$PROJECTM_VERSION/build \
-            -DENABLE_PLAYLIST=OFF \
-            -DBUILD_SHARED_LIBS=ON \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/projectm \
-            -DCMAKE_INSTALL_NAME_DIR=$GITHUB_WORKSPACE/projectm/lib \
-            -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON
-          cmake --build libprojectM-$PROJECTM_VERSION/build --target install --parallel
-      - name: Generate Build Scripts
-        run: ./autogen.sh
-      - name: Configure Project
-        run: |
-          libprojectM_VERSION=$PROJECTM_VERSION \
-          LIBS=-L$GITHUB_WORKSPACE/projectm/lib \
-          ./configure --with-opencv-cxx-api --with-libprojectM=nocheck
-      - name: Build
-        run: make macos-dmg
-      - name: Rename DMG
-        run: mv "UltraStar Deluxe.dmg" "UltraStarDeluxe-mac-${{ env.arch }}-${{ env.versionName }}.dmg"
-      - name: Upload Image Artifact
-        uses: actions/upload-artifact@v6
-        with:
-          name: UltraStarDeluxe-mac-${{ env.arch }}-${{ env.versionName }}
-          path: UltraStarDeluxe-mac-${{ env.arch }}-${{ env.versionName }}.dmg
-          if-no-files-found: error
-
-  build_linux:
-    name: Build for Linux
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v6
-      - name: Determine version
-        run: |
-          VNAME=$(cat VERSION | sed "s/+dev$/+dev-$(git rev-parse --short HEAD)/")
-          echo "versionName=$VNAME" >> $GITHUB_ENV
-      - name: Cache build
-        uses: actions/cache@v5
-        with:
-          key: linux-docker-${{ hashFiles('dists/linux/dl.sh', 'dists/linux/tasks.sh', 'dists/linux/dockerenv.sh', 'dists/linux/Dockerfile.in') }}
-          path: |
-            dists/linux/prefix
-      - name: Start container builder
-        uses: docker/setup-buildx-action@v4
-      - name: Generate Dockerfile
-        run: |
-          cd dists/linux
-          ./dockerenv.sh --dockerfile > Dockerfile
-      - name: Build container
-        uses: docker/build-push-action@v7
-        with:
-          context: dists/linux
-          cache-from: type=gha
-          cache-to: type=gha,mode=max,ignore-error=true
-          load: true
-          tags: usdx/buildenv:latest
-      - name: Build
-        run: |
-          cd dists/linux
-          sed -i '/docker/s/-it\>//' dockerenv.sh
-          ./dockerenv.sh --use-existing=usdx/buildenv:latest make compress
-          mv UltraStar*.AppImage ../../UltraStarDeluxe-linux-${{ env.versionName }}.AppImage
-      - name: Upload Image Artifact
-        uses: actions/upload-artifact@v6
-        with:
-          name: UltraStarDeluxe-linux-${{ env.versionName }}
-          path: UltraStarDeluxe-linux-${{ env.versionName }}.AppImage
-          if-no-files-found: error
+  platforms:
+    name: Platforms
+    uses: ./.github/workflows/platform-builds.yml
+    with:
+      ref: ${{ github.sha }}
+      use-caches: true

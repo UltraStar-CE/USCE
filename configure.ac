@@ -15,11 +15,11 @@
 AC_PREREQ(2.61)
 
 # Init autoconf
-AC_INIT([ultrastardx],
+AC_INIT([usce],
         m4_esyscmd_s([cat VERSION]),
-        [https://github.com/UltraStar-Deluxe/USDX/issues/])
+        [https://github.com/UltraStar-CE/USCE/issues/])
 # specify the website here
-PACKAGE_WEBSITE="http://usdx.eu/"
+PACKAGE_WEBSITE="https://github.com/UltraStar-CE/USCE"
 AC_SUBST(PACKAGE_WEBSITE)
 # specify the Discord channel here
 PACKAGE_DISCORD="https://discord.gg/qfS2b7VwDG"
@@ -27,7 +27,7 @@ AC_SUBST(PACKAGE_DISCORD)
 
 AC_CONFIG_MACRO_DIR([dists/autogen/m4])
 # Specify a source-file so autoconf can check if the source-dir exists
-AC_CONFIG_SRCDIR(src/ultrastardx.dpr)
+AC_CONFIG_SRCDIR(src/usce.dpr)
 
 # Set the path to install-sh
 AC_CONFIG_AUX_DIR(dists/autogen)
@@ -135,7 +135,7 @@ if [[ x$enable_global != x -o x$enable_local != x ]]; then
 
 !!! NOTE: --enable-global and --enable-local are deprecated:
 !!! - global build: just type "make" and "make install"
-!!! - local  build: just type "make" and start "game/ultrastardx"
+!!! - local  build: just type "make" and start "game/usce"
 ])
    sleep 2
 fi

@@ -1,5 +1,5 @@
 ; ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~
-; UltraStar Deluxe Installer: Main
+; UltraStar Community Edition Installer: Main
 ; ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~
 
 !include MUI2.nsh
@@ -62,7 +62,7 @@ VIAddVersionKey "ProductVersion" "${version}"
 VIAddVersionKey "LegalCopyright" "${publisher}"
 VIAddVersionKey "LegalTrademarks" "${name} is a trademark of the ${publisher}"
 VIAddVersionKey "OriginalFilename" "${installerexe}.exe"
-VIAddVersionKey "Comments" "The free and open source karaoke singing game UltraStar Deluxe, inspired by Sony SingStar"
+VIAddVersionKey "Comments" "The free and open source karaoke singing game UltraStar Community Edition, inspired by Sony SingStar"
 VIAddVersionKey "CompanyName" "${publisher}"
 
 !system 'md "dist"'
@@ -217,7 +217,7 @@ Function DetermineUserDataDir
 notexists:
 	StrCpy $UseAppData true
 	SetShellVarContext current
-	StrCpy $UserDataPath "$APPDATA\ultrastardx"
+	StrCpy $UserDataPath "$APPDATA\usce"
 	SetShellVarContext all
 end:
 	Delete "$INSTDIR\config.use"	
@@ -367,7 +367,7 @@ Function un.DeleteAll
 	${If} $CB_COVERS_State == "1" ; Remove covers
 		RMDir /r "$INSTDIR\covers"
 		SetShellVarContext current	
-		RMDir /r "$APPDATA\ultrastardx\covers"
+		RMDir /r "$APPDATA\usce\covers"
 		SetShellVarContext all
 	${EndIf}
 
@@ -375,20 +375,20 @@ Function un.DeleteAll
 		RMDir /r "$INSTDIR\avatars"
 		Delete "$INSTDIR\avatar.db"
 		SetShellVarContext current
-		Delete "$APPDATA\ultrastardx\avatar.db"
+		Delete "$APPDATA\usce\avatar.db"
 		SetShellVarContext all
 	${EndIf}
 
 	${If} $CB_CONFIG_State == "1" ; Remove config
 		SetShellVarContext current
-		Delete "$APPDATA\ultrastardx\config.ini" 
+		Delete "$APPDATA\usce\config.ini"
 		SetShellVarContext all
 		Delete "$INSTDIR\config.ini"
 	${EndIf}
 
 	${If} $CB_SCORES_State == "1" ; Remove highscores
 		SetShellVarContext current
-		Delete "$APPDATA\ultrastardx\Ultrastar.db" 
+		Delete "$APPDATA\usce\Ultrastar.db"
 		SetShellVarContext all
 		Delete "$INSTDIR\Ultrastar.db"
 	${EndIf}
@@ -396,21 +396,21 @@ Function un.DeleteAll
 	${If} $CB_SCREENSHOTS_State == "1" ; Remove screenshots
 		RMDir /r "$INSTDIR\screenshots"
 		SetShellVarContext current
-		RMDir /r "$APPDATA\ultrastardx\screenshots"
+		RMDir /r "$APPDATA\usce\screenshots"
 		SetShellVarContext all
 	${EndIf}
 
 	${If} $CB_PLAYLISTS_State == "1" ; Remove playlists
 		RMDir /r "$INSTDIR\playlists"
 		SetShellVarContext current
-		RMDir /r "$APPDATA\ultrastardx\playlists"
+		RMDir /r "$APPDATA\usce\playlists"
 		SetShellVarContext all
 	${EndIf}
 
 	${If} $CB_SONGS_State == "1" ; Remove songs
 		RMDir /r "$INSTDIR\songs"
 		SetShellVarContext current
-		RMDir /r "$APPDATA\ultrastardx\songs"
+		RMDir /r "$APPDATA\usce\songs"
 		SetShellVarContext all
 	${EndIf}
 
@@ -620,7 +620,7 @@ Function .onInit
 
 	${UAC.I.Elevate.AdminOnly}
 
-	System::Call 'kernel32::CreateMutexA(i 0, i 0, t "USdx Installer.exe") ?e'
+	System::Call 'kernel32::CreateMutexA(i 0, i 0, t "USCE Installer.exe") ?e'
 
 	Pop $R0
 
@@ -662,20 +662,12 @@ FunctionEnd
 
 Function un.onInit
 
-	${nsProcess::FindProcess} "USdx.exe" $R0
-	StrCmp $R0 0 0 +2
-	MessageBox MB_YESNO|MB_ICONEXCLAMATION '$(oninit_closeusdx)' IDYES closeit IDNO end
+	${nsProcess::FindProcess} "usce.exe" $R0
+	StrCmp $R0 0 0 continue
+	MessageBox MB_YESNO|MB_ICONEXCLAMATION '$(oninit_closeusdx)' IDYES closeusce IDNO end
 
-closeit:
-	${nsProcess::KillProcess} "USdx.exe" $R0
-	goto continue
-
-	${nsProcess::FindProcess} "ultrastardx.exe" $R0
-	StrCmp $R0 0 0 +2
-	MessageBox MB_YESNO|MB_ICONEXCLAMATION '$(oninit_closeusdx)' IDYES closeusdx IDNO end
-
-closeusdx:
-	${nsProcess::KillProcess} "ultrastardx.exe" $R0
+closeusce:
+	${nsProcess::KillProcess} "usce.exe" $R0
 	goto continue
 
 end:

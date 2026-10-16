@@ -125,7 +125,7 @@ procedure TCMDParams.ShowHelp();
 begin
   writeln;
   writeln('**************************************************************');
-  writeln('  UltraStar Deluxe - Command line switches                    ');
+  writeln('  UltraStar Community Edition - Command line switches                    ');
   writeln('**************************************************************');
   writeln;
   writeln('  '+ Fmt('Switch') +' : Purpose');

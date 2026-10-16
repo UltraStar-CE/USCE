@@ -1,52 +1,66 @@
-# UltraStar Deluxe
+# UltraStar Community Edition
 
-[![Build Status](https://github.com/UltraStar-Deluxe/USDX/actions/workflows/main.yml/badge.svg)](https://github.com/UltraStar-Deluxe/USDX/actions/workflows/main.yml)
+[![Build status](https://github.com/UltraStar-CE/USCE/actions/workflows/main.yml/badge.svg?branch=main&event=push)](https://github.com/UltraStar-CE/USCE/actions/workflows/main.yml?query=branch%3Amain+event%3Apush)
 [![License](https://img.shields.io/badge/license-GPLv2-blue.svg)](LICENSE)
 
-Official Project Website: https://usdx.eu/
+![USCE: UltraStar Community Edition](branding/usce-social-banner.png)
 
-![UltraStar Deluxe Logo](https://github.com/UltraStar-Deluxe/USDX/blob/master/icons/ultrastardx-icon_256.png)
+An open-source karaoke game for Windows, macOS and Linux, developed by the community.
 
+Sing along with your music, score points for pitch and timing, and play together
+with up to six players. USCE includes party modes, themes, and support for a range
+of audio and video formats.
 
-### 1. About
-UltraStar Deluxe (USDX) is a free and open source karaoke game. It allows up to six players to sing along with music using microphones in order to score points, depending on the pitch of the voice and the rhythm of singing.
-UltraStar Deluxe is a fork of the original UltraStar (developed by corvus5).
-Many features have been added like party mode, theme support and support for more audio and video formats.
-The improved stability and code quality of USDX enabled ports to Linux and macOS.
+## Get started
 
-### 2. Installation
-Currently, the following installation channels are offered:
-- installer (or portable version) for [the latest release](https://github.com/UltraStar-Deluxe/USDX/releases/latest)
-- flatpak from [flathub](https://flathub.org/apps/eu.usdx.UltraStarDeluxe)
-- Arch Linux [AUR](https://aur.archlinux.org/packages/ultrastardx-git)
+We are preparing the first USCE release. We will publish download links here
+after release testing. Until then, contributors can build from source using
+[COMPILING.md](COMPILING.md).
 
-### 3. Configuration
+The executable is `usce` (`usce.exe` on Windows); the macOS bundle is
+`UltraStar Community Edition.app`. Do not assume an upstream package is a USCE build.
+
+## Songs and setup
+
+Use UltraStar-format songs that you have permission to use. Songs are managed
+separately from the game. The upstream [controls](https://usdx.eu/docs/controls/)
+and [configuration documentation](https://usdx.eu/docs/) describe the inherited
+behavior while USCE documentation is being established.
+
+### Configuration notes
 - To set additional song directories change your config.ini like this:
 ```ini
   [Directories]
-  SongDir1=C:\Users\My\Music\MyUSDXSongs
-  SongDir2=F:\EvenMoreUSDXSongs
+  SongDir1=C:\Users\My\Music\MyUSCESongs
+  SongDir2=F:\EvenMoreUSCESongs
   SongDir...=... (some more directories)
 ```
 - To enable joypad support change config.ini `Joypad=Off` to `Joypad=On`
 - To enable 2 or 3 player each on 2 screens, disable the full screen mode, extend your desktop horizontally and set the resolution to fill one screen. Then, in the config.ini set `Screens=2` and restart the game.
-- The primary folder for songs on macOS is `$HOME/Music/UltraStar Deluxe`, which is created when UltraStar Deluxe is run for the first time.
-- On macOS, by default the `config.ini` file is created in `$HOME/Library/Application Support/UltraStarDeluxe` when UltraStar Deluxe is run for the first time.
+- New macOS song collections use `$HOME/Music/UltraStar Community Edition`. An existing `Music/UltraStar Deluxe` folder remains discoverable until a new USCE folder is created.
+- New installed builds use `~/.usce` on Linux, `%APPDATA%/usce` on Windows when the game folder is not writable, and `$HOME/Library/Application Support/UltraStar Community Edition` on macOS. An existing legacy config is reused when no new USCE config exists. Portable builds continue using their writable game folder. No files are moved or deleted.
 - When running in borderless fullscreen mode, the monitor it runs on can be configured by setting `Graphics.PositionX/Y` to an offset in pixels.
-- If installed via the flatpak package, the primary song folder is `~/.var/app/eu.usdx.UltraStarDeluxe/.ultrastardx/songs/` and the config.ini is located in `~/.var/app/eu.usdx.UltraStarDeluxe/.ultrastardx/` by default. To configure additional song directories, they first need to be made accessible to the flatpak app using the command: `flatpak override eu.usdx.UltraStarDeluxe --filesystem=/your/new/songfolder` - Afterwards, the directory can be added to the config.ini file as usual.
 
-### 4. Further documentation
-The [documentation](https://usdx.eu/docs/) contains more information on:
-* [Command-line parameters](https://usdx.eu/docs/command-line-parameters/)
-* [Controls](https://usdx.eu/docs/controls/)
-* [Customization](https://usdx.eu/docs/customization/)
 
-### 5. Compiling
-The game has an Autotools-based buildsystem and can be compiled by running `./autogen.sh && ./configure [--enable-debug] && make`. The executable will be `game/ultrastardx[.exe]`.
+USCE has no published Flathub package yet.
 
-For extended information, dependencies, OS-specific notes and configure flags, see [COMPILING.md](COMPILING.md).
+## Help and feedback
 
-### 6. Making a release
-See [RELEASING.md](RELEASING.md)
+Report reproducible problems in [Issues](https://github.com/UltraStar-CE/USCE/issues).
+Include your build, operating system, and steps to reproduce. Ideas, questions,
+and testing feedback help shape the game.
 
-Other useful documents for maintainers: [pipeline info](PIPELINE.md).
+## Take part
+
+Code, translations, themes, documentation, accessibility improvements, and testing
+are all useful contributions. Read [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
+Project proposals and decisions are discussed publicly; see
+[GOVERNANCE.md](GOVERNANCE.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+
+## Credits and license
+
+USCE builds on [UltraStar Deluxe](https://github.com/UltraStar-Deluxe/USDX),
+which derives from UltraStar by corvus5. We thank their contributors for the game
+and the work that makes this edition possible. See [COPYRIGHT.txt](COPYRIGHT.txt),
+the Git history, and [LICENSE](LICENSE) for authorship and license information.
+Third-party libraries and assets retain their own notices.

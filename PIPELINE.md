@@ -1,13 +1,20 @@
-# Pipeline
-This document lists some quirks and how-to's about the pipeline.
+# From contribution to release
 
-## Windows CI fails to download DLLs
-It fails with a message that it can't find some zip file, and a little further up is `HTTP Error 401: Unauthorized`.
+We develop through PRs under our [governance](GOVERNANCE.md). Contributors explain
+the problem, the resulting behavior and what they tested. Maintainer changes and
+automated proposals follow the same process.
 
-The pipeline uses a [fine-grained personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token) which expire at some point.
-To get a new one:
-* Go to [Settings - Personal access tokes](https://github.com/settings/personal-access-tokens)
-* Resource owner = UltraStar-Deluxe
-* Repository access = Only select repositories (`mxe`)
-* Permissions: readonly for Actions on the `mxe` repository
-* And then in the [USDX repository actions secrets](https://github.com/UltraStar-Deluxe/USDX/settings/secrets/actions) the token needs to be a `Repository secret` named `MXEACTIONSREADACCESSTOKEN`
+Code and build changes require Windows installer and portable builds, a Linux
+AppImage, Intel and ARM macOS DMGs, and whitespace validation. Documentation,
+banners and translation-only changes require whitespace validation. The required
+gate waits for the builds needed by the changed files on the exact PR revision.
+Failed or missing required builds block merging.
+
+AI reviews provide additional feedback; people remain responsible for their
+contributions and merge decisions. [DEVELOPMENT.md](DEVELOPMENT.md) explains our
+AI policy. [AUTOMATION.md](AUTOMATION.md) describes candidate fixes, reporter
+feedback and upstream assessment.
+
+Successful builds provide development artifacts for testing. A release is a
+separate human decision after testing the packaged game, as described in
+[RELEASING.md](RELEASING.md).

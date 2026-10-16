@@ -120,7 +120,7 @@ begin
             FadeTo(@ScreenMain);
           end;
 
-          // ultrastar deluxe team credits
+          // UltraStar Community Edition team credits
           if Interaction = 0 then
           begin
             if not ShowCreditsRequested then

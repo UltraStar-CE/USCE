@@ -6,7 +6,7 @@ dest = $(macos_bundle_path)/MacOS/$(notdir $(1))
 # application.
 
 FILES :=
-NEWFILES := $(USDX_BIN) $(EXTRA_DYLIBS)
+NEWFILES := $(USCE_BIN) $(EXTRA_DYLIBS)
 
 define processload
 D := $(1)
@@ -67,7 +67,7 @@ define installdylib
 $(call dest,$(1)): $(1)
 	@echo work on $(1)
 	@$(INSTALL) -m 755  $(1) $(call dest,$(1))
-ifneq ($(1),$(USDX_BIN))
+ifneq ($(1),$(USCE_BIN))
 	@$(INSTALL_NAME_TOOL) -id @executable_path/$(notdir $(1)) $(call dest,$(1))
 endif
 	$$(foreach dylib,$$(call getdylibs,$(1)),$$(call changeimport,$(call dest,$(1)),$$(dylib)))
