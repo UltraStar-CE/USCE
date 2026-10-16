@@ -1,5 +1,8 @@
 # UltraStar Community Edition
 
+[![Build status](https://github.com/UltraStar-CE/USCE/actions/workflows/main.yml/badge.svg?branch=main&event=push)](https://github.com/UltraStar-CE/USCE/actions/workflows/main.yml?query=branch%3Amain+event%3Apush)
+[![License](https://img.shields.io/badge/license-GPLv2-blue.svg)](LICENSE)
+
 ![USCE](branding/usce-logo-horizontal.png)
 
 An open-source karaoke game for Windows, macOS and Linux, developed by the community.
@@ -10,9 +13,9 @@ of audio and video formats.
 
 ## Get started
 
-USCE is being set up. There is no USCE release yet. Download links will be added
-here after the first builds have been tested. Developers can build from source
-using [COMPILING.md](COMPILING.md).
+We are preparing the first USCE release. We will publish download links here
+after release testing. Until then, contributors can build from source using
+[COMPILING.md](COMPILING.md).
 
 The executable is `usce` (`usce.exe` on Windows); the macOS bundle is
 `UltraStar Community Edition.app`. Do not assume an upstream package is a USCE build.
@@ -44,9 +47,8 @@ USCE has no published Flathub package yet.
 ## Help and feedback
 
 Report reproducible problems in [Issues](https://github.com/UltraStar-CE/USCE/issues).
-Include your build, operating system, and steps to reproduce. Please remove
-personal information from logs. Ideas, questions, and testing feedback help
-shape the game.
+Include your build, operating system, and steps to reproduce. Ideas, questions,
+and testing feedback help shape the game.
 
 ## Take part
 

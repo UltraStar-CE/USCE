@@ -1,6 +1,8 @@
 # Instructions for coding and review agents
 
 Read CONTRIBUTING.md, GOVERNANCE.md, DEVELOPMENT.md, and COMPILING.md.
+Use threat-model.md to scope runtime reviews around trusted local execution,
+compatible song handling, playback reliability and preservation of user files.
 Preserve upstream copyright, licenses, authorship, and compatible song/config
 behavior. Do not bundle music or artwork without documented permission.
 

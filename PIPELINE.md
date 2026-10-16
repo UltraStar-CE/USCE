@@ -1,6 +1,6 @@
 # USCE build and contribution pipeline
 
-All changes use PRs and the published governance, including the recorded solo
+We develop through PRs and our published governance, including the recorded solo
 bootstrap phase. Required checks cover Windows installer/portable builds,
 Linux AppImage, Intel and ARM macOS DMG builds, and source whitespace.
 
@@ -11,5 +11,5 @@ personal access token is needed by these build jobs.
 
 See [USCE-CI.md](USCE-CI.md) for isolated manual validation of agent candidates
 and [AUTOMATION.md](AUTOMATION.md) for reviews, reporter confirmation, upstream
-tracking and adaptation. AI work stays disabled until its separate activation
-steps are completed. Successful builds create test artifacts, not public releases.
+tracking and adaptation. Native Codex review setup is not yet verified. The separately billed API candidate
+workflows remain inactive. Successful builds create test artifacts, not public releases.

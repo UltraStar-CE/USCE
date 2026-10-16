@@ -3,14 +3,14 @@ name: Build
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
   workflow_dispatch:
     inputs:
       ref:
         description: 'Branch or full SHA to build (for bot-created candidate PRs)'
         type: string
-        default: master
+        default: main
         required: true
   # Run every day at 5:40.
   schedule:
@@ -35,8 +35,8 @@ jobs:
             if (context.eventName === 'workflow_dispatch') {
               // Cache write authority follows the dispatch ref, not checkout.
               // Candidate code must never run in the default branch's scope.
-              if (context.ref !== 'refs/heads/ci/candidate-validation-runner') {
-                throw Error('Dispatch candidate builds from the protected ci/candidate-validation-runner branch');
+              if (context.ref !== 'refs/tags/ci-validation-v1') {
+                throw Error('Dispatch candidate builds from the protected ci-validation-v1 tag');
               }
               const r = await github.rest.repos.getCommit({...context.repo, ref: context.payload.inputs.ref});
               sha = r.data.sha;

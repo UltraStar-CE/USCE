@@ -1,44 +1,36 @@
 # Community conduct
 
-USCE welcomes people of different backgrounds, identities, experiences, and
-skill levels. These expectations apply to project repositories, Discussions,
-project chat, events, and people representing the project.
+USCE is an open, inclusive community for people who enjoy karaoke and want to
+improve the game together. Everyone is welcome, whatever their background,
+identity, experience or skill level. Code, artwork, translations, testing,
+questions and ideas all help the project grow.
 
-Be considerate. Explain disagreements with evidence, ask questions in good
-faith, and give feedback about the work. Respect people's time and boundaries.
-Make space for newcomers and acknowledge contributions.
+## Working together
 
-Harassment, threats, discriminatory abuse, sexual harassment, doxxing,
-deliberate humiliation, and repeated personal attacks are not acceptable.
-Do not retaliate against someone for reporting a concern or participating in
-an investigation. Technical disagreement is welcome; personal abuse is not.
+- Welcome newcomers and help people find a place to contribute.
+- Ask questions in good faith and explain decisions clearly.
+- Give constructive feedback about the work and acknowledge others' efforts.
+- Make room for different perspectives. Disagreement can improve a proposal.
+- Be considerate of people's time and accept that volunteers set their own pace.
 
-## Reporting
+Harassment, discrimination, threats and personal attacks have no place here.
+These expectations apply equally to contributors, maintainers and people
+representing USCE in project spaces.
 
-The private reporting contact and independent appeal contact must be published
-in `MAINTAINERS.md` before the community launch. Until those contacts are in
-place, this reporting process is not operational. Do not put confidential
-reports or personal information in public issues. GitHub's own Report abuse
-option remains available for conduct on GitHub.
+## Resolving disagreements
 
-Report what happened, relevant links, and any immediate safety concern. You do
-not need to confront the other person first. Moderators share information only
-with people who need it to handle the report; they cannot promise absolute
-confidentiality. Aim to acknowledge reports within three working days and give
-an update within fourteen days, explaining delays.
+Start by explaining the problem and the outcome you would like to see. Keep
+discussion focused on the proposal, listen to the people affected and look for
+a practical way forward. Take a break when a discussion stops being productive.
 
-## Responses and appeals
+If a concern needs help, contact a maintainer listed in
+[`MAINTAINERS.md`](MAINTAINERS.md). We listen, explain which expectation applies
+and respond proportionately. Usually this starts with a
+reminder or a request to change the behavior. Repeated or serious disruption may
+lead to a temporary restriction or removal from project spaces.
 
-Moderators consider context, severity, impact, and repeated behavior. Responses
-can include a private reminder, a warning, a temporary restriction, or removal
-from project spaces. Serious threats or exposure of private information may
-require immediate restriction. Explain the rule, evidence, duration, and appeal
-route to the affected person when safe to do so.
+We explain moderation decisions and how they can be reconsidered. When a
+maintainer is involved in a disagreement, we ask another maintainer to handle
+it where possible. The same rules apply to everyone, including project leaders.
 
-A moderator involved in a report must recuse themselves. Appeals go to an
-uninvolved maintainer or the independent appeal contact within thirty days.
-Where the small team cannot provide an independent reviewer, arrange one and
-disclose that limitation. No one has an exemption because of their project role.
-Publish periodic aggregate reports without identifying reporters or disclosing
-sensitive details. Do not publish accusations or private evidence as a form of
-punishment.
+Anyone can suggest improvements to this code of conduct through an issue or PR.

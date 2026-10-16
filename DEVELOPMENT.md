@@ -4,6 +4,45 @@
 
 This guide introduces the inherited USDX codebase. For the USCE contribution and review process, read [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## AI assistance and human responsibility
+
+We use AI reviews to help maintainers keep up with a fast pace of development
+and community contributions. An additional review can surface mistakes, clarify
+tradeoffs and give contributors earlier feedback. It helps us manage review
+work; it does not transfer responsibility for a change to a tool.
+
+Contributors remain responsible for everything they submit, whether written by
+hand or with AI assistance. A human responsible for the contribution must be
+able to read, modify, explain and defend the code: how it works, why the approach
+fits, what it affects and how it was checked. We welcome AI assistance when the
+contributor has credible understanding of the submitted work.
+
+During review, we may ask for an explanation, a focused revision or evidence
+that supports a claim. We judge those answers and the code, not a contributor's
+credentials or confidence. If doubts remain and the contributor cannot
+plausibly demonstrate the expertise needed to own the change, we may decline it
+or ask for a smaller contribution they can support. Producing code with a tool
+is not, by itself, evidence of understanding it.
+
+AI suggestions are proposals. Contributors check them before submission, and
+maintainers assess review findings before acting on them. A human decides what
+is merged under our governance; an AI review never supplies a required human
+approval or authorizes an automatic merge.
+
+## Development direction and upstream
+
+Contributions to [UltraStar Deluxe](https://github.com/UltraStar-Deluxe/USDX) are
+welcome too. USDX has its own focus, priorities and development cadence. With
+USCE, we aim to move quickly on new features and community-led experiments,
+including ideas that need time to mature. AI-assisted reviews help us support
+that pace while keeping responsibility with the people contributing the code.
+
+We favor configurable additions and clear defaults, so players can try new
+features or keep the experience they prefer. We consider compatibility and
+existing workflows as part of each change. What we build next is shaped by
+community proposals, testing and discussion. We value upstream's work and
+preserve credit when incorporating improvements.
+
 ### Commits older than 2016
 In 2016 the project was moved from SourceForge (SVN) to Github (git).
 Generally, you don't need to look at commits that aren't in the git history, but sometimes you'll want to check something.
@@ -14,7 +53,7 @@ A git version of this SVN can be found in the [legacy-sourceforge-svn-mirror](ht
 - Please use CamelCase naming. Classes/Units/Types/Functions should start with a capital letter and constants/values/instances should start with small letters
 - You can use Windows or Linux or macOS for development just fine. See readme.md for Linux / macOS install instructions.
 - Use a feature branch and open a draft PR early so others can help. Required CI and the review policy in GOVERNANCE.md apply to maintainers too, including the recorded solo bootstrap exception. Independent approval becomes required when a second human developer joins.
-- There is Github Actions continuous integration set up. It will email project members if build of the master branch or some other branch is broken. This is quite helpful because linux users and other more tech savy users tend to run the most recent code so that they can use all the neat new features. Please keep them happy by not breaking too much of general singstar-like karaoke gameplay on the master branch. 
+- We build Windows, Linux, Intel macOS and ARM macOS on pull requests, pushes to `main` and a daily schedule. Required checks protect the shared development branch. Contributors can download build artifacts from GitHub Actions to help test changes.
 - If you start working on something that is more then just a small code change, please create an issue in the git repository issue tracker for that and assign it to yourself, so the other developers don't touch it in the mean time.
 - Please write somewhat reusable code and split big problems into smaller functions. :)
 - Ask development questions in the USCE issue tracker.
@@ -23,8 +62,8 @@ Thank you for helping improve the game.
 
 ### Whitespace checks
 - CI checks trailing whitespace in changed lines under `src` (excluding `src/lib` and `src/webSDK`).
-- Local one-liner (same check as CI, with `origin/master` as base):
-  `git --no-pager -c core.whitespace=blank-at-eol diff --no-ext-diff --color --check "$(git merge-base HEAD origin/master)" -- './src' ':!./src/lib' ':!./src/webSDK'`
+- Local one-liner (same check as CI, with `origin/main` as base):
+  `git --no-pager -c core.whitespace=blank-at-eol diff --no-ext-diff --color --check "$(git merge-base HEAD origin/main)" -- './src' ':!./src/lib' ':!./src/webSDK'`
 - Make targets:
   `make whitespace-check` (fails on issues), `make whitespace-warn` (warning only).
 - Normal build targets (`make`, `make debug`, `make release`, ...) now run `whitespace-warn` after the compile step.

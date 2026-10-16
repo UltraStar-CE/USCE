@@ -53,7 +53,7 @@ type
 
       {**
        * GetApplicationSupportPath returns the path to
-       * $HOME/Library/Application Support/UltraStarDeluxe_[USCE_VERSION].
+       * $HOME/Library/Application Support/UltraStar Community Edition.
        *}
       function GetApplicationSupportPath: IPath;
 
@@ -65,8 +65,8 @@ type
     public
       {**
        * Init simply calls @link(CreateUserFolders), which in turn scans the
-       * folder UltraStar Deluxe.app/Contents for all files and
-       * folders. $HOME/Library/Application Support/UltraStarDeluxe_[USCE_VERSION]
+       * folder UltraStar Community Edition.app/Contents for all files and
+       * folders. $HOME/Library/Application Support/UltraStar Community Edition
        * is then checked for their presence and missing ones are copied.
        *}
       procedure Init; override;
@@ -79,20 +79,20 @@ type
 
       {**
        * GetMusicPath returns the path for music. Currently it is set to
-       * $HOME/Music/UltraStar Deluxe/.
+       * $HOME/Music/UltraStar Community Edition/ (or an existing legacy folder).
        *}
       function  GetMusicPath:      IPath; override;
 
       {**
        * GetGameSharedPath returns the path for shared resources. Currently it
-       * is also set to $HOME/Library/Application Support/UltraStarDeluxe_[USCE_VERSION].
+       * is also set to $HOME/Library/Application Support/UltraStar Community Edition.
        * However it is not used.
        *}
       function  GetGameSharedPath: IPath; override;
 
       {**
        * GetGameUserPath returns the path for user resources. Currently it is
-       * set to $HOME/Library/Application Support/UltraStarDeluxe_[USCE_VERSION].
+       * set to $HOME/Library/Application Support/UltraStar Community Edition.
        * This is where a user can add themes, ....
        *}
       function  GetGameUserPath:   IPath; override;
@@ -154,7 +154,7 @@ end;
 
 function TPlatformMacOS.GetApplicationSupportPath: IPath;
 begin
-// append the version for conflict resolution
+// Prefer USCE configuration, retaining discovery of an existing legacy config.
   Result := GetHomeDir.Append('Library/Application Support/UltraStar Community Edition', pdAppend);
   if not Result.Append('config.ini').Exists() and GetHomeDir.Append('Library/Application Support/UltraStar Deluxe/config.ini').Exists() then
     Result := GetHomeDir.Append('Library/Application Support/UltraStar Deluxe', pdAppend);

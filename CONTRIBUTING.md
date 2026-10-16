@@ -7,9 +7,9 @@ finding the right place to make a change.
 ## Report a problem
 
 Include your operating system, the exact build or commit, steps to reproduce,
-expected behavior, and what happened. Add a short log or screenshot if useful,
-removing names, private paths, song collections, and credentials. Share only
-files you have permission to distribute. Search for an existing report first.
+expected behavior, and what happened. Add a short log or screenshot if useful.
+Share only files you have permission to distribute. Search for an existing
+report first.
 
 ## Propose a change
 
@@ -20,6 +20,11 @@ are welcome. Explain the problem, the resulting behavior, and what you tested.
 Say clearly when you could not test a platform. Preserve compatibility and
 existing copyright and license notices; include asset provenance and permission.
 
+We keep a maximum of **5 open PRs per author across USCE, MXE and Themes**,
+including drafts. This applies to maintainers and automated candidates too.
+An additional PR is closed with an explanation and can be reopened once merging
+or closing another PR leaves a free slot. Its commits and discussion remain.
+
 Every change uses a PR and required CI under [GOVERNANCE.md](GOVERNANCE.md).
 During the recorded solo bootstrap phase the sole maintainer can merge after
 checking CI and review findings, with the absence of independent review stated.
@@ -29,8 +34,16 @@ cannot approve their own work. Automation cannot merge or supply an approval.
 
 AI-assisted contributions are welcome when the contributor can explain the
 change, checks its correctness and provenance, and states how AI was used.
-Treat generated output as a proposal. Do not submit private data to an AI tool
-without permission. Reviews should focus on actionable problems, not volume.
+Treat generated output as a proposal. Reviews should focus on actionable
+problems, not volume.
+
+The human responsible for a contribution must be able to **read, modify,
+explain and defend its code**. We may ask for an explanation or revision during
+review. If the contributor cannot plausibly demonstrate the understanding
+needed to own the change, we may decline it or ask for a smaller, supported
+contribution. This applies equally to code written with and without AI.
+[DEVELOPMENT.md](DEVELOPMENT.md#ai-assistance-and-human-responsibility) explains
+why we use AI reviews and how human responsibility applies.
 
 ## Testing candidate fixes
 
@@ -45,9 +58,5 @@ do not close it automatically because a PR exists or was merged.
 USCE derives from [UltraStar Deluxe](https://github.com/UltraStar-Deluxe/USDX),
 which builds on UltraStar by corvus5. Thank you to their contributors. Preserve
 authorship when porting changes, link the source commit, and document adaptations.
-Changes useful to USDX can also be proposed there; contributors decide where
-they wish to participate.
 
-For conduct concerns, read [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Security
-vulnerabilities should use a verified private reporting channel; never publish
-credentials or exploit details in an ordinary bug report.
+For conduct concerns, read [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).

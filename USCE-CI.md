@@ -1,61 +1,53 @@
-# Build parity and candidate validation
+# Builds and candidate validation
 
-USCE inherits the upstream Windows installer/portable, Linux AppImage, and
-macOS ARM/Intel DMG build matrix plus its source whitespace check. These files
-preserve those builds. A successful upstream run is not proof that the new
-fork's builds work; verify the first USCE runs before offering downloads.
+We build the Windows installer and portable package, Linux AppImage, and macOS
+ARM and Intel DMGs. We inherited this platform coverage from USDX and retain its
+source whitespace check. Build results belong to the tested USCE commit; an
+upstream success does not substitute for a passing USCE build.
 
 ## Windows dependencies
 
-The inherited `dldlls.py` pins MXE commit
-`355c55d2723e344c47cf353f9d47699a2ce1150a`. Its public release download path
-is retained. Upstream publishes `usdx-dlls-x86_64-v2026.8.0.zip` under release
-`USDX-v2026.8.0`. The CI no longer passes a cross-repository read secret into
-candidate build jobs. If the pinned release cannot be found, the build must
-fail; publish or select a reviewed dependency release in a follow-up PR.
+The game currently downloads the pinned upstream MXE release for commit
+`355c55d2723e344c47cf353f9d47699a2ce1150a`, using asset
+`usdx-dlls-x86_64-v2026.8.0.zip` from `USDX-v2026.8.0`. These identifiers preserve
+compatibility with the existing dependency package. Missing pinned artifacts
+fail the build rather than silently selecting a different release.
 
-The relevant MXE build workflow lives on `ultrastardx`, not `master`. The fork
-must include that branch. Enable its Actions workflow before rebuilding DLLs.
-Moving dependency downloads to USCE's MXE repository needs a reviewed release,
-source SHA, artifact integrity check, and a corresponding downloader change.
-Do not point at a repository with no matching artifacts or silently use latest.
+Our Windows compiler installation incorporates dgruss's
+[USDX PR #1417](https://github.com/UltraStar-Deluxe/USDX/pull/1417): direct compiler
+downloads, fixed installer hashes, checked exits and bounded installation times.
+This prevents a partial download from being launched as a complete installer.
 
-## Validating bot-created candidate PRs
+The USCE MXE repository retains the application-specific dependency build. A
+USCE-hosted dependency release will replace the upstream download only after we
+have built and validated matching artifacts and reviewed the downloader change.
 
-GitHub suppresses ordinary PR workflow triggers for PRs created with the workflow
-token. After this PR is merged, create `ci/candidate-validation-runner` from the
-reviewed default-branch commit and protect it with the same review and force-push
-rules as the default branch. Refresh it only with reviewed workflow changes.
-To validate a candidate, run **Build** manually with that protected runner branch
-selected in GitHub's workflow selector, and enter the candidate branch or full
-commit SHA in `ref`. Dispatch from any other branch fails before checkout.
+## Candidate builds
 
-GitHub scopes cache writes to the dispatch ref, regardless of checkout SHA.
-The dedicated ref prevents candidate code from writing default-branch caches.
-Manual jobs also skip ProjectM/prefix cache restores and saves and BuildKit's
-GHA cache import/export, so later candidate builds start with fresh dependencies.
-Do not replace this separation with cache-key naming alone.
+GitHub does not start ordinary PR workflows for PRs created by its workflow
+token. For those candidates, our Build workflow supports an isolated manual run
+from the protected `ci-validation-v1` tag, with the candidate branch or full SHA
+as its `ref` input. The tag points to a reviewed workflow revision. Only `main`
+remains as a permanent branch; the validation workflow uses a tag to keep cache
+writes outside the default branch's scope.
 
-The build jobs check out the resolved commit with read-only permissions and no
-stored Git credentials. They receive no AI key or cross-repository secret. A
-separate job which never executes candidate code publishes the results against
-that exact SHA. Both macOS checks require success of the entire macOS matrix.
-Any failed, cancelled, or skipped build is reported as failure. The ordinary
-source whitespace check is also run for manual candidate builds.
+Manual builds skip shared dependency caches and BuildKit cache import/export.
+Build jobs check out the resolved commit with read-only repository permissions
+and no stored Git credentials. They receive no AI key or publishing token. A
+separate job that never executes candidate code publishes results on that exact
+SHA. A new candidate commit requires new build results.
 
-Manual jobs use distinct `Manual -` check names on the dispatch ref. Only the
-separate publisher reports the normal required status names on the resolved
-candidate SHA. Candidate results therefore cannot satisfy the default branch's
-normal build checks. New PR pushes cancel obsolete builds for that PR; manual
-and default-branch builds are not cancelled by this policy.
+Manual jobs have distinct `Manual -` names. The publisher reports the required
+status names against the candidate SHA; it cannot satisfy default-branch checks
+with an unrelated dispatch result. Both macOS statuses require the whole macOS
+matrix to pass. Failed, cancelled or skipped candidate builds report failure.
 
-A human must inspect the PR, build results, tests, source provenance, and reporter
-feedback. New commits require another build. This is a manual validation path,
-not a merge action. No job enables automatic merging.
+We review the changes, provenance, tests and reporter feedback before a human
+merge decision. No build or candidate job merges a PR.
 
 ## Required checks
 
-The following names intentionally match the workflow exactly, including `MacOS`:
+Our branch rules require these GitHub Actions checks:
 
 - Build for Windows
 - Build for Linux
@@ -63,6 +55,5 @@ The following names intentionally match the workflow exactly, including `MacOS`:
 - Build for MacOS (macos-15-intel)
 - Check trailing whitespace
 
-After the first workflows run, bind the ruleset's check sources to GitHub Actions
-in the GitHub UI. The initial empty fork does not list GitHub Actions as a source
-until it has reported checks. Keep fresh-branch and independent-review rules.
+These checks use their exact workflow names. Required CI, resolved review
+conversations and the published human approval policy apply to maintainers too.
