@@ -1,18 +1,27 @@
-# Credit: https://github.com/zlib-ng/zlib-ng/blob/develop/.github/workflows/lint.yml
 name: Lint
 on: [pull_request]
-
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: pr-validation-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 jobs:
   lint:
     name: Check trailing whitespace
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v6
-      with:
-        fetch-depth: 0
-
-    - name: Whitespace errors
-      run: |
-        git config core.whitespace blank-at-eol
-        git diff --color --check ${{ github.event.pull_request.base.sha }} -- './src' ':!./src/lib' ':!./src/webSDK'
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Whitespace errors
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: git -c core.whitespace=blank-at-eol diff --check --no-ext-diff "$BASE_SHA" HEAD -- . ':!src/lib' ':!src/webSDK'
+      - name: Required builds for code and build changes
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          script: |
+            await require('./tools/usce-ci.cjs').validatePullRequest({github, context, core});
