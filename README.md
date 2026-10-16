@@ -13,7 +13,7 @@ here after the first builds have been tested. Developers can build from source
 using [COMPILING.md](COMPILING.md).
 
 The inherited executable names and configuration locations still use UltraStar
-Deluxe names. See the setup notes below. Do not assume an upstream package is a
+Deluxe names. See the configuration notes below. Do not assume an upstream package is a
 USCE build.
 
 ## Songs and setup

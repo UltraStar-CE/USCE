@@ -20,10 +20,12 @@ are welcome. Explain the problem, the resulting behavior, and what you tested.
 Say clearly when you could not test a platform. Preserve compatibility and
 existing copyright and license notices; include asset provenance and permission.
 
-Every change requires CI and independent human review under
-[GOVERNANCE.md](GOVERNANCE.md). One approval is required until there are more
-than four active developers, then two. Authors cannot approve their own work,
-and automation cannot merge or supply the required human approval.
+Every change uses a PR and required CI under [GOVERNANCE.md](GOVERNANCE.md).
+During the recorded solo bootstrap phase the sole maintainer can merge after
+checking CI and review findings, with the absence of independent review stated.
+Once a second human developer joins, one independent approval is required;
+when there are more than four active developers, two are required. Authors
+cannot approve their own work. Automation cannot merge or supply an approval.
 
 AI-assisted contributions are welcome when the contributor can explain the
 change, checks its correctness and provenance, and states how AI was used.

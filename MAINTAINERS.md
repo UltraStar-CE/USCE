@@ -3,9 +3,12 @@
 ## Bootstrap administration
 
 - Organization owner: [dgruss](https://github.com/dgruss).
-- Active-developer roster: bootstrap pending a public activity review.
-- Current required independent human approvals: 1.
-- Independent reviewers: to be recruited; owner-authored PRs wait for review.
+- Solo bootstrap maintainer: dgruss. Review this status by 16 November 2026.
+- Independent approvals during the solo phase: 0; passing CI and a recorded
+  maintainer review decision are required. No self-approval is claimed.
+- Recruit independent reviewers. When a second human developer joins, end the
+  solo exception and require 1 independent approval before further merges.
+- Raise the requirement to 2 once there are more than 4 active developers.
 
 ## Before community launch
 

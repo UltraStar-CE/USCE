@@ -28,16 +28,24 @@ handle administrative settings; ownership is not a technical veto. Maintainer
 appointments and removals use a public proposal and the decision process above.
 Publish responsibilities and the current roster in `MAINTAINERS.md`.
 
-For the initial bootstrap, the organization owner handles administration until
-more maintainers join. This temporary responsibility does not permit self-review
-or direct changes to protected branches. Recruit at least one independent human
-reviewer before merging project changes.
+For the initial bootstrap, [dgruss](https://github.com/dgruss) is the sole human
+developer and handles administration. During this explicitly recorded solo
+phase, the maintainer may merge their own PR after required CI passes, review
+findings are addressed, and testing and the lack of independent review are
+recorded publicly. This is a human merge decision, not a self-approval or an AI
+approval. Direct pushes, force pushes and automatic merging remain prohibited.
+Review the solo status monthly and end this exception when a second human
+developer joins the published roster; set the independent approval requirement
+to one before further merges. Do not wait for a newcomer to earn two merged
+PRs before ending the solo phase.
 
 ## Active developers and review requirements
 
 An active developer is a human who has contributed at least two merged code,
 documentation, translation, or test PRs, or two substantive PR reviews, across
-USCE, its MXE repository, and its Themes repository during the preceding 90 days.
+[USCE](https://github.com/UltraStar-CE/USCE),
+[MXE](https://github.com/UltraStar-CE/mxe), and
+[Themes](https://github.com/UltraStar-CE/Themes) during the preceding 90 days.
 A substantive review contains technical reasoning, testing, or actionable
 feedback; a bare approval or automated review does not qualify.
 
@@ -46,8 +54,9 @@ People can correct omissions or appeal a decision using the public proposal
 process. Do not collect private activity or use commit counts as a proxy for
 contribution quality. The initial bootstrap roster is explicitly identified.
 
-Every PR needs **one independent human developer approval while there are four
-or fewer active developers, and two when there are more than four**. The author
+Outside the solo bootstrap exception, every PR needs **one independent human
+developer approval while there are four or fewer active developers, and two
+when there are more than four**. The author
 cannot approve their own PR. Maintainers, owners, and bots follow the same PR
 route. AI feedback never counts as a required human approval.
 
