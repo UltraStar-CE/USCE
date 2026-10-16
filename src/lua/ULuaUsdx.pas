@@ -38,7 +38,7 @@ uses ULua;
 { some basic lua c functions from usdx table }
 
 { Usdx.Time - returns sdl_time to have time numbers comparable with
-              ultrastar deluxe ones. no arguments }
+              UltraStar Community Edition ones. no arguments }
 function ULuaUsdx_Time(L: Plua_State): Integer; cdecl;
 
 { Usdx.Version - returns Usdx version string (the same that US_Version
@@ -66,7 +66,7 @@ implementation
 uses sdl2, ULuaCore, ULuaUtils, UHookableEvent, UConfig;
 
 { Usdx.Time - returns sdl_time to have time numbers comparable with
-              ultrastar deluxe ones. no arguments }
+              UltraStar Community Edition ones. no arguments }
 function ULuaUsdx_Time(L: Plua_State): Integer; cdecl;
   var top: Integer;
 begin
@@ -93,7 +93,7 @@ begin
     lua_pop(L, top);
 
   //push result
-  lua_pushstring(L, PChar(USDXVersionStr()));
+  lua_pushstring(L, PChar(USCEVersionStr()));
   Result := 1; //one result
 end;
 

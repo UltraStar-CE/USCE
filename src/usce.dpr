@@ -23,7 +23,7 @@
  * $Id: ultrastardx.dpr 3131 2015-09-07 00:11:32Z basisbit $
  *}
 
-program ultrastardx;
+program usce;
 
 {$IFDEF MSWINDOWS}
   {$R '..\res\link.res' '..\res\link.rc'}

@@ -26,11 +26,9 @@ Use the horizontal dark wordmark on light backgrounds. Keep clear space around
 the star and do not stretch the logo. For dark surfaces use the white wordmark
 in the banner or prepare a separately reviewed light variant.
 
-The inherited game icon and installer branding remain in place in this PR.
-After the identity is selected, prepare an editable vector master, optically
-adjusted 16/32/48-pixel versions, multi-resolution Windows ICO, macOS ICNS, and
-Linux icons. Replace in-game logos, installer graphics, application metadata,
-and release artifact names together in a tested branding PR. Verify Windows,
-Linux and both macOS architectures before publishing a branded release.
+The product rename PR packages PNG, ICO, ICNS and installer BMP assets and
+updates the corresponding platform references. See [BRANDING.md](../BRANDING.md)
+for compatible data paths, preserved upstream references and validation.
+An editable vector master and optical tuning of small sizes remain design work.
 
 Retain upstream copyright, license and attribution notices during that rollout.

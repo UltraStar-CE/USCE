@@ -134,7 +134,11 @@ begin
   if UseLocalDirs then
     Result := GetExecutionDir()
   else
-    Result := GetHomeDir().Append('.ultrastardx', pdAppend);
+  begin
+    Result := GetHomeDir().Append('.usce', pdAppend);
+    if not Result.Append('config.ini').Exists() and GetHomeDir().Append('.ultrastardx/config.ini').Exists() then
+      Result := GetHomeDir().Append('.ultrastardx', pdAppend);
+  end;
 end;
 
 {**
@@ -169,7 +173,7 @@ begin
     Result.Add(GetExecutionDir())
   else
   begin
-    Result.Add(GetHomeDir().Append('.ultrastardx'));
+    Result.Add(GetGameUserPath());
     Result.Add(Path(INSTALL_DATADIR));
   end;
 end;
@@ -180,7 +184,7 @@ begin
   if UseLocalDirs then
     Result.Add(GetExecutionDir())
   else
-    Result.Add(GetHomeDir().Append('.ultrastardx'));
+    Result.Add(GetGameUserPath());
 end;
 
 end.

@@ -3,7 +3,7 @@ ARCH = $(shell uname -m)
 VERSION = $(shell cat ../../VERSION)
 REV = $(shell git rev-parse --short HEAD)
 SHELL := /bin/bash
-EXE = ultrastardx
+EXE = usce
 
 .PHONY: default build-deps build run compress bundle upload clean distclean
 
@@ -17,8 +17,8 @@ prefix/$(ARCH)/built_libs:
 	@sed -r -i "s/\x1B(\[[0-9;]*[JKmsu]|\(B)//g" "build-deps.log" # remove color codes
 	@echo
 
-build: build/$(ARCH)/usr/bin/ultrastardx
-build/$(ARCH)/usr/bin/ultrastardx build/$(ARCH)/usr/bin/VERSION: prefix/$(ARCH)/built_libs
+build: build/$(ARCH)/usr/bin/usce
+build/$(ARCH)/usr/bin/usce build/$(ARCH)/usr/bin/VERSION: prefix/$(ARCH)/built_libs
 	@bash -eo pipefail -c './build.sh | tee build.log'
 	@sed -r -i "s/\x1B(\[[0-9;]*[JKmsu]|\(B)//g" "build.log" # remove color codes
 
@@ -28,20 +28,20 @@ build/$(ARCH)/usr/bin/ultrastardx build/$(ARCH)/usr/bin/VERSION: prefix/$(ARCH)/
 bundle: clean compress
 	@echo Complete!
 
-run: build/$(ARCH)/usr/bin/ultrastardx
+run: build/$(ARCH)/usr/bin/usce
 	@build/$(ARCH)/launch.sh
 
-compress: UltraStarDeluxe-$(ARCH).AppImage
-UltraStarDeluxe-$(ARCH).AppImage: build/$(ARCH)/usr/bin/ultrastardx build/$(ARCH)/usr/bin/VERSION
-	rm -f "./UltraStarDeluxe-$(ARCH).AppImage"
+compress: USCE-$(ARCH).AppImage
+USCE-$(ARCH).AppImage: build/$(ARCH)/usr/bin/usce build/$(ARCH)/usr/bin/VERSION
+	rm -f "./USCE-$(ARCH).AppImage"
 	echo "INFO: Any warnings about zsync and binary delta updates can be ignored, since we don't use them."
 	PATH="prefix/$(ARCH)/bin:$$PATH" prefix/$(ARCH)/bin/appimagetool --comp xz build/$(ARCH) $@
 
-upload: UltraStarDeluxe-$(ARCH).AppImage
-	curl --upload-file './UltraStarDeluxe-$(ARCH).AppImage' "https://transfer.sh/UltraStarDeluxe-$(ARCH).AppImage" && echo
+upload: USCE-$(ARCH).AppImage
+	curl --upload-file './USCE-$(ARCH).AppImage' "https://transfer.sh/USCE-$(ARCH).AppImage" && echo
 
 clean:
-	rm -rf build/$(ARCH) prefix/$(ARCH) UltraStarDeluxe-$(ARCH).tar.xz
+	rm -rf build/$(ARCH) prefix/$(ARCH) USCE-$(ARCH).tar.xz
 
 distclean: clean
-	rm -rf deps build prefix UltraStarDeluxe-*.tar.xz
+	rm -rf deps build prefix USCE-*.tar.xz

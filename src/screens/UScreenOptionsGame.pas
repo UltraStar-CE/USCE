@@ -286,7 +286,7 @@ begin
     UGraphic.UnloadScreens;
 
     Theme.LoadTheme(Ini.Theme, Ini.Color);
-    UGraphic.LoadScreens(USDXVersionStr);
+    UGraphic.LoadScreens(USCEVersionStr);
 
     old_Language := Ini.Language;
     old_SongMenu := Ini.SongMenu;

@@ -45,35 +45,35 @@ INSTALL_PROGRAM ?= @INSTALL_PROGRAM@
 # General package configuration
 #################################################
 
-USDX_PACKAGE_NAME := @PACKAGE_NAME@
-USDX_VERSION := @PACKAGE_VERSION@
-USDX_TARNAME := @PACKAGE_TARNAME@
+USCE_PACKAGE_NAME := @PACKAGE_NAME@
+USCE_VERSION := @PACKAGE_VERSION@
+USCE_TARNAME := @PACKAGE_TARNAME@
 
 #################################################
-# USDX Paths
+# USCE Paths
 #################################################
 
-USDX_SRC_DIR   := $(top_srcdir)/src
-USDX_GAME_DIR  := $(top_srcdir)/game
-USDX_TOOLS_DIR := $(top_srcdir)/tools
-USDX_BUILD_DIR := $(top_srcdir)/build
-USDX_LIB_DIR   := $(USDX_SRC_DIR)/lib
+USCE_SRC_DIR   := $(top_srcdir)/src
+USCE_GAME_DIR  := $(top_srcdir)/game
+USCE_TOOLS_DIR := $(top_srcdir)/tools
+USCE_BUILD_DIR := $(top_srcdir)/build
+USCE_LIB_DIR   := $(USCE_SRC_DIR)/lib
 
-INSTALL_DATADIR := $(datadir)/$(USDX_PACKAGE_NAME)
+INSTALL_DATADIR := $(datadir)/$(USCE_PACKAGE_NAME)
 
 #################################################
 # Binary name
 #################################################
 
 # name of executable
-USDX_BIN_NAME ?= ultrastardx$(EXEEXT)
-USDX_BIN := $(USDX_GAME_DIR)/$(USDX_BIN_NAME)
+USCE_BIN_NAME ?= usce$(EXEEXT)
+USCE_BIN := $(USCE_GAME_DIR)/$(USCE_BIN_NAME)
 
 #################################################
 # OpenCV
 #################################################
 
-OPENCV_CWRAPPER_DIR := $(USDX_LIB_DIR)/openCV3
+OPENCV_CWRAPPER_DIR := $(USCE_LIB_DIR)/openCV3
 USE_OPENCV_CWRAPPER = @USE_OPENCV_CWRAPPER@
 USE_OPENCV_CWRAPPER_DLL ?= no
 ifeq ($(EXEEXT),.exe)
@@ -117,7 +117,7 @@ endif
 BUILD_TARGETS = all debug release rebuild build
 .PHONY: $(BUILD_TARGETS)
 $(BUILD_TARGETS): all-deps
-	$(MAKE) -C $(USDX_SRC_DIR) $@
+	$(MAKE) -C $(USCE_SRC_DIR) $@
 	@$(MAKE) --no-print-directory whitespace-warn
 
 .PHONY: all-deps
@@ -131,7 +131,7 @@ clean: clean-src clean-deps
 
 .PHONY: clean-src
 clean-src:
-	$(MAKE) -C $(USDX_SRC_DIR) clean
+	$(MAKE) -C $(USCE_SRC_DIR) clean
 
 .PHONY: clean-deps
 clean-deps:
@@ -141,12 +141,12 @@ clean-deps:
 
 .PHONY: clean-game
 clean-game:
-	$(RM) $(USDX_GAME_DIR)/*.log
-	$(RM) $(USDX_GAME_DIR)/*.db
-	$(RM) $(USDX_GAME_DIR)/*.ini
-	-rmdir $(USDX_GAME_DIR)/screenshots
-	-rmdir $(USDX_GAME_DIR)/playlists
-	-rmdir $(USDX_GAME_DIR)/songs
+	$(RM) $(USCE_GAME_DIR)/*.log
+	$(RM) $(USCE_GAME_DIR)/*.db
+	$(RM) $(USCE_GAME_DIR)/*.ini
+	-rmdir $(USCE_GAME_DIR)/screenshots
+	-rmdir $(USCE_GAME_DIR)/playlists
+	-rmdir $(USCE_GAME_DIR)/songs
 
 # just clean the game build data but no dependencies (libs, tools, ...)
 .PHONY: mostlyclean
@@ -156,8 +156,8 @@ mostlyclean: clean-src
 distclean: clean clean-game
 	$(RM) config.log config.status aclocal.m4 
 	$(RM_REC) autom4te.cache
-	$(RM) $(USDX_SRC_DIR)/config.inc 
-	$(RM) $(srcdir)/Makefile $(USDX_SRC_DIR)/Makefile
+	$(RM) $(USCE_SRC_DIR)/config.inc
+	$(RM) $(srcdir)/Makefile $(USCE_SRC_DIR)/Makefile
 
 .PHONY: maintainer-clean
 maintainer-clean: distclean
@@ -201,7 +201,7 @@ whitespace-warn:
 # auto-update
 #################################################
 
-Makefile: $(srcdir)/Makefile.in $(USDX_SRC_DIR)/Makefile.in $(USDX_SRC_DIR)/config.inc.in config.status
+Makefile: $(srcdir)/Makefile.in $(USCE_SRC_DIR)/Makefile.in $(USCE_SRC_DIR)/config.inc.in config.status
 	@echo "-----------------------------------"
 	@echo "Performing reconfiguration..."
 	./config.status
@@ -231,8 +231,8 @@ reconf:
 .PHONY: install
 install: install-all
 	@echo "--------------------------------"
-	@echo "$(USDX_PACKAGE_NAME) installed."
-	@echo "Start with: $(bindir)/$(USDX_BIN_NAME)"
+	@echo "$(USCE_PACKAGE_NAME) installed."
+	@echo "Start with: $(bindir)/$(USCE_BIN_NAME)"
 	@echo "--------------------------------"
 
 # strip binaries during install
@@ -246,7 +246,7 @@ install-all: install-exec install-plugins install-data
 .PHONY: install-exec
 install-exec:
 	$(MKDIR) "$(DESTDIR)$(bindir)"
-	$(INSTALL_PROGRAM) "$(USDX_BIN)" "$(DESTDIR)$(bindir)"
+	$(INSTALL_PROGRAM) "$(USCE_BIN)" "$(DESTDIR)$(bindir)"
 
 # FPC target platform and processor
 PPLATFORM  := @FPC_PLATFORM@
@@ -255,33 +255,33 @@ PPROCESSOR := @FPC_PROCESSOR@
 .PHONY: install-plugins
 install-plugins:
 	$(MKDIR) "$(DESTDIR)$(INSTALL_DATADIR)/plugins"
-	$(INSTALL) "$(USDX_GAME_DIR)/plugins"/* "$(DESTDIR)$(INSTALL_DATADIR)/plugins"
+	$(INSTALL) "$(USCE_GAME_DIR)/plugins"/* "$(DESTDIR)$(INSTALL_DATADIR)/plugins"
 
 .PHONY: install-data
 install-data:
-	$(MAKE) RECURSIVE_SRC_DIR="$(USDX_GAME_DIR)/avatars" \
+	$(MAKE) RECURSIVE_SRC_DIR="$(USCE_GAME_DIR)/avatars" \
             RECURSIVE_DST_DIR="$(DESTDIR)$(INSTALL_DATADIR)/avatars" \
             install-data-recursive
-	$(MAKE) RECURSIVE_SRC_DIR="$(USDX_GAME_DIR)/covers" \
+	$(MAKE) RECURSIVE_SRC_DIR="$(USCE_GAME_DIR)/covers" \
             RECURSIVE_DST_DIR="$(DESTDIR)$(INSTALL_DATADIR)/covers" \
             install-data-recursive
-	$(MAKE) RECURSIVE_SRC_DIR="$(USDX_GAME_DIR)/fonts" \
+	$(MAKE) RECURSIVE_SRC_DIR="$(USCE_GAME_DIR)/fonts" \
             RECURSIVE_DST_DIR="$(DESTDIR)$(INSTALL_DATADIR)/fonts" \
             install-data-recursive
-	$(MAKE) RECURSIVE_SRC_DIR="$(USDX_GAME_DIR)/languages" \
+	$(MAKE) RECURSIVE_SRC_DIR="$(USCE_GAME_DIR)/languages" \
             RECURSIVE_DST_DIR="$(DESTDIR)$(INSTALL_DATADIR)/languages" \
             install-data-recursive
-	$(MAKE) RECURSIVE_SRC_DIR="$(USDX_GAME_DIR)/resources" \
+	$(MAKE) RECURSIVE_SRC_DIR="$(USCE_GAME_DIR)/resources" \
             RECURSIVE_DST_DIR="$(DESTDIR)$(INSTALL_DATADIR)/resources" \
             install-data-recursive
-	$(MAKE) RECURSIVE_SRC_DIR="$(USDX_GAME_DIR)/sounds" \
+	$(MAKE) RECURSIVE_SRC_DIR="$(USCE_GAME_DIR)/sounds" \
             RECURSIVE_DST_DIR="$(DESTDIR)$(INSTALL_DATADIR)/sounds" \
             install-data-recursive
-	$(MAKE) RECURSIVE_SRC_DIR="$(USDX_GAME_DIR)/themes" \
+	$(MAKE) RECURSIVE_SRC_DIR="$(USCE_GAME_DIR)/themes" \
             RECURSIVE_DST_DIR="$(DESTDIR)$(INSTALL_DATADIR)/themes" \
             install-data-recursive
 	if [ "@DEFINE_HAVE_PROJECTM@" = DEFINE ] ; then \
-	    $(MAKE) RECURSIVE_SRC_DIR="$(USDX_GAME_DIR)/visuals" \
+	    $(MAKE) RECURSIVE_SRC_DIR="$(USCE_GAME_DIR)/visuals" \
 	        RECURSIVE_DST_DIR="$(DESTDIR)$(INSTALL_DATADIR)/visuals" \
 	        install-data-recursive ; \
 	fi
@@ -327,7 +327,7 @@ uninstall-data:
 
 .PHONY: uninstall-exec
 uninstall-exec:
-	$(RM) "$(DESTDIR)$(bindir)/$(USDX_BIN_NAME)"
+	$(RM) "$(DESTDIR)$(bindir)/$(USCE_BIN_NAME)"
 
 .PHONY: uninstall-plugins
 uninstall-plugins:
@@ -337,8 +337,8 @@ uninstall-plugins:
 # Distributable source-package (TODO)
 #################################################
 
-#disttmpdir := $(USDX_PACKAGE_NAME)-$(USDX_VERSION)-src
-disttmpdir := $(USDX_PACKAGE_NAME)-1.1_alpha-src
+#disttmpdir := $(USCE_PACKAGE_NAME)-$(USCE_VERSION)-src
+disttmpdir := $(USCE_PACKAGE_NAME)-1.1_alpha-src
 # choose all files in SVN that are not deleted
 svn-files := svn status -v | grep -v "^[?D]" | cut -c8- | tr -s " " | cut -f5- -d" "
 
@@ -363,8 +363,8 @@ dist:
 
 debpkgdir    ?= dists/debian
 debpkgtmpdir := $(debpkgdir)/deb-package
-debpkgprefix := $(USDX_PACKAGE_NAME)
-debpkgname   := $(debpkgprefix)_$(USDX_VERSION)_$(PPROCESSOR).deb
+debpkgprefix := $(USCE_PACKAGE_NAME)
+debpkgname   := $(debpkgprefix)_$(USCE_VERSION)_$(PPROCESSOR).deb
 
 .PHONY: deb
 deb: all
@@ -409,7 +409,7 @@ EXTRA_DYLIBS := @EXTRA_DYLIBS@
 # macOS app-bundle
 #################################################
 
-macos_bundle_path := UltraStar\ Deluxe.app/Contents
+macos_bundle_path := UltraStar\ Community\ Edition.app/Contents
 .PHONY: macos-app
 macos-app: all 
 # Create double clickable macOS application.
@@ -423,10 +423,10 @@ macos-app: all
 # Put the icon file into its particular place. 
 # Must be done BEFORE info.plist is created.
 	$(MKDIR) $(macos_bundle_path)/resources
-	$(INSTALL_DATA) icons/ultrastardx.icns $(macos_bundle_path)/resources/
+	$(INSTALL_DATA) icons/usce.icns $(macos_bundle_path)/resources/
 
 # the info.plist file
-	$(INSTALL_DATA) $(USDX_SRC_DIR)/macos/Info.plist $(macos_bundle_path)/
+	$(INSTALL_DATA) $(USCE_SRC_DIR)/macos/Info.plist $(macos_bundle_path)/
 
 # Copy the resources. 
 	$(MAKE) install-all INSTALL_DATADIR=$(macos_bundle_path) bindir=$(macos_bundle_path)/MacOS
@@ -439,14 +439,14 @@ macos-app: all
 
 # final messages
 	@echo ""
-	@echo "macOS application created (UltraStar Deluxe.app)."
+	@echo "macOS application created (UltraStar Community Edition.app)."
 	@echo "Using @MACOS_PACKAGING@ with libdir @MACOS_PACKAGING_LIBDIR@"
 	@echo "Please report issues to the developer team, preferably on Discord (https://discord.gg/qfS2b7VwDG)."
 	@echo "Have fun."
 	@echo ""
 
 # export some variables used by Makefile.macos-helper
-export USDX_BIN
+export USCE_BIN
 export pkgingLibDir
 export macos_bundle_path
 export INSTALL
@@ -462,9 +462,9 @@ macos-standalone-app: macos-app
 	@echo "Creating the standalone macOS application"
 	@echo ""
 
-	@rm -f $(macos_bundle_path)/MacOS/$(USDX_BIN_NAME)
+	@rm -f $(macos_bundle_path)/MacOS/$(USCE_BIN_NAME)
 	@$(MAKE) -f Makefile.macos-helper
-	codesign --force --deep --sign - "./UltraStar Deluxe.app"
+	codesign --force --deep --sign - "./UltraStar Community Edition.app"
 
 
 # final messages
@@ -474,27 +474,27 @@ macos-standalone-app: macos-app
 
 .PHONY: macos-dmg
 macos-dmg: macos-standalone-app
-	@if test -d "/Volumes/UltraStar Deluxe"; then\
-		echo "Error: there is already a disk mounted on /Volumes/UltraStar Deluxe";\
+	@if test -d "/Volumes/UltraStar Community Edition"; then\
+		echo "Error: there is already a disk mounted on /Volumes/UltraStar Community Edition";\
 		exit 1;\
 	fi
-	$(RM) "UltraStar Deluxe.dmg"
-	$(RM) "UltraStar Deluxe.sparseimage"
-	$(HDIUTIL) create -type SPARSE -size 1g -fs HFS+ -volname "UltraStar Deluxe" -ov "UltraStar Deluxe.sparseimage"
-	$(HDIUTIL) attach "UltraStar Deluxe.sparseimage"
-	/bin/ln -s /Applications "/Volumes/UltraStar Deluxe/Applications"
-	/bin/cp -R "UltraStar Deluxe.app" "/Volumes/UltraStar Deluxe"
-	$(MKDIR) "/Volumes/UltraStar Deluxe/Licenses"
-	find $(USDX_GAME_DIR) -name 'LICENSE.*' -maxdepth 1 -exec cp {} "/Volumes/UltraStar Deluxe/Licenses" \;
-#	/bin/cp "ultrastardx/icons/UltraStarDeluxeVolumeIcon.icns "/Volumes/UltraStar Deluxe/.VolumeIcon.icns"
-#	/Developer/Tools/SetFile -a C "/Volumes/UltraStar Deluxe/.VolumeIcon.icns" "/Volumes/UltraStar Deluxe"
-	codesign --force --deep --sign - "/Volumes/UltraStar Deluxe/UltraStar Deluxe.app"
-	$(HDIUTIL) detach "/Volumes/UltraStar Deluxe"
-	$(HDIUTIL) convert "UltraStar Deluxe.sparseimage" -format UDBZ -o "UltraStar Deluxe.dmg"
-	$(RM) "UltraStar Deluxe.sparseimage"
+	$(RM) "UltraStar Community Edition.dmg"
+	$(RM) "UltraStar Community Edition.sparseimage"
+	$(HDIUTIL) create -type SPARSE -size 1g -fs HFS+ -volname "UltraStar Community Edition" -ov "UltraStar Community Edition.sparseimage"
+	$(HDIUTIL) attach "UltraStar Community Edition.sparseimage"
+	/bin/ln -s /Applications "/Volumes/UltraStar Community Edition/Applications"
+	/bin/cp -R "UltraStar Community Edition.app" "/Volumes/UltraStar Community Edition"
+	$(MKDIR) "/Volumes/UltraStar Community Edition/Licenses"
+	find $(USCE_GAME_DIR) -name 'LICENSE.*' -maxdepth 1 -exec cp {} "/Volumes/UltraStar Community Edition/Licenses" \;
+#	/bin/cp "ultrastardx/icons/UltraStarDeluxeVolumeIcon.icns "/Volumes/UltraStar Community Edition/.VolumeIcon.icns"
+#	/Developer/Tools/SetFile -a C "/Volumes/UltraStar Community Edition/.VolumeIcon.icns" "/Volumes/UltraStar Community Edition"
+	codesign --force --deep --sign - "/Volumes/UltraStar Community Edition/UltraStar Community Edition.app"
+	$(HDIUTIL) detach "/Volumes/UltraStar Community Edition"
+	$(HDIUTIL) convert "UltraStar Community Edition.sparseimage" -format UDBZ -o "UltraStar Community Edition.dmg"
+	$(RM) "UltraStar Community Edition.sparseimage"
 
 	@echo ""
-	@echo "DMG Disk image created (UltraStar Deluxe.dmg)."
+	@echo "DMG Disk image created (UltraStar Community Edition.dmg)."
 	@echo ""
 
 # remove macOS apllication bundle and disk image
@@ -503,9 +503,9 @@ clean-macos: clean-macos-app clean-macos-dmg
 
 .PHONY: clean-macos-app
 clean-macos-app:
-	$(RM_REC) "UltraStar Deluxe.app"
+	$(RM_REC) "UltraStar Community Edition.app"
 
 .PHONY: clean-macos-dmg
 clean-macos-dmg:
-	$(RM) "UltraStar Deluxe.dmg"
-	$(RM) "UltraStar Deluxe.sparseimage"
+	$(RM) "UltraStar Community Edition.dmg"
+	$(RM) "UltraStar Community Edition.sparseimage"
