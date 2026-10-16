@@ -279,6 +279,16 @@ function TSkin.GetTextureFileName(TextureName: string): IPath;
 var
   T: integer;
 begin
+  {$IFDEF DARWIN}
+  // Mac keyboards label the Alt key Option
+  if (TextureName = 'ButtonAlt') then
+  begin
+    Result := GetTextureFileName('ButtonAltMac');
+    if (Result.IsSet) then
+      Exit;
+  end;
+  {$ENDIF}
+
   Result := PATH_NONE;
   
   for T := 0 to High(SkinTexture) do
