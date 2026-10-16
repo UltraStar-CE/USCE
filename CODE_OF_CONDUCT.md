@@ -24,13 +24,13 @@ discussion focused on the proposal, listen to the people affected and look for
 a practical way forward. Take a break when a discussion stops being productive.
 
 If a concern needs help, contact a maintainer listed in
-[`MAINTAINERS.md`](MAINTAINERS.md). Maintainers should listen, explain which
-expectation applies and respond proportionately. Usually this starts with a
+[`MAINTAINERS.md`](MAINTAINERS.md). We listen, explain which expectation applies
+and respond proportionately. Usually this starts with a
 reminder or a request to change the behavior. Repeated or serious disruption may
 lead to a temporary restriction or removal from project spaces.
 
-Explain moderation decisions and how they can be reconsidered. A maintainer
-involved in a disagreement should ask another maintainer to handle it where
-possible. The same rules apply to everyone, including project leaders.
+We explain moderation decisions and how they can be reconsidered. When a
+maintainer is involved in a disagreement, we ask another maintainer to handle
+it where possible. The same rules apply to everyone, including project leaders.
 
 Anyone can suggest improvements to this code of conduct through an issue or PR.

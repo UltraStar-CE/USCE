@@ -4,6 +4,31 @@
 
 This guide introduces the inherited USDX codebase. For the USCE contribution and review process, read [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## AI assistance and human responsibility
+
+We use AI reviews to help maintainers keep up with a fast pace of development
+and community contributions. An additional review can surface mistakes, clarify
+tradeoffs and give contributors earlier feedback. It helps us manage review
+work; it does not transfer responsibility for a change to a tool.
+
+Contributors remain responsible for everything they submit, whether written by
+hand or with AI assistance. A human responsible for the contribution must be
+able to read, modify, explain and defend the code: how it works, why the approach
+fits, what it affects and how it was checked. We welcome AI assistance when the
+contributor has credible understanding of the submitted work.
+
+During review, we may ask for an explanation, a focused revision or evidence
+that supports a claim. We judge those answers and the code, not a contributor's
+credentials or confidence. If doubts remain and the contributor cannot
+plausibly demonstrate the expertise needed to own the change, we may decline it
+or ask for a smaller contribution they can support. Producing code with a tool
+is not, by itself, evidence of understanding it.
+
+AI suggestions are proposals. Contributors check them before submission, and
+maintainers assess review findings before acting on them. A human decides what
+is merged under our governance; an AI review never supplies a required human
+approval or authorizes an automatic merge.
+
 ### Commits older than 2016
 In 2016 the project was moved from SourceForge (SVN) to Github (git).
 Generally, you don't need to look at commits that aren't in the git history, but sometimes you'll want to check something.

@@ -1,115 +1,80 @@
-# USCE automation
+# Automation in USCE
 
-Automation proposes changes and reports evidence. Humans decide what is merged.
-Required CI and the published governance apply to maintainer and automated
-changes alike, including the explicitly recorded solo bootstrap phase.
-AI reviews are advisory comments, never approvals. Automation never merges.
+We use automation to help review contributions, prepare candidate changes and
+follow upstream development. Maintainers decide what is merged. Required CI and
+our published review policy apply to our own PRs and automated proposals alike.
+AI feedback is advisory and never replaces a required human approval.
 
-## Automatic reviews
+## PR reviews
 
-Use native Codex GitHub reviews with the maintainer's existing ChatGPT plan.
-Automatic Copilot review requests are disabled across USCE, MXE and Themes.
-Do not enable duplicate reviewers or paid API usage as a fallback for a quota
-failure.
+Codex is our chosen AI reviewer. Automatic Copilot requests are disabled across
+USCE, MXE and Themes. We use subscription-based Codex reviews rather than a
+second paid review service. The Codex connection is not yet verified, so a PR
+without a completed review must not be described as AI-reviewed.
 
-In [Codex review settings](https://chatgpt.com/settings/code-review), connect
-`UltraStar-CE/USCE`, `UltraStar-CE/mxe` and `UltraStar-CE/Themes`. Enable automatic
-review for each repository, covering all PR authors where supported. Prefer a
-review when a PR is ready; request another after substantial changes rather than
-on every draft push. A maintainer can request a review with `@codex review`.
-Verify a review on a representative PR before treating the connection as active.
-Subscription usage limits still apply; a failed review is not a clean review.
+Our intended review cadence is one review when a PR is ready, with another
+review after substantial changes. This avoids repeated reviews of draft pushes.
+A maintainer can request a review with `@codex review`. Usage limits still apply;
+a failed or missing review is not a clean review.
 
-The separate optional API workflow covers PRs through `pull_request_target`. It checks
-out only trusted default-branch code, downloads diffs as data, gives the agent
-read-only access without a write token, and publishes a COMMENT review from a
-separate job. It discards feedback if the PR head changed. Oversized changes
-require human review. Binary files and missing patches need manual review.
-Input tasks are limited to 60 KB of UTF-8 JSON without truncating patches.
-Agent responses travel as short-lived artifacts, not environment variables.
+## Candidate fixes
 
-## Candidate issue fixes
+The optional candidate workflow is currently inactive. It uses separately billed
+API access, which we have not enabled. Its implementation supports small,
+reproducible issues selected by a write collaborator with the `agent:fix` label.
+A human authorization step precedes a candidate run.
 
-A write collaborator applies `agent:fix` to a small, reproducible issue. This
-starts a candidate run after the configured environment approval. The workflow
-checks the collaborator's permission and the current issue state and label.
-The agent reads the code and returns a proposed set of source files. A separate
-publisher validates paths, sizes, file types, and the base commit before opening
-a draft PR. It does not execute agent-generated code with secrets or write
-permissions. It asks the reporter to test once a maintainer provides a build or
-instructions. No reply is not confirmation. A human closes the issue.
+The agent proposes source changes. A separate publisher checks the paths,
+sizes, file types and base revision before creating a draft PR. Proposed code
+runs only in the build validation path, without AI credentials or publishing
+permissions. Candidates are limited to eight text files and 250 KB, covering
+Pascal under `src/base`, `src/screens`, `src/classes`, `src/menu` and `test`, plus
+Markdown under `doc`. Other changes receive maintainer-led review.
 
-Candidates are limited to eight text files and 250 KB. Pascal files under
-`src/base`, `src/screens`, `src/classes`, `src/menu`, and `test`, plus Markdown
-under `doc`, are supported. Build changes, workflows, deletions, third-party
-code, and binary assets require a maintainer-led PR. This intentionally limits
-the initial automation's reach; it must explain when a task is outside scope.
+We provide a build or testing instructions before asking an issue reporter to
+try a candidate. Reporters can confirm, reject or say they cannot test. Silence
+is not confirmation. A human records the result and decides when to close the
+issue; creating or merging a candidate does not close it automatically.
 
-## Upstream tracking and adaptation
+## Following upstream
 
-The daily tracker follows:
+We track the following upstream branches and preserve their authorship:
 
-| Repository | Branch | Initial imported or inventoried baseline |
+| Repository | Branch | Imported or inventoried baseline |
 | --- | --- | --- |
 | UltraStar-Deluxe/USDX | master | 05a3cb37c63361695b16e777f5b5678ebd873198 |
 | UltraStar-Deluxe/mxe | ultrastardx | 355c55d2723e344c47cf353f9d47699a2ce1150a |
 | UltraStar-Deluxe/Themes | main | f21d921f43e6cd430435a2cb5423f2bf5243f6c9 |
 
-New tips create draft assessment PRs with compare links and a paginated commit
-inventory. A checkpoint means assessed, not incorporated. Before merging one,
-record an adaptation PR or explicit reason for deferral for every source commit.
-History rewrites fail for manual assessment rather than silently resetting.
+The tracker creates draft assessment PRs containing compare links and a complete
+commit inventory. An assessment checkpoint means reviewed, not necessarily
+incorporated. Each commit receives an adaptation PR or a recorded reason for
+deferral before the checkpoint is merged. Rewritten history receives explicit
+assessment rather than an automatic reset.
 
-With AI enabled, daily runs also propose one USDX source-commit adaptation at a
-time, in commit order. Each source SHA has a stable candidate branch; open or
-closed PRs are not recreated automatically. The queue waits for earlier candidate
-PRs to be merged or explicitly deferred before processing dependent changes.
-Incomplete patches or an agent response without a candidate create a persistent
-manual-assessment draft PR. Scheduled runs then pause without repeating the
-agent call. Closing that PR alone does not clear the pause. Use workflow dispatch
-with kind `upstream` and a full source SHA to retry after resolving prerequisites,
-or record a deferral and advance the reviewed assessment checkpoint.
-Use workflow dispatch with kind `upstream` and a full
-source SHA for a selected commit. Large commits, merge commits with incomplete
-patches, unsupported paths, and MXE/Themes changes need maintainer-led adaptation.
-The automatic tracker covers all three repositories; automatic code adaptation
-in this first version covers only the supported USDX source paths.
+The optional API adaptation queue can propose one supported USDX source commit
+at a time, in order. It is currently inactive. Earlier candidates must be merged
+or explicitly deferred before dependent changes proceed. Incomplete or
+unsupported changes produce a persistent assessment draft and pause the queue.
+Closing that draft alone does not restart it. MXE, theme assets and changes
+outside the supported paths remain maintainer-led adaptations.
 
-## Activation after review and merge
+## Implementation and limits
 
-1. Enable Actions on the fork and permit Actions to create PRs. Default workflow
-   token permission should remain read-only; only the publishing jobs request
-   the narrowly scoped writes they need.
-2. Create label `agent:fix`. Set repository variable `USCE_AUTOMATION_ENABLED` to
-   `true` to activate upstream assessment PRs.
-3. Create environments `usce-ai-reviews` and `usce-ai-candidates`, restricted to
-   the default branch. Require a human reviewer for candidate runs. Store a
-   dedicated, budget-limited `OPENAI_API_KEY` in each environment. No key is
-   included in this PR. Configure provider spending limits before enabling.
-4. Set `USCE_CODEX_VERSION` to a reviewed CLI release and optionally set
-   `USCE_AI_MODEL`. Set `USCE_AI_ENABLED=true` only after the environments,
-   permissions, API budget, and first end-to-end trial have been checked.
-   Native Codex GitHub reviews are the preferred review path. Keep this separate
-   API path disabled unless its additional cost and coverage are needed.
-5. Run a small internal PR, a fork PR, a labeled test issue, and a known upstream
-   commit. Check that generated PRs stay draft, approvals are required, and the
-   original issue remains open. Inspect the full changes and provenance.
+The scheduled tracker is controlled by `USCE_AUTOMATION_ENABLED`. The separate
+API path requires `USCE_AI_ENABLED`, a reviewed `USCE_CODEX_VERSION` and scoped
+API credentials in the `usce-ai-reviews` and `usce-ai-candidates` environments.
+We keep API use disabled until its cost and end-to-end behavior are reviewed.
+Native Codex reviews do not use these API credentials.
 
-PRs created by `GITHUB_TOKEN` do not automatically start ordinary PR workflows.
-A maintainer must run CI using the manual build trigger proposed in the CI PR,
-or push a reviewed commit to the candidate branch to start PR CI. Do not weaken
-required checks or merge while checks are missing. An independently configured
-GitHub App token could trigger CI in a future revision, but is not required or
-silently provisioned here.
+API review jobs read the trusted default-branch implementation and treat PR
+diffs as data. A separate job publishes COMMENT reviews only if the PR revision
+still matches. Tasks are limited to 60 KB of UTF-8 JSON without partial patches;
+responses use short-lived artifacts. Missing patches, binary files and oversized
+changes need manual review. The publisher boundary checks are covered by
+`node --test tools/usce-automation.test.cjs`.
 
-## Operations and limitations
-
-Run `node --test tools/usce-automation.test.cjs` for the publisher boundary tests.
-New external actions are pinned to reviewed commit SHAs. The CLI version is a
-separate explicit activation setting. Watch failed workflow runs, API quotas,
-and stalled assessment PRs; failures must not be treated as a clean review.
-Review the active developer roster monthly and change required approvals to two
-when the fifth developer qualifies. The workflow never changes that threshold.
-
-No automation has been enabled merely by adding these files. The workflow only
-becomes scheduled once merged into the default branch and explicitly enabled.
+PRs created with GitHub's workflow token do not start ordinary PR CI by
+themselves. We validate them through the isolated path described in
+[USCE-CI.md](USCE-CI.md). Automation never changes review thresholds, approves
+its own proposals or enables automatic merging.

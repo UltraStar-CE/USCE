@@ -1,36 +1,29 @@
-# USCE visual identity proposal
+# USCE visual identity
 
-This proposed identity combines a star and microphone with cyan, violet and
-magenta stage colors. The primary name is **USCE**, expanded as **UltraStar
-Community Edition**. The visual focuses on singing and shared play.
+Our identity combines a star and microphone with cyan, violet and magenta stage
+colors. **USCE** expands to **UltraStar Community Edition**. The graphics focus
+on singing and shared play, with abstract light and sound waves.
 
 ![Identity concept](usce-identity-concept.png)
 
-## Assets
+## Artwork
 
-- `usce-logo-horizontal.png`: transparent logo for light backgrounds.
-- `usce-app-icon.png`: square app and organization avatar artwork.
-- `usce-social-banner.png`: wide repository and announcement artwork.
-- `usce-identity-concept.png`: concept board showing the proposed direction.
+- `usce-logo-horizontal.png`: transparent dark wordmark for light backgrounds.
+- `usce-app-icon.png`: square application and organization avatar artwork.
+- `usce-social-banner.png`: repository and announcement artwork.
+- `usce-identity-concept.png`: presentation board showing the visual direction.
 
-These are raster proposals generated with OpenAI's built-in image generation
-tool, then visually inspected. The prompts are included in `generation-prompts.txt`.
-The concept board is a presentation, not a source vector file.
+We use the square star and microphone for the GitHub organization profile.
+Application icons, installer artwork and menu backgrounds use the same identity.
+[BRANDING.md](../BRANDING.md) describes platform assets and compatible data paths.
 
-## Review and rollout
+The horizontal logo suits light surfaces; the banner carries a light wordmark
+for dark surfaces. Clear space and the original proportions keep the mark
+recognizable. Supporting artwork uses abstract lighting rather than people or
+gestures.
 
-Review the symbol, name, contrast, and small-size legibility before adoption.
-Supporting graphics use abstract lighting and sound waves. Exclude crowds,
-people, hands, raised arms and gestures from the visual identity.
-Use the horizontal dark wordmark on light backgrounds. Keep clear space around
-the star and do not stretch the logo. For dark surfaces use the white wordmark
-in the banner or prepare a separately reviewed light variant.
-
-The inherited game icon and installer branding remain in place in this PR.
-After the identity is selected, prepare an editable vector master, optically
-adjusted 16/32/48-pixel versions, multi-resolution Windows ICO, macOS ICNS, and
-Linux icons. Replace in-game logos, installer graphics, application metadata,
-and release artifact names together in a tested branding PR. Verify Windows,
-Linux and both macOS architectures before publishing a branded release.
-
-Retain upstream copyright, license and attribution notices during that rollout.
+The raster artwork was generated with OpenAI image generation and visually
+reviewed. Prompts are recorded in `generation-prompts.txt`. The concept board
+is a presentation, not an editable vector source. A vector master and optical
+refinements at small sizes remain future design work. Existing upstream creator,
+copyright and license notices remain in the project.
