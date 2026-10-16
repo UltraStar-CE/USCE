@@ -9,7 +9,6 @@ The generated identity in `branding/` supplies the application, installer and
 package icons. We package PNG sizes, Windows ICO, macOS ICNS and installer BMP
 files from the reviewed raster source with `tools/package-usce-icons.ps1`.
 `python tools/check-usce-branding.py` checks the platform references.
-An editable vector master remains future design work.
 
 ## Existing user data
 
@@ -29,9 +28,8 @@ The source scan preserves copyright and license headers, historical release
 notes, original theme creators, contributor credits, and third-party source.
 These are attribution, not claims about the current product name.
 
-The pinned MXE downloader still consumes the verified upstream release and its
-`usdx-dlls-x86_64` asset name. It cannot be renamed or redirected until USCE has
-published matching dependencies. Lua's `Usdx` API, `.usdx` plugin extensions,
+The MXE downloader uses a pinned dependency release and the inherited
+`usdx-dlls-x86_64` asset identifier. Lua's `Usdx` API, `.usdx` plugin extensions,
 translation keys and theme-format identifiers stay compatible with existing
 community content. Legacy data-path strings remain only for discovery.
 

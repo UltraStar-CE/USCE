@@ -52,7 +52,7 @@ A git version of this SVN can be found in the [legacy-sourceforge-svn-mirror](ht
 - Freepascal 3.0.0 or later is required for development
 - Please use CamelCase naming. Classes/Units/Types/Functions should start with a capital letter and constants/values/instances should start with small letters
 - You can use Windows or Linux or macOS for development just fine. See readme.md for Linux / macOS install instructions.
-- Use a feature branch and open a draft PR early so others can help. Required CI and the review policy in GOVERNANCE.md apply to maintainers too, including the recorded solo bootstrap exception. Independent approval becomes required when a second human developer joins.
+- Use a feature branch and open a draft PR early so others can help. Required CI and the review policy in GOVERNANCE.md apply to maintainers too, including the published policy for a project with one human developer. Independent approval becomes required when a second human developer joins.
 - Code and build changes run Windows, Linux, Intel macOS and ARM macOS builds on pull requests and pushes to `main`. Documentation, banners and translation changes only need whitespace validation. Contributors can download build artifacts from GitHub Actions to help test changes. See [USCE-CI.md](USCE-CI.md) for the required validation gate.
 - If you start working on something that is more then just a small code change, please create an issue in the git repository issue tracker for that and assign it to yourself, so the other developers don't touch it in the mean time.
 - Please write somewhat reusable code and split big problems into smaller functions. :)

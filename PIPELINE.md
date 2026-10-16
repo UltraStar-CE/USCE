@@ -1,18 +1,20 @@
-# USCE build and contribution pipeline
+# From contribution to release
 
-We develop through PRs and our published governance, including the recorded solo
-bootstrap phase. Code and build changes require Windows installer/portable builds,
-Linux AppImage, Intel and ARM macOS DMG builds, plus whitespace validation.
-Documentation, banners and translation changes only require whitespace. The
-required gate waits for all builds needed by the changed files on the exact PR
-revision, so failed builds still block merging.
+We develop through PRs under our [governance](GOVERNANCE.md). Contributors explain
+the problem, the resulting behavior and what they tested. Maintainer changes and
+automated proposals follow the same process.
 
-Build jobs use read-only repository tokens. Windows dependencies are currently
-downloaded from the pinned public upstream MXE release by `dldlls.py`; the fork
-does not yet publish an equivalent dependency release. No broad cross-repository
-personal access token is needed by these build jobs.
+Code and build changes require Windows installer and portable builds, a Linux
+AppImage, Intel and ARM macOS DMGs, and whitespace validation. Documentation,
+banners and translation-only changes require whitespace validation. The required
+gate waits for the builds needed by the changed files on the exact PR revision.
+Failed or missing required builds block merging.
 
-See [USCE-CI.md](USCE-CI.md) for isolated manual validation of agent candidates
-and [AUTOMATION.md](AUTOMATION.md) for reviews, reporter confirmation, upstream
-tracking and adaptation. Native Codex review setup is not yet verified. The separately billed API candidate
-workflows remain inactive. Successful builds create test artifacts, not public releases.
+AI reviews provide additional feedback; people remain responsible for their
+contributions and merge decisions. [DEVELOPMENT.md](DEVELOPMENT.md) explains our
+AI policy. [AUTOMATION.md](AUTOMATION.md) describes candidate fixes, reporter
+feedback and upstream assessment.
+
+Successful builds provide development artifacts for testing. A release is a
+separate human decision after testing the packaged game, as described in
+[RELEASING.md](RELEASING.md).

@@ -20,9 +20,6 @@ The updater refers to the USCE repository and matching USCE installer names.
 Updater metadata changes only when the corresponding installer is available.
 We retain upstream credits, copyright notices and dependency licenses.
 
-## Package availability
-
-We have not published a USCE release yet. USCE Flathub packages, distribution
-packages and signing identities are not currently available. Historical
-Debian/Gentoo recipes and upstream release history remain source references;
-distribution-specific USCE packages need their own maintenance and testing.
+Published downloads and installation options are linked from
+[README.md](README.md). Each package identifies the USCE source and dependency
+versions it contains.

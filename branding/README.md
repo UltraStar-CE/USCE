@@ -19,11 +19,9 @@ Application icons, installer artwork and menu backgrounds use the same identity.
 
 The horizontal logo suits light surfaces; the banner carries a light wordmark
 for dark surfaces. Clear space and the original proportions keep the mark
-recognizable. Supporting artwork uses abstract lighting rather than people or
-gestures.
+recognizable. Supporting artwork uses abstract stage lighting.
 
 The raster artwork was generated with OpenAI image generation and visually
-reviewed. Prompts are recorded in `generation-prompts.txt`. The concept board
-is a presentation, not an editable vector source. A vector master and optical
-refinements at small sizes remain future design work. Existing upstream creator,
+reviewed. Prompts are recorded in `generation-prompts.txt`. The concept board presents the visual direction; the packaged assets use the
+recorded raster sources. Existing upstream creator,
 copyright and license notices remain in the project.

@@ -26,7 +26,7 @@ An additional PR is closed with an explanation and can be reopened once merging
 or closing another PR leaves a free slot. Its commits and discussion remain.
 
 Every change uses a PR and required CI under [GOVERNANCE.md](GOVERNANCE.md).
-During the recorded solo bootstrap phase the sole maintainer can merge after
+While the project has one human developer, the sole maintainer can merge after
 checking CI and review findings, with the absence of independent review stated.
 Once a second human developer joins, one independent approval is required;
 when there are more than four active developers, two are required. Authors
