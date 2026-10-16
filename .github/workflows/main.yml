@@ -46,6 +46,12 @@ jobs:
     needs: resolve
     name: ${{ github.event_name == 'workflow_dispatch' && 'Manual - Build for Windows' || 'Build for Windows' }}
     runs-on: windows-2022
+    # Adapted from dgruss's USDX PR #1417, commit a4c9ea3e11a8a2c688e7746e8f82e521f950e4a9.
+    env:
+      FPC_VERSION: 3.2.2
+      FPC_SHA256: 8C255390544B051388B577EB61C6191A04883264AFE0E3369B3600A56DAF7BDE
+      NSIS_VERSION: 3.05
+      NSIS_SHA256: 1A3CC9401667547B9B9327A177B13485F7C59C2303D4B6183E7BC9E6C8D6BFDB
     steps:
       - name: Checkout Repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -61,6 +67,7 @@ jobs:
         with:
           msystem: MSYS
           update: false
+          cache: ${{ github.event_name != 'workflow_dispatch' }}
           install: >-
             autoconf-wrapper
             automake-wrapper
@@ -69,20 +76,32 @@ jobs:
             pkgconf
             mingw-w64-x86_64-gcc
             mingw-w64-x86_64-tools
+      - name: Cache FPC and NSIS
+        if: github.event_name != 'workflow_dispatch'
+        id: cache-fpc-nsis
+        uses: actions/cache@v6
+        with:
+          path: |
+            C:\FPC\${{ env.FPC_VERSION }}
+            C:\Program Files (x86)\NSIS
+          key: windows-fpc-nsis-v1-${{ runner.arch }}-fpc-${{ env.FPC_VERSION }}-nsis-${{ env.NSIS_VERSION }}
       - name: Install Dependencies
-        timeout-minutes: 40
+        if: steps.cache-fpc-nsis.outputs.cache-hit != 'true'
+        timeout-minutes: 10
         run: |
-          curl.exe --fail --location --retry 2 --retry-all-errors --connect-timeout 30 --max-time 600 -o fpc-installer.exe "https://sourceforge.net/projects/freepascal/files/Win32/3.2.2/fpc-3.2.2.win32.and.win64.exe/download"
+          curl.exe --fail --location --retry 3 --retry-all-errors --connect-timeout 30 --max-time 300 --output fpc-installer.exe "https://downloads.freepascal.org/fpc/dist/$($env:FPC_VERSION)/i386-win32/fpc-$($env:FPC_VERSION).win32.and.win64.exe"
           if ($LASTEXITCODE -ne 0) { throw 'Compiler download failed; refusing to execute a partial installer' }
-          curl.exe --fail --location --retry 2 --retry-all-errors --connect-timeout 30 --max-time 120 -o nsis-3.05-setup.exe "https://sourceforge.net/projects/nsis/files/NSIS%203/3.05/nsis-3.05-setup.exe/download"
+          curl.exe --fail --location --retry 3 --retry-all-errors --connect-timeout 30 --max-time 120 --output nsis-installer.exe "https://downloads.sourceforge.net/project/nsis/NSIS%203/$($env:NSIS_VERSION)/nsis-$($env:NSIS_VERSION)-setup.exe"
           if ($LASTEXITCODE -ne 0) { throw 'NSIS download failed; refusing to execute a partial installer' }
+          if ((Get-FileHash -Algorithm SHA256 fpc-installer.exe).Hash -ne $env:FPC_SHA256) { throw 'Unexpected FPC installer SHA256' }
+          if ((Get-FileHash -Algorithm SHA256 nsis-installer.exe).Hash -ne $env:NSIS_SHA256) { throw 'Unexpected NSIS installer SHA256' }
           $compilerInstaller = Start-Process -FilePath ".\\fpc-installer.exe" -WindowStyle Hidden -ArgumentList "/TYPE=full /VERYSILENT /SP- /SUPPRESSMSGBOXES /NORESTART /LOG=fpc-install.log" -PassThru
           if (-not $compilerInstaller.WaitForExit(600000)) {
             Stop-Process -Id $compilerInstaller.Id -Force
             throw 'Compiler installation exceeded ten minutes'
           }
           if ($compilerInstaller.ExitCode -ne 0) { throw "Compiler installation failed: $($compilerInstaller.ExitCode)" }
-          $nsisInstaller = Start-Process -FilePath ".\\nsis-3.05-setup.exe" -WindowStyle Hidden -ArgumentList "/S" -PassThru
+          $nsisInstaller = Start-Process -FilePath ".\\nsis-installer.exe" -WindowStyle Hidden -ArgumentList "/S" -PassThru
           if (-not $nsisInstaller.WaitForExit(300000)) {
             Stop-Process -Id $nsisInstaller.Id -Force
             throw 'NSIS installation exceeded five minutes'
