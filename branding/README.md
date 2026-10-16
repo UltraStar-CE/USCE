@@ -15,12 +15,13 @@ Community Edition**. The visual focuses on singing and shared play.
 
 These are raster proposals generated with OpenAI's built-in image generation
 tool, then visually inspected. The prompts are included in `generation-prompts.txt`.
-The concept board is a presentation, not a source vector file. Do not treat
-generated lettering as an installed font or claim exclusive trademark clearance.
+The concept board is a presentation, not a source vector file.
 
 ## Review and rollout
 
 Review the symbol, name, contrast, and small-size legibility before adoption.
+Supporting graphics use abstract lighting and sound waves. Exclude crowds,
+people, hands, raised arms and gestures from the visual identity.
 Use the horizontal dark wordmark on light backgrounds. Keep clear space around
 the star and do not stretch the logo. For dark surfaces use the white wordmark
 in the banner or prepare a separately reviewed light variant.
