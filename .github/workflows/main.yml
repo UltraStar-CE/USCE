@@ -17,6 +17,9 @@ on:
     - cron:  '40 5 * * *'
 permissions:
   contents: read
+concurrency:
+  group: build-${{ github.event.pull_request.number || github.event.inputs.ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   resolve:
     name: Resolve build source
@@ -36,7 +39,7 @@ jobs:
             core.setOutput('sha', sha);
   build_windows:
     needs: resolve
-    name: Build for Windows
+    name: ${{ github.event_name == 'workflow_dispatch' && 'Manual - Build for Windows' || 'Build for Windows' }}
     runs-on: windows-2022
     steps:
       - name: Checkout Repository
@@ -106,7 +109,7 @@ jobs:
 
   build_mac:
     needs: resolve
-    name: Build for MacOS (${{ matrix.os }})
+    name: ${{ github.event_name == 'workflow_dispatch' && 'Manual - ' || '' }}Build for MacOS (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -180,7 +183,7 @@ jobs:
 
   build_linux:
     needs: resolve
-    name: Build for Linux
+    name: ${{ github.event_name == 'workflow_dispatch' && 'Manual - Build for Linux' || 'Build for Linux' }}
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout Repository
