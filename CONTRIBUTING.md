@@ -7,9 +7,9 @@ finding the right place to make a change.
 ## Report a problem
 
 Include your operating system, the exact build or commit, steps to reproduce,
-expected behavior, and what happened. Add a short log or screenshot if useful,
-removing names, private paths, song collections, and credentials. Share only
-files you have permission to distribute. Search for an existing report first.
+expected behavior, and what happened. Add a short log or screenshot if useful.
+Share only files you have permission to distribute. Search for an existing
+report first.
 
 ## Propose a change
 
@@ -29,8 +29,8 @@ cannot approve their own work. Automation cannot merge or supply an approval.
 
 AI-assisted contributions are welcome when the contributor can explain the
 change, checks its correctness and provenance, and states how AI was used.
-Treat generated output as a proposal. Do not submit private data to an AI tool
-without permission. Reviews should focus on actionable problems, not volume.
+Treat generated output as a proposal. Reviews should focus on actionable
+problems, not volume.
 
 ## Testing candidate fixes
 
@@ -48,6 +48,4 @@ authorship when porting changes, link the source commit, and document adaptation
 Changes useful to USDX can also be proposed there; contributors decide where
 they wish to participate.
 
-For conduct concerns, read [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Security
-vulnerabilities should use a verified private reporting channel; never publish
-credentials or exploit details in an ordinary bug report.
+For conduct concerns, read [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).

@@ -42,9 +42,8 @@ behavior while USCE documentation is being established.
 ## Help and feedback
 
 Report reproducible problems in [Issues](https://github.com/UltraStar-CE/USCE/issues).
-Include your build, operating system, and steps to reproduce. Please remove
-personal information from logs. Ideas, questions, and testing feedback help
-shape the game.
+Include your build, operating system, and steps to reproduce. Ideas, questions,
+and testing feedback help shape the game.
 
 ## Take part
 

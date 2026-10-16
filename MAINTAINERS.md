@@ -12,11 +12,7 @@
 
 ## Before community launch
 
-- Publish a private conduct-reporting contact approved by its recipient.
-- Publish an independent appeal contact and name the moderators who consent.
-- Enable and verify private vulnerability reporting, or publish an approved
-  private security contact.
+- Name additional maintainers and moderators as they join.
 - Record the active developer roster, review date, and contribution evidence.
 
-No email addresses or additional maintainers have been assumed. An empty role
-is a visible setup task, not evidence that a service is available.
+The current maintainer is dgruss. Update this roster as the team grows.

@@ -69,15 +69,14 @@ Require passing CI, resolved review conversations, and new approval after code
 changes invalidate an earlier review. Protect the default and release branches,
 with no bypass actors. Disable automatic merging. An administrator's ability
 to edit rules is a responsibility, not an exception to this policy; record rule
-changes publicly, without disclosing confidential security information.
+changes publicly.
 
 ## Transparency and conflicts
 
 Discuss project decisions in issues, PRs, or Discussions. Summarize decisions
 made in calls or chat in the relevant public thread. Disclose relevant conflicts
-of interest and recuse yourself from personal moderation cases. Private reports,
-security vulnerabilities, and personal data stay private; publish only redacted
-outcomes when appropriate.
+of interest and ask an uninvolved maintainer to handle moderation decisions
+where possible. Explain outcomes and the reasons for them.
 
 ## Upstream collaboration
 

@@ -24,9 +24,8 @@ Describe the problem and the behavior you expected.
 
 ## Supporting information
 
-Include a short log, screenshot, or minimal sample if useful. Remove personal
-information and credentials first. Share only files you have permission to
-distribute. Say if this worked in an earlier build.
+Include a short log, screenshot, or minimal sample if useful. Share only files
+you have permission to distribute. Say if this worked in an earlier build.
 
 ## Testing a fix
 
