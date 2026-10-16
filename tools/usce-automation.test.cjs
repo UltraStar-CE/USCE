@@ -85,3 +85,62 @@ test('review publication discards stale heads and never submits an approval', as
   assert.equal(submitted[0].event, 'COMMENT');
   assert.equal(submitted[0].commit_id, 'current');
 });
+
+test('incomplete and oversized upstream patches require manual assessment without an agent task', async () => {
+  for (const files of [[{filename: 'src/base/USong.pas'}], [{filename: 'src/base/USong.pas', patch: 'x'.repeat(20001)}]]) {
+    const outputs = {};
+    const github = {rest: {git: {
+      getRef: async () => ({data: {object: {sha: 'base'}}}),
+      getCommit: async () => ({data: {sha: 'base', tree: {sha: 'tree'}}}),
+    }, repos: {
+      getCollaboratorPermissionLevel: async () => ({data: {permission: 'write'}}),
+      getCommit: async () => ({data: {html_url: 'https://github.com/upstream/commit/test', files}}),
+    }}};
+    const context = {repo: {owner: 'o', repo: 'r'}, actor: 'writer', eventName: 'workflow_dispatch',
+      payload: {repository: {default_branch: 'master'}, inputs: {kind: 'upstream', source_sha: 'a'.repeat(40)}}};
+    await prepare({github, context, core: {setOutput: (k, v) => outputs[k] = v}});
+    assert.equal(outputs.kind, 'manual');
+    assert.equal(JSON.parse(outputs.task).input.files, undefined);
+  }
+});
+
+test('an upstream no-candidate result persists a draft manual-assessment PR', async () => {
+  const writes = [];
+  const github = {rest: {pulls: {
+    list: async () => ({data: []}),
+    create: async x => { writes.push(x); return {data: {html_url: 'https://github.com/o/r/pull/7'}}; },
+  }, git: {
+    getRef: async () => ({data: {object: {sha: 'base'}}}),
+    getTree: async () => ({data: {tree: []}}),
+    createTree: async x => { writes.push(x); return {data: {sha: 'newtree'}}; },
+    createCommit: async () => ({data: {sha: 'commit'}}),
+    createRef: async () => ({}),
+  }}};
+  const task = {kind: 'upstream', base: {branch: 'master', sha: 'base', tree: 'tree'},
+    input: {sha: 'a'.repeat(40), source: 'https://github.com/upstream/commit/a'}};
+  await publish({github, context: {repo: {owner: 'o', repo: 'r'}}, core: {notice: () => {}}},
+    JSON.stringify(task), JSON.stringify({summary: 'Needs build-script changes', validation: 'Not run', files: []}));
+  assert.equal(writes[0].tree.length, 1);
+  assert.match(writes[0].tree[0].path, /^doc\/upstream\/manual\//);
+  assert.equal(writes[1].draft, true);
+  assert.match(writes[1].head, /^automation\/upstream-manual-/);
+});
+
+test('the scheduled queue stops at an existing manual assessment instead of spending again', async () => {
+  let outputs = 0;
+  const github = {paginate: async () => [{sha: 'b'.repeat(40), html_url: 'source', commit: {message: 'change'}}], rest: {
+    git: {
+      getRef: async () => ({data: {object: {sha: 'base'}}}),
+      getCommit: async () => ({data: {sha: 'base', tree: {sha: 'tree'}}}),
+    }, repos: {
+      getCollaboratorPermissionLevel: async () => ({data: {permission: 'write'}}),
+      getContent: async () => { const e = Error('missing'); e.status = 404; throw e; },
+      getCommit: async () => ({data: {sha: 'b'.repeat(40)}}),
+      compareCommits: async () => ({data: {status: 'ahead', total_commits: 1, files: []}}),
+    }, pulls: {list: async x => ({data: x.head.includes('upstream-manual-') ? [{html_url: 'manual PR'}] : []})},
+  }};
+  const context = {repo: {owner: 'o', repo: 'r'}, actor: 'writer', eventName: 'schedule',
+    payload: {repository: {default_branch: 'master'}}};
+  await prepare({github, context, core: {notice: () => {}, setOutput: () => outputs++}});
+  assert.equal(outputs, 0);
+});

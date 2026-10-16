@@ -153,16 +153,32 @@ async function prepare({github, context, core}) {
         for (const commit of delta.commits) {
           const head = context.repo.owner + ':automation/candidate-upstream-' + commit.sha.slice(0, 12);
           const prior = await github.rest.pulls.list({...context.repo, head, state: 'all', per_page: 100});
-          if (!prior.data.length) { sha = commit.sha; break; }
+          if (prior.data.length) {
+            if (prior.data[0].merged_at) continue;
+            core.notice('Upstream queue waits for a human decision on ' + prior.data[0].html_url);
+            return;
+          }
+          const manualHead = context.repo.owner + ':automation/upstream-manual-' + commit.sha.slice(0, 12);
+          const manual = await github.rest.pulls.list({...context.repo, head: manualHead, state: 'all', per_page: 100});
+          if (manual.data.length) {
+            core.notice('Upstream queue paused for manual assessment: ' + manual.data[0].html_url);
+            return;
+          }
+          sha = commit.sha;
+          break;
         }
         if (!sha) return;
       }
       if (!SHA.test(sha || '')) throw Error('Supply a full source commit SHA');
       const source = await github.rest.repos.getCommit({...repoParts(TRACKS[0].repo), ref: sha});
-      if ((source.data.files || []).length > 30) throw Error('Upstream change is too large for candidate automation');
-      task = {kind, number: 0, base, input: {source: source.data.html_url, sha,
+      const files = source.data.files || [];
+      const incomplete = !files.length || files.length > 30 || files.some(f => typeof f.patch !== 'string' || !f.patch || f.patch.length > 20000);
+      if (incomplete) {
+        task = {kind: 'manual', number: 0, base, input: {source: source.data.html_url, sha,
+          reason: 'Source patch is missing, oversized, or outside the 30-file limit. Assess this commit manually before processing dependent changes.'}};
+      } else task = {kind, number: 0, base, input: {source: source.data.html_url, sha,
         author: source.data.commit.author,
-        message: bounded(source.data.commit.message), files: source.data.files.map(f => ({path: f.filename, status: f.status, patch: bounded(f.patch, 20000)}))}};
+        message: bounded(source.data.commit.message), files: files.map(f => ({path: f.filename, status: f.status, patch: f.patch}))}};
     } else throw Error('Unsupported task');
   }
   if (JSON.stringify(task).length > 150000) throw Error('Input exceeds the automated review limit');
@@ -194,6 +210,17 @@ async function publish({github, context, core}, taskText, resultText) {
     return;
   }
   if (!result.files.length) {
+    if (task.kind === 'upstream' || task.kind === 'manual') {
+      const content = {source: task.input.source, sha: task.input.sha, status: 'needs-manual-assessment', reason: result.summary};
+      const pr = await openDraft(github, context, task.base,
+        'automation/upstream-manual-' + task.input.sha.slice(0, 12),
+        [{path: 'doc/upstream/manual/' + task.input.sha + '.json', content: JSON.stringify(content, null, 2) + '\n'}],
+        'Manual upstream assessment for ' + task.input.sha.slice(0, 12),
+        'Upstream queue paused for ' + task.input.source + '\n\n' + result.summary + validation +
+        '\n\nNo source change was generated. This draft PR persists the pause so daily runs do not repeat the agent call or advance past potentially dependent changes. A maintainer can retry this SHA with workflow dispatch after resolving prerequisites, or record an explicit deferral and advance the reviewed assessment checkpoint. Closing this PR alone does not clear the pause. No automatic merge.');
+      core.notice('Upstream queue paused: ' + pr.html_url);
+      return;
+    }
     core.warning('Agent could not produce an in-scope candidate: ' + result.summary);
     return;
   }
