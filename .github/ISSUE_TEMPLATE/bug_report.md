@@ -1,3 +1,11 @@
+---
+name: Bug report
+about: Report a reproducible problem in USCE
+title: ""
+labels: ""
+assignees: ""
+---
+
 ## What happened?
 
 Describe the problem and the behavior you expected.
