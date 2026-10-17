@@ -79,7 +79,7 @@ File section: `[Game]`. Most settings are under **Options → Game**.
 | `Language` | Installed language name; `English` | Menu language. Falls back to an available language if necessary. |
 | `SongMenu` | `Roulette`, `Chessboard`, `List`; `Roulette` | Song browser layout. |
 | `Tabs` | `Off`, `On`; `Off` | Groups songs into categories using the sorting method. |
-| `Sorting` | `Edition`, `Genre`, `Language`, `Folder`, `Title`, `Artist`, `Artist2`, `Year`, `Year Reversed`, `Decade`, `Playlist`; `Artist` | Organizes the collection. Some choices depend on song metadata. |
+| `Sorting` | `Edition`, `Genre`, `Language`, `Folder`, `Title`, `Artist`, `Artist2`, `Year`, `Year Reversed`, `Decade`; `Artist` | Organizes the collection. Some choices depend on song metadata. |
 | `ShowScores` | `Off`, `When exists`, `On`; `On` | Whether scores appear in the song browser. |
 | `AVDelay` | Integer milliseconds; `0` | Audio/video timing compensation. Adjust in small steps using a familiar song. |
 | `MicDelay` | Integer milliseconds, normally nonnegative; `140` | Compensates for microphone input delay when matching notes. |
@@ -196,7 +196,7 @@ score and time-bar choices are also saved from their respective screens.
 | `LoadAnimation` | `Off`, `On`; `On` | Loading animation. |
 | `ScreenFade` | `Off`, `On`; `On` | Fades between screens. |
 | `EffectSing` | `Off`, `On`; `On` | Singing effects. |
-| `AskbeforeDel` | `Off`, `On`; `On` | Asks for confirmation before deleting a song. |
+| `AskbeforeDel` | `Off`, `On`; `On` | Asks for confirmation before quitting, including with Q during singing or jukebox playback. Despite its name, this setting does not control song deletion. |
 | `OnSongClick` | `Sing`, `Select Players`, `Open Menu`; `Sing` | Action after selecting a song. |
 | `PartyPopup` | `Off`, `On`; `On` | Automatically opens the party menu where applicable. |
 | `SingScores` | `Off`, `On`; `On` | Shows scores during normal singing; party games still show them. |
