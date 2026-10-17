@@ -10,44 +10,58 @@
   ],
   "configurations": [
     {
-      "name": "[Windows] USDX (MSVC)",
-      "type": "cppvsdbg",
-      "request": "launch",
-      "program": "${workspaceFolder}/game/ultrastardx.exe",
-      "args": ["-songpath", "${input:songpath}"],
-      "cwd": "${workspaceFolder}/game",
-      "preLaunchTask": "[any] 2. make all",
-      "windows": {} 
-    },
-    {
-      "name": "[Linux] USDX (GDB)",
+      "name": "[Windows] USCE (GDB)",
       "type": "cppdbg",
       "request": "launch",
-      "program": "${workspaceFolder}/game/ultrastardx",
-      "args": ["-songpath", "${input:songpath}"],
+      "program": "${workspaceFolder}/game/usce.exe",
+      "args": [
+        "-songpath",
+        "${input:songpath}"
+      ],
+      "cwd": "${workspaceFolder}/game",
+      "preLaunchTask": "[any] 2.a make debug",
+      "windows": {},
+      "MIMode": "gdb",
+      "miDebuggerPath": "C:/msys64/ucrt64/bin/gdb.exe"
+    },
+    {
+      "name": "[Linux] USCE (GDB)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/game/usce",
+      "args": [
+        "-songpath",
+        "${input:songpath}"
+      ],
       "cwd": "${workspaceFolder}/game",
       "MIMode": "gdb",
       "miDebuggerPath": "/usr/bin/gdb",
-      "preLaunchTask": "[any] 2. make all",
+      "preLaunchTask": "[any] 2.a make debug",
       "linux": {}
     },
     {
-      "name": "[macOS] USDX (LLDB)",
+      "name": "[macOS] USCE (LLDB)",
       "type": "lldb",
       "request": "launch",
-      "program": "${workspaceFolder}/game/ultrastardx",
-      "args": ["-songpath", "${input:songpath}"],
+      "program": "${workspaceFolder}/game/usce",
+      "args": [
+        "-songpath",
+        "${input:songpath}"
+      ],
       "cwd": "${workspaceFolder}/game",
-      "preLaunchTask": "[any] 2. make all",
+      "preLaunchTask": "[any] 2.a make debug",
       "osx": {}
     },
     {
-      "name": "[macOS] USDX (standalone app, LLDB)",
+      "name": "[macOS] USCE (standalone app, LLDB)",
       "type": "lldb",
       "request": "launch",
-      "program": "${workspaceFolder}/UltraStarDeluxe.app/Contents/MacOS/ultrastardx",
-      "args": ["-songpath", "${input:songpath}"],
-      "cwd": "${workspaceFolder}/UltraStarDeluxe.app/Contents/MacOS",
+      "program": "${workspaceFolder}/UltraStar Community Edition.app/Contents/MacOS/usce",
+      "args": [
+        "-songpath",
+        "${input:songpath}"
+      ],
+      "cwd": "${workspaceFolder}/UltraStar Community Edition.app/Contents/MacOS",
       "preLaunchTask": "[macos] make macos-standalone-app",
       "osx": {}
     }

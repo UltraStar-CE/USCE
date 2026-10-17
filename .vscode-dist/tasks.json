@@ -1,10 +1,6 @@
 {
   "version": "2.0.0",
-
   "tasks": [
-    // -------------------------------------------------------
-    // Setup (manual)
-    // -------------------------------------------------------
     {
       "label": "[helper] autogen",
       "type": "shell",
@@ -17,13 +13,12 @@
     },
     {
       "label": "[any] 1. autogen & configure",
-      "dependsOn": ["[helper] autogen", "[helper] configure"],
-      "dependsOrder": "sequence",
+      "dependsOn": [
+        "[helper] autogen",
+        "[helper] configure"
+      ],
+      "dependsOrder": "sequence"
     },
-
-    // -------------------------------------------------------
-    // Build
-    // -------------------------------------------------------
     {
       "label": "[any] 2. make all",
       "type": "shell",
@@ -33,10 +28,6 @@
         "isDefault": true
       }
     },
-
-    // -------------------------------------------------------
-    // Variants
-    // -------------------------------------------------------
     {
       "label": "[any] 2.a make debug",
       "type": "shell",
@@ -52,10 +43,6 @@
       "type": "shell",
       "command": "make rebuild"
     },
-
-    // -------------------------------------------------------
-    // macOS extras
-    // -------------------------------------------------------
     {
       "label": "[macos] make macos-app",
       "type": "shell",
@@ -80,10 +67,6 @@
         "group": "build"
       }
     },
-
-    // -------------------------------------------------------
-    // Install
-    // -------------------------------------------------------
     {
       "label": "[any] make install",
       "type": "shell",
@@ -94,10 +77,6 @@
       "type": "shell",
       "command": "make uninstall"
     },
-
-    // -------------------------------------------------------
-    // Clean
-    // -------------------------------------------------------
     {
       "label": "[any] make clean",
       "type": "shell",
@@ -108,33 +87,48 @@
       "type": "shell",
       "command": "make distclean"
     },
-
-    // -------------------------------------------------------
-    // Run helpers
-    // -------------------------------------------------------
     {
       "label": "[any] run",
-      "type": "shell",
-      "command": "./game/ultrastardx",
-      "dependsOn": "build",
-      "problemMatcher": []
+      "type": "process",
+      "command": "${workspaceFolder}/game/usce",
+      "dependsOn": "[any] 2. make all",
+      "problemMatcher": [],
+      "windows": {
+        "command": "${workspaceFolder}/game/usce.exe"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/game"
+      },
+      "args": []
     },
     {
       "label": "[any] run with songpath",
-      "type": "shell",
-      "command": "./game/ultrastardx -songpath ${input:songpath}",
-      "dependsOn": "build",
-      "problemMatcher": []
+      "type": "process",
+      "command": "${workspaceFolder}/game/usce",
+      "dependsOn": "[any] 2. make all",
+      "problemMatcher": [],
+      "windows": {
+        "command": "${workspaceFolder}/game/usce.exe"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/game"
+      },
+      "args": [
+        "-songpath",
+        "${input:songpath}"
+      ]
     },
     {
       "label": "[macos] run macos-standalone-app",
-      "type": "shell",
-      "command": "open build/macOS/ultrastardx.app",
+      "type": "process",
+      "command": "open",
       "osx": {},
-      "problemMatcher": []
+      "problemMatcher": [],
+      "args": [
+        "${workspaceFolder}/UltraStar Community Edition.app"
+      ]
     }
   ],
-
   "inputs": [
     {
       "id": "configureArgs",
