@@ -82,7 +82,7 @@ File section: `[Game]`. Most settings are under **Options → Game**.
 | `Sorting` | `Edition`, `Genre`, `Language`, `Folder`, `Title`, `Artist`, `Artist2`, `Year`, `Year Reversed`, `Decade`, `Playlist`; `Artist` | Organizes the collection. Some choices depend on song metadata. |
 | `ShowScores` | `Off`, `When exists`, `On`; `On` | Whether scores appear in the song browser. |
 | `AVDelay` | Integer milliseconds; `0` | Audio/video timing compensation. Adjust in small steps using a familiar song. |
-| `MicDelay` | Nonnegative milliseconds; `140` | Compensates for microphone input delay when matching notes. |
+| `MicDelay` | Integer milliseconds, normally nonnegative; `140` | Compensates for microphone input delay when matching notes. |
 | `Debug` | `Off`, `On`; `Off` | Additional diagnostic logging. |
 | `ShowWebScore` | Installed website definition name; first available | Website score source when definitions are installed. Prefer the score screen's selection. |
 
@@ -201,7 +201,7 @@ score and time-bar choices are also saved from their respective screens.
 | `PartyPopup` | `Off`, `On`; `On` | Automatically opens the party menu where applicable. |
 | `SingScores` | `Off`, `On`; `On` | Shows scores during normal singing; party games still show them. |
 | `DuetScores` | `Off`, `On`; `On` | Allows duet scores to be saved after a completed song. |
-| `TopScores` | `All`, `Player`; `Player` | Score view's player filter. |
+| `TopScores` | `All`, `Player`; `Player` | Includes all entries (`All`) or limits repeated entries for each player (`Player`). |
 | `HighScoreScreenEntries` | Integer `5`–`20`; `5` | Number of high-score entries shown. Values outside the range are limited to it. |
 | `SyncTo` | `Music`, `Lyrics`, `Off`; `Music` | Synchronization mode. Keep Music for normal playback. |
 | `SingTimebarMode` | `Current`, `Remaining`, `Total`; `Remaining` | Elapsed, remaining or total song time during singing. |
@@ -252,12 +252,15 @@ slots run from `P1` to `P12`; the normal game menu selects up to six singers.
 | Section | Keys; default | What it stores |
 | --- | --- | --- |
 | `[Name]` | `P1`–`P12`; `Player1`–`Player12` | Player names. |
-| `[PlayerColor]` | `P1`–`P12`; `1,4,3,2,5,6,7,8,9,10,11,12` for successive slots | Numeric player color selections. |
+| `[PlayerColor]` | `P1`–`P12`; `1,4,3,2,5,6,7,8,9,10,11,12` for successive slots | Color IDs `1`–`16`; prefer the player screen. |
 | `[PlayerAvatar]` | `P1`–`P12`; empty | Avatar selections. |
 | `[PlayerLevel]` | `P1`–`P12`; `1` | Difficulty: `0` Easy, `1` Medium, `2` Hard. |
-| `[TeamColor]` | `T1`–`T3`; `1`, `2`, `3` | Numeric team color selections. |
+| `[TeamColor]` | `T1`–`T3`; `1`, `2`, `3` | Team color IDs; prefer the party screen. |
 | `[NameTeam]` | `T1`–`T3`; `Team1`–`Team3` | Party team names. |
 | `[NameTemplate]` | `Name1`–`Name12`; `Template1`–`Template12` | Reusable name templates. |
+
+Player color IDs `1`–`16` are, in order: Blue, Red, Green, Yellow, Orange, Pink,
+Violet, Brown, Gray, Dark Blue, Sky, Cyan, Flame, Orchid, Harlequin and Lime.
 
 ## Piano key bindings
 

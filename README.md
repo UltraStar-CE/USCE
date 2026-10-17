@@ -1,6 +1,6 @@
-# UltraStar Community Edition
+<img src="branding/usce-app-icon.png" alt="USCE star and microphone" width="96" align="right">
 
-![UltraStar Community Edition: star and microphone with colorful stage lighting](branding/usce-social-banner.png)
+# UltraStar Community Edition
 
 **Your music. Your stage. Your karaoke night.**
 
