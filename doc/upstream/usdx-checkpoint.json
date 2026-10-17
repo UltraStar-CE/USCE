@@ -1,0 +1,20 @@
+{
+  "repository": "UltraStar-Deluxe/USDX",
+  "branch": "master",
+  "from": "05a3cb37c63361695b16e777f5b5678ebd873198",
+  "sha": "519b1c523e61e49db18dd0baf610ba83fb619d30",
+  "meaning": "Assessed upstream tip, not a claim that changes have been incorporated",
+  "comparison": "https://github.com/UltraStar-Deluxe/USDX/compare/05a3cb37c63361695b16e777f5b5678ebd873198...519b1c523e61e49db18dd0baf610ba83fb619d30",
+  "commits": [
+    {
+      "sha": "5fde5ec984154aca259117f99c49a220e0bab40c",
+      "url": "https://github.com/UltraStar-Deluxe/USDX/commit/5fde5ec984154aca259117f99c49a220e0bab40c",
+      "subject": "release v2026.10.0"
+    },
+    {
+      "sha": "519b1c523e61e49db18dd0baf610ba83fb619d30",
+      "url": "https://github.com/UltraStar-Deluxe/USDX/commit/519b1c523e61e49db18dd0baf610ba83fb619d30",
+      "subject": "set dev version again"
+    }
+  ]
+}
