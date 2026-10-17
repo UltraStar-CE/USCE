@@ -56,6 +56,8 @@ jobs:
       NSIS_VERSION: 3.05
       NSIS_SHA256: 1A3CC9401667547B9B9327A177B13485F7C59C2303D4B6183E7BC9E6C8D6BFDB
     steps:
+      - name: Use LF source files
+        run: git config --global core.autocrlf false
       - name: Checkout Repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
