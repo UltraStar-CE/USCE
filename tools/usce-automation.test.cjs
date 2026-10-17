@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {validateFiles, validateResult, openDraft, upstreamDelta, prepare, publish, hasBotPRSlot} = require('./usce-automation.cjs');
+const {validateFiles, validateResult, openDraft, upstreamDelta, prepare, publish} = require('./usce-automation.cjs');
 
 test('candidate publication rejects paths outside the source scope and path tricks', () => {
   for (const path of ['.github/workflows/evil.yml', '../src/base/Test.pas', 'src/base/../lib/Test.pas',
@@ -187,56 +187,6 @@ test('the scheduled queue stops at an existing manual assessment instead of spen
 });
 
 
-test('bot publication counts drafts across repositories and paginates past human PRs', async () => {
-  const visited = [];
-  const bot = {user: {login: 'github-actions[bot]'}, draft: true};
-  const github = {rest: {pulls: {list: async x => {
-    visited.push([x.repo, x.page]);
-    assert.equal(x.state, 'open');
-    if (x.repo === 'USCE' && x.page === 1) return {data: Array.from({length: 100}, () => ({user: {login: 'human'}}))};
-    return {data: x.repo === 'USCE' ? [bot, bot] : x.repo === 'mxe' ? [bot] : [bot, bot]};
-  }}}};
-  assert.equal(await hasBotPRSlot(github, {repo: {owner: 'UltraStar-CE'}}), false);
-  assert.deepEqual(visited, [['USCE', 1], ['USCE', 2], ['mxe', 1], ['Themes', 1]]);
-});
-
-test('four bot PRs leave a slot, while a failed repository read blocks publication', async () => {
-  const context = {repo: {owner: 'UltraStar-CE'}};
-  const github = {rest: {pulls: {list: async x => ({data: x.repo === 'USCE'
-    ? Array.from({length: 4}, () => ({user: {login: 'github-actions[bot]'}})) : []})}}};
-  assert.equal(await hasBotPRSlot(github, context), true);
-  github.rest.pulls.list = async () => { throw Error('read failed'); };
-  await assert.rejects(hasBotPRSlot(github, context), /read failed/);
-});
-
-test('a full bot queue preserves the branch and closes the excess draft for reopening', async () => {
-  const writes = [];
-  const github = {rest: {pulls: {
-    list: async x => ({data: x.head ? [] : Array.from({length: 5}, () => ({user: {login: 'github-actions[bot]'}}))}),
-    create: async x => { writes.push(x); return {data: {number: 17, state: 'open'}}; },
-    update: async x => { writes.push(x); return {data: {number: 17, state: x.state}}; },
-  }, git: {
-    getRef: async () => ({data: {object: {sha: 'base'}}}),
-    createTree: async () => ({data: {sha: 'tree'}}),
-    createCommit: async () => ({data: {sha: 'commit'}}),
-    createRef: async x => { writes.push(x); },
-  }}};
-  const pr = await openDraft(github, {repo: {owner: 'o', repo: 'USCE'}},
-    {branch: 'main', sha: 'base', tree: 'tree'}, 'automation/test', [], 'Proposal', 'Body');
-  assert.equal(pr.state, 'closed');
-  assert.equal(writes[0].ref, 'refs/heads/automation/test');
-  assert.equal(writes[1].draft, true);
-  assert.match(writes[1].body, /queued because its author already has five open PRs/);
-  assert.match(writes[1].body, /reopened when a slot is available/);
-  assert.equal(writes[2].state, 'closed');
-  github.rest.git.getTree = async () => ({data: {tree: []}});
-  github.rest.issues = {get: async () => ({data: {state: 'open', labels: [{name: 'agent:fix'}]}})};
-  // No comment API is available: a queued proposal must not notify the reporter.
-  await publish({github, context: {repo: {owner: 'o', repo: 'USCE'}}, core: {notice: () => {}}},
-    JSON.stringify({kind: 'issue', number: 1, base: {branch: 'main', sha: 'base', tree: 'tree'}}),
-    JSON.stringify({summary: 'Adjust song loading', validation: 'Not run', files: [{path: 'doc/a.md', content: 'change'}]}));
-});
-
 test('upstream candidate proposals name the source author and retain the credit policy', async () => {
   let proposal;
   const github = {rest: {pulls: {
@@ -263,7 +213,7 @@ test('upstream candidate proposals name the source author and retain the credit 
 });
 
 
-test('upstream proposals bypass publication capacity even when five issue proposals are open', async () => {
+test('publication does not count or close unrelated PRs', async () => {
   const github = {rest: {pulls: {
     list: async x => { assert.ok(x.head, 'upstream publication must not request a slot'); return {data: []}; },
     create: async x => ({data: {state: 'open', ...x}}),
@@ -294,40 +244,7 @@ test('unmerged upstream commits cannot enter the adaptation path', async () => {
 });
 
 
-test('exempt upstream PRs do not consume slots for automated issue proposals', async () => {
-  const github = {rest: {pulls: {list: async x => ({data: [
-    ...(x.repo === 'USCE' ? Array.from({length: 4}, () => ({user: {login: 'github-actions[bot]'}})) : []),
-    ...Array.from({length: 8}, () => ({user: {login: 'github-actions[bot]'},
-      base: {repo: {full_name: 'UltraStar-CE/' + x.repo}},
-      head: {repo: {full_name: 'UltraStar-CE/' + x.repo}, ref: 'automation/upstream-usdx-aaaaaaaaaaaa'}})),
-  ]})}}};
-  assert.equal(await hasBotPRSlot(github, {repo: {owner: 'UltraStar-CE'}}), true);
-});
-
-
-test('retry repairs a partially published excess PR without duplicating its branch or proposal', async () => {
-  let created, attempts = 0, creates = 0;
-  const github = {rest: {pulls: {
-    list: async x => ({data: x.head ? (created ? [created] : []) : x.repo === 'USCE'
-      ? [...Array.from({length: 5}, (_, i) => ({number: i + 1, user: {login: 'github-actions[bot]'}})), ...(created ? [created] : [])] : []}),
-    create: async x => { creates++; created = {...x, number: 17, state: 'open', user: {login: 'github-actions[bot]'}}; return {data: created}; },
-    update: async x => { if (++attempts === 1) throw Error('transient close failure'); created = {...created, ...x}; return {data: created}; },
-  }, git: {
-    getRef: async () => ({data: {object: {sha: 'base'}}}),
-    createTree: async () => ({data: {sha: 'tree'}}),
-    createCommit: async () => ({data: {sha: 'commit'}}),
-    createRef: async () => ({}),
-  }}};
-  const args = [github, {repo: {owner: 'UltraStar-CE', repo: 'USCE'}}, {branch: 'main', sha: 'base', tree: 'tree'}, 'automation/issue-test', [], 'Proposal', 'Body'];
-  await assert.rejects(openDraft(...args), /transient close failure/);
-  assert.equal(created.state, 'open');
-  const repaired = await openDraft(...args);
-  assert.equal(repaired.state, 'closed');
-  assert.equal(creates, 1);
-  assert.equal(repaired.body.split('This proposal is queued').length, 2);
-});
-
-test('retry preserves a valid fifth open bot proposal', async () => {
+test('retry preserves the existing proposal without counting other PRs', async () => {
   const prior = {number: 17, state: 'open', user: {login: 'github-actions[bot]'}};
   const github = {rest: {pulls: {list: async x => ({data: x.head ? [prior] : x.repo === 'USCE'
     ? [prior, ...Array.from({length: 4}, (_, i) => ({number: i + 1, user: {login: 'github-actions[bot]'}}))] : []})}}};

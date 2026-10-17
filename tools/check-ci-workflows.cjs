@@ -25,7 +25,5 @@ assert(workflow('platform-builds.yml').includes("context.ref !== 'refs/tags/ci-v
 for (const [file, job] of [['upstream-tracking.yml', 'track'], ['usce-agents.yml', 'publish']]) {
   assert(workflow(file).includes('  ' + job + ':\n    concurrency:\n      group: usce-pr-publication\n      cancel-in-progress: false\n      queue: max'), `${file}: bot publishers must share the publication lock`);
 }
-const {isUpstreamProposal} = require('./usce-pr-policy.cjs');
-const policyCopy = isUpstreamProposal.toString().split('\n').map(line => '            ' + line).join('\n');
-assert(workflow('pr-cap.yml').includes(policyCopy), 'PR cap must use the tested upstream exemption');
+assert(!fs.existsSync(path.join(root, '.github/workflows/pr-cap.yml')), 'PR submissions must not be capped');
 console.log('Workflow filters, required validation and candidate isolation agree.');
