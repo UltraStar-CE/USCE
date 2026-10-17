@@ -2,11 +2,13 @@
 const fs = require('node:fs');
 const crypto = require('node:crypto');
 const {execFileSync} = require('node:child_process');
+const {readThemePin, validateThemePin} = require('./themes-pin.cjs');
 const versionPattern = /^[0-9]{4}\.(?:[1-9]|1[0-2])\.[0-9]+$/;
 async function planRelease({github, context, core}) {
   const plan = JSON.parse(fs.readFileSync('release-plan.json', 'utf8'));
   if (plan.ready !== true) { core.notice('A reviewed release preparation PR is needed first.'); return; }
   if (!versionPattern.test(plan.version) || fs.readFileSync('VERSION', 'utf8').trim() !== plan.version) throw Error('Release plan and VERSION must match');
+  if (JSON.stringify(validateThemePin(plan.themes)) !== JSON.stringify(readThemePin())) throw Error('Release plan and Themes pin must match');
   const releases = await github.paginate(github.rest.repos.listReleases, {...context.repo, per_page: 100});
   const existing = releases.find(r => r.tag_name === 'v' + plan.version);
   if (existing && !existing.draft) { core.notice('This version is already published.'); return; }
@@ -37,10 +39,11 @@ async function publishDraft({github, context, core}, version) {
     // Keep imported commit subjects from creating PR cross-reference notifications.
     notes = notes.replace(/#/g, ' PR ').replace(/https?:\/\/github\.com\/[^\s)]+/g, '[source reference omitted]');
     const plan = JSON.parse(fs.readFileSync('release-plan.json', 'utf8'));
+    const themes = readThemePin();
     release = (await github.rest.repos.createRelease({...context.repo, tag_name: tag, target_commitish: context.sha,
       name: 'USCE ' + version, draft: true, prerelease: false,
       body: marker + '\nSource revision: `' + context.sha + '`.\n\nUpstream reference: ' + (plan.upstream?.tag || 'none recorded') +
-        '. Preparation: ' + plan.trigger + '.\n\n## Changes to review\n\n' + notes +
+        '. Preparation: ' + plan.trigger + '.\nThemes revision: `' + themes.sha + '`. All included themes and their assets use this snapshot.\n\n## Changes to review\n\n' + notes +
         '\n## Testing\n\n- [ ] Windows installer and portable package\n- [ ] Linux AppImage\n- [ ] Intel macOS DMG\n- [ ] ARM macOS DMG\n- [ ] Songs, microphone input, scoring, settings reuse and themes\n\n## Known limitations\n\nRecord the results and limitations before publication. These draft packages are not yet a published release.'})).data;
   }
   const assets = await github.paginate(github.rest.repos.listReleaseAssets, {...context.repo, release_id: release.id, per_page: 100});

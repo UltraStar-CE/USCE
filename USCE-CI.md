@@ -42,6 +42,7 @@ longer than compiling the game. Successful builds on `main` populate a cache
 that later PRs can restore. GitHub isolates caches saved by individual PRs.
 
 Windows builds its DLL dependencies from pinned, checksum-verified sources in
-MSYS2 UCRT64. The dependency cache is keyed by the build recipes and patches.
+MSYS2 UCRT64. The dependency cache is keyed by the build recipes, patches and installed
+MSYS2 package versions, so compiler or runtime updates invalidate old DLLs.
 A cold build takes longer; subsequent builds reuse the installed dependencies.
 Dependency updates include their source versions and checksums in the PR.

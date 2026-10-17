@@ -1,1 +1,9 @@
-{"ready": false, "version": "2026.10.0", "upstream": null}
+{
+  "ready": false,
+  "version": "2026.10.0",
+  "upstream": null,
+  "themes": {
+    "repository": "UltraStar-CE/Themes",
+    "sha": "972285c1b79909f7056939a41aed3279b57f67df"
+  }
+}

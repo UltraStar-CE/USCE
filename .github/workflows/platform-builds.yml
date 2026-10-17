@@ -56,6 +56,8 @@ jobs:
       NSIS_VERSION: 3.05
       NSIS_SHA256: 1A3CC9401667547B9B9327A177B13485F7C59C2303D4B6183E7BC9E6C8D6BFDB
     steps:
+      - name: Use LF source files
+        run: git config --global core.autocrlf false
       - name: Checkout Repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -66,6 +68,8 @@ jobs:
         run: |
           $VNAME=$(python tools/generate-version.py)
           echo "versionName=$VNAME" >> $env:GITHUB_ENV
+      - name: Bundle reviewed themes
+        uses: ./.github/actions/bundle-themes
       - name: Setup MSYS2
         uses: msys2/setup-msys2@v2
         with:
@@ -116,13 +120,20 @@ jobs:
             throw 'NSIS installation exceeded five minutes'
           }
           if ($nsisInstaller.ExitCode -ne 0) { throw "NSIS installation failed: $($nsisInstaller.ExitCode)" }
+      - name: Identify Windows dependency build environment
+        id: windows-toolchain
+        shell: msys2 {0}
+        run: |
+          set -eo pipefail
+          package_key=$(pacman -Q | LC_ALL=C sort | sha256sum)
+          echo "key=${package_key%% *}" >> "$GITHUB_OUTPUT"
       - name: Cache Windows DLL dependencies
         if: inputs.use-caches
         id: cache-windows-dlls
         uses: actions/cache@v6
         with:
           path: dists/windows/prefix
-          key: windows-2022-ucrt64-native-v1-${{ runner.arch }}-${{ hashFiles('dists/windows/tasks.sh', 'dists/windows/Makefile', 'dists/windows/*.patch') }}
+          key: windows-2022-ucrt64-native-v2-${{ runner.arch }}-${{ steps.windows-toolchain.outputs.key }}-${{ hashFiles('dists/windows/tasks.sh', 'dists/windows/Makefile', 'dists/windows/*.patch') }}
       - name: Build Windows DLL dependencies
         if: steps.cache-windows-dlls.outputs.cache-hit != 'true'
         shell: msys2 {0}
@@ -149,7 +160,7 @@ jobs:
         run: |
           del game\*.debug
           xcopy game\*.dll installer\dependencies\dll /y
-          & 'C:\Program Files (x86)\NSIS\makensis.exe' "installer/UltraStar Community Edition.nsi"
+          & 'C:\Program Files (x86)\NSIS\makensis.exe' "/DUSCE_THEMES_DIR=$((Resolve-Path .release-themes/bundle).Path)" "installer/UltraStar Community Edition.nsi"
           mv installer\dist\USCE_v*_installer.exe USCE-windows-installer-${{ env.versionName }}.exe
       - name: Upload Installer Artifact
         uses: actions/upload-artifact@v6
@@ -157,12 +168,17 @@ jobs:
           name: USCE-windows-installer-${{ env.versionName }}
           path: USCE-windows-installer-${{ env.versionName }}.exe
           if-no-files-found: error
+          retention-days: 7
+      - name: Stage portable package with every theme
+        run: python tools/bundle-themes.py portable --source game --destination .release-themes/portable
       - name: Upload Portable Artifact
         uses: actions/upload-artifact@v6
         with:
           name: USCE-windows-portable-${{ env.versionName }}
-          path: game
+          path: .release-themes/portable
+          include-hidden-files: true
           if-no-files-found: error
+          retention-days: 7
 
   build_mac:
     needs: resolve
@@ -192,6 +208,8 @@ jobs:
         run: |
           VNAME=$(python3 tools/generate-version.py)
           echo "versionName=$VNAME" >> $GITHUB_ENV
+      - name: Bundle reviewed themes
+        uses: ./.github/actions/bundle-themes
       - name: Determine Arch
         run: |
           if [ "${{ matrix.os }}" = "macos-15-intel" ]; then
@@ -232,7 +250,7 @@ jobs:
           LIBS=-L$GITHUB_WORKSPACE/projectm/lib \
           ./configure --with-opencv-cxx-api --with-libprojectM=nocheck
       - name: Build
-        run: make macos-dmg
+        run: make USCE_THEMES_DIR=".release-themes/bundle" macos-dmg
       - name: Rename DMG
         run: mv "UltraStar Community Edition.dmg" "USCE-mac-${{ env.arch }}-${{ env.versionName }}.dmg"
       - name: Upload Image Artifact
@@ -241,6 +259,7 @@ jobs:
           name: USCE-mac-${{ env.arch }}-${{ env.versionName }}
           path: USCE-mac-${{ env.arch }}-${{ env.versionName }}.dmg
           if-no-files-found: error
+          retention-days: 7
 
   build_linux:
     env:
@@ -261,6 +280,8 @@ jobs:
         run: |
           VNAME=$(python3 tools/generate-version.py)
           echo "versionName=$VNAME" >> $GITHUB_ENV
+      - name: Bundle reviewed themes
+        uses: ./.github/actions/bundle-themes
       - name: Cache build
         if: inputs.use-caches
         uses: actions/cache@v5
@@ -285,7 +306,7 @@ jobs:
       - name: Build
         run: |
           cd dists/linux
-          ./dockerenv.sh --use-existing=usce/buildenv:latest make compress
+          ./dockerenv.sh --use-existing=usce/buildenv:latest env USCE_THEMES_DIR=/src/.release-themes/bundle make compress
           mv USCE*.AppImage ../../USCE-linux-${{ env.versionName }}.AppImage
       - name: Upload Image Artifact
         uses: actions/upload-artifact@v6
@@ -293,3 +314,4 @@ jobs:
           name: USCE-linux-${{ env.versionName }}
           path: USCE-linux-${{ env.versionName }}.AppImage
           if-no-files-found: error
+          retention-days: 7
