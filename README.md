@@ -1,66 +1,51 @@
+<img src="branding/usce-app-icon.png" alt="USCE star and microphone" width="96" align="right">
+
 # UltraStar Community Edition
 
-[![Build status](https://github.com/UltraStar-CE/USCE/actions/workflows/main.yml/badge.svg?branch=main&event=push)](https://github.com/UltraStar-CE/USCE/actions/workflows/main.yml?query=branch%3Amain+event%3Apush)
-[![License](https://img.shields.io/badge/license-GPLv2-blue.svg)](LICENSE)
+**Your music. Your stage. Your karaoke night.**
 
-![USCE: UltraStar Community Edition](branding/usce-social-banner.png)
+USCE is a free, open-source karaoke game for **Windows, macOS and Linux**.
+Follow the lyrics, match the notes and see how your singing scores.
+Sing solo, challenge friends or get everyone involved in a party game.
 
-An open-source karaoke game for Windows, macOS and Linux, developed by the community.
+**[Getting started](docs/getting-started.md)** ·
+**[Help and ideas](https://github.com/UltraStar-CE/USCE/discussions)** ·
+**[Releases](https://github.com/UltraStar-CE/USCE/releases)**
 
-Sing along with your music, score points for pitch and timing, and play together
-with up to six players. USCE includes party modes, themes, and support for a range
-of audio and video formats.
+## Play your way
 
-## Get started
+| Sing together | Make it yours | Bring your collection |
+| --- | --- | --- |
+| Solo singing, duets and party modes, with support for up to six players. | Choose a theme, change the look and adjust the settings to suit your karaoke night. | Use UltraStar-format songs, with lyrics, pitch notes and optional video backgrounds. |
 
-We are preparing the first USCE release. We will publish download links here
-after release testing. Until then, contributors can build from source using
-[COMPILING.md](COMPILING.md).
+## Start singing
 
-The executable is `usce` (`usce.exe` on Windows); the macOS bundle is
-`UltraStar Community Edition.app`. Do not assume an upstream package is a USCE build.
+Our first USCE release is in preparation. Downloads will appear on the
+[releases page](https://github.com/UltraStar-CE/USCE/releases) after testing.
+You can already [build the game from source](COMPILING.md).
 
-## Songs and setup
+1. Connect a microphone and select it in the game's **Record** settings.
+2. Add your UltraStar-format songs. Song collections are separate from the game.
+3. Choose a song and sing!
 
-Use UltraStar-format songs that you have permission to use. Songs are managed
-separately from the game. The upstream [controls](https://usdx.eu/docs/controls/)
-and [configuration documentation](https://usdx.eu/docs/) describe the inherited
-behavior while USCE documentation is being established.
+The [getting-started guide](docs/getting-started.md) covers setup and your first
+song. For detailed settings, see the [configuration reference](docs/config.ini.md).
 
-### Configuration notes
-- To set additional song directories change your config.ini like this:
-```ini
-  [Directories]
-  SongDir1=C:\Users\My\Music\MyUSCESongs
-  SongDir2=F:\EvenMoreUSCESongs
-  SongDir...=... (some more directories)
-```
-- To enable joypad support change config.ini `Joypad=Off` to `Joypad=On`
-- To enable 2 or 3 player each on 2 screens, disable the full screen mode, extend your desktop horizontally and set the resolution to fill one screen. Then, in the config.ini set `Screens=2` and restart the game.
-- New macOS song collections use `$HOME/Music/UltraStar Community Edition`. An existing `Music/UltraStar Deluxe` folder remains discoverable until a new USCE folder is created.
-- New installed builds use `~/.usce` on Linux, `%APPDATA%/usce` on Windows when the game folder is not writable, and `$HOME/Library/Application Support/UltraStar Community Edition` on macOS. An existing legacy config is reused when no new USCE config exists. Portable builds continue using their writable game folder. No files are moved or deleted.
-- When running in borderless fullscreen mode, the monitor it runs on can be configured by setting `Graphics.PositionX/Y` to an offset in pixels.
+## Shape what comes next
 
+We build USCE around community ideas, with room for new features and experiments.
+Configurable additions let you try something new or keep the experience you enjoy.
 
-USCE has no published Flathub package yet.
+[Ask a question or suggest an idea](https://github.com/UltraStar-CE/USCE/discussions),
+[report a problem](https://github.com/UltraStar-CE/USCE/issues), or
+[help with testing, translations, themes and code](CONTRIBUTING.md).
+Our [governance](GOVERNANCE.md) and [code of conduct](CODE_OF_CONDUCT.md)
+explain how we work together.
 
-## Help and feedback
-
-Report reproducible problems in [Issues](https://github.com/UltraStar-CE/USCE/issues).
-Include your build, operating system, and steps to reproduce. Ideas, questions,
-and testing feedback help shape the game.
-
-## Take part
-
-Code, translations, themes, documentation, accessibility improvements, and testing
-are all useful contributions. Read [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
-Project proposals and decisions are discussed publicly; see
-[GOVERNANCE.md](GOVERNANCE.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
-
-## Credits and license
+## Credits
 
 USCE builds on [UltraStar Deluxe](https://github.com/UltraStar-Deluxe/USDX),
-which derives from UltraStar by corvus5. We thank their contributors for the game
-and the work that makes this edition possible. See [COPYRIGHT.txt](COPYRIGHT.txt),
-the Git history, and [LICENSE](LICENSE) for authorship and license information.
-Third-party libraries and assets retain their own notices.
+which derives from UltraStar by corvus5. Thank you to everyone whose work makes
+this game possible. See [COPYRIGHT.txt](COPYRIGHT.txt) and the Git history for
+authorship, and [LICENSE](LICENSE) for the GPL license. Third-party libraries
+and assets retain their own notices.
