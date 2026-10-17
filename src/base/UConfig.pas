@@ -195,12 +195,18 @@ const
   {$ENDIF}
 
 function USCEVersionStr(): string;
+function USCEVersionLabel(): string;
 
 implementation
 
 function USCEVersionStr(): string;
 begin
   Result := 'UltraStar Community Edition - github.com/UltraStar-CE/USCE - v' + USCE_VERSION;
+end;
+
+function USCEVersionLabel(): string;
+begin
+  Result := 'USCE v' + USCE_VERSION;
 end;
 
 end.
