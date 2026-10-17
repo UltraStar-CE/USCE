@@ -354,6 +354,7 @@ const
 var
   AltJumpPrefix: UTF8String = '';
   AltJumpLastTick: cardinal = 0;
+  AltJumpModifiers: word = 0;
 
 // ***** Public methods ****** //
 function TScreenSong.EnsureMedleyData(SongIndex: integer; MinSource: TMedleySource): boolean;
@@ -685,6 +686,7 @@ var
   I:      integer;
   I2:     integer;
   JumpStart: integer;
+  JumpOffset: integer;
   JumpTarget: integer;
   SDL_ModState:  word;
   UpperLetter: UCS4Char;
@@ -715,8 +717,9 @@ begin
     SDL_ModState := SDL_GetModState and (KMOD_LSHIFT + KMOD_RSHIFT
     + KMOD_LCTRL + KMOD_RCTRL + KMOD_LALT  + KMOD_RALT);
 
-    if (SDL_ModState and KMOD_LALT = 0) or ((AltJumpPrefix <> '') and (SDL_GetTicks - AltJumpLastTick > 1000)) then
+    if (SDL_ModState <> AltJumpModifiers) or (SDL_ModState and KMOD_LALT = 0) or ((AltJumpPrefix <> '') and (SDL_GetTicks - AltJumpLastTick > 1000)) then
       AltJumpPrefix := '';
+    AltJumpModifiers := SDL_ModState;
 
     //Jump to Artist/Title
     if ((SDL_ModState and KMOD_LALT <> 0) and (FreeListMode)) then
@@ -729,6 +732,7 @@ begin
 
       if (PressedKey in ([SDLK_a..SDLK_z, SDLK_0..SDLK_9])) then
       begin
+        if AltJumpPrefix = '' then JumpOffset := 1 else JumpOffset := 0;
         AltJumpPrefix := AltJumpPrefix + UCS4ToUTF8String(UCS4UpperCase(PressedKey));
         AltJumpLastTick := SDL_GetTicks;
         I2 := Length(CatSongs.Song);
@@ -736,7 +740,7 @@ begin
         //Jump To Title
         if (SDL_ModState = (KMOD_LALT or KMOD_LSHIFT)) then
         begin
-          for I := 1 to High(CatSongs.Song) do
+          for I := JumpOffset to High(CatSongs.Song) do
           begin
             if (CatSongs.Song[(I + Interaction) mod I2].Visible) then
             begin
@@ -758,7 +762,7 @@ begin
         else if (SDL_ModState = KMOD_LALT) then
         begin
           JumpStart := Interaction;
-          for I := 1 to High(CatSongs.Song) do
+          for I := JumpOffset to High(CatSongs.Song) do
           begin
             if (CatSongs.Song[(I + JumpStart) mod I2].Visible) then
             begin
@@ -2899,6 +2903,8 @@ var
 begin
   inherited;
   SyncDuetSingerTheme;
+  AltJumpPrefix := '';
+  AltJumpLastTick := 0;
 
   CloseMessage();
 
