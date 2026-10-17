@@ -433,6 +433,7 @@ var
   KeepGoing: boolean;
   SuppressKey: boolean;
   UpdateMouse: boolean;
+  SimulatedKeyName: AnsiString;
 begin
   KeepGoing := true;
   SuppressKey := false;
@@ -577,8 +578,9 @@ begin
               ShouldSimulateJoystickKeyInput(Event) // verify if the event is not a valid keyboard-text-input (and originating from keyboard simulation)
               then
             begin
-              s1 := SDL_GetScancodeName(Event.key.keysym.scancode);
-              if Length(s1) = 1 then KeyCharUnicode := Ord(s1[1])
+              SimulatedKeyName := SDL_GetScancodeName(Event.key.keysym.scancode);
+              if Length(SimulatedKeyName) = 1 then
+                KeyCharUnicode := Ord(SimulatedKeyName[1]);
             end;
 
             SimKey :=0;
