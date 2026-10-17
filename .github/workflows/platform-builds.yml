@@ -69,18 +69,21 @@ jobs:
       - name: Setup MSYS2
         uses: msys2/setup-msys2@v2
         with:
-          msystem: MSYS
+          msystem: UCRT64
           update: false
           cache: ${{ inputs.use-caches }}
           install: >-
-            autoconf-wrapper
-            automake-wrapper
-            git
-            make
-            pkgconf
-            python
-            mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-tools
+            base-devel
+            mingw-w64-ucrt-x86_64-toolchain
+            mingw-w64-ucrt-x86_64-autotools
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-meson
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-git
+            mingw-w64-ucrt-x86_64-ntldd
+            mingw-w64-ucrt-x86_64-nasm
+            mingw-w64-ucrt-x86_64-python
+            patch
       - name: Cache FPC and NSIS
         if: inputs.use-caches
         id: cache-fpc-nsis
@@ -112,23 +115,34 @@ jobs:
             throw 'NSIS installation exceeded five minutes'
           }
           if ($nsisInstaller.ExitCode -ne 0) { throw "NSIS installation failed: $($nsisInstaller.ExitCode)" }
-      - name: Download prebuilt DLLs
+      - name: Cache Windows DLL dependencies
+        if: inputs.use-caches
+        id: cache-windows-dlls
+        uses: actions/cache@v6
+        with:
+          path: dists/windows/prefix
+          key: windows-2022-ucrt64-native-v1-${{ runner.arch }}-${{ hashFiles('dists/windows/tasks.sh', 'dists/windows/Makefile', 'dists/windows/*.patch') }}
+      - name: Build Windows DLL dependencies
+        if: steps.cache-windows-dlls.outputs.cache-hit != 'true'
+        shell: msys2 {0}
+        run: make -C dists/windows
+      - name: Install Windows DLL dependencies
+        shell: msys2 {0}
         run: |
-          python dldlls.py
-          7z x -y usdx-dlls-x86_64.zip -ogame "*.dll"
-          7z x -y usdx-dlls-x86_64.zip -osrc "config-win.inc"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # An exact recipe cache hit is newer than the freshly checked-out recipes.
+          if [ "${{ steps.cache-windows-dlls.outputs.cache-hit }}" = true ]; then
+            touch dists/windows/prefix/$(uname -m)/built_libs
+          fi
+          make -C dists/windows install
       - name: Build
         shell: msys2 {0}
         run: |
-          export PATH="/usr/bin:/mingw64/bin:/c/FPC/3.2.2/bin:/c/FPC/3.2.2/bin/i386-win32:$PATH"
-          export MAKE="/usr/bin/make"
+          export PATH="$PATH:/c/FPC/3.2.2/bin/i386-win32"
           export FPCCFG="/c/FPC/3.2.2/bin/i386-win32/fpc.cfg"
           export FPCDIR="/c/FPC/3.2.2"
           export FPCMAKE="/c/FPC/3.2.2/bin/i386-win32/fpcmake"
           ./autogen.sh
-          ./configure
+          ./configure --with-opencv --with-libprojectM
           make
       - name: Create installer
         run: |

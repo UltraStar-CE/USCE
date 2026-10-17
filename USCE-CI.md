@@ -41,7 +41,7 @@ from source when their cache is empty. The first build can take substantially
 longer than compiling the game. Successful builds on `main` populate a cache
 that later PRs can restore. GitHub isolates caches saved by individual PRs.
 
-Windows downloads the pinned MXE dependency package selected by `dldlls.py`.
-The `usdx-dlls-x86_64` asset name identifies that inherited dependency package;
-it is separate from the USCE executable and installer names. Dependency updates
-include the matching source revision and package checks in their PR.
+Windows builds its DLL dependencies from pinned, checksum-verified sources in
+MSYS2 UCRT64. The dependency cache is keyed by the build recipes and patches.
+A cold build takes longer; subsequent builds reuse the installed dependencies.
+Dependency updates include their source versions and checksums in the PR.
