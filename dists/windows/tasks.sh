@@ -8,6 +8,10 @@ fi >/dev/null 2>/dev/null
 
 root=$(pwd)
 
+case "$1" in
+	dl|all_deps) bash "$root/check-tools.sh" ;;
+esac
+
 SRC="$root/deps"
 mkdir -p "$SRC"
 export SHELL=/bin/bash
@@ -195,7 +199,7 @@ task_sdl2() {
 
 task_sdl2_image() {
 	start_build SDL2_image || return 0
-	patch -p1 < $root/sdl2_image-1-no-webp-anim.patch
+	/usr/bin/patch -p1 < "$root/sdl2_image-1-no-webp-anim.patch"
 	cmake -S . -B build \
 		"${CMAKE_DEFAULT_OPTIONS[@]}" \
 		-DSDL2IMAGE_BACKEND_STB=OFF \
