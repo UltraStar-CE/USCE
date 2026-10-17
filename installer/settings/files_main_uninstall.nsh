@@ -56,6 +56,7 @@
  Delete "$INSTDIR\libidn-11.dll"
  Delete "$INSTDIR\libjpeg-9.dll"
  Delete "$INSTDIR\libpng16-16.dll"
+ Delete "$INSTDIR\libpng16.dll"
  Delete "$INSTDIR\libprojectM.dll"
  Delete "$INSTDIR\libprojectM-0.dll"
  Delete "$INSTDIR\libprojectM2.dll"
