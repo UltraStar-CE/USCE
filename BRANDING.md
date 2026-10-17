@@ -28,8 +28,7 @@ The source scan preserves copyright and license headers, historical release
 notes, original theme creators, contributor credits, and third-party source.
 These are attribution, not claims about the current product name.
 
-The MXE downloader uses a pinned dependency release and the inherited
-`usdx-dlls-x86_64` asset identifier. Lua's `Usdx` API, `.usdx` plugin extensions,
+Lua's `Usdx` API, `.usdx` plugin extensions,
 translation keys and theme-format identifiers stay compatible with existing
 community content. Legacy data-path strings remain only for discovery.
 
