@@ -61,3 +61,6 @@ source commit, theme definitions and asset checksums inside each package.
 Themes remain developed in the Themes repository. Bundling does not change the
 default selection. Experimental themes are available to choose, and we test
 their compatibility with the release candidate before publication.
+
+CI package artifacts are retained for seven days. Draft and published release
+assets are stored separately and are not affected by that retention period.

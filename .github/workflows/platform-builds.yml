@@ -159,6 +159,7 @@ jobs:
           name: USCE-windows-installer-${{ env.versionName }}
           path: USCE-windows-installer-${{ env.versionName }}.exe
           if-no-files-found: error
+          retention-days: 7
       - name: Stage portable package with every theme
         run: python tools/bundle-themes.py portable --source game --destination .release-themes/portable
       - name: Upload Portable Artifact
@@ -168,6 +169,7 @@ jobs:
           path: .release-themes/portable
           include-hidden-files: true
           if-no-files-found: error
+          retention-days: 7
 
   build_mac:
     needs: resolve
@@ -248,6 +250,7 @@ jobs:
           name: USCE-mac-${{ env.arch }}-${{ env.versionName }}
           path: USCE-mac-${{ env.arch }}-${{ env.versionName }}.dmg
           if-no-files-found: error
+          retention-days: 7
 
   build_linux:
     env:
@@ -302,3 +305,4 @@ jobs:
           name: USCE-linux-${{ env.versionName }}
           path: USCE-linux-${{ env.versionName }}.AppImage
           if-no-files-found: error
+          retention-days: 7
