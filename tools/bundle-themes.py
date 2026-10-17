@@ -21,6 +21,9 @@ def read_pin(path):
 
 def bundle(source, destination, pin):
     source, destination = Path(source).resolve(), Path(destination).resolve()
+    repository_root = subprocess.check_output(['git', '-C', str(source), 'rev-parse', '--show-toplevel'], text=True).strip()
+    if Path(repository_root).resolve() != source:
+        raise ValueError('Themes source must be the repository root')
     sha = subprocess.check_output(['git', '-C', str(source), 'rev-parse', 'HEAD'], text=True).strip()
     if sha != pin['sha']:
         raise ValueError('Themes checkout does not match the reviewed commit')

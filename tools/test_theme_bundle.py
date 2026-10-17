@@ -80,3 +80,5 @@ class ThemeBundleTests(unittest.TestCase):
         self.assertEqual(self.git('status', '--porcelain'), '')
         with self.assertRaisesRegex(ValueError, 'complete checkout'):
             themes.bundle(self.source, self.root / 'bundle', self.pin)
+        with self.assertRaisesRegex(ValueError, 'repository root'):
+            themes.bundle(self.source / 'Modern', self.root / 'subset', self.pin)
