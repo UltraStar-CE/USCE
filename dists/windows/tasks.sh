@@ -9,7 +9,12 @@ fi >/dev/null 2>/dev/null
 root=$(pwd)
 
 case "$1" in
-	dl|all_deps) bash "$root/check-tools.sh" ;;
+	dl|all_deps)
+		if [ ! -x /usr/bin/patch ]; then
+			echo 'MSYS2 patch is required. Install it with: pacman -S patch' >&2
+			exit 1
+		fi
+		;;
 esac
 
 SRC="$root/deps"
