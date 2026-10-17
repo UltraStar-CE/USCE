@@ -27,7 +27,7 @@ overwritten. No workflow merges PRs or publishes a release automatically.
 We test installation, launch, songs, microphones, scoring, themes and settings
 reuse using the actual draft packages. Before publication, we complete the
 release notes with testing results and known limitations, check licenses and
-upstream credit, and verify the dependency pin. A human decides when to publish.
+upstream credit, and verify the dependency source versions and checksums. A human decides when to publish.
 The updater reads VERSION from the latest published release and downloads its
 matching installer tag. Draft assets become available to users only after human
 publication. README download links point to publicly available tested packages. The first release remains subject to these checks.

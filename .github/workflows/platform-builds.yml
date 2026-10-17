@@ -34,8 +34,8 @@ jobs:
                 throw Error('Release builds require the default-branch source revision');
               }
             } else if (context.eventName === 'workflow_dispatch') {
-              if (context.ref !== 'refs/tags/ci-validation-v3' || process.env.USE_CACHES !== 'false') {
-                throw Error('Candidate builds require the protected ci-validation-v3 tag and disabled caches');
+              if (context.ref !== 'refs/tags/ci-validation-v4' || process.env.USE_CACHES !== 'false') {
+                throw Error('Candidate builds require the protected ci-validation-v4 tag and disabled caches');
               }
               const result = await github.rest.repos.getCommit({...context.repo, ref: process.env.BUILD_REF});
               sha = result.data.sha;
