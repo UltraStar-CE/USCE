@@ -35,7 +35,6 @@ We track improvements from these projects and preserve their authorship:
 | Project | Branch |
 | --- | --- |
 | [UltraStar Deluxe](https://github.com/UltraStar-Deluxe/USDX) | master |
-| [UltraStar Deluxe MXE](https://github.com/UltraStar-Deluxe/mxe) | ultrastardx |
 | [UltraStar Deluxe Themes](https://github.com/UltraStar-Deluxe/Themes) | main |
 
 Assessment PRs link the upstream comparison and record the changes considered.
@@ -47,9 +46,22 @@ in order, with compatibility adjustments recorded in the PR.
 ## Validation and merge decisions
 
 Automated proposals follow our [contribution policy](CONTRIBUTING.md), including
-required validation and published human review rules. Automated issue candidates
-follow the five-open-PR limit. Automated upstream assessments and adaptations of
-merged upstream changes are exempt and do not count toward that limit.
+required validation and published human review rules. We limit automated Codex
+review requests rather than the number of open PRs: two per author in a rolling
+24-hour window, with the project owner exempt. Reviews wait in a queue; PRs stay
+open. Requests are serialized, drafts are skipped, and each commit is requested
+only once. Manual review requests outside the queue are not subject to this
+scheduler's budget. Changes to a PR can be reviewed in a later slot.
+
+The queue uses the subscription-backed GitHub integration. Native automatic
+reviews must be disabled for these repositories so they do not bypass the queue.
+The scheduled dispatcher reads GitHub metadata and requests reviews; it does not
+check out or execute proposed code, merge PRs, or purchase additional usage.
+Queue requests and their source commits are recorded in PR comments.
+`tools/codex-review-queue.cjs` selects one eligible request from complete metadata
+and the owner-authored request ledger; missing in-flight state stops dispatch. This local
+schedule runs while its Codex host is available.
+
 Build results identify the exact source revision tested. See
 [USCE-CI.md](USCE-CI.md) for platform coverage.
 

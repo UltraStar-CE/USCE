@@ -20,12 +20,11 @@ are welcome. Explain the problem, the resulting behavior, and what you tested.
 Say clearly when you could not test a platform. Preserve compatibility and
 existing copyright and license notices; include asset provenance and permission.
 
-We keep a maximum of **5 open PRs per author across USCE, MXE and Themes**,
-including drafts. This applies to maintainers and automated issue candidates too.
-Automated upstream assessments and adaptations of changes merged into an upstream
-tracked branch are exempt and do not count toward this limit.
-An additional PR is closed with an explanation and can be reopened once merging
-or closing another PR leaves a free slot. Its commits and discussion remain.
+PR submissions are not capped. Automated Codex review requests are limited to
+**two per author in any rolling 24 hours**. The project owner is exempt from this
+review budget. A queued review does not close or reject a contribution; it waits
+for the next available review slot. Drafts and already-reviewed commits do not
+receive duplicate requests. See [AUTOMATION.md](AUTOMATION.md).
 
 Every change uses a PR and required CI under [GOVERNANCE.md](GOVERNANCE.md).
 While the project has one human developer, the sole maintainer can merge after

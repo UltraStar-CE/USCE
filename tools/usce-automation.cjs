@@ -1,10 +1,8 @@
 'use strict';
-const {isUpstreamProposal} = require('./usce-pr-policy.cjs');
 
 // This module runs only from the trusted default branch, never a PR checkout.
 const TRACKS = [
   {id: 'usdx', repo: 'UltraStar-Deluxe/USDX', ref: 'master', baseline: '05a3cb37c63361695b16e777f5b5678ebd873198'},
-  {id: 'mxe', repo: 'UltraStar-Deluxe/mxe', ref: 'ultrastardx', baseline: '355c55d2723e344c47cf353f9d47699a2ce1150a'},
   {id: 'themes', repo: 'UltraStar-Deluxe/Themes', ref: 'main', baseline: 'f21d921f43e6cd430435a2cb5423f2bf5243f6c9'},
 ];
 const SHA = /^[a-f0-9]{40}$/;
@@ -36,36 +34,10 @@ async function baseInfo(github, context) {
   return {branch, sha: commit.data.sha, tree: commit.data.tree.sha};
 }
 
-const QUEUED_PR_NOTICE = "\n\nThis proposal is queued because its author already has five open PRs across USCE, MXE and Themes. It can be reopened when a slot is available.";
-
-async function hasBotPRSlot(github, context, exclude) {
-  let count = 0;
-  for (const repo of ['USCE', 'mxe', 'Themes']) {
-    for (let page = 1; ; page++) {
-      const result = await github.rest.pulls.list({owner: context.repo.owner, repo,
-        state: 'open', per_page: 100, page});
-      count += result.data.filter(pr => pr.user?.login === 'github-actions[bot]' && !isUpstreamProposal(pr)
-        && !(exclude?.repo === repo && exclude.number === pr.number)).length;
-      if (count >= 5) return false;
-      if (result.data.length < 100) break;
-    }
-  }
-  return true;
-}
-
 async function openDraft(github, context, base, branch, files, title, body) {
   const repo = context.repo;
   const existing = await github.rest.pulls.list({...repo, state: 'all', head: repo.owner + ':' + branch, per_page: 100});
-  if (existing.data.length) {
-    const prior = existing.data[0];
-    if (prior.state === 'open' && prior.user?.login === 'github-actions[bot]' && !isUpstreamProposal(prior)
-        && !await hasBotPRSlot(github, context, {repo: repo.repo, number: prior.number})) {
-      const priorBody = prior.body || '';
-      return (await github.rest.pulls.update({...repo, pull_number: prior.number, state: 'closed',
-        body: priorBody.includes(QUEUED_PR_NOTICE) ? priorBody : priorBody + QUEUED_PR_NOTICE})).data;
-    }
-    return prior;
-  }
+  if (existing.data.length) return existing.data[0];
   validateCandidateProse(title + '\n' + body);
   const now = await github.rest.git.getRef({...repo, ref: 'heads/' + base.branch});
   if (now.data.object.sha !== base.sha) throw Error('Default branch changed; rerun against its new head');
@@ -85,12 +57,6 @@ async function openDraft(github, context, base, branch, files, title, body) {
       }
     }
   }
-  // Workflow-token PR checks may await approval. Apply the cap ourselves.
-  // Publishers share a lock so proposals cannot claim the same slot concurrently.
-  const fullName = repo.owner + '/' + repo.repo;
-  const upstream = isUpstreamProposal({user: {login: 'github-actions[bot]'},
-    base: {repo: {full_name: fullName}}, head: {ref: branch, repo: {full_name: fullName}}});
-  const hasSlot = upstream || await hasBotPRSlot(github, context);
   const tree = await github.rest.git.createTree({...repo, base_tree: base.tree,
     tree: files.map(f => ({path: f.path, mode: '100644', type: 'blob', content: f.content}))});
   const commit = await github.rest.git.createCommit({...repo, message: title, tree: tree.data.sha, parents: [base.sha]});
@@ -103,11 +69,7 @@ async function openDraft(github, context, base, branch, files, title, body) {
     const prior = await github.rest.git.getCommit({...repo, commit_sha: ref.data.object.sha});
     if (prior.data.tree.sha !== tree.data.sha) throw Error('Candidate branch already exists with different content');
   }
-  const publicationBody = body + (hasSlot ? '' : QUEUED_PR_NOTICE);
-  const pr = (await github.rest.pulls.create({...repo, base: base.branch, head: branch, title, body: publicationBody, draft: true})).data;
-  if (hasSlot) return pr;
-  // Keep the commits and discussion, matching the policy for excess human PRs.
-  return (await github.rest.pulls.update({...repo, pull_number: pr.number, state: 'closed'})).data;
+  return (await github.rest.pulls.create({...repo, base: base.branch, head: branch, title, body, draft: true})).data;
 }
 
 async function checkpoint(github, context, base, track) {
@@ -303,4 +265,4 @@ async function publish({github, context, core}, taskText, resultText) {
   }
 }
 
-module.exports = {TRACKS, validateFiles, validateResult, openDraft, upstreamDelta, prepare, publish, trackUpstream, hasBotPRSlot};
+module.exports = {TRACKS, validateFiles, validateResult, openDraft, upstreamDelta, prepare, publish, trackUpstream};
