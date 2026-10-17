@@ -76,3 +76,6 @@ ppaslink.sh
 /src/macos/Info.plist
 /installer/settings/version.nsh
 __pycache__/
+
+# Separate theme checkout and package staging
+/.release-themes/

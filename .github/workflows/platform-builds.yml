@@ -66,6 +66,8 @@ jobs:
         run: |
           $VNAME=$(python tools/generate-version.py)
           echo "versionName=$VNAME" >> $env:GITHUB_ENV
+      - name: Bundle reviewed themes
+        uses: ./.github/actions/bundle-themes
       - name: Setup MSYS2
         uses: msys2/setup-msys2@v2
         with:
@@ -149,7 +151,7 @@ jobs:
         run: |
           del game\*.debug
           xcopy game\*.dll installer\dependencies\dll /y
-          & 'C:\Program Files (x86)\NSIS\makensis.exe' "installer/UltraStar Community Edition.nsi"
+          & 'C:\Program Files (x86)\NSIS\makensis.exe' "/DUSCE_THEMES_DIR=$((Resolve-Path .release-themes/bundle).Path)" "installer/UltraStar Community Edition.nsi"
           mv installer\dist\USCE_v*_installer.exe USCE-windows-installer-${{ env.versionName }}.exe
       - name: Upload Installer Artifact
         uses: actions/upload-artifact@v6
@@ -157,11 +159,13 @@ jobs:
           name: USCE-windows-installer-${{ env.versionName }}
           path: USCE-windows-installer-${{ env.versionName }}.exe
           if-no-files-found: error
+      - name: Stage portable package with every theme
+        run: python tools/bundle-themes.py portable --source game --destination .release-themes/portable
       - name: Upload Portable Artifact
         uses: actions/upload-artifact@v6
         with:
           name: USCE-windows-portable-${{ env.versionName }}
-          path: game
+          path: .release-themes/portable
           if-no-files-found: error
 
   build_mac:
@@ -192,6 +196,8 @@ jobs:
         run: |
           VNAME=$(python3 tools/generate-version.py)
           echo "versionName=$VNAME" >> $GITHUB_ENV
+      - name: Bundle reviewed themes
+        uses: ./.github/actions/bundle-themes
       - name: Determine Arch
         run: |
           if [ "${{ matrix.os }}" = "macos-15-intel" ]; then
@@ -232,7 +238,7 @@ jobs:
           LIBS=-L$GITHUB_WORKSPACE/projectm/lib \
           ./configure --with-opencv-cxx-api --with-libprojectM=nocheck
       - name: Build
-        run: make macos-dmg
+        run: make USCE_THEMES_DIR=".release-themes/bundle" macos-dmg
       - name: Rename DMG
         run: mv "UltraStar Community Edition.dmg" "USCE-mac-${{ env.arch }}-${{ env.versionName }}.dmg"
       - name: Upload Image Artifact
@@ -261,6 +267,8 @@ jobs:
         run: |
           VNAME=$(python3 tools/generate-version.py)
           echo "versionName=$VNAME" >> $GITHUB_ENV
+      - name: Bundle reviewed themes
+        uses: ./.github/actions/bundle-themes
       - name: Cache build
         if: inputs.use-caches
         uses: actions/cache@v5
@@ -285,7 +293,7 @@ jobs:
       - name: Build
         run: |
           cd dists/linux
-          ./dockerenv.sh --use-existing=usce/buildenv:latest make compress
+          ./dockerenv.sh --use-existing=usce/buildenv:latest env USCE_THEMES_DIR=/src/.release-themes/bundle make compress
           mv USCE*.AppImage ../../USCE-linux-${{ env.versionName }}.AppImage
       - name: Upload Image Artifact
         uses: actions/upload-artifact@v6

@@ -43,6 +43,7 @@ on:
       - "!**/*.txt"
       - "**/CMakeLists.txt"
       - "release-plan.json"
+      - "themes.json"
       # ci-build-paths:end
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
@@ -87,6 +88,7 @@ on:
       - "!**/*.txt"
       - "**/CMakeLists.txt"
       - "release-plan.json"
+      - "themes.json"
       # ci-build-paths:end
 permissions:
   contents: read

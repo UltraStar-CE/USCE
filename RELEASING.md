@@ -48,3 +48,16 @@ commits are needed. Generated metadata is ignored by Git. For direct IDE builds,
 run `python3 tools/generate-version.py` first. Python 3 is required. Git provides the source revision and commit count.
 Source archives use an unknown-revision development label and need the same
 generation step before configuration. Stable release builds require Git metadata.
+
+## Themes in release packages
+
+Every platform package includes all themes and their assets from the reviewed
+`themes.json` commit in the separate Themes repository. Monthly preparation
+proposes the current Themes revision alongside the release plan. The release
+plan and theme pin must agree before a release build can start. Creator credits
+and accompanying notices are preserved. `themes/BUNDLE-SOURCE.json` records the
+source commit, theme definitions and asset checksums inside each package.
+
+Themes remain developed in the Themes repository. Bundling does not change the
+default selection. Experimental themes are available to choose, and we test
+their compatibility with the release candidate before publication.

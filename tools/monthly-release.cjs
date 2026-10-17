@@ -1,5 +1,6 @@
 'use strict';
 const {openDraft} = require('./usce-automation.cjs');
+const {validateThemePin} = require('./themes-pin.cjs');
 const VERSION = /^([0-9]{4})\.([1-9]|1[0-2])\.([0-9]+)$/;
 function chooseRelease({now, upstream, releases}) {
   const parts = new Intl.DateTimeFormat('en-CA', {timeZone: 'Europe/Vienna', year: 'numeric', month: 'numeric', day: 'numeric'}).formatToParts(now);
@@ -26,15 +27,19 @@ async function prepareMonthly({github, context, core, now = new Date()}) {
   const releases = await github.paginate(github.rest.repos.listReleases, {...context.repo, per_page: 100});
   const plan = chooseRelease({now, upstream, releases});
   if (!plan) { core.notice('No monthly release preparation is due.'); return; }
+  const themes = (await github.rest.repos.getCommit({owner: 'UltraStar-CE', repo: 'Themes', ref: 'main'})).data;
+  plan.themes = validateThemePin({repository: 'UltraStar-CE/Themes', sha: themes.sha});
   const branch = context.payload.repository.default_branch;
   const sha = (await github.rest.git.getRef({...context.repo, ref: 'heads/' + branch})).data.object.sha;
   const commit = (await github.rest.git.getCommit({...context.repo, commit_sha: sha})).data;
   const pr = await openDraft(github, context, {branch, sha, tree: commit.tree.sha},
     'automation/release-' + plan.version.split('.').slice(0, 2).join('-'),
-    [{path: 'VERSION', content: plan.version + '\n'}, {path: 'release-plan.json', content: JSON.stringify(plan, null, 2) + '\n'}],
+    [{path: 'VERSION', content: plan.version + '\n'}, {path: 'release-plan.json', content: JSON.stringify(plan, null, 2) + '\n'},
+      {path: 'themes.json', content: JSON.stringify(plan.themes, null, 2) + '\n'}],
     'Prepare USCE ' + plan.version,
     `Proposed monthly release: ${plan.version}. Trigger: ${plan.trigger}.\n\n` +
     `Upstream reference: ${plan.upstream?.tag || 'no stable upstream release available'}. This records a reference, not a claim that all upstream changes are incorporated.\n\n` +
+    `Themes revision: ${plan.themes.sha}. Every platform package includes all themes and their assets from this snapshot.\n\n` +
     'Review the included upstream changes and USCE additions, compatibility, release notes and required CI. Merging prepares draft packages from the exact merged revision. Installation, launch, songs and microphone testing are required before a human publishes the release.');
   core.notice('Release preparation: ' + pr.html_url);
 }

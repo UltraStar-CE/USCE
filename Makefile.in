@@ -55,6 +55,7 @@ USCE_TARNAME := @PACKAGE_TARNAME@
 
 USCE_SRC_DIR   := $(top_srcdir)/src
 USCE_GAME_DIR  := $(top_srcdir)/game
+USCE_THEMES_DIR ?= $(USCE_GAME_DIR)/themes
 USCE_TOOLS_DIR := $(top_srcdir)/tools
 USCE_BUILD_DIR := $(top_srcdir)/build
 USCE_LIB_DIR   := $(USCE_SRC_DIR)/lib
@@ -271,7 +272,7 @@ install-data:
 	$(MAKE) RECURSIVE_SRC_DIR="$(USCE_GAME_DIR)/sounds" \
             RECURSIVE_DST_DIR="$(DESTDIR)$(INSTALL_DATADIR)/sounds" \
             install-data-recursive
-	$(MAKE) RECURSIVE_SRC_DIR="$(USCE_GAME_DIR)/themes" \
+	$(MAKE) RECURSIVE_SRC_DIR="$(USCE_THEMES_DIR)" \
             RECURSIVE_DST_DIR="$(DESTDIR)$(INSTALL_DATADIR)/themes" \
             install-data-recursive
 	if [ "@DEFINE_HAVE_PROJECTM@" = DEFINE ] ; then \

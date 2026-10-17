@@ -177,7 +177,12 @@ ${EndIf}
 SetOutPath "$INSTDIR"
 
 File /r /x .git /x .gitignore ..\game\covers
-File /r /x .git /x .gitignore ..\game\themes
+!ifndef USCE_THEMES_DIR
+!define USCE_THEMES_DIR "..\game\themes"
+!endif
+SetOutPath "$INSTDIR\themes"
+File /r /x .git /x .gitignore "${USCE_THEMES_DIR}\*"
+SetOutPath "$INSTDIR"
 File /r /x .git /x .gitignore ..\game\languages
 File /r /x .git /x .gitignore ..\game\sounds
 File /r /x .git /x .gitignore ..\game\fonts

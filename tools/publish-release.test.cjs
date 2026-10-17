@@ -6,6 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const {execFileSync} = require('node:child_process');
+const themePin = {repository:'UltraStar-CE/Themes',sha:'a'.repeat(40)};
 const {planRelease, publishDraft} = require('./publish-release.cjs');
 async function fixture(run) {
   const previous = process.cwd();
@@ -13,7 +14,8 @@ async function fixture(run) {
   try {
     process.chdir(temp);
     fs.writeFileSync('VERSION', '2026.10.0\n');
-    fs.writeFileSync('release-plan.json', JSON.stringify({ready:true,version:'2026.10.0',trigger:'calendar-fallback',upstream:null}));
+    fs.writeFileSync('themes.json', JSON.stringify(themePin));
+    fs.writeFileSync('release-plan.json', JSON.stringify({ready:true,version:'2026.10.0',themes:themePin,trigger:'calendar-fallback',upstream:null}));
     execFileSync('git',['init','--quiet']);
     execFileSync('git',['add','VERSION','release-plan.json']);
     execFileSync('git',['-c','user.name=USCE Tests','-c','user.email=tests@example.invalid','commit','--quiet','-m','Improve playback #123']);
@@ -42,6 +44,7 @@ test('draft publisher pins source, avoids cross-references and retries matching 
   assert.equal(x.state.releases[0].draft,true);
   assert.equal(x.state.releases[0].target_commitish,x.context.sha);
   assert(!x.state.releases[0].body.includes('#123'));
+  assert(x.state.releases[0].body.includes(themePin.sha));
   assert.equal(x.state.uploads,7);
   await publishDraft(x,'2026.10.0');
   assert.equal(x.state.releases.length,1);
@@ -65,8 +68,11 @@ test('release planning requires a reviewed ready plan and skips published versio
   await planRelease(x);assert.deepEqual(x.state.outputs,{});
   fs.writeFileSync('release-plan.json',JSON.stringify({ready:true,version:'2026.11.0'}));
   await assert.rejects(planRelease(x),/must match/);
-  fs.writeFileSync('release-plan.json',JSON.stringify({ready:true,version:'2026.10.0'}));
+  fs.writeFileSync('release-plan.json',JSON.stringify({ready:true,version:'2026.10.0',themes:themePin}));
   await planRelease(x);assert.equal(x.state.outputs.version,'2026.10.0');
+  fs.writeFileSync('release-plan.json',JSON.stringify({ready:true,version:'2026.10.0',themes:{...themePin,sha:'b'.repeat(40)}}));
+  await assert.rejects(planRelease(x),/Themes pin must match/);
+  fs.writeFileSync('release-plan.json',JSON.stringify({ready:true,version:'2026.10.0',themes:themePin}));
   x.state.outputs={};x.state.releases.push({tag_name:'v2026.10.0',draft:false});
   await planRelease(x);assert.deepEqual(x.state.outputs,{});
 }));
