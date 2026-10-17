@@ -34,4 +34,4 @@ patchelf --set-rpath "\$ORIGIN/$LIBDIR" "$OUTPUT/usce"
 
 mkdir -p "$OUTPUT/data/songs"
 cp ../../LICENSE ../../game/LICENSE.* "$OUTPUT/"
-echo -e "Version: $(cat ../../VERSION)\nBuild date: `date -u +%FT%TZ`" > "$OUTPUT/VERSION"
+echo -e "Version: $(cat ../../VERSION.build)\nBuild date: `date -u +%FT%TZ`" > "$OUTPUT/VERSION"

@@ -70,3 +70,11 @@ ppaslink.sh
 /usdx-dlls-i686.zip
 /game/*.dll
 /game/*.debug
+
+# Generated build version metadata
+/VERSION.build
+/build-version.json
+/src/base/usce-version.inc
+/src/macos/Info.plist
+/installer/settings/version.nsh
+__pycache__/

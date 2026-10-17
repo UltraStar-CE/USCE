@@ -37,7 +37,8 @@
     "!**/*.MD",
     "!**/*.rst",
     "!**/*.txt",
-    "**/CMakeLists.txt"
+    "**/CMakeLists.txt",
+    "release-plan.json"
   ],
   "automation": [
     "tools/**",

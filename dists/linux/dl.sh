@@ -46,7 +46,7 @@ if older 1.8 wayland-scanner --version ; then
 	deps+=('wayland,https://gitlab.freedesktop.org/wayland/wayland/-/releases/1.21.91/downloads/wayland-1.21.91.tar.xz,d4f5b5e2453d45902016138dae0605cae096e00b')
 fi
 
-deps+=('pulseaudio,https://www.freedesktop.org/software/pulseaudio/releases/pulseaudio-16.1.tar.xz,7bf3845b522a1da263b6b84a0bc5aa761e49bc87')
+deps+=('pulseaudio,https://freedesktop.org/software/pulseaudio/releases/pulseaudio-16.1.tar.xz,7bf3845b522a1da263b6b84a0bc5aa761e49bc87')
 deps+=('pipewire,https://gitlab.freedesktop.org/pipewire/pipewire/-/archive/0.3.66/pipewire-0.3.66.tar.bz2,20c58dd867c33a7d111df69d7ec8d31c45b92a0b')
 deps+=('wayland-protocols,https://gitlab.freedesktop.org/wayland/wayland-protocols/-/releases/1.31/downloads/wayland-protocols-1.31.tar.xz,5a84628630598027fab1708f822fc399d9e70b02')
 deps+=('xkbcommon,https://github.com/xkbcommon/libxkbcommon/archive/refs/tags/xkbcommon-1.13.1.tar.gz,f487d1e7f5e362b8971e23e354d9eb4bdc51e453')
@@ -59,7 +59,7 @@ if older 2.15 nasm --version ; then
 fi
 
 deps+=('dav1d,https://downloads.videolan.org/pub/videolan/dav1d/1.5.3/dav1d-1.5.3.tar.xz,a547b3830b3469ef9e6a33a2fa62b714eb1f611c')
-deps+=('ffmpeg,https://ffmpeg.org/releases/ffmpeg-8.1.1.tar.xz,0b8318579556aaa736096ceb1e8333d2260b63bf')
+deps+=('ffmpeg,https://www.ffmpeg.org/releases/ffmpeg-8.1.1.tar.xz,0b8318579556aaa736096ceb1e8333d2260b63bf')
 deps+=('portmidi,https://sourceforge.net/projects/portmedia/files/portmidi/217/portmidi-src-217.zip,f45bf4e247c0d7617deacd6a65d23d9fddae6117')
 deps+=('portmidi-debian,http://http.debian.net/debian/pool/main/p/portmidi/portmidi_217-6.debian.tar.xz,02e4c6dcfbd35a75913de2acd39be8f0cfd0b244')
 deps+=('lua,https://www.lua.org/ftp/lua-5.4.8.tar.gz,ced7c0ec99ad9d984ad3e7af5fcd2deef2b33f9f')
@@ -86,7 +86,7 @@ deps+=('projectm,https://github.com/projectM-visualizer/projectm/archive/refs/ta
 # fi
 
 if ! desktop-file-validate -h >/dev/null ; then
-	deps+=('desktop-file-utils,https://www.freedesktop.org/software/desktop-file-utils/releases/desktop-file-utils-0.26.tar.xz,9fd94cb7de302163015fcbc0e157c61323b1205d')
+	deps+=('desktop-file-utils,https://freedesktop.org/software/desktop-file-utils/releases/desktop-file-utils-0.26.tar.xz,9fd94cb7de302163015fcbc0e157c61323b1205d')
 fi
 
 deps+=('//xz,https://download.sourceforge.net/lzmautils/xz-5.2.3.tar.gz,529638eec3597e429cc54c74551ac0a89169e841')

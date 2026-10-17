@@ -4,21 +4,8 @@
 
 ; Product Information:
 
-; use this block for a dev version
-!define VersionStr "2026.9.0"
-!define FullVersion "2026.9.0+dev" ; semver compatible. see semver.org
-!define Release "Dev"
-!define DevBuild true
-!define ReleaseMeta "+dev"
-!define ReleaseApp " Dev"
-
-; use this block for a release version
-;!define VersionStr "2026.9.0"
-;!define FullVersion "2026.9.0" ; semver compatible. see semver.org
-;!define Release "Stable"
-;!define DevBuild false
-;!define ReleaseMeta "+stable"
-;!define ReleaseApp " Stable"
+; Generated version values are shared with the game and platform packages.
+!include "${path_settings}\version.nsh"
 
 !define installername " Installer"
 !define installerexe "USCE_v${VersionStr}${ReleaseMeta}_installer"
@@ -48,8 +35,8 @@
 
 !define installer_version_path "$LOCALAPPDATA\Temp\usceversion"
 !define installer_exe_path "$LOCALAPPDATA\Temp\usceupdate.exe"
-!define version_url "https://raw.githubusercontent.com/UltraStar-CE/USCE/release/VERSION"
-!define update_url "https://github.com/UltraStar-CE/USCE/releases/download/%VERSION%/USCE-windows-installer-%VERSION%.exe"
+!define version_url "https://github.com/UltraStar-CE/USCE/releases/latest/download/VERSION"
+!define update_url "https://github.com/UltraStar-CE/USCE/releases/download/v%VERSION%/USCE-windows-installer-%VERSION%.exe"
 !define update_mask_online_version "%VERSION%"
 
 ; debug - uncomment for testing

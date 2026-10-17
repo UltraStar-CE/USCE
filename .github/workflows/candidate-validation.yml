@@ -24,8 +24,8 @@ jobs:
           CANDIDATE_REF: ${{ inputs.ref }}
         with:
           script: |
-            if (context.ref !== 'refs/tags/ci-validation-v2') {
-              throw Error('Select the protected ci-validation-v2 tag for candidate validation');
+            if (context.ref !== 'refs/tags/ci-validation-v3') {
+              throw Error('Select the protected ci-validation-v3 tag for candidate validation');
             }
             const result = await github.rest.repos.getCommit({...context.repo, ref: process.env.CANDIDATE_REF});
             core.setOutput('sha', result.data.sha);

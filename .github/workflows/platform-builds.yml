@@ -5,6 +5,9 @@ on:
       ref:
         type: string
         required: true
+      release-version:
+        type: string
+        default: ''
       use-caches:
         type: boolean
         default: true
@@ -22,12 +25,17 @@ jobs:
         env:
           BUILD_REF: ${{ inputs.ref }}
           USE_CACHES: ${{ inputs.use-caches }}
+          RELEASE_VERSION: ${{ inputs.release-version }}
         with:
           script: |
             let sha = context.sha;
-            if (context.eventName === 'workflow_dispatch') {
-              if (context.ref !== 'refs/tags/ci-validation-v2' || process.env.USE_CACHES !== 'false') {
-                throw Error('Candidate builds require the protected ci-validation-v2 tag and disabled caches');
+            if (context.eventName === 'workflow_dispatch' && process.env.RELEASE_VERSION) {
+              if (context.ref !== 'refs/heads/' + context.payload.repository.default_branch || process.env.BUILD_REF !== context.sha) {
+                throw Error('Release builds require the default-branch source revision');
+              }
+            } else if (context.eventName === 'workflow_dispatch') {
+              if (context.ref !== 'refs/tags/ci-validation-v3' || process.env.USE_CACHES !== 'false') {
+                throw Error('Candidate builds require the protected ci-validation-v3 tag and disabled caches');
               }
               const result = await github.rest.repos.getCommit({...context.repo, ref: process.env.BUILD_REF});
               sha = result.data.sha;
@@ -41,6 +49,8 @@ jobs:
     runs-on: windows-2022
     # Adapted from dgruss's USDX PR #1417, commit a4c9ea3e11a8a2c688e7746e8f82e521f950e4a9.
     env:
+      USCE_RELEASE_VERSION: ${{ inputs.release-version }}
+      USCE_BUILD_CHANNEL: development
       FPC_VERSION: 3.2.2
       FPC_SHA256: 8C255390544B051388B577EB61C6191A04883264AFE0E3369B3600A56DAF7BDE
       NSIS_VERSION: 3.05
@@ -50,10 +60,11 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ needs.resolve.outputs.sha }}
+          fetch-depth: 0
           persist-credentials: false
       - name: Determine version
         run: |
-          $VNAME=$(cat VERSION | sed "s/+dev$/+dev-$(git rev-parse --short HEAD)/")
+          $VNAME=$(python tools/generate-version.py)
           echo "versionName=$VNAME" >> $env:GITHUB_ENV
       - name: Setup MSYS2
         uses: msys2/setup-msys2@v2
@@ -67,6 +78,7 @@ jobs:
             git
             make
             pkgconf
+            python
             mingw-w64-x86_64-gcc
             mingw-w64-x86_64-tools
       - name: Cache FPC and NSIS
@@ -146,6 +158,8 @@ jobs:
       matrix:
         os: [macos-latest, macos-15-intel]
     env:
+      USCE_RELEASE_VERSION: ${{ inputs.release-version }}
+      USCE_BUILD_CHANNEL: development
       SDL2_VERSION: 2.32.10
       SDL2_SHA: 5f5993c530f084535c65a6879e9b26ad441169b3e25d789d83287040a9ca5165
       SDL2_IMAGE_VERSION: 2.8.12
@@ -157,10 +171,11 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ needs.resolve.outputs.sha }}
+          fetch-depth: 0
           persist-credentials: false
       - name: Determine version
         run: |
-          VNAME=$(cat VERSION | sed "s/+dev$/+dev-$(git rev-parse --short HEAD)/")
+          VNAME=$(python3 tools/generate-version.py)
           echo "versionName=$VNAME" >> $GITHUB_ENV
       - name: Determine Arch
         run: |
@@ -213,6 +228,10 @@ jobs:
           if-no-files-found: error
 
   build_linux:
+    env:
+      USCE_RELEASE_VERSION: ${{ inputs.release-version }}
+      USCE_BUILD_CHANNEL: development
+      USCE_DOCKER_TTY: ''
     needs: resolve
     name: Build for Linux
     runs-on: ubuntu-22.04
@@ -221,10 +240,11 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ needs.resolve.outputs.sha }}
+          fetch-depth: 0
           persist-credentials: false
       - name: Determine version
         run: |
-          VNAME=$(cat VERSION | sed "s/+dev$/+dev-$(git rev-parse --short HEAD)/")
+          VNAME=$(python3 tools/generate-version.py)
           echo "versionName=$VNAME" >> $GITHUB_ENV
       - name: Cache build
         if: inputs.use-caches
@@ -250,7 +270,6 @@ jobs:
       - name: Build
         run: |
           cd dists/linux
-          sed -i '/docker/s/-it\>//' dockerenv.sh
           ./dockerenv.sh --use-existing=usce/buildenv:latest make compress
           mv USCE*.AppImage ../../USCE-linux-${{ env.versionName }}.AppImage
       - name: Upload Image Artifact

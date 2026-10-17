@@ -13,6 +13,11 @@ export PFLAGS_EXTRA = -Cg
 	dh $@ --with autotools_dev,autoreconf
 
 
+override_dh_autoreconf:
+	python3 tools/generate-version.py
+	dh_autoreconf
+
+
 override_dh_auto_configure:
 	dh_auto_configure -- \
 		--bindir=/usr/games \
@@ -22,6 +27,7 @@ override_dh_auto_configure:
 
 override_dh_auto_clean:
 	dh_auto_clean
+	rm -f VERSION.build build-version.json src/base/usce-version.inc src/macos/Info.plist installer/settings/version.nsh
 	-rm config.log src/config-linux.inc
 	-rm game/link.res
 

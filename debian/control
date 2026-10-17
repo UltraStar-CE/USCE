@@ -4,6 +4,7 @@ Priority: optional
 Maintainer: Markus Meier <memcopy@epic-bytes.net>
 Build-Depends: debhelper (>= 10),
  autotools-dev,
+ python3,
  fpc (>= 3.0.0),
  libfreetype6-dev,
  libsqlite3-dev,
