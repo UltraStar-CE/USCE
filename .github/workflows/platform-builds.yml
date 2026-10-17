@@ -84,6 +84,7 @@ jobs:
             mingw-w64-ucrt-x86_64-nasm
             mingw-w64-ucrt-x86_64-python
             patch
+            unzip
       - name: Cache FPC and NSIS
         if: inputs.use-caches
         id: cache-fpc-nsis

@@ -32,7 +32,7 @@ Optional libraries:
 #### Windows using MSYS2
 - Install [MSYS2](https://www.msys2.org). Use the UCRT64 environment
 - Install [FPC](https://www.freepascal.org). Use the Win32 cross-to-Win64 installer so you get the Win64 RTL units.
-- `pacman -S base-devel mingw-w64-ucrt-x86_64-toolchain mingw-w64-ucrt-x86_64-autotools mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-meson mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-git mingw-w64-ucrt-x86_64-ntldd mingw-w64-ucrt-x86_64-nasm mingw-w64-ucrt-x86_64-python patch`
+- `pacman -S base-devel mingw-w64-ucrt-x86_64-toolchain mingw-w64-ucrt-x86_64-autotools mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-meson mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-git mingw-w64-ucrt-x86_64-ntldd mingw-w64-ucrt-x86_64-nasm mingw-w64-ucrt-x86_64-python patch unzip`
 - Add some information to `.bash_profile`:
   * Path to the cross compiler: `PATH="${PATH}:/c/FPC/3.2.2/bin/i386-win32"`
   * FPC config and base: `FPCCFG="/c/FPC/3.2.2/bin/i386-win32/fpc.cfg"` and `FPCDIR="/c/FPC/3.2.2"`
