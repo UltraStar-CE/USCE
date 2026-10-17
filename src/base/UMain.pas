@@ -159,7 +159,7 @@ begin
     Language := TLanguage.Create;
 
     // add const values:
-    Language.AddConst('US_VERSION', USCEVersionStr);
+    Language.AddConst('US_VERSION', USCEVersionLabel);
 
     // Skin
     Log.BenchmarkStart(1);
