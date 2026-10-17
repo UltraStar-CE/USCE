@@ -65,9 +65,7 @@ ppaslink.sh
 /game/*.log
 /game/ultrastardx
 
-# created by dldlls.py on Windows
-/usdx-dlls-x86_64.zip
-/usdx-dlls-i686.zip
+# Windows build outputs
 /game/*.dll
 /game/*.debug
 
