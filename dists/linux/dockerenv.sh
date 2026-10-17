@@ -52,11 +52,12 @@ else
 	imagename="$use_existing"
 fi
 
-$SUDO docker run --rm -it \
+$SUDO docker run --rm ${USCE_DOCKER_TTY--it} \
 	-v "$(realpath ../..):/src" \
 	-v "/etc/passwd:/etc/passwd:ro" \
 	-v "/etc/group:/etc/group:ro" \
 	--user $(id -u):$(id -g) \
+	-e USCE_RELEASE_VERSION -e USCE_BUILD_CHANNEL \
 	-e "TERM=$TERM" \
 	-e "PS1=[\u@$(tput setaf 6)$(tput bold)\h:$(uname -m)$(tput sgr0) \W]\$ " \
 	-h "uscebuilder" \

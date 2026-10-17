@@ -21,7 +21,7 @@ assert(!workflow('usce-agents.yml').includes('pull_request_target:'), 'Optional 
 assert(!workflow('candidate-validation.yml').includes('pull_request:'), 'Candidate validation is manual only');
 assert(workflow('candidate-validation.yml').includes('use-caches: false'), 'Candidates must not use shared caches');
 assert(workflow('platform-builds.yml').includes("process.env.USE_CACHES !== 'false'"), 'Candidate cache isolation guard missing');
-assert(workflow('platform-builds.yml').includes("context.ref !== 'refs/tags/ci-validation-v2'"), 'Protected candidate tag guard missing');
+assert(workflow('platform-builds.yml').includes("context.ref !== 'refs/tags/ci-validation-v3'"), 'Protected candidate tag guard missing');
 for (const [file, job] of [['upstream-tracking.yml', 'track'], ['usce-agents.yml', 'publish']]) {
   assert(workflow(file).includes('  ' + job + ':\n    concurrency:\n      group: usce-pr-publication\n      cancel-in-progress: false\n      queue: max'), `${file}: bot publishers must share the publication lock`);
 }

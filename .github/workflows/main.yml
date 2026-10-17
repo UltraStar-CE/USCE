@@ -42,8 +42,10 @@ on:
       - "!**/*.rst"
       - "!**/*.txt"
       - "**/CMakeLists.txt"
+      - "release-plan.json"
       # ci-build-paths:end
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       # ci-build-paths:start
       - "src/**"
@@ -84,6 +86,7 @@ on:
       - "!**/*.rst"
       - "!**/*.txt"
       - "**/CMakeLists.txt"
+      - "release-plan.json"
       # ci-build-paths:end
 permissions:
   contents: read

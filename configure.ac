@@ -16,7 +16,7 @@ AC_PREREQ(2.61)
 
 # Init autoconf
 AC_INIT([usce],
-        m4_esyscmd_s([cat VERSION]),
+        m4_esyscmd_s([cat VERSION.build]),
         [https://github.com/UltraStar-CE/USCE/issues/])
 # specify the website here
 PACKAGE_WEBSITE="https://github.com/UltraStar-CE/USCE"

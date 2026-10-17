@@ -1,6 +1,7 @@
 name: USCE automation checks
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       # ci-automation-paths:start
       - "tools/**"
@@ -24,4 +25,6 @@ jobs:
           persist-credentials: false
       - run: node --test tools/*.test.cjs
       - run: node tools/check-ci-workflows.cjs
+      - run: python3 -m unittest discover -s tools -p "test_*.py"
+      - run: python3 tools/generate-version.py
       - run: python3 tools/check-usce-branding.py

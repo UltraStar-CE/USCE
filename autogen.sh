@@ -5,6 +5,12 @@ set -e
 srcdir=`dirname $0`
 test -n "$srcdir" && cd "$srcdir"
 
+if command -v python3 >/dev/null 2>&1; then
+  python3 tools/generate-version.py
+else
+  python tools/generate-version.py
+fi
+
 echo "Updating build configuration files for USDX, please wait..."
 
 autoreconf --verbose --install --symlink --force
