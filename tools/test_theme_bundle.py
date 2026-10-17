@@ -73,3 +73,10 @@ class ThemeBundleTests(unittest.TestCase):
         self.assertEqual(json.loads((package / 'themes' / 'BUNDLE-SOURCE.json').read_text())['sha'], self.pin['sha'])
         with self.assertRaisesRegex(ValueError, 'reviewed commit'):
             themes.portable(game, bundle, self.root / 'wrong', {**self.pin, 'sha': 'f' * 40})
+
+    def test_sparse_checkout_cannot_silently_omit_theme_assets(self):
+        self.git('update-index', '--skip-worktree', '--', 'Modern/asset with spaces.png')
+        (self.source / 'Modern' / 'asset with spaces.png').unlink()
+        self.assertEqual(self.git('status', '--porcelain'), '')
+        with self.assertRaisesRegex(ValueError, 'complete checkout'):
+            themes.bundle(self.source, self.root / 'bundle', self.pin)

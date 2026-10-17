@@ -166,6 +166,7 @@ jobs:
         with:
           name: USCE-windows-portable-${{ env.versionName }}
           path: .release-themes/portable
+          include-hidden-files: true
           if-no-files-found: error
 
   build_mac:

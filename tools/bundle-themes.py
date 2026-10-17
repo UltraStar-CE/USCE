@@ -31,15 +31,18 @@ def bundle(source, destination, pin):
     if destination.exists() and (not destination.is_dir() or any(destination.iterdir())):
         raise ValueError('Theme bundle destination must be empty')
     files = []
-    for path in sorted(source.rglob('*')):
-        relative = path.relative_to(source)
+    tracked = subprocess.check_output(['git', '-C', str(source), 'ls-files', '-z'], encoding='utf-8').split('\0')
+    for name in sorted(name for name in tracked if name):
+        relative = Path(name)
+        path = source / relative
         if any(part in METADATA for part in relative.parts):
             continue
         if path.is_symlink():
             raise ValueError('Theme assets must be regular files, not symlinks')
-        if path.is_file():
-            files.append((path, relative))
-    themes = sorted(path.name for path in source.glob('*.ini') if path.is_file())
+        if not path.is_file():
+            raise ValueError('Missing theme asset: materialize the complete checkout before bundling: ' + name)
+        files.append((path, relative))
+    themes = sorted(relative.name for _, relative in files if len(relative.parts) == 1 and relative.suffix == '.ini')
     if not themes:
         raise ValueError('Themes snapshot contains no theme definitions')
     destination.mkdir(parents=True, exist_ok=True)
