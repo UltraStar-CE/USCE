@@ -118,13 +118,20 @@ jobs:
             throw 'NSIS installation exceeded five minutes'
           }
           if ($nsisInstaller.ExitCode -ne 0) { throw "NSIS installation failed: $($nsisInstaller.ExitCode)" }
+      - name: Identify Windows dependency build environment
+        id: windows-toolchain
+        shell: msys2 {0}
+        run: |
+          set -eo pipefail
+          package_key=$(pacman -Q | LC_ALL=C sort | sha256sum)
+          echo "key=${package_key%% *}" >> "$GITHUB_OUTPUT"
       - name: Cache Windows DLL dependencies
         if: inputs.use-caches
         id: cache-windows-dlls
         uses: actions/cache@v6
         with:
           path: dists/windows/prefix
-          key: windows-2022-ucrt64-native-v1-${{ runner.arch }}-${{ hashFiles('dists/windows/tasks.sh', 'dists/windows/Makefile', 'dists/windows/*.patch') }}
+          key: windows-2022-ucrt64-native-v2-${{ runner.arch }}-${{ steps.windows-toolchain.outputs.key }}-${{ hashFiles('dists/windows/tasks.sh', 'dists/windows/Makefile', 'dists/windows/*.patch') }}
       - name: Build Windows DLL dependencies
         if: steps.cache-windows-dlls.outputs.cache-hit != 'true'
         shell: msys2 {0}
