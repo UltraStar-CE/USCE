@@ -40,8 +40,7 @@ two merged PRs.
 
 An active developer is a human with at least two merged code, documentation,
 translation or test PRs, or two substantive PR reviews, across
-[USCE](https://github.com/UltraStar-CE/USCE),
-[MXE](https://github.com/UltraStar-CE/mxe) and
+[USCE](https://github.com/UltraStar-CE/USCE) and
 [Themes](https://github.com/UltraStar-CE/Themes) in the preceding 90 days.
 A substantive review includes technical reasoning, testing or actionable
 feedback; a bare approval or automated review does not qualify.
