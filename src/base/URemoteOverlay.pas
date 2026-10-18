@@ -18,9 +18,8 @@ procedure DrawRemoteRoomOverlay;
 implementation
 
 uses
-  dglOpenGL,
   SysUtils,
-  TextGL,
+  UText,
   URemoteBridgeIPC;
 
 procedure DrawRemoteRoomOverlay;
@@ -48,11 +47,11 @@ begin
   SetFontSize(20);
   SetFontItalic(false);
   SetFontReflection(false, 0);
-  glColor4f(1, 1, 1, 1);
-  TextW := glTextWidth(Text);
+  SetFontColor(1, 1, 1, 1);
+  TextW := TextWidth(Text);
   SetFontPos(800 - TextW - 10, 6);
-  glPrint(Text);
-  glColor4f(1, 1, 1, 1);
+  PrintText(Text);
+  SetFontColor(1, 1, 1, 1);
 end;
 
 end.

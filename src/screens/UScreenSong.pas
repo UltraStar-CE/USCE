@@ -5068,6 +5068,7 @@ begin
 
   if ((Mode <> smNormal) or (Ini.ShowScores = 0) or (CatSongs.Song[Interaction].Edition = '') or ((Ini.ShowScores = 1) and ((Text[TextMaxScore2].Text = '0') and (Text[TextMaxScoreLocal].Text = '0')))) then
 
+
   begin
     hide([
       TextScore, TextMaxScore, TextMediaScore,

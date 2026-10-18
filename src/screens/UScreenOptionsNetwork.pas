@@ -94,7 +94,7 @@ type
     InsertButton: integer;
 
     constructor Create; override;
-    function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
+    function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean): boolean; override;
     procedure OnShow; override;
     procedure UpdateUsernameList(ResetIndex: boolean);
     procedure UpdateUsernameSettings;

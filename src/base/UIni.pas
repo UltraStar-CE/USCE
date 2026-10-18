@@ -50,6 +50,7 @@ uses
   UPath;
 
 type
+  TUTF8StringArray = array of UTF8String;
   {**
    * TInputDeviceConfig stores the configuration for an input device.
    * Configurations will be stored in the InputDeviceConfig array.
