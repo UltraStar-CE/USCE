@@ -1,9 +1,14 @@
 {
-  "ready": false,
   "version": "2026.10.0",
-  "upstream": null,
+  "ready": true,
+  "trigger": "upstream-release",
+  "date": "2026-10-18",
+  "upstream": {
+    "tag": "v2026.10.0",
+    "sha": "5fde5ec984154aca259117f99c49a220e0bab40c"
+  },
   "themes": {
     "repository": "UltraStar-CE/Themes",
-    "sha": "972285c1b79909f7056939a41aed3279b57f67df"
+    "sha": "9fd3fa3adbfeabb1bd3b09d2187269a01e71260d"
   }
 }
