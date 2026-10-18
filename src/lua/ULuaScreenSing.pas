@@ -472,15 +472,10 @@ begin
   lua_ClearStack(L);
   Result := 1;
 
-  if (CurrentSong = nil) or (Length(CurrentSong.BPM) = 0) or (Display.CurrentScreen <> @ScreenSing) then
+  if (CurrentSong = nil) or (CurrentSong.BPM < MIN_BPM) or (Display.CurrentScreen <> @ScreenSing) then
     lua_PushNumber(L, 0) // in case of error
-  else if (Length(CurrentSong.BPM) = 1) then
-    lua_PushNumber(L, CurrentSong.BPM[0].BPM*TotalTime/60)
   else
-  begin
-    // to-do: do this for songs w/ BPM changes
-    //        or drop support for BPM changes?!
-  end;
+    lua_PushNumber(L, CurrentSong.BPM * TotalTime / 60);
 end;
 
 { ScreenSing.GetBackground - no arguments
