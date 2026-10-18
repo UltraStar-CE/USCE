@@ -1313,7 +1313,7 @@ const
   MAX_INHERITANCE = 10;
 var
   CurrentThemeIndex: integer = -1;
-  CurrentBaseThemeIndex: integer = -1;
+  CurrentBaseThemeIndexes: array of integer;
 
 function GetThemeFolder(ThemeIndex: integer): IPath;
 begin
@@ -1335,10 +1335,10 @@ end;
 function ResolveThemeAsset(const RelativePath: IPath; IncludeBaseTheme: boolean = true): IPath;
 var
   ThemeDir, Candidate: IPath;
+  I: integer;
 begin
   Result := PATH_NONE;
-
-  if not Assigned(Theme) then
+  if not Assigned(Theme) or (RelativePath = nil) or RelativePath.IsUnset then
     Exit;
   if (CurrentThemeIndex < Low(Theme.Themes)) or (CurrentThemeIndex > High(Theme.Themes)) then
     Exit;
@@ -1350,19 +1350,17 @@ begin
     if Candidate.IsFile then
       Exit(Candidate);
   end;
-
   if not IncludeBaseTheme then
     Exit;
-
-  if (CurrentBaseThemeIndex < Low(Theme.Themes)) or (CurrentBaseThemeIndex > High(Theme.Themes)) then
-    Exit;
-
-  ThemeDir := GetThemeFolder(CurrentBaseThemeIndex);
-  if ThemeDir.IsSet then
+  for I := Low(CurrentBaseThemeIndexes) to High(CurrentBaseThemeIndexes) do
   begin
-    Candidate := ThemeDir.Append(RelativePath);
-    if Candidate.IsFile then
-      Result := Candidate;
+    ThemeDir := GetThemeFolder(CurrentBaseThemeIndexes[I]);
+    if ThemeDir.IsSet then
+    begin
+      Candidate := ThemeDir.Append(RelativePath);
+      if Candidate.IsFile then
+        Exit(Candidate);
+    end;
   end;
 end;
 
@@ -1804,7 +1802,7 @@ end;
 procedure TTheme.OpenFile(ThemeNum: integer);
 begin
   CurrentThemeIndex := ThemeNum;
-  CurrentBaseThemeIndex := -1;
+  SetLength(CurrentBaseThemeIndexes, 0);
 
   ThemeIni := TMemIniFile.Create(Themes[ThemeNum].FileName.ToNative);
   SetLength(BaseThemeInis, 0);
@@ -1872,6 +1870,8 @@ begin
   BaseIndex := Length(BaseThemeInis);
   SetLength(BaseThemeInis, BaseIndex + 1);
   BaseThemeInis[BaseIndex] := TMemIniFile.Create(Themes[ThemeIndex].FileName.ToNative);
+  SetLength(CurrentBaseThemeIndexes, Length(CurrentBaseThemeIndexes) + 1);
+  CurrentBaseThemeIndexes[High(CurrentBaseThemeIndexes)] := ThemeIndex;
 
   if Themes[ThemeIndex].BaseTheme <> '' then
     AddBaseThemeChain(Themes[ThemeIndex].BaseTheme, Depth + 1);
