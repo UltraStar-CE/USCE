@@ -62,7 +62,8 @@ deps+=('dav1d,https://downloads.videolan.org/pub/videolan/dav1d/1.5.3/dav1d-1.5.
 deps+=('ffmpeg,https://ffmpeg.org/releases/ffmpeg-8.1.1.tar.xz,0b8318579556aaa736096ceb1e8333d2260b63bf')
 deps+=('lua,https://www.lua.org/ftp/lua-5.4.8.tar.gz,ced7c0ec99ad9d984ad3e7af5fcd2deef2b33f9f')
 deps+=('libjpeg-turbo,https://download.sourceforge.net/libjpeg-turbo/libjpeg-turbo-2.1.5.1.tar.gz,3ec9f6a19781a583285d93c2c4653f3dbe845fcc')
-deps+=('libpng,https://download.sourceforge.net/libpng/libpng-1.6.43.tar.xz,ad9f087b73acf01e2c252920810b005ee69d3e0e')
+deps+=('libpng,https://download.sourceforge.net/libpng/libpng-1.6.58.tar.xz,6263409a6907d180e7b990827ca84ee944c6cc17')
+deps+=('libwebp,https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-1.6.0.tar.gz,c65babfd749817e6d0f8233d653f8a85e4220b48')
 # deps+=('libcwrap.h,https://raw.githubusercontent.com/wheybags/glibc_version_header/master/version_headers/force_link_glibc_2.10.2.h,aff0c46cf3005fe15c49688e74df62a9988855a5')
 
 if ! patchelf 2>&1 | grep -q syntax ; then
