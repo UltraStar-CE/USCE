@@ -3488,6 +3488,10 @@ begin
   FadeMessage();
   ReloadCurrentPlaylist(false);
 
+  if CoverFull and (ScreenSongMenu.Visible or ScreenSongJumpto.Visible) then
+    CoverFull := false;
+
+
   if (PreviewEnd > 0) and (AudioPlayback.Position >= PreviewEnd) then
     StopMusicPreview;
 
