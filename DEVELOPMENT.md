@@ -60,6 +60,18 @@ A git version of this SVN can be found in the [legacy-sourceforge-svn-mirror](ht
 - Don't let anyone else tell you what to work on. Do what you like and be free!
 Thank you for helping improve the game.
 
+### English fallback coverage
+
+English is the fallback for incomplete translations. New labels need an entry
+in `game/languages/English.ini`, including labels passed through popup helpers
+and generated player labels. Run `python3 tools/check_english.py` to check source
+references, player labels, bundled party modes and built-in theme text. Use
+`--themes PATH` to include a checkout of the pinned Themes package. Packaging
+runs this check against every bundled theme before producing downloads.
+
+This static check cannot evaluate arbitrary plugin-generated text. Test changed
+screens in game as well, including labels, formatting arguments and text fit.
+
 ### Whitespace checks
 - CI checks trailing whitespace in changed text files (excluding vendored `src/lib` and `src/webSDK`).
 - Local one-liner (same check as CI, with `origin/main` as base):
