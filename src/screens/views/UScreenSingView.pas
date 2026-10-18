@@ -51,6 +51,7 @@ uses
   USingScores,
   USongs,
   UThemes,
+  UScale,
   UTime,
   USkins;
 
@@ -256,6 +257,13 @@ begin
   ScreenSing.Statics[AvatarSlot].Texture.H := SingPlayer.Avatar.H;
   ScreenSing.Statics[AvatarSlot].Texture.Z := SingPlayer.Avatar.Z;
   ScreenSing.Statics[AvatarSlot].Texture.Alpha := SingPlayer.Avatar.Alpha;
+  with ScreenSing.Statics[AvatarSlot].Texture do
+  begin
+    FitLayoutChild(X, Y, W, H,
+      SingPlayer.AvatarFrame.X, SingPlayer.AvatarFrame.Y,
+      SingPlayer.AvatarFrame.W, SingPlayer.AvatarFrame.H, SingPlayer.AvatarFrame.ScaleMode);
+    ScaleMode := lsStretch;
+  end;
 
   ScreenSing.Text[TextSlot].X := SingPlayer.Name.X;
   ScreenSing.Text[TextSlot].Y := SingPlayer.Name.Y;
