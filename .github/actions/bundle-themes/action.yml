@@ -19,3 +19,4 @@ runs:
       run: |
         if [ "$RUNNER_OS" = Windows ]; then py=python; else py=python3; fi
         "$py" tools/bundle-themes.py bundle
+        "$py" tools/check_english.py --themes .release-themes/source
