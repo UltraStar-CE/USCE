@@ -201,7 +201,7 @@ score and time-bar choices are also saved from their respective screens.
 | `OnSongClick` | `Sing`, `Select Players`, `Open Menu`; `Sing` | Action after selecting a song. |
 | `PartyPopup` | `Off`, `On`; `On` | Automatically opens the party menu where applicable. |
 | `SingScores` | `Off`, `On`, `Bar Rating`, `Remaining Score`; `On` | Chooses the in-song score display: `Off` hides it, `On` shows both bars, `Bar Rating` shows the line-rating bar, and `Remaining Score` shows the remaining-score bar. Numeric scores accompany each enabled mode; party mode keeps scores visible. |
-| `DuetScores` | `Off`, `On`; `On` | Allows duet scores to be saved after a completed song. |
+| `DuetScores` | `Off`, `Separate`, `Combined`, `Both`; `Separate` | Chooses which duet scores are stored. Combined scores average adjacent singers with matching difficulty. The older `On` setting is read as `Separate`. |
 | `TopScores` | `All`, `Player`; `Player` | Includes all entries (`All`) or limits repeated entries for each player (`Player`). |
 | `HighScoreScreenEntries` | Integer `5`–`20`; `5` | Number of high-score entries shown. Values outside the range are limited to it. |
 | `SyncTo` | `Music`, `Lyrics`, `Off`; `Music` | Synchronization mode. Keep Music for normal playback. |
