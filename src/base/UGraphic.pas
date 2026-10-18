@@ -1116,7 +1116,7 @@ begin
   FreeAndNil(ScreenJukebox);
   FreeAndNil(ScreenJukeboxOptions);
   FreeAndNil(ScreenJukeboxPlaylist);
-  FreeAndNil(ScreenTop5);
+  FreeAndNil(ScreenHighScores);
   FreeAndNil(ScreenAbout);
   //ScreenSingModi.Free;
   FreeAndNil(ScreenSongMenu);

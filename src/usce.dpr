@@ -295,7 +295,7 @@ uses
   UScreenOptionsWebcam    in 'screens\UScreenOptionsWebcam.pas',
   UScreenOptionsJukebox   in 'screens\UScreenOptionsJukebox.pas',
   UScreenEditSub          in 'screens\UScreenEditSub.pas',
-  UScreenTop5             in 'screens\UScreenTop5.pas',
+  UScreenHighScores             in 'screens\UScreenHighScores.pas',
   UScreenSongMenu         in 'screens\UScreenSongMenu.pas',
   UScreenSongJumpto       in 'screens\UScreenSongJumpto.pas',
   UScreenStatMain         in 'screens\UScreenStatMain.pas',
