@@ -577,6 +577,7 @@ var
   SlotIndex:              integer;
   SingPlayer:             TThemeSingPlayer;
   DrawScorePanel:         boolean;
+  ScoreMode:              TSingInfoBarMode;
   procedure SetPlayerNameTexts(const Slots: TSlotArray; FirstPlayerIndex: integer; UseDuetNames: boolean);
   var
     J: integer;
@@ -811,8 +812,11 @@ begin
     ScreenSing.fCurrentVideo.Draw;
   end;
 
-  DrawScorePanel := ScreenSing.Settings.ScoresVisible and
-    ((Ini.SingScores = 1) or Party.bPartyGame);
+  ScoreMode := TSingInfoBarMode(EnsureRange(Ini.SingScores, 0, Ord(High(TSingInfoBarMode))));
+  if Party.bPartyGame and (ScoreMode = sibOff) then
+    ScoreMode := sibRatingOnly;
+  ScreenSing.Scores.SetInfoBarMode(ScoreMode);
+  DrawScorePanel := ScreenSing.Settings.ScoresVisible and (ScoreMode <> sibOff);
   if DrawScorePanel then
     HidePlayerAvatarsForScorePanel;
 

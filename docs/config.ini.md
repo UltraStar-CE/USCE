@@ -200,7 +200,7 @@ score and time-bar choices are also saved from their respective screens.
 | `AskbeforeDel` | `Off`, `On`; `On` | Asks for confirmation before quitting, including with Q during singing or jukebox playback. Despite its name, this setting does not control song deletion. |
 | `OnSongClick` | `Sing`, `Select Players`, `Open Menu`; `Sing` | Action after selecting a song. |
 | `PartyPopup` | `Off`, `On`; `On` | Automatically opens the party menu where applicable. |
-| `SingScores` | `Off`, `On`, `Bar Rating`, `Remaining Score`; `On` | Chooses the in-song score display: hidden, numeric score, rating bar, or remaining-score bar. |
+| `SingScores` | `Off`, `On`, `Bar Rating`, `Remaining Score`; `On` | Chooses the in-song score display: `Off` hides it, `On` shows both bars, `Bar Rating` shows the line-rating bar, and `Remaining Score` shows the remaining-score bar. Numeric scores accompany each enabled mode; party mode keeps scores visible. |
 | `DuetScores` | `Off`, `On`; `On` | Allows duet scores to be saved after a completed song. |
 | `TopScores` | `All`, `Player`; `Player` | Includes all entries (`All`) or limits repeated entries for each player (`Player`). |
 | `HighScoreScreenEntries` | Integer `5`–`20`; `5` | Number of high-score entries shown. Values outside the range are limited to it. |
