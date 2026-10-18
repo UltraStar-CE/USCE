@@ -192,8 +192,8 @@ begin
   LaneWidth := Layout.ColumnWidth;
   Scale := Layout.WidgetScale;
 
-  FrameW := Max(Theme.Sing.PlayerWidgetLayout.MinFrameW, Round(BaseTemplate.AvatarFrame.W * Scale));
-  FrameH := Max(Theme.Sing.PlayerWidgetLayout.MinFrameH, Round(BaseTemplate.AvatarFrame.H * Scale));
+  FrameW := Max(1, Round(BaseTemplate.AvatarFrame.W * Scale));
+  FrameH := Max(1, Round(BaseTemplate.AvatarFrame.H * Scale));
   AvatarW := Max(1, Round(BaseTemplate.Avatar.W * Scale));
   AvatarH := Max(1, Round(BaseTemplate.Avatar.H * Scale));
   ScoreW := Max(Theme.Sing.PlayerWidgetLayout.MinScoreW, Round(BaseTemplate.ScoreBackground.W * Scale));
@@ -337,6 +337,7 @@ var
         ScreenSing.Statics[Slots[J]].Texture.H := CurrentTexture.H;
         ScreenSing.Statics[Slots[J]].Texture.Z := CurrentTexture.Z;
         ScreenSing.Statics[Slots[J]].Texture.Alpha := CurrentTexture.Alpha;
+        ScreenSing.Statics[Slots[J]].Texture.ScaleMode := CurrentTexture.ScaleMode;
         CurrentTexture.Free;
       end;
     end;
