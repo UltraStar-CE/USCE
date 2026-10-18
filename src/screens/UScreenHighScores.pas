@@ -327,6 +327,7 @@ begin
         begin
           if (not IsFadingOut) then
           begin
+            ScreenSong.PreservePreviewForReturn;
             FadeTo(@ScreenSong);
             IsFadingOut := true;
           end;
@@ -415,6 +416,7 @@ end;
 procedure TScreenHighScores.OnShow;
 begin
   inherited;
+  AudioPlayback.SetVolume(IPreviewVolumeVals[Ini.PreviewVolume]);
 
   if not Help.SetHelpID(HighScoresHelpID) then
     Log.LogWarn('No Entry for Help-ID ' + HighScoresHelpID, 'ScreenHighScores');
@@ -429,7 +431,10 @@ begin
   Text[TextArtistTitle].Text := CurrentSong.Artist + ' - ' + CurrentSong.Title;
 
   if Length(CurrentSong.Score[Player[0].Level]) = 0 then
-    FadeTo(@ScreenSong); //if there are no scores to show, go to next screen
+  begin
+    ScreenSong.PreservePreviewForReturn;
+    FadeTo(@ScreenSong);
+  end; //if there are no scores to show, go to next screen
 
   ShowScoresForDifficulty(Player[0].Level);
 end;
