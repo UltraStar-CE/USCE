@@ -363,10 +363,11 @@ begin
   if Playlists[Index].FixedOrder then
   begin
     ApplyPlaylistOrder(Index);
-    ScreenSong.SyncCoversToSongs;
   end
   else
     SongOrderDirty := False;
+
+  ScreenSong.SyncCoversToSongs;
 
   //Hide all Songs
   for I := 0 to high(CatSongs.Song) do

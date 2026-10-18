@@ -82,7 +82,7 @@ type
       LastPreviewStartTime: integer;
       LastChangeSoundTime: integer;
       LastScrollStopTime: integer;
-      LastPlaylistReloadTime: integer;
+      LastPlaylistReloadTime: cardinal;
       PreviewEndReloaded: boolean;
 
       RandomSongOrder: CardinalArray;
@@ -3210,7 +3210,7 @@ var
   PreviewSongRef: TSong;
   NewInteraction: integer;
   NewPreviewOpened: integer;
-  NowTicks: integer;
+  NowTicks: cardinal;
 
   function FindSongRefIndex(SongRef: TSong): integer;
   var
@@ -3268,6 +3268,7 @@ begin
   if not PlayListMan.ApplyPlayList(PlayListMan.CurPlayList) then
     Exit;
 
+  ResetRandomSongState;
   NewPreviewOpened := FindSongRefIndex(PreviewSongRef);
   if (NewPreviewOpened >= 0) and CatSongs.Song[NewPreviewOpened].Visible then
     PreviewOpened := NewPreviewOpened
