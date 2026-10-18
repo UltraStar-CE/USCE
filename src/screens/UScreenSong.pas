@@ -92,8 +92,6 @@ type
       RandomSearchOrder: CardinalArray;
       MarkedPlaylistSong: integer;
       KeepPreviewMusicOnHide: boolean;
-      PreviewRestorePosition: real;
-      PreviewRestoreValid: boolean;
 
       procedure StartMusicPreview();
       procedure StartVideoPreview();
@@ -2098,8 +2096,6 @@ begin
 
   KeepPreviewMusicOnHide := false;
   KeepPreviewPositionOnShow := false;
-  PreviewRestorePosition := 0;
-  PreviewRestoreValid := false;
 end;
 
 procedure TScreenSong.ColorDuetNameSingers();
@@ -3039,7 +3035,6 @@ begin
   begin
     // A playing preview keeps its stream and position. Ended previews use the
     // normal fresh-preview path rather than seeking an exhausted decoder.
-    PreviewRestoreValid := false;
 
     StartVideoPreview();
   end;
@@ -4060,7 +4055,6 @@ procedure TScreenSong.PreservePreviewForReturn;
 begin
   KeepPreviewPositionOnShow := (AudioPlayback.Length > 0) and
     not AudioPlayback.Finished;
-  PreviewRestoreValid := false;
 end;
 
 // Changes previewed song
