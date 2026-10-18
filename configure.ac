@@ -469,7 +469,6 @@ AC_SUBST_DEFINE(HAVE_PORTAUDIO, $portaudio_HAVE)
 # find portmixer
 PKG_HAVE([portmixer], [portmixer], no)
 AC_SUBST_DEFINE(HAVE_PORTMIXER, $portmixer_HAVE)
-fi
 
 AC_SUBST(PFLAGS_EXTRA)
 
