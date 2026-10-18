@@ -329,9 +329,9 @@ begin
     Max(1.0, BaseTemplate.ScoreBackground.W * 1.0));
 
   Result.PlayerCount := 0;
-  Result.BGW := Max(Theme.Sing.PlayerWidgetLayout.MinScoreW,
+  Result.BGW := Max(1,
     Round(BaseTemplate.ScoreBackground.W * ScoreScale));
-  Result.BGH := Max(Theme.Sing.PlayerWidgetLayout.MinScoreH,
+  Result.BGH := Max(1,
     Round(BaseTemplate.ScoreBackground.H * ScoreScale));
   GroupTop := Max(10, Layout.RowAnchorY -
     GetSingHeaderTopOffset(Theme.Sing.PlayerWidgetLayout, Layout.GridRows, Scale));
@@ -976,6 +976,7 @@ begin
       Y := Position.BGY;
       W := Position.BGW;
       H := Position.BGH;
+      ScaleMode := Theme.Sing.PlayerTemplate.ScoreBackground.ScaleMode;
     end;
     Renderer.DrawTexture(Players[Index].ScoreBG);
 
