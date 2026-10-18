@@ -417,6 +417,10 @@ begin
   if assigned(SourceStream) then
   begin
     BufferPosByte := BASS_ChannelGetData(Handle, nil, BASS_DATA_AVAILABLE);
+    // BASS returns DWORD(-1) on failure, not a buffered byte count. A stopped
+    // channel may no longer provide buffer data while its decoder still exists.
+    if BufferPosByte = High(DWORD) then
+      BufferPosByte := 0;
     BufferPosSec := BASS_ChannelBytes2Seconds(Handle, BufferPosByte);
     // decrease the decoding position by the amount buffered (and hence not played)
     // in the BASS playback stream.

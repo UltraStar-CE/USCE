@@ -3018,7 +3018,8 @@ begin
    *}
   SoundLib.PauseBgMusic;
 
-  KeepPreview := KeepPreviewPositionOnShow;
+  KeepPreview := KeepPreviewPositionOnShow and
+    (AudioPlayback.Length > 0) and not AudioPlayback.Finished;
   if (SongIndex <> Interaction) and not KeepPreview then
     AudioPlayback.Stop;
   if KeepPreview then
@@ -3036,22 +3037,9 @@ begin
   LastPlaylistReloadTime := SDL_GetTicks;
   if KeepPreview then
   begin
-    if PreviewRestoreValid then
-    begin
-      if (AudioPlayback.Length <= 0) then
-      begin
-        if AudioPlayback.Open(CatSongs.Song[Interaction].Path.Append(CatSongs.Song[Interaction].Audio), nil) then
-          AudioPlayback.Position := PreviewRestorePosition;
-        AudioPlayback.Play();
-      end
-      else if AudioPlayback.Finished then
-      begin
-        AudioPlayback.Position := PreviewRestorePosition;
-        AudioPlayback.Play();
-      end;
-
-      PreviewRestoreValid := false;
-    end;
+    // A playing preview keeps its stream and position. Ended previews use the
+    // normal fresh-preview path rather than seeking an exhausted decoder.
+    PreviewRestoreValid := false;
 
     StartVideoPreview();
   end;
@@ -4070,9 +4058,9 @@ end;
 
 procedure TScreenSong.PreservePreviewForReturn;
 begin
-  KeepPreviewPositionOnShow := true;
-  PreviewRestorePosition := AudioPlayback.Position;
-  PreviewRestoreValid := true;
+  KeepPreviewPositionOnShow := (AudioPlayback.Length > 0) and
+    not AudioPlayback.Finished;
+  PreviewRestoreValid := false;
 end;
 
 // Changes previewed song
