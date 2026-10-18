@@ -3398,6 +3398,10 @@ begin
   // Use the same preview scheduling for every way Interaction can change.
   SchedulePreview;
 
+  if CoverFull and (ScreenSongMenu.Visible or ScreenSongJumpto.Visible) then
+    CoverFull := false;
+
+
   if (PreviewEnd > 0) and (AudioPlayback.Position >= PreviewEnd) then
     StopMusicPreview;
 
