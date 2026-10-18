@@ -231,7 +231,7 @@ begin
       //  3. Movie aspect (video frame aspect stored in fAspect)
       ScreenAspect := ScreenWPerScreen / ScreenH;
 
-      case ScreenSing.BackgroundAspectCorrection of
+      case ScreenSing.PictureAspectCorrection of
         acoCrop: begin
           if (ScreenAspect >= ScreenSing.Tex_BackgroundAspectRatio) then
           begin

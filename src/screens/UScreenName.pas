@@ -989,6 +989,7 @@ begin
   Statics[PlayerCurrentAvatar[Player]].Texture.H := H;
   Statics[PlayerCurrentAvatar[Player]].Texture.Z := Z;
   Statics[PlayerCurrentAvatar[Player]].Texture.Int := 1;
+  Statics[PlayerCurrentAvatar[Player]].Texture.ScaleMode := Theme.Name.PlayerSelectTemplateAvatar.ScaleMode;
 
 end;
 

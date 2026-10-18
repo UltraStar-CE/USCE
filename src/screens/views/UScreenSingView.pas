@@ -415,6 +415,7 @@ var
     ScreenSing.Statics[avatarStatic].Texture.W := singPlayer.Avatar.W;
     ScreenSing.Statics[avatarStatic].Texture.Z := singPlayer.Avatar.Z;
     ScreenSing.Statics[avatarStatic].Texture.Alpha := singPlayer.Avatar.Alpha;
+    ScreenSing.Statics[avatarStatic].Texture.ScaleMode := singPlayer.Avatar.ScaleMode;
   end;
   procedure assignAvatarStaticForSlot(const PlayerCountOnScreen, PlayerIndexOnScreen: integer; var avatarStatic: integer; var texture: TTexture);
   var

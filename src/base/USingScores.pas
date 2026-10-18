@@ -274,6 +274,7 @@ uses
   ULog,
   UNote,
   UGraphic,
+  UScale,
   UDataBase;
 
 function IsPlayerVisibleOnScreen(const EncodedPosition: byte; const Screen: integer): boolean;
@@ -1098,6 +1099,9 @@ begin
   Rect.Y := Position.RBY;
   Rect.W := Position.RBW;
   Rect.H := Position.RBH;
+  // Keep the bar aligned with the uniformly fitted score panel before filling it.
+  ResolveLayoutRect(Rect.X, Rect.Y, Rect.W, Rect.H,
+    Players[Index].ScoreBG.ScaleMode);
 
   Result := true;
 end;
@@ -1232,13 +1236,20 @@ begin
     begin
       X := Rect.X;
       Y := Rect.Y;
-      W := BackgroundEnd - Rect.X;
+      W := Rect.W;
       H := Rect.H;
       ColR := 1;
       ColG := 1;
       ColB := 1;
       Alpha := 0.8;
     end;
+    if Segment = sbsRemaining then
+    begin
+      Settings.RatingBar_BG_Tex.Alpha := 0.25;
+      Renderer.DrawTexture(Settings.RatingBar_BG_Tex);
+      Settings.RatingBar_BG_Tex.Alpha := 0.8;
+    end;
+    Settings.RatingBar_BG_Tex.W := BackgroundEnd - Rect.X;
     Renderer.DrawTexture(Settings.RatingBar_BG_Tex);
   end;
 
