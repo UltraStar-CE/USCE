@@ -68,12 +68,12 @@ input {
         border-radius: calc(var(--switch-height)/2);
         cursor: pointer;
     }
-    
+
     input {
         position: absolute;
         display: none;
     }
-    
+
     .slider {
         position: absolute;
         width: 100%;
@@ -81,11 +81,11 @@ input {
         border-radius: calc(var(--switch-height)/2);
         transition: 0.3s;
     }
-    
+
     input:checked ~ .slider {
         background-color: var(--switch-light);
     }
-    
+
     .slider::before {
         content: "";
         position: absolute;
@@ -98,7 +98,7 @@ input {
         background-color: var(--switch-dark);
         transition: 0.3s;
     }
-    
+
     input:checked ~ .slider::before {
         transform: translateX(calc(var(--switch-height)*0.95));
         background-color: var(--switch-dark);

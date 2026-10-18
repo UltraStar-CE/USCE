@@ -45,7 +45,7 @@ function updateToggle(toggle) {
 
 window.onload = function() {
     let toggle = document.querySelector("#themeToggle");
-    
+
     toggle.addEventListener("change", () => {
         toggleTheme();
         updateToggle(toggle);

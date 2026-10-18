@@ -28,7 +28,7 @@ unit UWebServer;
 interface
 
 uses
-  Classes, SysUtils, fphttpserver, httproute, HTTPDefs, USongs, USong, UPlatform, UPath, fpjson, jsonparser;
+  Classes, SysUtils, fphttpserver, httproute, HTTPDefs, USongs, USong, UPlatform, UPath, UPathUtils, fpjson, jsonparser;
 
 type
   TLoopbackHTTPServer = class(TFPHTTPServer)
@@ -38,7 +38,7 @@ type
 
   TWebServer = class(TThread)
   private
-    FServer: TFPHTTPServer;
+    FServer: TLoopbackHTTPServer;
     FRouter: THTTPRouter;
     FPort: Integer;
   protected
@@ -119,7 +119,7 @@ begin
 
   try
     try
-      WebFilePath := Platform.GetGameUserPath.Append('resources\web\').Append(FileName);
+      WebFilePath := ResourcesPath.Append('web').Append(FileName);
       FileStream := TFileStream.Create(WebFilePath.ToNative, fmOpenRead or fmShareDenyWrite);
 
       AResponse.ContentType := ContentTypeForExt(WebFilePath.GetExtension);
@@ -154,7 +154,7 @@ begin
 
       if (Id < 0) or (Id >= Songs.SongList.Count) then
         raise Exception.Create('ID is out of bounds');
-      
+
       Song := TSong(Songs.SongList[Id]);
 
       if RequestedFile = 'cover' then
@@ -162,14 +162,14 @@ begin
       else if RequestedFile = 'background' then
         FilePath := Song.Path.Append(Song.Background)
       else if RequestedFile = 'audio' then
-        FilePath := Song.Path.Append(Song.Mp3)
+        FilePath := Song.Path.Append(Song.Audio)
       else if RequestedFile = 'video' then
         FilePath := Song.Path.Append(Song.Video)
       else if RequestedFile = 'file' then
         FilePath := Song.Path.Append(Song.FileName)
       else
         raise Exception.Create('Invalid file');
-      
+
       FileStream := TFileStream.Create(FilePath.ToNative, fmOpenRead or fmShareDenyWrite);
 
       AResponse.ContentType := ContentTypeForExt(FilePath.GetExtension);
@@ -177,7 +177,7 @@ begin
       AResponse.ContentStream := FileStream;
       AResponse.SendContent;
       AResponse.ContentStream := Nil;
-      
+
     except
       on E: Exception do begin
         AResponse.ContentType := 'text/html; charset=UTF-8';
@@ -192,7 +192,7 @@ end;
 
 procedure TWebServer.Execute;
 begin
-  FServer := TFPHTTPServer.Create(nil);
+  FServer := TLoopbackHTTPServer.Create(nil);
   FRouter := THTTPRouter.Create(nil);
   FRouter.RegisterRoute('/', rmGET, @routeSongList);
   FRouter.RegisterRoute('/style.css', rmGET, @routeFile);
@@ -230,7 +230,7 @@ var
 begin
   TemplateFile := TStringList.Create;
   try
-    TemplateFilePath := Platform.GetGameUserPath.Append('resources\web\index.html');
+    TemplateFilePath := ResourcesPath.Append('web').Append('index.html');
     TemplateFile.LoadFromFile(TemplateFilePath.toNative);
     Result := TemplateFile.Text;
   finally
@@ -310,7 +310,7 @@ begin
 
     if Song.isDuet then
       Item.Add('duet', True);
-    
+
     if Song.hasRap then
       Item.Add('hasRap', True);
 
