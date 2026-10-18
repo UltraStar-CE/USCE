@@ -636,7 +636,8 @@ begin
   FittedRect := GetNamePlayerSelectFittedRect(Player, Count);
 
   Button[PlayerSelect].X := ScaleNameCoord(
-    Theme.Name.PlayerSelectCurrent.X, BaseBounds.X, BaseBounds.W, FittedRect.X, FittedRect.W);
+    Theme.Name.PlayerSelectTemplateFrame.X + Theme.Name.PlayerSelectCurrent.X,
+    BaseBounds.X, BaseBounds.W, FittedRect.X, FittedRect.W);
   Button[PlayerSelect].Y := ScaleNameCoord(
     Theme.Name.PlayerSelectCurrent.Y, BaseBounds.Y, BaseBounds.H, FittedRect.Y, FittedRect.H);
   Button[PlayerSelect].W := ScaleNameLength(
