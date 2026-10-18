@@ -1034,7 +1034,7 @@ var
   I: integer;
 begin
   inherited;
-  AudioPlayback.SetVolume(IPreviewVolumeVals[Ini.PreviewVolume]);
+  AudioPlayback.SetVolume(EnsureRange(Ini.PreviewVolume, 0, 100) / 100);
 
   Ini.ReloadNames;
   CountIndex := Ini.Players;
