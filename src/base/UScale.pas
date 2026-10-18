@@ -254,11 +254,12 @@ begin
   W := W * FitW / ParentW;
   H := H * FitH / ParentH;
   // Cover the inner frame boundary on the physical pixel grid so fractional
-  // scaling cannot expose a transparent seam.
-  RightEdge := Ceil((X + W) * GetLayoutScaleX) / GetLayoutScaleX;
-  BottomEdge := Ceil((Y + H) * GetLayoutScaleY) / GetLayoutScaleY;
-  X := Floor(X * GetLayoutScaleX) / GetLayoutScaleX;
-  Y := Floor(Y * GetLayoutScaleY) / GetLayoutScaleY;
+  // scaling cannot expose a transparent seam. Include half a physical pixel
+  // of overlap for bilinear sampling at the inner frame edge.
+  RightEdge := Ceil((X + W) * GetLayoutScaleX + 0.5) / GetLayoutScaleX;
+  BottomEdge := Ceil((Y + H) * GetLayoutScaleY + 0.5) / GetLayoutScaleY;
+  X := Floor(X * GetLayoutScaleX - 0.5) / GetLayoutScaleX;
+  Y := Floor(Y * GetLayoutScaleY - 0.5) / GetLayoutScaleY;
   W := RightEdge - X; H := BottomEdge - Y;
 end;
 
