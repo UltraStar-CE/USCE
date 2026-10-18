@@ -38,7 +38,7 @@ async function prepareMonthly({github, context, core, now = new Date()}) {
       {path: 'themes.json', content: JSON.stringify(plan.themes, null, 2) + '\n'}],
     'Prepare USCE ' + plan.version,
     `Proposed monthly release: ${plan.version}. Trigger: ${plan.trigger}.\n\n` +
-    `Upstream reference: ${plan.upstream?.tag || 'no stable upstream release available'}. This records a reference, not a claim that all upstream changes are incorporated.\n\n` +
+    `Upstream reference: ${plan.upstream?.tag || 'no stable upstream release available'}. The release candidate requires the full upstream release history and a comparison against its release notes.\n\n` +
     `Themes revision: ${plan.themes.sha}. Every platform package includes all themes and their assets from this snapshot.\n\n` +
     'Review the included upstream changes and USCE additions, compatibility, release notes and required CI. Merging prepares draft packages from the exact merged revision. Installation, launch, songs and microphone testing are required before a human publishes the release.');
   core.notice('Release preparation: ' + pr.html_url);

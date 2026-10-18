@@ -76,3 +76,44 @@ test('release planning requires a reviewed ready plan and skips published versio
   x.state.outputs={};x.state.releases.push({tag_name:'v2026.10.0',draft:false});
   await planRelease(x);assert.deepEqual(x.state.outputs,{});
 }));
+
+
+test('curated release notes retain screenshots and replace commit subjects and internal checklists', async()=>fixture(async x=>{
+  fs.mkdirSync('doc/releases', {recursive:true});
+  const notes = '## Enhancements\n\n* New theme.\n\n![Theme screenshot](https://example.org/theme.png)';
+  fs.writeFileSync('doc/releases/2026.10.0.md', notes);
+  await publishDraft(x, '2026.10.0');
+  const body = x.state.releases[0].body;
+  assert(body.includes(notes));
+  assert(!body.includes('Improve playback'));
+  assert(!body.includes('- [ ]'));
+  assert(!body.includes('Changes to review'));
+  assert.equal(x.state.releases[0].draft, true);
+}));
+
+test('an empty curated release message cannot create a draft', async()=>fixture(async x=>{
+  fs.mkdirSync('doc/releases', {recursive:true});
+  fs.writeFileSync('doc/releases/2026.10.0.md', '  \n');
+  await assert.rejects(publishDraft(x, '2026.10.0'), /notes are empty/);
+  assert.equal(x.state.releases.length, 0);
+}));
+
+
+test('release planning verifies the full pinned upstream history and fails closed on missing changes', async()=>fixture(async x=>{
+  const source = 'b'.repeat(40);
+  fs.writeFileSync('release-plan.json', JSON.stringify({ready:true,version:'2026.10.0',themes:themePin,upstream:{sha:source}}));
+  for (const status of ['behind','diverged']) {
+    x.repos.compareCommits = async args => {
+      assert.equal(args.base, source);
+      assert.equal(args.head, x.context.sha);
+      return {data:{status}};
+    };
+    await assert.rejects(planRelease(x), /not fully included/);
+    assert.deepEqual(x.state.outputs, {});
+  }
+  for (const status of ['ahead','identical']) {
+    x.repos.compareCommits = async () => ({data:{status}});
+    await planRelease(x);
+    assert.equal(x.state.outputs.version, '2026.10.0');
+  }
+}));
