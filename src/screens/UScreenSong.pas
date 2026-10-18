@@ -3002,8 +3002,8 @@ begin
       Text[ListTextArtist[I]].Visible := true;
       Text[ListTextTitle[I]].Visible  := true;
       Text[ListTextYear[I]].Visible   := true;
-      Statics[ListVideoIcon[I]].Visible  := true;
-      Statics[ListDuetIcon[I]].Visible := true;
+      Statics[ListVideoIcon[I]].Visible  := false;
+      Statics[ListDuetIcon[I]].Visible := false;
     end;
 
     Text[TextArtist].Visible := false;
