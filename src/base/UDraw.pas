@@ -57,14 +57,6 @@ procedure EditDrawLine(X, YBaseNote, W, H: real; Track: integer; NumLines: integ
 procedure EditDrawBorderedBox(X, Y, W, H: integer; FillR: real = 0.9; FillG: real = 0.9; FillB: real = 0.9; FillAlpha: real = 0.5);
 procedure EditDrawBeatDelimiters(X, Y, W, H: real; Track: integer);
 
-{$IFDEF LEGACY_JUKEBOX}
-// Draw Jukebox
-procedure SingDrawJukebox;
-procedure SingDrawJukeboxBackground;
-procedure SingDrawJukeboxBlackBackground;
-procedure SingDrawJukeboxTimeBar();
-procedure SingDrawLyricHelperJukebox(Left, LyricsMid: real);
-{$ENDIF LEGACY_JUKEBOX}
 
 // Draw Webcam
 procedure SingDrawWebCamFrame;
@@ -287,105 +279,6 @@ begin
   end;
 end;
 
-{$IFDEF LEGACY_JUKEBOX}
-procedure SingDrawJukeboxBackground;
-var
-  Rec:    TRecR;
-  TexRec: TRecR;
-begin
-  if (ScreenJukebox.Tex_Background <> nil) then
-  begin
-    if (Ini.MovieSize <= 1) then  //HalfSize BG
-    begin
-      (* half screen + gradient *)
-      Rec.Top := 110; // 80
-      Rec.Bottom := Rec.Top + 20;
-      Rec.Left  := 0;
-      Rec.Right := RenderW;
-
-      TexRec.Top := (Rec.Top / RenderH);
-      TexRec.Bottom := (Rec.Bottom / RenderH);
-      TexRec.Left := 0;
-      TexRec.Right := 1;
-
-      (* gradient draw *)
-      (* top *)
-      with ScreenJukebox.Tex_Background do
-      begin
-        X := Rec.Left;
-        Y := Rec.Top;
-        W := Rec.Right - Rec.Left;
-        H := Rec.Bottom - Rec.Top;
-        TexX1 := TexRec.Left;
-        TexX2 := TexRec.Right;
-        TexY1 := TexRec.Top;
-        TexY2 := TexRec.Bottom;
-        AlphaGradient := gdVertical;
-        Alpha := 0; // Top alpha
-        Alpha2 := 1; // Bottom alpha
-      end;
-      Renderer.DrawTexture(ScreenJukebox.Tex_Background);
-
-      (* mid *)
-      Rec.Top := Rec.Bottom;
-      Rec.Bottom := 490 - 20; // 490 - 20
-      TexRec.Top := TexRec.Bottom;
-      TexRec.Bottom := (Rec.Bottom / RenderH);
-      with ScreenJukebox.Tex_Background do
-      begin
-        Y := Rec.Top;
-        H := Rec.Bottom - Rec.Top;
-        TexY1 := TexRec.Top;
-        TexY2 := TexRec.Bottom;
-        AlphaGradient := gdNone;
-        Alpha := 1;
-      end;
-      Renderer.DrawTexture(ScreenJukebox.Tex_Background);
-
-      (* bottom *)
-      Rec.Top := Rec.Bottom;
-      Rec.Bottom := 490; // 490
-      TexRec.Top := TexRec.Bottom;
-      TexRec.Bottom := (Rec.Bottom / RenderH);
-      with ScreenJukebox.Tex_Background do
-      begin
-        Y := Rec.Top;
-        H := Rec.Bottom - Rec.Top;
-        TexY1 := TexRec.Top;
-        TexY2 := TexRec.Bottom;
-        AlphaGradient := gdVertical;
-        Alpha := 1; // Top alpha
-        Alpha2 := 0; // Bottom alpha
-      end;
-      Renderer.DrawTexture(ScreenJukebox.Tex_Background);
-    end
-    else //Full Size BG
-    begin
-      with ScreenJukebox.Tex_Background do
-      begin
-        X := 0;
-        Y := 0;
-        W := RenderW;
-        H := RenderH;
-        TexX1 := 0;
-        TexX2 := 1;
-        TexY1 := 0;
-        TexY2 := 1;
-        AlphaGradient := gdNone;
-        Alpha := 1;
-      end;
-      Renderer.DrawTexture(ScreenJukebox.Tex_Background);
-    end;
-  end
-  else
-    SingDrawJukeboxBlackBackground;
-end;
-
-procedure SingDrawJukeboxBlackBackground;
-begin
-  Renderer.DrawQuad(0, 0, 0, RenderW, RenderH, 0, 0, 0, 1);
-end;
-{$ENDIF LEGACY_JUKEBOX}
 
 procedure SingDrawOscilloscopes;
   function GetBaseOscilloscopePosition: TThemePosition;
@@ -1024,112 +917,6 @@ begin
   end;
 end;
 
-{$IFDEF LEGACY_JUKEBOX}
-(**
- * Draws the lyrics helper bar jukebox.
- * Left: position the bar starts at
- * LyricsMid: the middle of the lyrics relative to the position Left
- *)
-procedure SingDrawLyricHelperJukebox(Left, LyricsMid: real);
-var
-  Bounds: TRecR;           // bounds of the lyric help bar
-  BarProgress: real;       // progress of the lyrics helper
-  BarMoveDelta: real;      // current beat relative to the beat the bar starts to move at
-  BarAlpha: real;          // transparency
-  CurLine:  PLine;         // current lyric line (beat specific)
-  LineWidth: real;         // lyric line width
-  FirstNoteBeat: integer;  // beat of the first note in the current line
-  FirstNoteDelta: integer; // time in beats between the start of the current line and its first note
-  MoveStartX: real;        // x-pos. the bar starts to move from
-  MoveDist: real;          // number of pixels the bar will move
-  LyricEngine: TLyricEngine;
-const
-  BarWidth  = 50; // width  of the lyric helper bar
-  BarHeight = 30; // height of the lyric helper bar
-  BarMoveLimit = 40; // max. number of beats remaining before the bar starts to move
-begin
-
-  // get current lyrics line and the time in beats of its first note
-  CurLine := @CurrentSong.Tracks[0].Lines[CurrentSong.Tracks[0].CurrentLine];
-
-  // FIXME: accessing ScreenSing is not that generic
-  LyricEngine := ScreenJukebox.Lyrics;
-
-  // do not draw the lyrics helper if the current line does not contain any note
-  if (Length(CurLine.Notes) > 0) then
-  begin
-    // start beat of the first note of this line
-    FirstNoteBeat := CurLine.Notes[0].StartBeat;
-    // time in beats between the start of the current line and its first note
-    FirstNoteDelta := FirstNoteBeat - CurLine.StartBeat;
-
-    // beats from current beat to the first note of the line
-    BarMoveDelta := FirstNoteBeat - LyricsState.MidBeat;
-
-    if (FirstNoteDelta > 8) and  // if the wait-time is large enough
-       (BarMoveDelta > 0) then   // and the first note of the line is not reached
-    begin
-      // let the bar blink to the beat
-      BarAlpha := 0.75 + cos(BarMoveDelta/2) * 0.25;
-
-      // if the number of beats to the first note is too big,
-      // the bar stays on the left side.
-      if (BarMoveDelta > BarMoveLimit) then
-        BarMoveDelta := BarMoveLimit;
-
-      // limit number of beats the bar moves
-      if (FirstNoteDelta > BarMoveLimit) then
-        FirstNoteDelta := BarMoveLimit;
-
-      // calc bar progress
-      BarProgress := 1 - BarMoveDelta / FirstNoteDelta;
-
-      // retrieve the width of the upper lyrics line on the display
-      if (LyricEngine.GetUpperLine() <> nil) then
-        LineWidth := LyricEngine.GetUpperLine().Width
-      else
-        LineWidth := 0;
-
-      // distance the bar will move (LyricRec.Left to beginning of text)
-      MoveDist := LyricsMid - LineWidth/2 - BarWidth;
-
-      if (LineWidth/2 + (BarWidth - Left) * 2 >= 400) then
-        Bounds.Left := - BarProgress * MoveDist + Left - BarWidth
-      else
-      begin
-        // if the line is too long the helper might move from right to left
-        // so we have to assure the start position is left of the text.
-        if (MoveDist >= 0) then
-          MoveStartX := Left
-        else
-          MoveStartX := Left + MoveDist;
-
-        // determine lyric help bar position and size
-        Bounds.Left := MoveStartX + BarProgress * MoveDist;
-      end;
-
-      Bounds.Right := Bounds.Left + BarWidth;
-      Bounds.Top := Theme.LyricBarJukebox.IndicatorYOffset + ScreenJukeBox.Lyrics.UpperLineY;
-      Bounds.Bottom := Bounds.Top + BarHeight + 3;
-
-      // draw lyric help bar
-      with Tex_Lyric_Help_Bar do
-      begin
-        X := Bounds.Left;
-        Y := Bounds.Top;
-        W := Bounds.Right - Bounds.Left;
-        H := Bounds.Bottom - Bounds.Top;
-        ColR := ScreenJukebox.LyricHelper.R;
-        ColG := ScreenJukebox.LyricHelper.G;
-        ColB := ScreenJukebox.LyricHelper.B;
-        Alpha := BarAlpha;
-      end;
-      Renderer.DrawTexture(Tex_Lyric_Help_Bar);
-    end;
-  end;
-end;
-
-{$ENDIF LEGACY_JUKEBOX}
 procedure SingDrawLines;
 var
   NR: TRecR;         // lyrics area bounds (NR = NoteRec?)
@@ -1338,35 +1125,6 @@ begin
   end;
 end;
 
-{$IFDEF LEGACY_JUKEBOX}
-procedure SingDrawJukebox;
-var
-  NR: TRecR;         // lyrics area bounds (NR = NoteRec?)
-  LyricEngine: TLyricEngine;
-begin
-  // positions
-  NR.Left := 20;
-  NR.Right := 780;
-  NR.Width := 760; //NR.Right - NR.Left;
-  NR.WMid  := 380; //NR.Width / 2;
-  NR.Mid   := 400; //NR.Left + NR.WMid;
-
-  // FIXME: accessing ScreenJukebox is not that generic
-  LyricEngine := ScreenJukebox.Lyrics;
-
-  // draw Lyrics
-  if (ScreenJukebox.ShowLyrics) then
-  begin
-    if (ScreenJukebox.LyricsStart) or ((not(ScreenJukebox.LyricsStart) and (LyricsState.GetCurrentTime() * 1000 >= LyricsState.StartTime - 3000))) then
-    begin
-        LyricEngine.Draw(LyricsState.MidBeat);
-        SingDrawLyricHelperJukebox(NR.Left, NR.WMid);
-        ScreenJukebox.LyricsStart := true;
-    end;
-  end;
-end;
-
-{$ENDIF LEGACY_JUKEBOX}
 // Draw Note Bars for Editor
 // There are 11 reasons for a new procedure:   (nice binary :D )
 // 1. It does not look good when you draw the golden note star effect in the editor
@@ -1619,57 +1377,5 @@ begin
   Renderer.DrawLines(LineList);
 end;
 
-{$IFDEF LEGACY_JUKEBOX}
-procedure SingDrawJukeboxTimeBar();
-var
-  x, y:           real;
-  width, height:  real;
-  LyricsProgress: real;
-  CurLyricsTime:  real;
-begin
-
-  if (ScreenJukebox.SongListVisible) then
-  begin
-    x := Theme.Jukebox.StaticTimeProgress.x;
-    y := Theme.Jukebox.StaticTimeProgress.y;
-
-    width  := Theme.Jukebox.StaticTimeProgress.w;
-    height := Theme.Jukebox.StaticTimeProgress.h;
-  end;
-
-  if (ScreenJukebox.SongMenuVisible) then
-  begin
-    x := Theme.Jukebox.StaticSongMenuTimeProgress.x;
-    y := Theme.Jukebox.StaticSongMenuTimeProgress.y;
-
-    width  := Theme.Jukebox.StaticSongMenuTimeProgress.w;
-    height := Theme.Jukebox.StaticSongMenuTimeProgress.h;
-  end;
-
-  CurLyricsTime := LyricsState.GetCurrentTime();
-  if (CurLyricsTime > 0) and
-      (LyricsState.TotalTime > 0) then
-  begin
-    LyricsProgress := CurLyricsTime / LyricsState.TotalTime;
-    // avoid that the bar "overflows" for inaccurate song lengths
-    if (LyricsProgress > 1.0) then
-      LyricsProgress := 1.0;
-    Tex_JukeboxTimeProgress.X := x;
-    Tex_JukeboxTimeProgress.Y := y;
-    Tex_JukeboxTimeProgress.W := width * LyricsProgress;
-    Tex_JukeboxTimeProgress.H := height;
-    Tex_JukeboxTimeProgress.ColR := Theme.Jukebox.StaticSongMenuTimeProgress.ColR;
-    Tex_JukeboxTimeProgress.ColG := Theme.Jukebox.StaticSongMenuTimeProgress.ColG;
-    Tex_JukeboxTimeProgress.ColB := Theme.Jukebox.StaticSongMenuTimeProgress.ColB;
-    Tex_JukeboxTimeProgress.Alpha := 1;
-    Tex_JukeboxTimeProgress.TexX1 := 0;
-    Tex_JukeboxTimeProgress.TexY1 := 0;
-    Tex_JukeboxTimeProgress.TexX2 := (width * LyricsProgress) / 8;
-    Tex_JukeboxTimeProgress.TexY2 := 1;
-    Renderer.DrawTexture(Tex_JukeboxTimeProgress);
-  end;
-end;
-
-{$ENDIF LEGACY_JUKEBOX}
 
 end.
