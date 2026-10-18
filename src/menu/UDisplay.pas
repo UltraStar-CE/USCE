@@ -176,7 +176,6 @@ uses
   ULog,
   UMain,
   URemoteOverlay,
-  UTexture,
   UTime,
   ULanguage,
   UPathUtils,
