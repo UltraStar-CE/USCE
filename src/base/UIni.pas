@@ -447,6 +447,7 @@ const
   IScreenFade:    array[0..1] of UTF8String = ('Off', 'On');
   IAskbeforeDel:  array[0..1] of UTF8String = ('Off', 'On');
   ISingScores:    array[0..3] of UTF8String = ('Off', 'On', 'Bar Rating', 'Remaining Score');
+  IDuetScores: array[0..1] of UTF8String = ('Off', 'On');
   ITopScores:    array[0..1] of UTF8String = ('All', 'Player');
   IOnSongClick:   array[0..2] of UTF8String = ('Sing', 'Select Players', 'Open Menu');
   sStartSing = 0;
@@ -553,6 +554,7 @@ var
   IOnSongClickTranslated:      array[0..2] of UTF8String = ('Sing', 'Select Players', 'Open Menu');
   IPartyPopupTranslated:       array[0..1] of UTF8String = ('Off', 'On');
   ISingScoresTranslated:       array[0..3] of UTF8String = ('Off', 'On', 'Bar Rating', 'Remaining Score');
+  IDuetScoresTranslated: array[0..1] of UTF8String = ('Off', 'On');
   ITopScoresTranslated:        array[0..1] of UTF8String = ('All', 'Player');
 
   IJoypadTranslated:           array[0..1] of UTF8String = ('Off', 'On');
@@ -1046,6 +1048,8 @@ begin
   ISingScoresTranslated[1]          := ULanguage.Language.Translate('OPTION_VALUE_ON');
   ISingScoresTranslated[2]          := ULanguage.Language.Translate('OPTION_VALUE_BAR_RATING');
   ISingScoresTranslated[3]          := ULanguage.Language.Translate('OPTION_VALUE_REMAINING_SCORE');
+  IDuetScoresTranslated[0] := ULanguage.Language.Translate('OPTION_VALUE_OFF');
+  IDuetScoresTranslated[1] := ULanguage.Language.Translate('OPTION_VALUE_ON');
   ITopScoresTranslated[0]          := ULanguage.Language.Translate('OPTION_VALUE_ALL');
   ITopScoresTranslated[1]          := ULanguage.Language.Translate('OPTION_VALUE_PLAYER');
 
