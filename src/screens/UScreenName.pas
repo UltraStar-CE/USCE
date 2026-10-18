@@ -910,6 +910,7 @@ begin
   for I := 0 to UIni.IMaxPlayerCount -1 do
   begin
     PlayerCurrentAvatar[I] := AddStaticRectangle(Theme.Name.PlayerSelectAvatar[I]);
+    Statics[PlayerCurrentAvatar[I]].Texture.Z := Theme.Name.PlayerSelectAvatar[I].Z;
     PlayerCurrent[I] := AddStatic(Theme.Name.PlayerSelect[I]);
     PlayerCurrentText[I] := AddText(Theme.Name.PlayerSelectText[I]);
   end;
