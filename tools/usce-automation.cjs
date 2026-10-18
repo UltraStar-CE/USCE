@@ -100,14 +100,40 @@ async function upstreamDelta(github, track, from) {
     filesTruncated: (comparison.data.files || []).length >= 300};
 }
 
+// A manually merged upstream history can advance main without an assessment
+// checkpoint. Only exact Git ancestry establishes automatic coverage here;
+// cherry-picked adaptations still use the explicit reviewed checkpoint.
+async function unrecordedDelta(github, context, base, delta) {
+  if (!delta) return null;
+  const recorded = async sha => {
+    const r = await github.rest.repos.compareCommits({...context.repo, base: sha, head: base.sha});
+    const status = r.data.status;
+    if (!['ahead', 'identical', 'behind', 'diverged'].includes(status)) {
+      throw Error('Cannot establish upstream ancestry in the default branch');
+    }
+    return status === 'ahead' || status === 'identical';
+  };
+  if (await recorded(delta.to)) return null;
+  let from = delta.from;
+  const commits = [];
+  for (const commit of delta.commits) {
+    if (await recorded(commit.sha)) {
+      if (!commits.length) from = commit.sha;
+    } else commits.push(commit);
+  }
+  if (!commits.length) return null;
+  return {...delta, from, commits, total: commits.length,
+    url: 'https://github.com/' + delta.track.repo + '/compare/' + from + '...' + delta.to};
+}
+
 async function trackUpstream({github, context, core}) {
   const base = await baseInfo(github, context);
   for (const track of TRACKS) {
     const from = await checkpoint(github, context, base, track);
-    const delta = await upstreamDelta(github, track, from);
+    const delta = await unrecordedDelta(github, context, base, await upstreamDelta(github, track, from));
     if (!delta) continue;
     const name = 'automation/upstream-' + track.id + '-' + delta.to.slice(0, 12);
-    const content = {repository: track.repo, branch: track.ref, from, sha: delta.to,
+    const content = {repository: track.repo, branch: track.ref, from: delta.from, sha: delta.to,
       meaning: 'Assessed upstream tip, not a claim that changes have been incorporated',
       comparison: delta.url, commits: delta.commits};
     const pr = await openDraft(github, context, base, name,
@@ -147,7 +173,7 @@ async function prepare({github, context, core}) {
       if (context.eventName === 'schedule') {
         const track = TRACKS[0];
         const from = await checkpoint(github, context, base, track);
-        const delta = await upstreamDelta(github, track, from);
+        const delta = await unrecordedDelta(github, context, base, await upstreamDelta(github, track, from));
         if (!delta) return;
         // Process one source commit per daily run, with a persistent branch per
         // source SHA. Only merged candidates clear the queue. Closed unmerged
@@ -265,4 +291,4 @@ async function publish({github, context, core}, taskText, resultText) {
   }
 }
 
-module.exports = {TRACKS, validateFiles, validateResult, openDraft, upstreamDelta, prepare, publish, trackUpstream};
+module.exports = {TRACKS, validateFiles, validateResult, openDraft, upstreamDelta, unrecordedDelta, prepare, publish, trackUpstream};
