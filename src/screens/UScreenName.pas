@@ -44,6 +44,7 @@ uses
   UScreenScore,
   UScreenSingController,
   UScreenHighScores,
+  UScale,
   UThemes,
   SysUtils,
   sdl2,
