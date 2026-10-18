@@ -229,7 +229,7 @@ fi
 # -----------------------------------------
 CMAKE_PREFIX=
 if [[ x$is_windows == xyes ]]; then
-    PKG_CONFIG_PATH=$PKG_CONFIG_PATH:dists/windows/prefix/$(uname -m)/lib/pkgconfig
+    PKG_CONFIG_PATH="dists/windows/prefix/$(uname -m)/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
     CMAKE_PREFIX=dists/windows/prefix/$(uname -m)
 fi
 
@@ -277,6 +277,10 @@ if [[ x$lua_HAVE != xyes ]]; then
     lua_LIB_NAME="lua"
     PKG_VERSION([lua], [lua])
 fi
+AS_CASE([$lua_VERSION_MAJOR.$lua_VERSION_MINOR],
+    [5.1|5.2|5.3|5.4|5.5], [],
+    [AC_MSG_ERROR([The selected Lua package reports version $lua_VERSION. USCE requires Lua API 5.1 through 5.5. Check PKG_CONFIG_PATH for a different toolchain or LuaJIT package. On Windows, finish make -C dists/windows install before configuring.])])
+
 AC_MSG_CHECKING([size of lua_Integer])
 PKG_VALUE([lua],[CFLAGS],[cflags],[$lua_LIB_NAME],[C compiler flags for Lua])
 old_CFLAGS="$CFLAGS"
