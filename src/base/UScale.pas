@@ -77,6 +77,8 @@ function GetUniformScale: single;
 procedure ResolveLayoutRect(var X, Y, W, H: single; ScaleMode: TLayoutScaleMode); overload;
 procedure ResolveLayoutRect(var X, Y, W, H: real; ScaleMode: TLayoutScaleMode); overload;
 
+procedure FitLayoutChild(var X, Y, W, H: single; ParentX, ParentY, ParentW, ParentH: single; Mode: TLayoutScaleMode);
+
 implementation
 
 uses
@@ -237,6 +239,27 @@ begin
   Y := SingleY;
   W := SingleW;
   H := SingleH;
+end;
+
+procedure FitLayoutChild(var X, Y, W, H: single; ParentX, ParentY, ParentW, ParentH: single; Mode: TLayoutScaleMode);
+var
+  FitX, FitY, FitW, FitH, RightEdge, BottomEdge: single;
+begin
+  if (ParentW <= 0) or (ParentH <= 0) or
+     (GetLayoutScaleX <= 0) or (GetLayoutScaleY <= 0) then Exit;
+  FitX := ParentX; FitY := ParentY; FitW := ParentW; FitH := ParentH;
+  ResolveLayoutRect(FitX, FitY, FitW, FitH, Mode);
+  X := FitX + (X - ParentX) * FitW / ParentW;
+  Y := FitY + (Y - ParentY) * FitH / ParentH;
+  W := W * FitW / ParentW;
+  H := H * FitH / ParentH;
+  // Cover the inner frame boundary on the physical pixel grid so fractional
+  // scaling cannot expose a transparent seam.
+  RightEdge := Ceil((X + W) * GetLayoutScaleX) / GetLayoutScaleX;
+  BottomEdge := Ceil((Y + H) * GetLayoutScaleY) / GetLayoutScaleY;
+  X := Floor(X * GetLayoutScaleX) / GetLayoutScaleX;
+  Y := Floor(Y * GetLayoutScaleY) / GetLayoutScaleY;
+  W := RightEdge - X; H := BottomEdge - Y;
 end;
 
 end.

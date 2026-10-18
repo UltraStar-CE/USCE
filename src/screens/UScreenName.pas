@@ -689,6 +689,14 @@ begin
     Theme.Name.PlayerSelectTemplateAvatar.W, BaseBounds.W, FittedRect.W);
   Statics[PlayerCurrentAvatar[Player]].Texture.H := ScaleNameLength(
     Theme.Name.PlayerSelectTemplateAvatar.H, BaseBounds.H, FittedRect.H);
+  with Statics[PlayerCurrentAvatar[Player]].Texture do
+  begin
+    FitLayoutChild(X, Y, W, H,
+      Statics[PlayerCurrent[Player]].Texture.X, Statics[PlayerCurrent[Player]].Texture.Y,
+      Statics[PlayerCurrent[Player]].Texture.W, Statics[PlayerCurrent[Player]].Texture.H,
+      Statics[PlayerCurrent[Player]].Texture.ScaleMode);
+    ScaleMode := lsStretch;
+  end;
 end;
 
 procedure TScreenName.RefreshPlayers();
@@ -991,7 +999,7 @@ begin
   Statics[PlayerCurrentAvatar[Player]].Texture.H := H;
   Statics[PlayerCurrentAvatar[Player]].Texture.Z := Z;
   Statics[PlayerCurrentAvatar[Player]].Texture.Int := 1;
-  Statics[PlayerCurrentAvatar[Player]].Texture.ScaleMode := Theme.Name.PlayerSelectTemplateAvatar.ScaleMode;
+  Statics[PlayerCurrentAvatar[Player]].Texture.ScaleMode := lsStretch;
 
 end;
 
