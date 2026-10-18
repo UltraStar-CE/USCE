@@ -9,6 +9,11 @@ async function planRelease({github, context, core}) {
   if (plan.ready !== true) { core.notice('A reviewed release preparation PR is needed first.'); return; }
   if (!versionPattern.test(plan.version) || fs.readFileSync('VERSION', 'utf8').trim() !== plan.version) throw Error('Release plan and VERSION must match');
   if (JSON.stringify(validateThemePin(plan.themes)) !== JSON.stringify(readThemePin())) throw Error('Release plan and Themes pin must match');
+  if (plan.upstream) {
+    if (!/^[a-f0-9]{40}$/.test(plan.upstream.sha)) throw Error('Invalid upstream release SHA');
+    const comparison = await github.rest.repos.compareCommits({...context.repo, base: plan.upstream.sha, head: context.sha});
+    if (!['ahead', 'identical'].includes(comparison.data.status)) throw Error('The upstream release is not fully included in this revision');
+  }
   const releases = await github.paginate(github.rest.repos.listReleases, {...context.repo, per_page: 100});
   const existing = releases.find(r => r.tag_name === 'v' + plan.version);
   if (existing && !existing.draft) { core.notice('This version is already published.'); return; }
@@ -38,13 +43,15 @@ async function publishDraft({github, context, core}, version) {
     } catch (_) { notes = 'Review the included changes against the previous release.'; }
     // Keep imported commit subjects from creating PR cross-reference notifications.
     notes = notes.replace(/#/g, ' PR ').replace(/https?:\/\/github\.com\/[^\s)]+/g, '[source reference omitted]');
-    const plan = JSON.parse(fs.readFileSync('release-plan.json', 'utf8'));
+    const notesPath = 'doc/releases/' + version + '.md';
+    const curated = fs.existsSync(notesPath) ? fs.readFileSync(notesPath, 'utf8').trim() : '';
+    if (fs.existsSync(notesPath) && !curated) throw Error('Release notes are empty');
     const themes = readThemePin();
     release = (await github.rest.repos.createRelease({...context.repo, tag_name: tag, target_commitish: context.sha,
       name: 'USCE ' + version, draft: true, prerelease: false,
-      body: marker + '\nSource revision: `' + context.sha + '`.\n\nUpstream reference: ' + (plan.upstream?.tag || 'none recorded') +
-        '. Preparation: ' + plan.trigger + '.\nThemes revision: `' + themes.sha + '`. All included themes and their assets use this snapshot.\n\n## Changes to review\n\n' + notes +
-        '\n## Testing\n\n- [ ] Windows installer and portable package\n- [ ] Linux AppImage\n- [ ] Intel macOS DMG\n- [ ] ARM macOS DMG\n- [ ] Songs, microphone input, scoring, settings reuse and themes\n\n## Known limitations\n\nRecord the results and limitations before publication. These draft packages are not yet a published release.'})).data;
+      body: marker + '\n\n' + (curated || '## Changes\n\n' + notes.trim()) +
+        '\n\n<details>\n<summary>Build information</summary>\n\nSource revision: `' + context.sha +
+        '`.\nThemes revision: `' + themes.sha + '`.\n\n</details>\n'})).data;
   }
   const assets = await github.paginate(github.rest.repos.listReleaseAssets, {...context.repo, release_id: release.id, per_page: 100});
   if (assets.some(a => !expected.includes(a.name))) throw Error('Unexpected assets on existing draft');
