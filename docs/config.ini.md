@@ -261,6 +261,27 @@ a different length falls back to its built-in mapping.
 | `PianoKeysLow` | `60,97,121,115,120,100,99,118,103,98,104,110,109,107,44,108,46,246,45` |
 | `PianoKeysHigh` | `49,113,50,119,51,101,114,53,116,54,122,117,56,105,57,111,48,112,252,96,43` |
 
+## Note scoring weights
+
+File section: `[Scoring]`. These settings are also available in **Advanced Options**
+under **Scoring**. Values are integer percentages from `0` to `200`.
+
+| Key | Standard value | Effect |
+| --- | ---: | --- |
+| `Freestyle` | `0` | Weight for freestyle notes; detected vocals count without pitch matching. |
+| `Normal` | `100` | Weight for normal pitched notes. |
+| `Golden` | `200` | Weight for golden pitched notes. |
+| `Rap` | `100` | Weight for rap notes; detected vocals count without pitch matching. |
+| `RapGolden` | `200` | Weight for golden rap notes. |
+
+Missing or nonnumeric values use the standard value. Numeric values outside the
+range are limited to `0` or `200`. Custom weights change the relative contribution
+of each note type; `0` disables scoring for that type. The former rap-to-freestyle
+T toggle is replaced by these settings. Notes retain their original types.
+
+Online score submission is available only when all five weights have their
+standard values, so custom scoring does not affect online leaderboards.
+
 ## Compatibility and related files
 
 This reference follows the current [configuration reader](../src/base/UIni.pas).
