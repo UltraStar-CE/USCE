@@ -70,6 +70,16 @@ Label := Language.Translate('SING_PRESENT');
         self.assertIn('MODE_DUEL_NAME:', '\n'.join(errors))
         self.assertIn('MODE_DUEL_DESC:', '\n'.join(errors))
 
+    def test_retired_theme_sections_do_not_hide_live_translation_references(self):
+        self.write('game/themes/Test.ini', '[EditConvertText1]\nText = SING_EDIT_CONVERT\n'
+                   '[EditOpenText1]\nText = SING_EDIT_OPEN\n'
+                   '[EditSubTitle]\nText = SING_FULL_EDITOR\n')
+        self.write('src/base/Test.pas', "Language.Translate('SING_EDIT_CONVERT');")
+        errors = '\n'.join(self.errors())
+        self.assertIn('SING_EDIT_CONVERT:', errors)
+        self.assertIn('SING_FULL_EDITOR:', errors)
+        self.assertNotIn('SING_EDIT_OPEN:', errors)
+
     def test_empty_and_duplicate_english_entries_fail(self):
         self.write('src/base/Test.pas', "Language.Translate('SING_PRESENT');")
         self.write('game/languages/English.ini', '[Text]\nSING_PRESENT=First\nSING_PRESENT=\n')
