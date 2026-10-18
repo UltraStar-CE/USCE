@@ -36,3 +36,10 @@ implementations cannot contain bugs.
 Keep repository and build automation in its own scope, as described in
 [`AUTOMATION.md`](AUTOMATION.md). Revisit these operating assumptions if future
 features introduce remote input or services.
+
+## Experimental song-list server
+
+The optional song-list server is disabled by default. Setting
+`USCE_SONGLIST_SERVER=1` starts a listener on `127.0.0.1:8091` that exposes
+the local song catalogue to applications on the same computer. This feature
+extends the normal local-playback model and remains experimental.

@@ -140,7 +140,6 @@ end;
 procedure Main;
 var
   WindowTitle: string;
-  BadPlayer: integer;
   Server: TWebServer;
 
 begin
@@ -291,8 +290,12 @@ begin
     //------------------------------
     Log.LogStatus('Webserver', 'Initialization');
     // Create and start the web server
-    Server := TWebServer.Create(8091);
-    Server.Start;
+    // Explicit opt-in while the song-list server is experimental.
+    if GetEnvironmentVariable('USCE_SONGLIST_SERVER') = '1' then
+    begin
+      Server := TWebServer.Create(8091);
+      Server.Start;
+    end;
 
     //------------------------------
     // Start Mainloop

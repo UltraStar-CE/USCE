@@ -28,12 +28,17 @@ unit UWebServer;
 interface
 
 uses
-  Classes, SysUtils, fphttpserver, HTTPDefs, USongs, USong, UPlatform, UPath;
+  Classes, SysUtils, fphttpserver, HTTPDefs, USongs, USong, UPlatform, UPath, UPathUtils;
 
 type
+  TLoopbackHTTPServer = class(TFPHTTPServer)
+  public
+    property Address;
+  end;
+
   TWebServer = class(TThread)
   private
-    FServer: TFPHTTPServer;
+    FServer: TLoopbackHTTPServer;
     FPort: Integer;
   protected
     procedure Execute; override;
@@ -62,10 +67,11 @@ end;
 
 procedure TWebServer.Execute;
 begin
-  FServer := TFPHTTPServer.Create(nil);
+  FServer := TLoopbackHTTPServer.Create(nil);
   try
     FServer.OnRequest := @HandleRequest;
     FServer.Port := FPort;
+    FServer.Address := '127.0.0.1';
     FServer.Active := True;
     WriteLn('Server is running on port ', FPort);
     while not Terminated do
@@ -104,7 +110,7 @@ var
 begin
   TemplateFile := TStringList.Create;
   try
-    TemplateFilePath := Platform.GetGameUserPath.Append('resources\songlist_template.html');
+    TemplateFilePath := ResourcesPath.Append('songlist_template.html');
     TemplateFile.LoadFromFile(TemplateFilePath.toNative);
     Result := TemplateFile.Text;
   finally
@@ -146,4 +152,3 @@ begin
 end;
 
 end.
-
