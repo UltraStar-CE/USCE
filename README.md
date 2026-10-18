@@ -23,7 +23,7 @@ Sing solo, challenge friends or get everyone involved in a party game.
 <details>
 <summary>Bring everyone into the game</summary>
 
-![Player setup with 24 color-coded player slots](docs/images/player-setup.jpg)
+![24 players singing across two screens](docs/images/singing-24.jpg)
 
 Choose a small group or a larger party. Layouts adapt to the number of players.
 
