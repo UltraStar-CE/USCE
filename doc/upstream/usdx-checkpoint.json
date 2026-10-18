@@ -1,0 +1,27 @@
+{
+  "repository": "UltraStar-Deluxe/USDX",
+  "branch": "master",
+  "sha": "44bd04c7681ea57501c890a4618123234fce1f06",
+  "meaning": "Assessed upstream tip; the history is already recorded in USCE main.",
+  "resolutions": [
+    {
+      "commits": [
+        "5fde5ec984154aca259117f99c49a220e0bab40c",
+        "519b1c523e61e49db18dd0baf610ba83fb619d30"
+      ],
+      "disposition": "Upstream release bookkeeping superseded by USCE generated version metadata.",
+      "usce_pr": 22
+    },
+    {
+      "commits": [
+        "65c9a1ec24086bbeb456c0123fbcbf2d13792193",
+        "44bd04c7681ea57501c890a4618123234fce1f06"
+      ],
+      "disposition": "macOS linking change integrated; upstream merge ancestry recorded.",
+      "usce_prs": [
+        19,
+        22
+      ]
+    }
+  ]
+}

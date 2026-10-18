@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {validateFiles, validateResult, openDraft, upstreamDelta, prepare, publish} = require('./usce-automation.cjs');
+const {validateFiles, validateResult, openDraft, upstreamDelta, unrecordedDelta, prepare, publish, trackUpstream} = require('./usce-automation.cjs');
 
 test('candidate publication rejects paths outside the source scope and path tricks', () => {
   for (const path of ['.github/workflows/evil.yml', '../src/base/Test.pas', 'src/base/../lib/Test.pas',
@@ -177,7 +177,7 @@ test('the scheduled queue stops at an existing manual assessment instead of spen
       getCollaboratorPermissionLevel: async () => ({data: {permission: 'write'}}),
       getContent: async () => { const e = Error('missing'); e.status = 404; throw e; },
       getCommit: async () => ({data: {sha: 'b'.repeat(40)}}),
-      compareCommits: async () => ({data: {status: 'ahead', total_commits: 1, files: []}}),
+      compareCommits: async x => ({data: {status: x.owner === 'UltraStar-Deluxe' ? 'ahead' : 'diverged', total_commits: 1, files: []}}),
     }, pulls: {list: async x => ({data: x.head.includes('upstream-manual-') ? [{html_url: 'manual PR'}] : []})},
   }};
   const context = {repo: {owner: 'o', repo: 'r'}, actor: 'writer', eventName: 'schedule',
@@ -249,4 +249,58 @@ test('retry preserves the existing proposal without counting other PRs', async (
   const github = {rest: {pulls: {list: async x => ({data: x.head ? [prior] : x.repo === 'USCE'
     ? [prior, ...Array.from({length: 4}, (_, i) => ({number: i + 1, user: {login: 'github-actions[bot]'}}))] : []})}}};
   assert.equal(await openDraft(github, {repo: {owner: 'UltraStar-CE', repo: 'USCE'}}, {}, 'automation/test', [], '', ''), prior);
+});
+
+const ancestryDelta = () => ({track: {repo: 'up/source'}, from: 'old', to: 'tip',
+  total: 3, commits: [{sha: 'a'}, {sha: 'b'}, {sha: 'tip'}]});
+
+test('an already merged upstream tip is quiet even with an old checkpoint', async () => {
+  for (const status of ['ahead', 'identical']) {
+    let calls = 0;
+    const github = {rest: {repos: {compareCommits: async x => {
+      calls++; assert.equal(x.base, 'tip'); assert.equal(x.head, 'main');
+      return {data: {status}};
+    }}}};
+    assert.equal(await unrecordedDelta(github, {repo: {owner: 'o', repo: 'r'}},
+      {sha: 'main'}, ancestryDelta()), null);
+    assert.equal(calls, 1);
+  }
+});
+
+test('only unrecorded source commits enter the next assessment', async () => {
+  const github = {rest: {repos: {compareCommits: async x => ({data: {
+    status: x.base === 'a' ? 'ahead' : 'diverged',
+  }})}}};
+  const delta = await unrecordedDelta(github, {repo: {owner: 'o', repo: 'r'}},
+    {sha: 'main'}, ancestryDelta());
+  assert.equal(delta.from, 'a');
+  assert.deepEqual(delta.commits.map(c => c.sha), ['b', 'tip']);
+  assert.equal(delta.total, 2);
+  assert.equal(delta.url, 'https://github.com/up/source/compare/a...tip');
+});
+
+test('ancestry errors cannot silently mark upstream work as covered', async () => {
+  for (const response of [{data: {status: 'unknown'}}, Error('API failed')]) {
+    const github = {rest: {repos: {compareCommits: async () => {
+      if (response instanceof Error) throw response;
+      return response;
+    }}}};
+    await assert.rejects(unrecordedDelta(github, {repo: {owner: 'o', repo: 'r'}},
+      {sha: 'main'}, ancestryDelta()));
+  }
+});
+
+test('the tracker does not create a duplicate for upstream history recorded in main', async () => {
+  const github = {paginate: async () => [{sha: 'tip', commit: {message: 'change'}}], rest: {
+    git: {getRef: async () => ({data: {object: {sha: 'main'}}}),
+      getCommit: async () => ({data: {sha: 'main', tree: {sha: 'tree'}}})},
+    repos: {
+      getContent: async () => {const e = Error('missing'); e.status = 404; throw e;},
+      getCommit: async x => ({data: {sha: x.repo === 'Themes' ?
+        'f21d921f43e6cd430435a2cb5423f2bf5243f6c9' : 'tip'}}),
+      compareCommits: async () => ({data: {status: 'ahead', total_commits: 1, files: []}}),
+    },
+  }};
+  await trackUpstream({github, context: {repo: {owner: 'UltraStar-CE', repo: 'USCE'},
+    payload: {repository: {default_branch: 'main'}}}, core: {notice: () => {throw Error('Unexpected proposal');}}});
 });
