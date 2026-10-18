@@ -38,7 +38,7 @@ uses
   UIni,
   UPlayerLayout,
   UThemes,
-  UTexture;
+  URenderer;
 
 //////////////////////////////////////////////////////////////
 //                        ATTENTION:                        //

@@ -796,6 +796,8 @@ var
   Count:          integer;
   TempR:          real;
   W, H:           real;
+  A:             single;
+  Texture:       TTexture;
   GlowPadX:       real;
   GlowExtraW:     real;
   GlowExtraH:     real;
