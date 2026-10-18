@@ -77,6 +77,7 @@ type
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean): boolean; override;
       function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
       procedure OnShow; override;
+      procedure OnHide; override;
   end;
 
 const
@@ -178,6 +179,7 @@ var
     until ((Interactions[Interaction].Typ = iSelectS) and
       SelectsS[Interactions[Interaction].Num].Visible) or
       (Button[Interactions[Interaction].Num].Visible);
+    LastEditedButton := -1;
     SetTextInput(Interactions[Interaction].Typ = iButton);
   end;
   procedure IntPrev;
@@ -187,6 +189,7 @@ var
     until ((Interactions[Interaction].Typ = iSelectS) and
       SelectsS[Interactions[Interaction].Num].Visible) or
       (Button[Interactions[Interaction].Num].Visible);
+    LastEditedButton := -1;
     SetTextInput(Interactions[Interaction].Typ = iButton);
   end;
 begin
@@ -341,6 +344,7 @@ begin
 
       SDLK_BACKSPACE:
         begin
+          LastEditedButton := Interactions[Interaction].Num;
           Button[Interactions[Interaction].Num].Text[0].DeleteLastLetter;
         end;
     end;
@@ -398,9 +402,13 @@ begin
 end;
 
 function TScreenPartyTournamentPlayer.ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
+var
+  PreviousInteraction: integer;
 begin
-  Result := true;
-  inherited ParseMouse(MouseButton, BtnDown, X, Y);
+  PreviousInteraction := Interaction;
+  Result := inherited ParseMouse(MouseButton, BtnDown, X, Y);
+  if Interaction <> PreviousInteraction then
+    LastEditedButton := -1;
   SetTextInput(Interactions[Interaction].Typ = iButton);
 end;
 
@@ -485,6 +493,12 @@ begin
   end;
 
   UpdateInterface;
+end;
+
+procedure TScreenPartyTournamentPlayer.OnHide;
+begin
+  SetTextInput(false);
+  inherited;
 end;
 
 end.
