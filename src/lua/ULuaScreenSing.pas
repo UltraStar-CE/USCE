@@ -944,19 +944,38 @@ end;
 function ULuaScreenSong_GetVisibleSongs(L: Plua_State): Integer; cdecl;
 begin
   Result := 1;
-  lua_pushinteger(L, CatSongs.VisibleSongs())
+  if not Assigned(CatSongs) or (Length(CatSongs.Song) = 0) then
+    lua_pushinteger(L, 0)
+  else
+    lua_pushinteger(L, CatSongs.VisibleSongs);
 end;
 
 function ULuaScreenSong_GetSelectedIndex(L: Plua_State): Integer; cdecl;
 begin
   Result := 1;
-  lua_pushinteger(L, CatSongs.Selected)
+  if not Assigned(CatSongs) or (CatSongs.Selected < 0) or
+     (CatSongs.Selected > High(CatSongs.Song)) or
+     not CatSongs.Song[CatSongs.Selected].Visible then
+    lua_pushinteger(L, -1)
+  else
+    lua_pushinteger(L, CatSongs.VisibleIndex(CatSongs.Selected));
 end;
 
 function ULuaScreenSong_GetSongNumbers(L: Plua_State): Integer; cdecl;
+var
+  VisibleCount, SelectedIndex: integer;
 begin
   Result := 1;
-  lua_pushstring(L, PChar(Theme.Song.TextNumber.Text))
+  VisibleCount := 0;
+  SelectedIndex := 0;
+  if Assigned(CatSongs) and (Length(CatSongs.Song) > 0) then
+  begin
+    VisibleCount := CatSongs.VisibleSongs;
+    if (CatSongs.Selected >= 0) and (CatSongs.Selected <= High(CatSongs.Song)) and
+       CatSongs.Song[CatSongs.Selected].Visible then
+      SelectedIndex := CatSongs.VisibleIndex(CatSongs.Selected) + 1;
+  end;
+  lua_pushstring(L, PChar(Format('%d / %d', [SelectedIndex, VisibleCount])));
 end;
 
 function ULuaScreenSong_GetSelectedSong(L: Plua_State): Integer; cdecl;
@@ -968,6 +987,13 @@ begin
   if (Top > 0) then
     lua_pop(L, Top);
 
+  Result := 1;
+  if not Assigned(CatSongs) or (CatSongs.Selected < 0) or
+     (CatSongs.Selected > High(CatSongs.Song)) then
+  begin
+    lua_pushnil(L);
+    Exit;
+  end;
   Song := CatSongs.Song[CatSongs.Selected];
 
   lua_createtable(L, 0, 2);
