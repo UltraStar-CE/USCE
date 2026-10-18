@@ -1,0 +1,30 @@
+{
+  "repository": "UltraStar-Deluxe/USDX",
+  "branch": "master",
+  "from": "05a3cb37c63361695b16e777f5b5678ebd873198",
+  "sha": "44bd04c7681ea57501c890a4618123234fce1f06",
+  "meaning": "Assessed upstream tip, not a claim that changes have been incorporated",
+  "comparison": "https://github.com/UltraStar-Deluxe/USDX/compare/05a3cb37c63361695b16e777f5b5678ebd873198...44bd04c7681ea57501c890a4618123234fce1f06",
+  "commits": [
+    {
+      "sha": "5fde5ec984154aca259117f99c49a220e0bab40c",
+      "url": "https://github.com/UltraStar-Deluxe/USDX/commit/5fde5ec984154aca259117f99c49a220e0bab40c",
+      "subject": "release v2026.10.0"
+    },
+    {
+      "sha": "519b1c523e61e49db18dd0baf610ba83fb619d30",
+      "url": "https://github.com/UltraStar-Deluxe/USDX/commit/519b1c523e61e49db18dd0baf610ba83fb619d30",
+      "subject": "set dev version again"
+    },
+    {
+      "sha": "65c9a1ec24086bbeb456c0123fbcbf2d13792193",
+      "url": "https://github.com/UltraStar-Deluxe/USDX/commit/65c9a1ec24086bbeb456c0123fbcbf2d13792193",
+      "subject": "Mac: Fail during building if external library function does not exist"
+    },
+    {
+      "sha": "44bd04c7681ea57501c890a4618123234fce1f06",
+      "url": "https://github.com/UltraStar-Deluxe/USDX/commit/44bd04c7681ea57501c890a4618123234fce1f06",
+      "subject": "Merge pull request #1455 from UltraStar-Deluxe/mac-link"
+    }
+  ]
+}
