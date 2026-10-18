@@ -47,6 +47,7 @@ uses
   UMenu,
   UMusic,
   UPlayerLayout,
+  URenderer,
   USingScores,
   USongs,
   UThemes,
@@ -327,13 +328,16 @@ var
       if (PlayerIndex >= 1) and (PlayerIndex <= UIni.IMaxPlayerCount) then
       begin
         CurrentTexture := ScreenSing.Statics[Slots[J]].Texture;
-        ScreenSing.Statics[Slots[J]].Texture := AvatarPlayerTextures[PlayerIndex];
+        if AvatarPlayerTextures[PlayerIndex] = nil then
+          Continue;
+        ScreenSing.Statics[Slots[J]].Texture := AvatarPlayerTextures[PlayerIndex].Clone;
         ScreenSing.Statics[Slots[J]].Texture.X := CurrentTexture.X;
         ScreenSing.Statics[Slots[J]].Texture.Y := CurrentTexture.Y;
         ScreenSing.Statics[Slots[J]].Texture.W := CurrentTexture.W;
         ScreenSing.Statics[Slots[J]].Texture.H := CurrentTexture.H;
         ScreenSing.Statics[Slots[J]].Texture.Z := CurrentTexture.Z;
         ScreenSing.Statics[Slots[J]].Texture.Alpha := CurrentTexture.Alpha;
+        CurrentTexture.Free;
       end;
     end;
   end;
@@ -401,7 +405,10 @@ var
   begin
     avatarStatic := ScreenSing.AddStaticAlphaRectangle(singPlayer.Avatar);
     if (texture <> nil) then
-      ScreenSing.Statics[avatarStatic].Texture := texture.clone();
+    begin
+      ScreenSing.Statics[avatarStatic].Texture.Free;
+      ScreenSing.Statics[avatarStatic].Texture := texture.Clone;
+    end;
     ScreenSing.Statics[avatarStatic].Texture.X := singPlayer.Avatar.X;
     ScreenSing.Statics[avatarStatic].Texture.Y := singPlayer.Avatar.Y;
     ScreenSing.Statics[avatarStatic].Texture.H := singPlayer.Avatar.H;
@@ -505,51 +512,7 @@ begin
     ScreenSing.PlayerDuetNames[I] := ScreenSing.PlayerNames[I];
   end;
 
-  // Sing Bars
-  // P1-6
-  for I := 1 to UIni.IMaxPlayerCount do
-  begin
-    Color := RGBFloatToInt(Col[I].R, Col[I].G, Col[I].B);
-
-	// Color := $002222; //light blue
-  // Color := $10000 * Round(0.22*255) + $100 * Round(0.39*255) + Round(0.64*255); //dark blue
-
-    Tex_Left[I]         := Texture.LoadTexture(Skin.GetTextureFileName('GrayLeft'),  TEXTURE_TYPE_COLORIZED, Color);
-    Tex_Mid[I]          := Texture.LoadTexture(Skin.GetTextureFileName('GrayMid'),   TEXTURE_TYPE_COLORIZED, Color);
-    Tex_Right[I]        := Texture.LoadTexture(Skin.GetTextureFileName('GrayRight'), TEXTURE_TYPE_COLORIZED, Color);
-
-    Tex_plain_Left[I]   := Texture.LoadTexture(Skin.GetTextureFileName('NotePlainLeft'),  TEXTURE_TYPE_COLORIZED, Color);
-    Tex_plain_Mid[I]    := Texture.LoadTexture(Skin.GetTextureFileName('NotePlainMid'),   TEXTURE_TYPE_COLORIZED, Color);
-    Tex_plain_Right[I]  := Texture.LoadTexture(Skin.GetTextureFileName('NotePlainRight'), TEXTURE_TYPE_COLORIZED, Color);
-
-    Tex_BG_Left[I]      := Texture.LoadTexture(Skin.GetTextureFileName('NoteBGLeft'),  TEXTURE_TYPE_COLORIZED, Color);
-    Tex_BG_Mid[I]       := Texture.LoadTexture(Skin.GetTextureFileName('NoteBGMid'),   TEXTURE_TYPE_COLORIZED, Color);
-    Tex_BG_Right[I]     := Texture.LoadTexture(Skin.GetTextureFileName('NoteBGRight'), TEXTURE_TYPE_COLORIZED, Color);
-
-    Tex_Left_Rap[I]         := Texture.LoadTexture(Skin.GetTextureFileName('GrayLeftRap'),  TEXTURE_TYPE_COLORIZED, Color);
-    Tex_Mid_Rap[I]          := Texture.LoadTexture(Skin.GetTextureFileName('GrayMidRap'),   TEXTURE_TYPE_COLORIZED, Color);
-    Tex_Right_Rap[I]        := Texture.LoadTexture(Skin.GetTextureFileName('GrayRightRap'), TEXTURE_TYPE_COLORIZED, Color);
-
-    Tex_plain_Left_Rap[I]   := Texture.LoadTexture(Skin.GetTextureFileName('NotePlainLeftRap'),  TEXTURE_TYPE_COLORIZED, Color);
-    Tex_plain_Mid_Rap[I]    := Texture.LoadTexture(Skin.GetTextureFileName('NotePlainMidRap'),   TEXTURE_TYPE_COLORIZED, Color);
-    Tex_plain_Right_Rap[I]  := Texture.LoadTexture(Skin.GetTextureFileName('NotePlainRightRap'), TEXTURE_TYPE_COLORIZED, Color);
-
-    Tex_BG_Left_Rap[I]      := Texture.LoadTexture(Skin.GetTextureFileName('NoteBGLeftRap'),  TEXTURE_TYPE_COLORIZED, Color);
-    Tex_BG_Mid_Rap[I]       := Texture.LoadTexture(Skin.GetTextureFileName('NoteBGMidRap'),   TEXTURE_TYPE_COLORIZED, Color);
-    Tex_BG_Right_Rap[I]     := Texture.LoadTexture(Skin.GetTextureFileName('NoteBGRightRap'), TEXTURE_TYPE_COLORIZED, Color);
-
-    //## backgrounds for the scores ##
-    Tex_ScoreBG[I - 1] := Texture.LoadTexture(Skin.GetTextureFileName('ScoreBG'), TEXTURE_TYPE_COLORIZED, Color);
-  end;
-
-  // Inversions of first player colors used to mark selected note in editor
-  Color := RGBFloatToInt(1 - Col[1].R, 1 - Col[1].G, 1 - Col[1].B);
-  Tex_Left_Inv := Texture.LoadTexture(Skin.GetTextureFileName('GrayLeft'), TEXTURE_TYPE_COLORIZED, Color);
-  Tex_Mid_Inv := Texture.LoadTexture(Skin.GetTextureFileName('GrayMid'), TEXTURE_TYPE_COLORIZED, Color);
-  Tex_Right_Inv := Texture.LoadTexture(Skin.GetTextureFileName('GrayRight'), TEXTURE_TYPE_COLORIZED, Color);
-  Tex_Left_Rap_Inv := Texture.LoadTexture(Skin.GetTextureFileName('GrayLeftRap'), TEXTURE_TYPE_COLORIZED, Color);
-  Tex_Mid_Rap_Inv := Texture.LoadTexture(Skin.GetTextureFileName('GrayMidRap'), TEXTURE_TYPE_COLORIZED, Color);
-  Tex_Right_Rap_Inv := Texture.LoadTexture(Skin.GetTextureFileName('GrayRightRap'), TEXTURE_TYPE_COLORIZED, Color);
+  LoadSingScreenTextures(true);
 
   StaticPausePopup := ScreenSing.AddStatic(Theme.Sing.PausePopUp);
 
