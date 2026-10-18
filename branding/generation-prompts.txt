@@ -15,3 +15,8 @@ Tall navy installer panel using the USCE star and microphone, white USCE wordmar
 
 MENU BACKGROUND EDITS
 For each blue, summer, winter and fall menu image: replace only the upper-right UltraStar Deluxe logo with a small white USCE wordmark and the reference star/microphone symbol; keep the background subject, framing, color and texture. No people, border or extra words. Generated with the built-in OpenAI image tool and converted to the original 800x600 JPEG dimensions.
+
+COVER BRANDING CORRECTIONS
+NoCover.jpg: preserve the original pale blue background, blue folder, sheets, microphone emblem, reflection and glossy style. Replace folder text with USCE and lower wordmark with UltraStar Community Edition.
+Modern songCover.png: preserve blue background, microphone, wings, laurel and ribbon. Replace UltraStarDeluxe with UltraStar CE and remove USDX branding.
+Built-in image tool; exported at original 256x256 JPEG and 200x200 PNG dimensions.
