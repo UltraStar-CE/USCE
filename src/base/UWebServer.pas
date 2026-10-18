@@ -28,7 +28,7 @@ unit UWebServer;
 interface
 
 uses
-  Classes, SysUtils, fphttpserver, httproute, HTTPDefs, USongs, USong, UPlatform, UPath, fpjson, jsonparser, UDisplay, UNote, UGraphic;
+  Classes, SysUtils, fphttpserver, httproute, HTTPDefs, USongs, USong, UPlatform, UPath, UPathUtils, fpjson, jsonparser, UDisplay, UNote, UGraphic;
 
 type
   TLoopbackHTTPServer = class(TFPHTTPServer)
