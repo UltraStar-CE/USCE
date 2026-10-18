@@ -1295,8 +1295,8 @@ begin
     Difficulty := 2;
 
   try
-    aPlayers[Index].HighscoreMax := DataBase.ReadMax_ScoreLocal(CurrentSong.Artist, CurrentSong.Title, Difficulty);
-    aPlayers[Index].HighscoreAvg := DataBase.ReadMedia_ScoreLocal(CurrentSong.Artist, CurrentSong.Title, Difficulty);
+    aPlayers[Index].HighscoreMax := DataBase.ReadMax_ScoreLocal(CurrentSong, Difficulty);
+    aPlayers[Index].HighscoreAvg := DataBase.ReadMedia_ScoreLocal(CurrentSong, Difficulty);
   except
     on E: Exception do
       Log.LogWarn('Unable to fetch highscore stats: ' + E.Message, 'TSingScores.EnsureHighscoreStats');
