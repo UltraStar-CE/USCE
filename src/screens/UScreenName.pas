@@ -140,6 +140,7 @@ uses
   UMenuButton,
   UPath,
   UPlayerLayout,
+  URenderer,
   USkins,
   USongs,
   UTime,
@@ -580,7 +581,7 @@ begin
         NoAvatarFile := Skin.GetTextureFileName('NoAvatar_P1');
     end;
 
-    NoAvatarTexture[I] := Texture.GetTexture(NoAvatarFile, TEXTURE_TYPE_TRANSPARENT, $FFFFFF);
+    NoAvatarTexture[I] := Renderer.GetTexture(NoAvatarFile, TEXTURE_TYPE_TRANSPARENT, $FFFFFF);
     NoAvatarTexture[I].ScaleMode := lsUniform;
   end;
 
