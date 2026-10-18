@@ -3107,6 +3107,8 @@ begin
   else
     PreviewOpened := -1;
   KeepPreviewPositionOnShow := false;
+  DuetChange := false;
+  RapToFreestyle := false;
 
   // reset video playback engine
   fCurrentVideo := nil;
