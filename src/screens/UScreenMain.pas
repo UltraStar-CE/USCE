@@ -117,7 +117,7 @@ begin
         Theme.LoadTheme(Ini.Theme, Ini.Color);
         SoundLib.LoadSounds();
         SoundLib.StartBgMusic();
-        UGraphic.LoadScreens(USDXVersionStr);
+        UGraphic.LoadScreens(USCEVersionStr);
       end;
 
       SDLK_T: begin
