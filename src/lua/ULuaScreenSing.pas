@@ -214,7 +214,6 @@ uses
   UMusic,
   ULuaUtils,
   {next imports are for ULuaScreenSong instead}
-  USong,
   USongs,
   UThemes,
   {this was always here}
@@ -488,7 +487,7 @@ begin
   if (CurrentSong = nil) or (CurrentSong.Background = nil) or (CurrentSong.Background.ToNative() = '') or (Display.CurrentScreen <> @ScreenSing) then
     lua_PushString(L, PChar('')) // in case of error
   else begin
-    lua_PushString(L, PChar(CurrentSong.Path.GetAbsolutePath().ToNative()+CurrentSong.Background.ToNative()))
+    lua_PushString(L, PChar(CurrentSong.Path.Append(CurrentSong.Background).GetAbsolutePath.ToUTF8))
   end;
 end;
 
@@ -541,7 +540,7 @@ begin
   lua_ClearStack(L);
   Result := 1;
 
-  if (CurrentSong = nil) then
+  if (CurrentSong = nil) or not Assigned(ScreenSing) then
     lua_pushboolean(L, false) // in case of error
   else begin
     lua_pushboolean(L, ScreenSing.SungToEnd and not ScreenSing.SungPaused)
