@@ -484,7 +484,11 @@ macos-dmg: macos-standalone-app
 #	/bin/cp "ultrastardx/icons/UltraStarDeluxeVolumeIcon.icns "/Volumes/UltraStar Community Edition/.VolumeIcon.icns"
 #	/Developer/Tools/SetFile -a C "/Volumes/UltraStar Community Edition/.VolumeIcon.icns" "/Volumes/UltraStar Community Edition"
 	codesign --force --deep --sign - "/Volumes/UltraStar Community Edition/UltraStar Community Edition.app"
-	$(HDIUTIL) detach "/Volumes/UltraStar Community Edition"
+	@attempt=0; until $(HDIUTIL) detach "/Volumes/UltraStar Community Edition"; do \
+		attempt=$$((attempt + 1)); \
+		if test "$$attempt" -ge 5; then exit 1; fi; \
+		sleep 2; \
+	done
 	$(HDIUTIL) convert "UltraStar Community Edition.sparseimage" -format UDBZ -o "UltraStar Community Edition.dmg"
 	$(RM) "UltraStar Community Edition.sparseimage"
 
