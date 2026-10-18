@@ -274,7 +274,6 @@ uses
   ULog,
   UNote,
   UGraphic,
-  UIni,
   UDataBase;
 
 function IsPlayerVisibleOnScreen(const EncodedPosition: byte; const Screen: integer): boolean;
