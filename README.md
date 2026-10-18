@@ -12,11 +12,22 @@ Sing solo, challenge friends or get everyone involved in a party game.
 **[Help and ideas](https://github.com/UltraStar-CE/USCE/discussions)** ·
 **[Releases](https://github.com/UltraStar-CE/USCE/releases)**
 
+![Three players following pitch notes and lyrics in USCE](docs/images/singing.jpg)
+
 ## Play your way
 
 | Sing together | Make it yours | Bring your collection |
 | --- | --- | --- |
-| Solo singing, duets and party modes, with support for up to six players. | Choose a theme, change the look and adjust the settings to suit your karaoke night. | Use UltraStar-format songs, with lyrics, pitch notes and optional video backgrounds. |
+| Solo singing, duets and party modes, with support for up to 24 players. | Choose a theme, change the look and adjust the settings to suit your karaoke night. | Use UltraStar-format songs, with lyrics, pitch notes and optional video backgrounds. |
+
+<details>
+<summary>Bring everyone into the game</summary>
+
+![Player setup with 24 color-coded player slots](docs/images/player-setup.jpg)
+
+Choose a small group or a larger party. Layouts adapt to the number of players.
+
+</details>
 
 ## Start singing
 
