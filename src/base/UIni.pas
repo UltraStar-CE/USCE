@@ -2373,19 +2373,16 @@ end;
 procedure TIni.SaveDelays;
 var
   IniFile: TIniFile;
-  I:       integer;
+  I: integer;
 begin
-  if not Filename.IsReadOnly() then
-  begin
-    IniFile := TIniFile.Create(Filename.ToNative);
-
+  IniFile := TSafeIniFile.Create(Filename.ToNative, 'TIni.SaveDelays');
+  try
     for I := 0 to High(PlayerDelay) do
       IniFile.WriteInteger('PlayerDelay', 'P' + IntToStr(I+1), PlayerDelay[I]);
-
+  finally
     IniFile.Free;
   end;
 end;
-
 
 procedure TIni.ReloadDelays;
 var
@@ -2400,10 +2397,12 @@ begin
 
   IniFile := TIniFile.Create(Filename.ToNative);
 
-  for I := 0 to IMaxPlayerCount-1 do
-    PlayerDelay[I] := IniFile.ReadInteger('PlayerDelay', 'P'+IntToStr(I+1), 0);
-
-  IniFile.Free;
+  try
+    for I := 0 to IMaxPlayerCount-1 do
+      PlayerDelay[I] := IniFile.ReadInteger('PlayerDelay', 'P'+IntToStr(I+1), 0);
+  finally
+    IniFile.Free;
+  end;
 end;
 
 function TIni.ReloadNames: boolean;
