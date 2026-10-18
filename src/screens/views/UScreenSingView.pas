@@ -174,8 +174,6 @@ var
   Scale: real;
   FrameW: integer;
   FrameH: integer;
-  AvatarW: integer;
-  AvatarH: integer;
   ScoreW: integer;
   ScoreX: integer;
   NameX: integer;
@@ -194,9 +192,7 @@ begin
 
   FrameW := Max(1, Round(BaseTemplate.AvatarFrame.W * Scale));
   FrameH := Max(1, Round(BaseTemplate.AvatarFrame.H * Scale));
-  AvatarW := Max(1, Round(BaseTemplate.Avatar.W * Scale));
-  AvatarH := Max(1, Round(BaseTemplate.Avatar.H * Scale));
-  ScoreW := Max(Theme.Sing.PlayerWidgetLayout.MinScoreW, Round(BaseTemplate.ScoreBackground.W * Scale));
+  ScoreW := Max(1, Round(BaseTemplate.ScoreBackground.W * Scale));
   GroupTop := Max(10, LaneTop -
     GetSingHeaderTopOffset(Theme.Sing.PlayerWidgetLayout, Layout.GridRows, Scale));
 
@@ -209,13 +205,18 @@ begin
   Result.AvatarFrame.W := FrameW;
   Result.AvatarFrame.H := FrameH;
 
-  Result.Avatar.X := GetSingPlayerWidgetX(BaseTemplate.Avatar.X, BaseTemplate.Avatar.W,
-    AvatarW, LaneLeft, LaneWidth, Theme.Sing.PlayerWidgetLayout.AvatarAnchorX,
-    Scale, Theme.Sing.PlayerWidgetLayout);
-  Result.Avatar.Y := GetSingPlayerWidgetY(BaseTemplate.Avatar.Y, GroupTop,
-    Scale, Theme.Sing.PlayerWidgetLayout);
-  Result.Avatar.W := AvatarW;
-  Result.Avatar.H := AvatarH;
+  // Round the inset outward against the already rounded frame bounds so a
+  // fractional player scale cannot expose a seam beside the avatar.
+  Result.Avatar.X := Result.AvatarFrame.X + Floor(
+    (BaseTemplate.Avatar.X - BaseTemplate.AvatarFrame.X) * Scale);
+  Result.Avatar.Y := Result.AvatarFrame.Y + Floor(
+    (BaseTemplate.Avatar.Y - BaseTemplate.AvatarFrame.Y) * Scale);
+  Result.Avatar.W := Max(1, Ceil(
+    (BaseTemplate.Avatar.X + BaseTemplate.Avatar.W - BaseTemplate.AvatarFrame.X) * Scale) -
+    Floor((BaseTemplate.Avatar.X - BaseTemplate.AvatarFrame.X) * Scale));
+  Result.Avatar.H := Max(1, Ceil(
+    (BaseTemplate.Avatar.Y + BaseTemplate.Avatar.H - BaseTemplate.AvatarFrame.Y) * Scale) -
+    Floor((BaseTemplate.Avatar.Y - BaseTemplate.AvatarFrame.Y) * Scale));
 
   NameH := Max(Theme.Sing.PlayerWidgetLayout.NameMinH, Round(BaseTemplate.Name.H * Scale));
   if BaseTemplate.Name.W > 0 then
