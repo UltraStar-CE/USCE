@@ -4,6 +4,14 @@ const crypto = require('node:crypto');
 const {execFileSync} = require('node:child_process');
 const {readThemePin, validateThemePin} = require('./themes-pin.cjs');
 const versionPattern = /^[0-9]{4}\.(?:[1-9]|1[0-2])\.[0-9]+$/;
+function releaseBaseline(releases, version) {
+  const parts = value => value.replace(/^v/, '').split('.').map(Number);
+  const compare = (a, b) => { const x = parts(a), y = parts(b); return x[0] - y[0] || x[1] - y[1] || x[2] - y[2]; };
+  const previous = releases.filter(r => !r.draft && !r.prerelease && versionPattern.test(r.tag_name.replace(/^v/, ''))
+    && compare(r.tag_name, version) < 0).sort((a, b) => compare(b.tag_name, a.tag_name))[0];
+  return previous ? {ref: previous.tag_name, label: 'USCE ' + previous.tag_name.replace(/^v/, '')}
+    : {ref: '8b5324f321d54491badadf5f95b4678a0bcf4633', label: 'USDX 2026.9.0'};
+}
 async function planRelease({github, context, core}) {
   const plan = JSON.parse(fs.readFileSync('release-plan.json', 'utf8'));
   if (plan.ready !== true) { core.notice('A reviewed release preparation PR is needed first.'); return; }
@@ -37,19 +45,23 @@ async function publishDraft({github, context, core}, version) {
   if (release && (!release.draft || release.target_commitish !== context.sha || !release.body?.includes(marker))) throw Error('Refusing to replace an existing release');
   if (!release) {
     let notes = '';
-    const previous = releases.find(r => !r.draft && !r.prerelease && /^v[0-9]{4}\./.test(r.tag_name));
-    try {
-      notes = execFileSync('git', ['log', '--first-parent', '--format=- %s', previous ? previous.tag_name + '..' + context.sha : context.sha, ...(previous ? [] : ['-20'])], {encoding: 'utf8'});
-    } catch (_) { notes = 'Review the included changes against the previous release.'; }
-    // Keep imported commit subjects from creating PR cross-reference notifications.
-    notes = notes.replace(/#/g, ' PR ').replace(/https?:\/\/github\.com\/[^\s)]+/g, '[source reference omitted]');
+    const baseline = releaseBaseline(releases, version);
+    const repositoryUrl = 'https://github.com/' + context.repo.owner + '/' + context.repo.repo;
+    const changes = execFileSync('git', ['log', '--first-parent', '--format=%H%x09%s', baseline.ref + '..' + context.sha], {encoding: 'utf8'});
+    notes = changes.trim().split('\n').filter(Boolean).map(line => {
+      const [sha, ...subject] = line.split('\t');
+      // Imported PR numbers must not resolve to unrelated local PRs or ping upstream.
+      const title = subject.join('\t').replace(/https?:\/\/github\.com\/[^\s)]+/g, '[source reference omitted]')
+        .replace(/#/g, ' PR ').replace(/[\[\]]/g, '');
+      return '- ' + title + ' ([`' + sha.slice(0, 7) + '`](' + repositoryUrl + '/commit/' + sha + '))';
+    }).join('\n');
     const notesPath = 'doc/releases/' + version + '.md';
     const curated = fs.existsSync(notesPath) ? fs.readFileSync(notesPath, 'utf8').trim() : '';
     if (fs.existsSync(notesPath) && !curated) throw Error('Release notes are empty');
     const themes = readThemePin();
     release = (await github.rest.repos.createRelease({...context.repo, tag_name: tag, target_commitish: context.sha,
       name: 'USCE ' + version, draft: true, prerelease: false,
-      body: marker + '\n\n' + (curated || '## Changes\n\n' + notes.trim()) +
+      body: marker + '\n\n' + (curated || 'Changes compared with **' + baseline.label + '**.\n\n## Changes\n\n' + notes.trim()) +
         '\n\n<details>\n<summary>Build information</summary>\n\nSource revision: `' + context.sha +
         '`.\nThemes revision: `' + themes.sha + '`.\n\n</details>\n'})).data;
   }
@@ -67,4 +79,4 @@ async function publishDraft({github, context, core}, version) {
   }
   core.notice('Draft release ready for human testing: ' + release.html_url);
 }
-module.exports = {planRelease, publishDraft};
+module.exports = {planRelease, publishDraft, releaseBaseline};

@@ -7,7 +7,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const {execFileSync} = require('node:child_process');
 const themePin = {repository:'UltraStar-CE/Themes',sha:'a'.repeat(40)};
-const {planRelease, publishDraft} = require('./publish-release.cjs');
+const {planRelease, publishDraft, releaseBaseline} = require('./publish-release.cjs');
 async function fixture(run) {
   const previous = process.cwd();
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'usce-release-'));
@@ -19,6 +19,8 @@ async function fixture(run) {
     execFileSync('git',['init','--quiet']);
     execFileSync('git',['add','VERSION','release-plan.json']);
     execFileSync('git',['-c','user.name=USCE Tests','-c','user.email=tests@example.invalid','commit','--quiet','-m','Improve playback #123']);
+    execFileSync('git', ['tag', 'v2026.9.0']);
+    execFileSync('git', ['-c','user.name=USCE Tests','-c','user.email=tests@example.invalid','commit','--quiet','--allow-empty','-m','Improve playback #123']);
     const sha = execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
     fs.mkdirSync('release-output');
     for (const name of ['USCE-windows-installer-2026.10.0.exe','USCE-windows-portable-2026.10.0.zip','USCE-linux-2026.10.0.AppImage','USCE-mac-ARM-2026.10.0.dmg','USCE-mac-x86-2026.10.0.dmg','SHA256SUMS','VERSION']) fs.writeFileSync('release-output/'+name, name);
@@ -29,7 +31,7 @@ async function fixture(run) {
       createRelease: async data => { const release={...data,id:1,html_url:'draft-url'};state.releases.push(release);return {data:release}; },
       uploadReleaseAsset: async data => {state.uploads++;state.assets.push({name:data.name,digest:'sha256:'+crypto.createHash('sha256').update(data.data).digest('hex')});},
     };
-    const github = {rest:{repos},paginate:async method=> method===repos.listReleases?state.releases:state.assets};
+    const github = {rest:{repos},paginate:async method=> method===repos.listReleases?[...state.releases,{tag_name:'v2026.9.0',draft:false,prerelease:false}]:state.assets};
     const context={repo:{owner:'UltraStar-CE',repo:'USCE'},sha};
     const core={notice(){},setOutput:(k,v)=>state.outputs[k]=v};
     await run({github,context,core,state,repos});
@@ -116,4 +118,22 @@ test('release planning verifies the full pinned upstream history and fails close
     await planRelease(x);
     assert.equal(x.state.outputs.version, '2026.10.0');
   }
+}));
+
+
+test('release-note baseline is USDX September initially, then the nearest earlier published USCE release', () => {
+  assert.equal(releaseBaseline([], '2026.10.0').label, 'USDX 2026.9.0');
+  const releases = [
+    {tag_name:'v2026.12.0'}, {tag_name:'v2026.10.0'}, {tag_name:'v2026.11.0',draft:true},
+    {tag_name:'v2026.11.1',prerelease:true}, {tag_name:'v2026.9.0'}, {tag_name:'v2026.10.1'},
+  ];
+  assert.deepEqual(releaseBaseline(releases, '2026.11.0'), {ref:'v2026.10.1',label:'USCE 2026.10.1'});
+});
+
+test('generated notes link to local commits and state the previous USCE baseline', async()=>fixture(async x=>{
+  await publishDraft(x, '2026.10.0');
+  const body = x.state.releases[0].body;
+  assert(body.includes('Changes compared with **USCE 2026.9.0**'));
+  assert(body.includes('https://github.com/UltraStar-CE/USCE/commit/' + x.context.sha));
+  assert(!body.includes('#123'));
 }));

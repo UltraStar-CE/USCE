@@ -1,5 +1,6 @@
 'use strict';
 const {openDraft} = require('./usce-automation.cjs');
+const {releaseBaseline} = require('./publish-release.cjs');
 const {validateThemePin} = require('./themes-pin.cjs');
 const VERSION = /^([0-9]{4})\.([1-9]|1[0-2])\.([0-9]+)$/;
 function chooseRelease({now, upstream, releases}) {
@@ -27,6 +28,7 @@ async function prepareMonthly({github, context, core, now = new Date()}) {
   const releases = await github.paginate(github.rest.repos.listReleases, {...context.repo, per_page: 100});
   const plan = chooseRelease({now, upstream, releases});
   if (!plan) { core.notice('No monthly release preparation is due.'); return; }
+  const baseline = releaseBaseline(releases, plan.version);
   const themes = (await github.rest.repos.getCommit({owner: 'UltraStar-CE', repo: 'Themes', ref: 'main'})).data;
   plan.themes = validateThemePin({repository: 'UltraStar-CE/Themes', sha: themes.sha});
   const branch = context.payload.repository.default_branch;
@@ -38,6 +40,7 @@ async function prepareMonthly({github, context, core, now = new Date()}) {
       {path: 'themes.json', content: JSON.stringify(plan.themes, null, 2) + '\n'}],
     'Prepare USCE ' + plan.version,
     `Proposed monthly release: ${plan.version}. Trigger: ${plan.trigger}.\n\n` +
+    `Release notes compare changes with ${baseline.label}. Entries link to USCE PRs or commits.\n\n` +
     `Upstream reference: ${plan.upstream?.tag || 'no stable upstream release available'}. The release candidate requires the full upstream release history and a comparison against its release notes.\n\n` +
     `Themes revision: ${plan.themes.sha}. Every platform package includes all themes and their assets from this snapshot.\n\n` +
     'Review the included upstream changes and USCE additions, compatibility, release notes and required CI. Merging prepares draft packages from the exact merged revision. Installation, launch, songs and microphone testing are required before a human publishes the release.');
