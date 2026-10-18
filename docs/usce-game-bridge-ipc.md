@@ -519,4 +519,3 @@ Recommended codes:
 | `message.unknown_type` | Unknown `type`. |
 | `message.invalid` | Invalid shape. |
 | `command.rejected` | Valid command rejected in current state. |
-
