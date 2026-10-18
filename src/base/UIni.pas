@@ -93,7 +93,7 @@ function CreateNumericOptionArray(const FirstValue, LastValue: integer): TUTF8St
 function GetPlayerColorOptionCount: integer;
 function TryGetMixedPlayerColorPair(ColorIndex: integer; out LeftColor, RightColor: integer): boolean;
 
-  DEFAULT_REMOTE_BRIDGE_ENABLED = 1;
+  DEFAULT_REMOTE_BRIDGE_ENABLED = 0;
   DEFAULT_REMOTE_BRIDGE_IPC_HOST = '127.0.0.1';
   DEFAULT_REMOTE_BRIDGE_IPC_PORT = 8765;
   DEFAULT_REMOTE_BRIDGE_SERVER_URL = 'wss://usdx.at/ws/host';

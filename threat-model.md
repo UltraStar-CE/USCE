@@ -36,3 +36,11 @@ implementations cannot contain bugs.
 Keep repository and build automation in its own scope, as described in
 [`AUTOMATION.md`](AUTOMATION.md). Revisit these operating assumptions if future
 features introduce remote input or services.
+
+## Optional remote bridge
+
+The remote bridge is disabled by default. When enabled, the game exchanges
+JSONL messages with a configured local adapter for control, pitch input and
+game state. The adapter can connect to remote services. This optional feature
+extends the local-playback assumptions; its contract is documented in
+[`docs/usce-game-bridge-ipc.md`](docs/usce-game-bridge-ipc.md).
