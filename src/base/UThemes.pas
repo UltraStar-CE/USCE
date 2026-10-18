@@ -708,40 +708,6 @@ type
   end;
 
 
-  TThemeEdit = class(TThemeBasic)
-    ButtonConvert:        TThemeButton;
-    ButtonExit:           TThemeButton;
-
-    TextDescription:      TThemeText;
-    TextDescriptionLong:  TThemeText;
-    Description:          array[0..5] of UTF8string;
-    DescriptionLong:      array[0..5] of UTF8string;
-  end;
-
-  TThemeEditConvert = class(TThemeBasic)
-    ButtonOpen:           TThemeButton;
-    ButtonPlay:           TThemeButton;
-    ButtonPlaySelected:   TThemeButton;
-    ButtonStop:           TThemeButton;
-    ButtonSave:           TThemeButton;
-
-    TextDescription:      TThemeText;
-    TextDescriptionLong:  TThemeText;
-    Description:          array[0..5] of UTF8string;
-    DescriptionLong:      array[0..5] of UTF8string;
-  end;
-
-  TThemeEditOpen = class(TThemeBasic)
-    ButtonFileName:       TThemeButton;
-    ButtonLoad:           TThemeButton;
-    ButtonBack:           TThemeButton;
-
-    TextDescription:      TThemeText;
-    TextDescriptionLong:  TThemeText;
-    Description:          array[0..5] of UTF8string;
-    DescriptionLong:      array[0..5] of UTF8string;
-  end;
-
   TThemeEditSub = class(TThemeBasic)
       // statics
       BackgroundImage:              TThemeStatic;
@@ -1158,9 +1124,6 @@ type
     OptionsSub:       TThemeOptionsSub;
 
     //edit
-    Edit:             TThemeEdit;
-    EditConvert:      TThemeEditConvert;
-    EditOpen:         TThemeEditOpen;
     EditSub:          TThemeEditSub;
     //error and check popup
     ErrorPopup:         TThemeError;
@@ -1746,9 +1709,6 @@ begin
   Options := TThemeOptions.Create;
   OptionsSub := TThemeOptionsSub.Create;
 
-  Edit := TThemeEdit.Create;
-  EditConvert := TThemeEditConvert.Create;
-  EditOpen := TThemeEditOpen.Create;
   EditSub := TThemeEditSub.Create;
 
   ErrorPopup := TThemeError.Create;
@@ -2365,49 +2325,6 @@ begin
       ThemeLoadOptionsSub;
       ThemeLoadStatics(OptionsNetworkLegendStatic, 'OptionsNetworkLegendStatic');
       ThemeLoadTexts(OptionsNetworkLegendText, 'OptionsNetworkLegendText');
-
-      //Edit Menu
-      ThemeLoadBasic (Edit,               'Edit');
-
-      ThemeLoadButton(Edit.ButtonConvert, 'EditButtonConvert');
-      ThemeLoadButton(Edit.ButtonExit,    'EditButtonExit');
-
-      Edit.Description[0] := Language.Translate('SING_EDIT_BUTTON_DESCRIPTION_CONVERT');
-      Edit.Description[1] := Language.Translate('SING_EDIT_BUTTON_DESCRIPTION_EXIT');
-
-      ThemeLoadText(Edit.TextDescription, 'EditTextDescription');
-      Edit.TextDescription.Text := Edit.Description[0];
-
-      //Edit Convert Menu
-      ThemeLoadBasic (EditConvert,        'EditConvert');
-
-      ThemeLoadButton(EditConvert.ButtonOpen,         'EditConvertButtonOpen');
-      ThemeLoadButton(EditConvert.ButtonPlay,         'EditConvertButtonPlay');
-      ThemeLoadButton(EditConvert.ButtonPlaySelected, 'EditConvertButtonPlaySelected');
-      ThemeLoadButton(EditConvert.ButtonStop,         'EditConvertButtonStop');
-      ThemeLoadButton(EditConvert.ButtonSave,         'EditConvertButtonSave');
-
-      EditConvert.Description[0] := Language.Translate('SING_EDIT_CONVERT_BUTTON_DESCRIPTION_OPEN');
-      EditConvert.Description[1] := Language.Translate('SING_EDIT_CONVERT_BUTTON_DESCRIPTION_PLAY');
-      EditConvert.Description[2] := Language.Translate('SING_EDIT_CONVERT_BUTTON_DESCRIPTION_PLAYSELECTED');
-      EditConvert.Description[3] := Language.Translate('SING_EDIT_CONVERT_BUTTON_DESCRIPTION_STOP');
-      EditConvert.Description[4] := Language.Translate('SING_EDIT_CONVERT_BUTTON_DESCRIPTION_SAVE');
-
-      ThemeLoadText(EditConvert.TextDescription, 'EditConvertTextDescription');
-      EditConvert.TextDescription.Text := EditConvert.Description[0];
-
-      //Edit Open Menu
-      ThemeLoadBasic (EditOpen,           'EditOpen');
-
-      ThemeLoadButton(EditOpen.ButtonFileName, 'EditOpenButtonFileName');
-      ThemeLoadButton(EditOpen.ButtonLoad,     'EditOpenButtonLoad');
-      ThemeLoadButton(EditOpen.ButtonBack,     'EditOpenButtonBack');
-
-      //EditOpen.Description[0] := Language.Translate('SING_EDIT_OPEN_BUTTON_DESCRIPTION_LOAD');
-      //EditOpen.Description[1] := Language.Translate('SING_EDIT_OPEN_BUTTON_DESCRIPTION_BACK');
-
-      ThemeLoadText(EditOpen.TextDescription, 'EditOpenTextDescription');
-      EditOpen.TextDescription.Text := EditOpen.Description[0];
 
       // editor
       ThemeLoadBasic (EditSub,               'EditSub');
@@ -4681,8 +4598,6 @@ begin
   freeandnil(OptionsSub);
   OptionsSub := TThemeOptionsSub.Create;
 
-  freeandnil(Edit);
-  Edit := TThemeEdit.Create;
 
   freeandnil(EditSub);
   EditSub := TThemeEditSub.Create;

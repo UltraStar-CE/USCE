@@ -86,6 +86,10 @@ def audit(root, extra_themes=()):
                 line = line.strip()
                 if line.startswith('[') and line.endswith(']'):
                     section = line[1:-1]
+                # Older external themes retain unused basic-editor/MIDI-import
+                # sections. The full editor uses EditSub and remains checked.
+                if section.lower().startswith('edit') and not section.lower().startswith('editsub'):
+                    continue
                 match = re.fullmatch(r'Text\s*=\s*([A-Z][A-Z0-9_]*)', line, re.I)
                 if not match or not KEY.fullmatch(match[1]):
                     continue
