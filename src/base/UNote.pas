@@ -652,7 +652,6 @@ begin
       DelayBeats := GetBeats(CurrentSong.BPM, Ini.PlayerDelay[PlayerIndex] / 1000);
 
       PlayerOldBeat := Floor(LyricsState.OldBeatD - DelayBeats);
-      if PlayerOldBeat < 0 then PlayerOldBeat := 0;
       PlayerCurBeat := Floor(LyricsState.CurrentBeatD - DelayBeats);
 
       for ActualBeat := PlayerOldBeat+1 to PlayerCurBeat do
