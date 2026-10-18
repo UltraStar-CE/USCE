@@ -1280,7 +1280,7 @@ begin
       if (self.Path.Append(EncFile).IsFile) then
         self.Vocals := EncFile
       else
-        Log.LogSongError('Can''t find vocals file in song: ' + FullFileName);
+        Log.LogError('Can''t find vocals file in song: ' + FullFileName, 'TSong.ReadHeader');
     end;
 
     // Video Gap

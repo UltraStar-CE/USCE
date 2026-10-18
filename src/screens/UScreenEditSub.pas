@@ -617,7 +617,7 @@ const
 
 constructor TEditSubAnalysisThread.Create(AOwner: TScreenEditSub; const BuildPreview: Boolean; const Track: Integer);
 begin
-  inherited Create(false);
+  inherited Create(true);
   FreeOnTerminate := false;
   FOwner := AOwner;
   FBuildPreview := BuildPreview;
@@ -2652,7 +2652,7 @@ begin
   if SDL_ModState = KMOD_LALT + KMOD_LCTRL + KMOD_LSHIFT then
   begin
     CopyToUndo;
-    MoveAllToEnd(Floor(1+(RepeatCounter/20)));
+    MoveAllToEnd(1);
     TriggerGlobalPreviewRescore;
     Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTES_SHIFTED_RIGHT');
     GoldenRec.KillAll;
@@ -2735,7 +2735,7 @@ begin
   if SDL_ModState = KMOD_LALT + KMOD_LCTRL + KMOD_LSHIFT then
   begin
     CopyToUndo;
-    MoveAllToEnd(-Floor(1+(RepeatCounter/20)));
+    MoveAllToEnd(-1);
     TriggerGlobalPreviewRescore;
     Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTES_SHIFTED_LEFT');
     GoldenRec.KillAll;
@@ -6581,6 +6581,9 @@ var
   PitchTone: Single;
   PitchTop: real;
   PitchBottom: real;
+  Pass: Integer;
+  PreviousX, PreviousY: real;
+  Thickness, Red, Alpha: single;
 begin
   EnsureCurrentLineWaveformCache;
   if (Track < 0) or (Track > High(CurrentSong.Tracks)) then
@@ -6613,18 +6616,24 @@ begin
   if TimeEnd <= TimeStart then
     Exit;
 
-  glPushAttrib(GL_ENABLE_BIT or GL_COLOR_BUFFER_BIT or GL_LINE_BIT);
-  try
-    glDisable(GL_TEXTURE_2D);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    NoteSpace := H / 9;
-    BaseNoteY := Y + 7 * NoteSpace;
-    PitchTop := Y;
-    PitchBottom := Y + H;
-
-    glLineWidth(5.0);
-    glColor4f(0.55, 0.0, 0.0, 0.10);
+  NoteSpace := H / 9;
+  BaseNoteY := Y + 7 * NoteSpace;
+  PitchTop := Y;
+  PitchBottom := Y + H;
+  for Pass := 0 to 1 do
+  begin
+    if Pass = 0 then
+    begin
+      Thickness := 5;
+      Red := 0.55;
+      Alpha := 0.10;
+    end
+    else
+    begin
+      Thickness := 2.5;
+      Red := 1;
+      Alpha := 0.35;
+    end;
     InSegment := false;
     for PitchIndex := 0 to High(Contour) do
     begin
@@ -6632,74 +6641,22 @@ begin
       PitchTime := PitchStartSec + PitchIndex * PitchStepSec;
       if (PitchTone = VOCALS_PITCH_INVALID) or (PitchTime < TimeStart) or (PitchTime > TimeEnd) then
       begin
-        if InSegment then
-        begin
-          glEnd;
-          InSegment := false;
-        end;
+        InSegment := false;
         Continue;
       end;
-
       XPos := X + ((PitchTime - TimeStart) / (TimeEnd - TimeStart)) * W;
       PitchY := BaseNoteY - (PitchTone - CurrentSong.Tracks[Track].Lines[LineIndex].BaseNote) * NoteSpace / 2;
       if (PitchY < PitchTop) or (PitchY > PitchBottom) then
       begin
-        if InSegment then
-        begin
-          glEnd;
-          InSegment := false;
-        end;
+        InSegment := false;
         Continue;
       end;
-      if not InSegment then
-      begin
-        glBegin(GL_LINE_STRIP);
-        InSegment := true;
-      end;
-      glVertex2f(XPos, PitchY);
+      if InSegment then
+        Renderer.DrawLine(PreviousX, PreviousY, XPos, PitchY, 0, Thickness, Red, 0, 0, Alpha);
+      PreviousX := XPos;
+      PreviousY := PitchY;
+      InSegment := true;
     end;
-    if InSegment then
-      glEnd;
-
-    glLineWidth(2.5);
-    glColor4f(1.0, 0.0, 0.0, 0.35);
-    InSegment := false;
-    for PitchIndex := 0 to High(Contour) do
-    begin
-      PitchTone := Contour[PitchIndex];
-      PitchTime := PitchStartSec + PitchIndex * PitchStepSec;
-      if (PitchTone = VOCALS_PITCH_INVALID) or (PitchTime < TimeStart) or (PitchTime > TimeEnd) then
-      begin
-        if InSegment then
-        begin
-          glEnd;
-          InSegment := false;
-        end;
-        Continue;
-      end;
-
-      XPos := X + ((PitchTime - TimeStart) / (TimeEnd - TimeStart)) * W;
-      PitchY := BaseNoteY - (PitchTone - CurrentSong.Tracks[Track].Lines[LineIndex].BaseNote) * NoteSpace / 2;
-      if (PitchY < PitchTop) or (PitchY > PitchBottom) then
-      begin
-        if InSegment then
-        begin
-          glEnd;
-          InSegment := false;
-        end;
-        Continue;
-      end;
-      if not InSegment then
-      begin
-        glBegin(GL_LINE_STRIP);
-        InSegment := true;
-      end;
-      glVertex2f(XPos, PitchY);
-    end;
-    if InSegment then
-      glEnd;
-  finally
-    glPopAttrib;
   end;
 end;
 
