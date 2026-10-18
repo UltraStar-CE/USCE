@@ -694,7 +694,7 @@ begin
     FitLayoutChild(X, Y, W, H,
       Statics[PlayerCurrent[Player]].Texture.X, Statics[PlayerCurrent[Player]].Texture.Y,
       Statics[PlayerCurrent[Player]].Texture.W, Statics[PlayerCurrent[Player]].Texture.H,
-      Statics[PlayerCurrent[Player]].Texture.ScaleMode);
+      Statics[PlayerCurrent[Player]].Texture.ScaleMode, 0.5);
     ScaleMode := lsStretch;
   end;
 end;

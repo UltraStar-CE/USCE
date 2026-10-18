@@ -77,7 +77,7 @@ function GetUniformScale: single;
 procedure ResolveLayoutRect(var X, Y, W, H: single; ScaleMode: TLayoutScaleMode); overload;
 procedure ResolveLayoutRect(var X, Y, W, H: real; ScaleMode: TLayoutScaleMode); overload;
 
-procedure FitLayoutChild(var X, Y, W, H: single; ParentX, ParentY, ParentW, ParentH: single; Mode: TLayoutScaleMode);
+procedure FitLayoutChild(var X, Y, W, H: single; ParentX, ParentY, ParentW, ParentH: single; Mode: TLayoutScaleMode; Overlap: single);
 
 implementation
 
@@ -241,7 +241,7 @@ begin
   H := SingleH;
 end;
 
-procedure FitLayoutChild(var X, Y, W, H: single; ParentX, ParentY, ParentW, ParentH: single; Mode: TLayoutScaleMode);
+procedure FitLayoutChild(var X, Y, W, H: single; ParentX, ParentY, ParentW, ParentH: single; Mode: TLayoutScaleMode; Overlap: single);
 var
   FitX, FitY, FitW, FitH, RightEdge, BottomEdge: single;
 begin
@@ -256,10 +256,10 @@ begin
   // Cover the inner frame boundary on the physical pixel grid so fractional
   // scaling cannot expose a transparent seam. Include half a physical pixel
   // of overlap for bilinear sampling at the inner frame edge.
-  RightEdge := Ceil((X + W) * GetLayoutScaleX + 0.5) / GetLayoutScaleX;
-  BottomEdge := Ceil((Y + H) * GetLayoutScaleY + 0.5) / GetLayoutScaleY;
-  X := Floor(X * GetLayoutScaleX - 0.5) / GetLayoutScaleX;
-  Y := Floor(Y * GetLayoutScaleY - 0.5) / GetLayoutScaleY;
+  RightEdge := Ceil((X + W) * GetLayoutScaleX + Overlap) / GetLayoutScaleX;
+  BottomEdge := Ceil((Y + H) * GetLayoutScaleY + Overlap) / GetLayoutScaleY;
+  X := Floor(X * GetLayoutScaleX - Overlap) / GetLayoutScaleX;
+  Y := Floor(Y * GetLayoutScaleY - Overlap) / GetLayoutScaleY;
   W := RightEdge - X; H := BottomEdge - Y;
 end;
 

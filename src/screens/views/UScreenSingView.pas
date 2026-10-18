@@ -261,7 +261,7 @@ begin
   begin
     FitLayoutChild(X, Y, W, H,
       SingPlayer.AvatarFrame.X, SingPlayer.AvatarFrame.Y,
-      SingPlayer.AvatarFrame.W, SingPlayer.AvatarFrame.H, SingPlayer.AvatarFrame.ScaleMode);
+      SingPlayer.AvatarFrame.W, SingPlayer.AvatarFrame.H, SingPlayer.AvatarFrame.ScaleMode, 0);
     ScaleMode := lsStretch;
   end;
 
