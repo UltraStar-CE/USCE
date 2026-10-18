@@ -1944,10 +1944,13 @@ begin
     begin
       LayoutScreenW := ThemeIni.ReadInteger('Theme', 'ScreenW', 0);
       LayoutScreenH := ThemeIni.ReadInteger('Theme', 'ScreenH', 0);
-      if (LayoutScreenW <= 0) and (BaseThemeIni <> nil) then
-        LayoutScreenW := BaseThemeIni.ReadInteger('Theme', 'ScreenW', 0);
-      if (LayoutScreenH <= 0) and (BaseThemeIni <> nil) then
-        LayoutScreenH := BaseThemeIni.ReadInteger('Theme', 'ScreenH', 0);
+      for I := Low(BaseThemeInis) to High(BaseThemeInis) do
+      begin
+        if LayoutScreenW <= 0 then
+          LayoutScreenW := BaseThemeInis[I].ReadInteger('Theme', 'ScreenW', 0);
+        if LayoutScreenH <= 0 then
+          LayoutScreenH := BaseThemeInis[I].ReadInteger('Theme', 'ScreenH', 0);
+      end;
       if LayoutScreenW <= 0 then
         LayoutScreenW := 800;
       if LayoutScreenH <= 0 then

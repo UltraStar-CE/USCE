@@ -55,6 +55,10 @@ type
   end;
 
   TSkin = class
+  private
+    LoadedSkinPaths: array of IPath;
+    RequestedSkinName: string;
+  public
     Skin:        array of TSkinEntry;
     SkinTexture: array of TSkinTexture;
     SkinPath:    IPath;
@@ -68,6 +72,7 @@ type
     procedure LoadHeader(FileName: IPath);
     procedure LoadSkin(Name, Theme: string);
     function GetTextureFileName(TextureName: string): IPath;
+    function GetSkinFile(const RelativeFileName: IPath): IPath;
     function GetSkinNumber(Name, Theme: string): integer;
     function GetDefaultColor(SkinNo: integer): integer;
 
@@ -194,6 +199,8 @@ var
 begin
   if UseAsBasePath then
     SkinPath := SkinEntry.Path;
+  SetLength(LoadedSkinPaths, Length(LoadedSkinPaths) + 1);
+  LoadedSkinPaths[High(LoadedSkinPaths)] := SkinEntry.Path;
 
   SkinIni := TMemIniFile.Create(SkinEntry.Path.Append(SkinEntry.FileName).ToNative);
   SL := TStringList.Create;
@@ -226,17 +233,24 @@ begin
     end;
   end;
 
-  if (ThemeIndex >= 0) and (UThemes.Theme.Themes[ThemeIndex].DefaultSkin >= 0) and
-     (UThemes.Theme.Themes[ThemeIndex].DefaultSkin < Length(ISkin)) then
+  if ThemeIndex >= 0 then
   begin
     LoadDefaultSkinForTheme(UThemes.Theme.Themes[ThemeIndex].BaseTheme, Depth + 1);
 
     GetSkinsByTheme(ThemeName, ThemeSkins);
-    if UThemes.Theme.Themes[ThemeIndex].DefaultSkin < Length(ThemeSkins) then
+    if (UThemes.Theme.Themes[ThemeIndex].DefaultSkin >= 0) and
+       (UThemes.Theme.Themes[ThemeIndex].DefaultSkin < Length(ThemeSkins)) then
     begin
       DefaultSkinIndex := GetSkinNumber(ThemeSkins[UThemes.Theme.Themes[ThemeIndex].DefaultSkin], ThemeName);
       LoadSkinTextures(Skin[DefaultSkinIndex], Length(SkinTexture) = 0);
     end;
+    for I := Low(Skin) to High(Skin) do
+      if SameText(Skin[I].Theme, ThemeName) and
+         SameText(Skin[I].Name, RequestedSkinName) then
+      begin
+        LoadSkinTextures(Skin[I], false);
+        Break;
+      end;
   end;
 end;
 
@@ -246,6 +260,8 @@ var
 begin
   SelectedSkinIndex := GetSkinNumber(Name, Theme);
   SetLength(SkinTexture, 0);
+  SetLength(LoadedSkinPaths, 0);
+  RequestedSkinName := Name;
 
   LoadDefaultSkinForTheme(Theme, 0);
 
@@ -275,6 +291,22 @@ begin
     //Log.LogError('', '-----------------------------------------');
     //Log.LogError('Was not able to retrieve Texture for ' + TextureName + ' - ' + Result.ToNative, 'TSkin.GetTextureFileName');
   end;
+end;
+
+function TSkin.GetSkinFile(const RelativeFileName: IPath): IPath;
+var
+  I: integer;
+begin
+  Result := PATH_NONE;
+  if (RelativeFileName = nil) or RelativeFileName.IsUnset then
+    Exit;
+  for I := High(LoadedSkinPaths) downto Low(LoadedSkinPaths) do
+  begin
+    Result := LoadedSkinPaths[I].Append(RelativeFileName);
+    if Result.IsFile then
+      Exit;
+  end;
+  Result := PATH_NONE;
 end;
 
 function TSkin.GetSkinNumber(Name, Theme: string): integer;
