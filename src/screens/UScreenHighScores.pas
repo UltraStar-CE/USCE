@@ -82,7 +82,7 @@ type
       IsFadingOut:    boolean;
 
       constructor Create; override;
-      function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean): boolean; override;
+      function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
       procedure OnShow; override;
       procedure ShowScoresForDifficulty(difficulty: integer);
@@ -305,7 +305,7 @@ begin
   Text[TextWhereAmI].Text := FormatEntryCountText(Theme.HighScores.TextWhereAmI.Text);
 end;
 
-function TScreenHighScores.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean): boolean;
+function TScreenHighScores.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
 begin
   Result := true;
   if PressedDown then
