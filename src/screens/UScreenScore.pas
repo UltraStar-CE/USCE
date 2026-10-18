@@ -309,6 +309,7 @@ begin
       ScreenScore.Statics[StaticIndex].Texture.H := CurrentTexture.H;
       ScreenScore.Statics[StaticIndex].Texture.Z := CurrentTexture.Z;
       ScreenScore.Statics[StaticIndex].Texture.Alpha := CurrentTexture.Alpha;
+      ScreenScore.Statics[StaticIndex].Texture.ScaleMode := CurrentTexture.ScaleMode;
       CurrentTexture.Free;
     end
     else
