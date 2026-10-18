@@ -416,7 +416,7 @@ end;
 procedure TScreenHighScores.OnShow;
 begin
   inherited;
-  AudioPlayback.SetVolume(IPreviewVolumeVals[Ini.PreviewVolume]);
+  AudioPlayback.SetVolume(EnsureRange(Ini.PreviewVolume, 0, 100) / 100);
 
   if not Help.SetHelpID(HighScoresHelpID) then
     Log.LogWarn('No Entry for Help-ID ' + HighScoresHelpID, 'ScreenHighScores');
