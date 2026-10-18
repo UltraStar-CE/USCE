@@ -743,8 +743,7 @@ begin
       ScreenSing.SungToEnd := true;
   end;
 
-  if not ScreenSing.SungToEnd and CurrentSong.isDuet and
-      not ScreenSong.RapToFreestyle then
+  if not ScreenSing.SungToEnd and CurrentSong.isDuet then
   begin
     LastLineSungToEnd := true;
     for VoiceIndex := 0 to High(ScreenSing.VoiceLyrics) do

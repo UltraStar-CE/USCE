@@ -1855,6 +1855,14 @@ begin
   // TopScores
   TopScores := ReadArrayIndex(ITopScores, IniFile, 'Advanced', 'TopScores', IGNORE_INDEX, 'Player');
 
+  // Last list length selected on the high-score screen
+  HighScoreScreenEntries := IniFile.ReadInteger(
+    'Advanced', 'HighScoreScreenEntries', DEFAULT_HIGH_SCORE_SCREEN_ENTRIES);
+  if (HighScoreScreenEntries < MIN_HIGH_SCORE_SCREEN_ENTRIES) then
+    HighScoreScreenEntries := MIN_HIGH_SCORE_SCREEN_ENTRIES
+  else if (HighScoreScreenEntries > MAX_HIGH_SCORE_SCREEN_ENTRIES) then
+    HighScoreScreenEntries := MAX_HIGH_SCORE_SCREEN_ENTRIES;
+
   for NoteType := Low(TNoteType) to High(TNoteType) do
     ScoreFactor[NoteType] := EnsureRange(
       IniFile.ReadInteger('Scoring', ScoreFactorName[NoteType],
@@ -2088,6 +2096,9 @@ begin
 
     //TopScores
     IniFile.WriteString('Advanced', 'TopScores', ITopScores[TopScores]);
+
+    // Last list length selected on the high-score screen
+    IniFile.WriteInteger('Advanced', 'HighScoreScreenEntries', HighScoreScreenEntries);
 
     for NoteType := Low(TNoteType) to High(TNoteType) do
       IniFile.WriteInteger('Scoring', ScoreFactorName[NoteType],
