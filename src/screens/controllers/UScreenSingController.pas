@@ -159,6 +159,7 @@ type
     Tex_BackgroundAspectRatio: single;
     // controls both background image and video
     BackgroundAspectCorrection: TAspectCorrection;
+    PictureAspectCorrection: TAspectCorrection;
     FadeOut: boolean;
 
     procedure ClearSettings;
@@ -486,10 +487,13 @@ begin
         end
         else
         begin
-          BackgroundAspectCorrection := TAspectCorrection((Ord(BackgroundAspectCorrection)+1) mod (Ord(High(TAspectCorrection))+1));
-          if (Assigned(fCurrentVideo)) then
+          if fShowBackground then
+            PictureAspectCorrection := TAspectCorrection((Ord(PictureAspectCorrection)+1) mod (Ord(High(TAspectCorrection))+1))
+          else
           begin
-            fCurrentVideo.SetAspectCorrection(BackgroundAspectCorrection);
+            BackgroundAspectCorrection := TAspectCorrection((Ord(BackgroundAspectCorrection)+1) mod (Ord(High(TAspectCorrection))+1));
+            if Assigned(fCurrentVideo) then
+              fCurrentVideo.SetAspectCorrection(BackgroundAspectCorrection);
           end;
         end;
       end;
@@ -670,8 +674,9 @@ begin
   ScreenSing := self;
   screenSingViewRef := TScreenSingView.Create();
   CheckPlayerConfigOnNextSong := true;
-  // for now: default to letterbox but preserve aspect between songs
+  // Preserve video framing; still images fill the stage without distortion.
   BackgroundAspectCorrection := acoLetterBox;
+  PictureAspectCorrection := acoCrop;
 
   ClearSettings;
 end;

@@ -689,6 +689,11 @@ begin
     static.H,
     PATH_NONE
   );
+  if Result >= 0 then
+  begin
+    Statics[Result].Texture.Z := static.Z;
+    Statics[Result].Texture.ScaleMode := static.ScaleMode;
+  end;
 end;
 
 function TMenu.AddStaticAlphaRectangle(static: TThemeStaticAlphaRectangle): integer;
@@ -711,6 +716,8 @@ begin
     // Reflection, reflection spacing
     false, 0
   );
+  if Result >= 0 then
+    Statics[Result].Texture.ScaleMode := static.ScaleMode;
 end;
 
 function TMenu.AddStaticColorRectangle(static: TThemeStaticColorRectangle): integer;
