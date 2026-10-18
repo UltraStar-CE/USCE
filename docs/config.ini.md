@@ -310,3 +310,26 @@ singing settings; `[Playback1]` holds continuous settings. Both contain `Repeat`
 Display values follow the order shown in Configuration. Missing settings retain
 the full display, manual results for ordinary singing and skipped results for
 continuous playback.
+
+`[Game] StatisticsView=Reduced` selects compact statistics; `Full` includes
+averages, recent activity and performance facts. Also available in Options → Game.
+
+## Remote bridge
+
+File section: `[RemoteBridge]`. This optional connection supports external
+controllers, remote singers and other integrations through a local adapter.
+It starts only when `Enabled=On`.
+
+| Option | Values and default | What it does |
+| --- | --- | --- |
+| `Enabled` | `Off`, `On`; `Off` | Enables the local adapter connection and configured bridge process. |
+| `IpcHost` | Host address; `127.0.0.1` | Address of the local adapter. |
+| `IpcPort` | TCP port; `8765` | Adapter connection port. |
+| `ServerUrl` | WebSocket URL; `wss://usdx.at/ws/host` | Relay URL passed to the bundled adapter. |
+| `NodeExecutable` | Executable path; automatic lookup | Node.js executable used to launch the adapter. |
+| `BridgeScriptPath` | Script path; bundled `webs/usdx-bridge.mjs` | Adapter script to launch. |
+| `StartCommand` | Command; empty | Replaces the generated adapter command when set. |
+| `WebApp` | Client flavor; empty | Selects the adapter client flavor. |
+
+The [bridge protocol reference](usce-game-bridge-ipc.md) describes messages and examples.
+
