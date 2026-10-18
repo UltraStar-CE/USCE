@@ -1326,7 +1326,7 @@ begin
 
   Result := Theme.Themes[ThemeIndex].FileName.SetExtension('');
   if not Result.IsDirectory then
-    Result := ThemePath.Append(Theme.Themes[ThemeIndex].Name);
+    Result := Theme.Themes[ThemeIndex].FileName.GetPath.Append(Theme.Themes[ThemeIndex].Name);
 
   if not Result.IsDirectory then
     Result := PATH_NONE;
