@@ -749,7 +749,7 @@ begin
 
   LastLineSungToEnd := false;
   //the song was sung to the end?
-  if not (ScreenSing.SungToEnd) and not(CurrentSong.isDuet) then
+  if not ScreenSing.SungToEnd and ((not CurrentSong.isDuet) or (PlayersPlay = 1)) then
   begin
     Line := ScreenSing.Lyrics.GetUpperLine();
     if Line.LastLine then
@@ -766,8 +766,7 @@ begin
       ScreenSing.SungToEnd := true;
   end;
 
-  if not ScreenSing.SungToEnd and CurrentSong.isDuet and (PlayersPlay <> 1) and
-      not ScreenSong.RapToFreestyle then
+  if not ScreenSing.SungToEnd and CurrentSong.isDuet and (PlayersPlay <> 1) then
   begin
     Line := ScreenSing.LyricsDuetP1.GetUpperLine();
     LineDuet := ScreenSing.LyricsDuetP2.GetUpperLine();
