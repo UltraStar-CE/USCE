@@ -252,7 +252,7 @@ begin
   Line := BoldOverviewText(Language.Translate('STAT_OVERVIEW_LIBRARY')) + ': ' +
       FormatOverviewText('STAT_OVERVIEW_LIBRARY_TOTAL',
       [LibraryOverview.SongCount, LibraryOverview.ArtistCount]);
-  if (SongsWithoutVideo > 0) then
+  if (Ini.StatisticsView = 1) and (SongsWithoutVideo > 0) then
     Line := Line + ' - ' + FormatOverviewText('STAT_OVERVIEW_LIBRARY_VIDEO',
         [LibraryOverview.SongsWithVideo, SongsWithoutVideo]);
   AppendOverviewLine(Overview, Line);
@@ -280,7 +280,8 @@ begin
         [FormatAverage(ScoreOverview.ScoreCount, ScoreOverview.SingerCount),
         FormatAverage(ScoreOverview.ScoreCount, ScoreOverview.ScoredSongCount)]);
     AppendOverviewLine(Overview, Activity);
-    AppendOverviewLine(Overview, FormatOverviewText('STAT_OVERVIEW_COVERAGE',
+    if Ini.StatisticsView = 1 then
+      AppendOverviewLine(Overview, FormatOverviewText('STAT_OVERVIEW_COVERAGE',
         [FormatPercent(Database.GetLibraryScoredSongCount(StatSinceDate), LibraryOverview.SongCount)]) +
         ' - ' + FormatOverviewText('STAT_OVERVIEW_AVERAGE_SCORE',
         [ScoreOverview.AverageScore]));
@@ -554,13 +555,14 @@ begin
   ScoreOverview := LoadScoreOverview(StatSinceDate);
   AppendOverallScoreOverview(Overview, ScoreOverview, LibraryOverview);
 
-  if StatSinceDate = 0 then
+  if (Ini.StatisticsView = 1) and (StatSinceDate = 0) then
   begin
     RecentScoreOverview := LoadRecentScoreOverview(RecentPeriod);
     AppendRecentScoreOverview(Overview, ScoreOverview, RecentScoreOverview,
         RecentPeriod);
   end;
-  AppendFunFacts(Overview);
+  if Ini.StatisticsView = 1 then
+    AppendFunFacts(Overview);
 
   Text[TextOverview].Text := Overview;
 end;
