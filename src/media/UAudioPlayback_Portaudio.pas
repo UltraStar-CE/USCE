@@ -103,7 +103,11 @@ var
 begin
   Result := false;
 
+  if deviceIndex = paNoDevice then
+    Exit;
   DeviceInfo := Pa_GetDeviceInfo(deviceIndex);
+  if (DeviceInfo = nil) or (DeviceInfo^.maxOutputChannels < 2) then
+    Exit;
 
   Log.LogInfo('Audio-Output Device: ' + DeviceInfo^.name, 'TAudioPlayback_Portaudio.OpenDevice');
 
@@ -330,6 +334,8 @@ begin
   paApiInfo := Pa_GetHostApiInfo(paApiIndex);
   Log.LogInfo('Audio-Output API-Type: ' + paApiInfo^.name, 'TAudioPlayback_Portaudio.OpenDevice');
 
+  if paApiInfo = nil then
+    Exit;
   paOutDevice := paApiInfo^.defaultOutputDevice;
   if (not OpenDevice(paOutDevice)) then
   begin
@@ -362,10 +368,10 @@ procedure TAudioPlayback_Portaudio.StopAudioPlaybackEngine();
 begin
   if (paStream <> nil) then
   begin
+    // Abort is synchronous: callbacks have stopped when it returns. Never
+    // query the handle after Pa_CloseStream has released it.
+    Pa_AbortStream(paStream);
     Pa_CloseStream(paStream);
-    // wait until stream is closed, otherwise Terminate() might cause a segfault
-    while (Pa_IsStreamActive(paStream) = 1) do
-      ;
     paStream := nil;
   end;
 end;
