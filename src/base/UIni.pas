@@ -143,6 +143,7 @@ type
       // Game
       Players:        integer;
       Difficulty:     integer;
+      AgeCountry: UTF8String;
       Language:       integer;
       SongMenu:       integer;
       Tabs:           integer;
@@ -622,7 +623,8 @@ uses
   USkins,
   UThemes,
   UPathUtils,
-  UUnicodeUtils;
+  UUnicodeUtils,
+  UAge;
 
 type
   TSafeIniFile = class(TIniFile)
@@ -1779,6 +1781,7 @@ begin
   // Debug
   RecentNames := LoadRecentNames(IniFile);
   RecentTeamNames := LoadRecentNames(IniFile, 'RecentTeamNames');
+  AgeCountry := UpperCase(Trim(IniFile.ReadString('Game', 'AgeCountry', SystemAgeRegion)));
   Debug := ReadArrayIndex(IDebug, IniFile, 'Game', 'Debug', 0);
 
   LoadScreenModes(IniFile);
@@ -2094,6 +2097,7 @@ begin
     IniFile.WriteString('Game', 'ShowScores', IShowScores[ShowScores]);
 
     // Debug
+    IniFile.WriteString('Game', 'AgeCountry', AgeCountry);
     IniFile.WriteString('Game', 'Debug', IDebug[Debug]);
 
     IniFile.WriteInteger('Game', 'AVDelay', AVDelay);
