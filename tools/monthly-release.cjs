@@ -43,7 +43,15 @@ async function prepareMonthly({github, context, core, now = new Date()}) {
   if (!plan) { core.notice('No monthly release preparation is due.'); return; }
   plan.comparisons = {upstream: await chooseComparisonRelease({version: plan.version,
     initial: !releaseBaseline(releases, plan.version).label.startsWith('USCE '), upstream: plan.upstream,
-    resolveTag: async ref => (await github.rest.repos.getCommit({owner:'UltraStar-Deluxe',repo:'USDX',ref})).data.sha})};
+    resolveTag: async ref => {
+      const release = (await github.rest.repos.getReleaseByTag({owner:'UltraStar-Deluxe',repo:'USDX',tag:ref})).data;
+      if (release.draft || release.prerelease) {
+        const error = Error('The corresponding USDX release is not published as stable');
+        error.status = 404;
+        throw error;
+      }
+      return (await github.rest.repos.getCommit({owner:'UltraStar-Deluxe',repo:'USDX',ref})).data.sha;
+    }})};
   if (!/^[a-f0-9]{40}$/.test(plan.comparisons.upstream.sha)) throw Error('Unexpected USDX comparison revision');
   const themes = (await github.rest.repos.getCommit({owner: 'UltraStar-CE', repo: 'Themes', ref: 'main'})).data;
   plan.themes = validateThemePin({repository: 'UltraStar-CE/Themes', sha: themes.sha});
