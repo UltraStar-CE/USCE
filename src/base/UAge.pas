@@ -4,6 +4,9 @@ unit UAge;
 
 interface
 
+// AGE grammar: comma-separated positive integers (1..999), optionally prefixed
+// by a country/authority of at least two letters: 12, DE:16, US:13. Regional
+// entries override the unprefixed default; malformed/duplicate entries are unrated.
 function AgeForRegion(const Header, Region: string): integer;
 function SystemAgeRegion: string;
 
