@@ -675,7 +675,8 @@ end;
 
 function TEditSubPreviewSourceStream.IsEOF(): boolean;
 begin
-  Result := (not FLoop) and (FPositionBytes >= FOwner.GetVocalsPreviewByteSize);
+  Result := (not FLoop) and (FOwner.FPreviewBuildComplete or FOwner.FAnalysisFailed) and
+      (FPositionBytes >= FOwner.GetVocalsPreviewByteSize);
 end;
 
 function TEditSubPreviewSourceStream.IsError(): boolean;
@@ -5569,6 +5570,11 @@ begin
 
   if not BuildPreview then
   begin
+    if FAnalysisThreadRunning then
+    begin
+      FPreviewRescorePending := true;
+      Exit;
+    end;
     FAnalysisThreadBuildPreview := false;
     FAnalysisThreadTrack := Track;
     FAnalysisCancelRequested := false;
@@ -5597,6 +5603,7 @@ begin
   end;
   FAnalysisThreadRunning := true;
   FAnalysisThread := TEditSubAnalysisThread.Create(Self, BuildPreview, Track);
+  FAnalysisThread.Start;
 end;
 
 procedure TScreenEditSub.StopAnalysisThread;
@@ -8215,7 +8222,7 @@ begin
   SyncVolumeSlidersFromIni;
   PlayPendingNoteClick;
 
-  if FPreviewRescorePending and HasVocalsPreviewPlayback then
+  if FPreviewRescorePending and HasVocalsPreviewPlayback and not FAnalysisThreadRunning then
   begin
     FPreviewRescorePending := false;
     InvalidateVocalsAnalysis(true);
