@@ -758,7 +758,7 @@ begin
       for T := 0 to High(Line.Words) do
       begin
         if (CurLyricsTime < GetTimeFromBeat(Line.Words[T].Start + Line.Words[T].Length)) and
-           (not Line.Words[T].Freestyle) then
+           ((not Line.Words[T].Freestyle) or (ScoreFactor[ntFreestyle] > 0)) then
           LastLineSungToEnd := false;
       end;
     end;
