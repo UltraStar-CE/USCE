@@ -12,6 +12,61 @@ function releaseBaseline(releases, version) {
   return previous ? {ref: previous.tag_name, label: 'USCE ' + previous.tag_name.replace(/^v/, '')}
     : {ref: '8b5324f321d54491badadf5f95b4678a0bcf4633', label: 'USDX 2026.9.0'};
 }
+function releaseComparisons(releases, version, upstream) {
+  const baseline = releaseBaseline(releases, version);
+  const previous = baseline.label.startsWith('USCE ') ? baseline : null;
+  if (!previous && version === '2026.10.0') {
+    return {previous, upstream: {ref: '8b5324f321d54491badadf5f95b4678a0bcf4633', label: 'USDX 2026.9.0'}};
+  }
+  if (!upstream || !/^v[0-9]{4}\.(?:[1-9]|1[0-2])\.[0-9]+$/.test(upstream.tag) ||
+      !/^[a-f0-9]{40}$/.test(upstream.sha)) throw Error('A pinned USDX release is required for release-note comparisons');
+  return {previous, upstream: {ref: upstream.sha, label: 'USDX ' + upstream.tag.slice(1)}};
+}
+function gitChanges(ref, sha, repositoryUrl) {
+  const range = ref + '..' + sha;
+  const commits = execFileSync('git', ['log', '--first-parent', '--format=%H%x09%s', range], {encoding: 'utf8'});
+  const notes = commits.trim().split('\n').filter(Boolean).map(line => {
+    const [hash, ...subject] = line.split('\t');
+    const title = subject.join('\t').replace(/https?:\/\/github\.com\/[^\s)]+/g, '[source reference omitted]')
+      .replace(/#/g, ' PR ').replace(/@([A-Za-z0-9_-]+)/g, '$1').replace(/[\[\]]/g, '');
+    return '- ' + title + ' ([`' + hash.slice(0, 7) + '`](' + repositoryUrl + '/commit/' + hash + '))';
+  }).join('\n');
+  const count = Number(execFileSync('git', ['rev-list', '--count', range], {encoding: 'utf8'}).trim());
+  const stats = execFileSync('git', ['diff', '--numstat', ref, sha, '--'], {encoding: 'utf8'}).trim();
+  let added = 0, deleted = 0, files = 0;
+  for (const line of stats.split('\n').filter(Boolean)) {
+    const fields = line.split('\t'); files++;
+    if (/^[0-9]+$/.test(fields[0])) added += Number(fields[0]);
+    if (/^[0-9]+$/.test(fields[1])) deleted += Number(fields[1]);
+  }
+  return {notes, count, files, added, deleted};
+}
+function comparisonGraphic(version, baseline, changes) {
+  const escape = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
+  const detail = baseline ? `${changes.count} commits · ${changes.files} files · text lines +${changes.added} / −${changes.deleted}` : 'No previous USCE release';
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="260" viewBox="0 0 1200 260">' +
+    '<rect width="1200" height="260" rx="16" fill="#101d2b"/>' +
+    '<g font-family="DejaVu Sans, sans-serif" fill="#e8f2fa">' +
+    '<text x="40" y="65" font-size="26">' + escape(baseline?.label || 'First USCE release') + '</text>' +
+    '<path d="M42 105H1150m-18-10 18 10-18 10" fill="none" stroke="#57dafa" stroke-width="3"/>' +
+    '<text x="40" y="165" font-size="38">USCE ' + escape(version) + '</text>' +
+    '<text x="40" y="218" font-size="23" fill="#bad3e9">' + escape(detail) + '</text></g></svg>\n';
+}
+function releaseNoteFiles({releases, version, upstream, sha, repositoryUrl, readChanges = gitChanges}) {
+  if (!versionPattern.test(version) || !/^[a-f0-9]{40}$/.test(sha)) throw Error('Invalid release-note revision');
+  const comparisons = releaseComparisons(releases, version, upstream);
+  const images = [];
+  const section = (kind, baseline, heading) => {
+    const changes = baseline ? readChanges(baseline.ref, sha, repositoryUrl) : null;
+    const path = 'docs/images/release-' + version + '-' + kind + '.svg';
+    images.push({path, content: comparisonGraphic(version, baseline, changes)});
+    return '## ' + heading + '\n\n![' + heading + '](' + repositoryUrl.replace('github.com/', 'raw.githubusercontent.com/') +
+      '/main/' + path + ')\n\n' + (changes?.notes || '') + '\n';
+  };
+  const notes = section('usce', comparisons.previous, comparisons.previous ? 'Changes since ' + comparisons.previous.label : 'Changes since the previous USCE release') +
+    '\n' + section('upstream', comparisons.upstream, 'Changes compared with ' + comparisons.upstream.label);
+  return {notes, images};
+}
 async function planRelease({github, context, core}) {
   const plan = JSON.parse(fs.readFileSync('release-plan.json', 'utf8'));
   if (plan.ready !== true) { core.notice('A reviewed release preparation PR is needed first.'); return; }
@@ -44,24 +99,29 @@ async function publishDraft({github, context, core}, version) {
   let release = releases.find(r => r.tag_name === tag);
   if (release && (!release.draft || release.target_commitish !== context.sha || !release.body?.includes(marker))) throw Error('Refusing to replace an existing release');
   if (!release) {
-    let notes = '';
-    const baseline = releaseBaseline(releases, version);
     const repositoryUrl = 'https://github.com/' + context.repo.owner + '/' + context.repo.repo;
-    const changes = execFileSync('git', ['log', '--first-parent', '--format=%H%x09%s', baseline.ref + '..' + context.sha], {encoding: 'utf8'});
-    notes = changes.trim().split('\n').filter(Boolean).map(line => {
-      const [sha, ...subject] = line.split('\t');
-      // Imported PR numbers must not resolve to unrelated local PRs or ping upstream.
-      const title = subject.join('\t').replace(/https?:\/\/github\.com\/[^\s)]+/g, '[source reference omitted]')
-        .replace(/#/g, ' PR ').replace(/[\[\]]/g, '');
-      return '- ' + title + ' ([`' + sha.slice(0, 7) + '`](' + repositoryUrl + '/commit/' + sha + '))';
-    }).join('\n');
     const notesPath = 'doc/releases/' + version + '.md';
     const curated = fs.existsSync(notesPath) ? fs.readFileSync(notesPath, 'utf8').trim() : '';
     if (fs.existsSync(notesPath) && !curated) throw Error('Release notes are empty');
+    const plan = JSON.parse(fs.readFileSync('release-plan.json', 'utf8'));
+    let notes = curated;
+    if (!notes) {
+      const generated = releaseNoteFiles({releases, version, upstream: plan.comparisons?.upstream || plan.upstream,
+        sha: context.sha, repositoryUrl});
+      for (const image of generated.images) {
+        if (!fs.existsSync(image.path)) throw Error('Missing release comparison graphic: ' + image.path);
+      }
+      notes = generated.notes;
+    }
+    const sections = notes.split(/^## /m).slice(1);
+    if (sections.length !== 2 || !/^Changes since /.test(sections[0]) ||
+        !/^Changes compared with USDX /.test(sections[1]) || sections.some(section => !/!\[[^\]]*\]\([^)]+\)/.test(section))) {
+      throw Error('Release notes require USCE and USDX comparison sections, each with a graphic');
+    }
     const themes = readThemePin();
     release = (await github.rest.repos.createRelease({...context.repo, tag_name: tag, target_commitish: context.sha,
       name: 'USCE ' + version, draft: true, prerelease: false,
-      body: marker + '\n\n' + (curated || 'Changes compared with **' + baseline.label + '**.\n\n## Changes\n\n' + notes.trim()) +
+      body: marker + '\n\n' + notes +
         '\n\n<details>\n<summary>Build information</summary>\n\nSource revision: `' + context.sha +
         '`.\nThemes revision: `' + themes.sha + '`.\n\n</details>\n'})).data;
   }
@@ -79,4 +139,4 @@ async function publishDraft({github, context, core}, version) {
   }
   core.notice('Draft release ready for human testing: ' + release.html_url);
 }
-module.exports = {planRelease, publishDraft, releaseBaseline};
+module.exports = {planRelease, publishDraft, releaseBaseline, releaseComparisons, releaseNoteFiles, comparisonGraphic};
