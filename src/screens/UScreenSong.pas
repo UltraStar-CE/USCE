@@ -3042,13 +3042,8 @@ begin
   fCurrentVideo := nil;
   PreviewEndReloaded := false;
   LastPlaylistReloadTime := SDL_GetTicks;
-  if KeepPreview then
-  begin
-    // A playing preview keeps its stream and position. Ended previews use the
-    // normal fresh-preview path rather than seeking an exhausted decoder.
-
-    StartVideoPreview();
-  end;
+  // Keep a playing audio stream, but let the preview scheduler start video
+  // after the screen transition. Ended audio uses the fresh-preview path.
 
   // reset Medley-Playlist
   SetLength(PlaylistMedley.Song, 0);
@@ -3325,7 +3320,8 @@ begin
 
     FixSelected;
     SetScrollRefresh;
-    LastScrollStopTime := SDL_GetTicks;
+    PreviewInteraction := -1;
+    SchedulePreview(true);
   end;
 
   Result := true;
