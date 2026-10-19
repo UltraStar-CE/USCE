@@ -172,6 +172,8 @@ uses
   USong             in 'base\USong.pas',
   USongs            in 'base\USongs.pas',
   UAge              in 'base\UAge.pas',
+  ULibraryLockdown   in 'base\ULibraryLockdown.pas',
+  ULockdownUI        in 'screens\ULockdownUI.pas',
   UIni              in 'base\UIni.pas',
   URecentNames      in 'base\URecentNames.pas',
   UImage            in 'base\UImage.pas',

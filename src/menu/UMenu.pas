@@ -263,6 +263,8 @@ implementation
 
 uses
   UCommon,
+  ULibraryLockdown,
+  ULockdownUI,
   UDisplay,
   UGraphic,
   ULanguage,
@@ -1530,6 +1532,11 @@ end;
 
 procedure TMenu.FadeTo(Screen: PMenu);
 begin
+  if LibraryLockdown.Active and ((Screen = nil) or
+    (Screen = @ScreenEditSub) or
+    (((Screen = @ScreenOptions) or (Screen^ is TOptionsMenu)) and
+      not ((Self = ScreenOptions) or (Self is TOptionsMenu)))) then
+    if not RequestLockdownAccess(Screen) then Exit;
   Display.Fade := 0;
   Display.NextScreen := Screen;
 end;

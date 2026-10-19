@@ -103,7 +103,9 @@ uses
   ULuaParty,
   ULuaScreenSing,
   UTime,
-  UWebcam;
+  UWebcam,
+  ULibraryLockdown,
+  ULockdownUI;
   //UVideoAcinerella;
 
 // starts singing the song given with the -song parameter
@@ -408,6 +410,7 @@ end;
 
 procedure DoQuit;
 begin
+  if LibraryLockdown.Active and not RequestLockdownAccess(nil) then Exit;
   // if question option is enabled then show exit popup
   if (Ini.AskbeforeDel = 1) then
   begin
@@ -441,9 +444,7 @@ begin
     case Event.type_ of
       SDL_QUITEV:
       begin
-        Display.Fade := 0;
-        Display.NextScreenWithCheck := nil;
-        Display.CheckOK := true;
+        DoQuit;
       end;
 
       SDL_MOUSEMOTION, SDL_MOUSEBUTTONDOWN, SDL_MOUSEBUTTONUP, SDL_MOUSEWHEEL:
