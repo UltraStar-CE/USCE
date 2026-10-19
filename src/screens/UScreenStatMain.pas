@@ -74,6 +74,8 @@ type
           const ScoreOverview: TStatMainScoreOverview; const EmptyTextID: RawByteString;
           IncludeAverage: boolean = true);
       procedure AppendFunFacts(var Overview: UTF8String);
+      function BoldOverviewText(const Text: UTF8String): UTF8String;
+      function FormatAverage(Numerator, Denominator: cardinal): UTF8String;
       function FormatOverviewDate(Date: TDateTime): UTF8String;
       function FormatOverviewText(const TextID: RawByteString; const Args: array of const): UTF8String;
       function FormatPercent(Numerator, Denominator: cardinal): UTF8String;
@@ -232,7 +234,7 @@ end;
 
 procedure TScreenStatMain.AppendOverviewSection(var Overview: UTF8String; const Header: RawByteString);
 begin
-  AppendOverviewSectionText(Overview, Language.Translate(Header));
+  AppendOverviewSectionText(Overview, BoldOverviewText(Language.Translate(Header)));
 end;
 
 procedure TScreenStatMain.AppendOverviewSectionText(var Overview: UTF8String; const Header: UTF8String);
@@ -247,7 +249,7 @@ procedure TScreenStatMain.AppendLibraryOverview(var Overview: UTF8String;
 var
   Line: UTF8String;
 begin
-  Line := Language.Translate('STAT_OVERVIEW_LIBRARY') + ': ' +
+  Line := BoldOverviewText(Language.Translate('STAT_OVERVIEW_LIBRARY')) + ': ' +
       FormatOverviewText('STAT_OVERVIEW_LIBRARY_TOTAL',
       [LibraryOverview.SongCount, LibraryOverview.ArtistCount]);
   if (SongsWithoutVideo > 0) then
@@ -260,20 +262,24 @@ procedure TScreenStatMain.AppendOverallScoreOverview(var Overview: UTF8String;
     const ScoreOverview: TStatMainScoreOverview;
     const LibraryOverview: TStatMainLibraryOverview);
 var
-  Header: UTF8String;
+  Header, Activity: UTF8String;
 begin
   Header := Language.Translate('STAT_OVERVIEW_SCORES');
   if StatSinceDate = 0 then
     Header := Header + ' (' + FormatOverviewDate(Database.GetStatReset()) + ')'
   else
     Header := Language.Translate('STAT_OVERVIEW_PERIOD_SCORES');
-  AppendOverviewSectionText(Overview, Header);
+  AppendOverviewSectionText(Overview, BoldOverviewText(Header));
 
   if (ScoreOverview.ScoreCount > 0) then
   begin
-    AppendOverviewLine(Overview, FormatOverviewText('STAT_OVERVIEW_SCORE_ACTIVITY',
-        [ScoreOverview.ScoreCount, ScoreOverview.SingerCount,
-        ScoreOverview.ScoredSongCount]));
+    Activity := FormatOverviewText('STAT_OVERVIEW_SCORE_ACTIVITY',
+        [ScoreOverview.ScoreCount, ScoreOverview.SingerCount, ScoreOverview.ScoredSongCount]);
+    if Ini.StatisticsView = 1 then
+      Activity := Activity + ', ' + FormatOverviewText('STAT_OVERVIEW_SCORE_DENSITY',
+        [FormatAverage(ScoreOverview.ScoreCount, ScoreOverview.SingerCount),
+        FormatAverage(ScoreOverview.ScoreCount, ScoreOverview.ScoredSongCount)]);
+    AppendOverviewLine(Overview, Activity);
     AppendOverviewLine(Overview, FormatOverviewText('STAT_OVERVIEW_COVERAGE',
         [FormatPercent(Database.GetLibraryScoredSongCount(StatSinceDate), LibraryOverview.SongCount)]) +
         ' - ' + FormatOverviewText('STAT_OVERVIEW_AVERAGE_SCORE',
@@ -347,43 +353,43 @@ begin
       case Fact.FunFactType of
         sffArtistRegular:
           FactText := FormatOverviewText('STAT_OVERVIEW_FUN_ARTIST_REGULAR',
-              [Fact.Artist, Fact.Player,
-              IntToStr(Fact.Count)]);
+              [BoldOverviewText(Fact.Artist), BoldOverviewText(Fact.Player),
+              BoldOverviewText(IntToStr(Fact.Count))]);
         sffSongRegular:
           FactText := FormatOverviewText('STAT_OVERVIEW_FUN_SONG_REGULAR',
-              [SongText, Fact.Player,
-              IntToStr(Fact.Count)]);
+              [BoldOverviewText(SongText), BoldOverviewText(Fact.Player),
+              BoldOverviewText(IntToStr(Fact.Count))]);
         sffOnlySinger:
           FactText := FormatOverviewText('STAT_OVERVIEW_FUN_ONLY_SINGER',
-              [Fact.Player, SongText,
-              IntToStr(Fact.Count)]);
+              [BoldOverviewText(Fact.Player), BoldOverviewText(SongText),
+              BoldOverviewText(IntToStr(Fact.Count))]);
         sffTiedRivals:
           FactText := FormatOverviewText('STAT_OVERVIEW_FUN_TIED_RIVALS',
-              [Fact.Player, Fact.OtherPlayer,
-              SongText, IntToStr(Fact.Score)]);
+              [BoldOverviewText(Fact.Player), BoldOverviewText(Fact.OtherPlayer),
+              BoldOverviewText(SongText), BoldOverviewText(IntToStr(Fact.Score))]);
         sffHiddenGem:
           FactText := FormatOverviewText('STAT_OVERVIEW_FUN_HIDDEN_GEM',
-              [SongText, IntToStr(Fact.Count),
-              IntToStr(Fact.Score)]);
+              [BoldOverviewText(SongText), BoldOverviewText(IntToStr(Fact.Count)),
+              BoldOverviewText(IntToStr(Fact.Score))]);
         sffUnderdogFavorite:
           FactText := FormatOverviewText('STAT_OVERVIEW_FUN_UNDERDOG_FAVORITE',
-              [Fact.Player, SongText,
-              IntToStr(Fact.Score), IntToStr(Fact.Delta)]);
+              [BoldOverviewText(Fact.Player), BoldOverviewText(SongText),
+              BoldOverviewText(IntToStr(Fact.Score)), BoldOverviewText(IntToStr(Fact.Delta))]);
         sffNarrowLead:
           FactText := FormatOverviewText('STAT_OVERVIEW_FUN_NARROW_LEAD',
-              [Fact.Player, Fact.OtherPlayer,
-              SongText, IntToStr(Fact.Delta)]);
+              [BoldOverviewText(Fact.Player), BoldOverviewText(Fact.OtherPlayer),
+              BoldOverviewText(SongText), BoldOverviewText(IntToStr(Fact.Delta))]);
         sffCloseChase:
           FactText := FormatOverviewText('STAT_OVERVIEW_FUN_CLOSE_CHASE',
-              [Fact.Player, Fact.OtherPlayer,
-              SongText, IntToStr(Fact.Delta)]);
+              [BoldOverviewText(Fact.Player), BoldOverviewText(Fact.OtherPlayer),
+              BoldOverviewText(SongText), BoldOverviewText(IntToStr(Fact.Delta))]);
         sffComeback:
           FactText := FormatOverviewText('STAT_OVERVIEW_FUN_COMEBACK',
-              [Fact.Player, SongText,
-              IntToStr(Fact.Delta)]);
+              [BoldOverviewText(Fact.Player), BoldOverviewText(SongText),
+              BoldOverviewText(IntToStr(Fact.Delta))]);
         sffSharedFavorite:
           FactText := FormatOverviewText('STAT_OVERVIEW_FUN_SHARED_FAVORITE',
-              [SongText, IntToStr(Fact.Count)]);
+              [BoldOverviewText(SongText), BoldOverviewText(IntToStr(Fact.Count))]);
       end;
 
       AppendOverviewLine(Overview, FactText);
@@ -391,6 +397,22 @@ begin
   finally
     Database.FreeFunFacts(FunFacts);
   end;
+end;
+
+function TScreenStatMain.BoldOverviewText(const Text: UTF8String): UTF8String;
+begin
+  if (Ini.StatisticsView <> 1) or (Text = '') then
+    Result := Text
+  else
+    Result := '**' + Text + '**';
+end;
+
+function TScreenStatMain.FormatAverage(Numerator, Denominator: cardinal): UTF8String;
+begin
+  if (Denominator = 0) then
+    Result := '0.0'
+  else
+    Result := FloatToStrF(Numerator / Denominator, ffFixed, 8, 1);
 end;
 
 function TScreenStatMain.FormatOverviewDate(Date: TDateTime): UTF8String;
@@ -528,7 +550,7 @@ begin
       integer(LibraryOverview.SongsWithVideo);
   AppendLibraryOverview(Overview, LibraryOverview, SongsWithoutVideo);
 
-  AppendOverviewSectionText(Overview, StatPeriodText);
+  AppendOverviewSectionText(Overview, BoldOverviewText(StatPeriodText));
   ScoreOverview := LoadScoreOverview(StatSinceDate);
   AppendOverallScoreOverview(Overview, ScoreOverview, LibraryOverview);
 

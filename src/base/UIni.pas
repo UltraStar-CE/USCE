@@ -147,6 +147,7 @@ type
       TabsAtStartup:  integer; // Tabs at Startup fix
       Sorting:        integer;
       ShowScores:     integer;
+      StatisticsView: integer;
       ShowWebScore:   integer;
       Debug:          integer;
       AVDelay:        integer;
@@ -364,6 +365,7 @@ type
   TSortingType = (sEdition, sGenre, sLanguage, sFolder, sTitle, sArtist, sArtist2, sYear, sYearReversed, sDecade);
 
 const
+  IStatisticsView:   array[0..1] of UTF8String = ('Reduced', 'Full');
   IShowScores:       array[0..2] of UTF8String  = ('Off', 'When exists', 'On');
 
   IDebug:            array[0..1] of UTF8String  = ('Off', 'On');
@@ -1731,6 +1733,7 @@ begin
   Sorting := ReadArrayIndex(ISorting, IniFile, 'Game', 'Sorting', Ord(sArtist));
 
   // Show Score
+  StatisticsView := ReadArrayIndex(IStatisticsView, IniFile, 'Game', 'StatisticsView', 0);
   ShowScores := ReadArrayIndex(IShowScores, IniFile, 'Game', 'ShowScores', IGNORE_INDEX, 'On');
 
   AVDelay := IniFile.ReadInteger('Game', 'AVDelay', 0);
@@ -2070,6 +2073,7 @@ begin
     IniFile.WriteString('Game', 'Sorting', ISorting[Sorting]);
 
     // Show Scores
+    IniFile.WriteString('Game', 'StatisticsView', IStatisticsView[StatisticsView]);
     IniFile.WriteString('Game', 'ShowScores', IShowScores[ShowScores]);
 
     // Debug
