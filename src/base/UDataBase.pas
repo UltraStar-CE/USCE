@@ -206,6 +206,7 @@ type
       function GetAverageScore(SinceDate: TDateTime = 0): integer;
       function GetScoreCount(SinceDate: TDateTime = 0): cardinal;
       function GetScoredSongCount(SinceDate: TDateTime = 0): cardinal;
+      function GetLibraryScoredSongCount(SinceDate: TDateTime = 0): cardinal;
       function GetSingerCount(SinceDate: TDateTime = 0): cardinal;
       function GetFunFacts(Count: integer; SinceDate: TDateTime = 0): TList;
       procedure FreeFunFacts(FunFacts: TList);
@@ -1700,6 +1701,49 @@ begin
   Result := GetScoreStatValue(ssmScoreCount, SinceDate);
 end;
 
+function TDataBaseSystem.GetLibraryScoredSongCount(SinceDate: TDateTime): cardinal;
+var
+  TableData: TSQLiteUniTable;
+  ScoredSongs: TStringList;
+  SongIndex: integer;
+  Song: TSong;
+  Key: UTF8String;
+begin
+  Result := 0;
+  if not Assigned(ScoreDB) then
+    Exit;
+  ScoredSongs := TStringList.Create;
+  try
+    ScoredSongs.Sorted := true;
+    ScoredSongs.CaseSensitive := true;
+    ScoredSongs.Duplicates := dupIgnore;
+    TableData := ScoreDB.GetUniTable('SELECT DISTINCT s.[Artist], s.[Title] FROM [' +
+        cUS_Songs + '] s INNER JOIN ' + StatScoreSource(SinceDate) +
+        ' sc ON sc.[SongID] = s.[ID]');
+    try
+      while not TableData.EOF do
+      begin
+        ScoredSongs.Add(IntToStr(Length(TableData.Fields[0])) + ':' +
+            TableData.Fields[0] + TableData.Fields[1]);
+        TableData.Next;
+      end;
+    finally
+      TableData.Free;
+    end;
+    for SongIndex := 0 to Songs.SongList.Count - 1 do
+    begin
+      Song := TSong(Songs.SongList[SongIndex]);
+      Key := IntToStr(Length(Song.Artist)) + ':' + Song.Artist + Song.Title;
+      if ScoredSongs.IndexOf(Key) >= 0 then
+        Inc(Result);
+    end;
+  except
+    on E: Exception do
+      Log.LogError(E.Message, 'TDataBaseSystem.GetLibraryScoredSongCount');
+  end;
+  ScoredSongs.Free;
+end;
+
 function TDataBaseSystem.GetScoredSongCount(SinceDate: TDateTime): cardinal;
 begin
   Result := GetScoreStatValue(ssmScoredSongCount, SinceDate);
@@ -1976,10 +2020,14 @@ var
     TableData: TSQLiteUniTable;
   begin
     TableData := OpenQuery(
-        'SELECT sc.[Player], s.[Artist], s.[Title], MAX(sc.[Score]) - MIN(sc.[Score]) AS [Delta] ' +
-        'FROM ' + StatScoreSource(SinceDate) + ' sc INNER JOIN [' + cUS_Songs + '] s ON sc.[SongID] = s.[ID] ' +
-        'WHERE sc.[Player] <> '''' GROUP BY sc.[SongID], sc.[Player], s.[Artist], s.[Title] ' +
-        'HAVING COUNT(*) >= 2 AND MAX(sc.[Score]) - MIN(sc.[Score]) >= 1000 ' +
+        'SELECT later.[Player], s.[Artist], s.[Title], MAX(later.[Score] - earlier.[Score]) AS [Delta] ' +
+        'FROM ' + StatScoreSource(SinceDate) + ' later INNER JOIN ' + StatScoreSource(SinceDate) +
+        ' earlier ON later.[SongID] = earlier.[SongID] AND later.[Player] = earlier.[Player] ' +
+        'AND later.[Difficulty] = earlier.[Difficulty] AND later.[Date] > earlier.[Date] ' +
+        'INNER JOIN [' + cUS_Songs + '] s ON later.[SongID] = s.[ID] ' +
+        'WHERE later.[Player] <> '''' AND earlier.[Date] > 0 ' +
+        'GROUP BY later.[SongID], later.[Player], s.[Artist], s.[Title] ' +
+        'HAVING MAX(later.[Score] - earlier.[Score]) >= 1000 ' +
         'ORDER BY [Delta] DESC, RANDOM() LIMIT ' + IntToStr(CANDIDATES_PER_TYPE) + ';',
         'TDataBaseSystem.GetFunFacts.Comeback');
     if (TableData = nil) then

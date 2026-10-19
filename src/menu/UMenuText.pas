@@ -74,6 +74,7 @@ type
       Font:    integer;
       Style:   integer;
       Visible: boolean;
+      InlineMarkup: boolean; // opt in for generated rich text, never song/player metadata
       Align:   integer; // 0 = left, 1 = center, 2 = right
 
       // reflection
@@ -299,6 +300,18 @@ var
   DecFontSize: boolean = true; // how to handle strings that are too long to fit a given height, either decrease font size or cut off with ellipsis
   MaxSize:     single;
 
+  function TileWidth(const Value: UTF8String; TextSize: single; InitialBold: boolean): real;
+  begin
+    if InlineMarkup then
+      Result := InlineTextWidth(Value, Style, TextSize, InitialBold)
+    else
+    begin
+      SetFontStyle(Style);
+      SetFontSize(TextSize);
+      Result := TextWidth(Value);
+    end;
+  end;
+
   function BuildTiles(TextSize: single; StoreTiles: boolean): word;
   var
     NextPos:     cardinal;  // next pos of a space etc.
@@ -353,7 +366,7 @@ var
           SetLength(TextTiles, Len);
           SetLength(TextTileBoldStart, Len);
           TextTiles[Len-1] := Trim(Copy(Value, From, bTo - From));
-          TextTileBoldStart[Len-1] := InlineBoldStateAt(Value, From);
+          TextTileBoldStart[Len-1] := InlineMarkup and InlineBoldStateAt(Value, From);
         end;
 
         if isBreak then
@@ -409,8 +422,8 @@ var
       if isBreak then
       begin
         // look for break before the break
-        if (InlineTextWidth(Copy(Value, LastBreak, NextPos - LastBreak + 1),
-            Style, TextSize, InlineBoldStateAt(Value, LastBreak)) > W) and
+        if (TileWidth(Copy(Value, LastBreak, NextPos - LastBreak + 1),
+            TextSize, InlineBoldStateAt(Value, LastBreak)) > W) and
             (NextPos - LastPos > 1) then
         begin
           isBreak := false;
@@ -425,8 +438,8 @@ var
         AddBreak(LastBreak, NextPos);
       end
       // text comes out of the text area -> create break
-      else if (InlineTextWidth(Copy(Value, LastBreak, NextPos - LastBreak + 1),
-          Style, TextSize, InlineBoldStateAt(Value, LastBreak)) > W) then
+      else if (TileWidth(Copy(Value, LastBreak, NextPos - LastBreak + 1),
+          TextSize, InlineBoldStateAt(Value, LastBreak)) > W) then
       begin
         // not the first word after break, so we don't have to break within a word
         if (FirstWord > 1) then
@@ -617,7 +630,7 @@ begin
             Text2 := TextTiles[I];
         end;
 
-        if TextTileBoldStart[I] or (Pos('**', tmpText2) > 0) then
+        if InlineMarkup and (TextTileBoldStart[I] or (Pos('**', tmpText2) > 0)) then
         begin
           case Align of
             1: X2 := X + MoveX - InlineTextWidth(tmpText2, Style, Size, TextTileBoldStart[I])/2; { centered }
@@ -689,6 +702,7 @@ begin
   Font := ParFont;
   Style := ParStyle;
   Size := ParSize;
+  InlineMarkup := false;
   Text := ParText;
   ColR := ParColR;
   ColG := ParColG;
