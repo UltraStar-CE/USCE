@@ -626,6 +626,8 @@ begin
   Party.Clear;
 
   UpdateInterface;
+  SetTextInput((Interaction >= 0) and (Interaction <= High(Interactions)) and
+      (Interactions[Interaction].Typ = iButton));
 end;
 
 function TScreenPartyPlayer.NoRepeatColors(ColorP:integer; Interaction:integer; Pos:integer):integer;
