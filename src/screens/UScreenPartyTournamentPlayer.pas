@@ -48,6 +48,7 @@ type
     private
       SelectPlayers: cardinal;
 
+      FRestoreNames: boolean;
       procedure UpdateInterface;
       procedure UpdatePartyTournament;
     public
@@ -257,6 +258,7 @@ begin
           Ini.RememberUsedNames([Button[NameIndex].Text[0].Text]);
         Ini.SaveNames;
         UpdatePartyTournament;
+        FRestoreNames := true;
         FadeTo(@ScreenPartyTournamentOptions, SoundLib.Start);
       end;
     // Up and Down could be done at the same time,
@@ -350,16 +352,22 @@ begin
 
   PartyTournament.Clear;
 
-  Interaction := 0;
-  SetTextInput(false);
-  // Translate untouched legacy defaults, while retaining actual player names.
-  for I := 0 to 15 do
-    if (Ini.Name[I] = 'Player' + IntToStr(I + 1)) or
-      (Ini.Name[I] = 'Player ' + IntToStr(I + 1)) then
-      Button[I].Text[0].Text := IPlayerTranslated[I]
-    else Button[I].Text[0].Text := Ini.Name[I];
+  if not FRestoreNames then
+  begin
+    Interaction := 0;
+    // Translate untouched legacy defaults, while retaining actual player names.
+    for I := 0 to 15 do
+      if (Ini.Name[I] = 'Player' + IntToStr(I + 1)) or
+        (Ini.Name[I] = 'Player ' + IntToStr(I + 1)) then
+        Button[I].Text[0].Text := IPlayerTranslated[I]
+      else Button[I].Text[0].Text := Ini.Name[I];
+
+  end;
+  FRestoreNames := false;
 
   UpdateInterface;
+  SetTextInput((Interaction >= 0) and (Interaction <= High(Interactions)) and
+      (Interactions[Interaction].Typ = iButton));
 
 end;
 
