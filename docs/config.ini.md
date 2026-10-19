@@ -271,8 +271,7 @@ compensate for later microphone input by scoring it against earlier song beats.
 The correction follows the player slot, so keep microphone assignments consistent.
 
 These values supplement the global microphone delay. Start with small adjustments
-and compare timing during a familiar song. Changes are reloaded at lyric-line
-boundaries. They do not change audio playback or the displayed lyric timing.
+and compare timing during a familiar song. Changes take effect when the next song starts. They do not change audio playback or the displayed lyric timing.
 
 ## Piano key bindings
 

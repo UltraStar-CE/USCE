@@ -185,7 +185,7 @@ type
     procedure Finish; virtual;
     procedure Pause; // toggle pause
     procedure UpdateMedleyStats(medley_end: boolean);
-    procedure OnSentenceEnd(Track: integer; SentenceIndex: cardinal);     // for linebonus + singbar
+    procedure OnSentenceEnd(Track: integer; SentenceIndex: cardinal; OnlyPlayer: integer = -1);     // for linebonus + singbar
     procedure OnSentenceChange(Track: integer; SentenceIndex: cardinal);  // for golden notes
     property CountIn: boolean read fCountIn write fCountIn;
     property FirstNote: real read fFirstNote;
@@ -1253,6 +1253,7 @@ begin
   end;
 
   // prepare lyrics timer
+  Ini.ReloadDelays;
   LyricsState.Reset();
 
   if ScreenSong.Mode = smMedley then
@@ -1573,7 +1574,7 @@ begin
 
 end;
 
-procedure TScreenSingController.OnSentenceEnd(Track: integer; SentenceIndex: cardinal); //ToDo: split and redo
+procedure TScreenSingController.OnSentenceEnd(Track: integer; SentenceIndex: cardinal; OnlyPlayer: integer); //ToDo: split and redo
 var
   PlayerIndex: byte;
   CurrentPlayer: PPLayer;
@@ -1603,7 +1604,8 @@ begin
 
   for PlayerIndex := 0 to High(Player) do
   begin
-    if (not CurrentSong.isDuet) or (PlayerIndex mod 2 = Track) or (PlayersPlay = 1)then
+    if ((OnlyPlayer < 0) or (OnlyPlayer = PlayerIndex)) and
+       ((not CurrentSong.isDuet) or (PlayerIndex mod 2 = Track) or (PlayersPlay = 1)) then
     begin
       CurrentPlayer := @Player[PlayerIndex];
       CurrentScore  := CurrentPlayer.Score + CurrentPlayer.ScoreGolden;
