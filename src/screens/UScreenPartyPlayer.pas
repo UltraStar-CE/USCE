@@ -312,6 +312,8 @@ begin
 
   if (Party.ModesAvailable) then
   begin //mode for current playersetup available
+      SaveCurrentSetup;
+      Ini.SaveNames;
     FadeTo(@ScreenPartyRounds, SoundLib.Start);
   end
   else
