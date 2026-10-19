@@ -279,4 +279,4 @@ averages, recent activity and performance facts. Also available in Options → G
 
 `[Game] AgeCountry=DE` selects Germany for AGE searches. An empty value uses
 the unprefixed local/default entry. Choose it in Options → Game; the initial
-default comes from the OS country/region, not timezone. See [AGE filtering](age-filtering.md).
+default comes from the OS country/region, not timezone.
