@@ -226,6 +226,13 @@ begin
 
   if (Party.ModesAvailable) then
   begin //mode for current playersetup available
+    for I := CountTeams + 1 downto 0 do
+    begin
+      for J := CountPlayer[I] downto 0 do
+        Ini.RememberUsedNames([Button[I * 5 + 1 + J].Text[0].Text]);
+      Ini.RememberUsedNames([Button[I * 5].Text[0].Text]);
+    end;
+    Ini.SaveNames;
     FadeTo(@ScreenPartyRounds, SoundLib.Start);
   end
   else
@@ -291,6 +298,8 @@ function TScreenPartyPlayer.ParseInput(PressedKey: cardinal; CharCode: UCS4Char;
   end;
 begin
   Result := true;
+  if not PressedDown then Exit;
+  if HandleNameSuggestionKey(PressedKey) then Exit;
 
   if (PressedDown) then
     SDL_ModState := SDL_GetModState and (KMOD_LSHIFT + KMOD_RSHIFT
@@ -308,6 +317,7 @@ begin
     begin
       Button[Interactions[Interaction].Num].Text[0].Text := Button[Interactions[Interaction].Num].Text[0].Text +
                                           UCS4ToUTF8String(CharCode);
+      Button[Interactions[Interaction].Num].Text[0].SuggestRecentName;
       Exit;
     end;
 
@@ -319,6 +329,7 @@ begin
       SDLK_BACKSPACE:
         begin
           Button[Interactions[Interaction].Num].Text[0].DeleteLastLetter;
+          Button[Interactions[Interaction].Num].Text[0].SuggestRecentName;
         end;
     end;
   end

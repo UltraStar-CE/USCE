@@ -1,0 +1,47 @@
+program RecentNamesTest;
+{$mode delphi}
+{$codepage utf8}
+uses SysUtils, IniFiles, URecentNames;
+var Names, Loaded: TRecentNames; Ini: TMemIniFile; I: integer;
+
+procedure Expect(Value: boolean; const Message: string);
+begin
+  if not Value then raise Exception.Create(Message);
+end;
+
+begin
+  RememberRecentName(Names, 'Daniel');
+  RememberRecentName(Names, 'Dani');
+  Expect(PredictRecentName(Names, 'Da') = 'Dani', 'MRU order ignored');
+  RememberRecentName(Names, 'Daniel');
+  Expect(PredictRecentName(Names, 'da') = 'Daniel', 'Reusing a name did not promote it');
+  Expect(Length(Names) = 2, 'Reusing a name duplicated it');
+  RememberRecentName(Names, 'DANIEL');
+  Expect((Length(Names) = 2) and (Names[0] = 'DANIEL'), 'Case-insensitive deduplication failed');
+  Expect(PredictRecentName(Names, '') = '', 'Untyped field predicted a name');
+  Expect(PredictRecentName(Names, 'x') = '', 'Nonmatching prefix predicted a name');
+  RememberRecentName(Names, 'Adam');
+  RememberRecentName(Names, 'Ada');
+  Expect(PredictRecentName(Names, 'Ada') = '', 'Exact match skipped in favor of older longer name');
+  RememberRecentName(Names, 'Änne');
+  Expect(PredictRecentName(Names, 'än') = 'Änne', 'Unicode prefix comparison failed');
+  RememberRecentName(Names, '');
+  RememberRecentName(Names, 'broken' + #10 + 'name');
+  Expect(Names[0] = 'Änne', 'Empty or multiline value changed history');
+  Ini := TMemIniFile.Create('');
+  try
+    SaveRecentNames(Ini, Names);
+    Loaded := LoadRecentNames(Ini);
+    Expect(Length(Loaded) = Length(Names), 'History count did not round-trip');
+    for I := 0 to High(Names) do Expect(Loaded[I] = Names[I], 'History order/text did not round-trip');
+    for I := 1 to MaxRecentNames + 5 do RememberRecentName(Names, 'Name' + IntToStr(I));
+    Expect(Length(Names) = MaxRecentNames, 'History limit failed');
+    Expect(Names[0] = 'Name' + IntToStr(MaxRecentNames + 5), 'Most recent name lost at limit');
+    Ini.WriteInteger('RecentNames', 'Count', -1);
+    Loaded := LoadRecentNames(Ini);
+    Expect(Length(Loaded) = 0, 'Negative count loaded entries');
+  finally
+    Ini.Free;
+  end;
+  WriteLn('PASS: MRU promotion, prefix matching, Unicode, deduplication and persistence');
+end.

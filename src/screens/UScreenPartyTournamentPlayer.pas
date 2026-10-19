@@ -162,6 +162,7 @@ var
   SDL_ModState:  word;
   isAlternate: boolean;
   TemplateIndex: integer;
+  NameIndex: integer;
   procedure IntNext;
   begin
     repeat
@@ -182,6 +183,8 @@ var
   end;
 begin
   Result := true;
+  if not PressedDown then Exit;
+  if HandleNameSuggestionKey(PressedKey) then Exit;
 
   if (PressedDown) then
     SDL_ModState := SDL_GetModState and (KMOD_LSHIFT + KMOD_RSHIFT
@@ -199,6 +202,7 @@ begin
     begin
       Button[Interactions[Interaction].Num].Text[0].Text := Button[Interactions[Interaction].Num].Text[0].Text +
                                           UCS4ToUTF8String(CharCode);
+      Button[Interactions[Interaction].Num].Text[0].SuggestRecentName;
       Exit;
     end;
 
@@ -219,6 +223,7 @@ begin
       SDLK_BACKSPACE:
         begin
           Button[Interactions[Interaction].Num].Text[0].DeleteLastLetter;
+          Button[Interactions[Interaction].Num].Text[0].SuggestRecentName;
         end;
     end;
   end
@@ -249,6 +254,9 @@ begin
 
     SDLK_RETURN:
       begin
+        for NameIndex := CountPlayer + 1 downto 0 do
+          Ini.RememberUsedNames([Button[NameIndex].Text[0].Text]);
+        Ini.SaveNames;
         UpdatePartyTournament;
         FadeTo(@ScreenPartyTournamentOptions, SoundLib.Start);
       end;

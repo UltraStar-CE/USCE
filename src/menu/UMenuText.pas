@@ -45,6 +45,7 @@ type
     private
       SelectBool:  boolean;
       TextString:  UTF8String;
+      NamePrediction: UTF8String;
       TextTiles:   array of UTF8String;
 
       STicks:      cardinal;
@@ -75,7 +76,11 @@ type
       Reflection:        boolean;
       ReflectionSpacing: single;
 
+      NameSuggestionWidth: single;
       Writable: boolean;
+      procedure SuggestRecentName;
+      function AcceptNameSuggestion: boolean;
+      function CancelNameSuggestion: boolean;
 
       procedure SetSelect(Value: boolean);
       property Selected: boolean read SelectBool write SetSelect;
@@ -99,13 +104,42 @@ implementation
 
 uses
   UGraphic,
+  UIni,
+  UThemes,
+  URecentNames,
   UDisplay,
   UUnicodeStringHelper,
   UUnicodeUtils,
   StrUtils;
 
+procedure TText.SuggestRecentName;
+begin
+  NamePrediction := '';
+  if Assigned(Ini) and (Theme.NameSuggestionAlpha > 0) then
+    NamePrediction := PredictRecentName(Ini.RecentNames, Text);
+end;
+
+function TText.AcceptNameSuggestion: boolean;
+var Value: UTF8String;
+begin
+  Result := NamePrediction <> '';
+  if Result then
+  begin
+    Value := NamePrediction;
+    NamePrediction := '';
+    Text := Value;
+  end;
+end;
+
+function TText.CancelNameSuggestion: boolean;
+begin
+  Result := NamePrediction <> '';
+  NamePrediction := '';
+end;
+
 procedure TText.SetSelect(Value: boolean);
 begin
+  if SelectBool and not Value then AcceptNameSuggestion;
   SelectBool := Value;
 
   // set cursor visible
@@ -177,6 +211,7 @@ var
 begin
   isBreak := false;
   // set TextString
+  NamePrediction := '';
   TextString := Value;
 
   // set cursor visible
@@ -294,6 +329,9 @@ var
   tmpText2, Text2:  UTF8String;
   I:      integer;
   Ticks:  cardinal;
+  Suffix: UTF8String;
+  WideSuffix: UnicodeString;
+  PrefixWidth: single;
 begin
   if Visible then
   begin
@@ -340,6 +378,46 @@ begin
     end
     else
     begin}
+    if (NamePrediction <> '') and SelectBool then
+    begin
+      if Length(TextTiles) <> 1 then NamePrediction := ''
+      else
+      begin
+        WideSuffix := Copy(UTF8Decode(NamePrediction), Length(UTF8Decode(Text)) + 1, MaxInt);
+        Suffix := UTF8Encode(WideSuffix);
+        while (NameSuggestionWidth > 0) and (Suffix <> '') and
+          (TextWidth(Text + Suffix) > NameSuggestionWidth) do
+        begin
+          SetLength(WideSuffix, Length(WideSuffix) - 1);
+          if (Length(WideSuffix) > 0) and (Ord(WideSuffix[Length(WideSuffix)]) >= $D800) and (Ord(WideSuffix[Length(WideSuffix)]) <= $DBFF) then
+            SetLength(WideSuffix, Length(WideSuffix) - 1);
+          Suffix := UTF8Encode(WideSuffix);
+        end;
+        if Suffix = '' then NamePrediction := '';
+        PrefixWidth := TextWidth(Text);
+        case Align of
+          1: X2 := X + MoveX - TextWidth(Text + Suffix) / 2;
+          2: X2 := X + MoveX - TextWidth(Text + Suffix);
+          else X2 := X + MoveX;
+        end;
+        SetFontPos(X2, Y + MoveY);
+        SetFontZ(Z);
+        PrintText(Text);
+        SetFontColor(ColR*Int, ColG*Int, ColB*Int, Alpha * Theme.NameSuggestionAlpha);
+        SetFontPos(X2 + PrefixWidth, Y + MoveY);
+        PrintText(Suffix);
+        SetFontColor(ColR*Int, ColG*Int, ColB*Int, Alpha);
+        if Writable and SelectBlink then
+        begin
+          SetFontPos(X2 + PrefixWidth, Y + MoveY);
+          PrintText('|');
+        end;
+        SetFontFamily(0);
+        SetFontStyle(ftRegular);
+        Exit;
+      end;
+    end;
+
     // now use always:
     // draw text as many strings
       Y2 := Y + MoveY;
