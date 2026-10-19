@@ -431,6 +431,8 @@ var
     Text[TextID].Y := HeaderY;
     Text[TextID].Visible := Layout.Width > 0;
     SetListCellText(Text[TextID], Layout, Language.Translate(HeaderText));
+    if (StatSinceDate > 0) and (HeaderText = 'STAT_DETAIL_HEADER_SUNG') then
+      SetListCellText(Text[TextID], Layout, Language.Translate('STAT_DETAIL_HEADER_SCORES'));
     for Row := 0 to High(TextList) do
     begin
       TextID := TextList[Row, Column];

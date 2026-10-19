@@ -180,6 +180,7 @@ begin
   inherited Create;
 
   TextOverview := AddText(Theme.StatMain.TextOverview);
+  Text[TextOverview].InlineMarkup := true;
 
   LoadFromTheme(Theme.StatMain);
 
@@ -274,7 +275,7 @@ begin
         [ScoreOverview.ScoreCount, ScoreOverview.SingerCount,
         ScoreOverview.ScoredSongCount]));
     AppendOverviewLine(Overview, FormatOverviewText('STAT_OVERVIEW_COVERAGE',
-        [FormatPercent(ScoreOverview.ScoredSongCount, LibraryOverview.SongCount)]) +
+        [FormatPercent(Database.GetLibraryScoredSongCount(StatSinceDate), LibraryOverview.SongCount)]) +
         ' - ' + FormatOverviewText('STAT_OVERVIEW_AVERAGE_SCORE',
         [ScoreOverview.AverageScore]));
   end
