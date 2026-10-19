@@ -1109,6 +1109,7 @@ type
     Themes:           array of TThemeEntry;
     Loading:          TThemeLoading;
     Main:             TThemeMain;
+    // [NameSuggestions] Alpha: suffix opacity, 0..1; default 0.5, zero disables suggestions.
     NameSuggestionAlpha: real;
     Name:             TThemeName;
     Song:             TThemeSong;
