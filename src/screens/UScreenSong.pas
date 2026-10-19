@@ -434,7 +434,7 @@ end;
 
 function TScreenSong.IsLoopModeActive: boolean;
 begin
-  Result := LoopModeEnabled and FreeListMode and (Mode <> smJukebox);
+  Result := LoopModeEnabled and (FreeListMode or (Mode = smPartyClassic)) and (Mode <> smJukebox);
 end;
 
 function TScreenSong.IsLoopOrderEnabled: boolean;
@@ -550,7 +550,7 @@ begin
 
   LoopPaused := false;
   ChangeMusic;
-  AudioPlayback.Position := 0;
+  AudioPlayback.Position := CatSongs.Song[Interaction].Start;
   if Assigned(fCurrentVideo) then
     fCurrentVideo.Position := CatSongs.Song[Interaction].VideoGAP + AudioPlayback.Position;
   ResetLoopLyricsForCurrentSong;
@@ -558,6 +558,8 @@ end;
 
 procedure TScreenSong.ToggleLoopMode;
 begin
+  if IsLoopModeActive and LoopPaused then
+    ToggleLoopPause;
   LoopModeEnabled := not LoopModeEnabled;
   LoopPaused := false;
 
@@ -744,7 +746,6 @@ end;
 
 procedure TScreenSong.DrawLoopFullscreenCoverFallback;
 var
-  Song: TSong;
   FullscreenCover: TTexture;
 begin
   if not (IsLoopModeActive and CoverFull and (not Assigned(fCurrentVideo))) then
@@ -752,9 +753,6 @@ begin
   if (CatSongs.VisibleSongs <= 0) or CatSongs.Song[Interaction].Main then
     Exit;
 
-  Song := CatSongs.Song[Interaction];
-  if Song.Video.IsSet or Song.Background.IsSet then
-    Exit;
   if (Interaction < 0) or (Interaction > High(Button)) or Button[Interaction].Texture.IsEmpty then
     Exit;
 
