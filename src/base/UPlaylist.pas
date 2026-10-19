@@ -921,6 +921,7 @@ begin
   end;
 
   Playlists[P].Items[Integer(iNewItem)] := Item;
+  Playlists[P].FixedOrder := true;
 
   SavePlayList(P);
 

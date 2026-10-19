@@ -35,6 +35,7 @@ type
   end;
 
 function RemoteBridgeProcess(): TRemoteBridgeProcess;
+function DefaultRemoteBridgeScriptPath: string;
 
 implementation
 
@@ -43,7 +44,8 @@ uses
   Process,
   ssockets,
   SysUtils,
-  UIni
+  UIni,
+  UPlatform
   {$IFDEF UNIX}, BaseUnix{$ENDIF};
 
 const
@@ -61,6 +63,11 @@ begin
   Result := singleton_RemoteBridgeProcess;
 end;
 
+function DefaultRemoteBridgeScriptPath: string;
+begin
+  Result := Platform.GetGameSharedPath.Append('webs').Append('usdx-bridge.mjs').ToNative;
+end;
+
 function TRemoteBridgeProcess.BridgeScriptPath: string;
 begin
   Result := Ini.RemoteBridgeScriptPath;
@@ -70,8 +77,7 @@ begin
     Exit;
   end;
 
-  Result := ExpandFileName(ExtractFilePath(ParamStr(0)) +
-    'webs' + DirectorySeparator + 'usdx-bridge.mjs');
+  Result := DefaultRemoteBridgeScriptPath;
 end;
 
 function TRemoteBridgeProcess.NodeExecutablePath: string;
@@ -187,26 +193,14 @@ var
   Proc: TProcess;
   ScriptPath: string;
   RequestedWebApp: string;
-  I: integer;
 begin
   if (FProcess <> nil) then
     Exit;
 
   if IsIpcAvailable then
   begin
-    RequestBridgeShutdown;
-    for I := 1 to 20 do
-    begin
-      Sleep(100);
-      if not IsIpcAvailable then
-        Break;
-    end;
-
-    if IsIpcAvailable then
-    begin
-      FLastError := 'Remote bridge IPC port is already in use';
-      Exit;
-    end;
+    FLastError := '';
+    Exit;
   end;
 
   ScriptPath := '';
