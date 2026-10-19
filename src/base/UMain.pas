@@ -582,8 +582,8 @@ begin
               begin
                 KeyCharUnicode := Event.key.keysym.sym;
                 if (KeyCharUnicode >= Ord('a')) and (KeyCharUnicode <= Ord('z')) and
-                    (((Event.key.keysym.mod_ and KMOD_SHIFT) <> 0) xor
-                     ((Event.key.keysym.mod_ and KMOD_CAPS) <> 0)) then
+                    (((SDL_GetModState and KMOD_SHIFT) <> 0) xor
+                     ((SDL_GetModState and KMOD_CAPS) <> 0)) then
                   Dec(KeyCharUnicode, Ord('a') - Ord('A'));
               end;
             end;
