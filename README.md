@@ -39,8 +39,7 @@ You can already [build the game from source](COMPILING.md).
 2. Add your UltraStar-format songs. Song collections are separate from the game.
 3. Choose a song and sing!
 
-The [getting-started guide](docs/getting-started.md) covers setup and your first
-song. For detailed settings, see the [configuration reference](docs/config.ini.md).
+Advanced file settings are listed in the [configuration reference](docs/config.ini.md).
 
 ## Shape what comes next
 

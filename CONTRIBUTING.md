@@ -20,6 +20,11 @@ are welcome. Explain the problem, the resulting behavior, and what you tested.
 Say clearly when you could not test a platform. Preserve compatibility and
 existing copyright and license notices; include asset provenance and permission.
 
+Explain player-facing changes in the relevant in-game help and make new controls
+and settings discoverable in the interface. Keep the README short and visual.
+Use existing configuration or developer references where needed; a separate
+feature guide is not required for each addition.
+
 PR submissions are not capped. Automated Codex review requests are limited to
 **two per author in any rolling 24 hours**. The project owner is exempt from this
 review budget. A queued review does not close or reject a contribution; it waits
