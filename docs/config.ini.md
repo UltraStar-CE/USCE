@@ -285,9 +285,5 @@ INI key. Adding these keys does not enable those features.
 Theme definitions, song TXT files, plugin settings and projectM's own
 configuration are separate files. Do not paste their sections into `config.ini`.
 
-### Statistics presentation
-
-`[Game] StatisticsView=Reduced` keeps the compact statistics overview. Choose
-`Full` for bold emphasis and score counts per player and per song. This is also
-available under Options → Game → Statistics. Both views share the same data
-and controls; see [Statistics views](statistics-views.md).
+`[Game] StatisticsView=Reduced` selects compact statistics; `Full` includes
+averages, recent activity and performance facts. Also available in Options → Game.
