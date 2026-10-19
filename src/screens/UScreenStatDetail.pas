@@ -419,6 +419,13 @@ var
   LayoutRows: integer;
   ThemeText: TThemeText;
 
+  function HeaderID(const TextID: RawByteString): RawByteString;
+  begin
+    Result := TextID;
+    if (StatSinceDate > 0) and (TextID = 'STAT_DETAIL_HEADER_SUNG') then
+      Result := 'STAT_DETAIL_HEADER_SCORES';
+  end;
+
   procedure SetColumn(Column: integer; const Layout: TListColumn;
       const HeaderText: RawByteString);
   var
@@ -430,9 +437,7 @@ var
     Text[TextID].H := 0;
     Text[TextID].Y := HeaderY;
     Text[TextID].Visible := Layout.Width > 0;
-    SetListCellText(Text[TextID], Layout, Language.Translate(HeaderText));
-    if (StatSinceDate > 0) and (HeaderText = 'STAT_DETAIL_HEADER_SUNG') then
-      SetListCellText(Text[TextID], Layout, Language.Translate('STAT_DETAIL_HEADER_SCORES'));
+    SetListCellText(Text[TextID], Layout, Language.Translate(HeaderID(HeaderText)));
     for Row := 0 to High(TextList) do
     begin
       TextID := TextList[Row, Column];
@@ -495,7 +500,7 @@ var
     Row: integer;
     ValueText: UTF8String;
   begin
-    Result := TextWidthFactor(Language.Translate(HeaderText), ThemeText.Font,
+    Result := TextWidthFactor(Language.Translate(HeaderID(HeaderText)), ThemeText.Font,
         Theme.StatDetail.TextHeader.Style, HeaderSize, Theme.StatDetail.ColumnPadding);
 
     for Row := 0 to VisibleEntries - 1 do
