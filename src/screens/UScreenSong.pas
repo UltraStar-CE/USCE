@@ -2240,8 +2240,12 @@ var
   Song: TSong;
   Event: TSDL_Event;
 begin
-  if (Length(CatSongs.Song) <= 0) then
-    Exit;
+  for I := 0 to High(Button) do Button[I].Free;
+  SetLength(Button, 0);
+  SetLength(Interactions, 0);
+  ButtonPos := -1;
+  SelInteraction := 0;
+  if (Length(CatSongs.Song) <= 0) then Exit;
 
   // set length of button array once instead for every song
   SetButtonLength(Length(CatSongs.Song));

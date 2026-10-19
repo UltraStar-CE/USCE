@@ -76,6 +76,8 @@ implementation
 
 uses
   UGraphic,
+  ULibraryLockdown,
+  ULockdownUI,
   UHelp,
   UIni,
   ULanguage,
@@ -85,7 +87,8 @@ uses
   URenderer,
   UPlaylist,
   UScreenSong,
-  UUnicodeUtils;
+  UUnicodeUtils,
+  UPath;
 
 function TScreenSongJumpto.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
 begin
@@ -128,6 +131,11 @@ begin
       SDLK_RETURN,
       SDLK_ESCAPE:
         begin
+          if (PressedKey = SDLK_RETURN) and (Interaction = 2) then
+          begin
+            ToggleLibraryLockdown;
+            Exit;
+          end;
           Visible := false;
           AudioPlayback.PlaySound(SoundLib.Back);
           if (fVisSongs = 0) and (Length(Button[0].Text[0].Text) > 0) then
@@ -140,17 +148,8 @@ begin
           end;
         end;
 
-      SDLK_DOWN:
-        begin
-          {SelectNext;
-          Button[0].Text[0].Selected := (Interaction = 0);}
-        end;
-
-      SDLK_UP:
-        begin
-          {SelectPrev;
-          Button[0].Text[0].Selected := (Interaction = 0); }
-        end;
+      SDLK_DOWN: InteractNext;
+      SDLK_UP: InteractPrev;
 
       SDLK_RIGHT:
         begin
@@ -212,7 +211,7 @@ end;
 
 constructor TScreenSongJumpto.Create;
 var
-  ButtonID: integer;
+  ButtonID, I: integer;
 begin
   inherited Create;
 
@@ -229,6 +228,20 @@ begin
 
   fSelectType := fltAll;
   AddSelectSlide(Theme.SongJumpto.SelectSlideType, PInteger(@fSelectType)^, Theme.SongJumpto.IType);
+  // The button follows the search results using the current theme geometry.
+  ButtonID := AddButton(Theme.SongJumpto.ButtonSearchText.X,
+    Theme.SongJumpto.TextFound.Y + 30,
+    Theme.SongJumpto.ButtonSearchText.W, 30, PATH_NONE);
+  Button[ButtonID].Z := Theme.SongJumpto.ButtonSearchText.Z;
+  AddButtonText(8, 3, 0, 0, 0, Language.Translate('LOCKDOWN_START'));
+  Button[ButtonID].Text[0].Z := Theme.SongJumpto.ButtonSearchText.Z + 0.001;
+  Button[ButtonID].Text[0].Size := 20;
+  // Extend the existing dialog backdrop, without requiring new theme assets.
+  for I := 0 to High(Statics) do
+    if (Statics[I].Texture.Y <= Theme.SongJumpto.TextFound.Y) and
+      (Statics[I].Texture.Y + Statics[I].Texture.H >= Theme.SongJumpto.TextFound.Y) and
+      (Statics[I].Texture.Y + Statics[I].Texture.H < Theme.SongJumpto.TextFound.Y + 72) then
+      Statics[I].Texture.H := Theme.SongJumpto.TextFound.Y + 72 - Statics[I].Texture.Y;
 
   Interaction := 0;
   fLastPlayed  := 0;
@@ -248,6 +261,9 @@ end;
 procedure TScreenSongJumpto.OnShow;
 var Country: UTF8String;
 begin
+  if LibraryLockdown.Active then
+    Button[1].Text[0].Text := Language.Translate('LOCKDOWN_UNLOCK')
+  else Button[1].Text[0].Text := Language.Translate('LOCKDOWN_START');
   Country := Ini.AgeCountry;
   if Country = '' then Country := Language.Translate('OPTION_VALUE_AGE_DEFAULT');
   Theme.SongJumpto.IType[9] := Language.Translate('SONG_JUMPTO_TYPE10') + ' (' + Country + ')';

@@ -165,6 +165,7 @@ implementation
 
 uses
   UAge,
+  ULibraryLockdown,
   StrUtils,
   SDL2,
   UCommandLine,
@@ -288,6 +289,7 @@ var
   I: integer;
   SongFiles: TPathDynArray;
 begin
+  if LibraryLockdown.Active then Exit;
   SetLength(SongFiles, 0);
   try
     fProcessing := true;
@@ -347,6 +349,7 @@ end;
 
 procedure TSongs.LoadSongList;
 begin
+  if LibraryLockdown.Active then Exit;
   fParseSongDirectory := true;
   Resume();
 end;
