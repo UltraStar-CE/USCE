@@ -93,7 +93,9 @@ uses
   ULog,
   UIni,
   UNote,
-  ssockets;
+  ssockets,
+  sockets
+  {$IFDEF MSWINDOWS}, Winsock2{$ELSE}, BaseUnix{$ENDIF};
 
 const
   DEFAULT_BRIDGE_HOST = '127.0.0.1';
@@ -740,6 +742,7 @@ var
   ReadCount: longint;
   Chunk: string;
   NewLinePos: integer;
+  ReadError: integer;
   Line: string;
 begin
   while (not Terminated) do
@@ -759,7 +762,18 @@ begin
       while (not Terminated) and not FSocketFailed do
       begin
         ReadCount := FSocket.Read(Buffer, SizeOf(Buffer));
-        if (ReadCount <= 0) then
+        if ReadCount < 0 then
+        begin
+          ReadError := SocketError;
+          {$IFDEF MSWINDOWS}
+          if (ReadError = WSAETIMEDOUT) or (ReadError = WSAEWOULDBLOCK) then
+          {$ELSE}
+          if (ReadError = ESysEAGAIN) or (ReadError = ESysEWOULDBLOCK) then
+          {$ENDIF}
+            Continue;
+          Break;
+        end;
+        if ReadCount = 0 then
           Break;
 
         SetString(Chunk, PChar(@Buffer[0]), ReadCount);
