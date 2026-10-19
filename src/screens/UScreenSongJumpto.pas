@@ -246,7 +246,12 @@ begin
 end;
 
 procedure TScreenSongJumpto.OnShow;
+var Country: UTF8String;
 begin
+  Country := Ini.AgeCountry;
+  if Country = '' then Country := Language.Translate('OPTION_VALUE_AGE_DEFAULT');
+  Theme.SongJumpto.IType[9] := Language.Translate('SONG_JUMPTO_TYPE10') + ' (' + Country + ')';
+  UpdateSelectSlideOptions(0, Theme.SongJumpto.IType, PInteger(@fSelectType)^);
   inherited;
 
   if not Help.SetHelpID(ID) then

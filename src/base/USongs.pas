@@ -164,6 +164,7 @@ const
 implementation
 
 uses
+  UAge,
   StrUtils,
   SDL2,
   UCommandLine,
@@ -1057,11 +1058,12 @@ var
   FilterCopy: UTF8String;
   AgeFilterActive: boolean;
   AgeFilterCondition: TAgeCondition;
+  AgeRegion: string;
+  RegionSeparator: integer;
 
   function MatchesAgeCondition(SongAge: integer; const Condition: TAgeCondition): boolean;
   begin
-    if SongAge = -1 then
-      SongAge := 18;
+    if SongAge < 0 then Exit(false);
 
     case Condition.Comparator of
       acEqual:           Result := SongAge = Condition.Value;
@@ -1082,13 +1084,22 @@ begin
 
   FilterStr := Trim(LowerCase(TransliterateToASCII(FilterStr)));
   FilterCopy := FilterStr;
+  AgeRegion := Ini.AgeCountry;
+  if Filter = fltAge then
+  begin
+    RegionSeparator := Pos(':', FilterCopy);
+    if RegionSeparator > 0 then
+    begin
+      AgeRegion := UpperCase(Trim(Copy(FilterCopy, 1, RegionSeparator - 1)));
+      Delete(FilterCopy, 1, RegionSeparator);
+    end;
+  end;
 
   AgeFilterActive := false;
   if (Filter = fltAge) and (FilterStr <> '') then
   begin
     AgeFilterActive := ParseAgeCondition(FilterCopy, AgeFilterCondition);
-    if not AgeFilterActive then
-      FilterStr := '';
+    // An invalid nonempty age query must match nothing, not clear the filter.
   end;
 
   if (FilterStr <> '') then
@@ -1122,7 +1133,10 @@ begin
 
       if Filter = fltAge then
       begin
-        Song[i].Visible := AgeFilterActive and MatchesAgeCondition(Song[i].Age, AgeFilterCondition);
+        if FilterCopy = '?' then
+          Song[i].Visible := AgeForRegion(Song[i].AgeRaw, AgeRegion) < 0
+        else
+          Song[i].Visible := AgeFilterActive and MatchesAgeCondition(AgeForRegion(Song[i].AgeRaw, AgeRegion), AgeFilterCondition);
         if Song[i].Visible then
           Inc(Result);
         Continue;

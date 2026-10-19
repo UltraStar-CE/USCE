@@ -48,6 +48,9 @@ type
   TScreenOptionsGame = class(TOptionsMenu)
     private
       StatisticsViewLabels: array[0..1] of UTF8String;
+      AgeCountryIndex: integer;
+      AgeCountries: array of UTF8String;
+      AgeCountryLabels: array of UTF8String;
       old_Language:  integer;
       old_SongMenu:  integer;
       old_Sorting:   integer;
@@ -84,7 +87,7 @@ uses
   ULanguage,
   ULog,
   UUnicodeUtils,
-  SysUtils;
+  SysUtils, Classes;
 
 type
   TGetTextFunc = function(var Param: integer; Offset: integer; Modify: boolean; OptText: PUtf8String): boolean;
@@ -97,6 +100,7 @@ type
     iShowScoresSlide,
     iDebugSlide,
     iStatisticsViewSlide,
+    iAgeCountrySlide,
     iAVDelaySlide,
     iMicDelaySlide,
     iBackButton
@@ -263,6 +267,7 @@ end;
 
 procedure TScreenOptionsGame.Leave;
 begin
+  Ini.AgeCountry := AgeCountries[AgeCountryIndex];
   Ini.Save;
   ReloadAllScreens;
   ReloadSongMenu;
@@ -309,7 +314,31 @@ begin
 end;
 
 procedure TScreenOptionsGame.LoadWidgets;
+const
+  CountryCodes = 'AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW';
+var Codes: TStringList; I: integer;
 begin
+  Codes := TStringList.Create;
+  try
+    Codes.Delimiter := ' ';
+    Codes.DelimitedText := CountryCodes;
+    // Keep an explicitly configured rating authority available as well.
+    if (Ini.AgeCountry <> '') and (Codes.IndexOf(Ini.AgeCountry) < 0) then
+      Codes.Add(Ini.AgeCountry);
+    SetLength(AgeCountries, Codes.Count + 1);
+    SetLength(AgeCountryLabels, Codes.Count + 1);
+    AgeCountries[0] := '';
+    AgeCountryLabels[0] := Language.Translate('OPTION_VALUE_AGE_DEFAULT');
+    AgeCountryIndex := 0;
+    for I := 0 to Codes.Count - 1 do
+    begin
+      AgeCountries[I + 1] := Codes[I];
+      AgeCountryLabels[I + 1] := Codes[I];
+      if Codes[I] = Ini.AgeCountry then AgeCountryIndex := I + 1;
+    end;
+  finally
+    Codes.Free;
+  end;
   // when editing this, also update the InteractionID enum declaration
   AddSelectSlide('SING_OPTIONS_GAME_LANGUAGE', Ini.Language, ILanguageTranslated);
   AddSelectSlide('SING_OPTIONS_GAME_SONGMENU', Ini.SongMenu, ISongMenuTranslated);
@@ -320,6 +349,7 @@ begin
   StatisticsViewLabels[0] := Language.Translate('OPTION_VALUE_STATISTICS_REDUCED');
   StatisticsViewLabels[1] := Language.Translate('OPTION_VALUE_STATISTICS_FULL');
   AddSelectSlide('SING_OPTIONS_GAME_STATISTICS', Ini.StatisticsView, StatisticsViewLabels);
+  AddSelectSlide('SING_OPTIONS_GAME_AGE_COUNTRY', AgeCountryIndex, AgeCountryLabels);
   UpdateCalculatedSelectSlides(true);
 end;
 

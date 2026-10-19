@@ -179,6 +179,7 @@ type
 
     Creator:    UTF8String;
     Age:        Integer;
+    AgeRaw:     UTF8String;
 
     CoverTex:   TTexture;
 
@@ -258,6 +259,7 @@ function ParseAgeCondition(const Input: UTF8String; out Condition: TAgeCondition
 implementation
 
 uses
+  UAge,
   StrUtils,
   UText,
   UIni,
@@ -1366,13 +1368,13 @@ begin
     ParseMultivaluedFilterHeaders('LANGUAGE', self.Language, self.LanguageASCII);
 
     //Age metadata
-    self.Age := -1;
-    if (TagMap.TryGetData('AGE', Value)) then
+    AgeRaw := '';
+    if TagMap.TryGetData('AGE', Value) then
     begin
+      AgeRaw := Value;
       RemoveTagsFromTagMap('AGE');
-      if not TryStrtoInt(Value, self.Age) then
-        self.Age := -1;
     end;
+    Age := AgeForRegion(AgeRaw, Ini.AgeCountry);
 
     //Tags Sorting
     if FormatVersion.MinVersion(1,0,0) then
@@ -2102,7 +2104,8 @@ begin
   Language := 'Unknown';
   Year := 0;
   Tags := '';
-  Age := 18;
+  Age := -1;
+  AgeRaw := '';
 
   // set to default encoding
   Encoding := Ini.DefaultEncoding;

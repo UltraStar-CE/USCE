@@ -1,8 +1,8 @@
 # Configuration reference
 
-[Back to USCE](../README.md) · [Getting started](getting-started.md)
+[Back to USCE](../README.md) Â· [Getting started](getting-started.md)
 
-Most everyday settings are available in **Tools → Options**. This guide explains
+Most everyday settings are available in **Tools â†’ Options**. This guide explains
 `config.ini`, including options for setups that need more control. Use the file's
 English values below even when menus are translated.
 
@@ -65,12 +65,12 @@ folder does not exist. Portable installations also search their `songs` folder.
 
 | Key in `[Directories]` | Default | What it does |
 | --- | --- | --- |
-| `SongDir1`, `SongDir2`, … | No extra folders | Adds song collections. Leave unused entries blank. |
+| `SongDir1`, `SongDir2`, â€¦ | No extra folders | Adds song collections. Leave unused entries blank. |
 | `WebScoresDir` | First available `webs` folder | Selects website score definitions; normally leave unchanged. An unavailable folder falls back to the standard one. |
 
 ## Game
 
-File section: `[Game]`. Most settings are under **Options → Game**.
+File section: `[Game]`. Most settings are under **Options â†’ Game**.
 
 | Key | Values; default | What it does |
 | --- | --- | --- |
@@ -88,7 +88,7 @@ File section: `[Game]`. Most settings are under **Options → Game**.
 
 ## Graphics
 
-File section: `[Graphics]`. Common settings are under **Options → Graphics**;
+File section: `[Graphics]`. Common settings are under **Options â†’ Graphics**;
 positions, frame limits and codec preferences are advanced file settings.
 
 | Key | Values; default | What it does |
@@ -117,16 +117,16 @@ use its desktop pixel offset in `PositionX` and `PositionY` instead.
 
 ## Sound and volume
 
-File section: `[Sound]`. Most settings are under **Options → Sound**.
+File section: `[Sound]`. Most settings are under **Options â†’ Sound**.
 
 | Key | Values; default | What it does |
 | --- | --- | --- |
-| `AudioVolume` | `0`–`100`; `100` | Song music volume. |
-| `VocalsVolume` | `0`–`100`; `100` | Separate vocal-track volume when the song provides one. |
+| `AudioVolume` | `0`â€“`100`; `100` | Song music volume. |
+| `VocalsVolume` | `0`â€“`100`; `100` | Separate vocal-track volume when the song provides one. |
 | `LastPartialVocalsVolume` | `0` to `100`; `0` | Remembers a manually chosen partial vocal volume. With a remembered level between 1 and 99, K cycles through full volume, that level, and muted vocals. Otherwise K switches between full and muted vocals. |
-| `SfxVolume` | `0`–`100`; `100` | Menu and game sound effects. |
-| `PreviewVolume` | `0`–`100`; `30` | Song preview volume. |
-| `BackgroundMusicVolume` | `0`–`100`; `40` | Menu background music volume. |
+| `SfxVolume` | `0`â€“`100`; `100` | Menu and game sound effects. |
+| `PreviewVolume` | `0`â€“`100`; `30` | Song preview volume. |
+| `BackgroundMusicVolume` | `0`â€“`100`; `40` | Menu background music volume. |
 | `BackgroundMusic` | `Off`, `On`; `On` | Background music in menus. |
 | `PreviewFading` | `Off`, `1 Sec`, `2 Secs`, `3 Secs`, `4 Secs`, `5 Secs`; `3 Secs` | Fade duration for song previews. |
 | `ReplayGain` | `Off`, `On`; `Off` | Uses available ReplayGain information to reduce loudness differences. |
@@ -141,7 +141,7 @@ numbers. `Off` is accepted as a legacy volume value for zero.
 
 ## Microphones
 
-Prefer **Options → Record** for device and channel assignments. Mic boost and
+Prefer **Options â†’ Record** for device and channel assignments. Mic boost and
 Threshold are on the Record page too. All are stored in `[Record]`.
 
 | Key in `[Record]` | Values; default | What it does |
@@ -151,7 +151,7 @@ Threshold are on the Record page too. All are stored in `[Record]`.
 | `DeviceName[n]` | Exact device name; no saved devices initially | Identifies device `n`. Let the Record menu write the name. |
 | `Input[n]` | Device-specific integer; `0` | Selected input for device `n`. Available inputs depend on the audio backend. |
 | `Latency[n]` | Milliseconds, or `-1` for automatic; `-1` | Requested device latency where supported by the backend. |
-| `Channelc[n]` | `0` unassigned, or player number `1`–`12`; `0` | Assigns channel `c` of device `n`. The normal player-count menu offers up to six singers. |
+| `Channelc[n]` | `0` unassigned, or player number `1`â€“`12`; `0` | Assigns channel `c` of device `n`. The normal player-count menu offers up to six singers. |
 
 The game saves device entries starting at `1`, for example `DeviceName[1]` and
 `Channel1[1]`. Disconnected devices remain saved for use when reconnected.
@@ -159,7 +159,7 @@ Device names and input numbers are specific to your computer.
 
 ## Controls
 
-File section: `[Controller]`. Available under **Options → Input**.
+File section: `[Controller]`. Available under **Options â†’ Input**.
 
 | Key | Values; default | What it does |
 | --- | --- | --- |
@@ -170,7 +170,7 @@ starts fading after one second without activity. Older `Mouse` settings are igno
 
 ## Themes and lyrics
 
-Available under **Options → Themes** and **Options → Lyrics**.
+Available under **Options â†’ Themes** and **Options â†’ Lyrics**.
 
 | Section | Key | Values; default | What it does |
 | --- | --- | --- | --- |
@@ -188,7 +188,7 @@ Changing theme can change available skins and their defaults.
 
 ## Advanced behavior
 
-File section: `[Advanced]`. Common effects are under **Options → Advanced**;
+File section: `[Advanced]`. Common effects are under **Options â†’ Advanced**;
 score and time-bar choices are also saved from their respective screens.
 
 | Key | Values; default | What it does |
@@ -202,7 +202,7 @@ score and time-bar choices are also saved from their respective screens.
 | `SingScores` | `Off`, `On`, `Bar Rating`, `Remaining Score`; `On` | Chooses the in-song score display: `Off` hides it, `On` shows both bars, `Bar Rating` shows the line-rating bar, and `Remaining Score` shows the remaining-score bar. Numeric scores accompany each enabled mode; party mode keeps scores visible. |
 | `DuetScores` | `Off`, `Separate`, `Combined`, `Both`; `Separate` | Chooses which duet scores are stored. Combined scores average adjacent singers with matching difficulty. The older `On` setting is read as `Separate`. |
 | `TopScores` | `All`, `Player`; `Player` | Includes all entries (`All`) or limits repeated entries for each player (`Player`). |
-| `HighScoreScreenEntries` | Integer `5`–`20`; `5` | Number of high-score entries shown. Values outside the range are limited to it. |
+| `HighScoreScreenEntries` | Integer `5`â€“`20`; `5` | Number of high-score entries shown. Values outside the range are limited to it. |
 | `SyncTo` | `Music`, `Lyrics`, `Off`; `Music` | Synchronization mode. Keep Music for normal playback. |
 | `SingTimebarMode` | `Current`, `Remaining`, `Total`; `Remaining` | Elapsed, remaining or total song time during singing. |
 
@@ -220,7 +220,7 @@ webcam controls for device selection and image adjustments.
 | `Brightness` | `-100` through `+100`; `0` | Brightness adjustment. Include `+` on positive values. |
 | `Saturation` | `-100` through `+100`; `0` | Saturation adjustment. Include `+` on positive values. |
 | `Hue` | `-180` through `+180`; `0` | Hue adjustment. Include `+` on positive values. |
-| `Effect` | Integer `0`–`10`; `0` | In order: normal, grayscale, black and white, negative, binary image, dilate, threshold, edges, Gaussian blur, equalized and erode. |
+| `Effect` | Integer `0`â€“`10`; `0` | In order: normal, grayscale, black and white, negative, binary image, dilate, threshold, edges, Gaussian blur, equalized and erode. |
 
 ## Saved players and teams
 
@@ -229,15 +229,15 @@ slots run from `P1` to `P12`; the normal game menu selects up to six singers.
 
 | Section | Keys; default | What it stores |
 | --- | --- | --- |
-| `[Name]` | `P1`–`P12`; `Player1`–`Player12` | Player names. |
-| `[PlayerColor]` | `P1`–`P12`; `1,4,3,2,5,6,7,8,9,10,11,12` for successive slots | Color IDs `1`–`16`; prefer the player screen. |
-| `[PlayerAvatar]` | `P1`–`P12`; empty | Avatar selections. |
-| `[PlayerLevel]` | `P1`–`P12`; `1` | Difficulty: `0` Easy, `1` Medium, `2` Hard. |
-| `[TeamColor]` | `T1`–`T3`; `1`, `2`, `3` | Team color IDs; prefer the party screen. |
-| `[NameTeam]` | `T1`–`T3`; `Team1`–`Team3` | Party team names. |
-| `[NameTemplate]` | `Name1`–`Name12`; `Template1`–`Template12` | Reusable name templates. |
+| `[Name]` | `P1`â€“`P12`; `Player1`â€“`Player12` | Player names. |
+| `[PlayerColor]` | `P1`â€“`P12`; `1,4,3,2,5,6,7,8,9,10,11,12` for successive slots | Color IDs `1`â€“`16`; prefer the player screen. |
+| `[PlayerAvatar]` | `P1`â€“`P12`; empty | Avatar selections. |
+| `[PlayerLevel]` | `P1`â€“`P12`; `1` | Difficulty: `0` Easy, `1` Medium, `2` Hard. |
+| `[TeamColor]` | `T1`â€“`T3`; `1`, `2`, `3` | Team color IDs; prefer the party screen. |
+| `[NameTeam]` | `T1`â€“`T3`; `Team1`â€“`Team3` | Party team names. |
+| `[NameTemplate]` | `Name1`â€“`Name12`; `Template1`â€“`Template12` | Reusable name templates. |
 
-Player color IDs `1`–`16` are, in order: Blue, Red, Green, Yellow, Orange, Pink,
+Player color IDs `1`â€“`16` are, in order: Blue, Red, Green, Yellow, Orange, Pink,
 Violet, Brown, Gray, Dark Blue, Sky, Cyan, Flame, Orchid, Harlequin and Lime.
 
 ## Per-player microphone delay
@@ -274,3 +274,9 @@ configuration are separate files. Do not paste their sections into `config.ini`.
 
 `[Game] StatisticsView=Reduced` selects compact statistics; `Full` includes
 averages, recent activity and performance facts. Also available in Options → Game.
+
+### Age rating country
+
+`[Game] AgeCountry=DE` selects Germany for AGE searches. An empty value uses
+the unprefixed local/default entry. Choose it in Options → Game; the initial
+default comes from the OS country/region, not timezone. See [AGE filtering](age-filtering.md).

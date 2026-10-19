@@ -1,0 +1,100 @@
+unit UAge;
+
+{$mode delphi}
+
+interface
+
+function AgeForRegion(const Header, Region: string): integer;
+function SystemAgeRegion: string;
+
+implementation
+
+uses SysUtils, Classes
+  {$IFDEF MSWINDOWS}, Windows{$ENDIF}
+  {$IFDEF DARWIN}, MacOSAll{$ENDIF};
+
+function SystemAgeRegion: string;
+var
+  Locale: string;
+  I: integer;
+  {$IFDEF MSWINDOWS}Buffer: array[0..15] of char;{$ENDIF}
+  {$IFDEF DARWIN}
+  CurrentLocale: CFLocaleRef;
+  Country: CFStringRef;
+  CountryBuffer: array[0..15] of char;
+  {$ENDIF}
+begin
+  Result := '';
+  {$IFDEF MSWINDOWS}
+  if GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_SISO3166CTRYNAME, Buffer, Length(Buffer)) > 0 then
+    Exit(UpperCase(string(Buffer)));
+  {$ENDIF}
+  {$IFDEF DARWIN}
+  CurrentLocale := CFLocaleCopyCurrent;
+  if CurrentLocale <> nil then
+  begin
+    Country := CFStringRef(CFLocaleGetValue(CurrentLocale, kCFLocaleCountryCode));
+    if (Country <> nil) and CFStringGetCString(Country, @CountryBuffer[0],
+      SizeOf(CountryBuffer), kCFStringEncodingUTF8) then
+      Result := UpperCase(string(CountryBuffer));
+    CFRelease(CurrentLocale);
+    if Result <> '' then Exit;
+  end;
+  {$ENDIF}
+  Locale := SysUtils.GetEnvironmentVariable('LC_ALL');
+  if Locale = '' then Locale := SysUtils.GetEnvironmentVariable('LC_MESSAGES');
+  if Locale = '' then Locale := SysUtils.GetEnvironmentVariable('LANG');
+  I := Pos('_', Locale);
+  if I = 0 then I := Pos('-', Locale);
+  if I > 0 then Result := UpperCase(Copy(Locale, I + 1, 2));
+end;
+
+function AgeForRegion(const Header, Region: string): integer;
+var
+  Entries, Seen: TStringList;
+  Entry, Key, Number: string;
+  I, J, Colon, Value, DefaultAge, RegionalAge: integer;
+begin
+  Result := -1;
+  DefaultAge := -1;
+  RegionalAge := -1;
+  if Trim(Header) = '' then Exit;
+  Entries := TStringList.Create;
+  Seen := TStringList.Create;
+  try
+    Entries.StrictDelimiter := true;
+    Entries.Delimiter := ',';
+    Entries.QuoteChar := #0;
+    Entries.DelimitedText := Header;
+    for I := 0 to Entries.Count - 1 do
+    begin
+      Entry := Trim(Entries[I]);
+      Colon := Pos(':', Entry);
+      Key := '';
+      Number := Entry;
+      if Colon > 0 then
+      begin
+        Key := UpperCase(Trim(Copy(Entry, 1, Colon - 1)));
+        if Length(Key) < 2 then Exit;
+        for J := 1 to Length(Key) do
+          if not (Key[J] in ['A'..'Z']) then Exit;
+        Number := Trim(Copy(Entry, Colon + 1, MaxInt));
+      end;
+      if Seen.IndexOf(Key) >= 0 then Exit;
+      Seen.Add(Key);
+      if (Length(Number) < 1) or (Length(Number) > 3) then Exit;
+      for J := 1 to Length(Number) do
+        if not (Number[J] in ['0'..'9']) then Exit;
+      if not TryStrToInt(Number, Value) or (Value < 1) then Exit;
+      if Key = '' then DefaultAge := Value
+      else if Key = UpperCase(Region) then RegionalAge := Value;
+    end;
+    if RegionalAge >= 0 then Result := RegionalAge
+    else Result := DefaultAge;
+  finally
+    Seen.Free;
+    Entries.Free;
+  end;
+end;
+
+end.

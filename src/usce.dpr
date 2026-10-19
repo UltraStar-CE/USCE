@@ -171,6 +171,7 @@ uses
   UTime             in 'base\UTime.pas',
   USong             in 'base\USong.pas',
   USongs            in 'base\USongs.pas',
+  UAge              in 'base\UAge.pas',
   UIni              in 'base\UIni.pas',
   URecentNames      in 'base\URecentNames.pas',
   UImage            in 'base\UImage.pas',
