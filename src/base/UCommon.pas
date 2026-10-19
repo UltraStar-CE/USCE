@@ -517,7 +517,7 @@ begin
   RTLeventDestroy(ConsoleEvent);
   MessageList.Free();
   {$ENDIF}
-  Log.Free;
+  FreeAndNil(Log);
 end;
 
 {*

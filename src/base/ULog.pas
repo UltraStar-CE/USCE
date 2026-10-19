@@ -116,6 +116,7 @@ type
     procedure LogWarn(const Msg, Context: string);
     procedure LogError(const Text: string); overload;
     procedure LogError(const Msg, Context: string); overload;
+    procedure LogExceptionReport(const Report: string);
     procedure LogSongError(const LogMsg: string); overload;
     procedure LogSongError(const LogMsg, Context: string); overload;
     //Critical Error (Halt + MessageBox)
@@ -329,6 +330,17 @@ begin
     end;
   end;
   LeaveCriticalSection(Lock);
+end;
+
+procedure TLog.LogExceptionReport(const Report: string);
+begin
+  // Persist the complete report before showing a modal error dialog. Bypass
+  // verbosity filters and console output, which may already be shutting down.
+  try
+    LogToFile('EXCEPTION: ' + Report, 'Error.log', ErrorLogFileOpened, ErrorLogFile);
+  except
+    // A logging failure must not replace the original exception dialog.
+  end;
 end;
 
 procedure TLog.SetLogLevel(Level: integer);
