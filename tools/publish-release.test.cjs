@@ -35,10 +35,11 @@ async function fixture(run) {
       createRelease: async data => { const release={...data,id:1,html_url:'draft-url'};state.releases.push(release);return {data:release}; },
       uploadReleaseAsset: async data => {state.uploads++;state.assets.push({name:data.name,digest:'sha256:'+crypto.createHash('sha256').update(data.data).digest('hex')});},
     };
-    const github = {rest:{repos},paginate:async method=> method===repos.listReleases?[...state.releases,{tag_name:'v2026.9.0',draft:false,prerelease:false}]:state.assets};
+    const git = {getRef:async()=>{const e=Error('missing ref');e.status=404;throw e;}};
+    const github = {rest:{repos,git},paginate:async method=> method===repos.listReleases?[...state.releases,{tag_name:'v2026.9.0',draft:false,prerelease:false}]:state.assets};
     const context={repo:{owner:'UltraStar-CE',repo:'USCE'},sha};
     const core={notice(){},setOutput:(k,v)=>state.outputs[k]=v};
-    await run({github,context,core,state,repos});
+    await run({github,context,core,state,repos,git});
   } finally {
     process.chdir(previous);
     assert(path.resolve(temp).startsWith(path.resolve(os.tmpdir())+path.sep));
@@ -64,6 +65,7 @@ test('publisher rejects a missing package, a different tag and an already publis
   await assert.rejects(publishDraft(x,'2026.10.0'), /five packages/);
   assert.equal(x.state.releases.length,0);
   fs.renameSync('sums','release-output/SHA256SUMS');
+  x.git.getRef=async()=>({data:{object:{type:'tag',sha:'annotated-tag'}}});
   x.repos.getCommit=async()=>({data:{sha:'different'}});
   await assert.rejects(publishDraft(x,'2026.10.0'), /tag points/);
   x.state.releases.push({tag_name:'v2026.10.0',draft:false});
@@ -176,5 +178,20 @@ test('a draft cannot lose a comparison graphic or one of the two sections', asyn
   fs.mkdirSync('doc/releases', {recursive:true});
   fs.writeFileSync('doc/releases/2026.10.0.md', '## Changes since USCE 2026.9.0\n\n![Changes](example.png)');
   await assert.rejects(publishDraft(x, '2026.10.0'), /each with a graphic/);
+  assert.equal(x.state.releases.length, 0);
+}));
+
+test('a missing tag avoids the commit lookup that GitHub reports as 422', async()=>fixture(async x=>{
+  let commitLookups=0;
+  x.repos.getCommit=async()=>{commitLookups++;const e=Error('No commit found');e.status=422;throw e;};
+  await publishDraft(x, '2026.10.0');
+  assert.equal(commitLookups, 0);
+  assert.equal(x.state.releases[0].draft, true);
+}));
+
+test('an existing tag lookup failure cannot be mistaken for an absent tag', async()=>fixture(async x=>{
+  x.git.getRef=async args=>{assert.equal(args.ref,'tags/v2026.10.0');return {data:{object:{type:'tag',sha:'tag'}}};};
+  x.repos.getCommit=async args=>{assert.equal(args.ref,'v2026.10.0');const e=Error('Tag lookup failed');e.status=422;throw e;};
+  await assert.rejects(publishDraft(x, '2026.10.0'), /Tag lookup failed/);
   assert.equal(x.state.releases.length, 0);
 }));

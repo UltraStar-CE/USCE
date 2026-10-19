@@ -91,10 +91,15 @@ async function publishDraft({github, context, core}, version) {
   if (JSON.stringify(paths) !== JSON.stringify(expected)) throw Error('Expected five packages, VERSION and SHA256SUMS');
   const marker = '<!-- usce-source:' + context.sha + ' -->';
   const tag = 'v' + version;
+  let tagExists = false;
   try {
-    const tagged = await github.rest.repos.getCommit({...context.repo, ref: 'refs/tags/' + tag});
-    if (tagged.data.sha !== context.sha) throw Error('Existing release tag points to another revision');
+    await github.rest.git.getRef({...context.repo, ref: 'tags/' + tag});
+    tagExists = true;
   } catch (e) { if (e.status !== 404) throw e; }
+  if (tagExists) {
+    const tagged = await github.rest.repos.getCommit({...context.repo, ref: tag});
+    if (tagged.data.sha !== context.sha) throw Error('Existing release tag points to another revision');
+  }
   const releases = await github.paginate(github.rest.repos.listReleases, {...context.repo, per_page: 100});
   let release = releases.find(r => r.tag_name === tag);
   if (release && (!release.draft || release.target_commitish !== context.sha || !release.body?.includes(marker))) throw Error('Refusing to replace an existing release');
