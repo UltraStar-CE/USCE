@@ -5,6 +5,11 @@ the 256 most recently used names. Continuing forward from a name-entry screen
 promotes its active names. Going back does not change recency. The history is
 saved in the `RecentNames` section of the existing configuration file.
 
+The first character typed after entering a field replaces its existing name.
+Further typing appends. Backspace edits the current name and subsequent typing
+continues that edit. Moving to another field resets this behavior; moving the
+mouse within the same field does not.
+
 A suggestion appears only after typing or editing a name. The most recently
 used matching name is suggested, with case-insensitive prefix matching. Typed
 letters remain opaque; the suggested suffix uses 50% opacity by default.

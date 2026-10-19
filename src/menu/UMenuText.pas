@@ -46,6 +46,7 @@ type
       SelectBool:  boolean;
       TextString:  UTF8String;
       NamePrediction: UTF8String;
+      NameEditing: boolean;
       TextTiles:   array of UTF8String;
 
       STicks:      cardinal;
@@ -76,8 +77,11 @@ type
       Reflection:        boolean;
       ReflectionSpacing: single;
 
+      NameEntryField: boolean;
       NameSuggestionWidth: single;
       Writable: boolean;
+      procedure TypeNameCharacter(const Value: UTF8String);
+      procedure DeleteNameCharacter;
       procedure SuggestRecentName;
       function AcceptNameSuggestion: boolean;
       function CancelNameSuggestion: boolean;
@@ -112,6 +116,24 @@ uses
   UUnicodeUtils,
   StrUtils;
 
+procedure TText.TypeNameCharacter(const Value: UTF8String);
+var Edited: UTF8String;
+begin
+  NameEntryField := true;
+  Edited := TypeNameInput(NameEditing, Text, Value);
+  Text := Edited;
+  NameEditing := true;
+  SuggestRecentName;
+end;
+
+procedure TText.DeleteNameCharacter;
+begin
+  NameEntryField := true;
+  DeleteLastLetter;
+  NameEditing := true;
+  SuggestRecentName;
+end;
+
 procedure TText.SuggestRecentName;
 begin
   NamePrediction := '';
@@ -128,6 +150,7 @@ begin
     Value := NamePrediction;
     NamePrediction := '';
     Text := Value;
+    NameEditing := true;
   end;
 end;
 
@@ -139,7 +162,11 @@ end;
 
 procedure TText.SetSelect(Value: boolean);
 begin
-  if SelectBool and not Value then AcceptNameSuggestion;
+  if SelectBool and not Value then
+  begin
+    AcceptNameSuggestion;
+    NameEditing := false;
+  end;
   SelectBool := Value;
 
   // set cursor visible
@@ -212,6 +239,7 @@ begin
   isBreak := false;
   // set TextString
   NamePrediction := '';
+  NameEditing := false;
   TextString := Value;
 
   // set cursor visible

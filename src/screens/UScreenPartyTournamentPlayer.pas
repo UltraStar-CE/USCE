@@ -74,7 +74,9 @@ type
       constructor Create; override;
       function ShouldHandleInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; out SuppressKey: boolean): boolean; override;
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
+      function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
       procedure OnShow; override;
+      procedure OnHide; override;
   end;
 
 const
@@ -200,9 +202,7 @@ begin
     // check normal keys
     if (IsPrintableChar(CharCode)) then
     begin
-      Button[Interactions[Interaction].Num].Text[0].Text := Button[Interactions[Interaction].Num].Text[0].Text +
-                                          UCS4ToUTF8String(CharCode);
-      Button[Interactions[Interaction].Num].Text[0].SuggestRecentName;
+      Button[Interactions[Interaction].Num].Text[0].TypeNameCharacter(UCS4ToUTF8String(CharCode));
       Exit;
     end;
 
@@ -222,8 +222,7 @@ begin
         end;
       SDLK_BACKSPACE:
         begin
-          Button[Interactions[Interaction].Num].Text[0].DeleteLastLetter;
-          Button[Interactions[Interaction].Num].Text[0].SuggestRecentName;
+          Button[Interactions[Interaction].Num].Text[0].DeleteNameCharacter;
         end;
     end;
   end
@@ -282,9 +281,17 @@ begin
   end;
 end;
 
+function TScreenPartyTournamentPlayer.ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
+begin
+  Result := inherited ParseMouse(MouseButton, BtnDown, X, Y);
+  SetTextInput((Interaction >= 0) and (Interaction <= High(Interactions)) and
+    (Interactions[Interaction].Typ = iButton));
+end;
+
 constructor TScreenPartyTournamentPlayer.Create;
 var
   TournamentPlayerOptions: TUTF8StringArray;
+  I: integer;
 begin
   inherited Create;
 
@@ -315,9 +322,21 @@ begin
   AddButton(Theme.PartyTournamentPlayer.Player14Name);
   AddButton(Theme.PartyTournamentPlayer.Player15Name);
   AddButton(Theme.PartyTournamentPlayer.Player16Name);
+  for I := 0 to High(Button) do
+  begin
+    Button[I].Text[0].Writable := true;
+    Button[I].Text[0].NameEntryField := true;
+  end;
+  SetTextInput(false);
 
   Interaction := 0;
 
+end;
+
+procedure TScreenPartyTournamentPlayer.OnHide;
+begin
+  StopTextInput;
+  inherited;
 end;
 
 procedure TScreenPartyTournamentPlayer.OnShow;
@@ -331,9 +350,14 @@ begin
 
   PartyTournament.Clear;
 
-  // Templates for Names Mod
+  Interaction := 0;
+  SetTextInput(false);
+  // Translate untouched legacy defaults, while retaining actual player names.
   for I := 0 to 15 do
-    Button[I].Text[0].Text := Ini.Name[I];
+    if (Ini.Name[I] = 'Player' + IntToStr(I + 1)) or
+      (Ini.Name[I] = 'Player ' + IntToStr(I + 1)) then
+      Button[I].Text[0].Text := IPlayerTranslated[I]
+    else Button[I].Text[0].Text := Ini.Name[I];
 
   UpdateInterface;
 
