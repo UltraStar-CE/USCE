@@ -133,6 +133,7 @@ begin
         SEntry[J].ID := Entry[J].ID;
         SEntry[J].Title := Entry[J].Title;
         SEntry[J].Description := Entry[J].Description;
+        SEntry[J].Subs := Entry[J].Subs;
         for K := low(Entry[J].Sections) to high(Entry[J].Sections) do
           SEntry[J].Sections[K] := Entry[J].Sections[K];
       end;
