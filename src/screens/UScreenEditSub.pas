@@ -1259,7 +1259,7 @@ begin
       ifthen(SDL_ModState = KMOD_LALT,
         CurrentSong.Tracks[CurrentTrack].High,
         CurrentSong.Tracks[CurrentTrack].CurrentLine),
-      SDL_ModState = KMOD_LALT, true, true);
+      false, true, true);
     PlaySentence := true;
     AudioPlayback.Play;
     PlayScheduledCue;
