@@ -2024,6 +2024,7 @@ var
         'FROM ' + StatScoreSource(SinceDate) + ' later INNER JOIN ' + StatScoreSource(SinceDate) +
         ' earlier ON later.[SongID] = earlier.[SongID] AND later.[Player] = earlier.[Player] ' +
         'AND later.[Difficulty] = earlier.[Difficulty] AND later.[Date] > earlier.[Date] ' +
+        'AND later.[TrackCount] = earlier.[TrackCount] AND later.[TrackMask] = earlier.[TrackMask] ' +
         'INNER JOIN [' + cUS_Songs + '] s ON later.[SongID] = s.[ID] ' +
         'WHERE later.[Player] <> '''' AND earlier.[Date] > 0 ' +
         'GROUP BY later.[SongID], later.[Player], s.[Artist], s.[Title] ' +
