@@ -713,6 +713,9 @@ begin
             if ((CurrentLineFragment.StartBeat <= ActualBeat) and
               (CurrentLineFragment.StartBeat + CurrentLineFragment.Duration-1 >= ActualBeat)) and
               (ScoreFactor[CurrentLineFragment.NoteType] > 0) and
+              ((ScreenSong.Mode <> smMedley) or
+               ((CurrentLineFragment.StartBeat >= CurrentSong.Medley.StartBeat) and
+                (CurrentLineFragment.StartBeat < CurrentSong.Medley.EndBeat))) and
               (CurrentLineFragment.Duration > 0) then
             begin
               SentenceDetected := SentenceIndex;
