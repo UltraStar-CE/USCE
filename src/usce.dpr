@@ -171,6 +171,7 @@ uses
   USong             in 'base\USong.pas',
   USongs            in 'base\USongs.pas',
   UIni              in 'base\UIni.pas',
+  URecentNames      in 'base\URecentNames.pas',
   UImage            in 'base\UImage.pas',
   ULyrics           in 'base\ULyrics.pas',
   UEditorLyrics     in 'base\UEditorLyrics.pas',

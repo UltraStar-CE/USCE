@@ -36,6 +36,7 @@ interface
 {$I switches.inc}
 
 uses
+  URecentNames,
   Classes,
   IniFiles,
   SysUtils,
@@ -134,6 +135,7 @@ type
       NameTemplate:   array[0..(IMaxPlayerCount-1)] of UTF8String;
 
       // Filename of the opened iniFile
+      RecentNames: TRecentNames;
       Filename:       IPath;
 
       // Game
@@ -295,6 +297,7 @@ type
       procedure Load();
       procedure Save();
       procedure SaveNames;
+      procedure RememberUsedNames(const Values: array of UTF8String);
       function ReloadNames: boolean;
       procedure SaveLevel;
       procedure SavePlayerColors;
@@ -1753,6 +1756,7 @@ begin
   end;
 
   // Debug
+  RecentNames := LoadRecentNames(IniFile);
   Debug := ReadArrayIndex(IDebug, IniFile, 'Game', 'Debug', 0);
 
   LoadScreenModes(IniFile);
@@ -2295,6 +2299,13 @@ begin
   end;
 end;
 
+procedure TIni.RememberUsedNames(const Values: array of UTF8String);
+var I: integer;
+begin
+  // Preserve screen order when several names were used together.
+  for I := High(Values) downto 0 do RememberRecentName(RecentNames, Values[I]);
+end;
+
 procedure TIni.SaveNames;
 var
   IniFile: TIniFile;
@@ -2302,6 +2313,7 @@ var
 begin
   IniFile := TSafeIniFile.Create(Filename.ToNative, 'TIni.SaveNames');
   try
+    SaveRecentNames(IniFile, RecentNames);
     //Name Templates for Names Mod
     for I := 0 to High(Name) do
       IniFile.WriteString('Name', 'P' + IntToStr(I+1), Name[I]);

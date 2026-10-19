@@ -156,6 +156,7 @@ type
       function AddText(X, Y, W, H: real; Font, Style: integer; Size, ColR, ColG, ColB: real; Align: integer; const Text_: UTF8String; Reflection_: boolean; ReflectionSpacing_: real; Z : real; Writable: boolean): integer; overload;
 
       // button
+      function HandleNameSuggestionKey(Key: cardinal): boolean;
       procedure SetButtonLength(Length: cardinal); //Function that Set Length of Button Array in one Step instead of register new Memory for every Button
       function AddButton(ThemeButton: TThemeButton): integer; overload;
       function AddButton(X, Y, W, H: real; const TexName: IPath): integer; overload;
@@ -331,6 +332,18 @@ begin
   Interactions[IntNum].Typ := Typ;
   Interactions[IntNum].Num := Num;
   Interaction := 0;
+end;
+
+function TMenu.HandleNameSuggestionKey(Key: cardinal): boolean;
+var B: integer;
+begin
+  Result := false;
+  if (Interaction < 0) or (Interaction > High(Interactions)) or
+    (Interactions[Interaction].Typ <> iButton) then Exit;
+  B := Interactions[Interaction].Num;
+  if (B < 0) or (B > High(Button)) or (Length(Button[B].Text) = 0) then Exit;
+  if Key = SDLK_ESCAPE then Result := Button[B].Text[0].CancelNameSuggestion
+  else if Key = SDLK_RETURN then Result := Button[B].Text[0].AcceptNameSuggestion;
 end;
 
 procedure TMenu.SetInteraction(Num: integer);

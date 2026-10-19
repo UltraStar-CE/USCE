@@ -1109,6 +1109,7 @@ type
     Themes:           array of TThemeEntry;
     Loading:          TThemeLoading;
     Main:             TThemeMain;
+    NameSuggestionAlpha: real;
     Name:             TThemeName;
     Song:             TThemeSong;
     Sing:             TThemeSing;
@@ -1983,6 +1984,7 @@ begin
       Skin.LoadSkin(ISkin[Ini.SkinNo], Themes[ThemeNum].Name);
 
       LoadColors;
+      NameSuggestionAlpha := EnsureRange(ReadFloat(GetSectionList('NameSuggestions'), 'Alpha', 0.5), 0.0, 1.0);
 
 //      ThemeIni.Free;
 //      ThemeIni := TIniFile.Create('Themes\Singstar\Main.ini');

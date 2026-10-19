@@ -473,7 +473,8 @@ begin
 
     for T := 0 to High(Text) do
     begin
-      Text[T].Draw;
+      Text[T].NameSuggestionWidth := W - 8;
+    Text[T].Draw;
     end;
   end;
 end;

@@ -100,6 +100,7 @@ type
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
 
+      procedure SetInteraction(Num: integer); override;
       procedure OnShow; override;
       function Draw: boolean; override;
 
@@ -187,6 +188,17 @@ begin
   MaxScale := UThemes.GetNamePlayerSelectMaxScale(PlayerCount, Theme.Name.PlayerSelectLayout);
 
   Result := GetFittedSlotRect(BaseBounds, SlotRect, MaxScale);
+end;
+
+procedure TScreenName.SetInteraction(Num: integer);
+begin
+  if (Num <> SelInteraction) and (PlayerName < cardinal(Length(Button))) and
+    (Length(Button[PlayerName].Text) > 0) and Button[PlayerName].Selected then
+  begin
+    Button[PlayerName].Text[0].AcceptNameSuggestion;
+    PlayerNames[PlayerIndex] := Button[PlayerName].Text[0].Text;
+  end;
+  inherited SetInteraction(Num);
 end;
 
 function TScreenName.ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
@@ -340,6 +352,11 @@ begin
   Result := true;
   if (PressedDown) then
   begin // Key Down
+    if HandleNameSuggestionKey(PressedKey) then
+    begin
+      PlayerNames[PlayerIndex] := Button[PlayerName].Text[0].Text;
+      Exit;
+    end;
 
     SDL_ModState := SDL_GetModState and (KMOD_LSHIFT + KMOD_RSHIFT
     + KMOD_LCTRL + KMOD_RCTRL + KMOD_LALT  + KMOD_RALT);
@@ -360,6 +377,7 @@ begin
       // pass printable chars to button
       Button[PlayerName].Text[0].Text := Button[PlayerName].Text[0].Text +
                                           UCS4ToUTF8String(CharCode);
+      Button[PlayerName].Text[0].SuggestRecentName;
 
       PlayerNames[PlayerIndex] := Button[PlayerName].Text[0].Text;
       Exit;
@@ -377,6 +395,7 @@ begin
           if (Interaction = PlayerNameIID) then
           begin
             Button[PlayerName].Text[0].DeleteLastLetter();
+            Button[PlayerName].Text[0].SuggestRecentName;
             PlayerNames[PlayerIndex] := Button[PlayerName].Text[0].Text;
           end
           else
@@ -421,6 +440,8 @@ begin
 
           LoadPlayersFromIni;
 
+          for I := UIni.IPlayersVals[CountIndex] - 1 downto 0 do
+            Ini.RememberUsedNames([PlayerNames[I]]);
           Ini.SaveNumberOfPlayers;
           Ini.SaveNames;
           Ini.SavePlayerColors;
