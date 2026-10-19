@@ -62,7 +62,10 @@ check that `make -C dists/windows install` completed successfully, then rerun
 `./configure` and `make` so configuration and binaries match those dependencies.
 
 #### configure flags
-* `--enable-debug`: Outputs warnings and errors from Error.log also to the console, and prints stacktraces when an EAccessViolation occurs.
+* `--enable-debug`: Outputs warnings and errors from Error.log also to the console.
+  Caught exceptions include their class, message and available stack trace in
+  `Error.log` in both normal and debug builds. The report is flushed before the
+  error dialog opens. Debug information makes stack addresses more useful.
 * `--with-portaudio`: This is the default on Linux and macOS. Windows uses SDL audio input.
 * `--without-portaudio`: Use SDL audio input instead.
   This should support newer platforms like PulseAudio and PipeWire.
