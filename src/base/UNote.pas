@@ -87,6 +87,9 @@ type
     ScorePerfectRemaining: real;
 
     // LineBonus
+    DetectionBeat: integer;
+    DetectionReady: boolean;
+    DetectionDelay: integer;
     ScoreLast:      real;    // Last Line Score
 
     // PerfectLineTwinkle (effect)
@@ -247,6 +250,7 @@ begin
 end;
 procedure TPlayer.ResetScores();
 begin
+  DetectionReady := false;
   _Score := 0;
   _ScoreLine := 0;
   _ScoreGolden := 0;
@@ -334,7 +338,7 @@ begin
     NewBeatClick(Screen);
 
   // make some operations when detecting new voice pitch
-  if (LyricsState.CurrentBeatD >= 0) and (LyricsState.OldBeatD <> LyricsState.CurrentBeatD) then
+  if LyricsState.CurrentBeatD >= 0 then
     NewBeatDetect(Screen);
 end;
 
@@ -379,8 +383,6 @@ begin
       SetLength(Player[I].Note, 0);
     end;
   end;
-
-  Ini.ReloadDelays;
 
   Screen.onSentenceChange(CP, CurrentSong.Tracks[CP].CurrentLine)
 end;
@@ -555,51 +557,15 @@ begin
 end;
 
 procedure NewBeatDetect(Screen: TScreenSingController);
-  var
-    MaxCP, CP, SentenceEnd, StartLine, EndLine: integer;
-    I, J: cardinal;
+var CP, MaxCP: integer;
 begin
-  // check for sentence end
-  // we check three lines (previous, current, next)
-  // here because a new sentence may have started
-  // before the old one finished due to corrupt line breaks
-
+  if not Assigned(Screen) then Exit;
   MaxCP := 0;
-  if (CurrentSong.isDuet) and (PlayersPlay <> 1) then
-    MaxCP := 1;
-
-  if (assigned(Screen)) then
+  if CurrentSong.isDuet and (PlayersPlay <> 1) then MaxCP := 1;
+  for CP := 0 to MaxCP do
   begin
-    for J := 0 to MaxCP do
-    begin
-      CP := J;
-
-      StartLine := CurrentSong.Tracks[CP].CurrentLine - 1;
-      if StartLine < 0 then
-        StartLine := 0;
-      EndLine := StartLine + 1;
-      if EndLine > CurrentSong.Tracks[CP].High then
-        EndLine := CurrentSong.Tracks[CP].High;
-
-      NewNote(CP, Screen);
-      ConsumePerfectScorePotential(CP, LyricsState.OldBeatD, LyricsState.CurrentBeatD, Screen);
-
-      for I := StartLine to EndLine do
-      begin
-        with CurrentSong.Tracks[CP].Lines[I] do
-        begin
-          if (HighNote >= 0) then
-          begin
-            SentenceEnd := Notes[HighNote].StartBeat + Notes[HighNote].Duration;
-
-            if (LyricsState.OldBeatD < SentenceEnd) and (LyricsState.CurrentBeatD >= SentenceEnd) then
-              Screen.OnSentenceEnd(CP, I);
-          end;
-        end;
-      end;
-
-      UpdateRemainingScoreBar(CP, Screen);
-    end;
+    NewNote(CP, Screen);
+    UpdateRemainingScoreBar(CP, Screen);
   end;
 end;
 
@@ -628,6 +594,7 @@ var
   DelayBeats:          real;
   PlayerOldBeat:       integer;
   PlayerCurBeat:       integer;
+  EndLineIndex, SentenceEnd: integer;
 begin
   ActualTone := 0;
   NoteHit := false;
@@ -637,10 +604,8 @@ begin
 
   // count min and max sentence range for checking
   // (detection is delayed to the notes we see on the screen)
-  SentenceMin := CurrentSong.Tracks[CP].CurrentLine-1;
-  if (SentenceMin < 0) then
-    SentenceMin := 0;
-  SentenceMax := CurrentSong.Tracks[CP].CurrentLine;
+  SentenceMin := 0;
+  SentenceMax := CurrentSong.Tracks[CP].High;
 
   // analyze player signals
   for PlayerIndex := 0 to PlayersPlay-1 do
@@ -649,13 +614,29 @@ begin
     begin
 
       // delay in beats (Ini.PlayerDelay is ms)
-      DelayBeats := GetBeats(CurrentSong.BPM, Ini.PlayerDelay[PlayerIndex] / 1000);
-
-      PlayerOldBeat := Floor(LyricsState.OldBeatD - DelayBeats);
-      PlayerCurBeat := Floor(LyricsState.CurrentBeatD - DelayBeats);
+      if not Player[PlayerIndex].DetectionReady then
+      begin
+        Player[PlayerIndex].DetectionDelay := Ini.PlayerDelay[PlayerIndex];
+        Player[PlayerIndex].DetectionReady := true;
+        DelayBeats := GetBeats(CurrentSong.BPM, Player[PlayerIndex].DetectionDelay / 1000);
+        Player[PlayerIndex].DetectionBeat := Floor(LyricsState.OldBeatD - DelayBeats);
+      end;
+      DelayBeats := GetBeats(CurrentSong.BPM, Player[PlayerIndex].DetectionDelay / 1000);
+      PlayerOldBeat := Player[PlayerIndex].DetectionBeat;
+      PlayerCurBeat := Floor(LyricsState.MidBeatD - DelayBeats);
 
       for ActualBeat := PlayerOldBeat+1 to PlayerCurBeat do
       begin
+        // Finish each player's line after its last delayed beat and before
+        // scoring any following line. Other players may still be singing it.
+        for EndLineIndex := 0 to CurrentSong.Tracks[CP].High do
+          with CurrentSong.Tracks[CP].Lines[EndLineIndex] do
+            if HighNote >= 0 then
+            begin
+              SentenceEnd := Notes[HighNote].StartBeat + Notes[HighNote].Duration;
+              if ActualBeat = SentenceEnd then
+                Screen.OnSentenceEnd(CP, EndLineIndex, PlayerIndex);
+            end;
         // check for an active note at the current time defined in the lyrics
         NoteAvailable := false;
         SentenceDetected := SentenceMin;
@@ -772,7 +753,7 @@ begin
           end; // operation
 
           // check if we have to add a new note or extend the note's length
-          if (SentenceDetected = SentenceMax) then
+          if (SentenceDetected = CurrentSong.Tracks[CP].CurrentLine) then
           begin
             // we will add a new note
             NewNote := true;
@@ -835,6 +816,7 @@ begin
 
         end; // if Detected
       end; // for ActualBeat
+      Player[PlayerIndex].DetectionBeat := Max(PlayerOldBeat, PlayerCurBeat);
     end;
   end; // for PlayerIndex
   //Log.LogStatus('EndBeat', 'NewBeat');
