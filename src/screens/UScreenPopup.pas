@@ -81,6 +81,7 @@ type
 
   TScreenPopupInsertUser = class(TMenu)
     private
+      fPasswordOnly: boolean;
       fHandler: TPopupInsertUserHandler;
       fHandlerData: Pointer;
 
@@ -89,6 +90,10 @@ type
       Username: UTF8String;
       Password: UTF8String;
       InteractionTmp: integer;
+
+      procedure SetInteraction(Num: integer); override;
+      procedure ShowPasswordPrompt(const Title, Msg: UTF8String;
+        Handler: TPopupInsertUserHandler; HandlerData: Pointer);
 
       constructor Create; override;
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
@@ -464,10 +469,9 @@ begin
 
           if (Interaction = 1) then
           begin
-            Password_TMP := '';
-            for I := 1 to High(Password) do
-              Password_TMP := Password_TMP + Password[I];
-            Password := Password_TMP;
+            I := Length(Password);
+            while (I > 1) and ((Ord(Password[I]) and $C0) = $80) do Dec(I);
+            if I > 0 then Delete(Password, I, MaxInt);
           end;
         end;
       end;
@@ -480,9 +484,8 @@ begin
             Interaction := 2;
 
           Value := (Interaction = 2);
-          if (Interaction = 3) then
-            Visible := false;
-            StopTextInput;
+          Visible := false;
+          StopTextInput;
           Result := false;
         end;
 
@@ -555,6 +558,7 @@ begin
   StartTextInput;
   fHandler := Handler;
   fHandlerData := HandlerData;
+  fPasswordOnly := false;
 
   Text[0].Text := Language.Translate(Msg);
   Text[1].Text := Title;
@@ -575,6 +579,22 @@ begin
   Interaction := 0;
 
   Background.OnShow
+end;
+
+procedure TScreenPopupInsertUser.SetInteraction(Num: integer);
+begin
+  if fPasswordOnly and (Num = 0) then Num := 1;
+  inherited SetInteraction(Num);
+end;
+
+procedure TScreenPopupInsertUser.ShowPasswordPrompt(const Title, Msg: UTF8String;
+  Handler: TPopupInsertUserHandler; HandlerData: Pointer);
+begin
+  ShowPopup(Title, Msg, Handler, HandlerData);
+  fPasswordOnly := true;
+  Button[0].Visible := false;
+  Button[2].Text[0].Text := Language.Translate('SONG_MENU_YES');
+  Interaction := 1;
 end;
 
 { TScreenPopupSendScore }
