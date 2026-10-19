@@ -845,6 +845,8 @@ begin
 
       // keyboard/mouse/joystick events
       CheckEvents;
+      if Display.CurrentScreen <> @ScreenSing then
+        RemoteBridgeIPC.ApplyPendingPlayerCount;
       ProcessRemoteCommandQueue;
 
       // display

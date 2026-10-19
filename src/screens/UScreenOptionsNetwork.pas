@@ -117,6 +117,7 @@ uses
   ULanguage,
   ULog,
   UMain,
+  URemoteBridgeProcess,
   UUnicodeUtils,
   SysUtils;
 
@@ -169,8 +170,7 @@ end;
 
 function DefaultBridgeScriptPath: UTF8String;
 begin
-  Result := ExpandFileName(ExtractFilePath(ParamStr(0)) +
-    'webs' + DirectorySeparator + 'usdx-bridge.mjs');
+  Result := DefaultRemoteBridgeScriptPath;
 end;
 
 function DefaultNodeExecutablePath: UTF8String;

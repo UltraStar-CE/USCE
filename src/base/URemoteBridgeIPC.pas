@@ -46,6 +46,7 @@ type
     FDisplayCode: UTF8String;
     FStatusSeq: integer;
     FGameStateSeq: integer;
+    FRequestedPlayerCount: integer;
     FPlayers: array of TRemoteBridgePlayer;
     procedure ClearRoomStatus;
     procedure SetRoomStatus(Connected: boolean; const DisplayCode: UTF8String);
@@ -60,6 +61,7 @@ type
 
     procedure Start;
     procedure Stop;
+    procedure ApplyPendingPlayerCount;
     procedure SendAck(const PlayerId: UTF8String; CommandId: integer;
       Accepted: boolean; const Reason: UTF8String; GameStateSeq: integer);
     procedure SendSongStarted(SongSeq: integer; SongId: integer; MediaStartUs: int64;
@@ -89,6 +91,8 @@ uses
   fpjson,
   jsonparser,
   ULog,
+  UIni,
+  UNote,
   ssockets;
 
 const
@@ -103,11 +107,14 @@ type
   private
     FOwner: TRemoteBridgeIPC;
     FSocket: TInetSocket;
+    FSocketLock: TRTLCriticalSection;
+    FSocketFailed: boolean;
     FLineBuffer: string;
 
     procedure HandleLine(const Line: string);
     procedure HandleMessage(Obj: TJSONObject);
     procedure HandlePlayerAssigned(Obj: TJSONObject);
+    procedure HandlePlayersSnapshot(Obj: TJSONObject);
     procedure HandleSettingsUpdate(Obj: TJSONObject);
     procedure HandlePlayerDisconnected(Obj: TJSONObject);
     procedure HandlePlayerLeft(Obj: TJSONObject);
@@ -491,7 +498,6 @@ begin
     Exit;
 
   FThread.Terminate;
-  TRemoteBridgeIPCThread(FThread).CloseSocket;
   FThread.WaitFor;
   FreeAndNil(FThread);
 end;
@@ -568,29 +574,46 @@ begin
   inherited Create(true);
   FreeOnTerminate := false;
   FOwner := Owner;
+  InitCriticalSection(FSocketLock);
 end;
 
 destructor TRemoteBridgeIPCThread.Destroy;
 begin
   CloseSocket;
+  DoneCriticalSection(FSocketLock);
   inherited;
 end;
 
 procedure TRemoteBridgeIPCThread.CloseSocket;
 begin
-  if (FSocket <> nil) then
+  EnterCriticalSection(FSocketLock);
+  try
     FreeAndNil(FSocket);
+  finally
+    LeaveCriticalSection(FSocketLock);
+  end;
 end;
 
 procedure TRemoteBridgeIPCThread.SendLine(const Line: string);
+var Written, Count: integer;
 begin
-  if (FSocket = nil) then
-    Exit;
-
+  EnterCriticalSection(FSocketLock);
   try
-    FSocket.Write(Pointer(Line)^, Length(Line));
-  except
-    CloseSocket;
+    if (FSocket = nil) or FSocketFailed then Exit;
+    try
+      Written := 0;
+      while Written < Length(Line) do
+      begin
+        Count := FSocket.Write(Line[Written + 1], Length(Line) - Written);
+        if Count <= 0 then raise Exception.Create('IPC write failed');
+        Inc(Written, Count);
+      end;
+    except
+      // The reader owns destruction. A sender must never free its live socket.
+      FSocketFailed := true;
+    end;
+  finally
+    LeaveCriticalSection(FSocketLock);
   end;
 end;
 
@@ -694,8 +717,21 @@ begin
 end;
 
 procedure TRemoteBridgeIPCThread.SendSongEnded(SongSeq: integer; MediaStartUs: int64; DurationUs: int64);
+var I: integer; PlayersJson: string;
 begin
-  SendSongEvent('song.ended', SongSeq, MediaStartUs, DurationUs);
+  PlayersJson := '[';
+  for I := 0 to High(Player) do
+  begin
+    if I > 0 then PlayersJson := PlayersJson + ',';
+    PlayersJson := PlayersJson + '{"slot":' + IntToStr(I + 1) +
+        ',"score":' + IntToStr(Player[I].ScoreInt) +
+        ',"scoreLine":' + IntToStr(Player[I].ScoreLineInt) +
+        ',"scoreGolden":' + IntToStr(Player[I].ScoreGoldenInt) +
+        ',"scoreTotal":' + IntToStr(Player[I].ScoreTotalInt) + '}';
+  end;
+  SendLine('{"type":"song.ended","protocol":1,"songSeq":' + IntToStr(SongSeq) +
+      ',"mediaStartUs":' + IntToStr(MediaStartUs) + ',"durationUs":' + IntToStr(DurationUs) +
+      ',"players":' + PlayersJson + ']}' + #10);
 end;
 
 procedure TRemoteBridgeIPCThread.Execute;
@@ -709,11 +745,18 @@ begin
   while (not Terminated) do
   begin
     try
-      FSocket := TInetSocket.Create(FOwner.Host, FOwner.Port, CONNECT_TIMEOUT_MS);
+      EnterCriticalSection(FSocketLock);
+      try
+        FSocket := TInetSocket.Create(FOwner.Host, FOwner.Port, CONNECT_TIMEOUT_MS);
+        FSocket.IOTimeout := 1000;
+        FSocketFailed := false;
+      finally
+        LeaveCriticalSection(FSocketLock);
+      end;
       SendLine('{"type":"bridge.ping","protocol":1}' + #10);
       FLineBuffer := '';
 
-      while (not Terminated) do
+      while (not Terminated) and not FSocketFailed do
       begin
         ReadCount := FSocket.Read(Buffer, SizeOf(Buffer));
         if (ReadCount <= 0) then
@@ -780,6 +823,8 @@ begin
     if (DisplayCode <> '') then
       FOwner.SetRoomStatus(true, UTF8String(DisplayCode));
   end
+  else if (MessageType = 'remote.players.snapshot') then
+    HandlePlayersSnapshot(Obj)
   else if (MessageType = 'player.joined') or (MessageType = 'player.assigned') then
     HandlePlayerAssigned(Obj)
   else if (MessageType = 'settings.update') then
@@ -800,6 +845,50 @@ begin
   begin
     FOwner.ClearRoomStatus;
     RemoteInputProcessor.Clear;
+  end;
+end;
+
+procedure TRemoteBridgeIPC.ApplyPendingPlayerCount;
+var Count, I: integer;
+begin
+  EnterCriticalSection(FStatusLock);
+  try
+    Count := FRequestedPlayerCount;
+    FRequestedPlayerCount := 0;
+  finally
+    LeaveCriticalSection(FStatusLock);
+  end;
+  if Count <= 0 then Exit;
+  for I := Low(IPlayersVals) to High(IPlayersVals) do
+    if IPlayersVals[I] >= Count then
+    begin
+      Ini.Players := I;
+      Exit;
+    end;
+end;
+
+procedure TRemoteBridgeIPCThread.HandlePlayersSnapshot(Obj: TJSONObject);
+var Data: TJSONData; Players: TJSONArray; Entry: TJSONObject; I: integer;
+begin
+  Data := Obj.Find('players');
+  if (Data = nil) or (Data.JSONType <> jtArray) then Exit;
+  Players := TJSONArray(Data);
+  FOwner.ClearPlayers;
+  for I := 0 to IMaxPlayerCount - 1 do
+    RemoteInputProcessor.ClearPlayerSlot(I);
+  for I := 0 to Players.Count - 1 do
+    if Players.Items[I].JSONType = jtObject then
+    begin
+      Entry := TJSONObject(Players.Items[I]);
+      HandlePlayerAssigned(Entry);
+      FOwner.SetPlayerConnected(UTF8String(JsonGetString(Entry, 'playerId', '')),
+          JsonGetBool(Entry, 'connected', true));
+    end;
+  EnterCriticalSection(FOwner.FStatusLock);
+  try
+    FOwner.FRequestedPlayerCount := JsonGetInt(Obj, 'gamePlayerCount', 0);
+  finally
+    LeaveCriticalSection(FOwner.FStatusLock);
   end;
 end;
 
@@ -943,15 +1032,15 @@ begin
     else if (Frames.Items[I].JSONType = jtArray) then
     begin
       FrameArr := TJSONArray(Frames.Items[I]);
-      if (FrameArr.Count < 5) then
+      if (FrameArr.Count < 2) then
         Continue;
       Frame.SongTimeUs := JsonArrayGetInt64(FrameArr, 0, -1);
       if (BaseSongTimeUs >= 0) and (Frame.SongTimeUs >= 0) then
         Frame.SongTimeUs := BaseSongTimeUs + Frame.SongTimeUs;
       Frame.F0Cents := JsonArrayGetInt(FrameArr, 1, 0);
-      Frame.RmsDb := JsonArrayGetInt(FrameArr, 2, -1200) / 10;
-      Frame.Confidence := JsonArrayGetInt(FrameArr, 3, 0) / 255;
-      Frame.Voiced := JsonArrayGetInt(FrameArr, 4, 0) <> 0;
+      Frame.RmsDb := JsonArrayGetInt(FrameArr, 2, 0) / 10;
+      Frame.Confidence := JsonArrayGetInt(FrameArr, 3, 255) / 255;
+      Frame.Voiced := JsonArrayGetInt(FrameArr, 4, 1) <> 0;
     end
     else
       Continue;
