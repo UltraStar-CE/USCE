@@ -84,6 +84,7 @@ type
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
       procedure OnShow; override;
+      procedure OnHide; override;
       
       function NoRepeatColors(ColorP:integer; Interaction:integer; Pos:integer):integer;
       procedure TeamColorButton(K: integer; Interact: integer);
@@ -315,9 +316,7 @@ begin
     // check normal keys
     if (IsPrintableChar(CharCode)) then
     begin
-      Button[Interactions[Interaction].Num].Text[0].Text := Button[Interactions[Interaction].Num].Text[0].Text +
-                                          UCS4ToUTF8String(CharCode);
-      Button[Interactions[Interaction].Num].Text[0].SuggestRecentName;
+      Button[Interactions[Interaction].Num].Text[0].TypeNameCharacter(UCS4ToUTF8String(CharCode));
       Exit;
     end;
 
@@ -328,8 +327,7 @@ begin
         HandleTemplateHotkey;
       SDLK_BACKSPACE:
         begin
-          Button[Interactions[Interaction].Num].Text[0].DeleteLastLetter;
-          Button[Interactions[Interaction].Num].Text[0].SuggestRecentName;
+          Button[Interactions[Interaction].Num].Text[0].DeleteNameCharacter;
         end;
     end;
   end
@@ -503,6 +501,7 @@ begin
 
   Team1Name := AddButton(Theme.PartyPlayer.Team1Name);
   Button[Team1Name].Text[0].Writable := true;
+  Button[Team1Name].Text[0].NameEntryField := true;
 
   Theme.PartyPlayer.SelectPlayers1.oneItemOnly := true;
   Theme.PartyPlayer.SelectPlayers1.showArrows := true;
@@ -510,18 +509,23 @@ begin
 
   ButtonID := AddButton(Theme.PartyPlayer.Player1Name);
   Button[ButtonID].Text[0].Writable := true;
+  Button[ButtonID].Text[0].NameEntryField := true;
 
   ButtonID := AddButton(Theme.PartyPlayer.Player2Name);
   Button[ButtonID].Text[0].Writable := true;
+  Button[ButtonID].Text[0].NameEntryField := true;
 
   ButtonID := AddButton(Theme.PartyPlayer.Player3Name);
   Button[ButtonID].Text[0].Writable := true;
+  Button[ButtonID].Text[0].NameEntryField := true;
 
   ButtonID := AddButton(Theme.PartyPlayer.Player4Name);
   Button[ButtonID].Text[0].Writable := true;
+  Button[ButtonID].Text[0].NameEntryField := true;
 
   Team2Name := AddButton(Theme.PartyPlayer.Team2Name);
   Button[Team2Name].Text[0].Writable := true;
+  Button[Team2Name].Text[0].NameEntryField := true;
 
   Theme.PartyPlayer.SelectPlayers2.oneItemOnly := true;
   Theme.PartyPlayer.SelectPlayers2.showArrows := true;
@@ -529,18 +533,23 @@ begin
 
   ButtonID := AddButton(Theme.PartyPlayer.Player5Name);
   Button[ButtonID].Text[0].Writable := true;
+  Button[ButtonID].Text[0].NameEntryField := true;
 
   ButtonID := AddButton(Theme.PartyPlayer.Player6Name);
   Button[ButtonID].Text[0].Writable := true;
+  Button[ButtonID].Text[0].NameEntryField := true;
 
   ButtonID := AddButton(Theme.PartyPlayer.Player7Name);
   Button[ButtonID].Text[0].Writable := true;
+  Button[ButtonID].Text[0].NameEntryField := true;
 
   ButtonID := AddButton(Theme.PartyPlayer.Player8Name);
   Button[ButtonID].Text[0].Writable := true;
+  Button[ButtonID].Text[0].NameEntryField := true;
 
   Team3Name := AddButton(Theme.PartyPlayer.Team3Name);
   Button[Team3Name].Text[0].Writable := true;
+  Button[Team3Name].Text[0].NameEntryField := true;
 
   Theme.PartyPlayer.SelectPlayers3.oneItemOnly := true;
   Theme.PartyPlayer.SelectPlayers3.showArrows := true;
@@ -548,15 +557,19 @@ begin
 
   ButtonID := AddButton(Theme.PartyPlayer.Player9Name);
   Button[ButtonID].Text[0].Writable := true;
+  Button[ButtonID].Text[0].NameEntryField := true;
 
   ButtonID := AddButton(Theme.PartyPlayer.Player10Name);
   Button[ButtonID].Text[0].Writable := true;
+  Button[ButtonID].Text[0].NameEntryField := true;
 
   ButtonID := AddButton(Theme.PartyPlayer.Player11Name);
   Button[ButtonID].Text[0].Writable := true;
+  Button[ButtonID].Text[0].NameEntryField := true;
 
   ButtonID := AddButton(Theme.PartyPlayer.Player12Name);
   Button[ButtonID].Text[0].Writable := true;
+  Button[ButtonID].Text[0].NameEntryField := true;
 
   Button[Team2Name].Text[0].Selected  := true;
 
@@ -568,6 +581,12 @@ begin
   CountPlayer[1] := 0;
   CountPlayer[2] := 0;
   FCachedSetupValid := false;
+end;
+
+procedure TScreenPartyPlayer.OnHide;
+begin
+  StopTextInput;
+  inherited;
 end;
 
 procedure TScreenPartyPlayer.OnShow;

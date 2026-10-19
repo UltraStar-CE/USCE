@@ -351,6 +351,13 @@ var
   OldNum, OldTyp: integer;
   NewNum, NewTyp: integer;
 begin
+  if (Num = SelInteraction) and (Num >= 0) and (Num <= High(Interactions)) and
+    (Interactions[Num].Typ = iButton) then
+  begin
+    OldNum := Interactions[Num].Num;
+    if (OldNum >= 0) and (OldNum <= High(Button)) and Button[OldNum].Selected and
+      (Length(Button[OldNum].Text) > 0) and Button[OldNum].Text[0].NameEntryField then Exit;
+  end;
   // set inactive
   if(Interaction > -1) then
   begin

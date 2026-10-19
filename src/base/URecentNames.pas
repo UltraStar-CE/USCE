@@ -9,12 +9,19 @@ uses SysUtils, IniFiles;
 type TRecentNames = array of UTF8String;
 const MaxRecentNames = 256;
 
+function TypeNameInput(var Editing: boolean; const Current, Input: UTF8String): UTF8String;
 procedure RememberRecentName(var Names: TRecentNames; const Value: UTF8String);
 function PredictRecentName(const Names: TRecentNames; const Prefix: UTF8String): UTF8String;
 function LoadRecentNames(Ini: TCustomIniFile): TRecentNames;
 procedure SaveRecentNames(Ini: TCustomIniFile; const Names: TRecentNames);
 
 implementation
+
+function TypeNameInput(var Editing: boolean; const Current, Input: UTF8String): UTF8String;
+begin
+  if Editing then Result := Current + Input else Result := Input;
+  Editing := true;
+end;
 
 procedure RememberRecentName(var Names: TRecentNames; const Value: UTF8String);
 var Name: UTF8String; I, J: integer;

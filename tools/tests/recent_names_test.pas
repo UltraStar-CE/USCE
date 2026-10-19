@@ -2,7 +2,7 @@ program RecentNamesTest;
 {$mode delphi}
 {$codepage utf8}
 uses SysUtils, IniFiles, URecentNames;
-var Names, Loaded: TRecentNames; Ini: TMemIniFile; I: integer;
+var Names, Loaded: TRecentNames; Ini: TMemIniFile; I: integer; Editing: boolean; Typed: UTF8String;
 
 procedure Expect(Value: boolean; const Message: string);
 begin
@@ -10,6 +10,15 @@ begin
 end;
 
 begin
+  Editing := false;
+  Typed := TypeNameInput(Editing, 'Player1', 'D');
+  Expect((Typed = 'D') and Editing, 'First character did not replace existing name');
+  Typed := TypeNameInput(Editing, Typed, 'a');
+  Expect(Typed = 'Da', 'Subsequent typing did not append');
+  Editing := true;
+  Expect(TypeNameInput(Editing, 'D', 'n') = 'Dn', 'Typing after an edit replaced it');
+  Editing := false;
+  Expect(TypeNameInput(Editing, 'Other field', 'Ä') = 'Ä', 'Fresh focus did not replace text');
   RememberRecentName(Names, 'Daniel');
   RememberRecentName(Names, 'Dani');
   Expect(PredictRecentName(Names, 'Da') = 'Dani', 'MRU order ignored');

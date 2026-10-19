@@ -102,6 +102,7 @@ type
 
       procedure SetInteraction(Num: integer); override;
       procedure OnShow; override;
+      procedure OnHide; override;
       function Draw: boolean; override;
 
       procedure SetAvatarScroll;
@@ -375,9 +376,7 @@ begin
     else if (Interaction = PlayerNameIID) and (IsPrintableChar(CharCode)) then
     begin
       // pass printable chars to button
-      Button[PlayerName].Text[0].Text := Button[PlayerName].Text[0].Text +
-                                          UCS4ToUTF8String(CharCode);
-      Button[PlayerName].Text[0].SuggestRecentName;
+      Button[PlayerName].Text[0].TypeNameCharacter(UCS4ToUTF8String(CharCode));
 
       PlayerNames[PlayerIndex] := Button[PlayerName].Text[0].Text;
       Exit;
@@ -394,8 +393,7 @@ begin
         begin
           if (Interaction = PlayerNameIID) then
           begin
-            Button[PlayerName].Text[0].DeleteLastLetter();
-            Button[PlayerName].Text[0].SuggestRecentName;
+            Button[PlayerName].Text[0].DeleteNameCharacter;
             PlayerNames[PlayerIndex] := Button[PlayerName].Text[0].Text;
           end
           else
@@ -961,6 +959,7 @@ begin
   PlayerName := AddButton(Theme.Name.PlayerButtonName);
   PlayerNameIID := High(Interactions);
   Button[PlayerName].Text[0].Writable := true;
+  Button[PlayerName].Text[0].NameEntryField := true;
 
   Theme.Name.SelectPlayerColor.oneItemOnly := true;
   Theme.Name.SelectPlayerColor.showArrows := true;
@@ -1059,6 +1058,12 @@ begin
       AvatarPlayerTextures[I+1].ColB := Col.B;
     end;
   end;
+end;
+
+procedure TScreenName.OnHide;
+begin
+  StopTextInput;
+  inherited;
 end;
 
 procedure TScreenName.OnShow;
