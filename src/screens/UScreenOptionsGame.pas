@@ -47,6 +47,7 @@ uses
 type
   TScreenOptionsGame = class(TOptionsMenu)
     private
+      StatisticsViewLabels: array[0..1] of UTF8String;
       old_Language:  integer;
       old_SongMenu:  integer;
       old_Sorting:   integer;
@@ -95,6 +96,7 @@ type
     iSortingSlide,
     iShowScoresSlide,
     iDebugSlide,
+    iStatisticsViewSlide,
     iAVDelaySlide,
     iMicDelaySlide,
     iBackButton
@@ -315,6 +317,9 @@ begin
   AddSelectSlide('SING_OPTIONS_GAME_SORTING', Ini.Sorting, ISortingTranslated);
   AddSelectSlide('SING_OPTIONS_GAME_SHOWSCORES', Ini.ShowScores, IShowScoresTranslated);
   AddSelectSlide('SING_OPTIONS_GAME_DEBUG', Ini.Debug, IDebugTranslated);
+  StatisticsViewLabels[0] := Language.Translate('OPTION_VALUE_STATISTICS_REDUCED');
+  StatisticsViewLabels[1] := Language.Translate('OPTION_VALUE_STATISTICS_FULL');
+  AddSelectSlide('SING_OPTIONS_GAME_STATISTICS', Ini.StatisticsView, StatisticsViewLabels);
   UpdateCalculatedSelectSlides(true);
 end;
 
