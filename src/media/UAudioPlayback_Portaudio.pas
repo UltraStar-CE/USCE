@@ -332,10 +332,9 @@ begin
   EnumDevices();
 
   paApiInfo := Pa_GetHostApiInfo(paApiIndex);
-  Log.LogInfo('Audio-Output API-Type: ' + paApiInfo^.name, 'TAudioPlayback_Portaudio.OpenDevice');
-
   if paApiInfo = nil then
     Exit;
+  Log.LogInfo('Audio-Output API-Type: ' + paApiInfo^.name, 'TAudioPlayback_Portaudio.OpenDevice');
   paOutDevice := paApiInfo^.defaultOutputDevice;
   if (not OpenDevice(paOutDevice)) then
   begin
