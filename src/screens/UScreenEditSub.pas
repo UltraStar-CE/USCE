@@ -5017,7 +5017,7 @@ begin
   I := 0;
   for LineIndex := 0 to numLines - 1 do
   begin
-    if (LineIndex = CurrentSong.Tracks[Track].CurrentLine) and not (PlaySentence or PlaySentenceMidi or PlayOne) then
+    if (LineIndex = CurrentSong.Tracks[Track].CurrentLine) and not (PlaySentence or PlaySentenceMidi or PlayOne or PlayOneMidi) then
     begin
       // currently selected line in orange
       QuadList[I].ColR := 1;
@@ -5077,7 +5077,7 @@ begin
     I := I + 1;
   end;
 
-  if(PlaySentence or PlaySentenceMidi or PlayOne) then
+  if(PlaySentence or PlaySentenceMidi or PlayOne or PlayOneMidi) then
   begin
     QuadList[I].ColR := 0;
     QuadList[I].ColG := 0;
