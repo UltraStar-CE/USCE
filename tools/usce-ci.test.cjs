@@ -78,7 +78,7 @@ test('candidate publisher requires every platform and whitespace on the resolved
   const text = fs.readFileSync(path.join(__dirname, '../.github/workflows/candidate-validation.yml'), 'utf8');
   const body = text.slice(text.lastIndexOf('          script: |') + '          script: |'.length)
     .split('\n').map(line => line.replace(/^            /, '')).join('\n');
-  const names = ['Build for Windows', 'Build for Linux', 'Build for MacOS (macos-latest)', 'Build for MacOS (macos-15-intel)'];
+  const names = ['Build for Windows', 'Build for Linux', 'Build for MacOS (macos-15)', 'Build for MacOS (macos-15-intel)'];
   async function publish(results, lint = 'success', platform = 'success') {
     const statuses = [];
     const github = {paginate: async () => results, rest: {actions: {listJobsForWorkflowRun() {}},
@@ -98,4 +98,38 @@ test('candidate publisher requires every platform and whitespace on the resolved
   for (const result of ['failure', 'cancelled', 'skipped', null]) {
     assert.equal(await publish(jobs.map((job, i) => i === 0 ? {...job, conclusion: result} : job)), 'failure');
   }
+});
+
+test('failure diagnostics identify runner cancellations and actual failed steps', async () => {
+  const f = fixture(['src/a.pas'], () => [run('failure', 42)]);
+  f.args.github.rest.actions.listJobsForWorkflowRun = () => {};
+  f.args.github.paginate = async (_, args) => {
+    assert.equal(args.run_id, 42);
+    assert.equal(args.filter, 'latest');
+    return [{name: 'Build for MacOS (macos-15)', conclusion: 'cancelled', steps: []},
+      {name: 'Build for Linux', conclusion: 'failure', steps: [{name: 'Compile', conclusion: 'failure'}]},
+      {name: 'Build for Windows', conclusion: 'success', steps: []}];
+  };
+  await assert.rejects(waitForBuilds(f.args), error => {
+    assert.match(error.message, /MacOS.*cancelled before any steps ran/);
+    assert.match(error.message, /Linux: failure at Compile/);
+    assert.doesNotMatch(error.message, /Windows: success/);
+    return true;
+  });
+});
+
+test('unavailable failure details cannot make a failed build pass', async () => {
+  const f = fixture(['src/a.pas'], () => [run('failure')]);
+  f.args.github.paginate = async () => { throw Error('API unavailable'); };
+  await assert.rejects(waitForBuilds(f.args), /Required main.yml finished with failure/);
+});
+
+test('ARM macOS uses an explicit supported image and remains required for candidates', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const workflow = fs.readFileSync(path.join(__dirname, '../.github/workflows/platform-builds.yml'), 'utf8');
+  assert.match(workflow, /os: \[macos-15, macos-15-intel\]/);
+  assert.match(workflow, /fail-fast: false/);
+  const candidate = fs.readFileSync(path.join(__dirname, '../.github/workflows/candidate-validation.yml'), 'utf8');
+  assert(candidate.includes("'Build for MacOS (macos-15)'"));
 });

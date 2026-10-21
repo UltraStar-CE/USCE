@@ -187,7 +187,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, macos-15-intel]
+        os: [macos-15, macos-15-intel]
     env:
       USCE_RELEASE_VERSION: ${{ inputs.release-version }}
       USCE_BUILD_CHANNEL: development
