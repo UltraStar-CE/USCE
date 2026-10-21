@@ -9,6 +9,13 @@ begin
 end;
 
 begin
+  Assert(LocaleAgeRegion('C.UTF-8') = '');
+  Assert(LocaleAgeRegion('en.UTF-8') = '');
+  Assert(LocaleAgeRegion('en_US.UTF-8') = 'US');
+  Assert(LocaleAgeRegion('de-AT') = 'AT');
+  Assert(LocaleAgeRegion('sr_RS@latin') = 'RS');
+  Assert(LocaleAgeRegion('en_8') = '');
+  Assert(LocaleAgeRegion('en_USA') = '');
   Expect('12, DE:16, US:13', 'DE', 16);
   Expect('12, DE:16, US:13', 'US', 13);
   Expect('12, DE:16, US:13', 'AT', 12);
