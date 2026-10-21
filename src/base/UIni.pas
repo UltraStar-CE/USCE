@@ -85,7 +85,6 @@ const
   IMaxPlayerCount = 24;
 
 type
-  TUTF8StringArray = array of UTF8String;
   TIntegerArray = array of integer;
 
 function GetNameTemplateIndexFromKey(const Key: cardinal): integer;
@@ -93,6 +92,7 @@ function CreateNumericOptionArray(const FirstValue, LastValue: integer): TUTF8St
 function GetPlayerColorOptionCount: integer;
 function TryGetMixedPlayerColorPair(ColorIndex: integer; out LeftColor, RightColor: integer): boolean;
 
+const
   DEFAULT_REMOTE_BRIDGE_ENABLED = 0;
   DEFAULT_REMOTE_BRIDGE_IPC_HOST = '127.0.0.1';
   DEFAULT_REMOTE_BRIDGE_IPC_PORT = 8765;
