@@ -6435,7 +6435,7 @@ begin
   if (PlaySentence or PlayVideo or PlayOne) then
   begin
     // stop the music
-    if (AudioPlayback.Position > PlayStopTime) then
+    if (AudioPlayback.Position >= PlayStopTime) or AudioPlayback.Finished then
     begin
       AudioPlayback.Stop;
       PlaySentence := false;
