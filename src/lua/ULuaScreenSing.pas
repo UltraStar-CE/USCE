@@ -469,7 +469,7 @@ begin
 end;
 
 { ScreenSing.GetTotalBeats - no arguments
-  returns the total beats minutes of the current song in quarts }
+  returns the end beat in the same absolute coordinates as GetBeat }
 function ULuaScreenSing_GetTotalBeats(L: Plua_State): Integer; cdecl;
 begin
   lua_ClearStack(L);
@@ -479,7 +479,7 @@ begin
     lua_PushNumber(L, 0) // in case of error
   else
     if ScreenSong.Mode = smMedley then
-      lua_PushNumber(L, CurrentSong.BPM * (ScreenSing.MedleyEnd - ScreenSing.MedleyStart) / 60)
+      lua_PushNumber(L, GetMidBeat(ScreenSing.MedleyEnd - CurrentSong.GAP / 1000))
     else
       lua_PushNumber(L, CurrentSong.BPM * LyricsState.TotalTime / 60);
 end;
