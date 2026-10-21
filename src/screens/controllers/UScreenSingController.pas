@@ -734,6 +734,7 @@ begin
   inherited;
 
   ScoringTailActive := false;
+  RemoteBridgeIPC.ApplyPendingPlayerCount(true);
   Log.LogStatus('Begin', 'OnShow');
 
   if not Help.SetHelpID(ID) then

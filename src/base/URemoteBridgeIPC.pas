@@ -33,6 +33,8 @@ type
     Role: UTF8String;
     Slot: integer;
     Connected: boolean;
+    Difficulty: integer;
+    AvatarId, AvatarFile: UTF8String;
   end;
 
   TRemoteBridgeIPC = class
@@ -47,11 +49,13 @@ type
     FStatusSeq: integer;
     FGameStateSeq: integer;
     FRequestedPlayerCount: integer;
+    FProfilesDirty: boolean;
     FPlayers: array of TRemoteBridgePlayer;
     procedure ClearRoomStatus;
     procedure SetRoomStatus(Connected: boolean; const DisplayCode: UTF8String);
     procedure ClearPlayers;
-    procedure UpsertPlayer(const PlayerId, Name, Role: UTF8String; Slot: integer);
+    procedure UpsertPlayer(const PlayerId, Name, Role: UTF8String; Slot, Difficulty: integer;
+      const AvatarId, AvatarFile: UTF8String);
     procedure SetPlayerConnected(const PlayerId: UTF8String; Connected: boolean);
     procedure RemovePlayer(const PlayerId: UTF8String);
     function BuildPlayersJson(out ControllerPlayerId: UTF8String): string;
@@ -61,7 +65,7 @@ type
 
     procedure Start;
     procedure Stop;
-    procedure ApplyPendingPlayerCount;
+    procedure ApplyPendingPlayerCount(RefreshProfiles: boolean = false);
     procedure SendAck(const PlayerId: UTF8String; CommandId: integer;
       Accepted: boolean; const Reason: UTF8String; GameStateSeq: integer);
     procedure SendSongStarted(SongSeq: integer; SongId: integer; MediaStartUs: int64;
@@ -92,6 +96,8 @@ uses
   jsonparser,
   ULog,
   UIni,
+  UAvatars,
+  UGraphic,
   UNote,
   ssockets,
   sockets
@@ -274,11 +280,19 @@ begin
 end;
 
 function RemoteJsonEscape(const Value: UTF8String): string;
+var
+  I: integer;
+  Text: UnicodeString;
 begin
-  Result := StringReplace(string(Value), '\', '\\', [rfReplaceAll]);
-  Result := StringReplace(Result, '"', '\"', [rfReplaceAll]);
-  Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
-  Result := StringReplace(Result, #13, '\r', [rfReplaceAll]);
+  Text := UTF8Decode(Value);
+  Result := '';
+  for I := 1 to Length(Text) do
+    case Text[I] of
+      '\': Result := Result + '\\';
+      '"': Result := Result + '\"';
+      #32..#33, #35..#91, #93..#126: Result := Result + AnsiChar(Text[I]);
+      else Result := Result + '\u' + IntToHex(Ord(Text[I]), 4);
+    end;
 end;
 
 function JsonEscape(const Value: UTF8String): string;
@@ -353,7 +367,8 @@ begin
   end;
 end;
 
-procedure TRemoteBridgeIPC.UpsertPlayer(const PlayerId, Name, Role: UTF8String; Slot: integer);
+procedure TRemoteBridgeIPC.UpsertPlayer(const PlayerId, Name, Role: UTF8String; Slot, Difficulty: integer;
+  const AvatarId, AvatarFile: UTF8String);
 var
   I: integer;
 begin
@@ -362,6 +377,7 @@ begin
 
   EnterCriticalSection(FStatusLock);
   try
+    FProfilesDirty := true;
     for I := 0 to High(FPlayers) do
     begin
       if (FPlayers[I].PlayerId = PlayerId) then
@@ -375,6 +391,9 @@ begin
         if (Slot >= 0) then
           FPlayers[I].Slot := Slot;
         FPlayers[I].Connected := true;
+        FPlayers[I].Difficulty := Difficulty;
+        FPlayers[I].AvatarId := AvatarId;
+        FPlayers[I].AvatarFile := AvatarFile;
         Exit;
       end;
     end;
@@ -385,6 +404,9 @@ begin
     FPlayers[High(FPlayers)].Role := Role;
     FPlayers[High(FPlayers)].Slot := Slot;
     FPlayers[High(FPlayers)].Connected := true;
+    FPlayers[High(FPlayers)].Difficulty := Difficulty;
+    FPlayers[High(FPlayers)].AvatarId := AvatarId;
+    FPlayers[High(FPlayers)].AvatarFile := AvatarFile;
   finally
     LeaveCriticalSection(FStatusLock);
   end;
@@ -862,16 +884,47 @@ begin
   end;
 end;
 
-procedure TRemoteBridgeIPC.ApplyPendingPlayerCount;
-var Count, I: integer;
+procedure TRemoteBridgeIPC.ApplyPendingPlayerCount(RefreshProfiles: boolean = false);
+var
+  Count, I, Slot, A: integer;
+  Profiles: array of TRemoteBridgePlayer;
 begin
   EnterCriticalSection(FStatusLock);
   try
     Count := FRequestedPlayerCount;
     FRequestedPlayerCount := 0;
+    if FProfilesDirty or RefreshProfiles then
+      Profiles := Copy(FPlayers);
+    FProfilesDirty := false;
   finally
     LeaveCriticalSection(FStatusLock);
   end;
+  for I := 0 to High(Profiles) do
+  begin
+    Slot := Profiles[I].Slot - 1;
+    if (Slot < 0) or (Slot >= IMaxPlayerCount) or
+      (Profiles[I].Role <> 'singer') or not Profiles[I].Connected then Continue;
+    Ini.Name[Slot] := Profiles[I].Name;
+    Ini.PlayerLevel[Slot] := Profiles[I].Difficulty;
+    Ini.PlayerAvatar[Slot] := '';
+    for A := 0 to High(AvatarsMD5) do
+      if (Profiles[I].AvatarId <> '') and (AvatarsMD5[A] = Profiles[I].AvatarId) or
+        ((Profiles[I].AvatarFile <> '') and (A <= High(AvatarsList)) and
+         Assigned(AvatarsList[A]) and
+         (AvatarsList[A].GetName.ToUTF8 = Profiles[I].AvatarFile)) then
+      begin
+        Ini.PlayerAvatar[Slot] := AvatarsMD5[A];
+        Break;
+      end;
+    if Slot <= High(Player) then
+    begin
+      Player[Slot].Name := Ini.Name[Slot];
+      Player[Slot].Level := Ini.PlayerLevel[Slot];
+    end;
+    if Assigned(ScreenSing) then ScreenSing.PlayerNames[Slot + 1] := Ini.Name[Slot];
+  end;
+  if (Length(Profiles) > 0) and Assigned(ScreenName) then
+    ScreenName.LoadPlayersFromIni(true);
   if Count <= 0 then Exit;
   for I := Low(IPlayersVals) to High(IPlayersVals) do
     if IPlayersVals[I] >= Count then
@@ -914,6 +967,9 @@ var
   Name: UTF8String;
   Role: UTF8String;
   MicDelayMs: integer;
+  Difficulty: integer;
+  DifficultyText: string;
+  DifficultyData: TJSONData;
 begin
   Slot := JsonGetInt(Obj, 'slot', 0);
   PlayerIndex := SlotToPlayerIndex(Slot);
@@ -921,7 +977,20 @@ begin
   Name := UTF8String(JsonGetString(Obj, 'name', ''));
   Role := UTF8String(JsonGetString(Obj, 'role', 'singer'));
   MicDelayMs := JsonGetInt(Obj, 'micDelayMs', 0);
-  FOwner.UpsertPlayer(PlayerId, Name, Role, Slot);
+  DifficultyText := LowerCase(JsonGetString(Obj, 'difficulty',
+    JsonGetString(Obj, 'difficultyMode', 'medium')));
+  Difficulty := 1;
+  if (DifficultyText = 'easy') or (DifficultyText = '0') then Difficulty := 0;
+  if (DifficultyText = 'hard') or (DifficultyText = '2') then Difficulty := 2;
+  DifficultyData := Obj.Find('difficulty');
+  if (DifficultyData <> nil) and (DifficultyData.JSONType = jtNumber) then
+  begin
+    Difficulty := JsonGetInt(Obj, 'difficulty', 1);
+    if (Difficulty < 0) or (Difficulty > 2) then Difficulty := 1;
+  end;
+  FOwner.UpsertPlayer(PlayerId, Name, Role, Slot, Difficulty,
+    UTF8String(JsonGetString(Obj, 'avatarId', '')),
+    UTF8String(JsonGetString(Obj, 'avatarFile', '')));
   if (Slot > 0) then
     RemoteInputProcessor.AssignPlayerSlot(
       PlayerIndex,
