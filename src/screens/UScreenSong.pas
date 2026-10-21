@@ -118,6 +118,7 @@ type
       function SelectLoopAdjacentSong(Direction: integer): boolean;
       function SelectLoopNextSong: boolean;
       procedure StartLoopPlaybackForCurrentSong(ForceFullscreen: boolean);
+      procedure GetLoopPlaybackRange(out StartPos, EndPos: real);
       procedure ToggleLoopMode;
       procedure ToggleLoopPause;
       function FormatLoopClock(Seconds: real): UTF8String;
@@ -540,7 +541,22 @@ begin
     Result := SelectLoopRandomSong;
 end;
 
+procedure TScreenSong.GetLoopPlaybackRange(out StartPos, EndPos: real);
+begin
+  StartPos := EnsureRange(CatSongs.Song[Interaction].Start, 0.0, AudioPlayback.Length);
+  EndPos := AudioPlayback.Length;
+  if CatSongs.Song[Interaction].Finish > 0 then
+    EndPos := EnsureRange(CatSongs.Song[Interaction].Finish / 1000, 0.0, EndPos);
+  if EndPos <= StartPos then
+  begin
+    StartPos := 0;
+    EndPos := AudioPlayback.Length;
+  end;
+end;
+
 procedure TScreenSong.StartLoopPlaybackForCurrentSong(ForceFullscreen: boolean);
+var
+  StartPos, EndPos: real;
 begin
   if (CatSongs.VisibleSongs <= 0) or CatSongs.Song[Interaction].Main then
     Exit;
@@ -549,8 +565,12 @@ begin
     CoverFull := LoopPreferredCoverFull;
 
   LoopPaused := false;
+  SongIndex := -1;
   ChangeMusic;
-  AudioPlayback.Position := CatSongs.Song[Interaction].Start;
+  StartMusicPreview;
+  StartVideoPreview;
+  GetLoopPlaybackRange(StartPos, EndPos);
+  AudioPlayback.Position := StartPos;
   if Assigned(fCurrentVideo) then
     fCurrentVideo.Position := CatSongs.Song[Interaction].VideoGAP + AudioPlayback.Position;
   ResetLoopLyricsForCurrentSong;
@@ -677,6 +697,7 @@ var
   OverlayX, OverlayY, OverlayW, OverlayH: real;
   BarX, BarY, BarW, BarH: real;
   TargetPos: real;
+  StartPos, EndPos: real;
 begin
   Result := false;
   if not IsLoopOverlayVisible then
@@ -690,8 +711,8 @@ begin
   if (X < BarX) or (X > BarX + BarW) or (Y < BarY) or (Y > BarY + BarH) then
     Exit;
 
-  TargetPos := ((X - BarX) / BarW) * AudioPlayback.Length;
-  TargetPos := EnsureRange(TargetPos, 0.0, AudioPlayback.Length);
+  GetLoopPlaybackRange(StartPos, EndPos);
+  TargetPos := StartPos + EnsureRange((X - BarX) / BarW, 0.0, 1.0) * (EndPos - StartPos);
   AudioPlayback.Position := TargetPos;
   if Assigned(fCurrentVideo) then
     fCurrentVideo.Position := CatSongs.Song[Interaction].VideoGAP + TargetPos;
@@ -706,17 +727,19 @@ var
   X, Y, W, H: real;
   BarX, BarY, BarW, BarH: real;
   Progress: real;
+  StartPos, EndPos: real;
 begin
   if not IsLoopOverlayVisible then
     Exit;
 
   SongText := CatSongs.Song[Interaction].Artist + ' - ' + CatSongs.Song[Interaction].Title;
-  TimeText := FormatLoopClock(AudioPlayback.Position) + ' / ' + FormatLoopClock(AudioPlayback.Length);
+  GetLoopPlaybackRange(StartPos, EndPos);
+  TimeText := FormatLoopClock(Max(0, AudioPlayback.Position - StartPos)) + ' / ' + FormatLoopClock(EndPos - StartPos);
 
   GetLoopOverlayGeometry(X, Y, W, H, BarX, BarY, BarW, BarH);
   SongText := TruncateLoopOverlayText(SongText, W - Theme.Song.LoopOverlay.BoxPaddingW);
-  if (AudioPlayback.Length > 0) then
-    Progress := EnsureRange(AudioPlayback.Position / AudioPlayback.Length, 0.0, 1.0)
+  if (EndPos > StartPos) then
+    Progress := EnsureRange((AudioPlayback.Position - StartPos) / (EndPos - StartPos), 0.0, 1.0)
   else
     Progress := 0;
 
@@ -2279,7 +2302,7 @@ begin
     X := X - RenderW;
   Y := Round((Y / ScreenH) * RenderH);
 
-  if CoverFull then
+  if CoverFull and (Assigned(fCurrentVideo) or IsLoopModeActive) then
   begin
     if HandleLoopOverlayMouse(MouseButton, BtnDown, X, Y) then
     begin
@@ -3922,9 +3945,7 @@ begin
 
   if IsLoopModeActive then
   begin
-    // Returning from sing/score should immediately restore loop fullscreen preview.
-    LoopPreferredCoverFull := true;
-    CoverFull := true;
+    CoverFull := LoopPreferredCoverFull;
     if (CatSongs.VisibleSongs > 0) and (not CatSongs.Song[Interaction].Main) then
       StartLoopPlaybackForCurrentSong(false);
   end;
