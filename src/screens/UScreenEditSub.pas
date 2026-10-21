@@ -1776,41 +1776,46 @@ end;
 
       // SDLK_SPACE: PlayNote
 procedure TScreenEditSub.PlayNote(SDL_ModState: word);
+var
+  IncludeAudio, IncludeMidi: boolean;
+  NoteStart, NoteStop: real;
 begin
-  if (SDL_ModState = 0) or (SDL_ModState = KMOD_LSHIFT or KMOD_LCTRL) then
+  IncludeAudio := (SDL_ModState = 0) or
+      (SDL_ModState = (KMOD_LSHIFT or KMOD_LCTRL));
+  IncludeMidi := (SDL_ModState = KMOD_LSHIFT) or
+      (SDL_ModState = (KMOD_LSHIFT or KMOD_LCTRL));
+  if not (IncludeAudio or IncludeMidi) then
+    Exit;
+
+  StopMidiPlayback;
+  AudioPlayback.Stop;
+  StopVideoPreview;
+  PlaySentence := false;
+  PlaySentenceMidi := false;
+  PlayVideo := false;
+  // Only audio-backed previews may be stopped by the audio clock in Draw.
+  PlayOne := IncludeAudio;
+  PlayOneMidi := IncludeMidi and Assigned(MidiOut);
+
+  with CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]] do
   begin
-    // Play current note
-    PlaySentenceMidi := false; // stop midi
-    PlaySentence := false;
-    PlayOne := true;
-    PlayOneMidi := false;
-    PlayVideo := false;
-    StopVideoPreview;
-    AudioPlayback.Stop;
-    AudioPlayback.Position := GetTimeFromBeat(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].StartBeat);
-    PlayStopTime := (GetTimeFromBeat(
-      CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].StartBeat +
-      CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Duration));
+    NoteStart := GetTimeFromBeat(StartBeat);
+    NoteStop := GetTimeFromBeat(StartBeat + Duration);
+  end;
+  PlayStopTime := NoteStop;
+
+  if IncludeAudio then
+  begin
+    AudioPlayback.Position := NoteStart;
     AudioPlayback.Play;
     Text[TextInfo].Text := Language.Translate('EDIT_INFO_PLAY_NOTE_AUDIO');
   end;
 
-  if (SDL_ModState = KMOD_LSHIFT) or (SDL_ModState = KMOD_LSHIFT or KMOD_LCTRL) then
+  if PlayOneMidi then
   begin
-    // Play Midi
-    PlaySentenceMidi := false;
-    PlayVideo := false;
-    PlayOne := true;
-    PlayOneMidi := true;
-    StopVideoPreview();
-    ScheduleCueNotePlayback(
-      GetTimeFromBeat(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].StartBeat),
-      GetTimeFromBeat(
-        CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].StartBeat +
-        CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Duration),
-      true, false, SDL_ModState = (KMOD_LSHIFT or KMOD_LCTRL));
+    ScheduleCueNotePlayback(NoteStart, NoteStop, true, false, IncludeAudio);
     PlayScheduledCue;
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_PLAY_NOTE_MIDI');
+    Text[TextInfo].Text := Language.Translate('EDIT_INFO_PLAY_NOTE_MIDI');
   end;
 end;
 
