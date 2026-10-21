@@ -472,7 +472,7 @@ begin
       for NoteIndex := 0 to Line.HighNote do
       begin
         Note := @Line.Notes[NoteIndex];
-        if (Note.Duration <= 0) or (Note.NoteType = ntFreestyle) then
+        if (Note.Duration <= 0) or Note.ScoreExcluded or (ScoreFactor[Note.NoteType] <= 0) then
           Continue;
 
         NoteFirstBeat := Note.StartBeat;
@@ -652,6 +652,7 @@ begin
             // check if line is active
             if ((CurrentLineFragment.StartBeat <= ActualBeat) and
               (CurrentLineFragment.StartBeat + CurrentLineFragment.Duration-1 >= ActualBeat)) and
+              not CurrentLineFragment.ScoreExcluded and
               (ScoreFactor[CurrentLineFragment.NoteType] > 0) and
               ((ScreenSong.Mode <> smMedley) or
                ((CurrentLineFragment.StartBeat >= CurrentSong.Medley.StartBeat) and

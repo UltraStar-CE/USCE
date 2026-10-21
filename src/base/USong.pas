@@ -117,7 +117,7 @@ type
     FMD5Cached  : boolean;
 
     function DecodeFilename(Filename: RawByteString): IPath;
-    procedure ParseNote(Track: integer; TypeP: char; StartP, DurationP, NoteP: integer; LyricS: UTF8String);
+    procedure ParseNote(Track: integer; TypeP: char; StartP, DurationP, NoteP: integer; LyricS: UTF8String; Excluded: boolean = false);
     procedure NormalizeUnpitchedNoteTones;
     procedure NewSentence(LineNumberP: integer; Param1, Param2: integer);
     procedure FindRefrain(); // tries to find a refrain for the medley mode and preview start
@@ -824,7 +824,9 @@ begin
             FileNamePath.ToNative+' Line:'+IntToStr(FileLineNo));
             Break;
           end;
-          ParseNote(CurrentTrack, Param0, (Param1+Rel[CurrentTrack]) * Mult, Param2 * Mult, Param3, ParamLyric);
+          ParseNote(CurrentTrack, Param0, (Param1+Rel[CurrentTrack]) * Mult, Param2 * Mult, Param3, ParamLyric,
+            OutOfBoundsToFreestyle and (((Self.Start > 0) and (GetTimeFromBeat(Param1, Self) < Self.Start)) or
+            ((AudioLength > 0) and (GetTimeFromBeat(Param1 + Param3, Self) >= AudioLength))));
         end // if
 
         else
@@ -1588,7 +1590,7 @@ begin
   FMD5Cached := Value <> '';
 end;
 
-procedure TSong.ParseNote(Track: integer; TypeP: char; StartP, DurationP, NoteP: integer; LyricS: UTF8String);
+procedure TSong.ParseNote(Track: integer; TypeP: char; StartP, DurationP, NoteP: integer; LyricS: UTF8String; Excluded: boolean = false);
 begin
 
   with Tracks[Track].Lines[Tracks[Track].High] do
@@ -1605,6 +1607,7 @@ begin
     end;
 
     Notes[HighNote].Duration := DurationP;
+    Notes[HighNote].ScoreExcluded := Excluded;
 
     // back to the normal system with normal, golden and now freestyle notes
     case TypeP of
@@ -1616,10 +1619,12 @@ begin
     end;
 
     //add this notes value ("notes length" * "notes scorefactor") to the current songs entire value
-    Inc(Tracks[Track].ScoreValue, Notes[HighNote].Duration * ScoreFactor[Notes[HighNote].NoteType]);
+    if not Excluded then
+      Inc(Tracks[Track].ScoreValue, Notes[HighNote].Duration * ScoreFactor[Notes[HighNote].NoteType]);
 
     //and to the current lines entire value
-    Inc(ScoreValue, Notes[HighNote].Duration * ScoreFactor[Notes[HighNote].NoteType]);
+    if not Excluded then
+      Inc(ScoreValue, Notes[HighNote].Duration * ScoreFactor[Notes[HighNote].NoteType]);
 
     Notes[HighNote].Tone := NoteP;
     Notes[HighNote].DisplayTone := NoteP;
@@ -2032,9 +2037,11 @@ begin
       begin
         if Tracks[TrackIndex].Lines[LineIndex].Notes[NoteIndex].StartBeat < start then      //check start
         begin
+          Tracks[TrackIndex].Lines[LineIndex].Notes[NoteIndex].ScoreExcluded := true;
           Tracks[TrackIndex].Lines[LineIndex].Notes[NoteIndex].NoteType := ntFreeStyle;
         end else if Tracks[TrackIndex].Lines[LineIndex].Notes[NoteIndex].StartBeat >= end_ then  //check end
         begin
+          Tracks[TrackIndex].Lines[LineIndex].Notes[NoteIndex].ScoreExcluded := true;
           Tracks[TrackIndex].Lines[LineIndex].Notes[NoteIndex].NoteType := ntFreeStyle;
           if not foundcut[TrackIndex] then
           begin
@@ -2045,7 +2052,7 @@ begin
           end;
           foundcut[TrackIndex] := true;
         end
-	else
+        else if not Tracks[TrackIndex].Lines[LineIndex].Notes[NoteIndex].ScoreExcluded then
         begin
           //add this notes value ("notes length" * "notes scorefactor") to the current songs entire value
           Inc(Tracks[TrackIndex].ScoreValue, Tracks[TrackIndex].Lines[LineIndex].Notes[NoteIndex].Duration * ScoreFactor[Tracks[TrackIndex].Lines[LineIndex].Notes[NoteIndex].NoteType]);
