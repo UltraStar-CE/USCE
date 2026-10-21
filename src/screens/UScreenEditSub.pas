@@ -1250,7 +1250,7 @@ end;
 function TScreenEditSub.GetPreviewPosition: real;
 begin
   if MidiSyncToAudio then
-    Result := AudioPlayback.Position
+    Result := GetPlaybackPosition
   else
     Result := USTime.GetTime - MidiTime + MidiStart;
 end;
@@ -1264,6 +1264,7 @@ procedure TScreenEditSub.ScheduleCueNote(LineIndex, NoteIndex: Integer; StartTim
 var
   NoteStart: real;
   NoteStop:  real;
+  ClickTime: real;
   MidiPitch: Byte;
 begin
   if not Assigned(MidiOut) or
@@ -1281,11 +1282,14 @@ begin
   if (NoteStop <= StartTime) or (NoteStart >= StopTime) then
     Exit;
 
-  if IncludeClick and (NoteStart >= StartTime) and (NoteStart < StopTime) then
-    MidiOut.QueueClick(VolumeToVelocity(SelectsS[VolumeClickSlideId].SelectedOption), NoteStart);
+  ClickTime := NoteStart - Ini.EditorClickLeadMs / 1000;
+  if IncludeClick and (ClickTime >= StartTime) and (ClickTime < StopTime) then
+    MidiOut.QueueClick(VolumeToVelocity(SelectsS[VolumeClickSlideId].SelectedOption), ClickTime);
 
   if IncludeMidi then
   begin
+    NoteStart := NoteStart - Ini.EditorMidiLeadMs / 1000;
+    NoteStop := NoteStop - Ini.EditorMidiLeadMs / 1000;
     if NoteStart < StartTime then
       NoteStart := StartTime;
     if NoteStop > StopTime then
@@ -1519,6 +1523,8 @@ var
   UseMidiPreview: boolean;
   ContinuePlayback: boolean;
   UseClicks: boolean;
+  UseAudio: boolean;
+  StopLine: Integer;
 begin
   ContinuePlayback := (SDL_ModState and KMOD_ALT) <> 0;
   RequestedVocalsPreview := AllowVocalsPreview and ((SDL_ModState and KMOD_CTRL) <> 0);
@@ -1534,8 +1540,11 @@ begin
   else
     RestoreStandardPlayback(false);
 
-  Click := false;
+  StopMidiPlayback;
   StopPlayback;
+  PlayOne := false;
+  PlayOneMidi := false;
+  PlaySentence := false;
   PlayVideo := WithVideo;
   StopVideoPreview;
   CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Color := 1;
@@ -1544,7 +1553,7 @@ begin
   R := GetTimeFromBeat(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[0].StartBeat);
   SentenceEndTime := GetTimeFromBeat(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].EndBeat);
   PlaybackStart := R;
-  SentencePreroll := 3 * GetSentenceLeadSeconds(UseMidiPreview);
+  SentencePreroll := 3 * Max(0, Max(Ini.EditorMidiLeadMs, Ini.EditorClickLeadMs)) / 1000;
   if SentencePreroll > 0 then
   begin
     PlaybackStart := R - SentencePreroll;
@@ -1552,6 +1561,9 @@ begin
       PlaybackStart := 0;
   end;
 
+  StopLine := CurrentSong.Tracks[CurrentTrack].CurrentLine;
+  if ContinuePlayback then
+    StopLine := CurrentSong.Tracks[CurrentTrack].High;
   if ContinuePlayback then
     PlaybackStop := GetTimeFromBeat(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].High].EndBeat)
   else
@@ -1569,15 +1581,7 @@ begin
     end;
   end;
 
-  PlaySentenceMidi := UseMidiPreview;
-  {$IFDEF UseMIDIPort}
-  StopMidi;
-  {$ENDIF}
-  if PlaySentenceMidi then
-  begin
-    PlayOneMidi := false;
-    midinotefound := false;
-  end;
+  UseAudio := UseVocalsPreview or RequestedVocalsPreview or not UseMidiPreview;
 
   if UseVocalsPreview or RequestedVocalsPreview or (not UseMidiPreview) then
     SetPlaybackVolume(VolumeAudioIndex / 100)
@@ -1587,18 +1591,15 @@ begin
   if PlaybackStart <= GetPlaybackLength then
   begin
     SetPlaybackPosition(PlaybackStart);
-    {$IFDEF UseMIDIPort}
-    if PlaySentenceMidi then
-      ConfigureMidiPlayback(PlaybackStart, PlaybackStop);
-    {$ELSE}
-      PlaySentenceMidi := false;
-    {$ENDIF}
+    ScheduleCuePlayback(PlaybackStart, PlaybackStop,
+      CurrentSong.Tracks[CurrentTrack].CurrentLine, StopLine,
+      UseMidiPreview, UseClicks, UseAudio);
+    PlaySentenceMidi := UseMidiPreview;
     PlayStopTime := PlaybackStop;
-    PlaySentence := true;
-    Click := UseClicks;
-    PlayPlayback;
-    LastClick := -100;
-    ResetBeatTracking;
+    PlaySentence := UseAudio;
+    if UseAudio then
+      PlayPlayback;
+    PlayScheduledCue;
     if WithVideo then
       StartVideoPreview();
   end;
@@ -2100,17 +2101,21 @@ end;
 procedure TScreenEditSub.PlayNote(SDL_ModState: word);
 var
   IncludeAudio, IncludeMidi: boolean;
+  UseVocals: boolean;
   NoteStart, NoteStop: real;
 begin
+  UseVocals := (SDL_ModState and KMOD_ALT) <> 0;
+  SDL_ModState := SDL_ModState and not KMOD_ALT;
   IncludeAudio := (SDL_ModState = 0) or
       (SDL_ModState = (KMOD_LSHIFT or KMOD_LCTRL));
   IncludeMidi := (SDL_ModState = KMOD_LSHIFT) or
       (SDL_ModState = (KMOD_LSHIFT or KMOD_LCTRL));
+  IncludeAudio := IncludeAudio or UseVocals;
   if not (IncludeAudio or IncludeMidi) then
     Exit;
 
   StopMidiPlayback;
-  AudioPlayback.Stop;
+  StopPlayback;
   StopVideoPreview;
   PlaySentence := false;
   PlaySentenceMidi := false;
@@ -2126,10 +2131,23 @@ begin
   end;
   PlayStopTime := NoteStop;
 
+  if UseVocals then
+  begin
+    if HasVocalsPreviewSource and not FPreviewBuildStarted and not FAnalysisFailed then
+      StartAnalysisThread(true, CurrentTrack);
+    if HasVocalsPreviewPlaybackAtTime(NoteStart) then
+      SetVocalsPreviewPlayback(true, false)
+    else
+      RestoreStandardPlayback(false);
+  end
+  else
+    RestoreStandardPlayback(false);
+
   if IncludeAudio then
   begin
-    AudioPlayback.Position := NoteStart;
-    AudioPlayback.Play;
+    SetPlaybackVolume(VolumeAudioIndex / 100);
+    SetPlaybackPosition(NoteStart);
+    PlayPlayback;
     Text[TextInfo].Text := Language.Translate('EDIT_INFO_PLAY_NOTE_AUDIO');
   end;
 
