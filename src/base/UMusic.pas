@@ -104,6 +104,7 @@ type
     DisplayTone:    integer;    // normalized tone used by the sing screen
     Text:           UTF8String; // text assigned to this fragment (a syllable, word, etc.)
     NoteType:       TNoteType;  // note-type: golden-note/freestyle etc.
+    ScoreExcluded:  boolean;    // clipped outside the playable audio range
 
     IsMedley:       boolean; // just for editor
     IsStartPreview: boolean; // just for editor
