@@ -63,7 +63,23 @@ async function waitForBuilds({github, context, core, files, now = Date.now,
       }
       if (!run || run.status !== 'completed') { complete = false; continue; }
       if (run.conclusion !== 'success') {
-        throw Error(`Required ${workflow} finished with ${run.conclusion}: ${run.html_url || run.id}`);
+        let details = '';
+        try {
+          const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun,
+            {...context.repo, run_id: run.id, per_page: 100, filter: 'latest'});
+          details = jobs.filter(job => job.conclusion && job.conclusion !== 'success' &&
+              job.conclusion !== 'skipped').map(job => {
+            const failedSteps = (job.steps || []).filter(step => step.conclusion === 'failure');
+            const location = failedSteps.length ? ' at ' + failedSteps.map(step => step.name).join(', ')
+              : job.conclusion === 'cancelled' && !(job.steps || []).length
+                ? ' before any steps ran; check job annotations for runner allocation errors' : '';
+            return `${job.name}: ${job.conclusion}${location}`;
+          }).join('; ');
+        } catch (error) {
+          core.info(`Could not read failed-job details: ${error.message}`);
+        }
+        throw Error(`Required ${workflow} finished with ${run.conclusion}: ${run.html_url || run.id}` +
+          (details ? `\nUnsuccessful jobs: ${details}` : ''));
       }
     }
     if (complete) { core.info('Whitespace and every required build workflow passed.'); return; }
