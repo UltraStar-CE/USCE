@@ -1393,6 +1393,7 @@ begin
     IncludeAudio := not IncludeSynth or ((SDL_ModState and KMOD_LCTRL) <> 0);
     AudioPlayback.Stop;
     StopMidiPlayback;
+    PlayOne := false;
     PlaySentence := false;
     PlayVideo := false;
     StopVideoPreview;
