@@ -1016,6 +1016,7 @@ end;
 
 procedure TScreenSingController.LoadNextSong();
 var
+  PlayerIndex: integer;
   Color:      TRGB;
   Index:      integer;
   VideoFile:  IPath;
@@ -1273,6 +1274,9 @@ begin
   end;
 
   LyricsState.UpdateBeats();
+
+  for PlayerIndex := 0 to High(Player) do
+    Player[PlayerIndex].DetectionReady := false;
 
   // prepare and start voice-capture
   AudioInput.CaptureStart;

@@ -423,7 +423,7 @@ begin
   end;
 end;
 
-procedure ConsumePerfectScorePotential(CP, OldBeat, CurrentBeat: integer; Screen: TScreenSingController);
+procedure ConsumePerfectScorePotential(CP, OldBeat, CurrentBeat: integer; Screen: TScreenSingController; TargetPlayer: integer);
 var
   FirstBeat: integer;
   LastBeat: integer;
@@ -526,7 +526,8 @@ begin
 
   for PlayerIndex := 0 to PlayersPlay - 1 do
   begin
-    if (not CurrentSong.isDuet) or (PlayerIndex mod 2 = CP) or (PlayersPlay = 1) then
+    if (PlayerIndex = TargetPlayer) and
+      ((not CurrentSong.isDuet) or (PlayerIndex mod 2 = CP) or (PlayersPlay = 1)) then
     begin
       Player[PlayerIndex].ScorePerfectRemaining :=
         Player[PlayerIndex].ScorePerfectRemaining - PotentialPassed;
@@ -619,7 +620,7 @@ begin
         Player[PlayerIndex].DetectionDelay := Ini.PlayerDelay[PlayerIndex];
         Player[PlayerIndex].DetectionReady := true;
         DelayBeats := GetBeats(CurrentSong.BPM, Player[PlayerIndex].DetectionDelay / 1000);
-        Player[PlayerIndex].DetectionBeat := Floor(LyricsState.OldBeatD - DelayBeats);
+        Player[PlayerIndex].DetectionBeat := Floor(LyricsState.MidBeatD - DelayBeats) - 1;
       end;
       DelayBeats := GetBeats(CurrentSong.BPM, Player[PlayerIndex].DetectionDelay / 1000);
       PlayerOldBeat := Player[PlayerIndex].DetectionBeat;
@@ -816,6 +817,7 @@ begin
 
         end; // if Detected
       end; // for ActualBeat
+      ConsumePerfectScorePotential(CP, PlayerOldBeat, PlayerCurBeat, Screen, PlayerIndex);
       Player[PlayerIndex].DetectionBeat := Max(PlayerOldBeat, PlayerCurBeat);
     end;
   end; // for PlayerIndex
