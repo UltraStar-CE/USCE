@@ -592,13 +592,14 @@ var
   IWebcamHue:        array [0..360] of UTF8String;
   IWebcamEffectTranslated:     array [0..10] of UTF8String;
 
-  // Names
-  IPlayerTranslated:      array[0..(IMaxPlayerCount-1)] of UTF8String = ('Player 1', 'Player 2', 'Player 3', 'Player 4', 'Player 5', 'Player 6', 'Player 7', 'Player 8', 'Player 9', 'Player 10', 'Player 11', 'Player 12');
-  ITeamTranslated:       array[0..2] of UTF8String = ('Team 1', 'Team 2', 'Team 3');
+  // Name
+  IPlayerTranslated:      TUTF8StringArray;
+  ITeamTranslated: array[0..2] of UTF8String;
 
   IRed:       array[0..255] of UTF8String;
   IGreen:     array[0..255] of UTF8String;
   IBlue:      array[0..255] of UTF8String;
+
 
 implementation
 
@@ -846,10 +847,6 @@ begin
     ULanguage.Language.ChangeLanguage(ILanguage[Params.Language])
   else
     ULanguage.Language.ChangeLanguage(ILanguage[Language]);
-
-  // Translate default team names
-  for I := 0 to 2 do
-    ITeamTranslated[I] := ULanguage.Language.Translate('OPTION_VALUE_TEAM') + ' ' + IntToStr(I + 1);
 
   IDifficultyTranslated[0]            := ULanguage.Language.Translate('OPTION_VALUE_EASY');
   IDifficultyTranslated[1]            := ULanguage.Language.Translate('OPTION_VALUE_MEDIUM');
@@ -1158,6 +1155,9 @@ begin
 
   for I := 0 to IMaxPlayerCount - 1 do
     IPlayerTranslated[I] := ULanguage.Language.Translate('OPTION_PLAYER_' + IntToStr(I + 1));
+
+  for I := 0 to High(ITeamTranslated) do
+    ITeamTranslated[I] := ULanguage.Language.Translate('OPTION_VALUE_TEAM') + ' ' + IntToStr(I + 1);
 
   // Webcam
   IWebcamFlipTranslated[0]          := ULanguage.Language.Translate('OPTION_VALUE_OFF');
