@@ -9,6 +9,7 @@ interface
 // entries override the unprefixed default; malformed/duplicate entries are unrated.
 function AgeForRegion(const Header, Region: string): integer;
 function SystemAgeRegion: string;
+function LocaleAgeRegion(Locale: string): string;
 
 implementation
 
@@ -16,10 +17,26 @@ uses SysUtils, Classes
   {$IFDEF MSWINDOWS}, Windows{$ENDIF}
   {$IFDEF DARWIN}, MacOSAll{$ENDIF};
 
+function LocaleAgeRegion(Locale: string): string;
+var
+  I: integer;
+begin
+  Result := '';
+  I := Pos('.', Locale);
+  if I > 0 then SetLength(Locale, I - 1);
+  I := Pos('@', Locale);
+  if I > 0 then SetLength(Locale, I - 1);
+  I := Pos('_', Locale);
+  if I = 0 then I := Pos('-', Locale);
+  if I = 0 then Exit;
+  Locale := UpperCase(Copy(Locale, I + 1, MaxInt));
+  if (Length(Locale) = 2) and (Locale[1] in ['A'..'Z']) and
+    (Locale[2] in ['A'..'Z']) then Result := Locale;
+end;
+
 function SystemAgeRegion: string;
 var
   Locale: string;
-  I: integer;
   {$IFDEF MSWINDOWS}Buffer: array[0..15] of char;{$ENDIF}
   {$IFDEF DARWIN}
   CurrentLocale: CFLocaleRef;
@@ -47,9 +64,7 @@ begin
   Locale := SysUtils.GetEnvironmentVariable('LC_ALL');
   if Locale = '' then Locale := SysUtils.GetEnvironmentVariable('LC_MESSAGES');
   if Locale = '' then Locale := SysUtils.GetEnvironmentVariable('LANG');
-  I := Pos('_', Locale);
-  if I = 0 then I := Pos('-', Locale);
-  if I > 0 then Result := UpperCase(Copy(Locale, I + 1, 2));
+  Result := LocaleAgeRegion(Locale);
 end;
 
 function AgeForRegion(const Header, Region: string): integer;
