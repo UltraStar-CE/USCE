@@ -17,7 +17,11 @@ def without_comments(text, pattern):
 
 def read_english(path):
     entries, errors, section = {}, [], ''
-    for line_no, line in enumerate(path.read_text(encoding='utf-8-sig').splitlines(), 1):
+    try:
+        lines = path.read_text(encoding='utf-8-sig').splitlines()
+    except (OSError, UnicodeError) as error:
+        return {}, [f'{path}: cannot read English fallback: {error}']
+    for line_no, line in enumerate(lines, 1):
         line = line.strip()
         if line.startswith('[') and line.endswith(']'):
             section = line[1:-1].lower()
@@ -32,9 +36,12 @@ def read_english(path):
     return entries, errors
 
 
-def audit(root, extra_themes=()):
-    entries, errors = read_english(root / 'game/languages/English.ini')
-    prefixes = {key.split('_')[0] for key in entries if '_' in key}
+def audit(root, extra_themes=(), english_path=None):
+    source_english = root / 'game/languages/English.ini'
+    entries, errors = read_english(english_path or source_english)
+    # A stale installed fallback may lack an entire family of indirect keys.
+    source_entries = read_english(source_english)[0] if english_path else entries
+    prefixes = {key.split('_')[0] for key in entries.keys() | source_entries.keys() if '_' in key}
     references = defaultdict(set)
     constants = set()
     sources = {}
@@ -112,8 +119,12 @@ def main():
     parser.add_argument('--root', type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument('--themes', action='append', type=Path, default=[],
                         help='Also scan a checked-out, pinned Themes package')
+    parser.add_argument('--english', type=Path,
+                        help='Validate an installed English.ini against this source tree')
     args = parser.parse_args()
-    errors, count = audit(args.root, args.themes)
+    errors, count = audit(args.root, args.themes, args.english)
+    if args.english:
+        print(f'English fallback checked: {args.english}')
     for error in errors:
         print(error)
     print(f'Checked {count} English keys from source literals, generated player labels, '

@@ -69,6 +69,12 @@ references, player labels, bundled party modes and built-in theme text. Use
 `--themes PATH` to include a checkout of the pinned Themes package. Packaging
 runs this check against every bundled theme before producing downloads.
 
+When testing a separately copied executable, validate its installed fallback too:
+`python3 tools/check_english.py --english /path/to/game/languages/English.ini`.
+Use the source tree matching that executable; a passing source-tree check alone
+does not verify the language files in a different installation. The command
+reports missing, empty and duplicate keys and returns a failing exit status.
+
 This static check cannot evaluate arbitrary plugin-generated text. Test changed
 screens in game as well, including labels, formatting arguments and text fit.
 

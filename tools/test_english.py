@@ -95,5 +95,36 @@ Label := Language.Translate('SING_PRESENT');
         self.assertIn('does not exist', '\n'.join(audit(self.root, [package / 'missing'])[0]))
 
 
+    def test_installed_fallback_is_checked_instead_of_repository_copy(self):
+        self.write('src/base/UIni.pas', "Language.Translate('OPTION_VALUE_SEPARATE');")
+        self.write('game/languages/English.ini', '[Text]\nOPTION_VALUE_SEPARATE=Separate\n')
+        installed = self.root / 'installed-English.ini'
+        installed.write_text('[Text]\nSING_PRESENT=Present\n', encoding='utf-8')
+        self.assertEqual(self.errors(), [])
+        errors = audit(self.root, english_path=installed)[0]
+        self.assertTrue(any(error.startswith('OPTION_VALUE_SEPARATE:') for error in errors))
+        installed.write_text('[Text]\nOPTION_VALUE_SEPARATE=Separate\n', encoding='utf-8')
+        self.assertEqual(audit(self.root, english_path=installed)[0], [])
+
+    def test_installed_fallback_cannot_hide_a_missing_indirect_key_family(self):
+        self.write('src/base/Test.pas', "Options := ('OPTION_VALUE_SEPARATE');")
+        self.write('game/languages/English.ini', '[Text]\nOPTION_VALUE_SEPARATE=Separate\n')
+        installed = self.root / 'installed-English.ini'
+        installed.write_text('[Text]\nSING_PRESENT=Present\n', encoding='utf-8')
+        self.assertTrue(any(error.startswith('OPTION_VALUE_SEPARATE:')
+                            for error in audit(self.root, english_path=installed)[0]))
+
+    def test_installed_key_in_wrong_section_is_missing(self):
+        self.write('src/base/Test.pas', "Language.Translate('SING_PRESENT');")
+        installed = self.root / 'installed-English.ini'
+        installed.write_text('[Text]\nOTHER=Other\n[Help]\nSING_PRESENT=Present\n', encoding='utf-8')
+        self.assertTrue(any(error.startswith('SING_PRESENT:')
+                            for error in audit(self.root, english_path=installed)[0]))
+
+    def test_missing_installed_english_file_fails_cleanly(self):
+        errors = audit(self.root, english_path=self.root / 'missing.ini')[0]
+        self.assertIn('cannot read English fallback', '\n'.join(errors))
+
+
 if __name__ == '__main__':
     unittest.main()
