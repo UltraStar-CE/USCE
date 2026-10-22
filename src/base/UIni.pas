@@ -136,6 +136,7 @@ type
 
       // Filename of the opened iniFile
       RecentNames: TRecentNames;
+      RecentTeamNames: TRecentNames;
       Filename:       IPath;
 
       // Game
@@ -301,6 +302,7 @@ type
       procedure Save();
       procedure SaveNames;
       procedure RememberUsedNames(const Values: array of UTF8String);
+      procedure RememberUsedTeamNames(const Values: array of UTF8String);
       function ReloadNames: boolean;
       procedure SaveLevel;
       procedure SavePlayerColors;
@@ -1770,6 +1772,7 @@ begin
 
   // Debug
   RecentNames := LoadRecentNames(IniFile);
+  RecentTeamNames := LoadRecentNames(IniFile, 'RecentTeamNames');
   Debug := ReadArrayIndex(IDebug, IniFile, 'Game', 'Debug', 0);
 
   LoadScreenModes(IniFile);
@@ -2334,6 +2337,12 @@ begin
   for I := High(Values) downto 0 do RememberRecentName(RecentNames, Values[I]);
 end;
 
+procedure TIni.RememberUsedTeamNames(const Values: array of UTF8String);
+var I: integer;
+begin
+  for I := High(Values) downto 0 do RememberRecentName(RecentTeamNames, Values[I]);
+end;
+
 procedure TIni.SaveNames;
 var
   IniFile: TIniFile;
@@ -2342,6 +2351,7 @@ begin
   IniFile := TSafeIniFile.Create(Filename.ToNative, 'TIni.SaveNames');
   try
     SaveRecentNames(IniFile, RecentNames);
+    SaveRecentNames(IniFile, RecentTeamNames, 'RecentTeamNames');
     //Name Templates for Names Mod
     for I := 0 to High(Name) do
       IniFile.WriteString('Name', 'P' + IntToStr(I+1), Name[I]);

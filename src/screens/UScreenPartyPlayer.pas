@@ -311,7 +311,7 @@ begin
     begin
       for J := CountPlayer[I] downto 0 do
         Ini.RememberUsedNames([Button[I * 5 + 1 + J].Text[0].Text]);
-      Ini.RememberUsedNames([Button[I * 5].Text[0].Text]);
+      Ini.RememberUsedTeamNames([Button[I * 5].Text[0].Text]);
     end;
     SaveCurrentSetup;
     Ini.SaveNames;
@@ -584,6 +584,7 @@ begin
   Team1Name := AddButton(Theme.PartyPlayer.Team1Name);
   Button[Team1Name].Text[0].Writable := true;
   Button[Team1Name].Text[0].NameEntryField := true;
+  Button[Team1Name].Text[0].TeamNameField := true;
 
   Theme.PartyPlayer.SelectPlayers1.oneItemOnly := true;
   Theme.PartyPlayer.SelectPlayers1.showArrows := true;
@@ -608,6 +609,7 @@ begin
   Team2Name := AddButton(Theme.PartyPlayer.Team2Name);
   Button[Team2Name].Text[0].Writable := true;
   Button[Team2Name].Text[0].NameEntryField := true;
+  Button[Team2Name].Text[0].TeamNameField := true;
 
   Theme.PartyPlayer.SelectPlayers2.oneItemOnly := true;
   Theme.PartyPlayer.SelectPlayers2.showArrows := true;
@@ -632,6 +634,7 @@ begin
   Team3Name := AddButton(Theme.PartyPlayer.Team3Name);
   Button[Team3Name].Text[0].Writable := true;
   Button[Team3Name].Text[0].NameEntryField := true;
+  Button[Team3Name].Text[0].TeamNameField := true;
 
   Theme.PartyPlayer.SelectPlayers3.oneItemOnly := true;
   Theme.PartyPlayer.SelectPlayers3.showArrows := true;

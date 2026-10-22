@@ -2,7 +2,7 @@ program RecentNamesTest;
 {$mode delphi}
 {$codepage utf8}
 uses SysUtils, IniFiles, URecentNames;
-var Names, Loaded: TRecentNames; Ini: TMemIniFile; I: integer; Editing: boolean; Typed: UTF8String;
+var Names, Loaded, Teams: TRecentNames; Ini: TMemIniFile; I: integer; Editing: boolean; Typed: UTF8String;
 
 procedure Expect(Value: boolean; const Message: string);
 begin
@@ -39,6 +39,19 @@ begin
   Expect(Names[0] = 'Änne', 'Empty or multiline value changed history');
   Ini := TMemIniFile.Create('');
   try
+    SaveRecentNames(Ini, Names);
+    Teams := LoadRecentNames(Ini, 'RecentTeamNames');
+    Expect(Length(Teams) = 0, 'Legacy history leaked into team history');
+    RememberRecentName(Teams, 'Daniel Team');
+    SaveRecentNames(Ini, Teams, 'RecentTeamNames');
+    Teams := LoadRecentNames(Ini, 'RecentTeamNames');
+    Expect(PredictRecentName(Teams, 'Da') = 'Daniel Team', 'Team history did not round-trip');
+    Loaded := LoadRecentNames(Ini);
+    Expect(PredictRecentName(Loaded, 'da') = 'DANIEL', 'Team save changed player suggestions');
+    RememberRecentName(Loaded, 'David');
+    SaveRecentNames(Ini, Loaded);
+    Teams := LoadRecentNames(Ini, 'RecentTeamNames');
+    Expect((Length(Teams) = 1) and (Teams[0] = 'Daniel Team'), 'Player save changed team history');
     SaveRecentNames(Ini, Names);
     Loaded := LoadRecentNames(Ini);
     Expect(Length(Loaded) = Length(Names), 'History count did not round-trip');
