@@ -91,3 +91,10 @@ The CI does this for you, but if you need to do it manually:
   * Copy the DLLs from `game` to `installer/dependencies/dll`
   * `C:\...\makensis "installer/UltraStar Community Edition.nsi"` (this will take a while)
   * The .exe will be placed in `installer/dist`
+
+## Experimental Linux ARM64 builds
+
+The manual Linux ARM workflow builds on a native Ubuntu ARM64 runner using
+distribution packages. Its artifact is an installation tree for the matching
+distribution, not an AppImage with bundled libraries. It remains separate from
+the regular release builds while ARM packaging is validated.
