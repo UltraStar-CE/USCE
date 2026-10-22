@@ -863,7 +863,8 @@ begin
     end
     else
     begin
-      if (not ScreenSing.FadeOut) and (Screens=1) or (ScreenAct=2) then
+      if not ScreenSing.ContinueDelayedScoring and
+        (((not ScreenSing.FadeOut) and (Screens=1)) or (ScreenAct=2)) then
       begin
         ScreenSing.Finish;
       end;

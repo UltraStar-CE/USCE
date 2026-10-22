@@ -625,6 +625,8 @@ begin
       DelayBeats := GetBeats(CurrentSong.BPM, Player[PlayerIndex].DetectionDelay / 1000);
       PlayerOldBeat := Player[PlayerIndex].DetectionBeat;
       PlayerCurBeat := Floor(LyricsState.MidBeatD - DelayBeats);
+      if Screen.ScoringTailActive then
+        PlayerCurBeat := Min(PlayerCurBeat, Screen.ScoringTailEndBeat);
 
       for ActualBeat := PlayerOldBeat+1 to PlayerCurBeat do
       begin
