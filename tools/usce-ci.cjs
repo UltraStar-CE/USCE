@@ -88,13 +88,23 @@ async function waitForBuilds({github, context, core, files, now = Date.now,
   throw Error('Required build workflows did not finish for this exact PR revision. No merge approval is reported.');
 }
 
+function pullRequestFiles(base, head, cwd) {
+  if (!/^[a-f0-9]{40}$/.test(base)) throw Error('Invalid PR base SHA');
+  if (!/^[a-f0-9]{40}$/.test(head)) throw Error('Invalid PR head SHA');
+  const options = {encoding: 'utf8', cwd};
+  // Compare the event's immutable PR commits, never the checkout's synthetic
+  // merge, which can already contain later changes from the target branch.
+  const ancestor = execFileSync('git', ['merge-base', base, head], options).trim();
+  // Include both paths when code is renamed to a documentation-only path.
+  return execFileSync('git', ['diff', '--name-only', '-z', '--no-renames', ancestor, head, '--'],
+    options).split('\0').filter(Boolean);
+}
+
 async function validatePullRequest({github, context, core}) {
   const base = context.payload.pull_request.base.sha;
-  if (!/^[a-f0-9]{40}$/.test(base)) throw Error('Invalid PR base SHA');
-  // Disabling rename detection includes both deleted code and its new path.
-  const files = execFileSync('git', ['diff', '--name-only', '-z', '--no-renames', base, 'HEAD', '--'],
-    {encoding: 'utf8'}).split('\0').filter(Boolean);
+  const head = context.payload.pull_request.head.sha;
+  const files = pullRequestFiles(base, head);
   return waitForBuilds({github, context, core, files});
 }
 
-module.exports = {matches, selected, requiredWorkflows, waitForBuilds, validatePullRequest};
+module.exports = {matches, selected, requiredWorkflows, waitForBuilds, validatePullRequest, pullRequestFiles};
