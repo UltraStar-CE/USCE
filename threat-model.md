@@ -41,5 +41,6 @@ features introduce remote input or services.
 
 The optional song-list server is disabled by default. Setting
 `USCE_SONGLIST_SERVER=1` starts a listener on `127.0.0.1:8091` that exposes
-the local song catalogue to applications on the same computer. This feature
+the local song catalogue and song media through HTTP routes to applications
+on the same computer. This feature
 extends the normal local-playback model and remains experimental.
