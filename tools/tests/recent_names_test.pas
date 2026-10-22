@@ -18,7 +18,7 @@ begin
   Editing := true;
   Expect(TypeNameInput(Editing, 'D', 'n') = 'Dn', 'Typing after an edit replaced it');
   Editing := false;
-  Expect(TypeNameInput(Editing, 'Other field', 'Ä') = 'Ä', 'Fresh focus did not replace text');
+  Expect(TypeNameInput(Editing, 'Other field', 'Ã„') = 'Ã„', 'Fresh focus did not replace text');
   RememberRecentName(Names, 'Daniel');
   RememberRecentName(Names, 'Dani');
   Expect(PredictRecentName(Names, 'Da') = 'Dani', 'MRU order ignored');
@@ -32,16 +32,16 @@ begin
   RememberRecentName(Names, 'Adam');
   RememberRecentName(Names, 'Ada');
   Expect(PredictRecentName(Names, 'Ada') = '', 'Exact match skipped in favor of older longer name');
-  RememberRecentName(Names, 'Änne');
-  Expect(PredictRecentName(Names, 'än') = 'Änne', 'Unicode prefix comparison failed');
+  RememberRecentName(Names, 'Ã„nne');
+  Expect(PredictRecentName(Names, 'Ã¤n') = 'Ã„nne', 'Unicode prefix comparison failed');
   RememberRecentName(Names, '');
   RememberRecentName(Names, 'broken' + #10 + 'name');
-  Expect(Names[0] = 'Änne', 'Empty or multiline value changed history');
+  Expect(Names[0] = 'Ã„nne', 'Empty or multiline value changed history');
   Ini := TMemIniFile.Create('');
   try
     SaveRecentNames(Ini, Names);
     Teams := LoadRecentNames(Ini, 'RecentTeamNames');
-    Expect(Length(Teams) = 0, 'Legacy history leaked into team history');
+    Expect(Length(Teams) = 0, 'Team history should start empty');
     RememberRecentName(Teams, 'Daniel Team');
     SaveRecentNames(Ini, Teams, 'RecentTeamNames');
     Teams := LoadRecentNames(Ini, 'RecentTeamNames');
