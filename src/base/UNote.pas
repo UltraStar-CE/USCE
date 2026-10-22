@@ -271,6 +271,29 @@ begin
   Result := BPM * msTime / 60;
 end;
 
+function ShouldRunNoteDetection: boolean;
+var
+  PlayerIndex: integer;
+  DelayBeats: real;
+begin
+  Result := LyricsState.CurrentBeatD >= 0;
+  if Result then
+    Exit;
+
+  // A negative correction moves a player's scoring clock ahead of playback.
+  // Start detection during the song pre-roll so every leading beat receives
+  // the microphone sample captured at its shifted time.
+  for PlayerIndex := 0 to PlayersPlay - 1 do
+  begin
+    DelayBeats := GetBeats(CurrentSong.BPM, Ini.PlayerDelay[PlayerIndex] / 1000);
+    if Floor(LyricsState.MidBeatD - DelayBeats) >= 0 then
+    begin
+      Result := true;
+      Exit;
+    end;
+  end;
+end;
+
 function GetMidBeat(Time: real): real;
 begin
   try
@@ -338,7 +361,7 @@ begin
     NewBeatClick(Screen);
 
   // make some operations when detecting new voice pitch
-  if LyricsState.CurrentBeatD >= 0 then
+  if ShouldRunNoteDetection then
     NewBeatDetect(Screen);
 end;
 
@@ -620,16 +643,23 @@ begin
         Player[PlayerIndex].DetectionDelay := Ini.PlayerDelay[PlayerIndex];
         Player[PlayerIndex].DetectionReady := true;
         DelayBeats := GetBeats(CurrentSong.BPM, Player[PlayerIndex].DetectionDelay / 1000);
-        // Negative corrections advance the first target. Include the beats
-        // between the current (post-seek) clock and that advanced target too.
         Player[PlayerIndex].DetectionBeat :=
-          Floor(Min(LyricsState.MidBeatD, LyricsState.MidBeatD - DelayBeats)) - 1;
+          Floor(LyricsState.MidBeatD - DelayBeats) - 1;
       end;
       DelayBeats := GetBeats(CurrentSong.BPM, Player[PlayerIndex].DetectionDelay / 1000);
       PlayerOldBeat := Player[PlayerIndex].DetectionBeat;
       PlayerCurBeat := Floor(LyricsState.MidBeatD - DelayBeats);
       if Screen.ScoringTailActive then
         PlayerCurBeat := Min(PlayerCurBeat, Screen.ScoringTailEndBeat);
+
+      // Other players can still be before their shifted scoring start when a
+      // negative-delay player begins during pre-roll. Move their cursor only;
+      // do not analyze or consume score potential before beat zero.
+      if PlayerCurBeat < 0 then
+      begin
+        Player[PlayerIndex].DetectionBeat := PlayerCurBeat;
+        Continue;
+      end;
 
       for ActualBeat := PlayerOldBeat+1 to PlayerCurBeat do
       begin
