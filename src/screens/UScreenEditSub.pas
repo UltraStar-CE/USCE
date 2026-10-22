@@ -114,6 +114,7 @@ type
       PlayVideo:               boolean;
       PlayStopTime:            real;
       CopySrc:                 TPos;
+      CopySrcValid:            Boolean;
       MidiOut:                 TMidiOutput;
       MidiStart:               real;
       MidiStop:                real;
@@ -428,6 +429,8 @@ type
       procedure ReloadSong(SDL_ModState: word);
       procedure HandleDivideBPM(SDL_ModState: word);
       procedure HandleMultiplyBPM(SDL_ModState: word);
+      procedure HandleLinePlayback(SDL_ModState: word; const WithVideo: Boolean;
+        const AllowVocalsPreview: Boolean);
       procedure HandleVideo(SDL_ModState: word);
       procedure HandlePaste(SDL_ModState: word);
       procedure HandleFixTimings(SDL_ModState: word);
@@ -4757,6 +4760,15 @@ begin
   CopySrc.track := CurrentTrack;
   CopySrc.line  := CurrentSong.Tracks[CurrentTrack].CurrentLine;
   CopySrc.note  := CurrentNote[CurrentTrack];
+  CopySrcValid  := true;
+end;
+
+function TScreenEditSub.HasCopySource: Boolean;
+begin
+  Result := CopySrcValid and
+    (CopySrc.track >= 0) and (CopySrc.track <= High(CurrentSong.Tracks)) and
+    (CopySrc.line >= 0) and
+    (CopySrc.line <= High(CurrentSong.Tracks[CopySrc.track].Lines));
 end;
 
 procedure TScreenEditSub.CopySentence(SrcTrack, SrcLine, DstTrack, DstLine: Integer; CopyText, CopyNotes, EnforceSrcLength: boolean);
