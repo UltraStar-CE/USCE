@@ -82,6 +82,7 @@ type
       ReflectionSpacing: single;
 
       NameEntryField: boolean;
+      TeamNameField: boolean;
       NameSuggestionWidth: single;
       Writable: boolean;
       procedure TypeNameCharacter(const Value: UTF8String);
@@ -142,7 +143,12 @@ procedure TText.SuggestRecentName;
 begin
   NamePrediction := '';
   if Assigned(Ini) and (Theme.NameSuggestionAlpha > 0) then
-    NamePrediction := PredictRecentName(Ini.RecentNames, Text);
+  begin
+    if TeamNameField then
+      NamePrediction := PredictRecentName(Ini.RecentTeamNames, Text)
+    else
+      NamePrediction := PredictRecentName(Ini.RecentNames, Text);
+  end;
 end;
 
 function TText.AcceptNameSuggestion: boolean;

@@ -12,8 +12,8 @@ const MaxRecentNames = 256;
 function TypeNameInput(var Editing: boolean; const Current, Input: UTF8String): UTF8String;
 procedure RememberRecentName(var Names: TRecentNames; const Value: UTF8String);
 function PredictRecentName(const Names: TRecentNames; const Prefix: UTF8String): UTF8String;
-function LoadRecentNames(Ini: TCustomIniFile): TRecentNames;
-procedure SaveRecentNames(Ini: TCustomIniFile; const Names: TRecentNames);
+function LoadRecentNames(Ini: TCustomIniFile; const Section: string = 'RecentNames'): TRecentNames;
+procedure SaveRecentNames(Ini: TCustomIniFile; const Names: TRecentNames; const Section: string = 'RecentNames');
 
 implementation
 
@@ -58,24 +58,24 @@ begin
   end;
 end;
 
-function LoadRecentNames(Ini: TCustomIniFile): TRecentNames;
+function LoadRecentNames(Ini: TCustomIniFile; const Section: string): TRecentNames;
 var Count, I: integer;
 begin
   Result := nil;
-  Count := Ini.ReadInteger('RecentNames', 'Count', 0);
+  Count := Ini.ReadInteger(Section, 'Count', 0);
   if Count < 0 then Count := 0;
   if Count > MaxRecentNames then Count := MaxRecentNames;
   for I := Count - 1 downto 0 do
-    RememberRecentName(Result, Ini.ReadString('RecentNames', 'Name' + IntToStr(I + 1), ''));
+    RememberRecentName(Result, Ini.ReadString(Section, 'Name' + IntToStr(I + 1), ''));
 end;
 
-procedure SaveRecentNames(Ini: TCustomIniFile; const Names: TRecentNames);
+procedure SaveRecentNames(Ini: TCustomIniFile; const Names: TRecentNames; const Section: string);
 var I: integer;
 begin
-  Ini.EraseSection('RecentNames');
-  Ini.WriteInteger('RecentNames', 'Count', Length(Names));
+  Ini.EraseSection(Section);
+  Ini.WriteInteger(Section, 'Count', Length(Names));
   for I := 0 to High(Names) do
-    Ini.WriteString('RecentNames', 'Name' + IntToStr(I + 1), Names[I]);
+    Ini.WriteString(Section, 'Name' + IntToStr(I + 1), Names[I]);
 end;
 
 end.
