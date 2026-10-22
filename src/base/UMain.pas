@@ -103,7 +103,8 @@ uses
   ULuaParty,
   ULuaScreenSing,
   UTime,
-  UWebcam;
+  UWebcam,
+  UWebServer;
   //UVideoAcinerella;
 
 // starts singing the song given with the -song parameter
@@ -139,6 +140,8 @@ end;
 procedure Main;
 var
   WindowTitle: string;
+  Server: TWebServer;
+
 begin
   {$IFNDEF Debug}
   try
@@ -283,6 +286,18 @@ begin
       SoundLib.StartBgMusic;
 
     //------------------------------
+    // Start Webserver
+    //------------------------------
+    Log.LogStatus('Webserver', 'Initialization');
+    // Create and start the web server
+    // Explicit opt-in while the song-list server is experimental.
+    if GetEnvironmentVariable('USCE_SONGLIST_SERVER') = '1' then
+    begin
+      Server := TWebServer.Create(8091);
+      Server.Start;
+    end;
+
+    //------------------------------
     // Start Mainloop
     //------------------------------
     Log.LogStatus('Main Loop', 'Initialization');
@@ -315,6 +330,11 @@ begin
 
     Log.LogStatus('Finalize SDL', 'Finalization');
     SDL_Quit();
+
+    Log.LogStatus('Finalize Webserver', 'Finalization');
+    //Server.Terminate; // Terminate the thread
+    //Server.WaitFor;
+    //Server.Free;
 
     Log.LogStatus('Finalize Log', 'Finalization');
   {$IFNDEF Debug}
