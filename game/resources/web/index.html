@@ -3,13 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <title>Song List</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <script src="/theme.js" fetchpriority="high" blocking="render"></script>
     <link rel="stylesheet" href="/style.css" />
-
-    <script src="/jquery.min.js"></script>
-    <script src="/datatables.min.js"></script>
-    <link rel="stylesheet" href="/datatables.min.css" />
 </head>
 <body>
     <h1>Song List</h1>
@@ -23,64 +20,34 @@
         </div>
     </div>
 
-    <table id="songTable" class="hover stripe">
+    <input type="search" id="search" placeholder="Search for songs…" aria-label="Search for songs">
+    <p id="songCount" role="status"></p>
+
+    <noscript>
+        <p>This song list requires JavaScript. The underlying data is available at
+        <a href="/songs.json">/songs.json</a>.</p>
+    </noscript>
+
+    <table id="songTable">
+        <colgroup>
+            <col class="col-artist">
+            <col class="col-title">
+            <col class="col-edition">
+            <col class="col-genre">
+            <col class="col-year">
+        </colgroup>
         <thead>
             <tr>
-                <th>Artist</th>
-                <th>Title</th>
-                <th>Edition</th>
-                <th>Genre</th>
-                <th>Year</th>
+                <th data-key="artist" aria-sort="ascending">Artist</th>
+                <th data-key="title" aria-sort="none">Title</th>
+                <th data-key="edition" aria-sort="none">Edition</th>
+                <th data-key="genre" aria-sort="none">Genre</th>
+                <th data-key="year" aria-sort="none">Year</th>
             </tr>
         </thead>
-        <tbody>
-            <!--SONG_ROWS-->
-        </tbody>
+        <tbody></tbody>
     </table>
 
-    <script>
-        const defaultPageLength = 25;
-        const PAGE_LENGTH = "pageLength";
-
-        let pageLength = parseInt(localStorage.getItem(PAGE_LENGTH), 10);
-        if (!pageLength || pageLength < 10 || pageLength > 100) {
-            pageLength = defaultPageLength;
-        }
-
-        let table = new DataTable('#songTable', {
-            // default entries per page
-            pageLength: pageLength,
-            layout: {
-                top: {
-                    search: {
-                        text: '',
-                        placeholder: 'Search for songs…'
-                    }
-                },
-                topStart: null,
-                topEnd: null,
-                bottomStart: [
-                    {
-                        pageLength: {
-                            menu: [ 10, 25, 50, 100 ]
-                        }
-                    },
-                ],
-                bottom2: {
-                    info: {
-                        text: 'Showing _START_ to _END_ of _TOTAL_ songs'
-                    }
-                },
-                bottomEnd: {
-                    paging: {
-                        // numbers: 6
-                    }
-                }
-            }
-        });
-        table.on('length.dt', function (e, settings, len) {
-            localStorage.setItem(PAGE_LENGTH, len);
-        });
-    </script>
+    <script src="/app.js"></script>
 </body>
 </html>
