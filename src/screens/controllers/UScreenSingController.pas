@@ -83,6 +83,7 @@ type
     procedure ClearLyricEngines();
     procedure CalculateStartTime;
     procedure SaveLocalScores;
+    procedure ResumeAfterScoringTail;
   public
     ScoringTailActive: boolean;
     ScoringTailEndBeat: integer;
@@ -293,6 +294,7 @@ begin
         end;
 
         LyricsState.SetCurrentTime(fStartTime);
+        ResumeAfterScoringTail;
         LyricsState.UpdateBeats();
         ClearLyricEngines;
         ResetLinesAndLyrics;
@@ -604,8 +606,8 @@ begin
 
         NewPosition := AudioPlayback.Position - 5.0;
         AudioPlayback.SetPosition(NewPosition);
-        ScoringTailActive := false;
         LyricsState.SetCurrentTime(NewPosition);
+        ResumeAfterScoringTail;
         ClearLyricEngines;
         LyricsState.UpdateBeats();
         if (Assigned(fCurrentVideo)) then
@@ -1442,6 +1444,15 @@ end;
 function TScreenSingController.FinishedMusic: boolean;
 begin
   Result := AudioPlayback.Finished;
+end;
+
+procedure TScreenSingController.ResumeAfterScoringTail;
+begin
+  if not ScoringTailActive then Exit;
+  ScoringTailActive := false;
+  if Ini.SyncTo = Ord(stMusic) then LyricsState.SetSyncSource(fMusicSync);
+  if Ini.SyncTo = Ord(stLyrics) then AudioPlayback.SetSyncSource(fLyricsSync);
+  if not Paused then AudioPlayback.Play;
 end;
 
 function TScreenSingController.ContinueDelayedScoring: boolean;
