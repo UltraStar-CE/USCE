@@ -620,7 +620,10 @@ begin
         Player[PlayerIndex].DetectionDelay := Ini.PlayerDelay[PlayerIndex];
         Player[PlayerIndex].DetectionReady := true;
         DelayBeats := GetBeats(CurrentSong.BPM, Player[PlayerIndex].DetectionDelay / 1000);
-        Player[PlayerIndex].DetectionBeat := Floor(LyricsState.MidBeatD - DelayBeats) - 1;
+        // Negative corrections advance the first target. Include the beats
+        // between the current (post-seek) clock and that advanced target too.
+        Player[PlayerIndex].DetectionBeat :=
+          Floor(Min(LyricsState.MidBeatD, LyricsState.MidBeatD - DelayBeats)) - 1;
       end;
       DelayBeats := GetBeats(CurrentSong.BPM, Player[PlayerIndex].DetectionDelay / 1000);
       PlayerOldBeat := Player[PlayerIndex].DetectionBeat;
