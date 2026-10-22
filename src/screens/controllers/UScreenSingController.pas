@@ -84,6 +84,8 @@ type
     procedure CalculateStartTime;
     procedure SaveLocalScores;
   public
+    ScoringTailActive: boolean;
+    ScoringTailEndBeat: integer;
     CheckPlayerConfigOnNextSong: boolean;
     eSongLoaded: THookableEvent; //< event is called after lyrics of a song are loaded on OnShow
     Paused:     boolean; //pause Mod
@@ -178,6 +180,7 @@ type
       PressedDown: boolean; Repeated: boolean = false): boolean; override;
 
     function FinishedMusic: boolean;
+    function ContinueDelayedScoring: boolean;
 
     procedure AutoSendScore;
     procedure AutoSaveScore;
@@ -601,6 +604,7 @@ begin
 
         NewPosition := AudioPlayback.Position - 5.0;
         AudioPlayback.SetPosition(NewPosition);
+        ScoringTailActive := false;
         LyricsState.SetCurrentTime(NewPosition);
         ClearLyricEngines;
         LyricsState.UpdateBeats();
@@ -658,7 +662,7 @@ begin
     LyricsState.Start();
 
     // play music
-      AudioPlayback.Play;
+      if not ScoringTailActive then AudioPlayback.Play;
 
     // video
     if (fCurrentVideo <> nil) then
@@ -702,6 +706,7 @@ var
 begin
   inherited;
 
+  ScoringTailActive := false;
   Log.LogStatus('Begin', 'OnShow');
 
   if not Help.SetHelpID(ID) then
@@ -1254,6 +1259,7 @@ begin
   end;
 
   // prepare lyrics timer
+  ScoringTailActive := false;
   Ini.ReloadDelays;
   LyricsState.Reset();
 
@@ -1436,6 +1442,51 @@ end;
 function TScreenSingController.FinishedMusic: boolean;
 begin
   Result := AudioPlayback.Finished;
+end;
+
+function TScreenSingController.ContinueDelayedScoring: boolean;
+var
+  PlayerIndex, TrackIndex, LineIndex, LastBeat, TargetBeat: integer;
+  EndTime: real;
+begin
+  Result := false;
+  if Settings.Finish or FadeOut then Exit;
+  EndTime := AudioPlayback.Length;
+  if CurrentSong.Finish > 0 then
+    EndTime := Min(EndTime, CurrentSong.Finish / 1000);
+  if ScreenSong.Mode = smMedley then
+    EndTime := Min(EndTime, MedleyEnd);
+  ScoringTailEndBeat := Floor(GetMidBeat(EndTime - CurrentSong.Gap / 1000));
+  for PlayerIndex := 0 to PlayersPlay - 1 do
+  begin
+    if not Player[PlayerIndex].DetectionReady or
+      (Player[PlayerIndex].DetectionDelay <= 0) then Continue;
+    TrackIndex := 0;
+    if CurrentSong.isDuet and (PlayersPlay > 1) then
+      TrackIndex := PlayerIndex mod 2;
+    LastBeat := Low(integer);
+    for LineIndex := 0 to CurrentSong.Tracks[TrackIndex].High do
+      with CurrentSong.Tracks[TrackIndex].Lines[LineIndex] do
+        if HighNote >= 0 then
+          LastBeat := Max(LastBeat, Notes[HighNote].StartBeat + Notes[HighNote].Duration);
+    TargetBeat := Min(LastBeat, ScoringTailEndBeat);
+    if Player[PlayerIndex].DetectionBeat < TargetBeat then
+      Result := true;
+  end;
+  if not Result then Exit;
+  if Paused then Exit;
+  if not ScoringTailActive then
+  begin
+    ScoringTailActive := true;
+    // The audio clock has stopped. Let the lyrics timer run independently
+    // while microphone input catches up, without extending the scoring range.
+    AudioPlayback.SetSyncSource(nil);
+    AudioPlayback.Stop;
+    LyricsState.SetSyncSource(nil);
+    LyricsState.SetCurrentTime(EndTime);
+    LyricsState.Start;
+  end;
+  Sing(Self);
 end;
 
 procedure TScreenSingController.Finish;
