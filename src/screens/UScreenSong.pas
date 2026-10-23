@@ -119,7 +119,6 @@ type
       DuetIcon:     cardinal;
       DuetChange:   boolean;
 
-      RapToFreestyle: boolean;
 
       TextCat:   integer;
       StaticCat: integer;
@@ -377,7 +376,7 @@ begin
   begin
     PreviousSong := CurrentSong;
     try
-      CatSongs.Song[SongIndex].Analyse(false, false, false, false, 0, true);
+      CatSongs.Song[SongIndex].Analyse(false, false, false, 0, true);
     finally
       CurrentSong := PreviousSong;
     end;
@@ -1146,10 +1145,6 @@ begin
             SetScrollRefresh;
           end;
         end;
-
-      SDLK_T:
-        if CatSongs.Song[Interaction].hasRap then
-          RapToFreestyle := not RapToFreestyle;
 
       SDLK_V:
         begin
@@ -2075,6 +2070,7 @@ begin
 
     Theme.Song.DuetIcon.Y  := StaticDuetY + Padding;
     ListDuetIcon[I] := AddStatic(Theme.Song.DuetIcon);
+
   end;
 
   MainChessboardMinLine := 0;
@@ -2335,7 +2331,6 @@ end;
 procedure TScreenSong.OnSongDeSelect;
 begin
   DuetChange := false;
-  RapToFreestyle := false;
 
   CoverTime := 10;
   //UnloadCover(Interaction);
@@ -3032,7 +3027,6 @@ begin
     PreviewOpened := -1;
   KeepPreviewPositionOnShow := false;
   DuetChange := false;
-  RapToFreestyle := false;
   CoverFull := false;
   PreviewInteraction := -1;
   LastPreviewStartTime := 0;
@@ -3124,7 +3118,6 @@ var
   PlaylistReloaded, PlaylistReapplied: Boolean;
 begin
   DuetChange := false;
-  RapToFreestyle := false;
   SyncDuetSingerTheme;
 
   isScrolling := true;
@@ -4778,7 +4771,7 @@ procedure TScreenSong.SongScore;
   end;
 begin
 
-  if RapToFreestyle or ((Mode <> smNormal) or (Ini.ShowScores = 0) or (CatSongs.Song[Interaction].Edition = '') or ((Ini.ShowScores = 1) and ((Text[TextMaxScore2].Text = '0') and (Text[TextMaxScoreLocal].Text = '0')))) then
+  if ((Mode <> smNormal) or (Ini.ShowScores = 0) or (CatSongs.Song[Interaction].Edition = '') or ((Ini.ShowScores = 1) and ((Text[TextMaxScore2].Text = '0') and (Text[TextMaxScoreLocal].Text = '0')))) then
   begin
     hide([
       TextScore, TextMaxScore, TextMediaScore,

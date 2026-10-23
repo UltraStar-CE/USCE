@@ -610,6 +610,7 @@ var
 implementation
 
 uses
+  Math,
   StrUtils,
   sdl2,
   UCommandLine,
@@ -618,6 +619,7 @@ uses
   ULanguage,
   UPlatform,
   UMain,
+  UMusic,
   URecord,
   USkins,
   UThemes,
@@ -1642,6 +1644,7 @@ procedure TIni.Load();
 var
   IniFile: TMemIniFile;
   I:       integer;
+  NoteType: TNoteType;
   IShowWebScore: array of UTF8String;
   HexColor: string;
   Col: TRGB;
@@ -1907,6 +1910,11 @@ begin
   else if (HighScoreScreenEntries > MAX_HIGH_SCORE_SCREEN_ENTRIES) then
     HighScoreScreenEntries := MAX_HIGH_SCORE_SCREEN_ENTRIES;
 
+  for NoteType := Low(TNoteType) to High(TNoteType) do
+    ScoreFactor[NoteType] := EnsureRange(
+      IniFile.ReadInteger('Scoring', ScoreFactorName[NoteType],
+        StandardScoreFactor[NoteType]), 0, MaxScoreFactor);
+
   StatPeriod := IniFile.ReadInteger('Advanced', 'StatPeriod', 0);
   if (StatPeriod < 0) or (StatPeriod > 4) then
     StatPeriod := 0;
@@ -2066,6 +2074,7 @@ var
   IniFile: TIniFile;
   HexColor: string;
   C: TRGB;
+  NoteType: TNoteType;
 begin
   IniFile := TSafeIniFile.Create(Filename.ToNative, 'TIni.Save');
 
@@ -2233,6 +2242,10 @@ begin
 
     // Last list length selected on the high-score screen
     IniFile.WriteInteger('Advanced', 'HighScoreScreenEntries', HighScoreScreenEntries);
+
+    for NoteType := Low(TNoteType) to High(TNoteType) do
+      IniFile.WriteInteger('Scoring', ScoreFactorName[NoteType],
+        ScoreFactor[NoteType]);
 
     IniFile.WriteInteger('Advanced', 'StatPeriod', StatPeriod);
 

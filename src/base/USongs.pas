@@ -456,7 +456,7 @@ var
 begin
   Song := TSong.Create(FilePath);
 
-  if Song.Analyse(false, false, false, false, 0, Params.CheckSongs) then
+  if Song.Analyse(false, false, false, 0, Params.CheckSongs) then
     SongList.Add(Song)
   else
   begin

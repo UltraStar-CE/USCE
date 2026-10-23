@@ -1109,7 +1109,8 @@ begin
   success := false;
   // FIXME: bad style, put the try-except into loadsong() and not here
   try
-    success := CurrentSong.Analyse(false, ScreenSong.DuetChange, ScreenSong.RapToFreestyle, true, AudioEnd, true); // and CurrentSong.LoadSong();
+    success := CurrentSong.Analyse(false, ScreenSong.DuetChange, true,
+      AudioEnd, true); // and CurrentSong.LoadSong();
   except
     on E: EInOutError do Log.LogWarn(E.Message, 'TScreenSing.LoadNextSong');
   end;
@@ -1935,6 +1936,8 @@ begin
             4: ScreenPopupError.ShowPopup(Language.Translate('WEBSITE_ERROR_SCORE'));
             5: ScreenPopupError.ShowPopup(Language.Translate('WEBSITE_ERROR_SCORE_DUPLICATED'));
             7: ScreenPopupError.ShowPopup(Language.Translate('WEBSITE_ERROR_SONG'));
+            WEBSITE_STATUS_NONSTANDARD_SCORE_FACTORS:
+              ScreenPopupError.ShowPopup(Language.Translate('WEBSITE_ERROR_NONSTANDARD_SCORE_FACTORS'));
           end;
 
        end;
@@ -1984,6 +1987,12 @@ begin
 
         if (Save) then
         begin
+
+          if not HasStandardScoreFactors then
+          begin
+            ScreenPopupError.ShowPopup(Language.Translate('WEBSITE_ERROR_NONSTANDARD_SCORE_FACTORS'));
+            Exit;
+          end;
 
           DllMan.LoadWebsite(IndexWeb);
 

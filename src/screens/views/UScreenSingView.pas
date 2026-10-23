@@ -749,8 +749,7 @@ begin
 
   LastLineSungToEnd := false;
   //the song was sung to the end?
-  if not ScreenSing.SungToEnd and ((not CurrentSong.isDuet) or (PlayersPlay = 1)) and
-      not ScreenSong.RapToFreestyle then
+  if not ScreenSing.SungToEnd and ((not CurrentSong.isDuet) or (PlayersPlay = 1)) then
   begin
     Line := ScreenSing.Lyrics.GetUpperLine();
     if Line.LastLine then
@@ -759,7 +758,7 @@ begin
       for T := 0 to High(Line.Words) do
       begin
         if (CurLyricsTime < GetTimeFromBeat(Line.Words[T].Start + Line.Words[T].Length)) and
-           (not Line.Words[T].Freestyle) then
+           (ScoreFactor[Line.Words[T].NoteType] > 0) then
           LastLineSungToEnd := false;
       end;
     end;
@@ -767,8 +766,7 @@ begin
       ScreenSing.SungToEnd := true;
   end;
 
-  if not ScreenSing.SungToEnd and CurrentSong.isDuet and (PlayersPlay <> 1) and
-      not ScreenSong.RapToFreestyle then
+  if not ScreenSing.SungToEnd and CurrentSong.isDuet and (PlayersPlay <> 1) then
   begin
     Line := ScreenSing.LyricsDuetP1.GetUpperLine();
     LineDuet := ScreenSing.LyricsDuetP2.GetUpperLine();
