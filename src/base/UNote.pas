@@ -328,9 +328,7 @@ var
 begin
   LyricsState.UpdateBeats();
 
-  PetGr := 0;
-  if (CurrentSong.isDuet) then
-    PetGr := 1;
+  PetGr := High(CurrentSong.Tracks);
 
   // sentences routines
   for CountGr := 0 to PetGr do //High(Tracks)
@@ -555,8 +553,7 @@ procedure NewBeatDetect(Screen: TScreenSingController);
 var CP, MaxCP: integer;
 begin
   if not Assigned(Screen) then Exit;
-  MaxCP := 0;
-  if CurrentSong.isDuet then MaxCP := 1;
+  MaxCP := High(CurrentSong.Tracks);
   for CP := 0 to MaxCP do
   begin
     NewNote(CP, Screen);

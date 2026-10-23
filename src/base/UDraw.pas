@@ -820,10 +820,7 @@ begin
   // FIXME: accessing ScreenSing is not that generic
   if (CurrentSong.isDuet) then
   begin
-    if (CP = 1) then
-      LyricEngine := ScreenSing.LyricsDuetP2
-    else
-      LyricEngine := ScreenSing.LyricsDuetP1;
+    LyricEngine := ScreenSing.VoiceLyrics[CP];
   end
   else
     LyricEngine := ScreenSing.Lyrics;
@@ -878,28 +875,12 @@ begin
       // determine lyric help bar position and size
       Bounds.Left := MoveStartX + BarProgress * MoveDist;
       Bounds.Right := Bounds.Left + BarWidth;
-      if (CurrentSong.isDuet) then
-      begin
-        if (CP = 0) then
-          Bounds.Top := Theme.LyricBarDuetP1.IndicatorYOffset + Theme.LyricBarDuetP1.UpperY
-        else
-          Bounds.Top := Theme.LyricBarDuetP2.IndicatorYOffset + Theme.LyricBarDuetP2.UpperY ;
-      end
-      else
-        Bounds.Top := Theme.LyricBar.IndicatorYOffset + Theme.LyricBar.UpperY ;
+      Bounds.Top := LyricEngine.UpperLineY;
 
       Bounds.Bottom := Bounds.Top + BarHeight + 3;
 
       // draw lyric help bar
-      if (CurrentSong.isDuet) then
-      begin
-        if (Screens > 1) and (GetScreenPlayerCount(PlayersPlay, Screens, ScreenAct) = 2) then
-          Col := GetLyricBarColor(Ini.SingColor[GetFirstPlayerIndexForScreen(PlayersPlay, Screens, ScreenAct) + CP])
-        else
-          Col := GetLyricBarColor(Ini.SingColor[CP]);
-      end
-      else
-        Col := GetLyricBarColor(1);
+      Col := GetLyricBarColor(Ini.SingColor[CP mod UIni.IMaxPlayerCount]);
 
       with Tex_Lyric_Help_Bar do
       begin
@@ -978,8 +959,6 @@ procedure SingDraw;
 var
   NR: TRecR;         // lyrics area bounds (NR = NoteRec?)
   LyricEngine: TLyricEngine;
-  LyricEngineDuetP1: TLyricEngine;
-  LyricEngineDuetP2: TLyricEngine;
   I: integer;
   Difficulty: integer;
   PlayerCountOnScreen: integer;
@@ -1023,29 +1002,26 @@ begin
   NR.Width := 760; //NR.Right - NR.Left;
   NR.WMid  := 380; //NR.Width / 2;
   NR.Mid   := 400; //NR.Left + NR.WMid;
-  // FIXME: accessing ScreenSing is not that generic
-  if (CurrentSong.isDuet) then
+  if ScreenSing.Settings.LyricsVisible then
   begin
-    LyricEngineDuetP1 := ScreenSing.LyricsDuetP1;
-    LyricEngineDuetP2 := ScreenSing.LyricsDuetP2;
-  end
-  else
-    LyricEngine := ScreenSing.Lyrics;
-
-  // draw lyrics
-  if (ScreenSing.Settings.LyricsVisible) then
-  begin
-    if (CurrentSong.isDuet) then
+    if CurrentSong.isDuet then
     begin
-      LyricEngineDuetP1.Draw(LyricsState.MidBeat);
-      SingDrawLyricHelper(0, NR.Left, NR.WMid);
-
-      LyricEngineDuetP2.Draw(LyricsState.MidBeat);
-      SingDrawLyricHelper(1, NR.Left, NR.WMid);
+      ScreenSing.LayoutVoiceLyrics;
+      for I := 0 to High(ScreenSing.DisplayedVoices) do
+      begin
+        TrackIndex := ScreenSing.DisplayedVoices[I];
+        LyricEngine := ScreenSing.VoiceLyrics[TrackIndex];
+        LyricEngine.Draw(LyricsState.MidBeat);
+        SetFontSize(14);
+        SetFontColor(LyricEngine.LineColor_act.R, LyricEngine.LineColor_act.G,
+          LyricEngine.LineColor_act.B, 1);
+        SetFontPos(LyricEngine.UpperLineX - 24, LyricEngine.UpperLineY);
+        PrintText('P' + IntToStr(TrackIndex + 1));
+      end;
     end
     else
     begin
-      LyricEngine.Draw(LyricsState.MidBeat);
+      ScreenSing.Lyrics.Draw(LyricsState.MidBeat);
       SingDrawLyricHelper(0, NR.Left, NR.WMid);
     end;
   end;

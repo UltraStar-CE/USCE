@@ -508,6 +508,7 @@ type
     LyricActive, LyricCurrent, LyricNext: TRGB;
     LyricOutlineActive, LyricOutlineCurrent, LyricOutlineNext: TRGB;
     LyricUsePlayerColors: boolean;
+    VoicePreviewAlpha: real;
     StaticLyricsBar:       TThemeStatic;
     StaticLyricsBarDuet:   TThemeStatic;
 
@@ -2114,7 +2115,8 @@ begin
       //ThemeLoadStatics(Sing.StaticDuet, 'SingStaticDuet');
 
       // lyrics bar
-      ThemeLoadStatic(Sing.StaticLyricsBar, 'SingLyricsBar');
+      Sing.VoicePreviewAlpha := EnsureRange(ReadFloat(GetSectionList('Sing'), 'VoicePreviewAlpha', 0.5), 0.0, 1.0);
+  ThemeLoadStatic(Sing.StaticLyricsBar, 'SingLyricsBar');
       ThemeLoadStatic(Sing.StaticLyricsBarDuet, 'SingLyricsBarDuet');
 
       //TimeBar mod
