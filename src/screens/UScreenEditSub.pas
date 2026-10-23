@@ -3339,6 +3339,7 @@ begin
   StopMidiPlayback;
 
   CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Tone := NewTone;
+  TriggerGlobalPreviewRescore;
 
   PlaySentenceMidi := False;
   PlayVideo        := False;
@@ -3861,7 +3862,8 @@ begin
     or (PrerollAudioSlideId = Interactions[nBut].Num) or (PrerollMidiSlideId = Interactions[nBut].Num))
     and (Action = maLeft) and (SelectsS[Interactions[nBut].Num].SelectedOption > 0)) then
   begin
-    SelectsS[Interactions[nBut].Num].SelectedOption := ((SelectsS[Interactions[nBut].Num].SelectedOption div 10) - 1) * 10;
+    SelectsS[Interactions[nBut].Num].SelectedOption :=
+      Max(0, ((SelectsS[Interactions[nBut].Num].SelectedOption - 1) div 10) * 10);
   end;
 
   if (((VolumeAudioSlideId = Interactions[nBut].Num) or (VolumeMidiSlideId = Interactions[nBut].Num) or (VolumeClickSlideId = Interactions[nBut].Num)
@@ -4300,6 +4302,7 @@ begin
   EditorLyrics[CurrentTrack].AddLine(CurrentTrack, CurrentSong.Tracks[CurrentTrack].CurrentLine);
   EditorLyrics[CurrentTrack].Selected := 0;
   StopPlayback;
+  RestoreStandardPlayback(false);
   PlaySentence := false;
   PlaySentenceMidi := false;
   PlayVideo := false;
@@ -4309,6 +4312,7 @@ end;
 procedure TScreenEditSub.PreviousSentence;
 begin
   StopPlayback;
+  RestoreStandardPlayback(false);
   PlayVideo := false;
   PlaySentence := false;
   PlaySentenceMidi := false;
@@ -5353,11 +5357,15 @@ end;
 procedure TScreenEditSub.InvalidateVocalsAnalysis(const KeepPreview: Boolean = true);
 var
   LineIndex: Integer;
+  RestartPreviewBuild: Boolean;
 begin
   if not KeepPreview then
     ClearVocalsWaveformCache(true);
   if KeepPreview and HasVocalsPreviewPlayback then
   begin
+    RestartPreviewBuild := FAnalysisThreadRunning and FAnalysisThreadBuildPreview;
+    if FAnalysisThreadRunning then
+      StopAnalysisThread;
     RefreshPreviewScoreMetadata(CurrentTrack);
     EnsurePreviewScoreCache(CurrentTrack);
     EnterCriticalSection(FAnalysisDataLock);
@@ -5386,7 +5394,7 @@ begin
     finally
       LeaveCriticalSection(FAnalysisDataLock);
     end;
-    StartAnalysisThread(false, CurrentTrack);
+    StartAnalysisThread(RestartPreviewBuild, CurrentTrack);
   end;
 end;
 
@@ -5913,6 +5921,8 @@ var
   end;
 
   function DetectPitchTone(const Samples: TSingleDynArray; const StartIndex: Integer; out ToneValue: Single): Boolean;
+  const
+    CORRELATION_SAMPLES = 256;
   var
     Threshold: Single;
     MaxVolume: Single;
@@ -5923,6 +5933,8 @@ var
     Correlation: Double;
     BestCorrelation: Double;
     BestToneIndex: Integer;
+    CorrelationIndex: Integer;
+    WindowOffset: Integer;
   begin
     Result := false;
     ToneValue := VOCALS_PITCH_INVALID;
@@ -5943,11 +5955,14 @@ var
     begin
       Delay := Round(VOCALS_WAVEFORM_SAMPLE_RATE / (BaseToneFreq * Power(2, (ToneIndex - 33) / 12)));
       Correlation := 0;
-      for SampleWindowIndex := 0 to VOCALS_PITCH_ANALYSIS_WINDOW - 1 do
+      for CorrelationIndex := 0 to CORRELATION_SAMPLES - 1 do
+      begin
+        WindowOffset := CorrelationIndex * (VOCALS_PITCH_ANALYSIS_WINDOW div CORRELATION_SAMPLES);
         Correlation := Correlation + Abs(
-          Samples[StartIndex + ((SampleWindowIndex + Delay) and (VOCALS_PITCH_ANALYSIS_WINDOW - 1))] -
-          Samples[StartIndex + SampleWindowIndex]);
-      Correlation := Correlation / VOCALS_PITCH_ANALYSIS_WINDOW;
+          Samples[StartIndex + ((WindowOffset + Delay) and (VOCALS_PITCH_ANALYSIS_WINDOW - 1))] -
+          Samples[StartIndex + WindowOffset]);
+      end;
+      Correlation := Correlation / CORRELATION_SAMPLES;
       if Correlation < BestCorrelation then
       begin
         BestCorrelation := Correlation;
@@ -6270,7 +6285,11 @@ begin
       if not Assigned(OriginalStream) then
         Exit;
       if HasVocalsPreviewSource then
+      begin
         KaraokeStream := OpenDecodeStream(CurrentSong.Path.Append(GetVocalsPreviewSourcePath));
+        if not Assigned(KaraokeStream) then
+          raise Exception.Create('Could not decode the declared instrumental stem');
+      end;
     end;
     HasKaraokePreview := Assigned(KaraokeStream);
 
