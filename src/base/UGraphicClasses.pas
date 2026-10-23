@@ -396,7 +396,7 @@ var
 begin
   inherited;
   LastTime := SDL_GetTicks();
-  for c := 0 to 5 do
+  for c := 0 to High(TwinkleArray) do
   begin
     TwinkleArray[c] := 0;
   end;
@@ -513,7 +513,7 @@ begin
     Kill(0);
   SetLength(RecArray,0);  // remove GoldenRec positions
   SetLength(PerfNoteArray,0); // remove PerfectNote positions
-  for c := 0 to 5 do
+  for c := 0 to High(TwinkleArray) do
   begin
     TwinkleArray[c] := 0; // reset GoldenNoteHit memory
   end;
@@ -535,9 +535,10 @@ begin
 
   SetLength(RecArray,0);  // remove GoldenRec positions
   SetLength(PerfNoteArray,0); // remove PerfectNote positions
-  for c := 0 to 5 do
+  for c := 0 to High(TwinkleArray) do
   begin
-    if not CurrentSong.isDuet or ((c mod 2) = CP)  then
+    if (c < cardinal(Length(Player))) and
+      ((not CurrentSong.isDuet) or (Player[c].Track = CP)) then
       TwinkleArray[c] := 0; // reset GoldenNoteHit memory
   end;
 end;

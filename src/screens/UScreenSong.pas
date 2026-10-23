@@ -34,6 +34,7 @@ interface
 {$I switches.inc}
 
 uses
+  UVoiceAssignments,
   UCatCovers,
   UCommon,
   UDataBase,
@@ -117,7 +118,6 @@ type
 
       //Duet Icon
       DuetIcon:     cardinal;
-      DuetChange:   boolean;
 
       RapToFreestyle: boolean;
 
@@ -1526,7 +1526,11 @@ begin
             ScreenJukebox.AddSongToJukeboxList(Interaction);
 
           if (Mode = smNormal) and (CatSongs.Song[Interaction].isDuet) then
-            DuetChange := not DuetChange;
+            begin
+              VoiceAssignments.SelectSong(CatSongs.Song[Interaction]);
+              VoiceAssignments.Rotate(2);
+              SetScrollRefresh;
+            end;
         end;
       SDLK_1:
         begin //Joker
@@ -2225,7 +2229,7 @@ begin
   for I := 0 to High(DuetSingerTexts) do
   begin
     if I < Count then
-      Text[DuetSingerTexts[I]].Text := CatSongs.Song[Interaction].DuetNames[(FirstNameIndex + (I mod 2)) mod 2]
+      Text[DuetSingerTexts[I]].Text := CatSongs.Song[Interaction].DuetNames[VoiceAssignments.VoiceForPlayer(FirstNameIndex + I, 2)]
     else
       Text[DuetSingerTexts[I]].Text := '';
   end;
@@ -2334,7 +2338,7 @@ end;
 { called before current song is deselected }
 procedure TScreenSong.OnSongDeSelect;
 begin
-  DuetChange := false;
+  VoiceAssignments.SelectSong(nil);
   RapToFreestyle := false;
 
   CoverTime := 10;
@@ -2425,19 +2429,8 @@ begin
       LayoutDuetSingerWidgets(VisibleCount);
       SetDuetSingerVisibility(VisibleCount);
 
-      // Set duet texts
-      if Screens > 1 then
-      begin
-        if LocalPlayerCount <= 2 then
-          BaseNameIndex := Ord(not DuetChange)
-        else
-          BaseNameIndex := (LocalStartIndex + Ord(DuetChange)) mod 2;
-      end
-      else
-      begin
-        BaseNameIndex := Ord(DuetChange);
-      end;
-
+      VoiceAssignments.SelectSong(CatSongs.Song[Interaction]);
+      BaseNameIndex := LocalStartIndex;
       SetDuetSingerTexts(VisibleCount, BaseNameIndex);
     end;
     //Set Song Score
@@ -3031,7 +3024,7 @@ begin
   else
     PreviewOpened := -1;
   KeepPreviewPositionOnShow := false;
-  DuetChange := false;
+
   RapToFreestyle := false;
   CoverFull := false;
   PreviewInteraction := -1;
@@ -3123,7 +3116,7 @@ var
   PlaylistItem, TargetSongID, NextSongID: Integer;
   PlaylistReloaded, PlaylistReapplied: Boolean;
 begin
-  DuetChange := false;
+
   RapToFreestyle := false;
   SyncDuetSingerTheme;
 

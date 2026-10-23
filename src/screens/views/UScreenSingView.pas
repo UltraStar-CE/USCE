@@ -185,7 +185,7 @@ var
 begin
   BaseTemplate := Theme.Sing.PlayerTemplate;
   Layout := GetSingLaneLayout(PlayerCountOnScreen, PlayerIndexOnScreen, Theme.Sing.PlayerLayout,
-    IsCurrentSongDuet and (PlayersPlay <> 1));
+    IsCurrentSongDuet);
   LaneLeft := Layout.ColumnLeft;
   LaneTop := Layout.RowAnchorY;
   LaneWidth := Layout.ColumnWidth;
@@ -708,8 +708,7 @@ begin
   SetPlayerNameTexts(TextSlots, LocalStartIndex, IsCurrentSongDuet and (LocalPlayerCount >= 3));
   SetTextVisibility(TextSlots, LocalPlayerCount, true);
 
-  if IsCurrentSongDuet and (LocalPlayerCount = 2) then
-    SetLyricsDuetColors(LocalStartIndex);
+  // Voice colors remain stable when players choose or share voices.
 
   // retrieve current lyrics time, we have to store the value to avoid
   // that min- and sec-values do not match
@@ -767,7 +766,7 @@ begin
       ScreenSing.SungToEnd := true;
   end;
 
-  if not ScreenSing.SungToEnd and CurrentSong.isDuet and (PlayersPlay <> 1) and
+  if not ScreenSing.SungToEnd and CurrentSong.isDuet and
       not ScreenSong.RapToFreestyle then
   begin
     Line := ScreenSing.LyricsDuetP1.GetUpperLine();
@@ -884,7 +883,7 @@ begin
 
   // always draw custom items
   ScreenSing.Statics[StaticLyricsBar].Visible := ScreenSing.Settings.LyricsVisible;
-  ScreenSing.Statics[StaticLyricsBarDuet].Visible := ScreenSing.Settings.LyricsVisible and IsCurrentSongDuet and (PlayersPlay <> 1);
+  ScreenSing.Statics[StaticLyricsBarDuet].Visible := ScreenSing.Settings.LyricsVisible and IsCurrentSongDuet;
   ScreenSing.Statics[StaticTimeBar].Visible := ScreenSing.Settings.TimeBarVisible;
   SingDraw;
 
