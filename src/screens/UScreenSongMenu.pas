@@ -364,7 +364,7 @@ begin
           not CatSongs.Song[ScreenSong.Interaction].Main;
         Button[2].Visible := (CatSongs.CatNumShow = -2);
         Button[3].Visible := true;
-        Button[4].Visible := false;
+        Button[4].Visible := (ScreenSong.Mode = smNormal) and not Party.bPartyGame;
 
         SelectsS[0].Visible := false;
         SelectsS[1].Visible := false;
@@ -374,6 +374,7 @@ begin
         Button[1].Text[0].Text := Language.Translate('SONG_MENU_MEDLEY');
         Button[2].Text[0].Text := Language.Translate('SONG_MENU_PLAYLIST_ADD_SHOWN');
         Button[3].Text[0].Text := Language.Translate('SONG_MENU_REFRESH_SCORES');
+        Button[4].Text[0].Text := Language.Translate('CONTINUOUS_TITLE');
       end;
     SM_Song:
       begin
@@ -857,6 +858,11 @@ begin
               //Dummy
             end;
 
+          7: // continuous playback
+            begin
+              Visible := false;
+              ScreenSong.OpenContinuousPlayback;
+            end;
           6: // button 4
             begin
               // show refresh scores menu

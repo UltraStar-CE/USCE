@@ -205,6 +205,7 @@ implementation
 
 uses
   UCommandLine,
+  UContinuousPlayback,
   UDatabase,
   UDisplay,
   UDLLManager,
@@ -241,6 +242,7 @@ var
   NewPosition:  real;
 begin
   Result := true;
+  if ScreenContinuousPlayback.HandlePlaybackKey(PressedKey, PressedDown, Repeated) then Exit;
   if (PressedDown) then
   begin // key down
 
@@ -672,6 +674,8 @@ begin
 
     Paused := false;
   end;
+  if ScreenContinuousPlayback.Session.Active then
+    ScreenContinuousPlayback.Session.Paused := Paused;
 end;
 
 constructor TScreenSingController.Create;
@@ -751,7 +755,8 @@ begin
   Statics[screenSingViewRef.SongNameStatic].Visible := false;
   Text[screenSingViewRef.SongNameText].Visible := false;
 
-  BadPlayer := AudioInputProcessor.CheckPlayersConfig(PlayersPlay);
+  BadPlayer := 0;
+  if PlayersPlay > 0 then BadPlayer := AudioInputProcessor.CheckPlayersConfig(PlayersPlay);
   if (BadPlayer <> 0) and CheckPlayerConfigOnNextSong then
   begin
     ScreenPopupError.ShowPopup(
@@ -859,6 +864,8 @@ procedure TScreenSingController.onShowFinish;
 var
   PlayerIndex: integer;
 begin
+  if ScreenContinuousPlayback.Session.Active and
+    (ScreenContinuousPlayback.Session.Stage = psAdvance) then Exit;
   // hide cursor on singscreen show
   Display.SetCursor;
 
@@ -892,6 +899,12 @@ begin
     AudioPlayback.Open(CurrentSong.Path.Append(CurrentSong.Audio), nil)
   else
     AudioPlayback.Open(CurrentSong.Path.Append(CurrentSong.Audio), CurrentSong.Path.Append(CurrentSong.Karaoke));
+
+  if ScreenContinuousPlayback.Session.Active and (AudioPlayback.Length <= 0) then
+  begin
+    SongError;
+    Exit;
+  end;
 
   if ScreenSong.Mode = smMedley then
     AudioPlayback.SetVolume(0.1)
@@ -947,6 +960,11 @@ var
   I, len:  integer;
 
 begin
+  if ScreenContinuousPlayback.Session.Active then
+  begin
+    ScreenContinuousPlayback.SongFailed;
+    Exit;
+  end;
   if ScreenSong.Mode <> smMedley then
   begin
     // error loading song -> go back to previous screen and show some error message
@@ -1135,6 +1153,13 @@ begin
     end;
   end;
 
+  if ScreenContinuousPlayback.Session.Active and
+    ((AudioEnd <= 0) or not CurrentSongHasNotes) then
+  begin
+    SongError;
+    Exit;
+  end;
+
   CalculateStartTime;
   if (fStartTime < CurrentSong.Start) then
   begin
@@ -1287,7 +1312,7 @@ begin
     Player[PlayerIndex].DetectionReady := false;
 
   // prepare and start voice-capture
-  AudioInput.CaptureStart;
+  if PlayersPlay > 0 then AudioInput.CaptureStart;
 
   // main text
   ClearLyricEngines;
@@ -1373,11 +1398,17 @@ end;
 
 procedure TScreenSingController.CalculateStartTime;
 var
-  I, StartBeat: integer;
+  I, J, StartBeat: integer;
 begin
   StartBeat := MaxInt;
   for I := Low(CurrentSong.Tracks) to High(CurrentSong.Tracks) do
-    StartBeat := Min(StartBeat, CurrentSong.Tracks[I].Lines[0].Notes[0].StartBeat);
+    for J := 0 to High(CurrentSong.Tracks[I].Lines) do
+      if Length(CurrentSong.Tracks[I].Lines[J].Notes) > 0 then
+      begin
+        StartBeat := Min(StartBeat, CurrentSong.Tracks[I].Lines[J].Notes[0].StartBeat);
+        Break;
+      end;
+  if StartBeat = MaxInt then StartBeat := 0;
   fFirstNote := (CurrentSong.GAP / 1000) + ((StartBeat * 60) / CurrentSong.BPM);
   if ((fFirstNote - CurrentSong.Start) < MINIMUM_START_TIME) then
     fStartTime := fFirstNote - MINIMUM_START_TIME
@@ -1390,11 +1421,12 @@ begin
   Settings.Finish := False;
   Settings.OscilloscopeVisible := Boolean(Ini.Oscilloscope);
   Settings.LyricsVisible := True;
-  AllNotesVisible(true);
-  Settings.ScoresVisible := True;
-  Settings.AvatarsVisible := True;
+  AllNotesVisible(PlayersPlay > 0);
+  Settings.ScoresVisible := PlayersPlay > 0;
+  Settings.AvatarsVisible := PlayersPlay > 0;
   Settings.TimeBarVisible := True;
-  Settings.InputVisible := True;
+  Settings.InputVisible := PlayersPlay > 0;
+  if PlayersPlay = 0 then Settings.OscilloscopeVisible := false;
   Settings.PlayerEnabled := high(Integer);
   Settings.SoundEnabled := True;
 end;
@@ -1438,7 +1470,11 @@ end;
 
 function TScreenSingController.Draw: boolean;
 begin
-  Result := screenSingViewRef.Draw();
+  Result := true;
+  if not ScreenContinuousPlayback.Session.Active or
+    (ScreenContinuousPlayback.Session.Stage <> psAdvance) then
+    Result := screenSingViewRef.Draw();
+  if Display.CurrentScreen = @ScreenSing then ScreenContinuousPlayback.Update;
 end;
 
 function TScreenSingController.FinishedMusic: boolean;
@@ -1506,11 +1542,14 @@ var
   len, num: integer;
 
 begin
+  if ScreenContinuousPlayback.Session.Active and
+    (ScreenContinuousPlayback.Session.Stage <> psSong) then Exit;
+  if FadeOut then Exit;
   Log.LogStatus('TScreenSingController.Finish', 'TScreenSingController.Finish');
-  AudioInput.CaptureStop;
+  if PlayersPlay > 0 then AudioInput.CaptureStop;
   AudioPlayback.SetSyncSource(nil);
 
-  if (ScreenSong.Mode = smNormal) and SungToEnd then
+  if (PlayersPlay > 0) and (ScreenSong.Mode = smNormal) and SungToEnd then
   begin
     SaveLocalScores;
 
@@ -1527,7 +1566,7 @@ begin
   // kill all stars and effects
   GoldenRec.KillAll;
 
-  if (Ini.SavePlayback = 1) then
+  if (PlayersPlay > 0) and (Ini.SavePlayback = 1) then
   begin
     Log.BenchmarkStart(0);
     Log.LogVoice(0);
@@ -1631,6 +1670,8 @@ begin
         Display.NextScreenWithCheck := nil;
         Display.CheckOK := true;
       end
+      else if ScreenContinuousPlayback.Session.Active then
+        ScreenContinuousPlayback.SongFinished(SungToEnd)
       else
         Party.CallAfterSing;
     end;
@@ -1642,7 +1683,7 @@ end;
 
 procedure TScreenSingController.OnSentenceEnd(Track: integer; SentenceIndex: cardinal; OnlyPlayer: integer); //ToDo: split and redo
 var
-  PlayerIndex: byte;
+  PlayerIndex: integer;
   CurrentPlayer: PPLayer;
   CurrentScore: real;
   Line:      PLine;
