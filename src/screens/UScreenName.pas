@@ -535,7 +535,7 @@ begin
           end;
 
           if Interaction = PlayerSelectVoiceIID then
-            VoiceAssignments.SetVoice(PlayerIndex, VoiceIndex, 2);
+            VoiceAssignments.SetVoice(PlayerIndex, VoiceIndex, CatSongs.Song[CatSongs.Selected].VoiceCount);
 
           if (Interaction = PlayerSelectLevelIID) then
           begin
@@ -581,7 +581,7 @@ begin
           end;
 
           if Interaction = PlayerSelectVoiceIID then
-            VoiceAssignments.SetVoice(PlayerIndex, VoiceIndex, 2);
+            VoiceAssignments.SetVoice(PlayerIndex, VoiceIndex, CatSongs.Song[CatSongs.Selected].VoiceCount);
 
           if (Interaction = PlayerSelectLevelIID) then
           begin
@@ -788,7 +788,7 @@ begin
     CatSongs.Song[CatSongs.Selected].isDuet;
   if not SelectsS[PlayerSelectVoice].Visible then Exit;
   VoiceAssignments.SelectSong(CatSongs.Song[CatSongs.Selected]);
-  SetLength(Options, 2);
+  SetLength(Options, CatSongs.Song[CatSongs.Selected].VoiceCount);
   for I := 0 to High(Options) do
     Options[I] := Format(Language.Translate('SING_VOICE_NUMBER'), [I + 1]) +
       ': ' + CatSongs.Song[CatSongs.Selected].DuetNames[I];
