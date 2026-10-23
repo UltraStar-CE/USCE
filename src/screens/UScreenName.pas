@@ -34,6 +34,7 @@ interface
 {$I switches.inc}
 
 uses
+  UVoiceAssignments,
   UAvatars,
   UDisplay,
   UFiles,
@@ -64,6 +65,9 @@ type
       PlayerSelectIID: integer;
       PlayerSelectLevel: cardinal;
       PlayerSelectLevelIID: integer;
+      PlayerSelectVoice: cardinal;
+      PlayerSelectVoiceIID: integer;
+      VoiceIndex: integer;
 
       CountIndex:   integer;
       PlayerCountOffset: integer;
@@ -94,6 +98,7 @@ type
       PlayerAvatarButton: array of integer;
       function SelectedPlayerCount: integer;
 
+      procedure RefreshVoice;
     public
       LyricsOnly: boolean;
       Goto_SingScreen: boolean; //If true then next Screen in SingScreen
@@ -501,7 +506,7 @@ begin
         begin
           AudioPlayback.PlaySound(SoundLib.Change);
 
-          if (Interaction in [PlayersCountIID, PlayerColorIID, PlayerSelectLevelIID]) then
+          if (Interaction in [PlayersCountIID, PlayerColorIID, PlayerSelectLevelIID, PlayerSelectVoiceIID]) then
             InteractInc;
 
           if (Interaction = PlayersCountIID) then
@@ -534,6 +539,9 @@ begin
             SelectsS[PlayerColor].SetSelect(true);
           end;
 
+          if Interaction = PlayerSelectVoiceIID then
+            VoiceAssignments.SetVoice(PlayerIndex, VoiceIndex, 2);
+
           if (Interaction = PlayerSelectLevelIID) then
           begin
             PlayerLevel[PlayerIndex] := LevelIndex;
@@ -544,7 +552,7 @@ begin
         begin
           AudioPlayback.PlaySound(SoundLib.Change);
 
-          if (Interaction in [PlayersCountIID, PlayerColorIID, PlayerSelectLevelIID]) then
+          if (Interaction in [PlayersCountIID, PlayerColorIID, PlayerSelectLevelIID, PlayerSelectVoiceIID]) then
             InteractDec;
 
           if (Interaction = PlayersCountIID) then
@@ -576,6 +584,9 @@ begin
             RefreshColor();
             SelectsS[PlayerColor].SetSelect(true);
           end;
+
+          if Interaction = PlayerSelectVoiceIID then
+            VoiceAssignments.SetVoice(PlayerIndex, VoiceIndex, 2);
 
           if (Interaction = PlayerSelectLevelIID) then
           begin
@@ -790,6 +801,25 @@ begin
 
 end;
 
+procedure TScreenName.RefreshVoice;
+var
+  Options: array of UTF8String;
+  I: integer;
+begin
+  SelectsS[PlayerSelectVoice].Visible := Goto_SingScreen and
+    (CatSongs.Selected >= 0) and (CatSongs.Selected < Length(CatSongs.Song)) and
+    CatSongs.Song[CatSongs.Selected].isDuet;
+  if not SelectsS[PlayerSelectVoice].Visible then Exit;
+  VoiceAssignments.SelectSong(CatSongs.Song[CatSongs.Selected]);
+  SetLength(Options, 2);
+  for I := 0 to High(Options) do
+    Options[I] := Format(Language.Translate('SING_VOICE_NUMBER'), [I + 1]) +
+      ': ' + CatSongs.Song[CatSongs.Selected].DuetNames[I];
+  VoiceIndex := VoiceAssignments.VoiceForPlayer(PlayerIndex, Length(Options));
+  UpdateSelectSlideOptions(PlayerSelectVoice, Options, VoiceIndex);
+  SelectsS[PlayerSelectVoice].SetSelectOpt(VoiceIndex);
+end;
+
 procedure TScreenName.RefreshProfile();
 var
   ITmp: array of UTF8String;
@@ -804,6 +834,7 @@ begin
   Button[PlayerName].Text[0].Text := PlayerNames[PlayerIndex];
 
   SelectsS[PlayerSelectLevel].SetSelectOpt(PlayerLevel[PlayerIndex]);
+  RefreshVoice;
 
   Count := SelectedPlayerCount;
 
@@ -904,6 +935,9 @@ begin
   SelectsS[PlayerSelectLevel].SBGColR:= Col.R;
   SelectsS[PlayerSelectLevel].SBGColG:= Col.G;
   SelectsS[PlayerSelectLevel].SBGColB:= Col.B;
+  SelectsS[PlayerSelectVoice].SBGColR := Col.R;
+  SelectsS[PlayerSelectVoice].SBGColG := Col.G;
+  SelectsS[PlayerSelectVoice].SBGColB := Col.B;
 
   DesCol := GetPlayerColor(K);
 
@@ -926,6 +960,9 @@ begin
   SelectsS[PlayerSelectLevel].SBGDColR := DesCol.R;
   SelectsS[PlayerSelectLevel].SBGDColG:= DesCol.G;
   SelectsS[PlayerSelectLevel].SBGDColB:= DesCol.B;
+  SelectsS[PlayerSelectVoice].SBGDColR := DesCol.R;
+  SelectsS[PlayerSelectVoice].SBGDColG := DesCol.G;
+  SelectsS[PlayerSelectVoice].SBGDColB := DesCol.B;
 
   Button[PlayerAvatarButton[0]].Texture.ColR := DesCol.R;
   Button[PlayerAvatarButton[0]].Texture.ColG := DesCol.G;
@@ -940,6 +977,7 @@ begin
 
   SelectsS[PlayerColor].SetSelect(false);
   SelectsS[PlayerSelectLevel].SetSelect(false);
+  SelectsS[PlayerSelectVoice].SetSelect(false);
   Button[PlayerName].SetSelect(false);
   Button[PlayerAvatar].SetSelect(false);
 
@@ -995,6 +1033,12 @@ begin
   Theme.Name.SelectPlayerLevel.showArrows := true;
   PlayerSelectLevel := AddSelectSlide(Theme.Name.SelectPlayerLevel, LevelIndex, IDifficultyTranslated);
   PlayerSelectLevelIID := High(Interactions);
+
+  Theme.Name.SelectPlayerVoice.oneItemOnly := true;
+  Theme.Name.SelectPlayerVoice.showArrows := true;
+  PlayerSelectVoice := AddSelectSlide(Theme.Name.SelectPlayerVoice, VoiceIndex, ['']);
+  PlayerSelectVoiceIID := High(Interactions);
+  SelectsS[PlayerSelectVoice].Visible := false;
 
   isScrolling := false;
 
@@ -1125,6 +1169,7 @@ begin
   AvatarCurrent := AvatarTarget;
 
   RefreshPlayers;
+  RefreshVoice;
 
   PlayerColorButton(Num[PlayerIndex]);
 

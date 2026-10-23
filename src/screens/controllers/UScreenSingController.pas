@@ -34,6 +34,7 @@ interface
 {$I switches.inc}
 
 uses
+  UVoiceAssignments,
   UAvatars,
   UCommon,
   UFiles,
@@ -736,8 +737,8 @@ begin
   CurrentSong := CatSongs.Song[CatSongs.Selected];
 
   {for I := 0 to High(screenSingViewRef.StaticDuet) do
-    Statics[screenSingViewRef.StaticDuet[I]].Visible := CurrentSong.isDuet and (PlayersPlay > 1);}
-  Statics[screenSingViewRef.StaticLyricsBarDuet].Visible := CurrentSong.isDuet and (PlayersPlay > 1);
+    Statics[screenSingViewRef.StaticDuet[I]].Visible := CurrentSong.isDuet;}
+  Statics[screenSingViewRef.StaticLyricsBarDuet].Visible := CurrentSong.isDuet;
 
   Statics[screenSingViewRef.SongNameStatic].Visible := false;
   Text[screenSingViewRef.SongNameText].Visible := false;
@@ -754,7 +755,7 @@ begin
   end;
 
   // set custom options
-  if (CurrentSong.isDuet) and (PlayersPlay <> 1) then
+  if (CurrentSong.isDuet) then
   begin
     ColP1 := GetPlayerColor(Ini.PlayerColor[0]);
     ColP2 := GetPlayerColor(Ini.PlayerColor[1]);
@@ -846,6 +847,8 @@ begin
   // hide cursor on singscreen show
   Display.SetCursor;
 
+  VoiceAssignments.SelectSong(CurrentSong);
+
   // clear the scores of all players
   for PlayerIndex := 0 to High(Player) do
     with Player[PlayerIndex] do
@@ -856,14 +859,7 @@ begin
 
       LastSentencePerfect := false;
 
-      Track          := 0;
-      if CurrentSong.isDuet then
-      begin
-        if ScreenSong.DuetChange then
-          Track := (PlayerIndex + 1) mod 2
-        else
-          Track := PlayerIndex mod 2;
-      end;
+      Track := VoiceAssignments.VoiceForPlayer(PlayerIndex, 1 + Ord(CurrentSong.isDuet));
     end;
 
   // prepare music
@@ -1104,7 +1100,7 @@ begin
   success := false;
   // FIXME: bad style, put the try-except into loadsong() and not here
   try
-    success := CurrentSong.Analyse(false, ScreenSong.DuetChange, ScreenSong.RapToFreestyle, true, AudioEnd, true); // and CurrentSong.LoadSong();
+    success := CurrentSong.Analyse(false, false, ScreenSong.RapToFreestyle, true, AudioEnd, true); // and CurrentSong.LoadSong();
   except
     on E: EInOutError do Log.LogWarn(E.Message, 'TScreenSing.LoadNextSong');
   end;
@@ -1294,7 +1290,7 @@ begin
   // main text
   ClearLyricEngines;
 
-  if (CurrentSong.isDuet) and (PlayersPlay <> 1) then
+  if (CurrentSong.isDuet) then
   begin
     // initialize lyrics by filling its queue
     while (not LyricsDuetP1.IsQueueFull) and
@@ -1322,7 +1318,7 @@ begin
 
   // kill all stars not killed yet (goldenstarstwinkle mod)
   GoldenRec.SentenceChange(0);
-  if (CurrentSong.isDuet) and (PlayersPlay <> 1) then
+  if (CurrentSong.isDuet) then
     GoldenRec.SentenceChange(1);
 
   // set position of line bonus - line bonus end
@@ -1330,7 +1326,7 @@ begin
   NumEmptySentences[0] := 0;
   NumEmptySentences[1] := 0;
 
-  if (CurrentSong.isDuet) and (PlayersPlay <> 1) then
+  if (CurrentSong.isDuet) then
   begin
     for Index := Low(CurrentSong.Tracks[1].Lines) to High(CurrentSong.Tracks[1].Lines) do
       if CurrentSong.Tracks[1].Lines[Index].ScoreValue = 0 then
@@ -1501,8 +1497,8 @@ begin
     if not Player[PlayerIndex].DetectionReady or
       (Player[PlayerIndex].DetectionDelay <= 0) then Continue;
     TrackIndex := 0;
-    if CurrentSong.isDuet and (PlayersPlay > 1) then
-      TrackIndex := PlayerIndex mod 2;
+    if CurrentSong.isDuet then
+      TrackIndex := Player[PlayerIndex].Track;
     LastBeat := Low(integer);
     for LineIndex := 0 to CurrentSong.Tracks[TrackIndex].High do
       with CurrentSong.Tracks[TrackIndex].Lines[LineIndex] do
@@ -1707,7 +1703,7 @@ begin
   for PlayerIndex := 0 to High(Player) do
   begin
     if ((OnlyPlayer < 0) or (OnlyPlayer = PlayerIndex)) and
-       ((not CurrentSong.isDuet) or (PlayerIndex mod 2 = Track) or (PlayersPlay = 1)) then
+       ((not CurrentSong.isDuet) or (Player[PlayerIndex].Track = Track)) then
     begin
       CurrentPlayer := @Player[PlayerIndex];
       CurrentScore  := CurrentPlayer.Score + CurrentPlayer.ScoreGolden;
@@ -1780,7 +1776,7 @@ begin
   // goldenstarstwinkle
   GoldenRec.SentenceChange(Track);
 
-  if (CurrentSong.isDuet) and (PlayersPlay <> 1) then
+  if (CurrentSong.isDuet) then
   begin
     if (Track = 1) then
       tmp_Lyric := LyricsDuetP2
@@ -1879,7 +1875,8 @@ begin
       I := 0;
       while I < PlayersPlay - 1 do
       begin
-        if Player[I].Level = Player[I + 1].Level then
+        if (Player[I].Level = Player[I + 1].Level) and
+          (Player[I].Track <> Player[I + 1].Track) then
         begin
           Name1 := Player[I].Name;
           Name2 := Player[I + 1].Name;
