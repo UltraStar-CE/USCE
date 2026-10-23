@@ -557,6 +557,7 @@ end;
 function TScreenScore.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
 begin
   Result := true;
+  if ScreenContinuousPlayback.HandlePlaybackKey(PressedKey, PressedDown, Repeated) then Exit;
   if (PressedDown) then
   begin
     // check normal keys
@@ -1311,6 +1312,7 @@ begin
   end;
    //Draw Theme Objects
   DrawFG;
+  ScreenContinuousPlayback.Update;
   Result := true;
 end;
 

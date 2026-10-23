@@ -889,7 +889,7 @@ begin
   SingDraw;
 
   // goldennotestarstwinkle
-  GoldenRec.SpawnRec;
+  if PlayersPlay > 0 then GoldenRec.SpawnRec;
 
   FadeMessage();
 
