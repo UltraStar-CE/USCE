@@ -1518,7 +1518,7 @@ begin
           if (Mode = smNormal) and (CatSongs.Song[Interaction].isDuet) then
             begin
               VoiceAssignments.SelectSong(CatSongs.Song[Interaction]);
-              VoiceAssignments.Rotate(2);
+              VoiceAssignments.Rotate(CatSongs.Song[Interaction].VoiceCount);
             end;
         end;
       SDLK_1:
@@ -1605,8 +1605,8 @@ begin
           if BtnDown and (MouseButton = SDL_BUTTON_LEFT) then
           begin
             VoiceAssignments.SelectSong(CatSongs.Song[Interaction]);
-            Voice := VoiceAssignments.VoiceForPlayer(FirstPlayer + I, 2);
-            VoiceAssignments.SetVoice(FirstPlayer + I, (Voice + 1) mod 2, 2);
+            Voice := VoiceAssignments.VoiceForPlayer(FirstPlayer + I, CatSongs.Song[Interaction].VoiceCount);
+            VoiceAssignments.SetVoice(FirstPlayer + I, (Voice + 1) mod CatSongs.Song[Interaction].VoiceCount, CatSongs.Song[Interaction].VoiceCount);
           end;
           // Keep a voice click or hover from selecting a cover underneath it.
           Result := true;
@@ -2207,7 +2207,7 @@ begin
   for I := 0 to High(DuetSingerTexts) do
   begin
     if I < Count then
-      Text[DuetSingerTexts[I]].Text := CatSongs.Song[Interaction].DuetNames[VoiceAssignments.VoiceForPlayer(FirstNameIndex + I, 2)]
+      Text[DuetSingerTexts[I]].Text := CatSongs.Song[Interaction].DuetNames[VoiceAssignments.VoiceForPlayer(FirstNameIndex + I, CatSongs.Song[Interaction].VoiceCount)]
     else
       Text[DuetSingerTexts[I]].Text := '';
   end;

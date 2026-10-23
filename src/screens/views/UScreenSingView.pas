@@ -534,14 +534,6 @@ begin
       Theme.LyricBar.UpperX, Theme.LyricBar.UpperY, Theme.LyricBar.UpperW, Theme.LyricBar.UpperH,
       Theme.LyricBar.LowerX, Theme.LyricBar.LowerY, Theme.LyricBar.LowerW, Theme.LyricBar.LowerH);
 
-  ScreenSing.LyricsDuetP1 := TLyricEngine.Create(
-      Theme.LyricBarDuetP1.UpperX, Theme.LyricBarDuetP1.UpperY, Theme.LyricBarDuetP1.UpperW, Theme.LyricBarDuetP1.UpperH,
-      Theme.LyricBarDuetP1.LowerX, Theme.LyricBarDuetP1.LowerY, Theme.LyricBarDuetP1.LowerW, Theme.LyricBarDuetP1.LowerH);
-
-  ScreenSing.LyricsDuetP2 := TLyricEngine.Create(
-      Theme.LyricBarDuetP2.UpperX, Theme.LyricBarDuetP2.UpperY, Theme.LyricBarDuetP2.UpperW, Theme.LyricBarDuetP2.UpperH,
-      Theme.LyricBarDuetP2.LowerX, Theme.LyricBarDuetP2.LowerY, Theme.LyricBarDuetP2.LowerW, Theme.LyricBarDuetP2.LowerH);
-
   ScreenSing.fLyricsSync := TLyricsSyncSource.Create();
   ScreenSing.fMusicSync := TMusicSyncSource.Create();
 
@@ -573,7 +565,7 @@ var
   CurLyricsTime:          real;
   VideoFrameTime:         Extended;
   Line:                   TLyricLine;
-  LineDuet:               TLyricLine;
+  VoiceIndex:             integer;
   medley_end:             boolean;
   medley_start_applause:  boolean;
   LastLineSungToEnd:      boolean;
@@ -755,15 +747,16 @@ begin
   if not ScreenSing.SungToEnd and CurrentSong.isDuet and
       not ScreenSong.RapToFreestyle then
   begin
-    Line := ScreenSing.LyricsDuetP1.GetUpperLine();
-    LineDuet := ScreenSing.LyricsDuetP2.GetUpperLine();
-    if Line.LastLine and LineDuet.LastLine and
-        (Length(Line.Words) > 0) and (Length(LineDuet.Words) > 0) and
-        (CurLyricsTime >= GetTimeFromBeat(Line.Words[High(Line.Words)].Start +
-            Line.Words[High(Line.Words)].Length)) and
-        (CurLyricsTime >= GetTimeFromBeat(LineDuet.Words[High(LineDuet.Words)].Start +
-            LineDuet.Words[High(LineDuet.Words)].Length)) then
-      ScreenSing.SungToEnd := true;
+    LastLineSungToEnd := true;
+    for VoiceIndex := 0 to High(ScreenSing.VoiceLyrics) do
+    begin
+      Line := ScreenSing.VoiceLyrics[VoiceIndex].GetUpperLine;
+      if not Line.LastLine or (Length(Line.Words) = 0) then
+        LastLineSungToEnd := false
+      else if CurLyricsTime < GetTimeFromBeat(Line.Words[High(Line.Words)].Start +
+        Line.Words[High(Line.Words)].Length) then LastLineSungToEnd := false;
+    end;
+    if LastLineSungToEnd then ScreenSing.SungToEnd := true;
   end;
 
   // for medley-mode:

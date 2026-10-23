@@ -33,6 +33,7 @@ interface
 {$I switches.inc}
 
 uses
+  UVoiceParts,
   {$IFDEF MSWINDOWS}
     Windows,
   {$ELSE}
@@ -197,6 +198,7 @@ type
     Medley:     TMedley;  // medley params
 
     isDuet: boolean;
+    VoiceCount: integer;
     DuetNames:  array of UTF8String; // duet singers name
 
     hasRap: boolean;
@@ -214,7 +216,7 @@ type
     VisibleIndex: integer;
 
     Base:       array[0..1] of integer;
-    Rel:        array[0..1] of integer;
+    Rel:        array of integer;
     Mult:       integer;
 
     LastError:  AnsiString;
@@ -688,8 +690,8 @@ begin
   CurrentTrack := 0;
 
   Mult              := 1; // accuracy of measurement of note
-  Rel[0]            := 0;
-  Rel[1]            := 0;
+  SetLength(Rel, VoiceCount);
+  for TrackIndex := 0 to High(Rel) do Rel[TrackIndex] := 0;
 
   try
     SongFile.Position := 0;
@@ -718,7 +720,7 @@ begin
       if (CurLine[1] = 'P') then
       begin
         Self.isDuet := true;
-        SetLength(Tracks, 2);
+        SetLength(Tracks, VoiceCount);
         CurrentTrack := -1;
       end
       else
@@ -762,34 +764,14 @@ begin
             Exit;
           end;
 
-          if (CurLine[2] = ' ') then
-            Param1 := StrToInt(CurLine[3])
-          else
-            Param1 := StrToInt(CurLine[2]);
-
-          if (Param1 = 1) then
+          if not TryParseVoiceMarker(Trim(CurLine), Param1) or
+            (Param1 > VoiceCount) then
           begin
-            if not(DuetChange) then
-              CurrentTrack := 0
-            else
-              CurrentTrack := 1
-          end
-          else
-          begin
-            if (Param1 = 2) then
-            begin
-              if not(DuetChange) then
-                CurrentTrack := 1
-              else
-                CurrentTrack := 0;
-            end
-            else
-            begin
-              Log.LogSongError('Wrong P-Number in file: "' + FileName.ToNative + '"; Line '+IntToStr(FileLineNo)+' (LoadSong)');
-              Result := False;
-              Exit;
-            end;
+            LastError := 'ERROR_CORRUPT_SONG_VOICE';
+            Exit;
           end;
+          CurrentTrack := Param1 - 1;
+
         end;
 
         if (Param0 = 'E') then
@@ -1175,8 +1157,32 @@ begin
 
     // Lightweight duet detection for song list: if the first non-header
     // note-section line starts with a P-track marker, this is a duet.
+    VoiceCount := 1;
     if GetFirstNonWhitespaceChar(Line) = 'P' then
+    begin
       Self.isDuet := true;
+      VoiceCount := 2;
+      repeat
+        if (GetFirstNonWhitespaceChar(Line) = 'P') then
+        begin
+          if not TryParseVoiceMarker(Trim(Line), I) then
+          begin
+            LastError := 'ERROR_CORRUPT_SONG_VOICE';
+            Result := false;
+            Exit;
+          end;
+          if I > SupportedSongVoices then
+          begin
+            LastError := 'ERROR_SONG_VOICE_LIMIT';
+            Result := false;
+            Exit;
+          end;
+          VoiceCount := Max(VoiceCount, I);
+        end;
+      until not SongFile.ReadLine(Line);
+    end;
+    SetLength(DuetNames, Max(2, VoiceCount));
+    for I := 0 to High(DuetNames) do DuetNames[I] := 'P' + IntToStr(I + 1);
 
     //Read the songs attributes stored in the TagMap
 
@@ -1473,48 +1479,21 @@ begin
     if TagMapTryGetData('CALCMEDLEY', Value) then
       RemoveTagsFromTagMap('CALCMEDLEY', false);
 
-    // Duet Singer Name P1
-    if (TagMapTryGetData('DUETSINGERP1', Value)) then
+    for I := 0 to High(DuetNames) do
     begin
-      if FormatVersion.MaxVersion(1,0,0,false) then
+      Identifier := 'DUETSINGERP' + IntToStr(I + 1);
+      if TagMapTryGetData(Identifier, Value) then
       begin
-        RemoveTagsFromTagMap('DUETSINGERP1');
-        DecodeStringUTF8(Value, DuetNames[0], Encoding);
-      end
-      else
-      begin
-        Log.LogSongError('Ignoring DUETSINGERP1 header in file "' + FullFileName + '" (deprecated in Format 1.0.0)', 'TSong.ReadTXTHeader');
-        RemoveTagsFromTagMap('DUETSINGERP1', false);
+        RemoveTagsFromTagMap(Identifier);
+        if FormatVersion.MaxVersion(1,0,0,false) then
+          DecodeStringUTF8(Value, DuetNames[I], Encoding);
       end;
-    end;
-
-    // Duet Singer Name P2
-    if (TagMapTryGetData('DUETSINGERP2', Value)) then
-    begin
-      if FormatVersion.MaxVersion(1,0,0,false) then
+      Identifier := 'P' + IntToStr(I + 1);
+      if TagMapTryGetData(Identifier, Value) then
       begin
-        RemoveTagsFromTagMap('DUETSINGERP2');
-        DecodeStringUTF8(Value, DuetNames[1], Encoding);
-      end
-      else
-      begin
-        Log.LogSongError('Ignoring DUETSINGERP2 header in file "' + FullFileName + '" (deprecated in Format 1.0.0)', 'TSong.ReadTXTHeader');
-        RemoveTagsFromTagMap('DUETSINGERP2', false);
+        RemoveTagsFromTagMap(Identifier);
+        DecodeStringUTF8(Value, DuetNames[I], Encoding);
       end;
-    end;
-
-    // Duet Singer Name P1
-    if (TagMapTryGetData('P1', Value)) then
-    begin
-      RemoveTagsFromTagMap('P1');
-      DecodeStringUTF8(Value, DuetNames[0], Encoding);
-    end;
-
-    // Duet Singer Name P2
-    if (TagMapTryGetData('P2', Value)) then
-    begin
-      RemoveTagsFromTagMap('P2');
-      DecodeStringUTF8(Value, DuetNames[1], Encoding);
     end;
 
     // Unsupported Tags
@@ -2133,6 +2112,7 @@ begin
   Medley.Source := msNone;
 
   isDuet := false;
+  VoiceCount := 1;
 
   SetLength(DuetNames, 2);
   DuetNames[0] := 'P1';
