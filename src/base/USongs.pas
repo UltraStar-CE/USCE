@@ -96,6 +96,7 @@ type
     fDiscoveryDirsScanned: integer;
     fTotalSongsToLoad:   integer;
     fSongsLoaded:        integer;
+    fReloadAfterLockdown: boolean;
     function CollectSongFiles: TPathDynArray;
     procedure int_LoadSongList;
     procedure DoDirChanged(Sender: TObject);
@@ -112,6 +113,7 @@ type
     destructor  Destroy(); override;
 
     procedure LoadSongList;     // load all songs
+    procedure ReplayDeferredReload;
   procedure FindFilesByExtension(const Dir: IPath; const Ext: IPath; Recursive: Boolean; var Files: TPathDynArray);
     procedure Sort(Order: TSortingType);
     property  Processing: boolean read fProcessing;
@@ -289,7 +291,11 @@ var
   I: integer;
   SongFiles: TPathDynArray;
 begin
-  if LibraryLockdown.Active then Exit;
+  if LibraryLockdown.Active then
+  begin
+    fReloadAfterLockdown := true;
+    Exit;
+  end;
   SetLength(SongFiles, 0);
   try
     fProcessing := true;
@@ -349,9 +355,22 @@ end;
 
 procedure TSongs.LoadSongList;
 begin
-  if LibraryLockdown.Active then Exit;
+  if LibraryLockdown.Active then
+  begin
+    fReloadAfterLockdown := true;
+    Exit;
+  end;
   fParseSongDirectory := true;
   Resume();
+end;
+
+procedure TSongs.ReplayDeferredReload;
+begin
+  if not fReloadAfterLockdown then
+    Exit;
+
+  fReloadAfterLockdown := false;
+  LoadSongList;
 end;
 
 procedure TSongs.FindFilesByExtension(const Dir: IPath; const Ext: IPath; Recursive: Boolean; var Files: TPathDynArray);
