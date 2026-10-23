@@ -240,10 +240,7 @@ function TScreenSingController.ParseInput(PressedKey: Cardinal; CharCode: UCS4Ch
   PressedDown: boolean; Repeated: boolean = false): boolean;
 var
   SDL_ModState: word;
-  i1:           integer;
-  Color:        TRGB;
   ResumeAfterHelp: boolean;
-  NewPosition:  real;
 begin
   Result := true;
   if ScreenContinuousPlayback.HandlePlaybackKey(PressedKey, PressedDown, Repeated) then Exit;
@@ -272,40 +269,8 @@ begin
       SDLK_R:
       begin
         if ScreenSong.Mode = smMedley then Exit;
-        for i1 := 0 to High(Player) do
-        with Player[i1] do
-        begin
-          ResetScores;
-
-          ScoreLast      := 0;
-
-          LastSentencePerfect := false;
-        end;
-        AudioPlayback.SetPosition(fStartTime);
-        if (fStartTime < CurrentSong.Start) then
-          fCountIn := true;
-        if (Assigned(fCurrentVideo)) then
-           fCurrentVideo.Position := CurrentSong.VideoGAP + CurrentSong.Start;// + (CurrentSong.gap / 1000.0 - 5.0);
-        Scores.KillAllPopUps;
-        // setup score manager
-        Scores.ClearPlayers; // clear old player values
-        Color.R := 0;
-        Color.G := 0;
-        Color.B := 0;
-
-        // add new players
-        for i1 := 0 to PlayersPlay - 1 do
-        begin
-          Scores.AddPlayer(Tex_ScoreBG[i1], Color);
-        end;
-
-        LyricsState.SetCurrentTime(fStartTime);
-        ResumeAfterScoringTail;
-        LyricsState.UpdateBeats();
-        ClearLyricEngines;
-        ResetLinesAndLyrics;
-
-        Scores.Init;
+        SeekTo(fStartTime);
+        PlaybackSeeked := false;
         Exit;
       end;
 
@@ -577,48 +542,13 @@ begin
       SDLK_RIGHT:
       begin
         if ((SDL_ModState and KMOD_LCTRL) <> 0) then
-        begin
-          NewPosition := AudioPlayback.Position + 5.0;
-          AudioPlayback.SetPosition(NewPosition);
-          if (Assigned(fCurrentVideo)) then
-            fCurrentVideo.Position := CurrentSong.VideoGAP + NewPosition;
-        end;
+          SeekTo(Min(AudioPlayback.Position + 5.0, LyricsState.TotalTime));
       end;
 
       SDLK_LEFT:
       begin
-        if (SDL_ModState = KMOD_LCTRL) then // seek 5 seconds backward and reset scores to avoid cheating
-        begin
-          if (AudioPlayback.Position < 20.0) then
-          exit;
-        for i1 := 0 to High(Player) do
-        with Player[i1] do
-        begin
-          ResetScores;
-
-          ScoreLast      := 0;
-
-          LastSentencePerfect := false;
-        end;
-        Scores.KillAllPopUps;
-        // setup score manager
-        Scores.ClearPlayers; // clear old player values
-        // add new players
-        for i1 := 0 to PlayersPlay - 1 do
-        begin
-          Scores.AddPlayer(Tex_ScoreBG[i1], Color);
-        end;
-        Scores.Init;
-
-        NewPosition := AudioPlayback.Position - 5.0;
-        AudioPlayback.SetPosition(NewPosition);
-        LyricsState.SetCurrentTime(NewPosition);
-        ResumeAfterScoringTail;
-        ClearLyricEngines;
-        LyricsState.UpdateBeats();
-        if (Assigned(fCurrentVideo)) then
-          fCurrentVideo.Position := CurrentSong.VideoGAP + NewPosition;
-        end;
+        if (SDL_ModState = KMOD_LCTRL) and (AudioPlayback.Position >= 20.0) then
+          SeekTo(AudioPlayback.Position - 5.0);
       end;
 
       SDLK_TAB:
