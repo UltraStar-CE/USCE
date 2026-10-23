@@ -18,6 +18,18 @@ begin
     Session.Start([11, 22, 33], 22, true, false, true);
     Next(22); Next(33);
     Expect(not Session.NextSong(Song), 'Ordered playback did not stop');
+    Session.Start([11, 22, 33], 11, true, false, false);
+    Next(11);
+    Expect(Session.PreviousSong(Song) and (Song = 11), 'Left at start did not restart current song');
+    Next(22); Next(33);
+    Expect(Session.PreviousSong(Song) and (Song = 22), 'Previous song ignored queue order');
+    Next(33);
+    Session.Start([11, 22, 33], 11, true, true, false); Next(11);
+    Expect(Session.PreviousSong(Song) and (Song = 33), 'Previous did not wrap repeating selection');
+    Session.Start([11, 22, 33], 11, true, false, false); Next(11);
+    Session.RejectCurrentSong; Next(22); Next(33);
+    Expect(Session.PreviousSong(Song) and (Song = 22), 'Previous did not find valid entry');
+    Expect(Session.PreviousSong(Song) and (Song = 22), 'Previous replayed rejected entry');
     Session.Start([11], 11, true, true, false);
     for I := 1 to 100 do Next(11);
     Session.RejectCurrentSong;

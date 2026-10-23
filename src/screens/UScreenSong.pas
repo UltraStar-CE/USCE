@@ -1135,7 +1135,7 @@ begin
           Exit;
         end;
 
-      SDLK_L:
+      SDLK_N:
         OpenContinuousPlayback;
 
       SDLK_O: // O for Ordering
