@@ -11,7 +11,7 @@ function RequestLockdownAccess(Target: PMenu): boolean;
 
 implementation
 
-uses Classes, SysUtils, ULibraryLockdown, UGraphic, UDisplay, ULanguage,
+uses Classes, SysUtils, ULibraryLockdown, UGraphic, UDisplay, UIni, ULanguage,
   UScreenPopup, UScreenSongJumpto, USongs, UPlaylist, USong, UMain, UNote;
 
 var
@@ -48,8 +48,13 @@ begin
   Display.Fade := 0;
   if PendingTarget = nil then
   begin
-    Display.NextScreenWithCheck := nil;
-    Display.CheckOK := true;
+    if Ini.AskbeforeDel = 1 then
+      Display.CurrentScreen^.CheckFadeTo(nil, 'MSG_QUIT_USDX')
+    else
+    begin
+      Display.NextScreenWithCheck := nil;
+      Display.CheckOK := true;
+    end;
   end
   else Display.NextScreen := PendingTarget;
 end;
@@ -91,6 +96,7 @@ begin
     ScreenSongJumpto.Visible := false;
     ScreenSong.StopMusicPreview;
     RebuildLibrary;
+    Songs.ReplayDeferredReload;
     Exit;
   end;
   if not ConfirmingPassword then
