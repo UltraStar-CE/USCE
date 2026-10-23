@@ -53,6 +53,7 @@ procedure SingDrawPlayerLine(Left, Top, W: real; Track, PlayerIndex: integer; Li
 procedure SingDrawPlayerBGLine(Left, Top, Right: real; Track, PlayerIndex: integer; LineSpacing: integer = 15);
 
 //Draw Editor NoteLines
+procedure EditDrawBackgroundVoices(X, YBaseNote, W, H: real; SelectedTrack, VoiceCount: integer);
 procedure EditDrawLine(X, YBaseNote, W, H: real; Track: integer; NumLines: integer = 10);
 procedure EditDrawBorderedBox(X, Y, W, H: integer; FillR: real = 0.9; FillG: real = 0.9; FillB: real = 0.9; FillAlpha: real = 0.5);
 procedure EditDrawBeatDelimiters(X, Y, W, H: real; Track: integer);
@@ -1344,6 +1345,37 @@ end;
 // 1. It does not look good when you draw the golden note star effect in the editor
 // 2. You can see the freestyle notes in the editor semitransparent
 // 3. It is easier and faster then changing the old procedure
+procedure EditDrawBackgroundVoices(X, YBaseNote, W, H: real; SelectedTrack, VoiceCount: integer);
+var
+  Track, Line, Note, ViewStart, ViewEnd, Base: integer;
+  Scale, Left, Right, Top: real;
+begin
+  with CurrentSong.Tracks[SelectedTrack].Lines[CurrentSong.Tracks[SelectedTrack].CurrentLine] do
+  begin
+    if not HasLength(Scale) or (Scale <= 0) then Exit;
+    Scale := W / Scale;
+    ViewStart := Notes[0].StartBeat;
+    ViewEnd := EndBeat;
+    Base := BaseNote;
+  end;
+  for Track := 0 to VoiceCount - 1 do
+    if Track <> SelectedTrack then
+      for Line := 0 to High(CurrentSong.Tracks[Track].Lines) do
+        with CurrentSong.Tracks[Track].Lines[Line] do
+          if (Length(Notes) > 0) and (Notes[0].StartBeat < ViewEnd) and
+            (Notes[HighNote].EndBeat > ViewStart) then
+            for Note := 0 to HighNote do
+              with Notes[Note] do
+              begin
+                Left := Max(X, X + (StartBeat - ViewStart) * Scale);
+                Right := Min(X + W, X + (EndBeat - ViewStart) * Scale);
+                Top := YBaseNote - (Tone - Base) * H / 18 - NotesH[0];
+                if (Right > Left) and (Top >= YBaseNote - 7 * H / 9) and
+                  (Top + 2 * NotesH[0] <= YBaseNote + 2 * H / 9) then
+                  Renderer.DrawQuad(Left, Top, 0, Right - Left, 2 * NotesH[0], 0.45, 0.45, 0.45, 0.4);
+              end;
+end;
+
 procedure EditDrawLine(X, YBaseNote, W, H: real; Track: integer; NumLines: integer);
 var
   Rec:   TRecR;

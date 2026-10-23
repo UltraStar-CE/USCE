@@ -236,7 +236,7 @@ begin
 
       if Song.isDuet then
       begin
-        for CurrentTrack := 0 to High(Song.Tracks) do
+        for CurrentTrack := 0 to High(Tracks) do
           SongFile.WriteLine('#P' + IntToStr(CurrentTrack + 1) + ':' + EncodeToken(Song.DuetNames[CurrentTrack]));
       end;
 
