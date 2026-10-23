@@ -1155,6 +1155,13 @@ begin
       end;
     end; // while
 
+    // Match the note loader: a blank separator before P1 is not a solo song.
+    while Trim(Line) = '' do
+    begin
+      if not SongFile.ReadLine(Line) then Break;
+      Inc(FileLineNo);
+    end;
+
     // Lightweight duet detection for song list: if the first non-header
     // note-section line starts with a P-track marker, this is a duet.
     VoiceCount := 1;
