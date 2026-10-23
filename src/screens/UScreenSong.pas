@@ -278,6 +278,7 @@ type
 
       //procedures for Menu
       procedure StartSong;
+      procedure OpenContinuousPlayback;
       procedure MarkSongStarted;
       procedure OpenEditor;
       procedure DoJoker(Team: integer; SDL_ModState: Word);
@@ -1133,6 +1134,9 @@ begin
           end;
           Exit;
         end;
+
+      SDLK_L:
+        OpenContinuousPlayback;
 
       SDLK_O: // O for Ordering
         begin
@@ -4519,6 +4523,14 @@ end;
 
 //Procedures for Menu
 
+procedure TScreenSong.OpenContinuousPlayback;
+begin
+  if (Mode <> smNormal) or Party.bPartyGame then Exit;
+  StopMusicPreview;
+  StopVideoPreview;
+  FadeTo(@ScreenContinuousPlayback);
+end;
+
 procedure TScreenSong.StartSong;
 begin
   CatSongs.Selected := Interaction;
@@ -4533,7 +4545,7 @@ end;
 
 procedure TScreenSong.MarkSongStarted;
 begin
-  SongReturnPending := (Mode = smNormal); // only normal mode returns to song selection
+  SongReturnPending := (Mode = smNormal) and not ScreenContinuousPlayback.Session.Active; // only normal mode returns to song selection
 end;
 
 procedure TScreenSong.SelectPlayers;

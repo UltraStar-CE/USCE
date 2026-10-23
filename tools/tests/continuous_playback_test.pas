@@ -1,0 +1,74 @@
+program ContinuousPlaybackTest;
+{$mode delphi}
+uses SysUtils, UContinuousPlayback;
+var Session: TContinuousPlayback; Song, I, Pass: integer; Seen: set of byte;
+procedure Expect(Value: boolean; const Message: string);
+begin
+  if not Value then raise Exception.Create(Message);
+end;
+procedure Next(Expected: integer);
+begin
+  Expect(Session.NextSong(Song) and (Song = Expected), 'Unexpected next song');
+end;
+begin
+  Session := TContinuousPlayback.Create;
+  try
+    Session.Start([], -1, true, false, false);
+    Expect(not Session.Active and not Session.NextSong(Song), 'Empty selection');
+    Session.Start([11, 22, 33], 22, true, false, true);
+    Next(22); Next(33);
+    Expect(not Session.NextSong(Song), 'Ordered playback did not stop');
+    Session.Start([11], 11, true, true, false);
+    for I := 1 to 100 do Next(11);
+    Session.RejectCurrentSong;
+    Expect(not Session.NextSong(Song) and (Session.Skipped = 1), 'Rejected single song repeated');
+    Session.Start([11, 22, 33], 11, true, true, true);
+    Next(11); Session.RejectCurrentSong; Next(22); Next(33); Next(22);
+    Session.RejectCurrentSong; Next(33); Session.RejectCurrentSong;
+    Expect(not Session.NextSong(Song), 'All rejected songs must stop even with repeat');
+    Session.Start([1, 2, 3, 4], 3, false, false, false);
+    Next(3); Seen := [3];
+    for I := 1 to 3 do begin
+      Expect(Session.NextSong(Song), 'Random pass ended early');
+      Expect((Song in [1..4]) and not (Song in Seen), 'Random pass repeated or escaped selection');
+      Include(Seen, Song);
+    end;
+    Expect(not Session.NextSong(Song), 'Random pass did not stop');
+    Session.Start([1, 2, 3], 2, false, true, false);
+    Next(2); Session.RejectCurrentSong;
+    for Pass := 1 to 20 do begin
+      Expect(Session.NextSong(Song) and (Song in [1, 3]), 'Shuffle revived rejected song');
+    end;
+    Session.ResultSeconds := 3; Session.HighScoreSeconds := 5;
+    Session.Start([1], 1, true, false, false); Next(1);
+    Session.FinishSong(true);
+    Expect(Session.Stage = psAdvance, 'Lyrics-only playback showed results');
+    Session.Start([1], 1, true, false, true); Next(1);
+    Session.FinishSong(true);
+    Expect(Session.Stage = psResults, 'Missing result stage');
+    Expect(not Session.Tick(100, false), 'Result expired immediately');
+    Expect(not Session.Tick(1100, false), 'Result expired too early');
+    Session.Paused := true;
+    Expect(not Session.Tick(10000, false), 'Pause did not suspend timer');
+    Session.Paused := false;
+    Expect(not Session.Tick(20000, true), 'Popup did not suspend timer');
+    Expect(not Session.Tick(21999, false), 'Suspended time consumed duration');
+    Expect(Session.Tick(22000, false) and (Session.Stage = psHighScores), 'Result timer did not advance');
+    Session.Tick(22000, false);
+    Expect(Session.Tick(27000, false) and (Session.Stage = psAdvance), 'High-score timer did not advance');
+    Session.FinishSong(false);
+    Expect(Session.Stage = psAdvance, 'Skipped song showed results');
+    Session.ResultSeconds := 0;
+    Session.FinishSong(true);
+    Expect(Session.Stage = psHighScores, 'Skipping results also skipped high scores');
+    Session.Paused := true; Session.NextStage;
+    Expect(not Session.Paused, 'Manual continue retained paused timer');
+    Session.ResultSeconds := 3; Session.FinishSong(true);
+    Session.Tick(High(cardinal) - 999, false);
+    Expect(not Session.Tick(1000, false), 'Clock wrap consumed extra time');
+    Expect(Session.Tick(2000, false), 'Clock wrap prevented expiry');
+    Session.Stop;
+    Expect(not Session.Active and (Session.Skipped = 0), 'Stop retained session state');
+    Writeln('Continuous playback tests passed');
+  finally Session.Free; end;
+end.

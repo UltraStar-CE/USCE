@@ -335,6 +335,8 @@ uses
   UScreenJukeboxOptions         in 'screens\UScreenJukeboxOptions.pas',
   UScreenJukeboxPlaylist        in 'screens\UScreenJukeboxPlaylist.pas',
 
+  UContinuousPlayback     in 'base\UContinuousPlayback.pas',
+  UScreenContinuousPlayback in 'screens\UScreenContinuousPlayback.pas',
   UAvatars                in 'base\UAvatars.pas',
   UScreenAbout            in 'screens\UScreenAbout.pas',
 

@@ -64,6 +64,7 @@ uses
   UScreenOptionsWebcam,
   UScreenOptionsJukebox,
   UScreenSong,
+  UScreenContinuousPlayback,
   UScreenSingController,
   UScreenJukebox,
   UScreenJukeboxOptions,
@@ -137,6 +138,7 @@ var
   ScreenMain:         TScreenMain;
   ScreenName:         TScreenName;
   ScreenSong:         TScreenSong;
+  ScreenContinuousPlayback: TScreenContinuousPlayback;
   ScreenSing:         TScreenSingController;
 
   ScreenJukebox:         TScreenJukebox;
@@ -1020,6 +1022,7 @@ begin
   ScreenName :=             TScreenName.Create;
   SetLoadingTitle('Loading ScreenSong');
   ScreenSong :=             TScreenSong.Create;
+  ScreenContinuousPlayback := TScreenContinuousPlayback.Create;
   SetLoadingTitle('Loading ScreenSongMenu & ScreenJukebox');
   ScreenSongMenu :=             TScreenSongMenu.Create;
   ScreenJukebox :=             TScreenJukebox.Create;
@@ -1095,6 +1098,7 @@ procedure UnloadScreens;
 begin
   FreeAndNil(ScreenMain);
   FreeAndNil(ScreenName);
+  FreeAndNil(ScreenContinuousPlayback);
   FreeAndNil(ScreenSong);
   //ScreenSing.Free;
   FreeAndNil(ScreenScore);
