@@ -776,9 +776,7 @@ begin
     LyricsDuetP2.LineColor_act.B := ColP2.B;
     LyricsDuetP2.LineColor_act.A := 1;
 
-    Col.R := Theme.Song.LoopLyrics.ActualR;
-    Col.G := Theme.Song.LoopLyrics.ActualG;
-    Col.B := Theme.Song.LoopLyrics.ActualB;
+    Col := GetLyricGrayColor(8);
     LyricsDuetP1.LineColor_en.R := Col.R;
     LyricsDuetP1.LineColor_en.G := Col.G;
     LyricsDuetP1.LineColor_en.B := Col.B;
@@ -789,9 +787,7 @@ begin
     LyricsDuetP2.LineColor_en.B := Col.B;
     LyricsDuetP2.LineColor_en.A := 1;
 
-    Col.R := Theme.Song.LoopLyrics.NextR;
-    Col.G := Theme.Song.LoopLyrics.NextG;
-    Col.B := Theme.Song.LoopLyrics.NextB;
+    Col := GetLyricGrayColor(6);
     LyricsDuetP1.LineColor_dis.R := Col.R;
     LyricsDuetP1.LineColor_dis.G := Col.G;
     LyricsDuetP1.LineColor_dis.B := Col.B;
@@ -809,25 +805,19 @@ begin
     Lyrics.FontFamily := Ini.LyricsFont;
     Lyrics.FontStyle := Ini.LyricsStyle;
 
-    Col.R := Theme.Song.LoopLyrics.SingR;
-    Col.G := Theme.Song.LoopLyrics.SingG;
-    Col.B := Theme.Song.LoopLyrics.SingB;
+    Col := GetLyricColor(0);
     Lyrics.LineColor_act.R := Col.R;
     Lyrics.LineColor_act.G := Col.G;
     Lyrics.LineColor_act.B := Col.B;
     Lyrics.LineColor_act.A := 1;
 
-    Col.R := Theme.Song.LoopLyrics.ActualR;
-    Col.G := Theme.Song.LoopLyrics.ActualG;
-    Col.B := Theme.Song.LoopLyrics.ActualB;
+    Col := GetLyricGrayColor(8);
     Lyrics.LineColor_en.R := Col.R;
     Lyrics.LineColor_en.G := Col.G;
     Lyrics.LineColor_en.B := Col.B;
     Lyrics.LineColor_en.A := 1;
 
-    Col.R := Theme.Song.LoopLyrics.NextR;
-    Col.G := Theme.Song.LoopLyrics.NextG;
-    Col.B := Theme.Song.LoopLyrics.NextB;
+    Col := GetLyricGrayColor(6);
     Lyrics.LineColor_dis.R := Col.R;
     Lyrics.LineColor_dis.G := Col.G;
     Lyrics.LineColor_dis.B := Col.B;

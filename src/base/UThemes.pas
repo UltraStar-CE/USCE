@@ -1092,7 +1092,6 @@ type
     LyricBar:         TThemeLyricBar;
     LyricBarDuetP1:   TThemeLyricBar;
     LyricBarDuetP2:   TThemeLyricBar;
-    LyricBarLoop:      TThemeLyricBar;
     Score:            TThemeScore;
     HighScores:       TThemeHighScores;
     Options:          TThemeOptions;
@@ -1984,8 +1983,8 @@ begin
       Main.DescriptionLong[0] := Language.Translate('SING_SING_DESC');
       Main.Description[1] := Language.Translate('SING_MULTI');
       Main.DescriptionLong[1] := Language.Translate('SING_MULTI_DESC');
-      Main.Description[2] := Language.Translate('SING_JUKEBOX');
-      Main.DescriptionLong[2] := Language.Translate('SING_JUKEBOX_DESC');
+      Main.Description[2] := Language.Translate('CONTINUOUS_TITLE');
+      Main.DescriptionLong[2] := Language.Translate('CONTINUOUS_DESC');
       Main.Description[3] := Language.Translate('SING_STATS');
       Main.DescriptionLong[3] := Language.Translate('SING_STATS_DESC');
       Main.Description[4] := Language.Translate('SING_EDITOR');
@@ -2059,16 +2058,6 @@ begin
       ThemeLoadLyricBar(LyricBarDuetP1, 'SingLyricsDuetP1');
       ThemeLoadLyricBar(LyricBarDuetP2, 'SingLyricsDuetP2');
 
-      // Loop mode lyric bars
-      LyricBarLoop.UpperX := 40;
-      LyricBarLoop.UpperW := 720;
-      LyricBarLoop.UpperY := 490;
-      LyricBarLoop.UpperH := 52;
-      LyricBarLoop.LowerX := 40;
-      LyricBarLoop.LowerW := 720;
-      LyricBarLoop.LowerY := 540;
-      LyricBarLoop.LowerH := 52;
-      LyricBarLoop.IndicatorYOffset := 8;
 
       // Sing
       ThemeLoadBasic(Sing, 'Sing');
