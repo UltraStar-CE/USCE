@@ -448,7 +448,6 @@ begin
 
       SDL_MOUSEMOTION, SDL_MOUSEBUTTONDOWN, SDL_MOUSEBUTTONUP, SDL_MOUSEWHEEL:
       begin
-        if (Ini.Mouse > 0) then
         begin
           UpdateMouse := true;
           case Event.type_ of
@@ -497,8 +496,8 @@ begin
             if assigned(Joy) then Joy.OnMouseMove(EnsureRange(Event.button.X, 0, 799),
                                                   EnsureRange(Event.button.Y, 0,599));
 
-            Display.MoveCursor(Event.button.X * 800 * Screens / ScreenW,
-                               Event.button.Y * 600 / ScreenH);
+            Display.MoveCursor(Event.button.X * RenderW * Screens / ScreenW,
+                               Event.button.Y * RenderH / ScreenH);
           end;
 
           if not Assigned(Display.NextScreen) then

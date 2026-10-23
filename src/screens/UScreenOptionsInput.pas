@@ -46,7 +46,6 @@ type
 
   TByteSet = set of byte;
   InteractionID = (
-    iMouseSlide,
     iJoypadSupportSlide
   );
 
@@ -54,19 +53,13 @@ type
     protected
       // interaction IDs
       ButtonExitIID: integer;
-      SelectMouse: integer;
       SelectJoyPad: integer;
-
-      // values
-      ActualMouse: integer;
 
       SoundInteractions: TByteSet;
 
       WasJoy: boolean;
-      WasMouse: boolean;
 
     protected
-      procedure CheckOption;
       procedure LoadWidgets; override;
 
     public
@@ -139,7 +132,6 @@ begin
             AudioPlayback.PlaySound(SoundLib.Option);
             InteractInc;
           end;
-          CheckOption;
         end;
       SDLK_LEFT:
         begin
@@ -148,7 +140,6 @@ begin
             AudioPlayback.PlaySound(SoundLib.Option);
             InteractDec;
           end;
-          CheckOption;
         end;
     end;
   end;
@@ -172,10 +163,6 @@ begin
   if not Help.SetHelpID(ID) then
     Log.LogError('No Entry for Help-ID ' + ID + ' (ScreenOptionsInput)');
 
-  ActualMouse := Ini.Mouse;
-  UpdateSelectSlideOptions(SelectMouse, IMouseTranslated, ActualMouse);
-
-  WasMouse := Ini.Mouse > 0;
   WasJoy := HasJoyStick;
   Interaction := 0;
 end;
@@ -184,11 +171,8 @@ procedure TScreenOptionsInput.OnHide;
 begin
   inherited;
 
-  // TODO: query confirm whether to disable mouse
   // TODO: RattleSN4K3: query confirm whether to disable Joypad (requires interaction mode, Controller/Mouse/Keyboard)
 
-  // update actual Mouse configuration
-  Ini.Mouse := ActualMouse;
   Display.SetCursor;
 
   // re-initialize or remove joypad support
@@ -199,24 +183,8 @@ begin
 
 end;
 
-procedure TScreenOptionsInput.CheckOption;
-begin
-  inherited;
-
-  if (Interaction = SelectMouse) then
-  begin
-    if ActualMouse > 0 then Ini.Mouse := ActualMouse
-    else Ini.Mouse := 1;
-    Display.SetCursor;
-    Display.UpdateCursor;
-  end;
-
-end;
-
 procedure TScreenOptionsInput.LoadWidgets;
 begin
-  SelectMouse := AddSelectSlide('SING_OPTIONS_INPUT_MOUSE', ActualMouse, IMouseTranslated);
-  Include(SoundInteractions, SelectMouse);
   SelectJoyPad := AddSelectSlide('SING_OPTIONS_INPUT_JOYPAD_SUPPORT', Ini.Joypad, IJoypad);
   Include(SoundInteractions, SelectJoyPad);
 end;

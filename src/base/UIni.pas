@@ -232,7 +232,6 @@ type
 
       // Controller
       Joypad:         integer;
-      Mouse:          integer;
 
       // WebCam
       WebCamID:         integer;
@@ -472,8 +471,6 @@ const
   IPartyPopup:    array[0..1] of UTF8String = ('Off', 'On');
 
   IJoypad:        array[0..1] of UTF8String = ('Off', 'On');
-  IMouse:         array[0..2] of UTF8String = ('Off', 'System', 'Game');
-  IMouseLegacy:         array[0..2] of UTF8String = ('Off', 'Hardware Cursor', 'Software Cursor'); // use to convert old config option to new
 
   ISingTimebarMode:    array[0..2] of UTF8String = ('Current', 'Remaining', 'Total');
   IJukeboxTimebarMode: array[0..2] of UTF8String = ('Current', 'Remaining', 'Total');
@@ -573,8 +570,6 @@ var
   ITopScoresTranslated:        array[0..1] of UTF8String = ('All', 'Player');
 
   IJoypadTranslated:           array[0..1] of UTF8String = ('Off', 'On');
-  IMouseTranslated:            array[0..2] of UTF8String = ('Off', 'On [System Cursor]', 'On [Game Cursor]');
-  IMouseTranslatedLegacy:      array[0..2] of UTF8String = ('Off', 'Hardware Cursor', 'Software Cursor');
 
   ISingTimebarModeTranslated:      array[0..2] of UTF8String = ('Current', 'Remaining', 'Total');
   IJukeboxTimebarModeTranslated:      array[0..2] of UTF8String = ('Current', 'Remaining', 'Total');
@@ -605,7 +600,6 @@ var
   IRed:       array[0..255] of UTF8String;
   IGreen:     array[0..255] of UTF8String;
   IBlue:      array[0..255] of UTF8String;
-
 
 implementation
 
@@ -1074,13 +1068,6 @@ begin
   IJoypadTranslated[0]                := ULanguage.Language.Translate('OPTION_VALUE_OFF');
   IJoypadTranslated[1]                := ULanguage.Language.Translate('OPTION_VALUE_ON');
 
-  IMouseTranslated[0]                 := ULanguage.Language.Translate('OPTION_VALUE_OFF');
-  IMouseTranslated[1]                 := ULanguage.Language.Translate('OPTION_VALUE_SYSTEM_CURSOR');
-  IMouseTranslated[2]                 := ULanguage.Language.Translate('OPTION_VALUE_GAME_CURSOR');
-
-  IMouseTranslatedLegacy[0]           := ULanguage.Language.Translate('OPTION_VALUE_OFF');
-  IMouseTranslatedLegacy[1]           := ULanguage.Language.Translate('OPTION_VALUE_HARDWARE_CURSOR');
-  IMouseTranslatedLegacy[2]           := ULanguage.Language.Translate('OPTION_VALUE_SOFTWARE_CURSOR');
 
   ISingTimebarModeTranslated[0]          := ULanguage.Language.Translate('OPTION_VALUE_CURRENT');
   ISingTimebarModeTranslated[1]          := ULanguage.Language.Translate('OPTION_VALUE_REMAINING');
@@ -1100,7 +1087,6 @@ begin
   IAudioOutputBufferSizeTranslated[7] := '16384';
   IAudioOutputBufferSizeTranslated[8] := '32768';
   IAudioOutputBufferSizeTranslated[9] := '65536';
-
 
   IAudioInputBufferSizeTranslated[0]  := ULanguage.Language.Translate('OPTION_VALUE_AUTO');
   IAudioInputBufferSizeTranslated[1]  := '256';
@@ -1127,7 +1113,6 @@ begin
   IPreviewVolumeTranslated[10]        := '80%';
   IPreviewVolumeTranslated[11]        := '90%';
   IPreviewVolumeTranslated[12]        := '100%';
-
 
   IPreviewFadingTranslated[0]         :=        ULanguage.Language.Translate('OPTION_VALUE_OFF');
   IPreviewFadingTranslated[1]         := '1 ' + ULanguage.Language.Translate('OPTION_VALUE_SEC');
@@ -1920,13 +1905,6 @@ begin
   // Joypad
   Joypad := ReadArrayIndex(IJoypad, IniFile, 'Controller', 'Joypad', 0);
 
-  // Mouse
-  Mouse := ReadArrayIndex(IMouse, IniFile, 'Controller', 'Mouse', 2);
-  if Mouse < 0 then // try finding legacy option
-  begin
-    Mouse := ReadArrayIndex(IMouseLegacy, IniFile, 'Controller', 'Mouse', 2);
-  end;
-
   // SingTimebarMode
   SingTimebarMode := ReadArrayIndex(ISingTimebarMode, IniFile, 'Advanced', 'SingTimebarMode', IGNORE_INDEX, 'Remaining');
 
@@ -1952,7 +1930,6 @@ begin
   JukeboxAlpha := ReadArrayIndex(ILyricsAlpha, IniFile, 'Jukebox', 'LyricsAlpha', 20);
 
   JukeboxSongMenu := ReadArrayIndex(IJukeboxSongMenu, IniFile, 'Jukebox', 'SongMenu', IGNORE_INDEX, 'On');
-
 
   JukeboxSingLineColor := ReadArrayIndex(IHexSingColor, IniFile, 'Jukebox', 'SingLineColor', High(IHexSingColor));
 
@@ -2246,7 +2223,6 @@ begin
     IniFile.WriteString('Controller', 'Joypad', IJoypad[Joypad]);
 
     // Mouse
-    IniFile.WriteString('Controller', 'Mouse', IMouse[Mouse]);
 
     // SingTimebarMode
     IniFile.WriteString('Advanced', 'SingTimebarMode', ISingTimebarMode[SingTimebarMode]);
@@ -2431,7 +2407,6 @@ begin
   Result := true;
 end;
 
-
 procedure TIni.SaveLevel;
 var
   IniFile: TIniFile;
@@ -2457,7 +2432,6 @@ begin
   end;
 end;
 
-
 procedure TIni.SaveShowWebScore;
 var
   IniFile: TIniFile;
@@ -2471,7 +2445,6 @@ begin
   end;
 end;
 
-
 procedure TIni.SaveHighScoreScreenEntries;
 var
   IniFile: TIniFile;
@@ -2483,7 +2456,6 @@ begin
     IniFile.Free;
   end;
 end;
-
 
 procedure TIni.SavePlayerColors;
 
@@ -2629,7 +2601,6 @@ begin
     IniFile.Free;
   end;
 end;
-
 
 function TIni.SetResolution(ResolutionString: string; RemoveCurrent: boolean; NoSave: boolean): boolean;
   var
