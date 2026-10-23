@@ -3012,6 +3012,14 @@ end;
 
 procedure TScreenEditSub.ApplyTone(NewTone: Integer);
 begin
+  if not Assigned(CurrentSong) then Exit;
+  if (CurrentTrack < 0) or (CurrentTrack >= Length(CurrentSong.Tracks)) then Exit;
+  if (CurrentSong.Tracks[CurrentTrack].CurrentLine < 0) or
+    (CurrentSong.Tracks[CurrentTrack].CurrentLine >= Length(CurrentSong.Tracks[CurrentTrack].Lines)) then Exit;
+  if (CurrentNote[CurrentTrack] < 0) or
+    (CurrentNote[CurrentTrack] >= Length(CurrentSong.Tracks[CurrentTrack].Lines[
+      CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes)) then Exit;
+
   StopMidiPlayback;
 
   CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Tone := NewTone;
@@ -3039,6 +3047,10 @@ end;
 
 procedure TScreenEditSub.OnMidiNote(Note: Byte);
 begin
+  if not Assigned(Display) then Exit;
+  if Display.CurrentScreen = nil then Exit;
+  if Display.CurrentScreen^ <> Self then Exit;
+  if (Display.NextScreen <> nil) or (Display.NextScreenWithCheck <> nil) then Exit;
   ApplyTone(Note - 48);
   // Play current note
 end;
