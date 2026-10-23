@@ -6393,10 +6393,28 @@ begin
       if ReadBytesKaraoke <= 0 then
         KaraokeEOF := true;
 
-      if OriginalEOF and KaraokeEOF and
-         (UseDirectVocalsSource or (Length(CarryOriginal) = 0)) and
-         ((not HasKaraokePreview) or (Length(CarryKaraoke) = 0)) then
-        Break;
+      if OriginalEOF and KaraokeEOF then
+      begin
+        if UseDirectVocalsSource then
+        begin
+          if Length(CarryKaraoke) = 0 then
+            Break;
+        end
+        else if HasKaraokePreview then
+        begin
+          // Only paired samples can produce a vocals difference. Once both
+          // streams ended, an unmatched tail cannot be analyzed and must not
+          // keep the worker alive indefinitely.
+          if (Length(CarryOriginal) = 0) or (Length(CarryKaraoke) = 0) then
+          begin
+            SetLength(CarryOriginal, 0);
+            SetLength(CarryKaraoke, 0);
+            Break;
+          end;
+        end
+        else if Length(CarryOriginal) = 0 then
+          Break;
+      end;
 
       InputSizeOriginal := ReadBytesOriginal;
       InputSizeKaraoke := ReadBytesKaraoke;
