@@ -120,6 +120,7 @@ type
 
     //the song was sung to the end
     SungToEnd: boolean;
+    SungPaused: boolean;
 
     // some settings to be set by plugins
     Settings: record
@@ -648,6 +649,7 @@ begin
   begin
     // pause time
     Paused := true;
+    SungPaused := true;
 
     LyricsState.Pause();
 
@@ -720,6 +722,7 @@ begin
 
   //the song was sung to the end
   SungToEnd := false;
+  SungPaused := false;
 
   ClearSettings;
   Party.CallBeforeSing;
