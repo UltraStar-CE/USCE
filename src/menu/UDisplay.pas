@@ -157,7 +157,7 @@ const
     time in milliseconds }
   CURSOR_FADE_IN_TIME = 100;      // milliseconds the fade in effect lasts
   CURSOR_FADE_OUT_TIME = 150;    // milliseconds the fade out effect lasts
-  CURSOR_AUTOHIDE_TIME = 1850;   // milliseconds until auto fade out starts if there is no mouse movement
+  CURSOR_AUTOHIDE_TIME = 1000;   // milliseconds until auto fade out starts if there is no mouse movement
 
 implementation
 
@@ -567,7 +567,7 @@ begin
     Ticks := SDL_GetTicks;
 
     if (Cursor_Visible) and (Ticks - Cursor_LastMove >= CURSOR_AUTOHIDE_TIME) then
-    begin // finish hiding after two seconds without activity
+    begin // start fading after one second without activity
       Cursor_Visible := false;
       Cursor_LastMove := Ticks;
       Cursor_Fade := true;

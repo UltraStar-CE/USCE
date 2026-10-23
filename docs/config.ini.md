@@ -166,7 +166,7 @@ File section: `[Controller]`. Available under **Options → Input**.
 | `Joypad` | `Off`, `On`; `Off` | Enables controller input. |
 
 Mouse input is always available. The pointer appears when moved or clicked and
-hides after two seconds without activity. Older `Mouse` settings are ignored.
+starts fading after one second without activity. Older `Mouse` settings are ignored.
 
 ## Themes and lyrics
 
