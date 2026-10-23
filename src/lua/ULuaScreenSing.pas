@@ -481,7 +481,7 @@ begin
     if ScreenSong.Mode = smMedley then
       lua_PushNumber(L, GetMidBeat(ScreenSing.MedleyEnd - CurrentSong.GAP / 1000))
     else
-      lua_PushNumber(L, CurrentSong.BPM * LyricsState.TotalTime / 60);
+      lua_PushNumber(L, GetMidBeat(LyricsState.TotalTime - CurrentSong.GAP / 1000));
 end;
 
 { ScreenSing.GetBackground - no arguments
