@@ -175,6 +175,7 @@ uses
   UImage,
   ULog,
   UMain,
+  URemoteOverlay,
   UTime,
   ULanguage,
   UPathUtils,
@@ -496,6 +497,8 @@ begin
         end;
       end;
     end; // if
+
+    DrawRemoteRoomOverlay;
 
     // Draw OSD only on first Screen if Debug Mode is enabled
     if ((Ini.Debug = 1) or (Params.Debug)) and (S = 1) then
