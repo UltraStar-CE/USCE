@@ -564,13 +564,24 @@ end;
 { called when cursor moves, positioning of software cursor }
 procedure TDisplay.MoveCursor(X, Y: double);
 begin
-  if (Ini.Mouse = 2) and
+  if (Ini.Mouse > 0) and
      ((X <> Cursor_X) or (Y <> Cursor_Y)) then
   begin
     Cursor_X := X;
     Cursor_Y := Y;
 
-    UpdateCursorFade;
+    if CurrentScreen = @ScreenSing then
+    begin
+      Cursor_HiddenByScreen := false;
+      if Ini.Mouse = 1 then
+      begin
+        Cursor_LastMove := SDL_GetTicks;
+        SDL_ShowCursor(1);
+      end
+      else if Cursor_LastMove = 0 then
+        Cursor_LastMove := SDL_GetTicks;
+    end;
+    if Ini.Mouse = 2 then UpdateCursorFade;
   end;
 end;
 
@@ -594,6 +605,13 @@ var
   CursorW: single;
   Texture: TTexture;
 begin
+  if (Ini.Mouse = 1) and (CurrentScreen = @ScreenSing) and
+     not Cursor_HiddenByScreen and
+     (SDL_GetTicks - Cursor_LastMove >= CURSOR_AUTOHIDE_TIME) then
+  begin
+    Cursor_HiddenByScreen := true;
+    SDL_ShowCursor(0);
+  end;
   if (Ini.Mouse = 2) and ((Screens = 1) or ((ScreenAct - 1) = (Round(Cursor_X+16) div RenderW))) then
   begin // draw software cursor
     Ticks := SDL_GetTicks;

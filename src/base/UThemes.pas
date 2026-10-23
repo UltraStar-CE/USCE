@@ -387,6 +387,8 @@ type
   end;
 
   TThemeSong = class(TThemeBasic)
+    TextContinuousStatus: TThemeText;
+    StaticContinuousKey: TThemeStatic;
     TextArtist:       TThemeText;
     TextTitle:        TThemeText;
     TextNumber:       TThemeText;
@@ -4622,6 +4624,7 @@ procedure TTheme.ThemeSongLoad;
 var
   I, C: integer;
   prefix: string;
+  Enabled: boolean;
   SectionLIst: TThemeSectionList;
 begin
   case (TSongMenuMode(Ini.SongMenu)) of
@@ -4637,6 +4640,27 @@ begin
   ThemeLoadText(Song.TextTitle, 'Song' + prefix + 'TextTitle');
   ThemeLoadText(Song.TextNumber, 'Song' + prefix + 'TextNumber');
   ThemeLoadText(Song.TextYear, 'Song' + prefix + 'TextYear');
+
+  Song.TextContinuousStatus := Song.TextYear;
+  with Song.TextContinuousStatus do
+  begin
+    X := 100; Y := 83; W := 670; H := 18; Size := 18; Align := 0;
+    Z := 0.95; ColR := 1; ColG := 1; ColB := 1; Text := '';
+    Reflection := false;
+  end;
+  if SectionExists('Song' + prefix + 'TextContinuousStatus', Enabled) then
+    ThemeLoadText(Song.TextContinuousStatus, 'Song' + prefix + 'TextContinuousStatus');
+  Song.StaticContinuousKey := Song.VideoIcon;
+  with Song.StaticContinuousKey do
+  begin
+    X := 72; Y := 81; W := 18; H := 18; Z := 0.95;
+    Tex := 'ButtonC'; Typ := TEXTURE_TYPE_TRANSPARENT;
+    TexX1 := 0; TexY1 := 0; TexX2 := 1; TexY2 := 1;
+    ColR := 1; ColG := 1; ColB := 1; Alpha := 1; Reflection := false;
+  end;
+  if SectionExists('Song' + prefix + 'StaticContinuousKey', Enabled) then
+    ThemeLoadStatic(Song.StaticContinuousKey, 'Song' + prefix + 'StaticContinuousKey');
+
 
   // medley playlist
   SectionList := GetSectionList('Song' + prefix + 'TextMedleyMax');

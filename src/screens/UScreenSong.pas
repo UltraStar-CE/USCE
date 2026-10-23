@@ -100,6 +100,7 @@ type
       function GetSongButtonMouseOverArea(ButtonIndex: integer): TMouseOverRect;
       function ReloadCurrentPlaylist(ForceCheck: boolean): boolean;
     public
+      TextContinuousStatus, StaticContinuousKey: integer;
       TextArtist:   integer;
       TextTitle:    integer;
       TextNumber:   integer;
@@ -278,6 +279,7 @@ type
 
       //procedures for Menu
       procedure StartSong;
+      procedure OpenContinuousPlayback;
       procedure MarkSongStarted;
       procedure OpenEditor;
       procedure DoJoker(Team: integer; SDL_ModState: Word);
@@ -1134,6 +1136,9 @@ begin
           Exit;
         end;
 
+      SDLK_C:
+        OpenContinuousPlayback;
+
       SDLK_O: // O for Ordering
         begin
           // Only applicable in playlist view
@@ -1910,6 +1915,8 @@ begin
   TextTitle  := AddText(Theme.Song.TextTitle);
   TextNumber := AddText(Theme.Song.TextNumber);
   TextYear   := AddText(Theme.Song.TextYear);
+  TextContinuousStatus := AddText(Theme.Song.TextContinuousStatus);
+  StaticContinuousKey := AddStatic(Theme.Song.StaticContinuousKey);
 
   //Show Cat in Top Left mod
   TextCat := AddText(Theme.Song.TextCat);
@@ -3516,6 +3523,10 @@ begin
   //This should cause no Problems because all Buttons on this screen
   //Has Z Position.
   //Draw BG
+  Text[TextContinuousStatus].Text := ScreenContinuousPlayback.StatusText;
+  Text[TextContinuousStatus].Visible := (Mode = smNormal) and not CoverFull;
+  Statics[StaticContinuousKey].Visible := Text[TextContinuousStatus].Visible;
+
   DrawBG;
 
   // StaticsList
@@ -4519,21 +4530,43 @@ end;
 
 //Procedures for Menu
 
+procedure TScreenSong.OpenContinuousPlayback;
+begin
+  if (Mode <> smNormal) or Party.bPartyGame then Exit;
+  StopMusicPreview;
+  StopVideoPreview;
+  FadeTo(@ScreenContinuousPlayback);
+end;
+
 procedure TScreenSong.StartSong;
 begin
+  // The sing and score screens are created by player setup.
+  if not Assigned(ScreenSing) then
+  begin
+    SelectPlayers;
+    Exit;
+  end;
   CatSongs.Selected := Interaction;
+  if (Mode = smNormal) and ScreenName.LyricsOnly then
+  begin
+    PlayersPlay := 0;
+    SetLength(Player, 0);
+  end;
 
   if (Mode = smPartyFree) then
     Party.SaveSungPartySong(Interaction);
 
   StopMusicPreview();
 
-  FadeTo(@ScreenSing);
+  if (Mode = smNormal) and (ScreenContinuousPlayback.Enabled = 1) then
+    ScreenContinuousPlayback.BeginSession
+  else
+    FadeTo(@ScreenSing);
 end;
 
 procedure TScreenSong.MarkSongStarted;
 begin
-  SongReturnPending := (Mode = smNormal); // only normal mode returns to song selection
+  SongReturnPending := (Mode = smNormal) and not ScreenContinuousPlayback.Session.Active; // only normal mode returns to song selection
 end;
 
 procedure TScreenSong.SelectPlayers;

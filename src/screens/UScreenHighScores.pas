@@ -379,6 +379,7 @@ end;
 
 function TScreenHighScores.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
 begin
+  if ScreenContinuousPlayback.HandlePlaybackKey(PressedKey, PressedDown, Repeated) then Exit(true);
   Result := true;
   if PressedDown then
   begin
@@ -504,8 +505,13 @@ begin
 
   if Length(CurrentSong.Score[Player[0].Level]) = 0 then
   begin
-    ScreenSong.PreservePreviewForReturn;
-    FadeTo(@ScreenSong);
+    if ScreenContinuousPlayback.Session.Active then
+      ScreenContinuousPlayback.HandlePlaybackKey(SDLK_RETURN, true)
+    else
+    begin
+      ScreenSong.PreservePreviewForReturn;
+      FadeTo(@ScreenSong);
+    end;
   end; //if there are no scores to show, go to next screen
 
   ShowScoresForDifficulty(Player[0].Level);
@@ -546,6 +552,7 @@ end;
 function TScreenHighScores.Draw: boolean;
 begin
   Result := inherited Draw;
+  ScreenContinuousPlayback.Update;
 end;
 
 end.

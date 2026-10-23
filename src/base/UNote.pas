@@ -357,11 +357,11 @@ begin
   end; // for CountGr
 
   // make some operations on clicks
-  if {(LyricsState.CurrentBeatC >= 0) and }(LyricsState.OldBeatC <> LyricsState.CurrentBeatC) then
+  if (PlayersPlay > 0) and (LyricsState.OldBeatC <> LyricsState.CurrentBeatC) then
     NewBeatClick(Screen);
 
   // make some operations when detecting new voice pitch
-  if ShouldRunNoteDetection then
+  if (PlayersPlay > 0) and ShouldRunNoteDetection then
     NewBeatDetect(Screen);
 end;
 
