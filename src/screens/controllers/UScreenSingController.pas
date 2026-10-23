@@ -119,6 +119,8 @@ type
     Lyrics: TLyricEngine;
     VoiceLyrics: array of TLyricEngine;
     DisplayedVoices: array of integer;
+    DisplayedVoiceBanks: array of integer;
+    VoiceBankCounts: array[0..1] of integer;
 
     // score manager:
     Scores: TSingScores;
@@ -201,6 +203,7 @@ type
     procedure ClearVoiceLyrics;
     procedure ConfigureVoiceLyrics;
     procedure LayoutVoiceLyrics;
+    procedure PositionVoiceLyrics(DisplayIndex: integer);
     procedure OnSentenceChange(Track: integer; SentenceIndex: cardinal);  // for golden notes
     property CountIn: boolean read fCountIn write fCountIn;
     property FirstNote: real read fFirstNote;
@@ -1339,94 +1342,106 @@ end;
 
 procedure TScreenSingController.LayoutVoiceLyrics;
 var
-  I, J, FirstPlayer, LocalPlayers, Count, Columns, Rows, Bank, Cell: integer;
-  VoiceBanks: array of integer;
-  BankCounts, BankCells: array[0..1] of integer;
-  AssignedHere, AssignedElsewhere: boolean;
-  X, Y, W, H, CenterY: real;
-  Engine: TLyricEngine;
+  I, J, FirstPlayer, LocalPlayers, Count, Bank, CenterBank: integer;
+  PlayerBanks: array of integer;
+  Used: array[0..1] of boolean;
+  AssignedElsewhere: boolean;
+  CenterY: real;
 begin
   FirstPlayer := GetFirstPlayerIndexForScreen(PlayersPlay, Screens, ScreenAct);
   LocalPlayers := GetScreenPlayerCount(PlayersPlay, Screens, ScreenAct);
+  SetLength(PlayerBanks, LocalPlayers);
+  CenterBank := 0;
+  for J := 0 to LocalPlayers - 1 do
+  begin
+    with Statics[screenSingViewRef.PlayerFrameSlots[LocalPlayers, J]].Texture do
+      CenterY := Y + H / 2;
+    if CenterY < RenderH / 2 - 0.01 then PlayerBanks[J] := 0
+    else if CenterY > RenderH / 2 + 0.01 then PlayerBanks[J] := 1
+    else
+    begin
+      PlayerBanks[J] := CenterBank;
+      CenterBank := 1 - CenterBank;
+    end;
+  end;
   SetLength(DisplayedVoices, 0);
-  SetLength(VoiceBanks, Length(VoiceLyrics));
-  BankCounts[0] := 0;
-  BankCounts[1] := 0;
+  SetLength(DisplayedVoiceBanks, 0);
+  VoiceBankCounts[0] := 0;
+  VoiceBankCounts[1] := 0;
   for I := 0 to High(VoiceLyrics) do
   begin
-    AssignedHere := false;
+    Used[0] := false;
+    Used[1] := false;
     AssignedElsewhere := false;
-    CenterY := 0;
-    Count := 0;
     for J := 0 to PlayersPlay - 1 do
       if Player[J].Track = I then
       begin
         if (J >= FirstPlayer) and (J < FirstPlayer + LocalPlayers) then
-        begin
-          AssignedHere := true;
-          with Statics[screenSingViewRef.PlayerFrameSlots[LocalPlayers, J - FirstPlayer]].Texture do
-            CenterY := CenterY + Y + H / 2;
-          Inc(Count);
-        end
+          Used[PlayerBanks[J - FirstPlayer]] := true
         else AssignedElsewhere := true;
       end;
-    // Keep unassigned voices visible too. Voices on another screen stay there.
-    if AssignedHere or not AssignedElsewhere then
+    // An unassigned song part must not disappear. Shared voices can appear in both halves.
+    if not (Used[0] or Used[1] or AssignedElsewhere) then
     begin
-      if Count > 0 then CenterY := CenterY / Count
-      else CenterY := RenderH / 2;
-      if CenterY < RenderH / 2 - 0.01 then Bank := 0
-      else if CenterY > RenderH / 2 + 0.01 then Bank := 1
-      else if BankCounts[0] <= BankCounts[1] then Bank := 0
-      else Bank := 1;
-      VoiceBanks[I] := Bank;
-      Inc(BankCounts[Bank]);
-      Count := Length(DisplayedVoices);
-      SetLength(DisplayedVoices, Count + 1);
-      DisplayedVoices[Count] := I;
+      if VoiceBankCounts[0] <= VoiceBankCounts[1] then Used[0] := true
+      else Used[1] := true;
     end;
+    for Bank := 0 to 1 do
+      if Used[Bank] then
+      begin
+        Inc(VoiceBankCounts[Bank]);
+        Count := Length(DisplayedVoices);
+        SetLength(DisplayedVoices, Count + 1);
+        SetLength(DisplayedVoiceBanks, Count + 1);
+        DisplayedVoices[Count] := I;
+        DisplayedVoiceBanks[Count] := Bank;
+      end;
   end;
-  BankCells[0] := 0;
-  BankCells[1] := 0;
-  for I := 0 to High(DisplayedVoices) do
+end;
+
+procedure TScreenSingController.PositionVoiceLyrics(DisplayIndex: integer);
+var
+  I, Count, Columns, Rows, Bank, Cell: integer;
+  X, Y, W, H: real;
+  Engine: TLyricEngine;
+begin
+  Engine := VoiceLyrics[DisplayedVoices[DisplayIndex]];
+  Bank := DisplayedVoiceBanks[DisplayIndex];
+  Count := VoiceBankCounts[Bank];
+  GetVoiceGrid(Count * 2, Columns, Rows);
+  Cell := 0;
+  for I := 0 to DisplayIndex - 1 do
+    if DisplayedVoiceBanks[I] = Bank then Inc(Cell);
+  Engine.Compact := Count > 1;
+  if Bank = 0 then
   begin
-    Engine := VoiceLyrics[DisplayedVoices[I]];
-    Bank := VoiceBanks[DisplayedVoices[I]];
-    Count := BankCounts[Bank];
-    GetVoiceGrid(Count * 2, Columns, Rows);
-    Cell := BankCells[Bank];
-    Inc(BankCells[Bank]);
-    Engine.Compact := Count > 1;
-    if Bank = 0 then
-    begin
-      X := Theme.LyricBarDuetP1.UpperX;
-      Y := Theme.LyricBarDuetP1.UpperY;
-      W := Theme.LyricBarDuetP1.UpperW;
-      H := Theme.LyricBarDuetP1.LowerY + Theme.LyricBarDuetP1.LowerH - Y;
-    end
-    else
-    begin
-      X := Theme.LyricBarDuetP2.UpperX;
-      Y := Theme.LyricBarDuetP2.UpperY;
-      W := Theme.LyricBarDuetP2.UpperW;
-      H := Theme.LyricBarDuetP2.LowerY + Theme.LyricBarDuetP2.LowerH - Y;
-    end;
-    Engine.UpperLineX := X + (Cell mod Columns) * W / Columns + 24;
-    Engine.UpperLineY := Y + (Cell div Columns) * H / Rows;
-    Engine.UpperLineW := W / Columns - 32;
-    Engine.UpperLineH := H / Rows;
-    Engine.LowerLineX := Engine.UpperLineX;
-    Engine.LowerLineW := Engine.UpperLineW;
-    Engine.LowerLineY := Engine.UpperLineY;
-    Engine.LowerLineH := Engine.UpperLineH;
-    if not Engine.Compact then
-    begin
-      Engine.UpperLineH := H / 2;
-      Engine.LowerLineY := Y + H / 2;
-      Engine.LowerLineH := H / 2;
-    end;
-    Engine.UpdateLineMetrics;
+    X := Theme.LyricBarDuetP1.UpperX;
+    Y := Theme.LyricBarDuetP1.UpperY;
+    W := Theme.LyricBarDuetP1.UpperW;
+    H := Theme.LyricBarDuetP1.LowerY + Theme.LyricBarDuetP1.LowerH - Y;
+  end
+  else
+  begin
+    X := Theme.LyricBarDuetP2.UpperX;
+    Y := Theme.LyricBarDuetP2.UpperY;
+    W := Theme.LyricBarDuetP2.UpperW;
+    H := Theme.LyricBarDuetP2.LowerY + Theme.LyricBarDuetP2.LowerH - Y;
   end;
+  Engine.UpperLineX := X + (Cell mod Columns) * W / Columns + 24;
+  Engine.UpperLineY := Y + (Cell div Columns) * H / Rows;
+  Engine.UpperLineW := W / Columns - 32;
+  Engine.UpperLineH := H / Rows;
+  Engine.LowerLineX := Engine.UpperLineX;
+  Engine.LowerLineW := Engine.UpperLineW;
+  Engine.LowerLineY := Engine.UpperLineY;
+  Engine.LowerLineH := Engine.UpperLineH;
+  if not Engine.Compact then
+  begin
+    Engine.UpperLineH := H / 2;
+    Engine.LowerLineY := Y + H / 2;
+    Engine.LowerLineH := H / 2;
+  end;
+  Engine.UpdateLineMetrics;
 end;
 
 procedure TScreenSingController.CalculateStartTime;
