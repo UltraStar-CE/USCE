@@ -22,6 +22,7 @@ type
     Enabled: integer;
     Session: TContinuousPlayback;
     procedure BeginSession;
+    function StatusText: UTF8String;
     constructor Create; override;
     destructor Destroy; override;
     procedure OnShow; override;
@@ -37,7 +38,7 @@ type
 implementation
 
 uses SysUtils, UNote, UGraphic, ULanguage, UHelp, ULog, UMusic, UPlaylist,
-  USongs, USong, UIni, UParty, ULyrics, URenderer, UDisplay;
+  USongs, USong, UIni, ULyrics, UDisplay;
 
 const
   DisplaySeconds: array[0..4] of integer = (0, 3, 5, 10, 20);
@@ -69,6 +70,25 @@ begin
     [Language.Translate('OPTION_VALUE_OFF'), Language.Translate('OPTION_VALUE_ON')]);
   AddSelectSlide('CONTINUOUS_RESULTS', ResultTime, Times);
   AddSelectSlide('CONTINUOUS_HIGHSCORES', HighScoreTime, Times);
+end;
+
+function TScreenContinuousPlayback.StatusText: UTF8String;
+  function TimeLabel(Index: integer): UTF8String;
+  begin
+    if DisplaySeconds[Index] = 0 then Result := Language.Translate('CONTINUOUS_SKIP')
+    else Result := IntToStr(DisplaySeconds[Index]) + ' s';
+  end;
+  function OnOff(Value: integer): UTF8String;
+  begin
+    if Value = 0 then Result := Language.Translate('OPTION_VALUE_OFF')
+    else Result := Language.Translate('OPTION_VALUE_ON');
+  end;
+begin
+  Result := Language.Translate('CONTINUOUS_TITLE') + ': ' + OnOff(Enabled);
+  if Enabled <> 0 then
+    Result := Result + '  |  ' + Language.Translate('CONTINUOUS_REPEAT') + ': ' + OnOff(RepeatSelection) +
+      '  |  ' + Language.Translate('CONTINUOUS_RESULTS') + ': ' + TimeLabel(ResultTime) +
+      '  |  ' + Language.Translate('CONTINUOUS_HIGHSCORES') + ': ' + TimeLabel(HighScoreTime);
 end;
 
 procedure TScreenContinuousPlayback.OnShow;
