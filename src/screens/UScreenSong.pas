@@ -1572,8 +1572,10 @@ begin
 end;
 
 function TScreenSong.ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
+var
+  PointerScreen, FirstPlayer, PlayerCount, I, Voice: integer;
 begin
-
+  PointerScreen := EnsureRange(Trunc(X / (ScreenW / Screens)) + 1, 1, Screens);
   // Convert mouse coordinates to the virtual render coordinate space.
   X := Round((X / (ScreenW / Screens)) * RenderW);
   if (X > RenderW) then
@@ -1592,6 +1594,28 @@ begin
   end
   else // no extension visible
   begin
+    if (Mode = smNormal) and (Interaction >= 0) and
+      (Interaction < Length(CatSongs.Song)) and CatSongs.Song[Interaction].isDuet then
+    begin
+      FirstPlayer := GetFirstPlayerIndexForScreen(PlayersPlay, Screens, PointerScreen);
+      PlayerCount := GetScreenPlayerCount(PlayersPlay, Screens, PointerScreen);
+      LayoutDuetSingerWidgets(PlayerCount);
+      for I := 0 to PlayerCount - 1 do
+        if InRegion(X, Y, Statics[DuetSingerStatics[I]].GetMouseOverArea) then
+        begin
+          if BtnDown and (MouseButton = SDL_BUTTON_LEFT) then
+          begin
+            VoiceAssignments.SelectSong(CatSongs.Song[Interaction]);
+            Voice := VoiceAssignments.VoiceForPlayer(FirstPlayer + I, 2);
+            VoiceAssignments.SetVoice(FirstPlayer + I, (Voice + 1) mod 2, 2);
+            AudioPlayback.PlaySound(SoundLib.Change);
+            SetScrollRefresh;
+          end;
+          // Keep a voice click or hover from selecting a cover underneath it.
+          Result := true;
+          Exit;
+        end;
+    end;
 
     case TSongMenuMode(Ini.SongMenu) of
       smChessboard: Result := ParseMouseChessboard(MouseButton, BtnDown, X, Y);
@@ -2122,7 +2146,7 @@ begin
     LocalStartIndex := 0;
   end;
 
-  VisibleCount := Max(2, LocalPlayerCount);
+  VisibleCount := LocalPlayerCount;
   LayoutDuetSingerWidgets(VisibleCount);
   if LocalPlayerCount = 1 then
   begin
@@ -2422,7 +2446,7 @@ begin
         LocalStartIndex := 0;
       end;
 
-      VisibleCount := Max(2, LocalPlayerCount);
+      VisibleCount := LocalPlayerCount;
       LayoutDuetSingerWidgets(VisibleCount);
       SetDuetSingerVisibility(VisibleCount);
 
