@@ -2161,71 +2161,39 @@ end;
 
 procedure TScreenSong.LayoutDuetSingerWidgets(PlayerCount: integer);
 var
-  I: integer;
-  Grid: TPlayerGrid;
-  SlotRect: TPlayerSlotRect;
-  RawTextOffsetX: real;
-  RawTextOffsetY: real;
-  TextOffsetX: real;
-  TextOffsetY: real;
-  RowScale: real;
-  BoxWidth: integer;
-  BoxHeight: integer;
-  ContainerX: integer;
-  ContainerY: integer;
-  ContainerW: integer;
-  ContainerH: integer;
-  TotalWidth: integer;
+  I, Columns, Rows, BoxWidth, BoxHeight, AreaWidth, AreaHeight: integer;
+  Left, Top: real;
 const
-  TextNudgeX = 3;
+  Gap = 4;
 begin
-  if PlayerCount <= 0 then
-    Exit;
-
+  if PlayerCount <= 0 then Exit;
   SyncDuetSingerTheme;
-  Grid := GetPlayerGrid(PlayerCount);
-  RowScale := Max(0.72, 1.0 - 0.08 * (Grid.Rows - 1));
-  BoxWidth := Max(1, Round(DuetSingerBaseStatic.W * RowScale));
-  BoxWidth := Min(BoxWidth, Max(1, (RenderW - Theme.Song.DuetSingerArea.X -
-    (Grid.Cols - 1) * 8) div Grid.Cols));
-  BoxHeight := Max(1, Round(DuetSingerBaseStatic.H * RowScale));
-  RawTextOffsetX := DuetSingerBaseText.X - DuetSingerBaseStatic.X;
-  RawTextOffsetY := DuetSingerBaseText.Y - DuetSingerBaseStatic.Y;
-  if (RawTextOffsetX < 0) or (RawTextOffsetX > DuetSingerBaseStatic.W) then
-    TextOffsetX := BoxWidth * 0.35
-  else
-    TextOffsetX := RawTextOffsetX * (BoxWidth / Max(1.0, DuetSingerBaseStatic.W));
-  if (RawTextOffsetY < 0) or (RawTextOffsetY > DuetSingerBaseStatic.H) then
-    TextOffsetY := BoxHeight * 0.15
-  else
-    TextOffsetY := RawTextOffsetY * (BoxHeight / Max(1.0, DuetSingerBaseStatic.H));
-  TotalWidth := Grid.Cols * BoxWidth;
-  if Grid.Cols > 1 then
-    Inc(TotalWidth, (Grid.Cols - 1) * 8);
-
-  ContainerX := Theme.Song.DuetSingerArea.X;
-  ContainerY := Theme.Song.DuetSingerArea.Y;
-  ContainerH := Grid.Rows * BoxHeight;
-  ContainerW := TotalWidth;
-
-  for I := 0 to High(DuetSingerStatics) do
+  AreaWidth := Theme.Song.DuetSingerArea.W;
+  if AreaWidth <= DuetSingerBaseStatic.W then
+    AreaWidth := Max(64, RenderW - Theme.Song.DuetSingerArea.X - 8);
+  AreaHeight := Theme.Song.DuetSingerArea.H;
+  if AreaHeight <= DuetSingerBaseStatic.H then
+    AreaHeight := Max(26, RenderH - Theme.Song.DuetSingerArea.Y - 55);
+  BoxWidth := Max(1, Round(DuetSingerBaseStatic.W * 0.68 * 2));
+  Columns := Min(PlayerCount, Max(1, (AreaWidth + Gap) div (BoxWidth + Gap)));
+  Rows := (PlayerCount + Columns - 1) div Columns;
+  BoxHeight := Max(22, Min(Round(DuetSingerBaseStatic.H),
+    (AreaHeight - Gap * (Rows - 1)) div Rows));
+  for I := 0 to PlayerCount - 1 do
   begin
-    if I < PlayerCount then
-    begin
-      SlotRect := GetPlayerSlotRect(I, PlayerCount, ContainerX, ContainerY, ContainerW, ContainerH);
-      Statics[DuetSingerStatics[I]].Texture.X := SlotRect.X;
-      Statics[DuetSingerStatics[I]].Texture.Y := SlotRect.Y;
-      Statics[DuetSingerStatics[I]].Texture.W := BoxWidth;
-      Statics[DuetSingerStatics[I]].Texture.H := BoxHeight;
-      Statics[DuetSingerStatics[I]].Texture.Z := Max(DuetSingerBaseStatic.Z, 0.995);
-
-      Text[DuetSingerTexts[I]].X := Statics[DuetSingerStatics[I]].Texture.X + BoxWidth / 2;
-      Text[DuetSingerTexts[I]].Y := Statics[DuetSingerStatics[I]].Texture.Y + 2;
-      Text[DuetSingerTexts[I]].W := Max(1, BoxWidth - 4);
-      Text[DuetSingerTexts[I]].H := Max(1, BoxHeight - 4);
-      Text[DuetSingerTexts[I]].Size := Max(8, Round(Min(14, DuetSingerBaseText.Size) * RowScale));
-      Text[DuetSingerTexts[I]].Z := Max(DuetSingerBaseText.Z, 0.996);
-    end;
+    Left := Theme.Song.DuetSingerArea.X + (I mod Columns) * (BoxWidth + Gap);
+    Top := Theme.Song.DuetSingerArea.Y + (I div Columns) * (BoxHeight + Gap);
+    Statics[DuetSingerStatics[I]].Texture.X := Left;
+    Statics[DuetSingerStatics[I]].Texture.Y := Top;
+    Statics[DuetSingerStatics[I]].Texture.W := BoxWidth;
+    Statics[DuetSingerStatics[I]].Texture.H := BoxHeight;
+    Statics[DuetSingerStatics[I]].Texture.Z := Max(DuetSingerBaseStatic.Z, 0.995);
+    Text[DuetSingerTexts[I]].X := Left + BoxWidth / 2;
+    Text[DuetSingerTexts[I]].Y := Top + 2;
+    Text[DuetSingerTexts[I]].W := BoxWidth - 6;
+    Text[DuetSingerTexts[I]].H := BoxHeight - 4;
+    Text[DuetSingerTexts[I]].Size := DuetSingerBaseText.Size;
+    Text[DuetSingerTexts[I]].Z := Max(DuetSingerBaseText.Z, 0.996);
   end;
 end;
 
@@ -2247,7 +2215,7 @@ begin
   for I := 0 to High(DuetSingerTexts) do
   begin
     if I < Count then
-      Text[DuetSingerTexts[I]].Text := 'P' + IntToStr(FirstNameIndex + I + 1) + ':' + 'P' + IntToStr(FirstNameIndex + I + 1) + ':' + IntToStr(VoiceAssignments.VoiceForPlayer(FirstNameIndex + I, 2) + 1)
+      Text[DuetSingerTexts[I]].Text := CatSongs.Song[Interaction].DuetNames[VoiceAssignments.VoiceForPlayer(FirstNameIndex + I, 2)]
     else
       Text[DuetSingerTexts[I]].Text := '';
   end;

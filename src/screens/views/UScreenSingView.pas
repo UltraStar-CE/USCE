@@ -618,20 +618,6 @@ var
       ScreenSing.Text[Slots[J]].Visible := Visible and (J < VisibleCount) and
         ScreenSing.Settings.AvatarsVisible and Theme.Sing.PlayerTemplate.NameEnabled;
   end;
-  procedure SetLyricsDuetColors(FirstPlayerIndex: integer);
-  var
-    PlayerColor: TRGB;
-  begin
-    PlayerColor := GetSingPlayerColor(FirstPlayerIndex - 1);
-    ScreenSing.LyricsDuetP1.LineColor_act.R := PlayerColor.R;
-    ScreenSing.LyricsDuetP1.LineColor_act.G := PlayerColor.G;
-    ScreenSing.LyricsDuetP1.LineColor_act.B := PlayerColor.B;
-
-    PlayerColor := GetSingPlayerColor(FirstPlayerIndex);
-    ScreenSing.LyricsDuetP2.LineColor_act.R := PlayerColor.R;
-    ScreenSing.LyricsDuetP2.LineColor_act.G := PlayerColor.G;
-    ScreenSing.LyricsDuetP2.LineColor_act.B := PlayerColor.B;
-  end;
   procedure HidePlayerAvatarsForScorePanel;
   var
     J: integer;
@@ -748,7 +734,7 @@ begin
 
   LastLineSungToEnd := false;
   //the song was sung to the end?
-  if not ScreenSing.SungToEnd and ((not CurrentSong.isDuet) or (PlayersPlay = 1)) and
+  if not ScreenSing.SungToEnd and (not CurrentSong.isDuet) and
       not ScreenSong.RapToFreestyle then
   begin
     Line := ScreenSing.Lyrics.GetUpperLine();
