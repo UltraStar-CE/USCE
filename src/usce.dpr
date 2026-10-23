@@ -284,7 +284,6 @@ uses
   UScreenSingController   in 'screens\controllers\UScreenSingController.pas',
   UScreenSingView         in 'screens\views\UScreenSingView.pas',
   UScreenScore            in 'screens\UScreenScore.pas',
-  UScreenJukebox          in 'screens\UScreenJukebox.pas',
   UScreenOptions          in 'screens\UScreenOptions.pas',
   UScreenOptionsGame      in 'screens\UScreenOptionsGame.pas',
   UScreenOptionsGraphics  in 'screens\UScreenOptionsGraphics.pas',
@@ -296,7 +295,6 @@ uses
   UScreenOptionsAdvanced  in 'screens\UScreenOptionsAdvanced.pas',
   UScreenOptionsNetwork   in 'screens\UScreenOptionsNetwork.pas',
   UScreenOptionsWebcam    in 'screens\UScreenOptionsWebcam.pas',
-  UScreenOptionsJukebox   in 'screens\UScreenOptionsJukebox.pas',
   UScreenEditSub          in 'screens\UScreenEditSub.pas',
   UScreenHighScores             in 'screens\UScreenHighScores.pas',
   UScreenSongMenu         in 'screens\UScreenSongMenu.pas',
@@ -332,11 +330,10 @@ uses
   UScreenPartyTournamentPlayer  in 'screens\UScreenPartyTournamentPlayer.pas',
   UScreenPartyTournamentOptions in 'screens\UScreenPartyTournamentOptions.pas',
   UScreenPartyTournamentWin     in 'screens\UScreenPartyTournamentWin.pas',
-  UScreenJukeboxOptions         in 'screens\UScreenJukeboxOptions.pas',
-  UScreenJukeboxPlaylist        in 'screens\UScreenJukeboxPlaylist.pas',
 
   UContinuousPlayback     in 'base\UContinuousPlayback.pas',
   UScreenContinuousPlayback in 'screens\UScreenContinuousPlayback.pas',
+
   UAvatars                in 'base\UAvatars.pas',
   UScreenAbout            in 'screens\UScreenAbout.pas',
 

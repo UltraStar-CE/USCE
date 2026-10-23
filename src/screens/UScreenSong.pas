@@ -318,6 +318,7 @@ type
       procedure ResetScrollList;
 
       procedure PreservePreviewForReturn;
+      procedure OpenContinuousFromMainMenu;
   end;
 
 implementation
@@ -390,13 +391,20 @@ end;
 
 function TScreenSong.FreeListMode: boolean;
 begin
-  if ((Mode = smNormal) or (Mode = smPartyTournament) or (Mode = smPartyFree) or (Mode = smJukebox)) then
+  if ((Mode = smNormal) or (Mode = smPartyTournament) or (Mode = smPartyFree)) then
     Result := true
   else
     Result := false;
 end;
 
+
 //Show Wrong Song when Tabs on Fix
+procedure TScreenSong.OpenContinuousFromMainMenu;
+begin
+  Mode := smNormal;
+  ScreenContinuousPlayback.Enabled := 1;
+end;
+
 procedure TScreenSong.FixSelected;
 var
   I2: integer;
@@ -952,29 +960,18 @@ begin
                 if CatSongs.CatNumShow = -3 then
                 begin
                   ScreenSongMenu.OnShow;
-
-                  if (ScreenSong.Mode = smJukebox) then
-                    ScreenSongMenu.MenuShow(SM_Jukebox)
-                  else
-                    ScreenSongMenu.MenuShow(SM_Playlist);
+                  ScreenSongMenu.MenuShow(SM_Playlist);
                 end
                 else
                 begin
                   ScreenSongMenu.OnShow;
-
-                  if (ScreenSong.Mode = smJukebox) then
-                    ScreenSongMenu.MenuShow(SM_Jukebox)
-                  else
-                    ScreenSongMenu.MenuShow(SM_Main);
+                  ScreenSongMenu.MenuShow(SM_Main);
                 end;
               end
               else
               begin
                 ScreenSongMenu.OnShow;
-                if (ScreenSong.Mode = smJukebox) then
-                  ScreenSongMenu.MenuShow(SM_Jukebox)
-                else
-                  ScreenSongMenu.MenuShow(SM_Playlist_Load);
+                ScreenSongMenu.MenuShow(SM_Playlist_Load);
               end;
             end //Party Mode -> Show Party Menu
             else
@@ -1150,6 +1147,7 @@ begin
             PlayListMan.SetPlayList(PlayListMan.CurPlaylist);
             SetScrollRefresh;
           end;
+
         end;
 
       SDLK_T:
@@ -1304,9 +1302,9 @@ begin
 
                 case Mode of
                   smPartyFree: FadeTo(@ScreenPartyNewRound);
-                  smJukebox: FadeTo(@ScreenJukeboxPlaylist);
                   smPartyTournament: FadeTo(@ScreenPartyTournamentRounds);
                   else FadeTo(@ScreenMain);
+
                 end;
 
               end;
@@ -1422,16 +1420,6 @@ begin
                   ScreenSong.StartSong;
                 end;
 
-                if (Mode = smJukebox) then
-                begin
-                  if (Length(ScreenJukebox.JukeboxSongsList) > 0) then
-                  begin
-                    ScreenJukebox.CurrentSongID := ScreenJukebox.JukeboxVisibleSongs[0];
-                    FadeTo(@ScreenJukebox);
-                  end
-                  else
-                    ScreenPopupError.ShowPopup(Language.Translate('PARTY_MODE_JUKEBOX_NO_SONGS'));
-                end;
               end;
           end;
         end;
@@ -1526,9 +1514,6 @@ begin
             SetScrollRefresh;
             Exit;
           end;
-
-          if (Mode = smJukebox) and (not CatSongs.Song[Interaction].Main) then
-            ScreenJukebox.AddSongToJukeboxList(Interaction);
 
           if (Mode = smNormal) and (CatSongs.Song[Interaction].isDuet) then
             DuetChange := not DuetChange;
@@ -2106,6 +2091,7 @@ begin
 
   KeepPreviewMusicOnHide := false;
   KeepPreviewPositionOnShow := false;
+
 end;
 
 procedure TScreenSong.ColorDuetNameSingers();
@@ -3111,9 +3097,6 @@ begin
     end;
   end;
 
-  if (ScreenSong.Mode = smJukebox) and (Ini.PartyPopup = 1) then
-    ScreenSongMenu.MenuShow(SM_Jukebox);
-
   isScrolling := false;
   SetJoker;
   SetStatics;
@@ -3187,9 +3170,6 @@ begin
   FixSelected;
   SetScroll;
   SetScrollRefresh;
-  //if (Mode = smPartyTournament) then
-  //  PartyTime := SDL_GetTicks();
-
 end;
 
 procedure TScreenSong.OnHide;
@@ -3535,65 +3515,31 @@ begin
     StaticsList[I].Draw;
   end;
 
-  // Jukebox Playlist
-  if (Mode = smJukebox) then
-  begin
-    if Length(ScreenJukebox.JukeboxSongsList) > Theme.Song.TextMedleyMax then
-      J := Length(ScreenJukebox.JukeboxSongsList) - Theme.Song.TextMedleyMax
-    else
-      J := 0;
-
-    for I := 0 to Theme.Song.TextMedleyMax - 1 do
-    begin
-      if (Length(ScreenJukebox.JukeboxSongsList) > I + J) then
-      begin
-        Text[TextMedleyArtist[I]].Visible := true;
-        Text[TextMedleyTitle[I]].Visible  := true;
-        Text[TextMedleyNumber[I]].Visible := true;
-        Statics[StaticMedley[I]].Visible  := true;
-
-        Text[TextMedleyNumber[I]].Text := IntToStr(I + 1 + J);
-        Text[TextMedleyArtist[I]].Text := CatSongs.Song[ScreenJukebox.JukeboxSongsList[I + J]].Artist;
-        Text[TextMedleyTitle[I]].Text  := CatSongs.Song[ScreenJukebox.JukeboxSongsList[I + J]].Title;
-      end
-      else
-      begin
-        Text[TextMedleyArtist[I]].Visible := false;
-        Text[TextMedleyTitle[I]].Visible  := false;
-        Text[TextMedleyNumber[I]].Visible := false;
-        Statics[StaticMedley[I]].Visible  := false;
-      end;
-    end;
-  end
+  // Medley Playlist
+  if Length(PlaylistMedley.Song) > Theme.Song.TextMedleyMax then
+    J := Length(PlaylistMedley.Song) - Theme.Song.TextMedleyMax
   else
+    J := 0;
+
+  for I := 0 to Theme.Song.TextMedleyMax - 1 do
   begin
-
-    //Medley Playlist
-    if Length(PlaylistMedley.Song) > Theme.Song.TextMedleyMax then
-      J := Length(PlaylistMedley.Song) - Theme.Song.TextMedleyMax
-    else
-      J := 0;
-
-    for I := 0 to Theme.Song.TextMedleyMax - 1 do
+    if (Length(PlaylistMedley.Song) > I + J) and (MakeMedley) then
     begin
-      if (Length(PlaylistMedley.Song) > I + J) and (MakeMedley) then
-      begin
-        Text[TextMedleyArtist[I]].Visible := true;
-        Text[TextMedleyTitle[I]].Visible  := true;
-        Text[TextMedleyNumber[I]].Visible := true;
-        Statics[StaticMedley[I]].Visible  := true;
+      Text[TextMedleyArtist[I]].Visible := true;
+      Text[TextMedleyTitle[I]].Visible  := true;
+      Text[TextMedleyNumber[I]].Visible := true;
+      Statics[StaticMedley[I]].Visible  := true;
 
-        Text[TextMedleyNumber[I]].Text := IntToStr(I + 1 + J);
-        Text[TextMedleyArtist[I]].Text := CatSongs.Song[PlaylistMedley.Song[I + J]].Artist;
-        Text[TextMedleyTitle[I]].Text  := CatSongs.Song[PlaylistMedley.Song[I + J]].Title;
-      end
-      else
-      begin
-        Text[TextMedleyArtist[I]].Visible := false;
-        Text[TextMedleyTitle[I]].Visible  := false;
-        Text[TextMedleyNumber[I]].Visible := false;
-        Statics[StaticMedley[I]].Visible  := false;
-      end;
+      Text[TextMedleyNumber[I]].Text := IntToStr(I + 1 + J);
+      Text[TextMedleyArtist[I]].Text := CatSongs.Song[PlaylistMedley.Song[I + J]].Artist;
+      Text[TextMedleyTitle[I]].Text  := CatSongs.Song[PlaylistMedley.Song[I + J]].Title;
+    end
+    else
+    begin
+      Text[TextMedleyArtist[I]].Visible := false;
+      Text[TextMedleyTitle[I]].Visible  := false;
+      Text[TextMedleyNumber[I]].Visible := false;
+      Statics[StaticMedley[I]].Visible  := false;
     end;
   end;
 

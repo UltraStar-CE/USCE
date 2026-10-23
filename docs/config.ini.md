@@ -9,7 +9,7 @@ English values below even when menus are translated.
 **Jump to:** [Song folders](#add-song-folders) · [Game](#game) ·
 [Graphics](#graphics) · [Sound](#sound-and-volume) · [Microphones](#microphones) ·
 [Controls](#controls) · [Themes and lyrics](#themes-and-lyrics) ·
-[Advanced](#advanced-behavior) · [Jukebox](#jukebox) · [Webcam](#webcam) ·
+[Advanced](#advanced-behavior) · [Webcam](#webcam) ·
 [Players and teams](#saved-players-and-teams) · [Piano keys](#piano-key-bindings)
 
 ## Find and edit your configuration
@@ -197,7 +197,7 @@ score and time-bar choices are also saved from their respective screens.
 | `LoadAnimation` | `Off`, `On`; `On` | Loading animation. |
 | `ScreenFade` | `Off`, `On`; `On` | Fades between screens. |
 | `EffectSing` | `Off`, `On`; `On` | Singing effects. |
-| `AskbeforeDel` | `Off`, `On`; `On` | Asks for confirmation before quitting, including with Q during singing or jukebox playback. Despite its name, this setting does not control song deletion. |
+| `AskbeforeDel` | `Off`, `On`; `On` | Asks for confirmation before quitting, including with Q during singing playback. Despite its name, this setting does not control song deletion. |
 | `OnSongClick` | `Sing`, `Select Players`, `Open Menu`; `Sing` | Action after selecting a song. |
 | `PartyPopup` | `Off`, `On`; `On` | Automatically opens the party menu where applicable. |
 | `SingScores` | `Off`, `On`, `Bar Rating`, `Remaining Score`; `On` | Chooses the in-song score display: `Off` hides it, `On` shows both bars, `Bar Rating` shows the line-rating bar, and `Remaining Score` shows the remaining-score bar. Numeric scores accompany each enabled mode; party mode keeps scores visible. |
@@ -206,28 +206,6 @@ score and time-bar choices are also saved from their respective screens.
 | `HighScoreScreenEntries` | Integer `5`–`20`; `5` | Number of high-score entries shown. Values outside the range are limited to it. |
 | `SyncTo` | `Music`, `Lyrics`, `Off`; `Music` | Synchronization mode. Keep Music for normal playback. |
 | `SingTimebarMode` | `Current`, `Remaining`, `Total`; `Remaining` | Elapsed, remaining or total song time during singing. |
-| `JukeboxTimebarMode` | `Current`, `Remaining`, `Total`; `Current` | Jukebox time display. |
-
-## Jukebox
-
-File section: `[Jukebox]`. Jukebox plays songs without a scored singing game.
-These appearance settings are independent of the singing lyric settings.
-
-| Key | Values; default | What it does |
-| --- | --- | --- |
-| `LyricsFont` | Installed font family; first available | Jukebox lyric font. |
-| `LyricsStyle` | `Regular`, `Bold`, `Outline`; `Outline` | Text styling. |
-| `LyricsEffect` | `Simple`, `Zoom`, `Slide`, `Ball`, `Shift`; `Slide` | Current-syllable animation. |
-| `LyricsAlpha` | `0.00` to `1.00` in steps of `0.05`; `1.00` | Lyric opacity, from transparent to opaque. |
-| `SongMenu` | `Off`, `On`; `On` | Shows the jukebox song menu. |
-| `SingLineColor` | Six hexadecimal RGB digits; `47B3FF` | Highlighted syllable color. |
-| `ActualLineColor` | Six hexadecimal RGB digits; `FFFFFF` | Current lyric line color. |
-| `NextLineColor` | Six hexadecimal RGB digits; `C0C0C0` | Next lyric line color. |
-| `SingLineOColor` | Six hexadecimal RGB digits; `000000` | Highlighted syllable outline. |
-| `ActualLineOColor` | Six hexadecimal RGB digits; `000000` | Current line outline. |
-| `NextLineOColor` | Six hexadecimal RGB digits; `000000` | Next line outline. |
-
-Write colors without a leading `#`, for example `FF9000` for orange.
 
 ## Webcam
 
