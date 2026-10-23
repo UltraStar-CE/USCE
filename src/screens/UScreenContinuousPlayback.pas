@@ -5,13 +5,13 @@ unit UScreenContinuousPlayback;
 
 interface
 
-uses UCommon, UMenu, UMenuText, UContinuousPlayback, sdl2;
+uses UCommon, UMenu, UContinuousPlayback, sdl2;
 
 type
   TScreenContinuousPlayback = class(TOptionsMenu)
   private
     RepeatSelection, ResultTime, HighScoreTime: integer;
-    Hint: TText;
+    PreviousRequested: boolean;
     StageChanged, SkipResults: boolean;
     procedure Advance;
     procedure ChangeStage;
@@ -49,16 +49,11 @@ begin
   Description := Language.Translate('CONTINUOUS_TITLE');
   WhereAmI := Description;
   Load;
-  Hint := TText.Create(20, 4, '');
-  Hint.W := 760;
-  Hint.H := 22;
-  Hint.Size := 14;
-  Hint.ColR := 1; Hint.ColG := 1; Hint.ColB := 1;
+
 end;
 
 destructor TScreenContinuousPlayback.Destroy;
 begin
-  Hint.Free;
   Session.Free;
   inherited;
 end;
@@ -139,7 +134,12 @@ end;
 procedure TScreenContinuousPlayback.Advance;
 var SongIndex, Skipped: integer; RestartSing: boolean; Message: UTF8String;
 begin
-  if not Session.NextSong(SongIndex) then
+  if PreviousRequested then
+  begin
+    PreviousRequested := false;
+    Session.PreviousSong(SongIndex);
+  end
+  else if not Session.NextSong(SongIndex) then
   begin
     Skipped := Session.Skipped;
     Stop;
@@ -169,6 +169,7 @@ procedure TScreenContinuousPlayback.Stop;
 begin
   if not Session.Active then Exit;
   Session.Stop;
+  PreviousRequested := false;
   if PlayersPlay > 0 then AudioInput.CaptureStop;
   AudioPlayback.SetSyncSource(nil);
   AudioPlayback.Stop;
@@ -215,7 +216,11 @@ function TScreenContinuousPlayback.HandlePlaybackKey(Key: cardinal; PressedDown:
 begin
   Result := Session.Active and PressedDown;
   if not Result then Exit;
-  if Repeated and (Key in [SDLK_ESCAPE, SDLK_BACKSPACE, SDLK_SPACE, SDLK_P, SDLK_N, SDLK_RETURN]) then Exit;
+  if ((Key = SDLK_LEFT) or (Key = SDLK_RIGHT)) and
+     ((SDL_GetModState and (KMOD_CTRL or KMOD_ALT or KMOD_SHIFT)) <> 0) then
+    Exit(false);
+  if Repeated and ((Key in [SDLK_ESCAPE, SDLK_BACKSPACE, SDLK_SPACE, SDLK_P, SDLK_RETURN]) or
+    (Key = SDLK_LEFT) or (Key = SDLK_RIGHT)) then Exit;
   case Key of
     SDLK_ESCAPE, SDLK_BACKSPACE: Stop;
     SDLK_SPACE, SDLK_P:
@@ -225,13 +230,16 @@ begin
         Session.Paused := not Session.Paused;
         if Session.Paused then AudioPlayback.Pause else AudioPlayback.Play;
       end;
-    SDLK_N:
+    SDLK_LEFT, SDLK_RIGHT:
+    begin
+      PreviousRequested := Key = SDLK_LEFT;
       if Session.Stage = psSong then
       begin
         SkipResults := true;
         ScreenSing.Finish;
       end
       else begin Session.Stage := psAdvance; StageChanged := true; end;
+    end;
     SDLK_RETURN:
       if Session.Stage in [psResults, psHighScores] then
       begin
@@ -244,19 +252,9 @@ begin
 end;
 
 procedure TScreenContinuousPlayback.Update;
-var Suspended: boolean; LabelText: UTF8String;
+var Suspended: boolean;
 begin
   if not Session.Active then Exit;
-  LabelText := Language.Translate('CONTINUOUS_CONTROLS');
-  if Session.Paused then LabelText := Language.Translate('CONTINUOUS_PAUSED') + ' | ' + LabelText;
-  if Session.Skipped > 0 then LabelText := LabelText + ' | ' +
-    Format(Language.Translate('CONTINUOUS_SKIPPED'), [Session.Skipped]);
-  Hint.Y := 4;
-  if (Session.Stage = psSong) and not Session.Scored and CurrentSong.isDuet then
-    Hint.Y := 95;
-  Renderer.DrawQuad(0, Hint.Y - 4, 0, 800, 26, 0, 0, 0, 0.6);
-  Hint.Text := LabelText;
-  Hint.Draw;
   if ScreenAct <> Screens then Exit;
   Suspended := (Display.NextScreen <> nil) or ScreenPopupHelp.Visible or
     ScreenPopupError.Visible or ScreenPopupInfo.Visible or ScreenPopupCheck.Visible or
