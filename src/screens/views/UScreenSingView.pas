@@ -831,6 +831,21 @@ begin
   if DrawScorePanel then
     HidePlayerAvatarsForScorePanel;
 
+  // Match each background to the lyrics actually drawn, including the last-line fade.
+  if IsCurrentSongDuet and (PlayersPlay <> 1) then
+  begin
+    ScreenSing.Statics[StaticLyricsBar].Visible := ScreenSing.Settings.LyricsVisible and
+      ScreenSing.LyricsDuetP1.HasVisibleText(LyricsState.MidBeat);
+    ScreenSing.Statics[StaticLyricsBarDuet].Visible := ScreenSing.Settings.LyricsVisible and
+      ScreenSing.LyricsDuetP2.HasVisibleText(LyricsState.MidBeat);
+  end
+  else
+  begin
+    ScreenSing.Statics[StaticLyricsBar].Visible := ScreenSing.Settings.LyricsVisible and
+      ScreenSing.Lyrics.HasVisibleText(LyricsState.MidBeat);
+    ScreenSing.Statics[StaticLyricsBarDuet].Visible := false;
+  end;
+
   // draw static menu (FG)
   ScreenSing.DrawFG;
 
@@ -883,8 +898,6 @@ begin
   end;
 
   // always draw custom items
-  ScreenSing.Statics[StaticLyricsBar].Visible := ScreenSing.Settings.LyricsVisible;
-  ScreenSing.Statics[StaticLyricsBarDuet].Visible := ScreenSing.Settings.LyricsVisible and IsCurrentSongDuet and (PlayersPlay <> 1);
   ScreenSing.Statics[StaticTimeBar].Visible := ScreenSing.Settings.TimeBarVisible;
   SingDraw;
 

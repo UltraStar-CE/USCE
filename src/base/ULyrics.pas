@@ -140,6 +140,7 @@ type
       procedure UpdateLineMetrics() overload;
 
       function GetUpperLineIndex(): integer;
+      function HasVisibleText(Beat: real): boolean;
 
       constructor Create(ULX, ULY, ULW, ULH, LLX, LLY, LLW, LLH: real);
       procedure   LoadTextures;
@@ -339,6 +340,18 @@ end;
  * Draw just manages the Lyrics, drawing is done by a call of DrawLyrics.
  * @param Beat: current Beat in Quarters
  *}
+function TLyricEngine.HasVisibleText(Beat: real): boolean;
+  function LineVisible(Line: TLyricLine): boolean;
+  begin
+    Result := (Length(Line.Words) > 0) and (Trim(Line.Text) <> '');
+    if Result and Line.LastLine then
+      with Line.Words[High(Line.Words)] do
+        Result := Beat < Start + Length + 15;
+  end;
+begin
+  Result := LineVisible(UpperLine) or LineVisible(LowerLine);
+end;
+
 procedure TLyricEngine.Draw(Beat: real);
 begin
   DrawLyrics(Beat);
