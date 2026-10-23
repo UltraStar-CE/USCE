@@ -5,24 +5,23 @@ unit UScreenContinuousPlayback;
 
 interface
 
-uses UCommon, UMenu, UMenuText, UContinuousPlayback, UNote, sdl2;
+uses UCommon, UMenu, UMenuText, UContinuousPlayback, sdl2;
 
 type
   TScreenContinuousPlayback = class(TOptionsMenu)
   private
-    PlaybackMode, RepeatSelection, ResultTime, HighScoreTime: integer;
-    SavedPlayerCount: integer;
-    SavedPlayers: array of TPlayer;
+    RepeatSelection, ResultTime, HighScoreTime: integer;
     Hint: TText;
     StageChanged, SkipResults: boolean;
-    procedure Start;
     procedure Advance;
     procedure ChangeStage;
     function CanShowHighScores: boolean;
   protected
     procedure LoadWidgets; override;
   public
+    Enabled: integer;
     Session: TContinuousPlayback;
+    procedure BeginSession;
     constructor Create; override;
     destructor Destroy; override;
     procedure OnShow; override;
@@ -37,7 +36,7 @@ type
 
 implementation
 
-uses SysUtils, Math, UGraphic, ULanguage, UHelp, ULog, UMusic, UPlaylist,
+uses SysUtils, UNote, UGraphic, ULanguage, UHelp, ULog, UMusic, UPlaylist,
   USongs, USong, UIni, UParty, ULyrics, URenderer, UDisplay;
 
 const
@@ -69,13 +68,12 @@ var Times: array[0..4] of UTF8String; I: integer;
 begin
   Times[0] := Language.Translate('CONTINUOUS_SKIP');
   for I := 1 to High(Times) do Times[I] := IntToStr(DisplaySeconds[I]) + ' s';
-  AddSelectSlide('CONTINUOUS_MODE', PlaybackMode,
-    [Language.Translate('CONTINUOUS_LYRICS'), Language.Translate('CONTINUOUS_PLAYERS')]);
+  AddSelectSlide('CONTINUOUS_TITLE', Enabled,
+    [Language.Translate('OPTION_VALUE_OFF'), Language.Translate('OPTION_VALUE_ON')]);
   AddSelectSlide('CONTINUOUS_REPEAT', RepeatSelection,
     [Language.Translate('OPTION_VALUE_OFF'), Language.Translate('OPTION_VALUE_ON')]);
   AddSelectSlide('CONTINUOUS_RESULTS', ResultTime, Times);
   AddSelectSlide('CONTINUOUS_HIGHSCORES', HighScoreTime, Times);
-  AddButton('CONTINUOUS_START');
 end;
 
 procedure TScreenContinuousPlayback.OnShow;
@@ -93,8 +91,7 @@ begin
   case Key of
     SDLK_ESCAPE, SDLK_BACKSPACE: FadeTo(@ScreenSong);
     SDLK_RETURN:
-      if Interaction = 4 then Start
-      else if Interaction = 5 then FadeTo(@ScreenSong);
+      if Interaction = 4 then FadeTo(@ScreenSong);
     SDLK_UP: InteractPrev;
     SDLK_DOWN: InteractNext;
     SDLK_LEFT: if Interactions[Interaction].Typ = iSelectS then InteractDec;
@@ -103,7 +100,7 @@ begin
   end;
 end;
 
-procedure TScreenContinuousPlayback.Start;
+procedure TScreenContinuousPlayback.BeginSession;
 var Selection: TPlaybackSongs; I, SongIndex: integer; Ordered: boolean;
 begin
   Ordered := (CatSongs.CatNumShow = -3) and (PlaylistMan.CurPlaylist >= 0) and
@@ -131,13 +128,10 @@ begin
         Selection[High(Selection)] := I;
       end;
   if Length(Selection) = 0 then Exit;
-  SavedPlayerCount := PlayersPlay;
-  SavedPlayers := Copy(Player);
   Session.ResultSeconds := DisplaySeconds[ResultTime];
   Session.HighScoreSeconds := DisplaySeconds[HighScoreTime];
   Session.Start(Selection, ScreenSong.Interaction, Ordered,
-    RepeatSelection = 1, PlaybackMode = 1);
-  if not Session.Scored then PlayersPlay := 0;
+    RepeatSelection = 1, PlayersPlay > 0);
   ScreenSong.Mode := smNormal;
   Advance;
 end;
@@ -180,9 +174,6 @@ begin
   AudioPlayback.Stop;
   LyricsState.Stop;
   LyricsState.SetSyncSource(nil);
-  PlayersPlay := SavedPlayerCount;
-  Player := Copy(SavedPlayers);
-  SavedPlayers := nil;
   StageChanged := false;
   ScreenSing.FadeOut := true;
   FadeTo(@ScreenSong);

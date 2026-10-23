@@ -4533,14 +4533,28 @@ end;
 
 procedure TScreenSong.StartSong;
 begin
+  // The sing and score screens are created by player setup.
+  if not Assigned(ScreenSing) then
+  begin
+    SelectPlayers;
+    Exit;
+  end;
   CatSongs.Selected := Interaction;
+  if (Mode = smNormal) and ScreenName.LyricsOnly then
+  begin
+    PlayersPlay := 0;
+    SetLength(Player, 0);
+  end;
 
   if (Mode = smPartyFree) then
     Party.SaveSungPartySong(Interaction);
 
   StopMusicPreview();
 
-  FadeTo(@ScreenSing);
+  if (Mode = smNormal) and (ScreenContinuousPlayback.Enabled = 1) then
+    ScreenContinuousPlayback.BeginSession
+  else
+    FadeTo(@ScreenSing);
 end;
 
 procedure TScreenSong.MarkSongStarted;
