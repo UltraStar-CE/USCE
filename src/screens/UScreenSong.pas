@@ -2339,6 +2339,7 @@ end;
 
 procedure TScreenSong.SetScrollRefresh;
 begin
+  SchedulePreview;
   case TSongMenuMode(Ini.SongMenu) of
     smRoulette: SetRouletteScrollRefresh;
     smChessboard: SetChessboardScrollRefresh;
@@ -3917,6 +3918,15 @@ procedure TScreenSong.SchedulePreview(SelectionSettled: boolean);
 begin
   if PreviewInteraction <> Interaction then
   begin
+    // A newly selected song must not keep playing the previous preview while
+    // cover loading or the debounce delays opening its replacement.
+    if (PreviewOpened <> -1) and (PreviewOpened <> Interaction) then
+    begin
+      StopMusicPreview;
+      StopVideoPreview;
+      PreviewOpened := -1;
+      PreviewEndReloaded := false;
+    end;
     PreviewInteraction := Interaction;
     LastPreviewStartTime := SDL_GetTicks;
     PreviewSettledTime := 0;
