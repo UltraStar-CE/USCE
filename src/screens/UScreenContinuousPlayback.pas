@@ -82,7 +82,7 @@ procedure TScreenContinuousPlayback.OnShow;
 begin
   inherited;
   Interaction := 0;
-  Help.SetHelpID('ID_ContinuousPlayback');
+  Help.SetHelpID('ID_082');
 end;
 
 function TScreenContinuousPlayback.ParseInput(Key: cardinal; CharCode: UCS4Char;
