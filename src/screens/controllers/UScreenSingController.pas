@@ -1671,7 +1671,7 @@ begin
         Display.CheckOK := true;
       end
       else if ScreenContinuousPlayback.Session.Active then
-        ScreenContinuousPlayback.SongFinished(SungToEnd)
+        ScreenContinuousPlayback.SongFinished
       else
         Party.CallAfterSing;
     end;

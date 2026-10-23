@@ -29,7 +29,7 @@ type
     function ParseInput(Key: cardinal; CharCode: UCS4Char;
       PressedDown: boolean; Repeated: boolean = false): boolean; override;
     function HandlePlaybackKey(Key: cardinal; PressedDown: boolean; Repeated: boolean = false): boolean;
-    procedure SongFinished(Completed: boolean);
+    procedure SongFinished;
     procedure SongFailed;
     procedure Update;
     procedure Stop;
@@ -82,7 +82,7 @@ procedure TScreenContinuousPlayback.OnShow;
 begin
   inherited;
   Interaction := 0;
-  Help.SetHelpID('ID_012');
+  Help.SetHelpID('ID_ContinuousPlayback');
 end;
 
 function TScreenContinuousPlayback.ParseInput(Key: cardinal; CharCode: UCS4Char;
@@ -206,9 +206,9 @@ begin
   end;
 end;
 
-procedure TScreenContinuousPlayback.SongFinished(Completed: boolean);
+procedure TScreenContinuousPlayback.SongFinished;
 begin
-  Session.FinishSong(Completed and not SkipResults);
+  Session.FinishSong(not SkipResults);
   StageChanged := true;
 end;
 
