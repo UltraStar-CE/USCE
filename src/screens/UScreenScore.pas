@@ -582,7 +582,7 @@ begin
         begin
           if (FinishScreenDraw = true) then
           begin
-            if (CurrentSong.isDuet and (Ini.DuetScores = 0)) or (ScreenSong.RapToFreestyle) or (ScreenSong.Mode = smMedley) then
+            if (CurrentSong.isDuet and (Ini.DuetScores = 0)) or (ScreenSong.Mode = smMedley) then
             begin
               ScreenSong.PreservePreviewForReturn;
               FadeTo(@ScreenSong)
@@ -609,7 +609,7 @@ begin
            if (FinishScreenDraw = true) then
            begin
 
-             if (CurrentSong.isDuet and (Ini.DuetScores = 0)) or (ScreenSong.RapToFreestyle) or (ScreenSong.Mode = smMedley) then
+             if (CurrentSong.isDuet and (Ini.DuetScores = 0)) or (ScreenSong.Mode = smMedley) then
              begin
                ScreenSong.PreservePreviewForReturn;
                FadeTo(@ScreenSong)
