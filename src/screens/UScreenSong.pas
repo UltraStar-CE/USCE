@@ -119,6 +119,7 @@ type
       function SelectLoopNextSong: boolean;
       procedure StartLoopPlaybackForCurrentSong(ForceFullscreen: boolean);
       procedure GetLoopPlaybackRange(out StartPos, EndPos: real);
+      procedure ResetLoopMode;
       procedure ToggleLoopMode;
       procedure ToggleLoopPause;
       function FormatLoopClock(Seconds: real): UTF8String;
@@ -399,6 +400,16 @@ var
   AltJumpLastTick: cardinal = 0;
   AltJumpModifiers: word = 0;
 
+procedure OnEndClassicParty(Value: boolean; Data: Pointer);
+begin
+  if Value then
+  begin
+    ScreenSong.ResetLoopMode;
+    AudioPlayback.PlaySound(SoundLib.Back);
+    Display.FadeTo(@ScreenMain);
+  end;
+end;
+
 // ***** Public methods ****** //
 function TScreenSong.EnsureMedleyData(SongIndex: integer): boolean;
 var
@@ -597,6 +608,14 @@ begin
   begin
     CoverFull := false;
   end;
+end;
+
+procedure TScreenSong.ResetLoopMode;
+begin
+  LoopModeEnabled := false;
+  LoopPaused := false;
+  LoopForceFixedOrder := false;
+  CoverFull := false;
 end;
 
 procedure TScreenSong.ToggleLoopPause;
@@ -1954,15 +1973,20 @@ begin
                 //  CurrentPartyTime := MAX_TIME - StrToInt(Text[TextPartyTime].Text);
 
                 case Mode of
-                  smPartyFree: FadeTo(@ScreenPartyNewRound);
+                  smPartyFree:
+                  begin
+                    ResetLoopMode;
+                    FadeTo(@ScreenPartyNewRound);
+                  end;
                   smJukebox: FadeTo(@ScreenJukeboxPlaylist);
-                  smPartyTournament: FadeTo(@ScreenPartyTournamentRounds);
+                  smPartyTournament:
+                  begin
+                    ResetLoopMode;
+                    FadeTo(@ScreenPartyTournamentRounds);
+                  end;
                   else
                   begin
-                    LoopModeEnabled := false;
-                    LoopPaused := false;
-                    LoopForceFixedOrder := false;
-                    CoverFull := false;
+                    ResetLoopMode;
                     FadeTo(@ScreenMain);
                   end;
                 end;
@@ -1974,12 +1998,7 @@ begin
           //When in party Mode then Ask before Close
           else if (Mode = smPartyClassic) then
           begin
-            LoopModeEnabled := false;
-            LoopPaused := false;
-            LoopForceFixedOrder := false;
-            CoverFull := false;
-            AudioPlayback.PlaySound(SoundLib.Back);
-            CheckFadeTo(@ScreenMain,'MSG_END_PARTY');
+            ScreenPopupCheck.ShowPopup('MSG_END_PARTY', OnEndClassicParty, nil, false);
           end;
 
           if (TSongMenuMode(Ini.SongMenu) in [smChessboard, smList]) then
