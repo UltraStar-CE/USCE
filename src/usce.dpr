@@ -191,6 +191,7 @@ uses
   USingScores       in 'base\USingScores.pas',
   USingNotes        in 'base\USingNotes.pas',
   UPathUtils        in 'base\UPathUtils.pas',
+  UVoiceParts       in 'base\UVoiceParts.pas',
   UVoiceAssignments in 'base\UVoiceAssignments.pas',
   UNote             in 'base\UNote.pas',
   UBeatTimer        in 'base\UBeatTimer.pas',

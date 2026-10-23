@@ -236,8 +236,8 @@ begin
 
       if Song.isDuet then
       begin
-        SongFile.WriteLine('#P1:' + EncodeToken(Song.DuetNames[0]));
-        SongFile.WriteLine('#P2:' + EncodeToken(Song.DuetNames[1]));
+        for CurrentTrack := 0 to High(Song.Tracks) do
+          SongFile.WriteLine('#P' + IntToStr(CurrentTrack + 1) + ':' + EncodeToken(Song.DuetNames[CurrentTrack]));
       end;
 
       // write custom header tags

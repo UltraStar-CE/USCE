@@ -5948,6 +5948,13 @@ begin
     Error := true;
   end;
 
+  if (not Error) and (CurrentSong.VoiceCount > 2) then
+  begin
+    FadeTo(@ScreenSong);
+    ScreenPopupError.ShowPopup(Language.Translate('ERROR_MULTIPART_EDITOR_UNSUPPORTED'));
+    Exit;
+  end;
+
   if Error then
   begin
     //Error Loading Song -> Go back to Song Screen and Show some Error Message
