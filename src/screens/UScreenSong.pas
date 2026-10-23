@@ -318,7 +318,7 @@ type
       procedure ResetScrollList;
 
       procedure PreservePreviewForReturn;
-      procedure EnterLoopModeFromMainMenu;
+      procedure OpenContinuousFromMainMenu;
   end;
 
 implementation
@@ -399,19 +399,10 @@ end;
 
 
 //Show Wrong Song when Tabs on Fix
-procedure TScreenSong.EnterLoopModeFromMainMenu;
+procedure TScreenSong.OpenContinuousFromMainMenu;
 begin
   Mode := smNormal;
-  LoopForceFixedOrder := false;
-  LoopPaused := false;
-  LoopPreferredCoverFull := true;
-  CoverFull := true;
-
-  if not LoopModeEnabled then
-    LoopModeEnabled := true;
-
-  if (CatSongs.VisibleSongs > 0) and (not CatSongs.Song[Interaction].Main) then
-    StartLoopPlaybackForCurrentSong(true);
+  ScreenContinuousPlayback.Enabled := 1;
 end;
 
 procedure TScreenSong.FixSelected;
@@ -3179,9 +3170,6 @@ begin
   FixSelected;
   SetScroll;
   SetScrollRefresh;
-  //if (Mode = smPartyTournament) then
-  //  PartyTime := SDL_GetTicks();
-
 end;
 
 procedure TScreenSong.OnHide;

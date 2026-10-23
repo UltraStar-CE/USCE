@@ -228,7 +228,6 @@ var
   FullScreen:     boolean;
 
   Tex_TimeProgress: TTexture;
-  Tex_JukeboxTimeProgress: TTexture;
   
   //Sing Bar Mod
   Tex_SingBar_Back:  TTexture;
