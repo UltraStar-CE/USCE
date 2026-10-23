@@ -106,7 +106,7 @@ end;
 procedure TScreenContinuousPlayback.Start;
 var Selection: TPlaybackSongs; I, SongIndex: integer; Ordered: boolean;
 begin
-  Ordered := (PlaylistMan.CurPlaylist >= 0) and
+  Ordered := (CatSongs.CatNumShow = -3) and (PlaylistMan.CurPlaylist >= 0) and
     (PlaylistMan.CurPlaylist < Length(PlaylistMan.Playlists)) and
     PlaylistMan.Playlists[PlaylistMan.CurPlaylist].FixedOrder;
   Selection := nil;
