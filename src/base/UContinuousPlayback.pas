@@ -25,6 +25,7 @@ type
     procedure Start(const Selection: TPlaybackSongs; FirstSong: integer;
       InOrder, RepeatSelection, WithPlayers: boolean);
     function NextSong(out Song: integer): boolean;
+    function PreviousSong(out Song: integer): boolean;
     procedure RejectCurrentSong;
     procedure FinishSong(ShowResults: boolean);
     procedure NextStage;
@@ -90,6 +91,38 @@ begin
       Result := true;
       Exit;
     end;
+  end;
+end;
+
+function TContinuousPlayback.PreviousSong(out Song: integer): boolean;
+var Candidate, Attempts: integer;
+begin
+  Result := false;
+  Candidate := Position;
+  for Attempts := 1 to Length(Songs) do
+  begin
+    Dec(Candidate);
+    if Candidate < 0 then
+    begin
+      if not RepeatSongs then Break;
+      Candidate := High(Songs);
+    end;
+    if not Rejected[Candidate] then
+    begin
+      Position := Candidate;
+      Song := Songs[Position];
+      Stage := psSong;
+      Paused := false;
+      Exit(true);
+    end;
+  end;
+  // At the beginning of a non-repeating selection, restart the current song.
+  if (Position >= 0) and (Position < Length(Songs)) and not Rejected[Position] then
+  begin
+    Song := Songs[Position];
+    Stage := psSong;
+    Paused := false;
+    Result := true;
   end;
 end;
 
