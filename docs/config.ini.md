@@ -164,10 +164,9 @@ File section: `[Controller]`. Available under **Options → Input**.
 | Key | Values; default | What it does |
 | --- | --- | --- |
 | `Joypad` | `Off`, `On`; `Off` | Enables controller input. |
-| `Mouse` | `Off`, `System`, `Game`; `Game` | Disables mouse input, uses the system pointer or the game's pointer. |
 
-Legacy `Mouse` values `Hardware Cursor` and `Software Cursor` correspond to
-`System` and `Game`.
+Mouse input is always available. The pointer appears when moved or clicked and
+hides after two seconds without activity. Older `Mouse` settings are ignored.
 
 ## Themes and lyrics
 

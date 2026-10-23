@@ -2440,7 +2440,7 @@ begin
      Display.Cursor_HiddenByScreen then
   begin
     CursorForcedVisible := true;
-    Display.SetCursor(cshIgnoreSingScreen);
+    Display.SetCursor;
   end;
 end;
 
