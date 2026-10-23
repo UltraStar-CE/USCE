@@ -807,11 +807,12 @@ var
   FirstNoteDelta: integer; // time in beats between the start of the current line and its first note
   MoveStartX: real;        // x-pos. the bar starts to move from
   MoveDist: real;          // number of pixels the bar will move
+  BarWidth, BarHeight: real;
   LyricEngine: TLyricEngine;
   Col: TRGB;
 const
-  BarWidth  = 50; // width  of the lyric helper bar
-  BarHeight = 30; // height of the lyric helper bar
+  DefaultBarWidth  = 50; // width  of the lyric helper bar
+  DefaultBarHeight = 30; // height of the lyric helper bar
   BarMoveLimit = 40; // max. number of beats remaining before the bar starts to move
 begin
   // get current lyrics line and the time in beats of its first note
@@ -825,6 +826,8 @@ begin
   else
     LyricEngine := ScreenSing.Lyrics;
 
+  BarHeight := Min(DefaultBarHeight, LyricEngine.UpperLineH * 0.85);
+  BarWidth := DefaultBarWidth * BarHeight / DefaultBarHeight;
   LyricEngine.FontFamily := Ini.LyricsFont;
   LyricEngine.FontStyle  := Ini.LyricsStyle;
 
@@ -1012,6 +1015,7 @@ begin
         TrackIndex := ScreenSing.DisplayedVoices[I];
         LyricEngine := ScreenSing.VoiceLyrics[TrackIndex];
         LyricEngine.Draw(LyricsState.MidBeat);
+        SingDrawLyricHelper(TrackIndex, LyricEngine.UpperLineX, LyricEngine.UpperLineW / 2);
         SetFontSize(14);
         SetFontColor(LyricEngine.LineColor_act.R, LyricEngine.LineColor_act.G,
           LyricEngine.LineColor_act.B, 1);
