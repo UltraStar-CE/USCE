@@ -291,7 +291,7 @@ procedure SingDrawOscilloscopes;
     Layout: TSingLaneLayout;
   begin
     Layout := GetSingLaneLayout(PlayerCountOnScreen, PlayerIndexOnScreen, Theme.Sing.PlayerLayout,
-      CurrentSong.isDuet and (PlayersPlay <> 1));
+      CurrentSong.isDuet);
     LaneLeft := Layout.ColumnLeft;
     LaneTop := Layout.RowAnchorY;
     LaneWidth := Layout.ColumnWidth;
@@ -321,7 +321,7 @@ procedure SingDrawOscilloscopes;
 
     BasePosition := GetBaseOscilloscopePosition;
     Layout := GetSingLaneLayout(LocalPlayerCount, LocalIndex, Theme.Sing.PlayerLayout,
-      CurrentSong.isDuet and (PlayersPlay <> 1));
+      CurrentSong.isDuet);
     GetLaneLayout(LocalPlayerCount, LocalIndex, LaneLeft, LaneTop, LaneWidth);
     Scale := Layout.WidgetScale;
 
@@ -818,7 +818,7 @@ begin
   CurLine := @CurrentSong.Tracks[CP].Lines[CurrentSong.Tracks[CP].CurrentLine];
 
   // FIXME: accessing ScreenSing is not that generic
-  if (CurrentSong.isDuet) and (PlayersPlay <> 1) then
+  if (CurrentSong.isDuet) then
   begin
     if (CP = 1) then
       LyricEngine := ScreenSing.LyricsDuetP2
@@ -878,7 +878,7 @@ begin
       // determine lyric help bar position and size
       Bounds.Left := MoveStartX + BarProgress * MoveDist;
       Bounds.Right := Bounds.Left + BarWidth;
-      if (CurrentSong.isDuet) and (PlayersPlay <> 1) then
+      if (CurrentSong.isDuet) then
       begin
         if (CP = 0) then
           Bounds.Top := Theme.LyricBarDuetP1.IndicatorYOffset + Theme.LyricBarDuetP1.UpperY
@@ -943,7 +943,7 @@ var
     end;
 
     Layout := GetSingLaneLayout(PlayerCountOnScreen, LocalIndex, Theme.Sing.PlayerLayout,
-      CurrentSong.isDuet and (PlayersPlay <> 1));
+      CurrentSong.isDuet);
     Left := Layout.GridLeft;
     Right := Layout.GridRight;
     Top := Layout.GuideTopY;
@@ -1009,7 +1009,7 @@ var
     end;
 
     Layout := GetSingLaneLayout(PlayerCountOnScreen, LocalIndex, Theme.Sing.PlayerLayout,
-      CurrentSong.isDuet and (PlayersPlay <> 1));
+      CurrentSong.isDuet);
     Left := Layout.GridLeft;
     Right := Layout.GridRight;
     Width := Right - Left;
@@ -1024,7 +1024,7 @@ begin
   NR.WMid  := 380; //NR.Width / 2;
   NR.Mid   := 400; //NR.Left + NR.WMid;
   // FIXME: accessing ScreenSing is not that generic
-  if (CurrentSong.isDuet) and (PlayersPlay <> 1) then
+  if (CurrentSong.isDuet) then
   begin
     LyricEngineDuetP1 := ScreenSing.LyricsDuetP1;
     LyricEngineDuetP2 := ScreenSing.LyricsDuetP2;
@@ -1035,7 +1035,7 @@ begin
   // draw lyrics
   if (ScreenSing.Settings.LyricsVisible) then
   begin
-    if (CurrentSong.isDuet) and (PlayersPlay <> 1) then
+    if (CurrentSong.isDuet) then
     begin
       LyricEngineDuetP1.Draw(LyricsState.MidBeat);
       SingDrawLyricHelper(0, NR.Left, NR.WMid);
@@ -1098,7 +1098,7 @@ begin
     end;
 
     Layout := GetSingLaneLayout(PlayerCountOnScreen, LocalIndex, Theme.Sing.PlayerLayout,
-      CurrentSong.isDuet and (PlayersPlay <> 1));
+      CurrentSong.isDuet);
     ContentScale := Layout.ContentScale;
     NotesH[I - 1] := Max(2.0, BaseNoteH * ContentScale);
     NotesW[I - 1] := Max(1.0, BaseNoteW * ContentScale);
@@ -1115,9 +1115,7 @@ begin
 
     GetLaneLayout(PlayerIndex, LaneLeft, LaneRight, LaneWidth, LineTop, LineSpacing);
 
-    TrackIndex := 0;
-    if (CurrentSong.isDuet) and (PlayersPlay <> 1) and Odd(PlayerIndex) then
-      TrackIndex := 1;
+    TrackIndex := Player[PlayerIndex].Track;
 
     SingDrawPlayerBGLine(LaneLeft, LineTop, LaneRight, TrackIndex, PlayerIndex, LineSpacing);
     SingDrawLine(LaneLeft, LineTop, LaneRight, TrackIndex, PlayerIndex, LineSpacing);

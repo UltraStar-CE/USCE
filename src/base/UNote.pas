@@ -329,7 +329,7 @@ begin
   LyricsState.UpdateBeats();
 
   PetGr := 0;
-  if (CurrentSong.isDuet) and (PlayersPlay <> 1) then
+  if (CurrentSong.isDuet) then
     PetGr := 1;
 
   // sentences routines
@@ -369,7 +369,7 @@ begin
   // clean note of player
   for I := 0 to High(Player) do
   begin
-    if (not CurrentSong.isDuet) or (I mod 2 = CP) then
+    if (not CurrentSong.isDuet) or (Player[I].Track = CP) then
     begin
       Player[I].LengthNote := 0;
       Player[I].HighNote := -1;
@@ -382,22 +382,23 @@ end;
 
 procedure NewBeatClick;
 var
-  Count: integer;
+  Count, Track: integer;
 begin
+  Track := Player[0].Track;
   // beat click
 
   if not (CurrentSong.isDuet) or (PlayersPlay = 1) then
   begin
   if ((Ini.BeatClick = 1) and
-    ((LyricsState.CurrentBeatC + USong.DEFAULT_RESOLUTION + CurrentSong.Tracks[0].NotesGAP) mod USong.DEFAULT_RESOLUTION = 0)) then
+    ((LyricsState.CurrentBeatC + USong.DEFAULT_RESOLUTION + CurrentSong.Tracks[Track].NotesGAP) mod USong.DEFAULT_RESOLUTION = 0)) then
     begin
       PlaySyntheticBeatClick;
     end;
 
-    for Count := 0 to CurrentSong.Tracks[0].Lines[CurrentSong.Tracks[0].CurrentLine].HighNote do
+    for Count := 0 to CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine].HighNote do
     begin
       //basisbit todo
-      if (CurrentSong.Tracks[0].Lines[CurrentSong.Tracks[0].CurrentLine].Notes[Count].StartBeat = LyricsState.CurrentBeatC) then
+      if (CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine].Notes[Count].StartBeat = LyricsState.CurrentBeatC) then
       begin
         // click assist
         if Ini.ClickAssist = 1 then
@@ -520,7 +521,7 @@ begin
   for PlayerIndex := 0 to PlayersPlay - 1 do
   begin
     if (PlayerIndex = TargetPlayer) and
-      ((not CurrentSong.isDuet) or (PlayerIndex mod 2 = CP) or (PlayersPlay = 1)) then
+      ((not CurrentSong.isDuet) or (Player[PlayerIndex].Track = CP)) then
     begin
       Player[PlayerIndex].ScorePerfectRemaining :=
         Player[PlayerIndex].ScorePerfectRemaining - PotentialPassed;
@@ -539,7 +540,7 @@ begin
 
   for PlayerIndex := 0 to High(Player) do
   begin
-    if (not CurrentSong.isDuet) or (PlayerIndex mod 2 = CP) or (PlayersPlay = 1) then
+    if (not CurrentSong.isDuet) or (Player[PlayerIndex].Track = CP) then
     begin
       Screen.Scores.SetRemainingScore(
         byte(PlayerIndex),
@@ -555,7 +556,7 @@ var CP, MaxCP: integer;
 begin
   if not Assigned(Screen) then Exit;
   MaxCP := 0;
-  if CurrentSong.isDuet and (PlayersPlay <> 1) then MaxCP := 1;
+  if CurrentSong.isDuet then MaxCP := 1;
   for CP := 0 to MaxCP do
   begin
     NewNote(CP, Screen);
@@ -604,7 +605,7 @@ begin
   // analyze player signals
   for PlayerIndex := 0 to PlayersPlay-1 do
   begin
-    if (not CurrentSong.isDuet) or (PlayerIndex mod 2 = CP) then
+    if (not CurrentSong.isDuet) or (Player[PlayerIndex].Track = CP) then
     begin
 
       // delay in beats (Ini.PlayerDelay is ms)
