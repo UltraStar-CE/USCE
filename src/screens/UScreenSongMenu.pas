@@ -549,7 +549,7 @@ begin
         ISelections3[2] := Language.Translate('OPTION_VALUE_EDITION');
         ISelections3[3] := Language.Translate('OPTION_VALUE_GENRE');
         ISelections3[4] := Language.Translate('OPTION_VALUE_LANGUAGE');
-        ISelections3[5] := Language.Translate('JUKEBOX_RANDOM');
+        ISelections3[5] := Language.Translate('OPTION_VALUE_RANDOM');
         SelectValue3 := 0;
         UpdateSelectSlideOptions(2, ISelections3, SelectValue3);
         Interaction := 4;
