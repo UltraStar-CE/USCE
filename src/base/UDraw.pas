@@ -1012,6 +1012,7 @@ begin
       ScreenSing.LayoutVoiceLyrics;
       for I := 0 to High(ScreenSing.DisplayedVoices) do
       begin
+        ScreenSing.PositionVoiceLyrics(I);
         TrackIndex := ScreenSing.DisplayedVoices[I];
         LyricEngine := ScreenSing.VoiceLyrics[TrackIndex];
         LyricEngine.Draw(LyricsState.MidBeat);
