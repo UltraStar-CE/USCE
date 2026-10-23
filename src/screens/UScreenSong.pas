@@ -1529,7 +1529,6 @@ begin
             begin
               VoiceAssignments.SelectSong(CatSongs.Song[Interaction]);
               VoiceAssignments.Rotate(2);
-              SetScrollRefresh;
             end;
         end;
       SDLK_1:
@@ -1618,8 +1617,6 @@ begin
             VoiceAssignments.SelectSong(CatSongs.Song[Interaction]);
             Voice := VoiceAssignments.VoiceForPlayer(FirstPlayer + I, 2);
             VoiceAssignments.SetVoice(FirstPlayer + I, (Voice + 1) mod 2, 2);
-            AudioPlayback.PlaySound(SoundLib.Change);
-            SetScrollRefresh;
           end;
           // Keep a voice click or hover from selecting a cover underneath it.
           Result := true;
@@ -2155,16 +2152,11 @@ begin
 
   VisibleCount := LocalPlayerCount;
   LayoutDuetSingerWidgets(VisibleCount);
-  if LocalPlayerCount = 1 then
-  begin
-    setColor(DuetSingerStatics[0], GetSongPlayerColor(LocalStartIndex));
-    setColor(DuetSingerStatics[1], GetPlayerLightColor(Ini.SingColor[LocalStartIndex]));
-  end
-  else
-  begin
-    for I := 0 to VisibleCount - 1 do
-      setColor(DuetSingerStatics[I], GetSongPlayerColor(LocalStartIndex + I));
-  end;
+  VoiceAssignments.SelectSong(CatSongs.Song[Interaction]);
+  SetDuetSingerVisibility(VisibleCount);
+  SetDuetSingerTexts(VisibleCount, LocalStartIndex);
+  for I := 0 to VisibleCount - 1 do
+    setColor(DuetSingerStatics[I], GetSongPlayerColor(LocalStartIndex + I));
 end;
 
 procedure TScreenSong.LayoutDuetSingerWidgets(PlayerCount: integer);
@@ -2193,7 +2185,9 @@ begin
   SyncDuetSingerTheme;
   Grid := GetPlayerGrid(PlayerCount);
   RowScale := Max(0.72, 1.0 - 0.08 * (Grid.Rows - 1));
-  BoxWidth := Max(1, Round(DuetSingerBaseStatic.W * 0.68 * RowScale));
+  BoxWidth := Max(1, Round(DuetSingerBaseStatic.W * RowScale));
+  BoxWidth := Min(BoxWidth, Max(1, (RenderW - Theme.Song.DuetSingerArea.X -
+    (Grid.Cols - 1) * 8) div Grid.Cols));
   BoxHeight := Max(1, Round(DuetSingerBaseStatic.H * RowScale));
   RawTextOffsetX := DuetSingerBaseText.X - DuetSingerBaseStatic.X;
   RawTextOffsetY := DuetSingerBaseText.Y - DuetSingerBaseStatic.Y;
@@ -2225,11 +2219,11 @@ begin
       Statics[DuetSingerStatics[I]].Texture.H := BoxHeight;
       Statics[DuetSingerStatics[I]].Texture.Z := Max(DuetSingerBaseStatic.Z, 0.995);
 
-      Text[DuetSingerTexts[I]].X := Statics[DuetSingerStatics[I]].Texture.X + TextOffsetX + TextNudgeX;
-      Text[DuetSingerTexts[I]].Y := Statics[DuetSingerStatics[I]].Texture.Y + TextOffsetY;
-      Text[DuetSingerTexts[I]].W := BoxWidth;
-      Text[DuetSingerTexts[I]].H := Max(1, Round(DuetSingerBaseText.H * RowScale));
-      Text[DuetSingerTexts[I]].Size := Max(8, Round(DuetSingerBaseText.Size * RowScale));
+      Text[DuetSingerTexts[I]].X := Statics[DuetSingerStatics[I]].Texture.X + BoxWidth / 2;
+      Text[DuetSingerTexts[I]].Y := Statics[DuetSingerStatics[I]].Texture.Y + 2;
+      Text[DuetSingerTexts[I]].W := Max(1, BoxWidth - 4);
+      Text[DuetSingerTexts[I]].H := Max(1, BoxHeight - 4);
+      Text[DuetSingerTexts[I]].Size := Max(8, Round(Min(14, DuetSingerBaseText.Size) * RowScale));
       Text[DuetSingerTexts[I]].Z := Max(DuetSingerBaseText.Z, 0.996);
     end;
   end;
@@ -2253,7 +2247,7 @@ begin
   for I := 0 to High(DuetSingerTexts) do
   begin
     if I < Count then
-      Text[DuetSingerTexts[I]].Text := CatSongs.Song[Interaction].DuetNames[VoiceAssignments.VoiceForPlayer(FirstNameIndex + I, 2)]
+      Text[DuetSingerTexts[I]].Text := 'P' + IntToStr(FirstNameIndex + I + 1) + ':' + 'P' + IntToStr(FirstNameIndex + I + 1) + ':' + IntToStr(VoiceAssignments.VoiceForPlayer(FirstNameIndex + I, 2) + 1)
     else
       Text[DuetSingerTexts[I]].Text := '';
   end;
