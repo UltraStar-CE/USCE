@@ -62,13 +62,9 @@ uses
   UScreenOptionsAdvanced,
   UScreenOptionsNetwork,
   UScreenOptionsWebcam,
-  UScreenOptionsJukebox,
   UScreenSong,
   UScreenContinuousPlayback,
   UScreenSingController,
-  UScreenJukebox,
-  UScreenJukeboxOptions,
-  UScreenJukeboxPlaylist,
   UScreenScore,
   UScreenHighScores,
   UScreenEditSub,
@@ -141,10 +137,6 @@ var
   ScreenContinuousPlayback: TScreenContinuousPlayback;
   ScreenSing:         TScreenSingController;
 
-  ScreenJukebox:         TScreenJukebox;
-  ScreenJukeboxOptions:  TScreenJukeboxOptions;
-  ScreenJukeboxPlaylist: TScreenJukeboxPlaylist;
-
   ScreenScore:        TScreenScore;
   ScreenHighScores:   TScreenHighScores;
   ScreenOptions:          TScreenOptions;
@@ -158,7 +150,6 @@ var
   ScreenOptionsAdvanced:  TScreenOptionsAdvanced;
   ScreenOptionsNetwork:   TScreenOptionsNetwork;
   ScreenOptionsWebcam:    TScreenOptionsWebcam;
-  ScreenOptionsJukebox:   TScreenOptionsJukebox;
   ScreenEditSub:      TScreenEditSub;
   ScreenAbout:        TScreenAbout;
 
@@ -368,7 +359,6 @@ begin
 
   //TimeBar mod
   Tex_TimeProgress := Renderer.LoadTexture(Skin.GetTextureFileName('TimeBar'));
-  Tex_JukeboxTimeProgress := Renderer.LoadTexture(Skin.GetTextureFileName('JukeboxTimeBar'));
   //eoa TimeBar mod
 
   //SingBar Mod
@@ -1023,14 +1013,9 @@ begin
   SetLoadingTitle('Loading ScreenSong');
   ScreenSong :=             TScreenSong.Create;
   ScreenContinuousPlayback := TScreenContinuousPlayback.Create;
-  SetLoadingTitle('Loading ScreenSongMenu & ScreenJukebox');
+  SetLoadingTitle('Loading ScreenSongMenu');
+
   ScreenSongMenu :=             TScreenSongMenu.Create;
-  ScreenJukebox :=             TScreenJukebox.Create;
-  Log.BenchmarkEnd(3); Log.LogBenchmark('====> Screen Jukebox', 3); Log.BenchmarkStart(3);
-  ScreenJukeboxOptions :=   TScreenJukeboxOptions.Create;
-  Log.BenchmarkEnd(3); Log.LogBenchmark('====> Screen Jukebox Options', 3); Log.BenchmarkStart(3);
-  ScreenJukeboxPlaylist :=   TScreenJukeboxPlaylist.Create;
-  Log.BenchmarkEnd(3); Log.LogBenchmark('====> Screen Jukebox Playlist', 3); Log.BenchmarkStart(3);
   ScreenHighScores :=       TScreenHighScores.Create;
   SetLoadingTitle('Loading ScreenOptions & ScreenOptionsGame');
   ScreenOptions :=          TScreenOptions.Create;
@@ -1050,8 +1035,6 @@ begin
   ScreenOptionsNetwork :=    TScreenOptionsNetwork.Create;
   SetLoadingTitle('Loading ScreenOptionsWebCam');
   ScreenOptionsWebcam  :=    TScreenOptionsWebcam.Create;
-  SetLoadingTitle('Loading ScreenOptionsJukebox');
-  ScreenOptionsJukebox :=    TScreenOptionsJukebox.Create;
   SetLoadingTitle('Loading ScreenEditSub');
   ScreenEditSub :=          TScreenEditSub.Create;
   SetLoadingTitle('Loading ScreenAbout');
@@ -1113,11 +1096,7 @@ begin
   FreeAndNil(ScreenOptionsAdvanced);
   FreeAndNil(ScreenOptionsNetwork);
   FreeAndNil(ScreenOptionsWebcam);
-  FreeAndNil(ScreenOptionsJukebox);
   FreeAndNil(ScreenEditSub);
-  FreeAndNil(ScreenJukebox);
-  FreeAndNil(ScreenJukeboxOptions);
-  FreeAndNil(ScreenJukeboxPlaylist);
   FreeAndNil(ScreenHighScores);
   FreeAndNil(ScreenAbout);
   //ScreenSingModi.Free;
