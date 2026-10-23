@@ -1672,6 +1672,8 @@ begin
       end
       else if ScreenContinuousPlayback.Session.Active then
         ScreenContinuousPlayback.SongFinished
+      else if PlayersPlay = 0 then
+        FadeTo(@ScreenSong)
       else
         Party.CallAfterSing;
     end;
