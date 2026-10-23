@@ -384,6 +384,7 @@ type
     SelectPlayersCount:  TThemeSelectSlide;
     SelectPlayerColor:   TThemeSelectSlide;
     SelectPlayerLevel:   TThemeSelectSlide;
+    SelectPlayerVoice:   TThemeSelectSlide;
   end;
 
   TThemeSong = class(TThemeBasic)
@@ -2095,6 +2096,10 @@ begin
       ThemeLoadSelectSlide(Name.SelectPlayersCount, 'NameSelectPlayerCount');
       ThemeLoadSelectSlide(Name.SelectPlayerColor, 'NameSelectPlayerColor');
       ThemeLoadSelectSlide(Name.SelectPlayerLevel, 'NameSelectPlayerLevel');
+      Name.SelectPlayerVoice := Name.SelectPlayerLevel;
+      Name.SelectPlayerVoice.Y := Name.SelectPlayerLevel.Y + Name.SelectPlayerLevel.H + 5;
+      if ThemeIni.SectionExists('NameSelectPlayerVoice') then
+        ThemeLoadSelectSlide(Name.SelectPlayerVoice, 'NameSelectPlayerVoice');
 
       ThemeLoadStatic(NamePlayerSelectTemplate.Frame, 'NamePlayerSelectTemplateFrame');
       ThemeLoadText(NamePlayerSelectTemplate.Text, 'NamePlayerSelectTemplateText');
