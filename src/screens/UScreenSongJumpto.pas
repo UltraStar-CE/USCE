@@ -25,312 +25,440 @@
 
 unit UScreenSongJumpto;
 
-interface
-
-{$IFDEF FPC}
-  {$MODE Delphi}
-{$ENDIF}
-
+{$mode delphi}
 {$I switches.inc}
 
-uses
-  UDisplay,
-  UFiles,
-  UMenu,
-  UMusic,
-  USongs,
-  UThemes,
-  sdl2,
-  SysUtils;
+interface
+
+uses UMenu, USongs, USong, UThemes, sdl2, SysUtils;
+
+const FILTER_SLOTS = 3;
 
 type
   TScreenSongJumpto = class(TMenu)
-    private
-      //For ChangeMusic
-      fLastPlayed: integer;
-      fVisible: boolean;
-      fSelectType: TSongFilter;
-      fVisSongs: integer;
-      fPlaylistSearch: boolean;
-
-      procedure SetTextFound(Count: Cardinal);
-      function ApplyFilter: Cardinal;
-
-      //Visible //Whether the Menu should be Drawn
-      //Whether the Menu should be Drawn
-      procedure SetVisible(Value: boolean);
-    public
-      constructor Create; override;
-
-      function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
-      procedure OnShow; override;
-      function Draw: boolean; override;
-
-      property Visible: boolean read fVisible write SetVisible;
+  private
+    fVisible, fPlaylistSearch, fLockShortcutPending: boolean;
+    fFooter: TMenu;
+    fLastPlayed, fVisSongs, fFocus, fFirst, fPlaylist: integer;
+    fRows: TSongFilterRows;
+    fSlotKinds: array[0..FILTER_SLOTS-1] of integer;
+    fInputs, fCategories: array[0..FILTER_SLOTS-1] of integer;
+    fActions: array[0..3] of integer;
+    procedure SetVisible(Value: boolean);
+    procedure SetTextFound(Count: cardinal; SelectedSong: TSong);
+    function ApplyFilter: cardinal;
+    function FilterSummary: UTF8String;
+    procedure RefreshRows;
+    procedure Changed;
+    procedure AddRow;
+    procedure RemoveRow(Index: integer);
+    procedure ActivateAction(Action: integer);
+    procedure MoveFocus(Direction: integer);
+  public
+    constructor Create; override;
+    destructor Destroy; override;
+    function ParseInput(PressedKey: cardinal; CharCode: UCS4Char;
+      PressedDown: boolean; Repeated: boolean = false): boolean; override;
+    function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
+    procedure OnShow; override;
+    procedure ResetFilters;
+    function Draw: boolean; override;
+    property Visible: boolean read fVisible write SetVisible;
   end;
-
-const
-  ID='ID_016';   //for help system
 
 implementation
 
-uses
-  UGraphic,
-  ULibraryLockdown,
-  ULockdownUI,
-  UHelp,
-  UIni,
-  ULanguage,
-  ULog,
-  UMain,
-  UParty,
-  URenderer,
-  UPlaylist,
-  UScreenSong,
-  UUnicodeUtils,
-  UPath;
+uses Math, UCommon, UDisplay, UFiles, UMusic, UGraphic, ULibraryLockdown, ULockdownUI,
+  UHelp, UIni, ULanguage, ULog, UMain, UParty, URenderer, UPlaylist,
+  UScreenSong, UUnicodeUtils, UPath, UMenuInteract;
 
-function TScreenSongJumpto.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
+const ID = 'ID_016';
+
+constructor TScreenSongJumpto.Create;
+var S, I: integer; Category: TThemeSelectSlide; Input: TThemeButton;
 begin
-  Result := true;
-  if (PressedDown) then
-  begin // Key Down
-    // check normal keys
-    if (IsAlphaNumericChar(CharCode) or
-        IsPunctuationChar(CharCode)) then
+  inherited Create;
+  AddText(Theme.SongJumpto.TextFound);
+  LoadFromTheme(Theme.SongJumpto);
+  for S := 0 to FILTER_SLOTS - 1 do
+  begin
+    Category := Theme.SongJumpto.SelectSlideType;
+    Inc(Category.Y, S * Theme.SongJumpto.RowSpacing);
+    fCategories[S] := AddSelectSlide(Category, fSlotKinds[S], Theme.SongJumpto.IType);
+    Input := Theme.SongJumpto.ButtonSearchText;
+    Inc(Input.Y, S * Theme.SongJumpto.RowSpacing);
+    fInputs[S] := AddButton(Input);
+    Button[fInputs[S]].Text[0].Writable := true;
+  end;
+  for I := 0 to 3 do
+    fActions[I] := AddButton(Theme.SongJumpto.FilterActions[I]);
+  fFooter := TMenu.Create;
+  fFooter.LoadFromTheme(Theme.SongJumpto.Footer);
+  SetLength(fRows, 1);
+  fPlaylist := -1;
+end;
+
+destructor TScreenSongJumpto.Destroy;
+begin
+  fFooter.Free;
+  inherited;
+end;
+
+function TScreenSongJumpto.FilterSummary: UTF8String;
+var R: integer;
+begin
+  Result := '';
+  for R := 0 to High(fRows) do
+    if Trim(fRows[R].Query) <> '' then
     begin
-      if (Interaction = 0) then
-      begin
-        Button[0].Text[0].ColR := Theme.SongJumpto.ButtonSearchText.ColR;
-        Button[0].Text[0].ColG := Theme.SongJumpto.ButtonSearchText.ColG;
-        Button[0].Text[0].ColB := Theme.SongJumpto.ButtonSearchText.ColB;
-
-        Button[0].Text[0].Text := Button[0].Text[0].Text + UCS4ToUTF8String(CharCode);
-        SetTextFound(ApplyFilter);
-        ScreenSong.NextRandomSearchIdx := CatSongs.VisibleSongs;
-      end;
+      if Result <> '' then Result := Result + ' / ';
+      Result := Result + Theme.SongJumpto.IType[Ord(fRows[R].Kind)] + ': ' + fRows[R].Query;
     end;
+end;
 
-    // check special keys
-    case PressedKey of
-      SDLK_BACKSPACE:
-        begin
-          if (Interaction = 0) and (Length(Button[0].Text[0].Text) > 0) then
-          begin
-            Button[0].Text[0].DeleteLastLetter();
-            SetTextFound(ApplyFilter);
-            ScreenSong.NextRandomSearchIdx := CatSongs.VisibleSongs;
-          end;
-        end;
-
-      SDLK_TAB:
-        begin
-          ScreenPopupHelp.ShowPopup();
-        end;
-
-      SDLK_RETURN,
-      SDLK_ESCAPE:
-        begin
-          if (PressedKey = SDLK_RETURN) and (Interaction = 2) then
-          begin
-            ToggleLibraryLockdown;
-            Exit;
-          end;
-          Visible := false;
-          AudioPlayback.PlaySound(SoundLib.Back);
-          if (fVisSongs = 0) and (Length(Button[0].Text[0].Text) > 0) then
-          begin
-            //ScreenSong.UnLoadDetailedCover;
-            Button[0].Text[0].Text := '';
-            ApplyFilter;
-            ScreenSong.NextRandomSearchIdx := CatSongs.VisibleSongs;
-            SetTextFound(0);
-          end;
-        end;
-
-      SDLK_DOWN: InteractNext;
-      SDLK_UP: InteractPrev;
-
-      SDLK_RIGHT:
-        begin
-          Interaction := 1;
-          InteractInc;
-          if (Length(Button[0].Text[0].Text) > 0) then
-          begin
-            SetTextFound(ApplyFilter);
-            ScreenSong.NextRandomSearchIdx := CatSongs.VisibleSongs;
-          end;
-          Interaction := 0;
-        end;
-      SDLK_LEFT:
-        begin
-          Interaction := 1;
-          InteractDec;
-          if (Length(Button[0].Text[0].Text) > 0) then
-          begin
-            SetTextFound(ApplyFilter);
-            ScreenSong.NextRandomSearchIdx := CatSongs.VisibleSongs;
-          end;
-          Interaction := 0;
-        end;
-    end;
+procedure TScreenSongJumpto.RefreshRows;
+var S, R, I, Delta: integer; OffsetY: real;
+begin
+  for I := 0 to High(Statics) do Statics[I].Texture.Y := Theme.SongJumpto.Statics[I].Y;
+  for I := 0 to High(Theme.SongJumpto.Text) do Text[I + 1].Y := Theme.SongJumpto.Text[I].Y;
+  Text[0].Y := Theme.SongJumpto.TextFound.Y;
+  for I := 0 to 3 do Button[fActions[I]].Y := Theme.SongJumpto.FilterActions[I].Y;
+  for S := 0 to FILTER_SLOTS - 1 do
+  begin
+    SelectsS[fCategories[S]].Y := Theme.SongJumpto.SelectSlideType.Y + S * Theme.SongJumpto.RowSpacing;
+    Button[fInputs[S]].Y := Theme.SongJumpto.ButtonSearchText.Y + S * Theme.SongJumpto.RowSpacing;
+  end;
+  if fFocus < Length(fRows) then
+  begin
+    if fFocus < fFirst then fFirst := fFocus;
+    if fFocus >= fFirst + FILTER_SLOTS then fFirst := fFocus - FILTER_SLOTS + 1;
+  end;
+  fFirst := EnsureRange(fFirst, 0, Max(0, Length(fRows) - FILTER_SLOTS));
+  for S := 0 to FILTER_SLOTS - 1 do
+  begin
+    R := fFirst + S;
+    Button[fInputs[S]].Visible := R < Length(fRows);
+    SelectsS[fCategories[S]].Visible := R < Length(fRows);
+    if R >= Length(fRows) then Continue;
+    fSlotKinds[S] := Ord(fRows[R].Kind);
+    UpdateSelectSlideOptions(fCategories[S], Theme.SongJumpto.IType, fSlotKinds[S]);
+    Button[fInputs[S]].Text[0].Text := fRows[R].Query;
+    Button[fInputs[S]].Selected := (fFocus = R);
+    SelectsS[fCategories[S]].Selected := (fFocus = R);
+  end;
+  Button[fActions[0]].Visible := false;
+  Button[fActions[1]].Text[0].Text := 'x';
+  Button[fActions[2]].Visible := false;
+  Button[fActions[3]].Text[0].Text := '';
+  for I := 0 to 3 do Button[fActions[I]].Selected := fFocus = Length(fRows) + I;
+  if Theme.SongJumpto.AutoHeightStatic > 0 then
+  begin
+    Delta := (FILTER_SLOTS - Min(FILTER_SLOTS, Length(fRows))) * Theme.SongJumpto.RowSpacing;
+    Text[0].Y := Theme.SongJumpto.TextFound.Y - Delta;
+    for I := 0 to 3 do
+      if I = 0 then Button[fActions[I]].Y := Theme.SongJumpto.FilterActions[I].Y - Delta;
+    I := Theme.SongJumpto.AutoHeightStatic - 1;
+    if (I <= High(Statics)) and (I <= High(Theme.SongJumpto.Statics)) then
+      Statics[I].Texture.H := Theme.SongJumpto.Statics[I].H - Delta;
+  end;
+  if Length(fFooter.Text) >= 6 then
+    if LibraryLockdown.Active then fFooter.Text[5].Text := Language.Translate('FILTER_UNLOCK')
+    else fFooter.Text[5].Text := Language.Translate('FILTER_LOCK');
+  if Theme.SongJumpto.CenterVertical and (Length(Statics) > 0) then
+  begin
+    OffsetY := (RenderH - Statics[0].Texture.H) / 2 - Statics[0].Texture.Y;
+    for I := 0 to High(Statics) do Statics[I].Texture.Y := Statics[I].Texture.Y + OffsetY;
+    for I := 0 to High(Text) do Text[I].Y := Text[I].Y + OffsetY;
+    for I := 0 to High(Button) do Button[I].Y := Button[I].Y + OffsetY;
+    for I := 0 to High(SelectsS) do SelectsS[I].Y := SelectsS[I].Y + OffsetY;
   end;
 end;
 
-function TScreenSongJumpto.ApplyFilter: Cardinal;
-var
-  I: Integer;
-  FilterText: UTF8String;
+procedure TScreenSongJumpto.Changed;
+var SelectedSong: TSong;
 begin
-  FilterText := Button[0].Text[0].Text;
-
-  if fPlaylistSearch and (PlaylistMan.CurPlayList <> -1) then
-  begin
-    PlaylistMan.SetPlayList(PlaylistMan.CurPlayList, fLastPlayed);
-    if Length(FilterText) = 0 then
-    begin
-      Result := CatSongs.VisibleSongs;
-      Exit;
-    end;
-
-    Result := 0;
-    CatSongs.SetFilter(FilterText, fSelectType);
-    for I := Low(CatSongs.Song) to High(CatSongs.Song) do
-    begin
-      if CatSongs.Song[I].Visible and
-         (PlaylistMan.GetIndexbySongID(I) = -1) then
-        CatSongs.Song[I].Visible := false;
-      if CatSongs.Song[I].Visible then
-        Inc(Result);
-    end;
-    CatSongs.ResetVisibleIndexCache;
-  end
-  else
-    Result := CatSongs.SetFilter(FilterText, fSelectType);
+  SelectedSong := nil;
+  if (ScreenSong.Interaction >= 0) and (ScreenSong.Interaction < Length(CatSongs.Song)) then
+    SelectedSong := CatSongs.Song[ScreenSong.Interaction];
+  RefreshRows;
+  SetTextFound(ApplyFilter, SelectedSong);
+  ScreenSong.NextRandomSearchIdx := CatSongs.VisibleSongs;
 end;
 
-constructor TScreenSongJumpto.Create;
-var
-  ButtonID, I: integer;
+procedure TScreenSongJumpto.AddRow;
 begin
-  inherited Create;
+  // Reuse an empty trailing row rather than adding a series of empty rows.
+  if Trim(fRows[High(fRows)].Query) <> '' then SetLength(fRows, Length(fRows) + 1);
+  fFocus := High(fRows);
+  RefreshRows;
+end;
 
-  AddText(Theme.SongJumpto.TextFound);
+procedure TScreenSongJumpto.RemoveRow(Index: integer);
+var R: integer;
+begin
+  if Length(fRows) = 1 then fRows[0].Query := ''
+  else
+  begin
+    for R := Index to High(fRows) - 1 do fRows[R] := fRows[R + 1];
+    SetLength(fRows, Length(fRows) - 1);
+  end;
+  fFocus := Min(Index, High(fRows));
+  Changed;
+end;
 
-  LoadFromTheme(Theme.SongJumpto);
+procedure TScreenSongJumpto.ActivateAction(Action: integer);
+begin
+  case Action of
+    0: AddRow;
+    1: begin SetLength(fRows, 1); fRows[0].Query := ''; fRows[0].Kind := fltAll;
+         fFocus := 0; fFirst := 0; Changed; end;
+    2: Visible := false;
+    3: ToggleLibraryLockdown;
+  end;
+end;
 
-  ButtonID := AddButton(Theme.SongJumpto.ButtonSearchText);
+procedure TScreenSongJumpto.MoveFocus(Direction: integer);
+begin
+  fFocus := (fFocus + Direction + Length(fRows) + 4) mod (Length(fRows) + 4);
+  if (fFocus = Length(fRows)) or (fFocus = Length(fRows) + 2) then Inc(fFocus, Direction);
+  if (fFocus = Length(fRows)) or (fFocus = Length(fRows) + 2) then Inc(fFocus, Direction);
+  RefreshRows;
+end;
 
-  if (Length(Button[0].Text) = 0) then
-    AddButtonText(14, 20, '');
+function TScreenSongJumpto.ParseInput(PressedKey: cardinal; CharCode: UCS4Char;
+  PressedDown: boolean; Repeated: boolean = false): boolean;
+var S: integer;
+begin
+  Result := true;
+  if not PressedDown then Exit;
+  if SDL_GetModState and KMOD_ALT <> 0 then
+  begin
+    case PressedKey of
+      SDLK_c: begin ActivateAction(1); Exit; end;
+      SDLK_l: begin fLockShortcutPending := true; Exit; end;
+    end;
+    Exit;
+  end;
+  if (fFocus < Length(fRows)) and (IsAlphaNumericChar(CharCode) or
+    IsPunctuationChar(CharCode) or (CharCode = 32)) then
+  begin
+    fRows[fFocus].Query := fRows[fFocus].Query + UCS4ToUTF8String(CharCode);
+    Changed;
+    Exit;
+  end;
+  case PressedKey of
+    SDLK_F1: ScreenPopupHelp.ShowPopup;
+    SDLK_TAB:
+      if SDL_GetModState and KMOD_SHIFT <> 0 then MoveFocus(-1) else MoveFocus(1);
+    SDLK_ESCAPE: begin Visible := false; AudioPlayback.PlaySound(SoundLib.Back); end;
+    SDLK_RETURN: if fFocus < Length(fRows) then Visible := false
+                 else ActivateAction(fFocus - Length(fRows));
+    SDLK_SPACE: if fFocus >= Length(fRows) then ActivateAction(fFocus - Length(fRows));
+    SDLK_BACKSPACE:
+      if fFocus < Length(fRows) then
+      begin
+        if fRows[fFocus].Query = '' then RemoveRow(fFocus)
+        else
+        begin
+          S := fFocus - fFirst;
+          Button[fInputs[S]].Text[0].DeleteLastLetter;
+          fRows[fFocus].Query := Button[fInputs[S]].Text[0].Text;
+          Changed;
+        end;
+      end;
+    SDLK_DOWN:
+      if not Repeated then
+      begin
+        if (fFocus = High(fRows)) and (Trim(fRows[fFocus].Query) <> '') then AddRow
+        else MoveFocus(1);
+      end;
+    SDLK_UP: MoveFocus(-1);
+    SDLK_INSERT: AddRow;
+    SDLK_LEFT, SDLK_RIGHT:
+      if fFocus < Length(fRows) then
+      begin
+        S := Ord(fRows[fFocus].Kind);
+        if PressedKey = SDLK_LEFT then S := (S + Ord(High(TSongFilter))) mod (Ord(High(TSongFilter)) + 1)
+        else S := (S + 1) mod (Ord(High(TSongFilter)) + 1);
+        fRows[fFocus].Kind := TSongFilter(S);
+        Changed;
+      end
+      else if PressedKey = SDLK_LEFT then MoveFocus(-1) else MoveFocus(1);
+  end;
+end;
 
-  Button[ButtonID].Text[0].Writable := true;
+function TScreenSongJumpto.ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
+var S, R, I: integer; LX, LY: real; Area: TMouseOverRect;
+  function Inside(B: integer): boolean;
+  begin
+    Result := Button[B].Visible and (LX >= Button[B].X) and (LX <= Button[B].X + Button[B].W) and
+      (LY >= Button[B].Y) and (LY <= Button[B].Y + Button[B].H);
+  end;
+begin
+  Result := true;
+  if not BtnDown then Exit;
+  if RightMbESC and (MouseButton = SDL_BUTTON_RIGHT) then begin Visible := false; Exit; end;
+  if (MouseButton = SDL_BUTTON_WHEELUP) or (MouseButton = SDL_BUTTON_WHEELDOWN) then
+  begin
+    if MouseButton = SDL_BUTTON_WHEELUP then fFirst := Max(0, fFirst - 1)
+    else fFirst := Min(Max(0, Length(fRows) - FILTER_SLOTS), fFirst + 1);
+    fFocus := EnsureRange(fFocus, fFirst, Min(High(fRows), fFirst + FILTER_SLOTS - 1));
+    RefreshRows; Exit;
+  end;
+  if MouseButton <> SDL_BUTTON_LEFT then Exit;
+  // UScreenSong already converts mouse input to theme coordinates.
+  LX := X;
+  LY := Y;
+  for S := 0 to FILTER_SLOTS - 1 do
+  begin
+    R := fFirst + S;
+    if R >= Length(fRows) then Break;
+    if Inside(fInputs[S]) then begin fFocus := R; RefreshRows; Exit; end;
+    Area := SelectsS[fCategories[S]].GetMouseOverArea;
+    if (LX >= Area.X) and (LX <= Area.X + Area.W) and
+       (LY >= Area.Y) and (LY < Area.Y + Area.H) then
+      begin
+        fFocus := R;
+        if LX < Area.X + Area.W / 2 then ParseInput(SDLK_LEFT, 0, true)
+        else ParseInput(SDLK_RIGHT, 0, true);
+        Exit;
+      end;
+  end;
+  for I := 0 to 3 do
+    if Inside(fActions[I]) then begin fFocus := Length(fRows) + I; ActivateAction(I); Exit; end;
+end;
 
-  fSelectType := fltAll;
-  AddSelectSlide(Theme.SongJumpto.SelectSlideType, PInteger(@fSelectType)^, Theme.SongJumpto.IType);
-  // The button follows the search results using the current theme geometry.
-  ButtonID := AddButton(Theme.SongJumpto.ButtonSearchText.X,
-    Theme.SongJumpto.TextFound.Y + 30,
-    Theme.SongJumpto.ButtonSearchText.W, 30, PATH_NONE);
-  Button[ButtonID].Z := Theme.SongJumpto.ButtonSearchText.Z;
-  AddButtonText(8, 3, 0, 0, 0, Language.Translate('LOCKDOWN_START'));
-  Button[ButtonID].Text[0].Z := Theme.SongJumpto.ButtonSearchText.Z + 0.001;
-  Button[ButtonID].Text[0].Size := 20;
-  // Extend the existing dialog backdrop, without requiring new theme assets.
-  for I := 0 to High(Statics) do
-    if (Statics[I].Texture.Y <= Theme.SongJumpto.TextFound.Y) and
-      (Statics[I].Texture.Y + Statics[I].Texture.H >= Theme.SongJumpto.TextFound.Y) and
-      (Statics[I].Texture.Y + Statics[I].Texture.H < Theme.SongJumpto.TextFound.Y + 72) then
-      Statics[I].Texture.H := Theme.SongJumpto.TextFound.Y + 72 - Statics[I].Texture.Y;
-
-  Interaction := 0;
-  fLastPlayed  := 0;
-  fPlaylistSearch := false;
+function TScreenSongJumpto.ApplyFilter: cardinal;
+var I: integer; Active: boolean;
+begin
+  Active := false;
+  for I := 0 to High(fRows) do Active := Active or (Trim(fRows[I].Query) <> '');
+  if fPlaylistSearch and (PlaylistMan.CurPlayList = fPlaylist) then
+  begin
+    PlaylistMan.SetPlayList(fPlaylist, fLastPlayed);
+    if not Active then Exit(CatSongs.VisibleSongs);
+  end;
+  Result := CatSongs.SetFilters(fRows);
+  if fPlaylistSearch and (PlaylistMan.CurPlayList = fPlaylist) then
+  begin
+    Result := 0;
+    for I := 0 to High(CatSongs.Song) do
+    begin
+      if CatSongs.Song[I].Visible and (PlaylistMan.GetIndexbySongID(I) = -1) then
+        CatSongs.Song[I].Visible := false;
+      if CatSongs.Song[I].Visible then Inc(Result);
+    end;
+    CatSongs.ResetVisibleIndexCache;
+  end;
 end;
 
 procedure TScreenSongJumpto.SetVisible(Value: boolean);
 begin
-//If change from invisible to Visible then OnShow
-  if (fVisible = false) and (Value = true) then
-    OnShow;
-
+  if not fVisible and Value then OnShow;
   SetTextInput(Value);
   fVisible := Value;
+end;
+
+procedure TScreenSongJumpto.ResetFilters;
+begin
+  // Search rows are temporary. Lockdown freezes the library, not these queries.
+  SetLength(fRows, 1);
+  fRows[0].Query := '';
+  fRows[0].Kind := fltAll;
+  fPlaylistSearch := false;
+  fPlaylist := -1;
+  fFocus := 0; fFirst := 0;
 end;
 
 procedure TScreenSongJumpto.OnShow;
 var Country: UTF8String;
 begin
-  if LibraryLockdown.Active then
-    Button[1].Text[0].Text := Language.Translate('LOCKDOWN_UNLOCK')
-  else Button[1].Text[0].Text := Language.Translate('LOCKDOWN_START');
+  inherited;
+  Help.SetHelpID(ID);
   Country := Ini.AgeCountry;
   if Country = '' then Country := Language.Translate('OPTION_VALUE_AGE_DEFAULT');
   Theme.SongJumpto.IType[9] := Language.Translate('SONG_JUMPTO_TYPE10') + ' (' + Country + ')';
-  UpdateSelectSlideOptions(0, Theme.SongJumpto.IType, PInteger(@fSelectType)^);
-  inherited;
-
-  if not Help.SetHelpID(ID) then
-    Log.LogWarn('No Entry for Help-ID ' + ID, 'ScreenSongJumpTo');
-
-  //Reset Screen if no Old Search is Displayed
-  fPlaylistSearch := (CatSongs.CatNumShow = -3) and (PlaylistMan.CurPlayList <> -1);
-  if (CatSongs.CatNumShow <> -2) and not fPlaylistSearch then
+  if CatSongs.CatNumShow <> -2 then
   begin
-    SelectsS[0].SetSelectOpt(0);
-
-    Button[0].Text[0].Text := '';
-    Text[0].Text := Theme.SongJumpto.NoSongsFound;
+    ResetFilters;
+    fPlaylistSearch := (CatSongs.CatNumShow = -3) and (PlaylistMan.CurPlayList <> -1);
+    fPlaylist := PlaylistMan.CurPlayList;
+    Text[0].Text := Format(Theme.SongJumpto.SongsFound, [CatSongs.VisibleSongs]);
   end;
-
-  //Select Input
-  Interaction := 0;
-  Button[0].Text[0].Selected := true;
-
+  fFocus := 0; fFirst := 0;
   fLastPlayed := ScreenSong.Interaction;
+  RefreshRows;
 end;
 
 function TScreenSongJumpto.Draw: boolean;
+var I: integer; X, Y, W, H, Z: real;
+  procedure Outline(B: integer);
+  begin
+    if not Button[B].Visible or not Button[B].Selected then Exit;
+    X := Button[B].X; Y := Button[B].Y; W := Button[B].W; H := Button[B].H;
+    Z := Button[B].Z + 0.003;
+    Renderer.DrawLine(X, Y, X+W, Y, Z, 1.5, 0.5, 0.85, 1, 1);
+    Renderer.DrawLine(X+W, Y, X+W, Y+H, Z, 1.5, 0.5, 0.85, 1, 1);
+    Renderer.DrawLine(X+W, Y+H, X, Y+H, Z, 1.5, 0.5, 0.85, 1, 1);
+    Renderer.DrawLine(X, Y+H, X, Y, Z, 1.5, 0.5, 0.85, 1, 1);
+  end;
 begin
+  if fLockShortcutPending and (SDL_GetModState and KMOD_ALT = 0) then
+  begin
+    fLockShortcutPending := false;
+    ToggleLibraryLockdown;
+  end;
   Renderer.ClearFrameBuffer(CLEAR_DEPTH);
   Result := inherited Draw;
+  for I := 0 to FILTER_SLOTS - 1 do
+  begin
+    Outline(fInputs[I]);
+  end;
+  for I := 0 to 3 do Outline(fActions[I]);
+  fFooter.DrawFG;
+  // A simple vector padlock remains crisp at any screen scale.
+  X := Button[fActions[3]].X + Button[fActions[3]].W * 0.25;
+  Y := Button[fActions[3]].Y + Button[fActions[3]].H * 0.48;
+  W := Button[fActions[3]].W * 0.5;
+  H := Button[fActions[3]].H * 0.35;
+  Z := Button[fActions[3]].Z + 0.004;
+  Renderer.DrawQuad(X, Y, Z, W, H, 0.9, 0.9, 0.9, 1);
+  Renderer.DrawQuad(X+W*0.45, Y+H*0.25, Z+0.001, W*0.1, H*0.5, 0.1, 0.1, 0.1, 1);
+  Renderer.DrawLine(X+W*0.2, Y, X+W*0.2, Y-H*0.8, Z, 2, 0.9, 0.9, 0.9, 1);
+  Renderer.DrawLine(X+W*0.2, Y-H*0.8, X+W*0.8, Y-H*0.8, Z, 2, 0.9, 0.9, 0.9, 1);
+  if LibraryLockdown.Active then
+    Renderer.DrawLine(X+W*0.8, Y-H*0.8, X+W*0.8, Y, Z, 2, 0.9, 0.9, 0.9, 1);
 end;
 
-procedure TScreenSongJumpto.SetTextFound(Count: cardinal);
+procedure TScreenSongJumpto.SetTextFound(Count: cardinal; SelectedSong: TSong);
+var I, NewSelection: integer;
 begin
-  if (Count = 0) then
-  begin
-    Text[0].Text := Theme.SongJumpto.NoSongsFound;
-    if (Length(Button[0].Text[0].Text) = 0) then
-      ScreenSong.HideCatTL
-    else
-      ScreenSong.ShowCatTLCustom(Format(Theme.SongJumpto.CatText, [Button[0].Text[0].Text]));
-  end
+  if Count = 0 then
+    Text[0].Text := Theme.SongJumpto.NoSongsFound
   else
-  begin
     Text[0].Text := Format(Theme.SongJumpto.SongsFound, [Count]);
 
-    //Set CatTopLeftText
-    ScreenSong.ShowCatTLCustom(Format(Theme.SongJumpto.CatText, [Button[0].Text[0].Text]));
-  end;
+  if FilterSummary = '' then
+    ScreenSong.HideCatTL
+  else
+    ScreenSong.ShowCatTLCustom(Format(Theme.SongJumpto.CatText, [FilterSummary]));
 
   //Set visSongs
   fVisSongs := Count;
 
-  //Fix SongSelection
-  if (TSongMenuMode(Ini.SongMenu) = smRoulette) then
-  begin
-    ScreenSong.Interaction := high(CatSongs.Song);
-  end;
-
-  if (TSongMenuMode(Ini.SongMenu) in [smChessboard, smList]) then
-  begin
-    ScreenSong.Interaction := 0;
-    ScreenSong.ChessboardMinLine := 0;
-    ScreenSong.ListMinLine := 0;
-  end;
-
-  ScreenSong.SelectNext;
+  // Keep the current song if it still matches; otherwise choose the first result.
+  NewSelection := -1;
+  for I := 0 to High(CatSongs.Song) do
+    if CatSongs.Song[I].Visible then
+    begin
+      if NewSelection = -1 then NewSelection := I;
+      if CatSongs.Song[I] = SelectedSong then
+      begin
+        NewSelection := I;
+        Break;
+      end;
+    end;
+  if NewSelection >= 0 then ScreenSong.Interaction := NewSelection;
   ScreenSong.FixSelected;
 
   ScreenSong.SetScrollRefresh;

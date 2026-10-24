@@ -4,7 +4,7 @@ unit UAge;
 
 interface
 
-// AGE grammar: comma-separated positive integers (1..999), optionally prefixed
+// AGE grammar: comma-separated nonnegative integers (0..999), optionally prefixed
 // by a country/authority of at least two letters: 12, DE:16, US:13. Regional
 // entries override the unprefixed default; malformed/duplicate entries are unrated.
 function AgeForRegion(const Header, Region: string): integer;
@@ -103,7 +103,7 @@ begin
       if (Length(Number) < 1) or (Length(Number) > 3) then Exit;
       for J := 1 to Length(Number) do
         if not (Number[J] in ['0'..'9']) then Exit;
-      if not TryStrToInt(Number, Value) or (Value < 1) then Exit;
+      if not TryStrToInt(Number, Value) or (Value < 0) then Exit;
       if Key = '' then DefaultAge := Value
       else if Key = UpperCase(Region) then RegionalAge := Value;
     end;

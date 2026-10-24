@@ -833,7 +833,12 @@ type
   end;
 
   TThemeSongJumpTo = class(TThemeBasic)
+    Footer: TThemeBasic;
     ButtonSearchText: TThemeButton;
+    ButtonRemove: TThemeButton;
+    FilterActions: array[0..3] of TThemeButton;
+    RowSpacing, AutoHeightStatic: integer;
+    CenterVertical: boolean;
     SelectSlideType:  TThemeSelectSlide;
     TextFound:        TThemeText;
 
@@ -842,6 +847,8 @@ type
     NoSongsfound:     UTF8String;
     CatText:          UTF8String;
     IType:            array [0..9] of UTF8String;
+    constructor Create;
+    destructor Destroy; override;
   end;
 
   //Party Screens
@@ -1150,6 +1157,7 @@ type
     function ReadBool(const Sections: TThemeSectionList; const Key: string; DefaultValue: boolean): boolean;
     function ReadFloat(const Sections: TThemeSectionList; const Key: string; DefaultValue: real): real;
     procedure LoadStatMainRecentPeriods;
+    procedure LoadSongFilterLayout;
     procedure LoadStatDetailColumn(var Column: TThemeStatDetailColumn; const SectionName: string);
     procedure LoadStatDetailTable(var Table: TThemeStatDetailTable; const SectionName: string);
   public
@@ -2492,6 +2500,8 @@ begin
 
       ThemeLoadSelectSlide(SongJumpto.SelectSlideType, 'SongJumptoSelectSlideType');
       ThemeLoadText(SongJumpto.TextFound, 'SongJumptoTextFound');
+      LoadSongFilterLayout;
+      ThemeLoadBasic(SongJumpto.Footer, 'SongJumptoFooter');
       //Translations
       SongJumpto.IType[0] := Language.Translate('SONG_JUMPTO_TYPE1');
       SongJumpto.IType[1] := Language.Translate('SONG_JUMPTO_TYPE2');
@@ -2946,6 +2956,82 @@ begin
     end;
   end;
   Result := DefaultValue;
+end;
+
+constructor TThemeSongJumpTo.Create;
+begin
+  inherited Create;
+  Footer := TThemeBasic.Create;
+end;
+
+destructor TThemeSongJumpTo.Destroy;
+begin
+  Footer.Free;
+  inherited;
+end;
+
+procedure TTheme.LoadSongFilterLayout;
+const ActionNames: array[0..3] of string = ('Add', 'Clear', 'Done', 'Lock');
+var Sections: TThemeSectionList; I, BottomY: integer; Legacy: boolean;
+  procedure EnsureText(var B: TThemeButton; Size: integer);
+  begin
+    if Length(B.Text) <> 0 then Exit;
+    SetLength(B.Text, 1);
+    B.Text[0] := SongJumpto.TextFound;
+    B.Text[0].X := 4;
+    B.Text[0].Y := 1;
+    B.Text[0].W := B.W - 8;
+    B.Text[0].H := B.H;
+    B.Text[0].Size := Size;
+    B.Text[0].Align := 0;
+    B.Text[0].Text := '';
+  end;
+begin
+  Sections := GetSectionList('SongJumptoFilters');
+  Legacy := Length(Sections) = 0;
+  SongJumpto.RowSpacing := Max(1, ReadInteger(Sections, 'RowSpacing', 78));
+  SongJumpto.AutoHeightStatic := Max(0, ReadInteger(Sections, 'AutoHeightStatic', 0));
+  SongJumpto.CenterVertical := ReadBool(Sections, 'CenterVertical', false);
+  BottomY := SongJumpto.SelectSlideType.Y + 3 * SongJumpto.RowSpacing;
+  // Existing themes remain usable until they define the stacked layout.
+  if Legacy then
+  begin
+    with SongJumpto.ButtonSearchText do
+    begin
+      Y := SongJumpto.SelectSlideType.Y + 28;
+      H := 38; W := W - 30; SelectW := W; SelectH := H; Fade := false;
+    end;
+    SongJumpto.TextFound.Y := BottomY;
+    for I := 0 to High(SongJumpto.Statics) do
+      with SongJumpto.Statics[I] do
+        if (Y <= SongJumpto.SelectSlideType.Y) and
+           (Y + H >= SongJumpto.SelectSlideType.Y) then H := BottomY + 156 - Y;
+  end;
+  EnsureText(SongJumpto.ButtonSearchText, 24);
+  SongJumpto.ButtonRemove := SongJumpto.ButtonSearchText;
+  with SongJumpto.ButtonRemove do
+  begin
+    Text := Copy(Text);
+    X := X + W + 2; W := 28; SelectW := W; Tex := '';
+    Text[0].Text := 'x';
+  end;
+  if ResolveThemeFile('SongJumptoButtonRemove') <> nil then
+    ThemeLoadButton(SongJumpto.ButtonRemove, 'SongJumptoButtonRemove');
+  EnsureText(SongJumpto.ButtonRemove, 24);
+  for I := 0 to 3 do
+  begin
+    SongJumpto.FilterActions[I] := SongJumpto.ButtonSearchText;
+    with SongJumpto.FilterActions[I] do
+    begin
+      Text := Copy(Text);
+      Y := BottomY + 28 + I * 30; H := 28; W := W + 30;
+      SelectW := W; SelectH := H; Tex := ''; Fade := false;
+      Text[0].Size := 20;
+    end;
+    if ResolveThemeFile('SongJumptoButton' + ActionNames[I]) <> nil then
+      ThemeLoadButton(SongJumpto.FilterActions[I], 'SongJumptoButton' + ActionNames[I]);
+    EnsureText(SongJumpto.FilterActions[I], 20);
+  end;
 end;
 
 procedure TTheme.LoadStatMainRecentPeriods;
