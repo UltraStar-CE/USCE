@@ -251,6 +251,8 @@ function TScreenSingController.ParseInput(PressedKey: Cardinal; CharCode: UCS4Ch
 var
   SDL_ModState: word;
   ResumeAfterHelp: boolean;
+  VoiceIndex: integer;
+  IntroPosition: real;
 begin
   Result := true;
   if ScreenContinuousPlayback.HandlePlaybackKey(PressedKey, PressedDown, Repeated) then Exit;
@@ -409,11 +411,13 @@ begin
           end
           else if CurrentSong.isDuet then
           begin
-            NewPosition := 1.0E20;
-            for i1 := 0 to High(VoiceLyrics) do
-              NewPosition := Min(NewPosition, GetTimeFromBeat(VoiceLyrics[i1].GetUpperLine.StartNote));
-            if (Length(VoiceLyrics) > 0) and (NewPosition - AudioPlayback.Position > 6) then
-              AudioPlayback.SetPosition(NewPosition - 5);
+            IntroPosition := 1.0E20;
+            for VoiceIndex := 0 to High(VoiceLyrics) do
+              if VoiceLyrics[VoiceIndex].GetUpperLine <> nil then
+                IntroPosition := Min(IntroPosition,
+                  GetTimeFromBeat(VoiceLyrics[VoiceIndex].GetUpperLine.StartNote));
+            if (IntroPosition < 1.0E20) and (IntroPosition - AudioPlayback.Position > 6) then
+              AudioPlayback.SetPosition(IntroPosition - 5);
           end;
           Exit;
         end;
