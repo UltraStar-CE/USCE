@@ -817,7 +817,7 @@ begin
     HidePlayerAvatarsForScorePanel;
 
   // Match each background to the lyrics actually drawn, including the last-line fade.
-  if IsCurrentSongDuet and (PlayersPlay <> 1) then
+  if IsCurrentSongDuet then
   begin
     ScreenSing.Statics[StaticLyricsBar].Visible := ScreenSing.Settings.LyricsVisible and
       ScreenSing.LyricsDuetP1.HasVisibleText(LyricsState.MidBeat);
