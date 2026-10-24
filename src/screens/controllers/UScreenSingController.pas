@@ -1402,7 +1402,7 @@ end;
 procedure TScreenSingController.PositionVoiceLyrics(DisplayIndex: integer);
 var
   I, Count, Columns, Rows, Bank, Cell: integer;
-  X, Y, W, H: real;
+  X, Y, W, H, Gutter: real;
   Engine: TLyricEngine;
 begin
   Engine := VoiceLyrics[DisplayedVoices[DisplayIndex]];
@@ -1427,9 +1427,11 @@ begin
     W := Theme.LyricBarDuetP2.UpperW;
     H := Theme.LyricBarDuetP2.LowerY + Theme.LyricBarDuetP2.LowerH - Y;
   end;
-  Engine.UpperLineX := X + (Cell mod Columns) * W / Columns + 24;
+  Gutter := 0;
+  if Theme.Sing.VoiceLabelVisible then Gutter := Theme.Sing.VoiceLabelGutter;
+  Engine.UpperLineX := X + (Cell mod Columns) * W / Columns + Gutter;
   Engine.UpperLineY := Y + (Cell div Columns) * H / Rows;
-  Engine.UpperLineW := W / Columns - 32;
+  Engine.UpperLineW := Max(1, W / Columns - Gutter - Theme.Sing.VoiceCellPadding);
   Engine.UpperLineH := H / Rows;
   Engine.LowerLineX := Engine.UpperLineX;
   Engine.LowerLineW := Engine.UpperLineW;

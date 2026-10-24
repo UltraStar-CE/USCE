@@ -509,6 +509,9 @@ type
     LyricOutlineActive, LyricOutlineCurrent, LyricOutlineNext: TRGB;
     LyricUsePlayerColors: boolean;
     VoicePreviewAlpha: real;
+    VoiceLabel: TThemeText;
+    VoiceLabelVisible: boolean;
+    VoiceLabelGutter, VoiceCellPadding: integer;
     StaticLyricsBar:       TThemeStatic;
     StaticLyricsBarDuet:   TThemeStatic;
 
@@ -2116,6 +2119,18 @@ begin
 
       // lyrics bar
       Sing.VoicePreviewAlpha := EnsureRange(ReadFloat(GetSectionList('Sing'), 'VoicePreviewAlpha', 0.5), 0.0, 1.0);
+      Sing.VoiceLabel := Sing.InfoMessageText;
+      with Sing.VoiceLabel do
+      begin
+        X := 0; Y := 0; W := 24; H := 18; Size := 14;
+        Font := 0; Style := 0; ColR := 1; ColG := 1; ColB := 1;
+      end;
+      if ResolveThemeFile('SingVoiceLabel') <> nil then
+        ThemeLoadText(Sing.VoiceLabel, 'SingVoiceLabel');
+      SectionList := GetSectionList('SingVoiceLabel');
+      Sing.VoiceLabelVisible := ReadBool(SectionList, 'Visible', true);
+      Sing.VoiceLabelGutter := Max(0, ReadInteger(SectionList, 'Gutter', Sing.VoiceLabel.W));
+      Sing.VoiceCellPadding := Max(0, ReadInteger(SectionList, 'CellPadding', 8));
   ThemeLoadStatic(Sing.StaticLyricsBar, 'SingLyricsBar');
       ThemeLoadStatic(Sing.StaticLyricsBarDuet, 'SingLyricsBarDuet');
 
