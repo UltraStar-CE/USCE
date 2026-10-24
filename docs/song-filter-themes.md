@@ -37,3 +37,12 @@ Use the existing legend styles and key textures, including `ButtonAlt` for Alt
 combinations. The Add, Done and per-row remove controls are unused. Up/Down moves
 between filter rows and Down after a populated last row adds another. Tab reaches
 the header actions; Alt+C clears and Alt+L locks or unlocks. Enter confirms.
+
+## Focus and lock artwork
+
+`SongJumptoFocusOutline` accepts Red, Green, Blue and Alpha (0-1), plus Width.
+Width 0 hides it. Defaults preserve the cyan 1.5-pixel outline.
+Define both `SongJumptoLockedIcon` and `SongJumptoUnlockedIcon` as ordinary
+static textures. Their X/Y offsets are relative to the lock button, so they
+follow the centered overlay. A custom lock-button texture also suppresses the
+fallback vector padlock. Without either override the current vector icon remains.

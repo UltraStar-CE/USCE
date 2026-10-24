@@ -38,7 +38,7 @@ type
   TScreenSongJumpto = class(TMenu)
   private
     fVisible, fPlaylistSearch, fLockShortcutPending: boolean;
-    fFooter: TMenu;
+    fFooter, fLockIcons: TMenu;
     fLastPlayed, fVisSongs, fFocus, fFirst, fPlaylist: integer;
     fRows: TSongFilterRows;
     fSlotKinds: array[0..FILTER_SLOTS-1] of integer;
@@ -94,12 +94,19 @@ begin
     fActions[I] := AddButton(Theme.SongJumpto.FilterActions[I]);
   fFooter := TMenu.Create;
   fFooter.LoadFromTheme(Theme.SongJumpto.Footer);
+  if Theme.SongJumpto.CustomLockIcons then
+  begin
+    fLockIcons := TMenu.Create;
+    fLockIcons.AddStatic(Theme.SongJumpto.LockedIcon);
+    fLockIcons.AddStatic(Theme.SongJumpto.UnlockedIcon);
+  end;
   SetLength(fRows, 1);
   fPlaylist := -1;
 end;
 
 destructor TScreenSongJumpto.Destroy;
 begin
+  fLockIcons.Free;
   fFooter.Free;
   inherited;
 end;
@@ -397,10 +404,14 @@ var I: integer; X, Y, W, H, Z: real;
     if not Button[B].Visible or not Button[B].Selected then Exit;
     X := Button[B].X; Y := Button[B].Y; W := Button[B].W; H := Button[B].H;
     Z := Button[B].Z + 0.003;
-    Renderer.DrawLine(X, Y, X+W, Y, Z, 1.5, 0.5, 0.85, 1, 1);
-    Renderer.DrawLine(X+W, Y, X+W, Y+H, Z, 1.5, 0.5, 0.85, 1, 1);
-    Renderer.DrawLine(X+W, Y+H, X, Y+H, Z, 1.5, 0.5, 0.85, 1, 1);
-    Renderer.DrawLine(X, Y+H, X, Y, Z, 1.5, 0.5, 0.85, 1, 1);
+    Renderer.DrawLine(X, Y, X+W, Y, Z, Theme.SongJumpto.FocusWidth, Theme.SongJumpto.FocusColor.R,
+      Theme.SongJumpto.FocusColor.G, Theme.SongJumpto.FocusColor.B, Theme.SongJumpto.FocusAlpha);
+    Renderer.DrawLine(X+W, Y, X+W, Y+H, Z, Theme.SongJumpto.FocusWidth, Theme.SongJumpto.FocusColor.R,
+      Theme.SongJumpto.FocusColor.G, Theme.SongJumpto.FocusColor.B, Theme.SongJumpto.FocusAlpha);
+    Renderer.DrawLine(X+W, Y+H, X, Y+H, Z, Theme.SongJumpto.FocusWidth, Theme.SongJumpto.FocusColor.R,
+      Theme.SongJumpto.FocusColor.G, Theme.SongJumpto.FocusColor.B, Theme.SongJumpto.FocusAlpha);
+    Renderer.DrawLine(X, Y+H, X, Y, Z, Theme.SongJumpto.FocusWidth, Theme.SongJumpto.FocusColor.R,
+      Theme.SongJumpto.FocusColor.G, Theme.SongJumpto.FocusColor.B, Theme.SongJumpto.FocusAlpha);
   end;
 begin
   if fLockShortcutPending and (SDL_GetModState and KMOD_ALT = 0) then
@@ -416,6 +427,18 @@ begin
   end;
   for I := 0 to 3 do Outline(fActions[I]);
   fFooter.DrawFG;
+  if Assigned(fLockIcons) then
+  begin
+    fLockIcons.Statics[0].Texture.X := Button[fActions[3]].X + Theme.SongJumpto.LockedIcon.X;
+    fLockIcons.Statics[0].Texture.Y := Button[fActions[3]].Y + Theme.SongJumpto.LockedIcon.Y;
+    fLockIcons.Statics[1].Texture.X := Button[fActions[3]].X + Theme.SongJumpto.UnlockedIcon.X;
+    fLockIcons.Statics[1].Texture.Y := Button[fActions[3]].Y + Theme.SongJumpto.UnlockedIcon.Y;
+    fLockIcons.Statics[0].Visible := LibraryLockdown.Active;
+    fLockIcons.Statics[1].Visible := not LibraryLockdown.Active;
+    fLockIcons.DrawFG;
+    Exit;
+  end;
+  if Theme.SongJumpto.FilterActions[3].Tex <> '' then Exit;
   // A simple vector padlock remains crisp at any screen scale.
   X := Button[fActions[3]].X + Button[fActions[3]].W * 0.25;
   Y := Button[fActions[3]].Y + Button[fActions[3]].H * 0.48;
