@@ -71,51 +71,26 @@ uses Math, UCommon, UDisplay, UFiles, UMusic, UGraphic, ULibraryLockdown, ULockd
 const ID = 'ID_016';
 
 constructor TScreenSongJumpto.Create;
-var S, B, I: integer; Category: TThemeSelectSlide; Input: TThemeButton;
-    TopY, BottomY: real;
+var S, I: integer; Category: TThemeSelectSlide; Input: TThemeButton;
 begin
   inherited Create;
   AddText(Theme.SongJumpto.TextFound);
   LoadFromTheme(Theme.SongJumpto);
-  TopY := Theme.SongJumpto.SelectSlideType.Y;
   for S := 0 to FILTER_SLOTS - 1 do
   begin
     Category := Theme.SongJumpto.SelectSlideType;
-    Category.Y := Round(TopY + S * 78);
+    Inc(Category.Y, S * Theme.SongJumpto.RowSpacing);
     fCategories[S] := AddSelectSlide(Category, fSlotKinds[S], Theme.SongJumpto.IType);
     Input := Theme.SongJumpto.ButtonSearchText;
-    Input.Y := Category.Y + 28;
-    Input.H := 38;
-    Input.W := Input.W - 30;
-    Input.SelectW := Input.W;
-    Input.SelectH := Input.H;
-    Input.Fade := false;
+    Inc(Input.Y, S * Theme.SongJumpto.RowSpacing);
     fInputs[S] := AddButton(Input);
-    B := fInputs[S];
-    if Length(Button[B].Text) = 0 then AddButtonText(4, 0, '');
-    Button[B].Text[0].Size := 24;
-    Button[B].Text[0].Writable := true;
-    fRemove[S] := AddButton(Input.X + Input.W + 2, Input.Y, 28, 38, PATH_NONE);
-    AddButtonText(6, 3, 1, 1, 1, 'x');
-    Button[fRemove[S]].Z := Input.Z;
-    Button[fRemove[S]].Text[0].Z := Input.Z + 0.001;
-    Button[fRemove[S]].Text[0].Size := 24;
+    Button[fInputs[S]].Text[0].Writable := true;
+    Input := Theme.SongJumpto.ButtonRemove;
+    Inc(Input.Y, S * Theme.SongJumpto.RowSpacing);
+    fRemove[S] := AddButton(Input);
   end;
-  BottomY := TopY + FILTER_SLOTS * 78;
-  Text[0].Y := BottomY;
   for I := 0 to 3 do
-  begin
-    fActions[I] := AddButton(Theme.SongJumpto.ButtonSearchText.X,
-      BottomY + 28 + I * 30, Theme.SongJumpto.ButtonSearchText.W, 28, PATH_NONE);
-    AddButtonText(4, 1, 1, 1, 1, '');
-    Button[fActions[I]].Z := Theme.SongJumpto.ButtonSearchText.Z;
-    Button[fActions[I]].Text[0].Z := Theme.SongJumpto.ButtonSearchText.Z + 0.001;
-    Button[fActions[I]].Text[0].Size := 20;
-  end;
-  for I := 0 to High(Statics) do
-    if (Statics[I].Texture.Y <= TopY) and
-       (Statics[I].Texture.Y + Statics[I].Texture.H >= TopY) then
-      Statics[I].Texture.H := BottomY + 156 - Statics[I].Texture.Y;
+    fActions[I] := AddButton(Theme.SongJumpto.FilterActions[I]);
   SetLength(fRows, 1);
   fPlaylist := -1;
 end;
