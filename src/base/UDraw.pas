@@ -113,7 +113,7 @@ uses
 function NoteAlpha(NoteType: TNoteType; Alpha: real): real; inline;
 begin
   if NoteType = ntFreestyle then
-    Result := Alpha * 0.55
+    Result := Alpha * Theme.Sing.FreestyleNoteAlpha
   else
     Result := Alpha;
 end;
