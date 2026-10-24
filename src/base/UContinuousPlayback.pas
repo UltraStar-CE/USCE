@@ -165,7 +165,8 @@ begin
     LastTick := Now;
     ClockStarted := true;
   end;
-  Elapsed := Now - LastTick;
+  if Now >= LastTick then Elapsed := Now - LastTick
+  else Elapsed := cardinal(QWord(High(cardinal)) - LastTick + Now + 1);
   LastTick := Now;
   if Paused or Suspended then Exit;
   if Elapsed < Remaining then Dec(Remaining, Elapsed)
