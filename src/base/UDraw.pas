@@ -47,7 +47,7 @@ procedure SingDrawBackground;
 procedure SingDrawOscilloscopes;
 procedure SingDrawOscilloscope(Position: TThemePosition; NrSound: integer);
 procedure SingDrawNoteLines(Left, Top, Right: real; LineSpacing: integer = 15; LineThickness: single = 1);
-procedure SingDrawLyricHelper(CP: integer; Left, LyricsMid: real);
+procedure SingDrawLyricHelper(CP: integer; Left, LyricsMid, IndicatorOffset: real);
 procedure SingDrawLine(Left, Top, Right: real; Track, PlayerIndex: integer; LineSpacing: integer = 15);
 procedure SingDrawPlayerLine(Left, Top, W: real; Track, PlayerIndex: integer; LineSpacing: integer = 15);
 procedure SingDrawPlayerBGLine(Left, Top, Right: real; Track, PlayerIndex: integer; LineSpacing: integer = 15);
@@ -795,7 +795,7 @@ end;
  * Left: position the bar starts at
  * LyricsMid: the middle of the lyrics relative to the position Left 
  *)
-procedure SingDrawLyricHelper(CP: integer; Left, LyricsMid: real);
+procedure SingDrawLyricHelper(CP: integer; Left, LyricsMid, IndicatorOffset: real);
 var
   Bounds: TRecR;           // bounds of the lyric help bar
   BarProgress: real;       // progress of the lyrics helper
@@ -878,15 +878,7 @@ begin
       // determine lyric help bar position and size
       Bounds.Left := MoveStartX + BarProgress * MoveDist;
       Bounds.Right := Bounds.Left + BarWidth;
-      Bounds.Top := LyricEngine.UpperLineY;
-      if CurrentSong.isDuet then
-      begin
-        if LyricEngine.UpperLineY < Theme.LyricBarDuetP2.UpperY then
-          Bounds.Top := Bounds.Top + Theme.LyricBarDuetP1.IndicatorYOffset
-        else
-          Bounds.Top := Bounds.Top + Theme.LyricBarDuetP2.IndicatorYOffset;
-      end
-      else Bounds.Top := Bounds.Top + Theme.LyricBar.IndicatorYOffset;
+      Bounds.Top := LyricEngine.UpperLineY + IndicatorOffset;
 
       Bounds.Bottom := Bounds.Top + BarHeight + 3;
 
@@ -1024,7 +1016,12 @@ begin
         TrackIndex := ScreenSing.DisplayedVoices[I];
         LyricEngine := ScreenSing.VoiceLyrics[TrackIndex];
         LyricEngine.Draw(LyricsState.MidBeat);
-        SingDrawLyricHelper(TrackIndex, LyricEngine.UpperLineX, LyricEngine.UpperLineW / 2);
+        if ScreenSing.DisplayedVoiceBanks[I] = 0 then
+          SingDrawLyricHelper(TrackIndex, LyricEngine.UpperLineX, LyricEngine.UpperLineW / 2,
+            Theme.LyricBarDuetP1.IndicatorYOffset)
+        else
+          SingDrawLyricHelper(TrackIndex, LyricEngine.UpperLineX, LyricEngine.UpperLineW / 2,
+            Theme.LyricBarDuetP2.IndicatorYOffset);
         if Theme.Sing.VoiceLabelVisible then
           with Theme.Sing.VoiceLabel do
           begin
@@ -1042,7 +1039,7 @@ begin
     else
     begin
       ScreenSing.Lyrics.Draw(LyricsState.MidBeat);
-      SingDrawLyricHelper(0, NR.Left, NR.WMid);
+      SingDrawLyricHelper(0, NR.Left, NR.WMid, Theme.LyricBar.IndicatorYOffset);
     end;
   end;
 
