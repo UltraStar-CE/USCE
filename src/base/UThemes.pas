@@ -837,6 +837,7 @@ type
     ButtonRemove: TThemeButton;
     FilterActions: array[0..3] of TThemeButton;
     RowSpacing, AutoHeightStatic: integer;
+    CenterVertical: boolean;
     SelectSlideType:  TThemeSelectSlide;
     TextFound:        TThemeText;
 
@@ -2974,6 +2975,7 @@ begin
   Legacy := Length(Sections) = 0;
   SongJumpto.RowSpacing := Max(1, ReadInteger(Sections, 'RowSpacing', 78));
   SongJumpto.AutoHeightStatic := Max(0, ReadInteger(Sections, 'AutoHeightStatic', 0));
+  SongJumpto.CenterVertical := ReadBool(Sections, 'CenterVertical', false);
   BottomY := SongJumpto.SelectSlideType.Y + 3 * SongJumpto.RowSpacing;
   // Existing themes remain usable until they define the stacked layout.
   if Legacy then
