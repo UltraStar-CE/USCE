@@ -22,5 +22,7 @@ these three slots. Mouse hit areas follow the themed control bounds.
 Themes without `SongJumptoFilters` receive a compatibility layout derived from
 their existing search controls. Adding that section opts into explicit layout:
 set the input, result count, actions and dialog background to fit the rows.
-The game does not resize the background or reposition the input/result count
-for themes that define this section.
+Set `AutoHeightStatic` to the 1-based dialog background index to shrink it
+when fewer than three rows are present. The result count and Add/Done/Lock
+buttons move up with the hidden rows; Clear stays in the header. Leave it at
+0 for a fixed layout. Modern uses the plain dialog background without a divider.
