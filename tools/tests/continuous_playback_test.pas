@@ -68,6 +68,19 @@ begin
     Expect(Session.Tick(22000, false) and (Session.Stage = psHighScores), 'Result timer did not advance');
     Session.Tick(22000, false);
     Expect(Session.Tick(27000, false) and (Session.Stage = psAdvance), 'High-score timer did not advance');
+    // Each result screen receives its own full duration after transitions.
+    Session.ResultSeconds := 5; Session.HighScoreSeconds := 10;
+    Session.FinishSong(true);
+    Expect(not Session.Tick(30000, true), 'Transition advanced result stage');
+    Expect(not Session.Tick(35000, true), 'Transition consumed result duration');
+    Expect(not Session.Tick(35000, false), 'Result expired at reveal');
+    Expect(not Session.Tick(39999, false), 'Five-second result expired early');
+    Expect(Session.Tick(40000, false) and (Session.Stage = psHighScores), 'Five-second result did not advance');
+    Expect(not Session.Tick(40000, true), 'Highscores skipped during transition');
+    Expect(not Session.Tick(45000, true), 'Transition consumed highscore duration');
+    Expect(not Session.Tick(45000, false), 'Highscores expired at reveal');
+    Expect(not Session.Tick(54999, false), 'Ten-second highscores expired early');
+    Expect(Session.Tick(55000, false) and (Session.Stage = psAdvance), 'Ten-second highscores did not advance');
     Session.FinishSong(false);
     Expect(Session.Stage = psAdvance, 'Skipped song showed results');
     Session.ResultSeconds := 0;
