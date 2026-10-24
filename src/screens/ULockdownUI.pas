@@ -31,6 +31,7 @@ begin
   ScreenSong.ListMinLine := 0;
   ScreenSong.ResetRandomSongState;
   ScreenSong.OnShow;
+  ScreenSongJumpto.ResetFilters;
 end;
 
 procedure PasswordAccessResult(Value: boolean; Data: Pointer);

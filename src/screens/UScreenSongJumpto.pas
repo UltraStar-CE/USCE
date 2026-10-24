@@ -58,6 +58,7 @@ type
       PressedDown: boolean; Repeated: boolean = false): boolean; override;
     function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
     procedure OnShow; override;
+    procedure ResetFilters;
     function Draw: boolean; override;
     property Visible: boolean read fVisible write SetVisible;
   end;
@@ -320,6 +321,17 @@ begin
   fVisible := Value;
 end;
 
+procedure TScreenSongJumpto.ResetFilters;
+begin
+  // Search rows are temporary. Lockdown freezes the library, not these queries.
+  SetLength(fRows, 1);
+  fRows[0].Query := '';
+  fRows[0].Kind := fltAll;
+  fPlaylistSearch := false;
+  fPlaylist := -1;
+  fFocus := 0; fFirst := 0; fFocusPart := 0;
+end;
+
 procedure TScreenSongJumpto.OnShow;
 var Country: UTF8String;
 begin
@@ -330,7 +342,7 @@ begin
   Theme.SongJumpto.IType[9] := Language.Translate('SONG_JUMPTO_TYPE10') + ' (' + Country + ')';
   if CatSongs.CatNumShow <> -2 then
   begin
-    SetLength(fRows, 1); fRows[0].Query := ''; fRows[0].Kind := fltAll;
+    ResetFilters;
     fPlaylistSearch := (CatSongs.CatNumShow = -3) and (PlaylistMan.CurPlayList <> -1);
     fPlaylist := PlaylistMan.CurPlayList;
     Text[0].Text := Format(Theme.SongJumpto.SongsFound, [CatSongs.VisibleSongs]);
