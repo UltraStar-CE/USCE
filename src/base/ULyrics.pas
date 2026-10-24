@@ -511,9 +511,9 @@ begin
 
   SetFontSize(Line.Height);
 
-  OutlineColor_act := GetLyricOutlineColor(0);
-  OutlineColor_en := GetLyricOutlineColor(0);
-  OutlineColor_dis := GetLyricOutlineColor(0);
+  OutlineColor_act := Theme.Sing.LyricOutlineActive;
+  OutlineColor_en := Theme.Sing.LyricOutlineCurrent;
+  OutlineColor_dis := Theme.Sing.LyricOutlineNext;
 
   // center lyrics
   LyricX := X + (W - Line.Width) / 2;

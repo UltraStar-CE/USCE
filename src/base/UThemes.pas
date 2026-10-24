@@ -502,6 +502,9 @@ type
   end;
 
   TThemeSing = class(TThemeBasic)
+    LyricActive, LyricCurrent, LyricNext: TRGB;
+    LyricOutlineActive, LyricOutlineCurrent, LyricOutlineNext: TRGB;
+    LyricUsePlayerColors: boolean;
     StaticLyricsBar:       TThemeStatic;
     StaticLyricsBarDuet:   TThemeStatic;
 
@@ -2061,6 +2064,32 @@ begin
 
       // Sing
       ThemeLoadBasic(Sing, 'Sing');
+      SectionList := GetSectionList('SingLyricColors');
+      Sing.LyricUsePlayerColors := ReadBool(SectionList, 'UsePlayerColors', true);
+      Sing.LyricActive := GetLyricColor(0);
+      Sing.LyricActive.R := EnsureRange(ReadFloat(SectionList, 'ActiveRed', Sing.LyricActive.R), 0.0, 1.0);
+      Sing.LyricActive.G := EnsureRange(ReadFloat(SectionList, 'ActiveGreen', Sing.LyricActive.G), 0.0, 1.0);
+      Sing.LyricActive.B := EnsureRange(ReadFloat(SectionList, 'ActiveBlue', Sing.LyricActive.B), 0.0, 1.0);
+      Sing.LyricCurrent := GetLyricGrayColor(8);
+      Sing.LyricCurrent.R := EnsureRange(ReadFloat(SectionList, 'CurrentRed', Sing.LyricCurrent.R), 0.0, 1.0);
+      Sing.LyricCurrent.G := EnsureRange(ReadFloat(SectionList, 'CurrentGreen', Sing.LyricCurrent.G), 0.0, 1.0);
+      Sing.LyricCurrent.B := EnsureRange(ReadFloat(SectionList, 'CurrentBlue', Sing.LyricCurrent.B), 0.0, 1.0);
+      Sing.LyricNext := GetLyricGrayColor(6);
+      Sing.LyricNext.R := EnsureRange(ReadFloat(SectionList, 'NextRed', Sing.LyricNext.R), 0.0, 1.0);
+      Sing.LyricNext.G := EnsureRange(ReadFloat(SectionList, 'NextGreen', Sing.LyricNext.G), 0.0, 1.0);
+      Sing.LyricNext.B := EnsureRange(ReadFloat(SectionList, 'NextBlue', Sing.LyricNext.B), 0.0, 1.0);
+      Sing.LyricOutlineActive := GetLyricOutlineColor(0);
+      Sing.LyricOutlineActive.R := EnsureRange(ReadFloat(SectionList, 'OutlineActiveRed', Sing.LyricOutlineActive.R), 0.0, 1.0);
+      Sing.LyricOutlineActive.G := EnsureRange(ReadFloat(SectionList, 'OutlineActiveGreen', Sing.LyricOutlineActive.G), 0.0, 1.0);
+      Sing.LyricOutlineActive.B := EnsureRange(ReadFloat(SectionList, 'OutlineActiveBlue', Sing.LyricOutlineActive.B), 0.0, 1.0);
+      Sing.LyricOutlineCurrent := GetLyricOutlineColor(0);
+      Sing.LyricOutlineCurrent.R := EnsureRange(ReadFloat(SectionList, 'OutlineCurrentRed', Sing.LyricOutlineCurrent.R), 0.0, 1.0);
+      Sing.LyricOutlineCurrent.G := EnsureRange(ReadFloat(SectionList, 'OutlineCurrentGreen', Sing.LyricOutlineCurrent.G), 0.0, 1.0);
+      Sing.LyricOutlineCurrent.B := EnsureRange(ReadFloat(SectionList, 'OutlineCurrentBlue', Sing.LyricOutlineCurrent.B), 0.0, 1.0);
+      Sing.LyricOutlineNext := GetLyricOutlineColor(0);
+      Sing.LyricOutlineNext.R := EnsureRange(ReadFloat(SectionList, 'OutlineNextRed', Sing.LyricOutlineNext.R), 0.0, 1.0);
+      Sing.LyricOutlineNext.G := EnsureRange(ReadFloat(SectionList, 'OutlineNextGreen', Sing.LyricOutlineNext.G), 0.0, 1.0);
+      Sing.LyricOutlineNext.B := EnsureRange(ReadFloat(SectionList, 'OutlineNextBlue', Sing.LyricOutlineNext.B), 0.0, 1.0);
 
       //ThemeLoadStatics(Sing.StaticDuet, 'SingStaticDuet');
 

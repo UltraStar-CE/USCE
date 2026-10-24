@@ -758,6 +758,11 @@ begin
   begin
     ColP1 := GetPlayerColor(Ini.PlayerColor[0]);
     ColP2 := GetPlayerColor(Ini.PlayerColor[1]);
+    if not Theme.Sing.LyricUsePlayerColors then
+    begin
+      ColP1 := Theme.Sing.LyricActive;
+      ColP2 := Theme.Sing.LyricActive;
+    end;
 
     LyricsDuetP1.FontFamily := Ini.LyricsFont;
     LyricsDuetP2.FontFamily := Ini.LyricsFont;
@@ -776,7 +781,7 @@ begin
     LyricsDuetP2.LineColor_act.B := ColP2.B;
     LyricsDuetP2.LineColor_act.A := 1;
 
-    Col := GetLyricGrayColor(8);
+    Col := Theme.Sing.LyricCurrent;
     LyricsDuetP1.LineColor_en.R := Col.R;
     LyricsDuetP1.LineColor_en.G := Col.G;
     LyricsDuetP1.LineColor_en.B := Col.B;
@@ -787,7 +792,7 @@ begin
     LyricsDuetP2.LineColor_en.B := Col.B;
     LyricsDuetP2.LineColor_en.A := 1;
 
-    Col := GetLyricGrayColor(6);
+    Col := Theme.Sing.LyricNext;
     LyricsDuetP1.LineColor_dis.R := Col.R;
     LyricsDuetP1.LineColor_dis.G := Col.G;
     LyricsDuetP1.LineColor_dis.B := Col.B;
@@ -805,19 +810,19 @@ begin
     Lyrics.FontFamily := Ini.LyricsFont;
     Lyrics.FontStyle := Ini.LyricsStyle;
 
-    Col := GetLyricColor(0);
+    Col := Theme.Sing.LyricActive;
     Lyrics.LineColor_act.R := Col.R;
     Lyrics.LineColor_act.G := Col.G;
     Lyrics.LineColor_act.B := Col.B;
     Lyrics.LineColor_act.A := 1;
 
-    Col := GetLyricGrayColor(8);
+    Col := Theme.Sing.LyricCurrent;
     Lyrics.LineColor_en.R := Col.R;
     Lyrics.LineColor_en.G := Col.G;
     Lyrics.LineColor_en.B := Col.B;
     Lyrics.LineColor_en.A := 1;
 
-    Col := GetLyricGrayColor(6);
+    Col := Theme.Sing.LyricNext;
     Lyrics.LineColor_dis.R := Col.R;
     Lyrics.LineColor_dis.G := Col.G;
     Lyrics.LineColor_dis.B := Col.B;
