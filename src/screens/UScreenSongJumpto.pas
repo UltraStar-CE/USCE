@@ -161,9 +161,9 @@ begin
     if (I <= High(Statics)) and (I <= High(Theme.SongJumpto.Statics)) then
       Statics[I].Texture.H := Theme.SongJumpto.Statics[I].H - Delta;
   end;
-  if Length(fFooter.Text) >= 4 then
-    if LibraryLockdown.Active then fFooter.Text[3].Text := Language.Translate('FILTER_KEY_UNLOCK')
-    else fFooter.Text[3].Text := Language.Translate('FILTER_KEY_LOCK');
+  if Length(fFooter.Text) >= 6 then
+    if LibraryLockdown.Active then fFooter.Text[5].Text := Language.Translate('FILTER_UNLOCK')
+    else fFooter.Text[5].Text := Language.Translate('FILTER_LOCK');
   if Theme.SongJumpto.CenterVertical and (Length(Statics) > 0) then
   begin
     OffsetY := (RenderH - Statics[0].Texture.H) / 2 - Statics[0].Texture.Y;

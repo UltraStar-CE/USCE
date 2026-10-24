@@ -3627,13 +3627,28 @@ begin
   for I := 0 to High(Theme.Song.StaticNonParty) do
     SetMarkedCardTexture(StaticNonParty[I], Theme.Song.StaticNonParty[I]);
 
-  // Statics
+  // Filter hints replace legend items only; the existing footer bars stay intact.
   for I := 0 to High(Statics) do
+  begin
+    if ScreenSongJumpto.Visible and (Length(Theme.SongJumpto.Footer.Text) > 0) then
+    begin
+      J := 0;
+      while (J <= High(StaticNonParty)) and (StaticNonParty[J] <> cardinal(I)) do Inc(J);
+      if (J <= High(StaticNonParty)) and
+         (Theme.Song.StaticNonParty[J].Y >= Theme.SongJumpto.Footer.Text[0].Y - 8) then Continue;
+      J := 0;
+      while (J <= High(StaticParty)) and (StaticParty[J] <> cardinal(I)) do Inc(J);
+      if (J <= High(StaticParty)) and
+         (Theme.Song.StaticParty[J].Y >= Theme.SongJumpto.Footer.Text[0].Y - 8) then Continue;
+    end;
     Statics[I].Draw;
-
-  // and texts
+  end;
   for I := 0 to High(Text) do
+  begin
+    if ScreenSongJumpto.Visible and (Length(Theme.SongJumpto.Footer.Text) > 0) and
+       (Text[I].Y >= Theme.SongJumpto.Footer.Text[0].Y - 8) then Continue;
     Text[I].Draw;
+  end;
 
   // Keep duet assignment widgets in the foreground to avoid mode-specific overlap.
   if CatSongs.Song[Interaction].isDuet then
