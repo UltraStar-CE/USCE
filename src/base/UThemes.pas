@@ -512,6 +512,7 @@ type
     VoiceLabel: TThemeText;
     VoiceLabelVisible, VoiceLabelUseVoiceColor: boolean;
     VoiceLabelGutter, VoiceCellPadding: integer;
+    FreestyleNoteAlpha: real;
     StaticLyricsBar:       TThemeStatic;
     StaticLyricsBarDuet:   TThemeStatic;
 
@@ -2117,6 +2118,7 @@ begin
       Sing.LyricOutlineNext.R := EnsureRange(ReadFloat(SectionList, 'OutlineNextRed', Sing.LyricOutlineNext.R), 0.0, 1.0);
       Sing.LyricOutlineNext.G := EnsureRange(ReadFloat(SectionList, 'OutlineNextGreen', Sing.LyricOutlineNext.G), 0.0, 1.0);
       Sing.LyricOutlineNext.B := EnsureRange(ReadFloat(SectionList, 'OutlineNextBlue', Sing.LyricOutlineNext.B), 0.0, 1.0);
+      Sing.FreestyleNoteAlpha := EnsureRange(ReadFloat(GetSectionList('Sing'), 'FreestyleNoteAlpha', 0.55), 0.0, 1.0);
 
       //ThemeLoadStatics(Sing.StaticDuet, 'SingStaticDuet');
 
