@@ -809,13 +809,20 @@ begin
   if DrawScorePanel then
     HidePlayerAvatarsForScorePanel;
 
-  // Match each background to the lyrics actually drawn, including the last-line fade.
+  // Match both themed lyric banks to every visible voice, including last-line fades.
   if IsCurrentSongDuet then
   begin
-    ScreenSing.Statics[StaticLyricsBar].Visible := ScreenSing.Settings.LyricsVisible and
-      ScreenSing.LyricsDuetP1.HasVisibleText(LyricsState.MidBeat);
-    ScreenSing.Statics[StaticLyricsBarDuet].Visible := ScreenSing.Settings.LyricsVisible and
-      ScreenSing.LyricsDuetP2.HasVisibleText(LyricsState.MidBeat);
+    ScreenSing.LayoutVoiceLyrics;
+    ScreenSing.Statics[StaticLyricsBar].Visible := false;
+    ScreenSing.Statics[StaticLyricsBarDuet].Visible := false;
+    if ScreenSing.Settings.LyricsVisible then
+      for VoiceIndex := 0 to High(ScreenSing.DisplayedVoices) do
+        if ScreenSing.VoiceLyrics[ScreenSing.DisplayedVoices[VoiceIndex]].HasVisibleText(LyricsState.MidBeat) then
+        begin
+          if ScreenSing.DisplayedVoiceBanks[VoiceIndex] = 0 then
+            ScreenSing.Statics[StaticLyricsBar].Visible := true
+          else ScreenSing.Statics[StaticLyricsBarDuet].Visible := true;
+        end;
   end
   else
   begin
