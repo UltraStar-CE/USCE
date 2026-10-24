@@ -1,6 +1,6 @@
 # Continuous mode display
 
-Open continuous-mode settings with C in song selection and choose Display.
+Open continuous-mode settings with C in song selection.
 
 Song display is available with any number of players:
 
