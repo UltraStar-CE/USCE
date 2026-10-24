@@ -26,3 +26,8 @@ Set `AutoHeightStatic` to the 1-based dialog background index to shrink it
 when fewer than three rows are present. The result count and Add/Done/Lock
 buttons move up with the hidden rows; Clear stays in the header. Leave it at
 0 for a fixed layout. Modern uses the plain dialog background without a divider.
+
+CenterVertical=1 in SongJumptoFilters centers the complete panel after its
+height is calculated. The Done button is unused: Enter from an input and Escape
+return to song selection. Lock state is shown with a vector padlock inside the
+Lock button's themed bounds.
