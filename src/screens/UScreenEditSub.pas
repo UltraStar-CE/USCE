@@ -6696,18 +6696,9 @@ begin
   PitchBottom := Y + H;
   for Pass := 0 to 1 do
   begin
-    if Pass = 0 then
-    begin
-      Thickness := 5;
-      Red := 0.55;
-      Alpha := 0.10;
-    end
-    else
-    begin
-      Thickness := 2.5;
-      Red := 1;
-      Alpha := 0.35;
-    end;
+    Thickness := Theme.EditSub.VocalsContourWidth[Pass];
+    Alpha := Theme.EditSub.VocalsContourAlpha[Pass];
+    Red := Theme.EditSub.VocalsContourColor[Pass].R;
     InSegment := false;
     for PitchIndex := 0 to High(Contour) do
     begin
@@ -6726,7 +6717,8 @@ begin
         Continue;
       end;
       if InSegment then
-        Renderer.DrawLine(PreviousX, PreviousY, XPos, PitchY, 0, Thickness, Red, 0, 0, Alpha);
+        Renderer.DrawLine(PreviousX, PreviousY, XPos, PitchY, 0, Thickness, Red, Theme.EditSub.VocalsContourColor[Pass].G,
+          Theme.EditSub.VocalsContourColor[Pass].B, Alpha);
       PreviousX := XPos;
       PreviousY := PitchY;
       InSegment := true;

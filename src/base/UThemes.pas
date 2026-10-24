@@ -713,6 +713,8 @@ type
 
 
   TThemeEditSub = class(TThemeBasic)
+      VocalsContourColor: array[0..1] of TRGB;
+      VocalsContourAlpha, VocalsContourWidth: array[0..1] of real;
       // statics
       BackgroundImage:              TThemeStatic;
       HeaderBackground:             TThemeStatic;
@@ -2380,6 +2382,18 @@ begin
 
       // editor
       ThemeLoadBasic (EditSub,               'EditSub');
+      SectionList := GetSectionList('EditSubVocalsHalo');
+      EditSub.VocalsContourColor[0].R := EnsureRange(ReadFloat(SectionList, 'Red', 0.55), 0.0, 1.0);
+      EditSub.VocalsContourColor[0].G := EnsureRange(ReadFloat(SectionList, 'Green', 0), 0.0, 1.0);
+      EditSub.VocalsContourColor[0].B := EnsureRange(ReadFloat(SectionList, 'Blue', 0), 0.0, 1.0);
+      EditSub.VocalsContourAlpha[0] := EnsureRange(ReadFloat(SectionList, 'Alpha', 0.1), 0.0, 1.0);
+      EditSub.VocalsContourWidth[0] := Max(0, ReadFloat(SectionList, 'Width', 5));
+      SectionList := GetSectionList('EditSubVocalsLine');
+      EditSub.VocalsContourColor[1].R := EnsureRange(ReadFloat(SectionList, 'Red', 1), 0.0, 1.0);
+      EditSub.VocalsContourColor[1].G := EnsureRange(ReadFloat(SectionList, 'Green', 0), 0.0, 1.0);
+      EditSub.VocalsContourColor[1].B := EnsureRange(ReadFloat(SectionList, 'Blue', 0), 0.0, 1.0);
+      EditSub.VocalsContourAlpha[1] := EnsureRange(ReadFloat(SectionList, 'Alpha', 0.35), 0.0, 1.0);
+      EditSub.VocalsContourWidth[1] := Max(0, ReadFloat(SectionList, 'Width', 2.5));
       ThemeLoadStatic(EditSub.BackgroundImage, 'EditSubBackgroundImage');
       ThemeLoadStatic(EditSub.HeaderBackground, 'EditSubHeaderBackground');
       ThemeLoadStatic(EditSub.CurrentNoteInfoBackground, 'EditSubCurrentNoteInfoBackground');
