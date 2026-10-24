@@ -503,16 +503,14 @@ begin
 
   Text[TextArtistTitle].Text := CurrentSong.Artist + ' - ' + CurrentSong.Title;
 
-  if Length(CurrentSong.Score[Player[0].Level]) = 0 then
+  // An explicitly timed continuous-mode screen also stays visible when this
+  // difficulty has no saved scores yet.
+  if (Length(CurrentSong.Score[Player[0].Level]) = 0) and
+     not ScreenContinuousPlayback.Session.Active then
   begin
-    if ScreenContinuousPlayback.Session.Active then
-      ScreenContinuousPlayback.HandlePlaybackKey(SDLK_RETURN, true)
-    else
-    begin
-      ScreenSong.PreservePreviewForReturn;
-      FadeTo(@ScreenSong);
-    end;
-  end; //if there are no scores to show, go to next screen
+    ScreenSong.PreservePreviewForReturn;
+    FadeTo(@ScreenSong);
+  end;
 
   ShowScoresForDifficulty(Player[0].Level);
 end;

@@ -43,7 +43,7 @@ uses SysUtils, UNote, UGraphic, ULanguage, UHelp, ULog, UMusic, UPlaylist,
   USongs, USong, UIni, ULyrics, UDisplay;
 
 const
-  DisplaySeconds: array[0..4] of integer = (0, 3, 5, 10, 20);
+  DisplaySeconds: array[0..7] of integer = (0, 5, 10, 20, 30, 40, 50, 60);
 
 constructor TScreenContinuousPlayback.Create;
 begin
@@ -62,7 +62,7 @@ begin
 end;
 
 procedure TScreenContinuousPlayback.LoadWidgets;
-var Times: array[0..4] of UTF8String; I: integer;
+var Times: array[0..High(DisplaySeconds)] of UTF8String; I: integer;
 begin
   Times[0] := Language.Translate('CONTINUOUS_SKIP');
   for I := 1 to High(Times) do Times[I] := IntToStr(DisplaySeconds[I]) + ' s';
