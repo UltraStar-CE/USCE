@@ -26,7 +26,13 @@ begin
   Expect('PEGI:12, USK:16', 'PEGI', 12);
   Expect('999', '', 999);
   Expect('', 'DE', -1);
-  Expect('0', 'DE', -1);
+  Expect('0', 'DE', 0);
+  Expect('0', '', 0);
+  Expect('DE:0', 'DE', 0);
+  Expect('12, DE:0', 'DE', 0);
+  Expect('0, DE:12', 'AT', 0);
+  Expect('0, DE:12', 'DE', 12);
+  Expect('0, DE:bad', '', -1);
   Expect('-1', 'DE', -1);
   Expect('1000', '', -1);
   Expect('12, DE:bad', '', -1);
