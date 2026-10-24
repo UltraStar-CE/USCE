@@ -1116,6 +1116,9 @@ type
     Name:             TThemeName;
     Song:             TThemeSong;
     Sing:             TThemeSing;
+    RemoteRoomText: TThemeText;
+    RemoteRoomVisible, RemoteRoomAnchorRight: boolean;
+    RemoteRoomAlpha: real;
     LyricBar:         TThemeLyricBar;
     LyricBarDuetP1:   TThemeLyricBar;
     LyricBarDuetP2:   TThemeLyricBar;
@@ -2119,6 +2122,20 @@ begin
       Sing.LyricOutlineNext.G := EnsureRange(ReadFloat(SectionList, 'OutlineNextGreen', Sing.LyricOutlineNext.G), 0.0, 1.0);
       Sing.LyricOutlineNext.B := EnsureRange(ReadFloat(SectionList, 'OutlineNextBlue', Sing.LyricOutlineNext.B), 0.0, 1.0);
       Sing.FreestyleNoteAlpha := EnsureRange(ReadFloat(GetSectionList('Sing'), 'FreestyleNoteAlpha', 0.55), 0.0, 1.0);
+
+      with RemoteRoomText do
+      begin
+        X := -10; Y := 6; W := 0; H := 24; Size := 20;
+        Font := 0; Style := 0; Align := 2; Z := 1;
+        ColR := 1; ColG := 1; ColB := 1; Reflection := false;
+      end;
+      if ResolveThemeFile('RemoteRoomText') <> nil then
+        ThemeLoadText(RemoteRoomText, 'RemoteRoomText');
+      SectionList := GetSectionList('RemoteRoomText');
+      RemoteRoomVisible := ReadBool(SectionList, 'Visible', true);
+      RemoteRoomAnchorRight := ReadBool(SectionList, 'AnchorRight', true);
+      RemoteRoomAlpha := EnsureRange(ReadFloat(SectionList, 'Alpha', 1), 0.0, 1.0);
+
 
       //ThemeLoadStatics(Sing.StaticDuet, 'SingStaticDuet');
 
