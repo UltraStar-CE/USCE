@@ -38,7 +38,7 @@ type
   TScreenSongJumpto = class(TMenu)
   private
     fVisible, fPlaylistSearch: boolean;
-    fLastPlayed, fVisSongs, fFocus, fFirst, fPlaylist: integer;
+    fLastPlayed, fVisSongs, fFocus, fFirst, fPlaylist, fFocusPart: integer;
     fRows: TSongFilterRows;
     fSlotKinds: array[0..FILTER_SLOTS-1] of integer;
     fInputs, fRemove, fCategories: array[0..FILTER_SLOTS-1] of integer;
@@ -108,7 +108,7 @@ begin
 end;
 
 procedure TScreenSongJumpto.RefreshRows;
-var S, R, I: integer;
+var S, R, I, Delta: integer;
 begin
   if fFocus < Length(fRows) then
   begin
@@ -126,16 +126,27 @@ begin
     fSlotKinds[S] := Ord(fRows[R].Kind);
     UpdateSelectSlideOptions(fCategories[S], Theme.SongJumpto.IType, fSlotKinds[S]);
     Button[fInputs[S]].Text[0].Text := fRows[R].Query;
-    Button[fInputs[S]].Selected := fFocus = R;
-    SelectsS[fCategories[S]].Selected := fFocus = R;
+    Button[fInputs[S]].Selected := (fFocus = R) and (fFocusPart = 0);
+    Button[fRemove[S]].Selected := (fFocus = R) and (fFocusPart = 1);
+    SelectsS[fCategories[S]].Selected := (fFocus = R) and (fFocusPart = 0);
   end;
-  Button[fActions[0]].Text[0].Text := Language.Translate('FILTER_ADD');
-  Button[fActions[1]].Text[0].Text := Language.Translate('FILTER_CLEAR');
-  Button[fActions[2]].Text[0].Text := Language.Translate('FILTER_DONE');
+  Button[fActions[0]].Text[0].Text := '+';
+  Button[fActions[1]].Text[0].Text := 'x';
+  Button[fActions[2]].Text[0].Text := Language.Translate('FILTER_OK');
   if LibraryLockdown.Active then
-    Button[fActions[3]].Text[0].Text := Language.Translate('LOCKDOWN_UNLOCK')
-  else Button[fActions[3]].Text[0].Text := Language.Translate('LOCKDOWN_START');
+    Button[fActions[3]].Text[0].Text := Language.Translate('FILTER_UNLOCK')
+  else Button[fActions[3]].Text[0].Text := Language.Translate('FILTER_LOCK');
   for I := 0 to 3 do Button[fActions[I]].Selected := fFocus = Length(fRows) + I;
+  if Theme.SongJumpto.AutoHeightStatic > 0 then
+  begin
+    Delta := (FILTER_SLOTS - Min(FILTER_SLOTS, Length(fRows))) * Theme.SongJumpto.RowSpacing;
+    Text[0].Y := Theme.SongJumpto.TextFound.Y - Delta;
+    for I := 0 to 3 do
+      if I <> 1 then Button[fActions[I]].Y := Theme.SongJumpto.FilterActions[I].Y - Delta;
+    I := Theme.SongJumpto.AutoHeightStatic - 1;
+    if (I <= High(Statics)) and (I <= High(Theme.SongJumpto.Statics)) then
+      Statics[I].Texture.H := Theme.SongJumpto.Statics[I].H - Delta;
+  end;
 end;
 
 procedure TScreenSongJumpto.Changed;
@@ -149,7 +160,7 @@ procedure TScreenSongJumpto.AddRow;
 begin
   // Reuse an empty trailing row rather than adding a series of empty rows.
   if Trim(fRows[High(fRows)].Query) <> '' then SetLength(fRows, Length(fRows) + 1);
-  fFocus := High(fRows);
+  fFocus := High(fRows); fFocusPart := 0;
   RefreshRows;
 end;
 
@@ -162,7 +173,7 @@ begin
     for R := Index to High(fRows) - 1 do fRows[R] := fRows[R + 1];
     SetLength(fRows, Length(fRows) - 1);
   end;
-  fFocus := Min(Index, High(fRows));
+  fFocus := Min(Index, High(fRows)); fFocusPart := 0;
   Changed;
 end;
 
@@ -171,7 +182,7 @@ begin
   case Action of
     0: AddRow;
     1: begin SetLength(fRows, 1); fRows[0].Query := ''; fRows[0].Kind := fltAll;
-         fFocus := 0; fFirst := 0; Changed; end;
+         fFocus := 0; fFirst := 0; fFocusPart := 0; Changed; end;
     2: Visible := false;
     3: ToggleLibraryLockdown;
   end;
@@ -183,7 +194,7 @@ var S: integer;
 begin
   Result := true;
   if not PressedDown then Exit;
-  if (fFocus < Length(fRows)) and (IsAlphaNumericChar(CharCode) or
+  if (fFocus < Length(fRows)) and (fFocusPart = 0) and (IsAlphaNumericChar(CharCode) or
     IsPunctuationChar(CharCode) or (CharCode = 32)) then
   begin
     fRows[fFocus].Query := fRows[fFocus].Query + UCS4ToUTF8String(CharCode);
@@ -191,9 +202,18 @@ begin
     Exit;
   end;
   case PressedKey of
-    SDLK_TAB: ScreenPopupHelp.ShowPopup;
+    SDLK_F1: ScreenPopupHelp.ShowPopup;
+    SDLK_TAB:
+      begin
+        if (fFocus < Length(fRows)) and (fFocusPart = 0) then fFocusPart := 1
+        else begin fFocusPart := 0; fFocus := (fFocus + 1) mod (Length(fRows) + 4); end;
+        RefreshRows;
+      end;
     SDLK_ESCAPE: begin Visible := false; AudioPlayback.PlaySound(SoundLib.Back); end;
-    SDLK_RETURN: if fFocus < Length(fRows) then Visible := false
+    SDLK_RETURN: if fFocus < Length(fRows) then
+                   begin
+                     if fFocusPart = 1 then RemoveRow(fFocus) else Visible := false;
+                   end
                  else ActivateAction(fFocus - Length(fRows));
     SDLK_BACKSPACE:
       if fFocus < Length(fRows) then
@@ -210,10 +230,11 @@ begin
     SDLK_DOWN:
       begin
         if Repeated then Exit;
+        fFocusPart := 0;
         if (fFocus = High(fRows)) and (Trim(fRows[fFocus].Query) <> '') then AddRow
         else begin fFocus := Min(fFocus + 1, Length(fRows) + 3); RefreshRows; end;
       end;
-    SDLK_UP: begin fFocus := Max(0, fFocus - 1); RefreshRows; end;
+    SDLK_UP: begin fFocusPart := 0; fFocus := Max(0, fFocus - 1); RefreshRows; end;
     SDLK_LEFT, SDLK_RIGHT:
       if fFocus < Length(fRows) then
       begin
@@ -253,12 +274,12 @@ begin
     R := fFirst + S;
     if R >= Length(fRows) then Break;
     if Inside(fRemove[S]) then begin RemoveRow(R); Exit; end;
-    if Inside(fInputs[S]) then begin fFocus := R; RefreshRows; Exit; end;
+    if Inside(fInputs[S]) then begin fFocus := R; fFocusPart := 0; RefreshRows; Exit; end;
     Area := SelectsS[fCategories[S]].GetMouseOverArea;
     if (LX >= Area.X) and (LX <= Area.X + Area.W) and
        (LY >= Area.Y) and (LY < Area.Y + Area.H) then
       begin
-        fFocus := R;
+        fFocus := R; fFocusPart := 0;
         if LX < Area.X + Area.W / 2 then ParseInput(SDLK_LEFT, 0, true)
         else ParseInput(SDLK_RIGHT, 0, true);
         Exit;
@@ -314,7 +335,7 @@ begin
     fPlaylist := PlaylistMan.CurPlayList;
     Text[0].Text := Format(Theme.SongJumpto.SongsFound, [CatSongs.VisibleSongs]);
   end;
-  fFocus := 0; fFirst := 0;
+  fFocus := 0; fFirst := 0; fFocusPart := 0;
   fLastPlayed := ScreenSong.Interaction;
   RefreshRows;
 end;
