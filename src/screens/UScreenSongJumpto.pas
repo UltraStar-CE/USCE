@@ -211,7 +211,7 @@ end;
 
 constructor TScreenSongJumpto.Create;
 var
-  ButtonID, I: integer;
+  ButtonID: integer;
 begin
   inherited Create;
 
@@ -228,20 +228,7 @@ begin
 
   fSelectType := fltAll;
   AddSelectSlide(Theme.SongJumpto.SelectSlideType, PInteger(@fSelectType)^, Theme.SongJumpto.IType);
-  // The button follows the search results using the current theme geometry.
-  ButtonID := AddButton(Theme.SongJumpto.ButtonSearchText.X,
-    Theme.SongJumpto.TextFound.Y + 30,
-    Theme.SongJumpto.ButtonSearchText.W, 30, PATH_NONE);
-  Button[ButtonID].Z := Theme.SongJumpto.ButtonSearchText.Z;
-  AddButtonText(8, 3, 0, 0, 0, Language.Translate('LOCKDOWN_START'));
-  Button[ButtonID].Text[0].Z := Theme.SongJumpto.ButtonSearchText.Z + 0.001;
-  Button[ButtonID].Text[0].Size := 20;
-  // Extend the existing dialog backdrop, without requiring new theme assets.
-  for I := 0 to High(Statics) do
-    if (Statics[I].Texture.Y <= Theme.SongJumpto.TextFound.Y) and
-      (Statics[I].Texture.Y + Statics[I].Texture.H >= Theme.SongJumpto.TextFound.Y) and
-      (Statics[I].Texture.Y + Statics[I].Texture.H < Theme.SongJumpto.TextFound.Y + 72) then
-      Statics[I].Texture.H := Theme.SongJumpto.TextFound.Y + 72 - Statics[I].Texture.Y;
+  AddButton(Theme.SongJumpto.ButtonLock);
 
   Interaction := 0;
   fLastPlayed  := 0;

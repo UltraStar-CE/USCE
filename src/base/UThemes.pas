@@ -764,6 +764,7 @@ type
   end;
 
   TThemeSongJumpTo = class(TThemeBasic)
+    ButtonLock: TThemeButton;
     ButtonSearchText: TThemeButton;
     SelectSlideType:  TThemeSelectSlide;
     TextFound:        TThemeText;
@@ -2342,6 +2343,28 @@ begin
 
       ThemeLoadSelectSlide(SongJumpto.SelectSlideType, 'SongJumptoSelectSlideType');
       ThemeLoadText(SongJumpto.TextFound, 'SongJumptoTextFound');
+      SongJumpto.ButtonLock := SongJumpto.ButtonSearchText;
+      with SongJumpto.ButtonLock do
+      begin
+        Text := Copy(Text);
+        Y := SongJumpto.TextFound.Y + Max(1, SongJumpto.TextFound.H) + 12;
+        H := Max(30, H); SelectH := H;
+        if Length(Text) = 0 then
+        begin
+          SetLength(Text, 1);
+          Text[0] := SongJumpto.TextFound;
+          Text[0].X := 8; Text[0].Y := 3; Text[0].Size := 20;
+        end;
+        Text[0].Text := Language.Translate('LOCKDOWN_START');
+      end;
+      if ResolveThemeFile('SongJumptoButtonLock') <> nil then
+        ThemeLoadButton(SongJumpto.ButtonLock, 'SongJumptoButtonLock')
+      else
+        // Legacy themes get bounds derived from the added control.
+        for I := 0 to High(SongJumpto.Statics) do
+          with SongJumpto.Statics[I] do
+            if (Y <= SongJumpto.TextFound.Y) and (Y + H >= SongJumpto.TextFound.Y) then
+              H := Max(H, SongJumpto.ButtonLock.Y + SongJumpto.ButtonLock.H + 12 - Y);
       //Translations
       SongJumpto.IType[0] := Language.Translate('SONG_JUMPTO_TYPE1');
       SongJumpto.IType[1] := Language.Translate('SONG_JUMPTO_TYPE2');
