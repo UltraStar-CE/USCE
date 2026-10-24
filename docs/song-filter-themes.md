@@ -8,7 +8,7 @@ stacked layout; Deluxe inherits it. Other themes can override these sections:
 | `SongJumptoFilters` | `RowSpacing`, the vertical distance between the three visible rows |
 | `SongJumptoSelectSlideType` | First row's category selector, including arrows and text |
 | `SongJumptoButtonSearchText` | First row's input position, size, texture and selection appearance |
-| `SongJumptoButtonAdd`, `SongJumptoButtonClear`, `SongJumptoButtonDone`, `SongJumptoButtonLock` | Action buttons, independently positioned |
+| `SongJumptoButtonClear`, `SongJumptoButtonLock` | Header actions, independently positioned |
 | `SongJumptoTextFound` | Result count |
 | `SongJumptoStatic*`, `SongJumptoBackground`, `SongJumptoText*` | Dialog background, decoration and heading |
 
@@ -22,11 +22,18 @@ Themes without `SongJumptoFilters` receive a compatibility layout derived from
 their existing search controls. Adding that section opts into explicit layout:
 set the input, result count, actions and dialog background to fit the rows.
 Set `AutoHeightStatic` to the 1-based dialog background index to shrink it
-when fewer than three rows are present. The result count and Add/Done/Lock
-buttons move up with the hidden rows; Clear stays in the header. Leave it at
+when fewer than three rows are present. The result count moves up with the
+hidden rows; Clear and Lock stay in the header. Leave it at
 0 for a fixed layout. Modern uses the plain dialog background without a divider.
 
 CenterVertical=1 in SongJumptoFilters centers the complete panel after its
 height is calculated. The Done button is unused: Enter from an input and Escape
 return to song selection. Lock state is shown with a vector padlock inside the
 Lock button's themed bounds.
+
+`SongJumptoFooterStatic*` and `SongJumptoFooterText*` supply only the replacement
+key icons and labels. The song screen keeps drawing its original footer bars.
+Use the existing legend styles and key textures, including `ButtonAlt` for Alt
+combinations. The Add, Done and per-row remove controls are unused. Up/Down moves
+between filter rows and Down after a populated last row adds another. Tab reaches
+the header actions; Alt+C clears and Alt+L locks or unlocks. Enter confirms.
