@@ -352,21 +352,15 @@ end;
 
 procedure TScreenSongJumpto.SetTextFound(Count: cardinal);
 begin
-  if (Count = 0) then
-  begin
-    Text[0].Text := Theme.SongJumpto.NoSongsFound;
-    if (Length(FilterSummary) = 0) then
-      ScreenSong.HideCatTL
-    else
-      ScreenSong.ShowCatTLCustom(Format(Theme.SongJumpto.CatText, [FilterSummary]));
-  end
+  if Count = 0 then
+    Text[0].Text := Theme.SongJumpto.NoSongsFound
   else
-  begin
     Text[0].Text := Format(Theme.SongJumpto.SongsFound, [Count]);
 
-    //Set CatTopLeftText
+  if FilterSummary = '' then
+    ScreenSong.HideCatTL
+  else
     ScreenSong.ShowCatTLCustom(Format(Theme.SongJumpto.CatText, [FilterSummary]));
-  end;
 
   //Set visSongs
   fVisSongs := Count;
