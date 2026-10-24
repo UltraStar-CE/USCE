@@ -744,7 +744,7 @@ begin
   end
   else if (ScreenSongJumpto.Visible) then
   begin
-    Result := ScreenSongJumpto.ParseInput(PressedKey, CharCode, PressedDown);
+    Result := ScreenSongJumpto.ParseInput(PressedKey, CharCode, PressedDown, Repeated);
     Exit;
   end;
 
