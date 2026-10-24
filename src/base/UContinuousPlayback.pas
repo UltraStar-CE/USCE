@@ -7,6 +7,9 @@ interface
 type
   TPlaybackSongs = array of integer;
   TPlaybackStage = (psStopped, psSong, psResults, psHighScores, psAdvance);
+  TContinuousDisplay = record
+    Lyrics, Progress, Notes, PlayerInfo, Feedback: boolean;
+  end;
 
   // Session policy has no dependency on menus, media, microphones or players.
   TContinuousPlayback = class
@@ -34,7 +37,21 @@ type
     function Active: boolean;
   end;
 
+function ContinuousDisplay(WithPlayers: boolean; SongMode, SingingMode: integer): TContinuousDisplay;
+
 implementation
+
+function ContinuousDisplay(WithPlayers: boolean; SongMode, SingingMode: integer): TContinuousDisplay;
+begin
+  // Defaults and invalid values retain the normal display.
+  if (SongMode < 0) or (SongMode > 3) then SongMode := 0;
+  if (SingingMode < 0) or (SingingMode > 4) then SingingMode := 0;
+  Result.Lyrics := SongMode in [0, 1];
+  Result.Progress := SongMode in [0, 2];
+  Result.Notes := WithPlayers and (SingingMode in [0, 1, 2]);
+  Result.PlayerInfo := WithPlayers and (SingingMode in [0, 1, 3]);
+  Result.Feedback := WithPlayers and (SingingMode = 0);
+end;
 
 procedure TContinuousPlayback.Shuffle;
 var I, J, Temp: integer; Bad: boolean;

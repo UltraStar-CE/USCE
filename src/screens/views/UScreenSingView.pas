@@ -831,6 +831,12 @@ begin
   if DrawScorePanel then
     HidePlayerAvatarsForScorePanel;
 
+  // always draw custom items
+  ScreenSing.Statics[StaticLyricsBar].Visible := ScreenSing.Settings.LyricsVisible;
+  ScreenSing.Statics[StaticLyricsBarDuet].Visible := ScreenSing.Settings.LyricsVisible and IsCurrentSongDuet and (PlayersPlay <> 1);
+  ScreenSing.Statics[StaticTimeBar].Visible := ScreenSing.Settings.TimeBarVisible;
+  ScreenSing.Statics[StaticTimeProgress].Visible := ScreenSing.Settings.TimeBarVisible;
+
   // draw static menu (FG)
   ScreenSing.DrawFG;
 
@@ -876,20 +882,18 @@ begin
     DrawInfoLyricBar;
 
   // draw scores
-  if DrawScorePanel then
+  if DrawScorePanel or ScreenContinuousPlayback.Session.Active then
   begin
-    ScreenSing.Scores.Draw;
-    DrawPlayerAvatarsAfterScorePanel;
+    // Keep popup/score animation state advancing even when its rendering is hidden.
+    ScreenSing.Scores.Draw(DrawScorePanel, ScreenSing.Settings.FeedbackVisible);
+    if DrawScorePanel then DrawPlayerAvatarsAfterScorePanel;
   end;
 
-  // always draw custom items
-  ScreenSing.Statics[StaticLyricsBar].Visible := ScreenSing.Settings.LyricsVisible;
-  ScreenSing.Statics[StaticLyricsBarDuet].Visible := ScreenSing.Settings.LyricsVisible and IsCurrentSongDuet and (PlayersPlay <> 1);
-  ScreenSing.Statics[StaticTimeBar].Visible := ScreenSing.Settings.TimeBarVisible;
+
   SingDraw;
 
   // goldennotestarstwinkle
-  if PlayersPlay > 0 then GoldenRec.SpawnRec;
+  if (PlayersPlay > 0) and ScreenSing.Settings.FeedbackVisible then GoldenRec.SpawnRec;
 
   FadeMessage();
 
@@ -950,6 +954,7 @@ var
   w, h: real;
   CountDownText:  UTF8String;
 begin
+  if ScreenContinuousPlayback.Session.Active and not ScreenSing.Settings.FeedbackVisible then Exit;
   t := frac(timeDiff);
 
   h := 300*t*ScreenH/RenderH;
