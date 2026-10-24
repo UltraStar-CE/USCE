@@ -401,7 +401,8 @@ function TScreenSongJumpto.Draw: boolean;
 var I: integer; X, Y, W, H, Z: real;
   procedure Outline(B: integer);
   begin
-    if not Button[B].Visible or not Button[B].Selected then Exit;
+    if not Button[B].Visible or not Button[B].Selected or
+      (Theme.SongJumpto.FocusWidth <= 0) or (Theme.SongJumpto.FocusAlpha <= 0) then Exit;
     X := Button[B].X; Y := Button[B].Y; W := Button[B].W; H := Button[B].H;
     Z := Button[B].Z + 0.003;
     Renderer.DrawLine(X, Y, X+W, Y, Z, Theme.SongJumpto.FocusWidth, Theme.SongJumpto.FocusColor.R,
