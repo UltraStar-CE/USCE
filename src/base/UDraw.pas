@@ -1149,7 +1149,9 @@ begin
                 Top := YBaseNote - (Tone - Base) * H / 18 - NotesH[0];
                 if (Right > Left) and (Top >= YBaseNote - 7 * H / 9) and
                   (Top + 2 * NotesH[0] <= YBaseNote + 2 * H / 9) then
-                  Renderer.DrawQuad(Left, Top, 0, Right - Left, 2 * NotesH[0], 0.45, 0.45, 0.45, 0.4);
+                  Renderer.DrawQuad(Left, Top, 0, Right - Left, 2 * NotesH[0], Theme.EditSub.InactiveVoiceColor.R,
+                    Theme.EditSub.InactiveVoiceColor.G, Theme.EditSub.InactiveVoiceColor.B,
+                    Theme.EditSub.InactiveVoiceAlpha);
               end;
 end;
 
