@@ -77,6 +77,12 @@ type
     fltAge
   );
 
+  TSongFilterRow = record
+    Kind: TSongFilter;
+    Query: UTF8String;
+  end;
+  TSongFilterRows = array of TSongFilterRow;
+
   TScore = record
     Name:   UTF8String;
     Score:  integer;
@@ -143,6 +149,7 @@ type
     function VisibleIndex(Index: integer): integer;         // returns visible song index (skips invisible)
 
     function SetFilter(FilterStr: UTF8String; Filter: TSongFilter): cardinal;
+    function SetFilters(const Rows: TSongFilterRows): cardinal;
   end;
 
 var
@@ -166,6 +173,7 @@ const
 implementation
 
 uses
+  UFilterTerms,
   UAge,
   ULibraryLockdown,
   StrUtils,
@@ -1072,6 +1080,34 @@ begin
   Result := Song[Index].VisibleIndex;
 end;
 
+function TCatSongs.SetFilters(const Rows: TSongFilterRows): cardinal;
+var I, R: integer; Mask: array of boolean; Active: boolean;
+begin
+  SetLength(Mask, Length(Song));
+  for I := 0 to High(Mask) do Mask[I] := not Song[I].Main;
+  Active := false;
+  for R := 0 to High(Rows) do
+    if Trim(Rows[R].Query) <> '' then
+    begin
+      Active := true;
+      SetFilter(Rows[R].Query, Rows[R].Kind);
+      for I := 0 to High(Mask) do Mask[I] := Mask[I] and Song[I].Visible;
+    end;
+  if not Active then
+  begin
+    SetFilter('', fltAll);
+    Exit(VisibleSongs);
+  end;
+  Result := 0;
+  for I := 0 to High(Mask) do
+  begin
+    Song[I].Visible := Mask[I];
+    if Mask[I] then Inc(Result);
+  end;
+  CatNumShow := -2;
+  ResetVisibleIndexCache;
+end;
+
 function TCatSongs.SetFilter(FilterStr: UTF8String; Filter: TSongFilter): cardinal;
 var
   I, J:      integer;
@@ -1185,6 +1221,12 @@ begin
           TmpString := Song[i].TagsASCII;
       end;
 
+      if Filter in [fltLanguage, fltEdition, fltGenre, fltYear, fltTags] then
+      begin
+        Song[I].Visible := MatchesFilterTerms(TmpString, FilterCopy, Filter = fltYear);
+        if Song[I].Visible then Inc(Result);
+        Continue;
+      end;
       Song[i].Visible := true;
       // Look for every searched word
       for J := 0 to High(WordArray) do
