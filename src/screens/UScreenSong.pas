@@ -2154,12 +2154,11 @@ end;
 
 procedure TScreenSong.LayoutDuetSingerWidgets(PlayerCount: integer);
 var
-  I, Columns, Rows, BoxWidth, BoxHeight, AreaWidth, AreaHeight: integer;
+  I, Columns, Rows, BoxWidth, BoxHeight, AreaWidth, AreaHeight, Gap: integer;
   Left, Top: real;
-const
-  Gap = 4;
 begin
   if PlayerCount <= 0 then Exit;
+  Gap := Theme.Song.VoiceTileGap;
   SyncDuetSingerTheme;
   AreaWidth := Theme.Song.DuetSingerArea.W;
   if AreaWidth <= DuetSingerBaseStatic.W then
@@ -2167,10 +2166,10 @@ begin
   AreaHeight := Theme.Song.DuetSingerArea.H;
   if AreaHeight <= DuetSingerBaseStatic.H then
     AreaHeight := Max(26, RenderH - Theme.Song.DuetSingerArea.Y - 55);
-  BoxWidth := Max(1, Round(DuetSingerBaseStatic.W * 0.68 * 2));
+  BoxWidth := Min(Theme.Song.VoiceTileWidth, AreaWidth);
   Columns := Min(PlayerCount, Max(1, (AreaWidth + Gap) div (BoxWidth + Gap)));
   Rows := (PlayerCount + Columns - 1) div Columns;
-  BoxHeight := Max(22, Min(Round(DuetSingerBaseStatic.H),
+  BoxHeight := Max(1, Min(Theme.Song.VoiceTileHeight,
     (AreaHeight - Gap * (Rows - 1)) div Rows));
   for I := 0 to PlayerCount - 1 do
   begin
@@ -2182,9 +2181,9 @@ begin
     Statics[DuetSingerStatics[I]].Texture.H := BoxHeight;
     Statics[DuetSingerStatics[I]].Texture.Z := Max(DuetSingerBaseStatic.Z, 0.995);
     Text[DuetSingerTexts[I]].X := Left + BoxWidth / 2;
-    Text[DuetSingerTexts[I]].Y := Top + 2;
-    Text[DuetSingerTexts[I]].W := BoxWidth - 6;
-    Text[DuetSingerTexts[I]].H := BoxHeight - 4;
+    Text[DuetSingerTexts[I]].Y := Top + Theme.Song.VoiceTextPaddingY;
+    Text[DuetSingerTexts[I]].W := Max(1, BoxWidth - 2 * Theme.Song.VoiceTextPaddingX);
+    Text[DuetSingerTexts[I]].H := Max(1, BoxHeight - 2 * Theme.Song.VoiceTextPaddingY);
     Text[DuetSingerTexts[I]].Size := DuetSingerBaseText.Size;
     Text[DuetSingerTexts[I]].Z := Max(DuetSingerBaseText.Z, 0.996);
   end;
