@@ -510,7 +510,7 @@ type
     LyricUsePlayerColors: boolean;
     VoicePreviewAlpha: real;
     VoiceLabel: TThemeText;
-    VoiceLabelVisible: boolean;
+    VoiceLabelVisible, VoiceLabelUseVoiceColor: boolean;
     VoiceLabelGutter, VoiceCellPadding: integer;
     StaticLyricsBar:       TThemeStatic;
     StaticLyricsBarDuet:   TThemeStatic;
@@ -2129,6 +2129,7 @@ begin
         ThemeLoadText(Sing.VoiceLabel, 'SingVoiceLabel');
       SectionList := GetSectionList('SingVoiceLabel');
       Sing.VoiceLabelVisible := ReadBool(SectionList, 'Visible', true);
+      Sing.VoiceLabelUseVoiceColor := ReadBool(SectionList, 'UseVoiceColor', true);
       Sing.VoiceLabelGutter := Max(0, ReadInteger(SectionList, 'Gutter', Sing.VoiceLabel.W));
       Sing.VoiceCellPadding := Max(0, ReadInteger(SectionList, 'CellPadding', 8));
   ThemeLoadStatic(Sing.StaticLyricsBar, 'SingLyricsBar');

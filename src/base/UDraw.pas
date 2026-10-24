@@ -1030,7 +1030,9 @@ begin
           begin
             SetFont(Font, Style);
             SetFontSize(Size);
-            SetFontColor(ColR, ColG, ColB, 1);
+            if Theme.Sing.VoiceLabelUseVoiceColor then
+              SetFontColor(LyricEngine.LineColor_act.R, LyricEngine.LineColor_act.G, LyricEngine.LineColor_act.B, 1)
+            else SetFontColor(ColR, ColG, ColB, 1);
             SetFontPos(LyricEngine.UpperLineX - Theme.Sing.VoiceLabelGutter + X,
               LyricEngine.UpperLineY + Y);
             PrintText('P' + IntToStr(TrackIndex + 1));
