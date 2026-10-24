@@ -67,7 +67,7 @@ begin
   AddSelectSlide('CONTINUOUS_SONG_DISPLAY', ScreenContinuousPlayback.SongDisplay,
     [Language.Translate('CONTINUOUS_LYRICS_PROGRESS'), Language.Translate('CONTINUOUS_LYRICS_ONLY'),
      Language.Translate('CONTINUOUS_PROGRESS_ONLY'), Language.Translate('CONTINUOUS_NOTHING')]);
-  if PlayersPlay > 0 then
+  if (PlayersPlay > 0) and not ScreenName.LyricsOnly then
     AddSelectSlide('CONTINUOUS_SINGING_DISPLAY', ScreenContinuousPlayback.SingingDisplay,
       [Language.Translate('CONTINUOUS_FULL'), Language.Translate('CONTINUOUS_NOTES_PLAYER_INFO'),
        Language.Translate('CONTINUOUS_NOTES_ONLY'), Language.Translate('CONTINUOUS_PLAYER_INFO_ONLY'),
