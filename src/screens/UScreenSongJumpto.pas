@@ -37,7 +37,7 @@ const FILTER_SLOTS = 3;
 type
   TScreenSongJumpto = class(TMenu)
   private
-    fVisible, fPlaylistSearch: boolean;
+    fVisible, fPlaylistSearch, fLockShortcutPending: boolean;
     fFooter: TMenu;
     fLastPlayed, fVisSongs, fFocus, fFirst, fPlaylist: integer;
     fRows: TSongFilterRows;
@@ -235,8 +235,9 @@ begin
   begin
     case PressedKey of
       SDLK_c: begin ActivateAction(1); Exit; end;
-      SDLK_l: begin ActivateAction(3); Exit; end;
+      SDLK_l: begin fLockShortcutPending := true; Exit; end;
     end;
+    Exit;
   end;
   if (fFocus < Length(fRows)) and (IsAlphaNumericChar(CharCode) or
     IsPunctuationChar(CharCode) or (CharCode = 32)) then
@@ -402,6 +403,11 @@ var I: integer; X, Y, W, H, Z: real;
     Renderer.DrawLine(X, Y+H, X, Y, Z, 1.5, 0.5, 0.85, 1, 1);
   end;
 begin
+  if fLockShortcutPending and (SDL_GetModState and KMOD_ALT = 0) then
+  begin
+    fLockShortcutPending := false;
+    ToggleLibraryLockdown;
+  end;
   Renderer.ClearFrameBuffer(CLEAR_DEPTH);
   Result := inherited Draw;
   for I := 0 to FILTER_SLOTS - 1 do
