@@ -458,7 +458,18 @@ begin
         Break;
       end;
     end;
-  if NewSelection >= 0 then ScreenSong.Interaction := NewSelection;
+  if NewSelection >= 0 then
+  begin
+    if TSongMenuMode(Ini.SongMenu) in [smChessboard, smList] then
+      ScreenSong.SkipTo(CatSongs.VisibleIndex(NewSelection), NewSelection, Count)
+    else
+      ScreenSong.Interaction := NewSelection;
+  end
+  else
+  begin
+    ScreenSong.ChessboardMinLine := 0;
+    ScreenSong.ListMinLine := 0;
+  end;
   ScreenSong.FixSelected;
 
   ScreenSong.SetScrollRefresh;
