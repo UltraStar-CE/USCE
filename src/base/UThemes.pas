@@ -771,6 +771,10 @@ type
     FilterActions: array[0..3] of TThemeButton;
     RowSpacing, AutoHeightStatic: integer;
     CenterVertical: boolean;
+    FocusColor: TRGB;
+    FocusAlpha, FocusWidth: real;
+    CustomLockIcons: boolean;
+    LockedIcon, UnlockedIcon: TThemeStatic;
     SelectSlideType:  TThemeSelectSlide;
     TextFound:        TThemeText;
 
@@ -2838,6 +2842,19 @@ var Sections: TThemeSectionList; I, BottomY: integer; Legacy: boolean;
     B.Text[0].Text := '';
   end;
 begin
+  Sections := GetSectionList('SongJumptoFocusOutline');
+  SongJumpto.FocusColor.R := EnsureRange(ReadFloat(Sections, 'Red', 0.5), 0.0, 1.0);
+  SongJumpto.FocusColor.G := EnsureRange(ReadFloat(Sections, 'Green', 0.85), 0.0, 1.0);
+  SongJumpto.FocusColor.B := EnsureRange(ReadFloat(Sections, 'Blue', 1), 0.0, 1.0);
+  SongJumpto.FocusAlpha := EnsureRange(ReadFloat(Sections, 'Alpha', 1), 0.0, 1.0);
+  SongJumpto.FocusWidth := Max(0, ReadFloat(Sections, 'Width', 1.5));
+  SongJumpto.CustomLockIcons := (ResolveThemeFile('SongJumptoLockedIcon') <> nil) and
+    (ResolveThemeFile('SongJumptoUnlockedIcon') <> nil);
+  if SongJumpto.CustomLockIcons then
+  begin
+    ThemeLoadStatic(SongJumpto.LockedIcon, 'SongJumptoLockedIcon');
+    ThemeLoadStatic(SongJumpto.UnlockedIcon, 'SongJumptoUnlockedIcon');
+  end;
   Sections := GetSectionList('SongJumptoFilters');
   Legacy := Length(Sections) = 0;
   SongJumpto.RowSpacing := Max(1, ReadInteger(Sections, 'RowSpacing', 78));
