@@ -833,6 +833,9 @@ type
   end;
 
   TThemeSongJumpTo = class(TThemeBasic)
+    Footer: TThemeBasic;
+    constructor Create;
+    destructor Destroy; override;
     ButtonSearchText: TThemeButton;
     ButtonRemove: TThemeButton;
     FilterActions: array[0..3] of TThemeButton;
@@ -2498,6 +2501,7 @@ begin
       ThemeLoadSelectSlide(SongJumpto.SelectSlideType, 'SongJumptoSelectSlideType');
       ThemeLoadText(SongJumpto.TextFound, 'SongJumptoTextFound');
       LoadSongFilterLayout;
+      ThemeLoadBasic(SongJumpto.Footer, 'SongJumptoFooter');
       //Translations
       SongJumpto.IType[0] := Language.Translate('SONG_JUMPTO_TYPE1');
       SongJumpto.IType[1] := Language.Translate('SONG_JUMPTO_TYPE2');
@@ -2952,6 +2956,18 @@ begin
     end;
   end;
   Result := DefaultValue;
+end;
+
+constructor TThemeSongJumpTo.Create;
+begin
+  inherited Create;
+  Footer := TThemeBasic.Create;
+end;
+
+destructor TThemeSongJumpTo.Destroy;
+begin
+  Footer.Free;
+  inherited;
 end;
 
 procedure TTheme.LoadSongFilterLayout;
