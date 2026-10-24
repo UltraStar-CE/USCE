@@ -834,8 +834,6 @@ type
 
   TThemeSongJumpTo = class(TThemeBasic)
     Footer: TThemeBasic;
-    constructor Create;
-    destructor Destroy; override;
     ButtonSearchText: TThemeButton;
     ButtonRemove: TThemeButton;
     FilterActions: array[0..3] of TThemeButton;
@@ -849,6 +847,8 @@ type
     NoSongsfound:     UTF8String;
     CatText:          UTF8String;
     IType:            array [0..9] of UTF8String;
+    constructor Create;
+    destructor Destroy; override;
   end;
 
   //Party Screens
