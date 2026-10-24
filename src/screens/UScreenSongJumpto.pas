@@ -38,6 +38,7 @@ type
   TScreenSongJumpto = class(TMenu)
   private
     fVisible, fPlaylistSearch: boolean;
+    fFooter: TMenu;
     fLastPlayed, fVisSongs, fFocus, fFirst, fPlaylist: integer;
     fRows: TSongFilterRows;
     fSlotKinds: array[0..FILTER_SLOTS-1] of integer;
@@ -55,6 +56,7 @@ type
     procedure MoveFocus(Direction: integer);
   public
     constructor Create; override;
+    destructor Destroy; override;
     function ParseInput(PressedKey: cardinal; CharCode: UCS4Char;
       PressedDown: boolean; Repeated: boolean = false): boolean; override;
     function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
@@ -90,8 +92,16 @@ begin
   end;
   for I := 0 to 3 do
     fActions[I] := AddButton(Theme.SongJumpto.FilterActions[I]);
+  fFooter := TMenu.Create;
+  fFooter.LoadFromTheme(Theme.SongJumpto.Footer);
   SetLength(fRows, 1);
   fPlaylist := -1;
+end;
+
+destructor TScreenSongJumpto.Destroy;
+begin
+  fFooter.Free;
+  inherited;
 end;
 
 function TScreenSongJumpto.FilterSummary: UTF8String;
@@ -136,7 +146,7 @@ begin
     Button[fInputs[S]].Selected := (fFocus = R);
     SelectsS[fCategories[S]].Selected := (fFocus = R);
   end;
-  Button[fActions[0]].Text[0].Text := '+';
+  Button[fActions[0]].Visible := false;
   Button[fActions[1]].Text[0].Text := 'x';
   Button[fActions[2]].Visible := false;
   Button[fActions[3]].Text[0].Text := '';
@@ -151,6 +161,9 @@ begin
     if (I <= High(Statics)) and (I <= High(Theme.SongJumpto.Statics)) then
       Statics[I].Texture.H := Theme.SongJumpto.Statics[I].H - Delta;
   end;
+  if Length(fFooter.Text) >= 4 then
+    if LibraryLockdown.Active then fFooter.Text[3].Text := Language.Translate('FILTER_KEY_UNLOCK')
+    else fFooter.Text[3].Text := Language.Translate('FILTER_KEY_LOCK');
   if Theme.SongJumpto.CenterVertical and (Length(Statics) > 0) then
   begin
     OffsetY := (RenderH - Statics[0].Texture.H) / 2 - Statics[0].Texture.Y;
@@ -207,7 +220,8 @@ end;
 procedure TScreenSongJumpto.MoveFocus(Direction: integer);
 begin
   fFocus := (fFocus + Direction + Length(fRows) + 4) mod (Length(fRows) + 4);
-  if fFocus = Length(fRows) + 2 then Inc(fFocus, Direction);
+  if (fFocus = Length(fRows)) or (fFocus = Length(fRows) + 2) then Inc(fFocus, Direction);
+  if (fFocus = Length(fRows)) or (fFocus = Length(fRows) + 2) then Inc(fFocus, Direction);
   RefreshRows;
 end;
 
@@ -217,6 +231,13 @@ var S: integer;
 begin
   Result := true;
   if not PressedDown then Exit;
+  if SDL_GetModState and KMOD_ALT <> 0 then
+  begin
+    case PressedKey of
+      SDLK_c: begin ActivateAction(1); Exit; end;
+      SDLK_l: begin ActivateAction(3); Exit; end;
+    end;
+  end;
   if (fFocus < Length(fRows)) and (IsAlphaNumericChar(CharCode) or
     IsPunctuationChar(CharCode) or (CharCode = 32)) then
   begin
@@ -245,7 +266,11 @@ begin
         end;
       end;
     SDLK_DOWN:
-      if not Repeated then MoveFocus(1);
+      if not Repeated then
+      begin
+        if (fFocus = High(fRows)) and (Trim(fRows[fFocus].Query) <> '') then AddRow
+        else MoveFocus(1);
+      end;
     SDLK_UP: MoveFocus(-1);
     SDLK_INSERT: AddRow;
     SDLK_LEFT, SDLK_RIGHT:
@@ -384,6 +409,7 @@ begin
     Outline(fInputs[I]);
   end;
   for I := 0 to 3 do Outline(fActions[I]);
+  fFooter.DrawFG;
   // A simple vector padlock remains crisp at any screen scale.
   X := Button[fActions[3]].X + Button[fActions[3]].W * 0.25;
   Y := Button[fActions[3]].Y + Button[fActions[3]].H * 0.48;
