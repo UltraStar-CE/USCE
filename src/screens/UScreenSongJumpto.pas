@@ -109,8 +109,18 @@ begin
 end;
 
 procedure TScreenSongJumpto.RefreshRows;
-var S, R, I, Delta: integer;
+var S, R, I, Delta: integer; OffsetY: real;
 begin
+  for I := 0 to High(Statics) do Statics[I].Texture.Y := Theme.SongJumpto.Statics[I].Y;
+  for I := 0 to High(Theme.SongJumpto.Text) do Text[I + 1].Y := Theme.SongJumpto.Text[I].Y;
+  Text[0].Y := Theme.SongJumpto.TextFound.Y;
+  for I := 0 to 3 do Button[fActions[I]].Y := Theme.SongJumpto.FilterActions[I].Y;
+  for S := 0 to FILTER_SLOTS - 1 do
+  begin
+    SelectsS[fCategories[S]].Y := Theme.SongJumpto.SelectSlideType.Y + S * Theme.SongJumpto.RowSpacing;
+    Button[fInputs[S]].Y := Theme.SongJumpto.ButtonSearchText.Y + S * Theme.SongJumpto.RowSpacing;
+    Button[fRemove[S]].Y := Theme.SongJumpto.ButtonRemove.Y + S * Theme.SongJumpto.RowSpacing;
+  end;
   if fFocus < Length(fRows) then
   begin
     if fFocus < fFirst then fFirst := fFocus;
@@ -133,20 +143,26 @@ begin
   end;
   Button[fActions[0]].Text[0].Text := '+';
   Button[fActions[1]].Text[0].Text := 'x';
-  Button[fActions[2]].Text[0].Text := Language.Translate('FILTER_OK');
-  if LibraryLockdown.Active then
-    Button[fActions[3]].Text[0].Text := Language.Translate('FILTER_UNLOCK')
-  else Button[fActions[3]].Text[0].Text := Language.Translate('FILTER_LOCK');
+  Button[fActions[2]].Visible := false;
+  Button[fActions[3]].Text[0].Text := '';
   for I := 0 to 3 do Button[fActions[I]].Selected := fFocus = Length(fRows) + I;
   if Theme.SongJumpto.AutoHeightStatic > 0 then
   begin
     Delta := (FILTER_SLOTS - Min(FILTER_SLOTS, Length(fRows))) * Theme.SongJumpto.RowSpacing;
     Text[0].Y := Theme.SongJumpto.TextFound.Y - Delta;
     for I := 0 to 3 do
-      if I <> 1 then Button[fActions[I]].Y := Theme.SongJumpto.FilterActions[I].Y - Delta;
+      if I = 0 then Button[fActions[I]].Y := Theme.SongJumpto.FilterActions[I].Y - Delta;
     I := Theme.SongJumpto.AutoHeightStatic - 1;
     if (I <= High(Statics)) and (I <= High(Theme.SongJumpto.Statics)) then
       Statics[I].Texture.H := Theme.SongJumpto.Statics[I].H - Delta;
+  end;
+  if Theme.SongJumpto.CenterVertical and (Length(Statics) > 0) then
+  begin
+    OffsetY := (RenderH - Statics[0].Texture.H) / 2 - Statics[0].Texture.Y;
+    for I := 0 to High(Statics) do Statics[I].Texture.Y := Statics[I].Texture.Y + OffsetY;
+    for I := 0 to High(Text) do Text[I].Y := Text[I].Y + OffsetY;
+    for I := 0 to High(Button) do Button[I].Y := Button[I].Y + OffsetY;
+    for I := 0 to High(SelectsS) do SelectsS[I].Y := SelectsS[I].Y + OffsetY;
   end;
 end;
 
@@ -207,7 +223,8 @@ begin
     SDLK_TAB:
       begin
         if (fFocus < Length(fRows)) and (fFocusPart = 0) then fFocusPart := 1
-        else begin fFocusPart := 0; fFocus := (fFocus + 1) mod (Length(fRows) + 4); end;
+        else begin fFocusPart := 0; fFocus := (fFocus + 1) mod (Length(fRows) + 4);
+          if fFocus = Length(fRows) + 2 then Inc(fFocus); end;
         RefreshRows;
       end;
     SDLK_ESCAPE: begin Visible := false; AudioPlayback.PlaySound(SoundLib.Back); end;
@@ -233,9 +250,11 @@ begin
         if Repeated then Exit;
         fFocusPart := 0;
         if (fFocus = High(fRows)) and (Trim(fRows[fFocus].Query) <> '') then AddRow
-        else begin fFocus := Min(fFocus + 1, Length(fRows) + 3); RefreshRows; end;
+        else begin fFocus := Min(fFocus + 1, Length(fRows) + 3);
+          if fFocus = Length(fRows) + 2 then Inc(fFocus); RefreshRows; end;
       end;
-    SDLK_UP: begin fFocusPart := 0; fFocus := Max(0, fFocus - 1); RefreshRows; end;
+    SDLK_UP: begin fFocusPart := 0; fFocus := Max(0, fFocus - 1);
+      if fFocus = Length(fRows) + 2 then Dec(fFocus); RefreshRows; end;
     SDLK_LEFT, SDLK_RIGHT:
       if fFocus < Length(fRows) then
       begin
@@ -252,7 +271,7 @@ function TScreenSongJumpto.ParseMouse(MouseButton: integer; BtnDown: boolean; X,
 var S, R, I: integer; LX, LY: real; Area: TMouseOverRect;
   function Inside(B: integer): boolean;
   begin
-    Result := (LX >= Button[B].X) and (LX <= Button[B].X + Button[B].W) and
+    Result := Button[B].Visible and (LX >= Button[B].X) and (LX <= Button[B].X + Button[B].W) and
       (LY >= Button[B].Y) and (LY <= Button[B].Y + Button[B].H);
   end;
 begin
@@ -353,9 +372,37 @@ begin
 end;
 
 function TScreenSongJumpto.Draw: boolean;
+var I: integer; X, Y, W, H, Z: real;
+  procedure Outline(B: integer);
+  begin
+    if not Button[B].Visible or not Button[B].Selected then Exit;
+    X := Button[B].X; Y := Button[B].Y; W := Button[B].W; H := Button[B].H;
+    Z := Button[B].Z + 0.003;
+    Renderer.DrawLine(X, Y, X+W, Y, Z, 1.5, 0.5, 0.85, 1, 1);
+    Renderer.DrawLine(X+W, Y, X+W, Y+H, Z, 1.5, 0.5, 0.85, 1, 1);
+    Renderer.DrawLine(X+W, Y+H, X, Y+H, Z, 1.5, 0.5, 0.85, 1, 1);
+    Renderer.DrawLine(X, Y+H, X, Y, Z, 1.5, 0.5, 0.85, 1, 1);
+  end;
 begin
   Renderer.ClearFrameBuffer(CLEAR_DEPTH);
   Result := inherited Draw;
+  for I := 0 to FILTER_SLOTS - 1 do
+  begin
+    Outline(fInputs[I]); Outline(fRemove[I]);
+  end;
+  for I := 0 to 3 do Outline(fActions[I]);
+  // A simple vector padlock remains crisp at any screen scale.
+  X := Button[fActions[3]].X + Button[fActions[3]].W * 0.25;
+  Y := Button[fActions[3]].Y + Button[fActions[3]].H * 0.48;
+  W := Button[fActions[3]].W * 0.5;
+  H := Button[fActions[3]].H * 0.35;
+  Z := Button[fActions[3]].Z + 0.004;
+  Renderer.DrawQuad(X, Y, Z, W, H, 0.9, 0.9, 0.9, 1);
+  Renderer.DrawQuad(X+W*0.45, Y+H*0.25, Z+0.001, W*0.1, H*0.5, 0.1, 0.1, 0.1, 1);
+  Renderer.DrawLine(X+W*0.2, Y, X+W*0.2, Y-H*0.8, Z, 2, 0.9, 0.9, 0.9, 1);
+  Renderer.DrawLine(X+W*0.2, Y-H*0.8, X+W*0.8, Y-H*0.8, Z, 2, 0.9, 0.9, 0.9, 1);
+  if LibraryLockdown.Active then
+    Renderer.DrawLine(X+W*0.8, Y-H*0.8, X+W*0.8, Y, Z, 2, 0.9, 0.9, 0.9, 1);
 end;
 
 procedure TScreenSongJumpto.SetTextFound(Count: cardinal);
