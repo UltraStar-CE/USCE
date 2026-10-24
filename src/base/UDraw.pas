@@ -879,6 +879,14 @@ begin
       Bounds.Left := MoveStartX + BarProgress * MoveDist;
       Bounds.Right := Bounds.Left + BarWidth;
       Bounds.Top := LyricEngine.UpperLineY;
+      if CurrentSong.isDuet then
+      begin
+        if LyricEngine.UpperLineY < Theme.LyricBarDuetP2.UpperY then
+          Bounds.Top := Bounds.Top + Theme.LyricBarDuetP1.IndicatorYOffset
+        else
+          Bounds.Top := Bounds.Top + Theme.LyricBarDuetP2.IndicatorYOffset;
+      end
+      else Bounds.Top := Bounds.Top + Theme.LyricBar.IndicatorYOffset;
 
       Bounds.Bottom := Bounds.Top + BarHeight + 3;
 
@@ -1017,11 +1025,16 @@ begin
         LyricEngine := ScreenSing.VoiceLyrics[TrackIndex];
         LyricEngine.Draw(LyricsState.MidBeat);
         SingDrawLyricHelper(TrackIndex, LyricEngine.UpperLineX, LyricEngine.UpperLineW / 2);
-        SetFontSize(14);
-        SetFontColor(LyricEngine.LineColor_act.R, LyricEngine.LineColor_act.G,
-          LyricEngine.LineColor_act.B, 1);
-        SetFontPos(LyricEngine.UpperLineX - 24, LyricEngine.UpperLineY);
-        PrintText('P' + IntToStr(TrackIndex + 1));
+        if Theme.Sing.VoiceLabelVisible then
+          with Theme.Sing.VoiceLabel do
+          begin
+            SetFont(Font, Style);
+            SetFontSize(Size);
+            SetFontColor(ColR, ColG, ColB, 1);
+            SetFontPos(LyricEngine.UpperLineX - Theme.Sing.VoiceLabelGutter + X,
+              LyricEngine.UpperLineY + Y);
+            PrintText('P' + IntToStr(TrackIndex + 1));
+          end;
       end;
     end
     else
