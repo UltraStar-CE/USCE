@@ -32,6 +32,33 @@ class DetachTests(unittest.TestCase):
             detach_volume('hdiutil', '/volume', run, lambda _: None)
         self.assertEqual(len(calls), 10)
 
+    def test_unmounted_image_still_attached_retries_by_device(self):
+        attached = plistlib.dumps({'images': [{'image-path': '/packaging/image.sparseimage',
+            'system-entities': [{'dev-entry': '/dev/disk2'}]}]})
+        empty = plistlib.dumps({'images': []})
+        calls, run = self.simulate([(1, b''), (0, attached), (0, b''), (0, empty)])
+        detach_volume('hdiutil', '/volume', run, lambda _: None,
+                      image_path='/packaging/image.sparseimage')
+        self.assertEqual(calls[2], ['detach', '/dev/disk2'])
+        self.assertEqual(len(calls), 4)
+
+    def test_success_still_checks_backing_image(self):
+        attached = plistlib.dumps({'images': [{'image-path': '/packaging/image.sparseimage',
+            'system-entities': [{'dev-entry': '/dev/disk2'}]}]})
+        calls, run = self.simulate([(0, b''), (0, attached), (0, b''),
+                                   (0, plistlib.dumps({'images': []}))])
+        detach_volume('hdiutil', '/volume', run, lambda _: None,
+                      image_path='/packaging/image.sparseimage')
+        self.assertEqual(calls[2], ['detach', '/dev/disk2'])
+
+    def test_other_images_do_not_block_conversion(self):
+        unrelated = plistlib.dumps({'images': [{'image-path': '/other.sparseimage',
+            'system-entities': [{'dev-entry': '/dev/disk7'}]}]})
+        calls, run = self.simulate([(0, b''), (0, unrelated)])
+        detach_volume('hdiutil', '/volume', run, lambda _: None,
+                      image_path='/packaging/image.sparseimage')
+        self.assertEqual(len(calls), 2)
+
     def test_unreadable_state_fails(self):
         calls, run = self.simulate([(1, b''), subprocess.CalledProcessError(1, 'info')])
         with self.assertRaises(subprocess.CalledProcessError):
