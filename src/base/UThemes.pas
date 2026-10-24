@@ -651,6 +651,9 @@ type
 
 
   TThemeEditSub = class(TThemeBasic)
+      InactiveVoiceColor: TRGB;
+      InactiveVoiceAlpha: real;
+      VoiceFieldPadding: integer;
       // statics
       BackgroundImage:              TThemeStatic;
       HeaderBackground:             TThemeStatic;
@@ -2266,6 +2269,12 @@ begin
 
       // editor
       ThemeLoadBasic (EditSub,               'EditSub');
+      SectionList := GetSectionList('EditSubInactiveVoice');
+      EditSub.InactiveVoiceColor.R := EnsureRange(ReadFloat(SectionList, 'Red', 0.45), 0.0, 1.0);
+      EditSub.InactiveVoiceColor.G := EnsureRange(ReadFloat(SectionList, 'Green', 0.45), 0.0, 1.0);
+      EditSub.InactiveVoiceColor.B := EnsureRange(ReadFloat(SectionList, 'Blue', 0.45), 0.0, 1.0);
+      EditSub.InactiveVoiceAlpha := EnsureRange(ReadFloat(SectionList, 'Alpha', 0.4), 0.0, 1.0);
+      EditSub.VoiceFieldPadding := Max(0, ReadInteger(SectionList, 'FieldPadding', 4));
       ThemeLoadStatic(EditSub.BackgroundImage, 'EditSubBackgroundImage');
       ThemeLoadStatic(EditSub.HeaderBackground, 'EditSubHeaderBackground');
       ThemeLoadStatic(EditSub.CurrentNoteInfoBackground, 'EditSubCurrentNoteInfoBackground');

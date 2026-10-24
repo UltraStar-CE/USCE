@@ -5161,7 +5161,8 @@ begin
           if Length(Notes) > 0 then
             Renderer.DrawQuad(X + (Notes[0].StartBeat - SongStart) / SongDuration * W,
               Y, 0, (Notes[HighNote].EndBeat - Notes[0].StartBeat) / SongDuration * W,
-              H, 0.5, 0.5, 0.5, 0.45);
+              H, Theme.EditSub.InactiveVoiceColor.R, Theme.EditSub.InactiveVoiceColor.G,
+              Theme.EditSub.InactiveVoiceColor.B, Theme.EditSub.InactiveVoiceAlpha);
 
 
 
@@ -6626,7 +6627,9 @@ begin
   SelectsS[MedleyStartSlideId].TextOpt[0].Writable := true;
   SelectsS[MedleyStartSlideId].TextOpt[0].Align := 1;
   SelectsS[MedleyStartSlideId].TextOpt[0].X := SelectsS[MedleyStartSlideId].TextureSBG.X + SelectsS[MedleyStartSlideId].TextureSBG.W / 2;
-  SelectsS[MedleyStartSlideId].TextOpt[0].W := SelectsS[MedleyStartSlideId].TextureSBG.W - 32;
+  SelectsS[MedleyStartSlideId].TextOpt[0].W := Max(1, SelectsS[MedleyStartSlideId].TextureSBG.W -
+    2 * (Max(SelectsS[MedleyStartSlideId].Tex_SelectS_ArrowL.W,
+      SelectsS[MedleyStartSlideId].Tex_SelectS_ArrowR.W) + Theme.EditSub.VoiceFieldPadding));
   SelectsS[MedleyStartSlideId].ShowArrows := true;
   SelectsS[MedleyStartSlideId].Tex_SelectS_ArrowL.Alpha := 1;
   SelectsS[MedleyStartSlideId].Tex_SelectS_ArrowR.Alpha := 1;
@@ -6636,7 +6639,9 @@ begin
   SelectsS[MedleyEndSlideId].TextOpt[0].Writable := true;
   SelectsS[MedleyEndSlideId].TextOpt[0].Align := 1;
   SelectsS[MedleyEndSlideId].TextOpt[0].X := SelectsS[MedleyEndSlideId].TextureSBG.X + SelectsS[MedleyEndSlideId].TextureSBG.W / 2;
-  SelectsS[MedleyEndSlideId].TextOpt[0].W := SelectsS[MedleyEndSlideId].TextureSBG.W - 32;
+  SelectsS[MedleyEndSlideId].TextOpt[0].W := Max(1, SelectsS[MedleyEndSlideId].TextureSBG.W -
+    2 * (Max(SelectsS[MedleyEndSlideId].Tex_SelectS_ArrowL.W,
+      SelectsS[MedleyEndSlideId].Tex_SelectS_ArrowR.W) + Theme.EditSub.VoiceFieldPadding));
   SelectsS[MedleyEndSlideId].ShowArrows := true;
   SelectsS[MedleyEndSlideId].Tex_SelectS_ArrowL.Alpha := Ord(EditorVoiceCount > 1);
   SelectsS[MedleyEndSlideId].Tex_SelectS_ArrowR.Alpha := Ord(EditorVoiceCount < SupportedSongVoices);
