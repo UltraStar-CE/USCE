@@ -8,8 +8,18 @@ interface
 uses UCommon, UMenu, UContinuousPlayback, sdl2;
 
 type
+  TScreenContinuousDisplay = class(TOptionsMenu)
+  protected
+    procedure LoadWidgets; override;
+  public
+    constructor Create; override;
+    function ParseInput(Key: cardinal; CharCode: UCS4Char;
+      PressedDown: boolean; Repeated: boolean = false): boolean; override;
+  end;
+
   TScreenContinuousPlayback = class(TOptionsMenu)
   private
+    DisplayMenu: TScreenContinuousDisplay;
     RepeatSelection, ResultTime, HighScoreTime: integer;
     PreviousRequested: boolean;
     StageChanged, SkipResults: boolean;
@@ -20,6 +30,7 @@ type
     procedure LoadWidgets; override;
   public
     Enabled: integer;
+    SongDisplay, SingingDisplay: integer;
     Session: TContinuousPlayback;
     procedure BeginSession;
     function StatusText: UTF8String;
@@ -43,6 +54,42 @@ uses SysUtils, UNote, UGraphic, ULanguage, UHelp, ULog, UMusic, UPlaylist,
 const
   DisplaySeconds: array[0..4] of integer = (0, 3, 5, 10, 20);
 
+constructor TScreenContinuousDisplay.Create;
+begin
+  inherited;
+  Description := Language.Translate('CONTINUOUS_DISPLAY');
+  WhereAmI := Language.Translate('CONTINUOUS_TITLE') + ' > ' + Description;
+  Load;
+end;
+
+procedure TScreenContinuousDisplay.LoadWidgets;
+begin
+  AddSelectSlide('CONTINUOUS_SONG_DISPLAY', ScreenContinuousPlayback.SongDisplay,
+    [Language.Translate('CONTINUOUS_LYRICS_PROGRESS'), Language.Translate('CONTINUOUS_LYRICS_ONLY'),
+     Language.Translate('CONTINUOUS_PROGRESS_ONLY'), Language.Translate('CONTINUOUS_NOTHING')]);
+  if PlayersPlay > 0 then
+    AddSelectSlide('CONTINUOUS_SINGING_DISPLAY', ScreenContinuousPlayback.SingingDisplay,
+      [Language.Translate('CONTINUOUS_FULL'), Language.Translate('CONTINUOUS_NOTES_PLAYER_INFO'),
+       Language.Translate('CONTINUOUS_NOTES_ONLY'), Language.Translate('CONTINUOUS_PLAYER_INFO_ONLY'),
+       Language.Translate('CONTINUOUS_NOTHING')]);
+end;
+
+function TScreenContinuousDisplay.ParseInput(Key: cardinal; CharCode: UCS4Char;
+  PressedDown: boolean; Repeated: boolean): boolean;
+begin
+  Result := true;
+  if not PressedDown then Exit;
+  case Key of
+    SDLK_ESCAPE, SDLK_BACKSPACE: FadeTo(@ScreenContinuousPlayback);
+    SDLK_RETURN: if Interactions[Interaction].Typ = iButton then FadeTo(@ScreenContinuousPlayback);
+    SDLK_UP: InteractPrev;
+    SDLK_DOWN: InteractNext;
+    SDLK_LEFT: if Interactions[Interaction].Typ = iSelectS then InteractDec;
+    SDLK_RIGHT: if Interactions[Interaction].Typ = iSelectS then InteractInc;
+    SDLK_TAB: ScreenPopupHelp.ShowPopup;
+  end;
+end;
+
 constructor TScreenContinuousPlayback.Create;
 begin
   inherited;
@@ -55,6 +102,7 @@ end;
 
 destructor TScreenContinuousPlayback.Destroy;
 begin
+  DisplayMenu.Free;
   Session.Free;
   inherited;
 end;
@@ -70,6 +118,7 @@ begin
     [Language.Translate('OPTION_VALUE_OFF'), Language.Translate('OPTION_VALUE_ON')]);
   AddSelectSlide('CONTINUOUS_RESULTS', ResultTime, Times);
   AddSelectSlide('CONTINUOUS_HIGHSCORES', HighScoreTime, Times);
+  AddButton('CONTINUOUS_DISPLAY');
 end;
 
 function TScreenContinuousPlayback.StatusText: UTF8String;
@@ -106,7 +155,13 @@ begin
   case Key of
     SDLK_ESCAPE, SDLK_BACKSPACE: FadeTo(@ScreenSong);
     SDLK_RETURN:
-      if Interaction = 4 then FadeTo(@ScreenSong);
+      if Interaction = 4 then
+      begin
+        FreeAndNil(DisplayMenu);
+        DisplayMenu := TScreenContinuousDisplay.Create;
+        FadeTo(@DisplayMenu);
+      end
+      else if Interaction = 5 then FadeTo(@ScreenSong);
     SDLK_UP: InteractPrev;
     SDLK_DOWN: InteractNext;
     SDLK_LEFT: if Interactions[Interaction].Typ = iSelectS then InteractDec;

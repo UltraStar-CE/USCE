@@ -174,7 +174,7 @@ type
       InfoBarMode: TSingInfoBarMode;
 
       // draws a popup by pointer
-      procedure DrawPopUp(const PopUp: PScorePopUp);
+      procedure DrawPopUp(const PopUp: PScorePopUp; RenderPopup: boolean);
 
       // has to be called after DrawPopUp and before DrawScore
       procedure DoRaiseScore(const Index: integer);
@@ -261,7 +261,7 @@ type
       procedure KillAllPopUps;
 
       // draws scores and line bonus popups
-      procedure Draw;
+      procedure Draw(RenderScores: boolean = true; RenderFeedback: boolean = true);
   end;
 
 implementation
@@ -685,7 +685,7 @@ end;
 {**
  * draws scores and linebonus popups
  *}
-procedure TSingScores.Draw;
+procedure TSingScores.Draw(RenderScores, RenderFeedback: boolean);
 var
   I: integer;
   CurTime: cardinal;
@@ -713,7 +713,7 @@ begin
       end
       else
       begin
-        DrawPopUp(CurPopUp);
+        DrawPopUp(CurPopUp, RenderFeedback);
         LastPopUp := CurPopUp;
         CurPopUp  := LastPopUp.Next;
       end;
@@ -725,15 +725,18 @@ begin
       for I := 0 to PlayerCount-1 do
       begin
         DoRaiseScore(I);
-        DrawScore(I);
-        DrawInfoBars(I);
+        if RenderScores then
+        begin
+          DrawScore(I);
+          DrawInfoBars(I);
+        end;
       end
     else
       // draw players w/o rating bar
       for I := 0 to PlayerCount-1 do
       begin
         DoRaiseScore(I);
-        DrawScore(I);
+        if RenderScores then DrawScore(I);
       end;
 
   end; // eo visible
@@ -771,7 +774,7 @@ end;
 {**
  * draws a popup by pointer
  *}
-procedure TSingScores.DrawPopUp(const PopUp: PScorePopUp);
+procedure TSingScores.DrawPopUp(const PopUp: PScorePopUp; RenderPopup: boolean);
 var
   Progress:          real;
   CurTime:           cardinal;
@@ -908,7 +911,7 @@ begin
 
         // draw popup
 
-        if (Alpha > 0) and (Players[PopUp.Player].Visible) then
+        if RenderPopup and (Alpha > 0) and (Players[PopUp.Player].Visible) then
         begin
           // draw bg:
           Settings.PopUpTex[PopUp.Rating].X := X;

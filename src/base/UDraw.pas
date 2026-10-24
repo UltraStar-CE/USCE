@@ -642,7 +642,7 @@ begin
             Renderer.DrawTexture(Texture);
 
             // Golden Star Patch
-            if ((NoteType = ntGolden) or (NoteType = ntRapGolden)) and (Ini.EffectSing=1) then
+            if ((NoteType = ntGolden) or (NoteType = ntRapGolden)) and (Ini.EffectSing=1) and ScreenSing.Settings.FeedbackVisible then
             begin
               GoldenRec.SaveGoldenStarsRec(GoldenStarPos, Rec.Top, Rec.Right, Rec.Bottom);
             end;
@@ -768,7 +768,7 @@ begin
           Renderer.DrawTexture(Texture);
 
           // Perfect note is stored
-          if Perfect and (Ini.EffectSing=1) then
+          if Perfect and (Ini.EffectSing=1) and ScreenSing.Settings.FeedbackVisible then
           begin
             //A := 1 - 2*(LyricsState.GetCurrentTime() - GetTimeFromBeat(Start + Duration));
             if not (Start + Duration - 1 = LyricsState.CurrentBeatD) then
@@ -786,7 +786,7 @@ begin
       // actually we need a comparison here, to determine if the singing process
       // is ahead Rec.Right even if there is no singing
 
-      if (Ini.EffectSing = 1) then
+      if (Ini.EffectSing = 1) and ScreenSing.Settings.FeedbackVisible then
         GoldenRec.GoldenNoteTwinkle(Rec.Top,Rec.Bottom,Rec.Right, PlayerIndex);
     end; // if
   end; // if
