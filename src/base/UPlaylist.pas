@@ -71,7 +71,6 @@ type
       function  PlaylistContainsSongID(const iPlaylist: Cardinal; const SongID: Integer): Boolean;
       procedure MoveSongIndex(const OldIndex, NewIndex: Integer);
       procedure ApplyPlaylistOrder(Index: Cardinal);
-      procedure ReindexAllPlaylists;
       procedure SortItems(var Items: APlaylistItem; Order: TPlaylistSortOrder);
 
     public
@@ -82,6 +81,7 @@ type
       Playlists:    APlaylist;
 
       constructor Create;
+      procedure ReindexAllPlaylists;
       procedure   LoadPlayLists;
       function    LoadPlayList(Index: Cardinal; const Filename: IPath): Boolean;
       function    ReloadPlayList(Index: Cardinal): Boolean;
