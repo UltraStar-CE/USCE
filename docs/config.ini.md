@@ -296,3 +296,9 @@ configuration are separate files. Do not paste their sections into `config.ini`.
 
 `[Game] StatisticsView=Reduced` selects compact statistics; `Full` includes
 averages, recent activity and performance facts. Also available in Options → Game.
+
+### Age rating country
+
+`[Game] AgeCountry=DE` selects Germany for AGE searches. An empty value uses
+the unprefixed local/default entry. Choose it in Options → Game; the initial
+default comes from the OS country/region, not timezone.
