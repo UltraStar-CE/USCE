@@ -130,6 +130,7 @@ type
       OscilloscopeVisible: Boolean; //< shows or hides oscilloscope
       LyricsVisible:       Boolean; //< shows or hides lyrics
       NotesVisible:        array [0..IMaxPlayerCount-1] of Boolean; //< if NotesVisible[playerIndex] is set the notes for the specified player are visible. By default all players notes are visible
+      FeedbackVisible:     Boolean; //< rating popups and singing effects
       ScoresVisible:       Boolean; //< shows or hides scores
       AvatarsVisible:      Boolean; //< shows or hides avatars
       TimeBarVisible:      Boolean; //< shows or hides timebar
@@ -1403,6 +1404,7 @@ begin
 end;
 
 procedure TScreenSingController.ClearSettings;
+var DisplayOptions: TContinuousDisplay;
 begin
   Settings.Finish := False;
   Settings.OscilloscopeVisible := Boolean(Ini.Oscilloscope);
@@ -1415,6 +1417,20 @@ begin
   if PlayersPlay = 0 then Settings.OscilloscopeVisible := false;
   Settings.PlayerEnabled := high(Integer);
   Settings.SoundEnabled := True;
+  Settings.FeedbackVisible := PlayersPlay > 0;
+  if Assigned(ScreenContinuousPlayback) and ScreenContinuousPlayback.Session.Active then
+  begin
+    DisplayOptions := ContinuousDisplay(PlayersPlay > 0,
+      ScreenContinuousPlayback.SongDisplay, ScreenContinuousPlayback.SingingDisplay);
+    Settings.LyricsVisible := DisplayOptions.Lyrics;
+    Settings.TimeBarVisible := DisplayOptions.Progress;
+    AllNotesVisible(DisplayOptions.Notes);
+    Settings.InputVisible := DisplayOptions.Notes;
+    Settings.OscilloscopeVisible := Settings.OscilloscopeVisible and DisplayOptions.Notes;
+    Settings.ScoresVisible := DisplayOptions.PlayerInfo;
+    Settings.AvatarsVisible := DisplayOptions.PlayerInfo;
+    Settings.FeedbackVisible := DisplayOptions.Feedback;
+  end;
 end;
 
 procedure TScreenSingController.AllNotesVisible(visible: boolean);

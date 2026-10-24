@@ -10,6 +10,7 @@ uses UCommon, UMenu, UContinuousPlayback, sdl2;
 type
   TScreenContinuousPlayback = class(TOptionsMenu)
   private
+    SingingSlide: integer;
     RepeatSelection, ResultTime, HighScoreTime: integer;
     PreviousRequested: boolean;
     StageChanged, SkipResults: boolean;
@@ -20,6 +21,7 @@ type
     procedure LoadWidgets; override;
   public
     Enabled: integer;
+    SongDisplay, SingingDisplay: integer;
     Session: TContinuousPlayback;
     procedure BeginSession;
     function StatusText: UTF8String;
@@ -70,14 +72,16 @@ begin
     [Language.Translate('OPTION_VALUE_OFF'), Language.Translate('OPTION_VALUE_ON')]);
   AddSelectSlide('CONTINUOUS_RESULTS', ResultTime, Times);
   AddSelectSlide('CONTINUOUS_HIGHSCORES', HighScoreTime, Times);
+  AddSelectSlide('CONTINUOUS_SONG_DISPLAY', SongDisplay,
+    [Language.Translate('CONTINUOUS_LYRICS_PROGRESS'), Language.Translate('CONTINUOUS_LYRICS_ONLY'),
+     Language.Translate('CONTINUOUS_PROGRESS_ONLY'), Language.Translate('CONTINUOUS_NOTHING')]);
+  SingingSlide := AddSelectSlide('CONTINUOUS_SINGING_DISPLAY', SingingDisplay,
+    [Language.Translate('CONTINUOUS_FULL'), Language.Translate('CONTINUOUS_NOTES_PLAYER_INFO'),
+     Language.Translate('CONTINUOUS_NOTES_ONLY'), Language.Translate('CONTINUOUS_PLAYER_INFO_ONLY'),
+     Language.Translate('CONTINUOUS_NOTHING')]);
 end;
 
 function TScreenContinuousPlayback.StatusText: UTF8String;
-  function TimeLabel(Index: integer): UTF8String;
-  begin
-    if DisplaySeconds[Index] = 0 then Result := Language.Translate('CONTINUOUS_SKIP')
-    else Result := IntToStr(DisplaySeconds[Index]) + ' s';
-  end;
   function OnOff(Value: integer): UTF8String;
   begin
     if Value = 0 then Result := Language.Translate('OPTION_VALUE_OFF')
@@ -85,15 +89,13 @@ function TScreenContinuousPlayback.StatusText: UTF8String;
   end;
 begin
   Result := Language.Translate('CONTINUOUS_TITLE') + ': ' + OnOff(Enabled);
-  if Enabled <> 0 then
-    Result := Result + '  |  ' + Language.Translate('CONTINUOUS_REPEAT') + ': ' + OnOff(RepeatSelection) +
-      '  |  ' + Language.Translate('CONTINUOUS_RESULTS') + ': ' + TimeLabel(ResultTime) +
-      '  |  ' + Language.Translate('CONTINUOUS_HIGHSCORES') + ': ' + TimeLabel(HighScoreTime);
+
 end;
 
 procedure TScreenContinuousPlayback.OnShow;
 begin
   inherited;
+  SelectsS[SingingSlide].Visible := not ScreenName.LyricsOnly;
   Interaction := 0;
   Help.SetHelpID('ID_082');
 end;
@@ -105,8 +107,7 @@ begin
   if not PressedDown then Exit;
   case Key of
     SDLK_ESCAPE, SDLK_BACKSPACE: FadeTo(@ScreenSong);
-    SDLK_RETURN:
-      if Interaction = 4 then FadeTo(@ScreenSong);
+    SDLK_RETURN: if Interactions[Interaction].Typ = iButton then FadeTo(@ScreenSong);
     SDLK_UP: InteractPrev;
     SDLK_DOWN: InteractNext;
     SDLK_LEFT: if Interactions[Interaction].Typ = iSelectS then InteractDec;
