@@ -836,7 +836,7 @@ type
     ButtonSearchText: TThemeButton;
     ButtonRemove: TThemeButton;
     FilterActions: array[0..3] of TThemeButton;
-    RowSpacing: integer;
+    RowSpacing, AutoHeightStatic: integer;
     SelectSlideType:  TThemeSelectSlide;
     TextFound:        TThemeText;
 
@@ -2973,6 +2973,7 @@ begin
   Sections := GetSectionList('SongJumptoFilters');
   Legacy := Length(Sections) = 0;
   SongJumpto.RowSpacing := Max(1, ReadInteger(Sections, 'RowSpacing', 78));
+  SongJumpto.AutoHeightStatic := Max(0, ReadInteger(Sections, 'AutoHeightStatic', 0));
   BottomY := SongJumpto.SelectSlideType.Y + 3 * SongJumpto.RowSpacing;
   // Existing themes remain usable until they define the stacked layout.
   if Legacy then
