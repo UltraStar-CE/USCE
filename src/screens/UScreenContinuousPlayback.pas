@@ -20,6 +20,7 @@ type
     procedure SyncProfile;
     procedure Advance;
     procedure ChangeStage;
+    procedure ReturnToSong;
     function CanShowHighScores: boolean;
   protected
     procedure LoadWidgets; override;
@@ -139,7 +140,6 @@ begin
   SaveProfile;
   Ini.ContinuousMode := Enabled;
   Ini.Save;
-  ScreenSong.PreservePreviewForReturn;
   inherited;
 end;
 
@@ -165,14 +165,21 @@ begin
   Help.SetHelpID('ID_082');
 end;
 
+procedure TScreenContinuousPlayback.ReturnToSong;
+begin
+  // The destination OnShow runs before this screen OnHide during a fade.
+  ScreenSong.PreservePreviewForReturn;
+  FadeTo(@ScreenSong);
+end;
+
 function TScreenContinuousPlayback.ParseInput(Key: cardinal; CharCode: UCS4Char;
   PressedDown: boolean; Repeated: boolean): boolean;
 begin
   Result := true;
   if not PressedDown then Exit;
   case Key of
-    SDLK_ESCAPE, SDLK_BACKSPACE: FadeTo(@ScreenSong);
-    SDLK_RETURN: if Interactions[Interaction].Typ = iButton then FadeTo(@ScreenSong);
+    SDLK_ESCAPE, SDLK_BACKSPACE: ReturnToSong;
+    SDLK_RETURN: if Interactions[Interaction].Typ = iButton then ReturnToSong;
     SDLK_UP: InteractPrev;
     SDLK_DOWN: InteractNext;
     SDLK_LEFT: if Interactions[Interaction].Typ = iSelectS then InteractDec;
