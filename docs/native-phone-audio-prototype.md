@@ -1,0 +1,155 @@
+# Native phone microphone experiment
+
+This optional prototype receives microphone PCM inside the USCE process. The
+phone page and room signaling run on the hosted relay. There is no local Node
+runtime, bridge process, virtual microphone, PipeWire configuration, or web server.
+It builds on the unmerged game API branch from PR #89, without merging that PR.
+
+## What is implemented
+
+The phone AudioWorklet emits 10 ms packets of mono signed 16-bit PCM at 48 kHz
+(about 784 kbit/s before network overhead). The native module uses libdatachannel
+for WebRTC and secure relay WebSockets. Pascal polls a bounded queue on the game
+thread and submits PCM to `TCaptureBuffer`, using the existing game pitch detector
+and scoring path. Network callbacks do not call game objects.
+
+Player 1 is reserved for the phone while the experiment is enabled. Its physical
+microphone is disconnected from capture without rewriting saved device settings.
+Other local players retain their inputs. Native audio is neither played through
+the speakers nor added to the debug recording buffer.
+
+The existing hosted service is `usdx.service` on `ssh g2www`, running Node from
+`/var/www/usdx`. Apache proxies `usdx.at` and `/ws/{host,client}` to port 8080.
+The prototype page is `https://usdx.at/raw-audio-prototype/index.html`.
+It is separate from the existing phone app. `ultrastar.at` routing is not changed.
+
+## Trying the prototype
+
+Build the game normally, build the optional native module below, and place its
+shared library and runtime dependencies beside the game executable. Enable:
+
+```text
+USCE_RAW_AUDIO=1
+USCE_AUDIO_WINDOW=2048
+USCE_AUDIO_DETECTOR=amdf
+USCE_AUDIO_DIAGNOSTICS=1
+```
+
+Keep `[RemoteBridge] Enabled=Off`; this experiment and the Node bridge must not
+compete for player input. Start the game, read the `PCM` room code in its overlay,
+and open the prototype page on the phone. Enter the code and choose microphone
+or a test tone. Grant microphone access only when testing a real microphone.
+Both devices need internet access. The game can use its ordinary local song library.
+
+`USCE_RAW_AUDIO_RELAY` overrides the host URL (`wss://usdx.at/ws/host`).
+`USCE_RAW_AUDIO_ICE` overrides the ICE server URI. TURN credentials, if used,
+belong in the URI format supported by libdatachannel. The prototype page exposes
+its corresponding connection settings. `USCE_RAW_AUDIO_LIBRARY` overrides the
+native library's absolute path. TLS verification remains enabled.
+
+Normal game behavior remains 4096 samples with CAMDF unless these experimental
+environment settings are supplied. `USCE_AUDIO_WINDOW` also allows 1024 for
+comparison. `USCE_AUDIO_DETECTOR=amdf` selects the existing non-circular AMDF;
+otherwise the existing CAMDF is retained. The prototype corrects short-window
+indexing so analysis reads the newest samples, not the old front of the ring.
+
+## P2P confirmation and fallback
+
+The phone sends the same numbered PCM packets over both routes while probing
+P2P. The native queue de-duplicates them. Once valid direct audio reaches the
+receiver and the game polls audio, the receiver acknowledges through the direct
+channel. Only that acknowledgment stops the server copy. An open connection
+alone does not stop fallback. The direct path stays probed while server audio is
+active; acknowledgments expire after 250 ms. A closed/failed channel resumes
+server sending immediately. A silent path failure may therefore lose up to about
+250 ms before fallback resumes; seamless crossfade/replay is not implemented.
+
+The page's **Force server route** checkbox permits a live comparison without
+changing the audio sequence. Server fallback uses authenticated room/player
+identity and accepts only bounded PCM-v1 frames for a room advertising `rawPcmV1`.
+The server processes audio in memory and forwards it; this is not end-to-end
+encryption through the server. Direct WebRTC does not send audio through it.
+
+## Latency measurements
+
+The page reports packet counts, server/direct routing, send backlog, application
+round trip, and the selected ICE candidate types. The native status reports
+packet intervals, queue depth/high-water mark, late/duplicate packets, gaps,
+sample drops, and maximum game polling interval.
+
+With `USCE_AUDIO_DIAGNOSTICS=1`, `Audio timing` log lines cover physical as well
+as phone inputs: sample rate, callback block duration, analysis window duration,
+time since the latest input, pitch-analysis CPU time, and detected note.
+`Native audio timing` lines add the receiver's transport diagnostics.
+
+These are stage measurements, not mouth-to-screen latency. Browser/USB hardware
+buffering, audio input processing, rendering, output delay, and scoring offsets
+need separate measurement. A configured 200-300 ms mic offset is not proof that
+the microphone transport alone takes that long. True end-to-end calibration
+still needs a shared acoustic/electrical stimulus and an external timing reference.
+
+## Build the native module
+
+Requires CMake 3.24+, a C++17 compiler, OpenSSL development files, and Git.
+Dependencies are pinned to libdatachannel v0.24.6's commit and nlohmann/json 3.12.0's
+verified archive hash. The module has no WebRTC media codec dependency: it sends
+uncompressed samples over data channels. An Opus/media-track comparison is future work.
+
+```sh
+cmake -S native/phone-audio -B build/phone-audio -DCMAKE_BUILD_TYPE=Release
+cmake --build build/phone-audio --parallel 3
+ctest --test-dir build/phone-audio --output-on-failure
+node --test tools/tests/phone_audio_worklet.test.cjs
+```
+
+Windows: use MSYS2 UCRT64 GCC/CMake/Ninja/OpenSSL; bundle `usce-phone-audio.dll`
+with its OpenSSL and compiler runtime DLLs. Linux: bundle/find
+`libusce-phone-audio.so` and its matching runtime libraries. macOS: build separately
+for Intel and ARM and bundle `libusce-phone-audio.dylib`, fixing dependency install
+names/rpaths and signing it with the app. The CI matrix compiles/tests the native
+module on all four targets; passing local Windows tests is not a claim that the
+other targets have been tested on real hardware or that release packaging is done.
+
+`tools/tests/phone_audio_receiver.pas` tests the Pascal/native ABI independently.
+`phone_audio_pitch_test.pas` uses the actual game buffer/detector. Compile it with
+the same unit/include/library paths as the game. `--live` runs a two-minute room
+receiver; `--benchmark` measures a chromatic sine sweep and one synthetic note
+transition; `--low-window` compares 65 Hz at 12 phases for three harmonic shapes.
+
+## Evidence and limits
+
+On Windows, the hosted browser test sent a 440 Hz tone into the compiled Pascal
+receiver and the actual game detector, reporting A4. A roughly 94-second run
+received 4,508,160 samples, with no sequence gaps or queue drops. The selected ICE
+pair was host-to-host on this machine. This is a same-machine transport test,
+not a real phone/Wi-Fi or cross-NAT test.
+
+At 65 Hz, the synthetic phase/harmonic tests produced:
+
+| Samples | Window at 48 kHz | CAMDF correct | AMDF correct |
+| --- | --- | --- | --- |
+| 512 | 10.7 ms | 0/36 | 0/36 |
+| 1024 | 21.3 ms | 0/36 | 36/36 |
+| 2048 | 42.7 ms | 12/36 | 36/36 |
+| 4096 | 85.3 ms | 36/36 | 36/36 |
+
+This supports testing 2048 + AMDF; it does not establish real-voice reliability
+at 1024. The current search range starts at C2, about 65.4 Hz. Frequencies below
+that range can produce harmonics or wrong notes and need a separate range change.
+The baseline detector also chose A4 for a pure 880 Hz tone in one test, illustrating
+its existing octave ambiguity. The analysis window has been 4096 samples since
+at least the imported November 2015 snapshot; the May 2019 refactor retained it.
+
+The hosted 65 Hz test also reached the real detector as C2 using 2048 + AMDF.
+Server-only transport ran for about 77 seconds without reported sequence gaps or
+queue drops. A subsequent automatic handover sent 28 server packets before P2P
+was acknowledged; the server count then stopped while direct audio continued.
+That run reported five sequence gaps and six late/duplicate packets during
+startup/handover. These are recorded limitations, not a claim of seamless routing.
+
+This prototype does not replace the bridge's catalog, controls, party features,
+lyrics, or media streaming. It has one phone slot, no automatic reconnect, no
+QR provisioning, no adaptive jitter/clock-drift correction, and no audio playout.
+Real microphone tests, cross-NAT/TURN tests, packet-loss tests, alignment with
+song timing, low-voice recordings with explicit consent, and macOS/Linux hardware
+tests remain required before considering it a supported feature.
