@@ -362,6 +362,7 @@ begin
     try
     begin
       TicksBeforeFrame := SDL_GetTicks;
+        Log.FlushPending;
 
       // keyboard/mouse/joystick events
       CheckEvents;
