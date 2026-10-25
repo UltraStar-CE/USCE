@@ -41,6 +41,49 @@ begin
       Exit(Candidate);
 end;
 
+procedure TestVideoSelection;
+var
+  SavedProviders: array of IInterface;
+  FFmpegProvider, MpvProvider: IVideoPlayback;
+  I: integer;
+begin
+  ConsoleWriteLn('Testing configured video provider selection');
+  FFmpegProvider:=FindVideoProvider('FFmpeg_Video');
+  MpvProvider:=FindVideoProvider('MPV_Video');
+  Require(FFmpegProvider<>nil,'missing FFmpeg provider');
+  SetLength(SavedProviders,MediaManager.Count);
+  for I:=0 to MediaManager.Count-1 do
+    SavedProviders[I]:=MediaManager[I];
+  try
+    // Exercise the application's selector without initializing visualizers.
+    MediaManager.Clear;
+    if MpvProvider<>nil then MediaManager.Add(MpvProvider);
+    MediaManager.Add(FFmpegProvider);
+    Ini.VideoBackend:='ffmpeg';
+    InitializeVideo;
+    Require(VideoPlayback=FFmpegProvider,'FFmpeg preference was ignored');
+    {$IFDEF UseMpvVideo}
+    Require(MpvProvider<>nil,'missing MPV provider');
+    Require(FindVideoProvider('MPV_Video')=MpvProvider,
+      'disabled MPV provider was treated as an initialization failure');
+    Ini.VideoBackend:='mpv';
+    InitializeVideo;
+    Require(VideoPlayback=MpvProvider,'MPV preference was ignored');
+    // A previously initialized optional provider must still respect opt-out.
+    Ini.VideoBackend:='ffmpeg';
+    InitializeVideo;
+    Require(VideoPlayback=FFmpegProvider,'initialized MPV overrode FFmpeg preference');
+    {$ENDIF}
+  finally
+    if MpvProvider<>nil then MpvProvider.Finalize;
+    MediaManager.Clear;
+    for I:=0 to High(SavedProviders) do
+      MediaManager.Add(SavedProviders[I]);
+    Ini.VideoBackend:='mpv';
+  end;
+  ConsoleWriteLn('PASS configured video provider selection');
+end;
+
 procedure RenderVideo(const Video: IVideo; Time: double);
 begin
   Video.GetFrame(Time);
@@ -263,6 +306,7 @@ begin
   ConsoleWriteLn('PASS ' + ModeName + ': offscreen texture output, state restoration, framebuffer separation and repeated lifetime');
   if ParamStr(2)<>'' then
   begin
+    TestVideoSelection;
     TestVideo('FFmpeg_Video');
     {$IFDEF UseMpvVideo}
     TestVideo('MPV_Video');

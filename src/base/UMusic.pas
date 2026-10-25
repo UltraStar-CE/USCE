@@ -1090,6 +1090,9 @@ begin
   for i := 0 to InterfaceList.Count-1 do
   begin
     VideoInterface := InterfaceList[i] as IVideoPlayback;
+    // An optional backend disabled by configuration is not an init failure.
+    if (VideoInterface.GetName = 'MPV_Video') and (Ini.VideoBackend <> 'mpv') then
+      Continue;
     if (VideoInterface.Init()) then
     begin
       DefaultVideoPlayback := VideoInterface;

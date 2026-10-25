@@ -29,7 +29,8 @@ the MPV backend alone does not prove hardware decoding is active.
 
 Use `VideoHardwareDecoding=no` for a software-decoding comparison through the
 same backend. Use `VideoBackend=ffmpeg` to restore the original video path.
-Unknown values revert to the defaults.
+Disabled MPV is skipped without an initialization error. Unknown values revert
+to the defaults.
 
 When libmpv is unavailable, USDX selects its normal FFmpeg backend. When opening
 a file or creating its render context fails, the MPV provider tries the
@@ -84,7 +85,8 @@ make whitespace-check
 
 The integration test uses the real renderer and video backends, a generated
 H.264 clip, and pixel comparisons for orientation, color, pause, seek, looping,
-EOF and fallback:
+EOF and fallback. It also checks configured provider selection, including
+switching back to FFmpeg after MPV has initialized:
 
 ```sh
 python3 test/run-video-smoke.py --renderers gl gl2 gles2 gles3

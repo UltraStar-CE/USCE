@@ -137,6 +137,10 @@ def main():
             (temp / (renderer + ".log")).write_text(output)
             print(output, end="", flush=True)
             result.check_returncode()
+            if not args.skip_video:
+                selection, marker, _ = output.partition("PASS configured video provider selection")
+                if not marker or re.search(r"(?:ERROR|CRITICAL):", selection):
+                    raise RuntimeError("Configured video provider selection did not complete without errors")
             if output.count("Using libmpv video") < output.count("Testing MPV_Video"):
                 raise RuntimeError("The MPV playback test silently fell back to another backend")
             if "Testing expected libmpv initialization failure" in output and \
