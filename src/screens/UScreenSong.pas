@@ -101,7 +101,7 @@ type
       function GetSongButtonMouseOverArea(ButtonIndex: integer): TMouseOverRect;
       function ReloadCurrentPlaylist(ForceCheck: boolean): boolean;
     public
-      TextContinuousStatus, TextConfiguration, StaticContinuousKey: integer;
+      TextConfiguration, StaticContinuousKey, StaticContinuousStatus: integer;
       TextArtist:   integer;
       TextTitle:    integer;
       TextNumber:   integer;
@@ -1925,7 +1925,7 @@ begin
   TextTitle  := AddText(Theme.Song.TextTitle);
   TextNumber := AddText(Theme.Song.TextNumber);
   TextYear   := AddText(Theme.Song.TextYear);
-  TextContinuousStatus := AddText(Theme.Song.TextContinuousStatus);
+  StaticContinuousStatus := AddStatic(Theme.Song.StaticContinuousStatus);
   TextConfiguration := AddText(Theme.Song.TextConfiguration);
   StaticContinuousKey := AddStatic(Theme.Song.StaticContinuousKey);
 
@@ -3487,10 +3487,10 @@ begin
   //This should cause no Problems because all Buttons on this screen
   //Has Z Position.
   //Draw BG
-  Text[TextContinuousStatus].Text := ScreenContinuousPlayback.StatusText;
-  Text[TextContinuousStatus].Visible := (Mode = smNormal) and not CoverFull;
-  Text[TextConfiguration].Visible := Text[TextContinuousStatus].Visible;
-  Statics[StaticContinuousKey].Visible := Text[TextContinuousStatus].Visible;
+  Text[TextConfiguration].Visible := (Mode = smNormal) and not CoverFull;
+  Statics[StaticContinuousKey].Visible := Text[TextConfiguration].Visible;
+  Statics[StaticContinuousStatus].Visible := Text[TextConfiguration].Visible and
+    (ScreenContinuousPlayback.Enabled = 1);
 
   DrawBG;
 
