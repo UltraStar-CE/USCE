@@ -879,7 +879,11 @@ begin
       DelayBeats := GetBeats(CurrentSong.BPM, PlayerDelayMs / 1000);
       if IsRemotePlayer then
       begin
+        Player[PlayerIndex].DetectionReady := true;
+        Player[PlayerIndex].DetectionDelay := PlayerDelayMs;
         PlayerCurBeat := Floor(LyricsState.CurrentBeatD - DelayBeats);
+        if Screen.ScoringTailActive then
+          PlayerCurBeat := Min(PlayerCurBeat, Screen.ScoringTailEndBeat);
         if PlayerCurBeat < 0 then PlayerCurBeat := 0;
         FirstBeatToAnalyze := Max(0, PlayerCurBeat - REMOTE_INPUT_LATE_BEAT_WINDOW);
       end
@@ -1164,7 +1168,9 @@ begin
 
         end; // if Detected
       end; // for ActualBeat
-      if not IsRemotePlayer then
+      if IsRemotePlayer then
+        Player[PlayerIndex].DetectionBeat := PlayerCurBeat
+      else
       begin
         ConsumePerfectScorePotential(CP, PlayerOldBeat, PlayerCurBeat, Screen, PlayerIndex);
         Player[PlayerIndex].DetectionBeat := Max(PlayerOldBeat, PlayerCurBeat);
