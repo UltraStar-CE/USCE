@@ -34,40 +34,26 @@
         }
 
         function sortTable(n) {
-            var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
-            table = document.getElementById("songTable");
-            switching = true;
-            dir = "asc";
-            while (switching) {
-                switching = false;
-                rows = table.rows;
-                for (i = 1; i < (rows.length - 1); i++) {
-                    shouldSwitch = false;
-                    x = rows[i].getElementsByTagName("TD")[n];
-                    y = rows[i+1].getElementsByTagName("TD")[n];
-                    if (dir == "asc") {
-                        if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
-                            shouldSwitch = true;
-                            break;
-                        }
-                    } else if (dir == "desc") {
-                        if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
-                            shouldSwitch = true;
-                            break;
-                        }
-                    }
-                }
-                if (shouldSwitch) {
-                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-                    switching = true;
-                    switchcount ++;
-                } else {
-                    if (switchcount == 0 && dir == "asc") {
-                        dir = "desc";
-                        switching = true;
-                    }
-                }
-            }
+            const table = document.getElementById("songTable");
+            const rows = Array.from(table.rows).slice(1);
+            if (!rows.length) return;
+            const ascending = table.dataset.sortColumn !== String(n) ||
+                table.dataset.sortDirection !== "asc";
+            const entries = rows.map((row, index) => ({
+                row, index, value: row.cells[n].textContent.trim()
+            }));
+            const collator = new Intl.Collator(undefined,
+                { numeric: true, sensitivity: "base" });
+            entries.sort((a, b) => {
+                const order = collator.compare(a.value, b.value);
+                return (ascending ? order : -order) || a.index - b.index;
+            });
+            const parent = rows[0].parentNode;
+            const fragment = document.createDocumentFragment();
+            entries.forEach(entry => fragment.appendChild(entry.row));
+            parent.appendChild(fragment);
+            table.dataset.sortColumn = String(n);
+            table.dataset.sortDirection = ascending ? "asc" : "desc";
         }
     </script>
 </head>
