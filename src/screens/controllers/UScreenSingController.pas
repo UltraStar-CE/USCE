@@ -407,7 +407,7 @@ begin
         begin
           if (not CurrentSong.isDuet and (GetTimeFromBeat(Lyrics.GetUpperLine().StartNote) - AudioPlayback.Position > 6)) then
           begin
-            AudioPlayback.SetPosition(GetTimeFromBeat(Lyrics.GetUpperLine().StartNote) - 5);
+            SeekTo(GetTimeFromBeat(Lyrics.GetUpperLine().StartNote) - 5);
           end
           else if CurrentSong.isDuet then
           begin
@@ -417,7 +417,7 @@ begin
                 IntroPosition := Min(IntroPosition,
                   GetTimeFromBeat(VoiceLyrics[VoiceIndex].GetUpperLine.StartNote));
             if (IntroPosition < 1.0E20) and (IntroPosition - AudioPlayback.Position > 6) then
-              AudioPlayback.SetPosition(IntroPosition - 5);
+              SeekTo(IntroPosition - 5);
           end;
           Exit;
         end;
@@ -636,6 +636,7 @@ begin
   for I := 0 to PlayersPlay - 1 do Scores.AddPlayer(Tex_ScoreBG[I], Color);
   Scores.Init;
   GoldenRec.KillAll;
+  StopSingClicks;
   AudioPlayback.SetPosition(Position);
   LyricsState.SetCurrentTime(Position);
   ResumeAfterScoringTail;
@@ -655,6 +656,7 @@ begin
     Paused := true;
 
     LyricsState.Pause();
+    StopSingClicks;
 
     // pause music
       AudioPlayback.Pause;
@@ -828,6 +830,7 @@ begin
       Track := VoiceAssignments.VoiceForPlayer(PlayerIndex, CurrentSong.VoiceCount);
     end;
 
+  StopSingClicks;
   // prepare music
   // Important: AudioPlayback must not be initialized in onShow() as TScreenSong
   // uses stops AudioPlayback in onHide() which interferes with TScreenSings onShow.
@@ -1519,6 +1522,7 @@ end;
 
 procedure TScreenSingController.OnHide;
 begin
+  StopSingClicks;
   // close video files
   fVideoClip := nil;
   fCurrentVideo := nil;
