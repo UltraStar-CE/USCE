@@ -10,10 +10,14 @@ uses UCommon, UMenu, UContinuousPlayback, sdl2;
 type
   TScreenContinuousPlayback = class(TOptionsMenu)
   private
-    SingingSlide: integer;
+    SingingSlide, ActiveProfile: integer;
+    ResultsOnly: boolean;
     RepeatSelection, ResultTime, HighScoreTime: integer;
     PreviousRequested: boolean;
     StageChanged, SkipResults: boolean;
+    procedure SaveProfile;
+    procedure LoadProfile;
+    procedure SyncProfile;
     procedure Advance;
     procedure ChangeStage;
     function CanShowHighScores: boolean;
@@ -24,10 +28,14 @@ type
     SongDisplay, SingingDisplay: integer;
     Session: TContinuousPlayback;
     procedure BeginSession;
+    function BeginNormalResults: boolean;
     function StatusText: UTF8String;
     constructor Create; override;
     destructor Destroy; override;
     procedure OnShow; override;
+    procedure OnHide; override;
+    function DrawFG: boolean; override;
+    function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
     function ParseInput(Key: cardinal; CharCode: UCS4Char;
       PressedDown: boolean; Repeated: boolean = false): boolean; override;
     function HandlePlaybackKey(Key: cardinal; PressedDown: boolean; Repeated: boolean = false): boolean;
@@ -43,13 +51,16 @@ uses SysUtils, UNote, UGraphic, ULanguage, UHelp, ULog, UMusic, UPlaylist,
   USongs, USong, UIni, ULyrics, UDisplay;
 
 const
-  DisplaySeconds: array[0..7] of integer = (0, 5, 10, 20, 30, 40, 50, 60);
+  DisplaySeconds: array[0..8] of integer = (-1, 0, 5, 10, 20, 30, 40, 50, 60);
 
 constructor TScreenContinuousPlayback.Create;
 begin
   inherited;
   Session := TContinuousPlayback.Create;
-  Description := Language.Translate('CONTINUOUS_TITLE');
+  Enabled := Ini.ContinuousMode;
+  ActiveProfile := Enabled;
+  LoadProfile;
+  Description := Language.Translate('SING_CONFIGURATION');
   WhereAmI := Description;
   Load;
 
@@ -64,8 +75,9 @@ end;
 procedure TScreenContinuousPlayback.LoadWidgets;
 var Times: array[0..High(DisplaySeconds)] of UTF8String; I: integer;
 begin
-  Times[0] := Language.Translate('CONTINUOUS_SKIP');
-  for I := 1 to High(Times) do Times[I] := IntToStr(DisplaySeconds[I]) + ' s';
+  Times[0] := Language.Translate('PLAYBACK_MANUAL');
+  Times[1] := Language.Translate('CONTINUOUS_SKIP');
+  for I := 2 to High(Times) do Times[I] := IntToStr(DisplaySeconds[I]) + ' s';
   AddSelectSlide('CONTINUOUS_TITLE', Enabled,
     [Language.Translate('OPTION_VALUE_OFF'), Language.Translate('OPTION_VALUE_ON')]);
   AddSelectSlide('CONTINUOUS_REPEAT', RepeatSelection,
@@ -79,6 +91,68 @@ begin
     [Language.Translate('CONTINUOUS_FULL'), Language.Translate('CONTINUOUS_NOTES_PLAYER_INFO'),
      Language.Translate('CONTINUOUS_NOTES_ONLY'), Language.Translate('CONTINUOUS_PLAYER_INFO_ONLY'),
      Language.Translate('CONTINUOUS_NOTHING')]);
+end;
+
+procedure TScreenContinuousPlayback.SaveProfile;
+begin
+  with Ini.PlaybackProfiles[ActiveProfile] do
+  begin
+    RepeatSelection := Self.RepeatSelection;
+    ResultTime := Self.ResultTime;
+    HighScoreTime := Self.HighScoreTime;
+    SongDisplay := Self.SongDisplay;
+    SingingDisplay := Self.SingingDisplay;
+  end;
+end;
+
+procedure TScreenContinuousPlayback.LoadProfile;
+begin
+  with Ini.PlaybackProfiles[ActiveProfile] do
+  begin
+    Self.RepeatSelection := RepeatSelection;
+    Self.ResultTime := ResultTime;
+    Self.HighScoreTime := HighScoreTime;
+    Self.SongDisplay := SongDisplay;
+    Self.SingingDisplay := SingingDisplay;
+  end;
+  if Length(SelectsS) >= 6 then
+  begin
+    SelectsS[1].SelectedOption := RepeatSelection;
+    SelectsS[2].SelectedOption := ResultTime;
+    SelectsS[3].SelectedOption := HighScoreTime;
+    SelectsS[4].SelectedOption := SongDisplay;
+    SelectsS[5].SelectedOption := SingingDisplay;
+  end;
+end;
+
+procedure TScreenContinuousPlayback.SyncProfile;
+begin
+  Ini.ContinuousMode := Enabled;
+  if ActiveProfile = Enabled then Exit;
+  SaveProfile;
+  ActiveProfile := Enabled;
+  LoadProfile;
+end;
+
+procedure TScreenContinuousPlayback.OnHide;
+begin
+  SyncProfile;
+  SaveProfile;
+  Ini.ContinuousMode := Enabled;
+  Ini.Save;
+  inherited;
+end;
+
+function TScreenContinuousPlayback.DrawFG: boolean;
+begin
+  SyncProfile;
+  Result := inherited;
+end;
+
+function TScreenContinuousPlayback.ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
+begin
+  Result := inherited ParseMouse(MouseButton, BtnDown, X, Y);
+  SyncProfile;
 end;
 
 function TScreenContinuousPlayback.StatusText: UTF8String;
@@ -95,6 +169,8 @@ end;
 procedure TScreenContinuousPlayback.OnShow;
 begin
   inherited;
+  SyncProfile;
+  SelectsS[0].SelectedOption := Enabled;
   SelectsS[SingingSlide].Visible := not ScreenName.LyricsOnly;
   Interaction := 0;
   Help.SetHelpID('ID_082');
@@ -114,11 +190,14 @@ begin
     SDLK_RIGHT: if Interactions[Interaction].Typ = iSelectS then InteractInc;
     SDLK_TAB: ScreenPopupHelp.ShowPopup;
   end;
+  SyncProfile;
 end;
 
 procedure TScreenContinuousPlayback.BeginSession;
 var Selection: TPlaybackSongs; I, SongIndex: integer; Ordered: boolean;
 begin
+  ResultsOnly := false;
+  SyncProfile;
   Ordered := (CatSongs.CatNumShow = -3) and (PlaylistMan.CurPlaylist >= 0) and
     (PlaylistMan.CurPlaylist < Length(PlaylistMan.Playlists)) and
     PlaylistMan.Playlists[PlaylistMan.CurPlaylist].FixedOrder;
@@ -150,6 +229,21 @@ begin
     RepeatSelection = 1, PlayersPlay > 0);
   ScreenSong.Mode := smNormal;
   Advance;
+end;
+
+function TScreenContinuousPlayback.BeginNormalResults: boolean;
+begin
+  SyncProfile;
+  // Keep the existing manual score/highscore flow for the default profile.
+  Result := (ResultTime <> 0) or (HighScoreTime <> 0);
+  if not Result then Exit;
+  ResultsOnly := true;
+  Session.Stop;
+  Session.Scored := PlayersPlay > 0;
+  Session.ResultSeconds := DisplaySeconds[ResultTime];
+  Session.HighScoreSeconds := DisplaySeconds[HighScoreTime];
+  Session.FinishSong(true);
+  ChangeStage;
 end;
 
 procedure TScreenContinuousPlayback.Advance;
@@ -215,7 +309,7 @@ begin
   case Session.Stage of
     psResults: FadeTo(@ScreenScore);
     psHighScores: FadeTo(@ScreenHighScores);
-    psAdvance: Advance;
+    psAdvance: if ResultsOnly then Stop else Advance;
   end;
 end;
 
@@ -237,6 +331,9 @@ function TScreenContinuousPlayback.HandlePlaybackKey(Key: cardinal; PressedDown:
 begin
   Result := Session.Active and PressedDown;
   if not Result then Exit;
+  if ResultsOnly and not (Key in [SDLK_ESCAPE, SDLK_BACKSPACE, SDLK_RETURN]) then Exit(false);
+  if (Key = SDLK_RETURN) and (Display.CurrentScreen = @ScreenScore) and
+     (ScreenScore.Interaction <> -1) then Exit(false);
   if ((Key = SDLK_LEFT) or (Key = SDLK_RIGHT)) and
      ((SDL_GetModState and (KMOD_CTRL or KMOD_ALT or KMOD_SHIFT)) <> 0) then
     Exit(false);

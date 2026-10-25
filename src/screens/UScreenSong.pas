@@ -101,7 +101,7 @@ type
       function GetSongButtonMouseOverArea(ButtonIndex: integer): TMouseOverRect;
       function ReloadCurrentPlaylist(ForceCheck: boolean): boolean;
     public
-      TextContinuousStatus, StaticContinuousKey: integer;
+      TextContinuousStatus, TextConfiguration, StaticContinuousKey: integer;
       TextArtist:   integer;
       TextTitle:    integer;
       TextNumber:   integer;
@@ -1926,6 +1926,7 @@ begin
   TextNumber := AddText(Theme.Song.TextNumber);
   TextYear   := AddText(Theme.Song.TextYear);
   TextContinuousStatus := AddText(Theme.Song.TextContinuousStatus);
+  TextConfiguration := AddText(Theme.Song.TextConfiguration);
   StaticContinuousKey := AddStatic(Theme.Song.StaticContinuousKey);
 
   //Show Cat in Top Left mod
@@ -3488,6 +3489,7 @@ begin
   //Draw BG
   Text[TextContinuousStatus].Text := ScreenContinuousPlayback.StatusText;
   Text[TextContinuousStatus].Visible := (Mode = smNormal) and not CoverFull;
+  Text[TextConfiguration].Visible := Text[TextContinuousStatus].Visible;
   Statics[StaticContinuousKey].Visible := Text[TextContinuousStatus].Visible;
 
   DrawBG;

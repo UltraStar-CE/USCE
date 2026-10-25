@@ -387,7 +387,7 @@ type
   end;
 
   TThemeSong = class(TThemeBasic)
-    TextContinuousStatus: TThemeText;
+    TextContinuousStatus, TextConfiguration: TThemeText;
     StaticContinuousKey: TThemeStatic;
     TextArtist:       TThemeText;
     TextTitle:        TThemeText;
@@ -4576,10 +4576,20 @@ begin
   ThemeLoadText(Song.TextNumber, 'Song' + prefix + 'TextNumber');
   ThemeLoadText(Song.TextYear, 'Song' + prefix + 'TextYear');
 
+  Song.TextConfiguration := Song.TextYear;
+  with Song.TextConfiguration do
+  begin
+    X := 50; Y := 548; W := 195; H := 24; Size := 20; Align := 0;
+    Z := 0.95; ColR := 1; ColG := 1; ColB := 1;
+    Text := Language.Translate('SING_CONFIGURATION');
+    Reflection := false;
+  end;
+  if SectionExists('Song' + prefix + 'TextConfiguration', Enabled) then
+    ThemeLoadText(Song.TextConfiguration, 'Song' + prefix + 'TextConfiguration');
   Song.TextContinuousStatus := Song.TextYear;
   with Song.TextContinuousStatus do
   begin
-    X := 50; Y := 548; W := 195; H := 24; Size := 20; Align := 0;
+    X := 550; Y := 80; W := 230; H := 24; Size := 20; Align := 2;
     Z := 0.95; ColR := 1; ColG := 1; ColB := 1; Text := '';
     Reflection := false;
   end;

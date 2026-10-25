@@ -5,6 +5,10 @@ unit UContinuousPlayback;
 interface
 
 type
+  TPlaybackProfile = record
+    RepeatSelection, ResultTime, HighScoreTime, SongDisplay, SingingDisplay: integer;
+  end;
+  TPlaybackProfiles = array[0..1] of TPlaybackProfile;
   TPlaybackSongs = array of integer;
   TPlaybackStage = (psStopped, psSong, psResults, psHighScores, psAdvance);
   TContinuousDisplay = record
@@ -157,8 +161,8 @@ procedure TContinuousPlayback.FinishSong(ShowResults: boolean);
 begin
   Paused := false;
   ClockStarted := false;
-  if Scored and ShowResults and (ResultSeconds > 0) then Stage := psResults
-  else if Scored and ShowResults and (HighScoreSeconds > 0) then Stage := psHighScores
+  if Scored and ShowResults and (ResultSeconds <> 0) then Stage := psResults
+  else if Scored and ShowResults and (HighScoreSeconds <> 0) then Stage := psHighScores
   else Stage := psAdvance;
 end;
 
@@ -166,7 +170,7 @@ procedure TContinuousPlayback.NextStage;
 begin
   Paused := false;
   ClockStarted := false;
-  if (Stage = psResults) and (HighScoreSeconds > 0) then Stage := psHighScores
+  if (Stage = psResults) and (HighScoreSeconds <> 0) then Stage := psHighScores
   else Stage := psAdvance;
 end;
 
@@ -175,6 +179,9 @@ var Elapsed: cardinal;
 begin
   Result := false;
   if not (Stage in [psResults, psHighScores]) then Exit;
+  // Negative duration means manual advancement, never an unsigned timeout.
+  if ((Stage = psResults) and (ResultSeconds < 0)) or
+     ((Stage = psHighScores) and (HighScoreSeconds < 0)) then Exit;
   if not ClockStarted then
   begin
     if Stage = psResults then Remaining := cardinal(ResultSeconds) * 1000

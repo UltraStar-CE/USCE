@@ -1482,7 +1482,7 @@ begin
   Settings.PlayerEnabled := high(Integer);
   Settings.SoundEnabled := True;
   Settings.FeedbackVisible := PlayersPlay > 0;
-  if Assigned(ScreenContinuousPlayback) and ScreenContinuousPlayback.Session.Active then
+  if Assigned(ScreenContinuousPlayback) and (ScreenSong.Mode = smNormal) then
   begin
     DisplayOptions := ContinuousDisplay(PlayersPlay > 0,
       ScreenContinuousPlayback.SongDisplay, ScreenContinuousPlayback.SingingDisplay);
@@ -1741,6 +1741,10 @@ begin
         ScreenContinuousPlayback.SongFinished
       else if PlayersPlay = 0 then
         FadeTo(@ScreenSong)
+      else if (ScreenSong.Mode = smNormal) and ScreenContinuousPlayback.BeginNormalResults then
+      begin
+        // The configured result policy owns the transition.
+      end
       else
         Party.CallAfterSing;
     end;
