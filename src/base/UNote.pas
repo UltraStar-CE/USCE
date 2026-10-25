@@ -153,6 +153,7 @@ const
 procedure Sing(Screen: TScreenSingController);
 procedure NewSentence(CP: integer; Screen: TScreenSingController);
 procedure NewBeatClick(Screen: TScreenSingController);  // executed when on then new beat for click
+procedure StopSingClicks;
 procedure NewBeatDetect(Screen: TScreenSingController); // executed when on then new beat for detection
 procedure NewNote(CP: integer; Screen: TScreenSingController);       // detect note
 function  GetMidBeat(Time: real): real;
@@ -181,23 +182,26 @@ uses
   USongs,
   UThemes;
 
-var
-  BeatClickOutput: TMidiOutput = nil;
-
-procedure PlaySyntheticBeatClick;
-begin
-  if not Assigned(BeatClickOutput) then
-  begin
-    BeatClickOutput := TMidiOutput.Create(nil);
-    if not BeatClickOutput.Open then
-    begin
-      FreeAndNil(BeatClickOutput);
-      Exit;
-    end;
+type
+  TSingClickClock = class(TSyncSource)
+    Origin: real;
+    function GetClock: real; override;
   end;
 
-  BeatClickOutput.SetVolume(EnsureRange(Ini.SfxVolume, 0, 100) / 100);
-  BeatClickOutput.Click(127);
+var
+  BeatClickOutput: TMidiOutput = nil;
+  BeatClickClock: TSingClickClock = nil;
+  BeatClickScheduled: boolean = false;
+
+function TSingClickClock.GetClock: real;
+begin
+  Result := AudioPlayback.Position - Origin;
+end;
+
+procedure StopSingClicks;
+begin
+  if Assigned(BeatClickOutput) then BeatClickOutput.Stop;
+  BeatClickScheduled := false;
 end;
 
 procedure TPlayer.SetScore(newScore: real);
@@ -352,7 +356,7 @@ begin
   end; // for CountGr
 
   // make some operations on clicks
-  if (PlayersPlay > 0) and (LyricsState.OldBeatC <> LyricsState.CurrentBeatC) then
+  if PlayersPlay > 0 then
     NewBeatClick(Screen);
 
   // make some operations when detecting new voice pitch
@@ -380,39 +384,55 @@ end;
 
 procedure NewBeatClick;
 var
-  Count, Track: integer;
+  Beat, LastBeat, LineIndex, NoteIndex, Track: integer;
+  Origin, EndTime, ClickTime: real;
 begin
-  Track := Player[0].Track;
-  // beat click
-
-  if not (CurrentSong.isDuet) or (PlayersPlay = 1) then
+  if BeatClickScheduled or ((Ini.BeatClick = 0) and (Ini.ClickAssist = 0)) then Exit;
+  if not Assigned(BeatClickOutput) then
   begin
-  if ((Ini.BeatClick = 1) and
-    ((LyricsState.CurrentBeatC + USong.DEFAULT_RESOLUTION + CurrentSong.Tracks[Track].NotesGAP) mod USong.DEFAULT_RESOLUTION = 0)) then
+    BeatClickOutput := TMidiOutput.Create(nil);
+    if not BeatClickOutput.Open then
     begin
-      PlaySyntheticBeatClick;
+      FreeAndNil(BeatClickOutput);
+      Exit;
     end;
-
-    for Count := 0 to CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine].HighNote do
+    BeatClickClock := TSingClickClock.Create;
+  end;
+  Track := Player[0].Track;
+  if (Track < 0) or (Track > High(CurrentSong.Tracks)) or
+     (CurrentSong.BPM < MIN_BPM) then Exit;
+  // Queue against the music timeline, including its silent roll-in. Playback
+  // consumes the events sample by sample, independently of the video frames.
+  Origin := AudioPlayback.Position;
+  EndTime := LyricsState.TotalTime;
+  BeatClickOutput.Stop;
+  BeatClickOutput.SetPosition(0);
+  BeatClickClock.Origin := Origin;
+  BeatClickOutput.SetSyncSource(BeatClickClock);
+  BeatClickOutput.SetVolume(EnsureRange(Ini.SfxVolume, 0, 100) / 100);
+  if Ini.BeatClick = 1 then
+  begin
+    Beat := Ceil((GetMidBeat(Origin - CurrentSong.GAP / 1000) +
+      CurrentSong.Tracks[Track].NotesGAP) / USong.DEFAULT_RESOLUTION) *
+      USong.DEFAULT_RESOLUTION - CurrentSong.Tracks[Track].NotesGAP;
+    LastBeat := Floor(GetMidBeat(EndTime - CurrentSong.GAP / 1000));
+    while Beat <= LastBeat do
     begin
-      //basisbit todo
-      if (CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine].Notes[Count].StartBeat = LyricsState.CurrentBeatC) then
-      begin
-        // click assist
-        if Ini.ClickAssist = 1 then
-          PlaySyntheticBeatClick;
-
-        // drum machine
-        (*
-        TempBeat := LyricsState.CurrentBeat; // + 2;
-        if (TempBeat mod 8 = 0) then Music.PlayDrum;
-        if (TempBeat mod 8 = 4) then Music.PlayClap;
-        //if (TempBeat mod 4 = 2) then Music.PlayHihat;
-        if (TempBeat mod 4 <> 0) then Music.PlayHihat;
-        *)
-      end;
+      ClickTime := GetTimeFromBeat(Beat) - Origin;
+      if ClickTime >= 0 then BeatClickOutput.QueueClick(127, ClickTime);
+      Inc(Beat, USong.DEFAULT_RESOLUTION);
     end;
   end;
+  if Ini.ClickAssist = 1 then
+    for LineIndex := 0 to CurrentSong.Tracks[Track].High do
+      for NoteIndex := 0 to CurrentSong.Tracks[Track].Lines[LineIndex].HighNote do
+      begin
+        ClickTime := GetTimeFromBeat(CurrentSong.Tracks[Track].Lines[LineIndex].Notes[NoteIndex].StartBeat);
+        if (ClickTime >= Origin) and (ClickTime <= EndTime) then
+          BeatClickOutput.QueueClick(127, ClickTime - Origin);
+      end;
+  BeatClickOutput.Play;
+  BeatClickScheduled := true;
 end;
 
 procedure ConsumePerfectScorePotential(CP, OldBeat, CurrentBeat: integer; Screen: TScreenSingController; TargetPlayer: integer);
@@ -829,5 +849,6 @@ end;
 
 finalization
   FreeAndNil(BeatClickOutput);
+  FreeAndNil(BeatClickClock);
 
 end.

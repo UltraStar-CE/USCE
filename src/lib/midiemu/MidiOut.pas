@@ -14,6 +14,7 @@ uses
   SysUtils,
   ULog,
   UMusic,
+  UTime,
   Math,
   MidiAudioSourceStream,
   UAudioPlaybackBase;
@@ -42,6 +43,7 @@ type
     procedure QueueClick(Velocity: Byte = 127; Time: Double = -1.0);
     procedure StopAll(Time: Double = -1.0);
     procedure SetPosition(Time: Double);
+    procedure SetSyncSource(Source: TSyncSource);
     procedure Play;
     procedure Stop;
 
@@ -181,8 +183,15 @@ end;
 
 procedure TMidiOutput.Play;
 begin
+  // Queued notes and clicks share one running stream on every backend.
   if Assigned(FPlaybackStream) and (FPlaybackStream.Status <> ssPlaying) then
     FPlaybackStream.Play;
+end;
+
+procedure TMidiOutput.SetSyncSource(Source: TSyncSource);
+begin
+  if Assigned(FPlaybackStream) then
+    FPlaybackStream.SetSyncSource(Source);
 end;
 
 procedure TMidiOutput.Stop;
