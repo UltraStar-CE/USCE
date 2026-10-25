@@ -6027,7 +6027,7 @@ const
 var
   Files:       TPathDynArray;
   FileIndex:   Integer;
-  TrackIndex:  Integer;
+  TrackIndex, LineIndex, NoteIndex: Integer;
   VolumeIndex: Integer;
   Ext:         string;
   TimingErrors: UTF8String;
@@ -6093,6 +6093,14 @@ begin
   end
   else
   begin
+    for TrackIndex := 0 to High(CurrentSong.Tracks) do
+      for LineIndex := 0 to CurrentSong.Tracks[TrackIndex].High do
+        with CurrentSong.Tracks[TrackIndex].Lines[LineIndex] do
+        begin
+          BaseNote := High(Integer);
+          for NoteIndex := 0 to HighNote do
+            BaseNote := Min(BaseNote, Notes[NoteIndex].Tone);
+        end;
     // run additional timing checks (note/linebreak overlaps)
     // if there are problems, show them in a popup but still allow editing
     // the function returns false if no errors were found
