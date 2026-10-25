@@ -80,6 +80,49 @@ begin
     Check(not decision.Seek and decision.Paused, 'Do not repeatedly seek past EOF');
     decision := sync.Update(3, 9.96, 2.12, 10, true, false, false);
     Check(decision.Seek and (decision.Position = 3), 'Allow seeking backwards from EOF');
+
+    sync.Reset;
+    decision := sync.Update(9, 9, 0, 10, true, false, false);
+    decision := sync.Update(10.1, 9, 1.1, 10, true, false, false);
+    Check(not decision.Seek and decision.Paused,
+      'A long final frame must not trigger a corrective seek at EOF');
+    decision := sync.Update(11.2, 9, 2.2, 10, true, false, false);
+    Check(not decision.Seek and decision.Paused,
+      'A long final frame must remain visible while the audio continues');
+    decision := sync.Update(3, 9, 2.21, 10, true, false, true);
+    Check(decision.Seek and decision.Paused and (decision.Position = 3),
+      'Seek back from a long final frame even while paused');
+    decision := sync.Update(3.1, 3, 2.31, 10, true, false, false);
+    Check(not decision.Seek and not decision.Paused,
+      'Resume the moving clock after seeking back from EOF');
+    decision := sync.Update(20, 3.1, 2.32, 10, true, false, false);
+    Check(decision.Seek and decision.Paused and (decision.Position = 10),
+      'An explicit forward jump beyond EOF still positions the video');
+    decision := sync.Update(20.02, 9, 2.34, 10, true, false, false);
+    Check(not decision.Seek and decision.Paused,
+      'Hold the final frame after a forward jump beyond EOF');
+
+    sync.Reset;
+    decision := sync.Update(20, 0, 0, 10, true, false, false);
+    Check(decision.Seek and decision.Paused and (decision.Position = 10),
+      'Initial positioning beyond EOF must still seek');
+    decision := sync.Update(21.1, 9, 1.1, 10, true, false, false);
+    Check(not decision.Seek and decision.Paused,
+      'Initial positioning beyond EOF must not repeat its seek');
+    // SetLoop resets the synchronizer before remapping the existing clock.
+    sync.Reset;
+    decision := sync.Update(21.1, 9, 1.1, 10, true, true, false);
+    Check(decision.Seek and (Abs(decision.Position - 1.1) < 0.000001),
+      'Enabling a loop after EOF must seek to the wrapped position');
+    decision := sync.Update(21.2, 1.1, 1.2, 10, true, true, false);
+    Check(not decision.Seek and not decision.Paused,
+      'A loop enabled after EOF must resume with the moving clock');
+
+    sync.Reset;
+    decision := sync.Update(1, 1, 0, 10, true, false, false);
+    decision := sync.Update(2.1, 1, 1.1, 10, true, false, false);
+    Check(decision.Seek and not decision.Paused,
+      'Large drift before EOF must still trigger a corrective seek');
   finally
     sync.Free;
   end;

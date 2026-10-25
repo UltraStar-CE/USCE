@@ -37,12 +37,10 @@ const
   MPV_EVENT_NONE = 0;
   MPV_EVENT_SHUTDOWN = 1;
   MPV_EVENT_LOG_MESSAGE = 2;
-  MPV_EVENT_GET_PROPERTY_REPLY = 3;
   MPV_EVENT_SET_PROPERTY_REPLY = 4;
   MPV_EVENT_COMMAND_REPLY = 5;
   MPV_EVENT_END_FILE = 7;
   MPV_EVENT_FILE_LOADED = 8;
-  MPV_EVENT_VIDEO_RECONFIG = 17;
   MPV_EVENT_SEEK = 20;
   MPV_EVENT_PLAYBACK_RESTART = 21;
   MPV_EVENT_PROPERTY_CHANGE = 22;
@@ -128,7 +126,6 @@ var
   mpv_set_option_string: function(Handle: Pmpv_handle; Name, Value: PAnsiChar): cint; cdecl;
   mpv_command_async: function(Handle: Pmpv_handle; ReplyUserdata: cuint64; Args: PPAnsiChar): cint; cdecl;
   mpv_set_property_async: function(Handle: Pmpv_handle; ReplyUserdata: cuint64; Name: PAnsiChar; Format: cint; Data: Pointer): cint; cdecl;
-  mpv_get_property_async: function(Handle: Pmpv_handle; ReplyUserdata: cuint64; Name: PAnsiChar; Format: cint): cint; cdecl;
   mpv_observe_property: function(Handle: Pmpv_handle; ReplyUserdata: cuint64; Name: PAnsiChar; Format: cint): cint; cdecl;
   mpv_request_log_messages: function(Handle: Pmpv_handle; Level: PAnsiChar): cint; cdecl;
   mpv_wait_event: function(Handle: Pmpv_handle; Timeout: cdouble): Pmpv_event; cdecl;
@@ -204,7 +201,6 @@ begin
     LoadSymbol('mpv_set_option_string', mpv_set_option_string) and
     LoadSymbol('mpv_command_async', mpv_command_async) and
     LoadSymbol('mpv_set_property_async', mpv_set_property_async) and
-    LoadSymbol('mpv_get_property_async', mpv_get_property_async) and
     LoadSymbol('mpv_observe_property', mpv_observe_property) and
     LoadSymbol('mpv_request_log_messages', mpv_request_log_messages) and
     LoadSymbol('mpv_wait_event', mpv_wait_event) and

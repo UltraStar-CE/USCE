@@ -69,10 +69,11 @@ function TExternalVideoSync.Update(RequestedTime, PlaybackTime, ClockTime,
   Duration: double; HavePlayback, Loop, Paused: boolean): TVideoSyncDecision;
 var
   elapsed, delta, drift: double;
-  discontinuity, firstRequest: boolean;
+  discontinuity, firstRequest, atEnd: boolean;
 begin
   Result.Position := VideoLoopPosition(RequestedTime, Duration, Loop);
   Result.Seek := false;
+  atEnd := not Loop and (Duration > 0) and (RequestedTime >= Duration);
   firstRequest := not fHaveRequest;
   discontinuity := false;
   if fHaveRequest then
@@ -86,8 +87,7 @@ begin
 
   { Wait for the audio clock to move before starting. Identical timestamps
     also occur briefly because the audio clock has a coarser resolution. }
-  Result.Paused := Paused or (RequestedTime <= 0) or
-    (not Loop and (Duration > 0) and (RequestedTime >= Duration)) or
+  Result.Paused := Paused or (RequestedTime <= 0) or atEnd or
     (fLastMovementTime < 0) or (ClockTime - fLastMovementTime >= 0.100);
   if Result.Paused then
     fSpeed := 1;
@@ -104,8 +104,11 @@ begin
         drift := drift + Duration;
     end;
 
+    { The final frame's timestamp can precede the duration by a long interval.
+      Once the clock reaches EOF, hold it rather than repeatedly correcting that
+      expected difference. Initial positioning and explicit jumps still seek. }
     if discontinuity or (firstRequest and (Abs(drift) > 0.100)) or
-      ((Abs(drift) > 0.750) and (ClockTime - fLastSeekTime >= 1)) then
+      (not atEnd and (Abs(drift) > 0.750) and (ClockTime - fLastSeekTime >= 1)) then
     begin
       Result.Seek := true;
       fLastSeekTime := ClockTime;

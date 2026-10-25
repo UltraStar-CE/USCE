@@ -468,7 +468,7 @@ begin
     case event^.event_id of
       MPV_EVENT_FILE_LOADED:
         fFileLoaded := true;
-      MPV_EVENT_PROPERTY_CHANGE, MPV_EVENT_GET_PROPERTY_REPLY:
+      MPV_EVENT_PROPERTY_CHANGE:
         ReadProperty(event);
       MPV_EVENT_SEEK:
         if fSeeking then
