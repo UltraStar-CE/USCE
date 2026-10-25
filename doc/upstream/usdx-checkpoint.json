@@ -1,27 +1,20 @@
 {
   "repository": "UltraStar-Deluxe/USDX",
   "branch": "master",
-  "sha": "44bd04c7681ea57501c890a4618123234fce1f06",
-  "meaning": "Assessed upstream tip; the history is already recorded in USCE main.",
-  "resolutions": [
+  "from": "5541017022b8276cc6d101264e913eb5ac6dd9ac",
+  "sha": "f4fbb218c0bd3c822d77f27a6682734b80cb6bef",
+  "meaning": "Assessed upstream tip, not a claim that changes have been incorporated",
+  "comparison": "https://github.com/UltraStar-Deluxe/USDX/compare/5541017022b8276cc6d101264e913eb5ac6dd9ac...f4fbb218c0bd3c822d77f27a6682734b80cb6bef",
+  "commits": [
     {
-      "commits": [
-        "5fde5ec984154aca259117f99c49a220e0bab40c",
-        "519b1c523e61e49db18dd0baf610ba83fb619d30"
-      ],
-      "disposition": "Upstream release bookkeeping superseded by USCE generated version metadata.",
-      "usce_pr": 22
+      "sha": "e755ec1eaa02fe87d837463c74c3a69128ef2825",
+      "url": "https://github.com/UltraStar-Deluxe/USDX/commit/e755ec1eaa02fe87d837463c74c3a69128ef2825",
+      "subject": "Update Windows DLLs"
     },
     {
-      "commits": [
-        "65c9a1ec24086bbeb456c0123fbcbf2d13792193",
-        "44bd04c7681ea57501c890a4618123234fce1f06"
-      ],
-      "disposition": "macOS linking change integrated; upstream merge ancestry recorded.",
-      "usce_prs": [
-        19,
-        22
-      ]
+      "sha": "f4fbb218c0bd3c822d77f27a6682734b80cb6bef",
+      "url": "https://github.com/UltraStar-Deluxe/USDX/commit/f4fbb218c0bd3c822d77f27a6682734b80cb6bef",
+      "subject": "Merge pull request #1461 from UltraStar-Deluxe/dll-update"
     }
   ]
 }
