@@ -418,7 +418,10 @@ begin
   for I := 0 to High(Player) do
   begin
     lua_pushInteger(L, I + 1);
-    lua_pushInteger(L, Ini.PlayerLevel[I]);
+    if ScreenSong.Mode in [smNormal, smMedley] then
+      lua_pushInteger(L, Player[I].Level)
+    else
+      lua_pushInteger(L, Ini.Difficulty);
 
     lua_settable(L, -3);
   end;

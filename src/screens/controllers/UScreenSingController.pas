@@ -1031,6 +1031,7 @@ var
 
 begin
   ResetSungPitchReference;
+  SungPaused := false;
   // background texture (garbage disposal)
   FreeAndNil(Tex_Background);
 
