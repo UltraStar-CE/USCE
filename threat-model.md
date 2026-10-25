@@ -39,6 +39,17 @@ features introduce remote input or services.
 
 ## Optional remote bridge
 
+The optional native phone-audio prototype (`USCE_RAW_AUDIO=1`) adds a direct
+WebRTC receiver inside the game. Network callbacks only write bounded signaling
+and PCM queues; the game thread consumes PCM for player 1. Frames have fixed
+format/size limits, stale audio expires, and duplicate routes share sequence
+de-duplication. A malformed signaling message is caught outside gameplay logic.
+TLS verification remains enabled. The hosted relay can forward PCM in memory
+as fallback; no audio is logged or recorded by this prototype. Only a paired
+room's slot 1 is accepted. The room code is the current pairing boundary, not
+an identity guarantee. See `docs/native-phone-audio-prototype.md` for experimental
+scope and outstanding real-network tests. Normal local play remains unchanged.
+
 The remote bridge is disabled by default. When enabled, the game exchanges
 JSONL messages with a configured local adapter for control, pitch input and
 game state. The adapter can connect to remote services. This optional feature

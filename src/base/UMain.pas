@@ -92,6 +92,7 @@ uses
   UPlaylist,
   UMusic,
   URecord,
+  UPhoneAudio,
   URemoteBridgeIPC,
   URemoteBridgeProcess,
   URemoteControl,
@@ -310,6 +311,16 @@ begin
     { prepare software cursor }
     Display.SetCursor;
 
+    if (GetEnvironmentVariable('USCE_RAW_AUDIO') = '1') and
+      (Ini.RemoteBridgeEnabled <> 1) then
+    begin
+      if not PhoneAudio.Start(
+        UTF8String(GetEnvironmentVariable('USCE_RAW_AUDIO_RELAY')),
+        UTF8String(GetEnvironmentVariable('USCE_RAW_AUDIO_ICE')),
+        GetEnvironmentVariable('USCE_RAW_AUDIO_LIBRARY')) then
+        Log.LogWarn(PhoneAudio.LastError, 'Native phone audio');
+    end;
+
     if (Ini.RemoteBridgeEnabled = 1) then
     begin
       Log.LogStatus('Remote Bridge IPC', 'Initialization');
@@ -356,6 +367,7 @@ begin
     end;
 
     Log.LogStatus('Closing DB file', 'Finalization');
+    PhoneAudio.Stop;
     if (DataBase <> nil) then
     begin
          DataBase.Destroy();
@@ -839,12 +851,14 @@ begin
 
       // keyboard/mouse/joystick events
       CheckEvents;
+      UpdatePhoneAudio;
       if Display.CurrentScreen <> @ScreenSing then
         RemoteBridgeIPC.ApplyPendingPlayerCount;
       ProcessRemoteCommandQueue;
 
       // display
       Done := not Display.Draw;
+      LogAudioInputDiagnostics;
       Renderer.SwapBuffers;
 
       // FPS limiter

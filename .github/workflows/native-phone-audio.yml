@@ -1,0 +1,59 @@
+name: Native phone audio prototype
+on:
+  pull_request:
+    paths:
+      - 'native/phone-audio/**'
+      - 'game/webs/raw-audio/**'
+      - '.github/workflows/native-phone-audio.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-2022, macos-15, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - name: Windows build dependencies
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: false
+          install: >-
+            git
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-openssl
+      - name: Linux build dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build libssl-dev
+      - name: macOS build dependencies
+        if: runner.os == 'macOS'
+        run: brew install cmake ninja openssl@3
+      - name: Build and test on Windows
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: |
+          cmake -S native/phone-audio -B build/phone-audio -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/phone-audio --parallel 3
+          ctest --test-dir build/phone-audio --output-on-failure
+      - name: Build and test on Unix
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" = "macOS" ]; then
+            export OPENSSL_ROOT_DIR="$(brew --prefix openssl@3)"
+          fi
+          cmake -S native/phone-audio -B build/phone-audio -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/phone-audio --parallel 3
+          ctest --test-dir build/phone-audio --output-on-failure
+      - name: Browser packet tests
+        run: node --test tools/tests/phone_audio_worklet.test.cjs

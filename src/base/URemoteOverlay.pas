@@ -20,6 +20,7 @@ implementation
 uses
   SysUtils,
   UText, UThemes, UGraphic,
+  UPhoneAudio, fpjson, jsonparser,
   URemoteBridgeIPC;
 
 procedure DrawRemoteRoomOverlay;
@@ -30,18 +31,37 @@ var
   ConnectedPlayers: integer;
   Text: UTF8String;
   TextW, X: real;
+  Status: TJSONData;
 begin
   if not Theme.RemoteRoomVisible then Exit;
   RemoteBridgeIPC.GetRoomStatus(Connected, DisplayCode, StatusSeq, ConnectedPlayers);
-  if (not Connected) then
+  if PhoneAudio.Enabled then
+  begin
+    Text := 'PCM status unavailable';
+    Status := nil;
+    try
+      Status := GetJSON(PhoneAudio.Status);
+      if Status is TJSONObject then
+        Text := 'PCM ' + TJSONObject(Status).Get('code', '') + '  ' +
+          TJSONObject(Status).Get('state', '') + '  queue ' +
+          FloatToStr(TJSONObject(Status).Get('queueMs', 0.0)) + ' ms';
+    except
+      // An unavailable diagnostic must not interrupt rendering or singing.
+    end;
+    Status.Free;
+  end
+  else if (not Connected) then
     Exit;
 
-  if (DisplayCode = '') then
-    Text := 'usdx.at connecting'
-  else
-    Text := 'usdx.at/' + DisplayCode + '  ' + IntToStr(ConnectedPlayers) + ' player';
-  if (ConnectedPlayers <> 1) and (DisplayCode <> '') then
-    Text := Text + 's';
+  if not PhoneAudio.Enabled then
+  begin
+    if (DisplayCode = '') then
+      Text := 'usdx.at connecting'
+    else
+      Text := 'usdx.at/' + DisplayCode + '  ' + IntToStr(ConnectedPlayers) + ' player';
+    if (ConnectedPlayers <> 1) and (DisplayCode <> '') then
+      Text := Text + 's';
+  end;
 
   SetFont(Theme.RemoteRoomText.Font, Theme.RemoteRoomText.Style);
   SetFontSize(Theme.RemoteRoomText.Size);
