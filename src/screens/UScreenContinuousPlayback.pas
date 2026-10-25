@@ -293,7 +293,7 @@ end;
 
 function TScreenContinuousPlayback.CanShowHighScores: boolean;
 begin
-  Result := (Length(Player) > 0) and not ScreenSong.RapToFreestyle and
+  Result := (Length(Player) > 0) and
     (not CurrentSong.isDuet or (Ini.DuetScores <> 0));
 
 end;
