@@ -236,7 +236,7 @@ begin
   AddSelectSlide('SING_OPTIONS_SOUND_VOICEPASSTHROUGH', Ini.VoicePassthrough, IVoicePassthroughTranslated);
   AddSelectSlide('SING_OPTIONS_SOUND_BACKGROUNDMUSIC', Ini.BackgroundMusicOption, IBackgroundMusicTranslated);
   BackgroundVolumeSelectId := AddVolumeSlider('SING_OPTIONS_SOUND_BACKGROUNDMUSICVOLUME', Ini.BackgroundMusicVolume);
-  AddSelectSlide('SING_OPTIONS_SOUND_NOTE_ASSIST', Ini.ClickAssist, IClickAssistTranslated);
+  AddSelectSlide('SING_OPTIONS_SOUND_CLICK_ASSIST', Ini.ClickAssist, IClickAssistTranslated);
   AddSelectSlide('SING_OPTIONS_SOUND_MUSICAUTOGAIN', Ini.ReplayGain, IReplayGainTranslated);
   AudioVolumeSelectId := AddVolumeSlider('SING_OPTIONS_SOUND_AUDIOVOLUME', Ini.AudioVolume);
   VocalsVolumeSelectId := AddVolumeSlider('SING_OPTIONS_SOUND_VOCALSVOLUME', Ini.VocalsVolume);
