@@ -292,7 +292,7 @@ begin
     UGraphic.UnloadScreens;
 
     Theme.LoadTheme(Ini.Theme, Ini.Color);
-    UGraphic.LoadScreens(USCEVersionStr);
+    UGraphic.LoadScreens(Log.Title);
 
     old_Language := Ini.Language;
     old_SongMenu := Ini.SongMenu;

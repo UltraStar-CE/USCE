@@ -265,7 +265,7 @@ begin
     (ActualColor <> Ini.Color) then
   begin
     UGraphic.UnLoadScreens();
-    UGraphic.LoadScreens(USCEVersionStr);
+    UGraphic.LoadScreens(Log.Title);
     Ini.Load;
     AudioInputProcessor.UpdateInputDeviceConfig();
   end;
