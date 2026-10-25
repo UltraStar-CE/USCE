@@ -8,6 +8,7 @@ uses Classes, USong, UPath;
 
 type
   TWebSong = record
+    Source: Pointer; // identity only; never dereferenced by the server
     Artist, Title, Edition, Genre, Language, Creator: UTF8String;
     Year: integer;
     IsDuet, HasRap: boolean;
@@ -31,6 +32,7 @@ begin
     Song := TSong(SongList[I]);
     with Result[I] do
     begin
+      Source := Pointer(Song);
       Artist := Song.Artist; Title := Song.Title;
       Edition := Song.Edition; Genre := Song.Genre;
       Language := Song.Language; Creator := Song.Creator;

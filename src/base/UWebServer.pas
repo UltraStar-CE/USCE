@@ -290,29 +290,41 @@ end;
 function TWebServer.GenerateJSONWithCurrentSong: string;
 var
   SongDetails: TJSONObject;
+  Song: TWebSong;
+  SongIdentity: Pointer;
+  I, SongIndex: integer;
   JSONRoot: TJSONObject;
 begin
+  SongIdentity := Pointer(CurrentSong);
+  SongIndex := -1;
+  for I := 0 to High(FCatalogue) do
+    if FCatalogue[I].Source = SongIdentity then
+    begin
+      SongIndex := I;
+      Break;
+    end;
   JSONRoot := TJSONObject.Create;
   try
-    if Assigned(CurrentSong) and (Display.CurrentScreen = @ScreenSing) then
+    if (SongIndex >= 0) and (Display.CurrentScreen = @ScreenSing) then
     begin
+      Song := FCatalogue[SongIndex];
       JSONRoot.Add('playing', true);
       SongDetails := TJSONObject.Create;
-      SongDetails.Add('artist', UTF8Encode(CurrentSong.Artist));
-      SongDetails.Add('title', UTF8Encode(CurrentSong.Title));
-      SongDetails.Add('genre', UTF8Encode(CurrentSong.Genre));
-      SongDetails.Add('year', CurrentSong.Year);
-      SongDetails.Add('language', UTF8Encode(CurrentSong.Language));
-      SongDetails.Add('edition', UTF8Encode(CurrentSong.Edition));
-      SongDetails.Add('lang', UTF8Encode(CurrentSong.Language));
+      SongDetails.Add('artist', Song.Artist);
+      SongDetails.Add('title', Song.Title);
+      SongDetails.Add('genre', Song.Genre);
+      SongDetails.Add('year', Song.Year);
+      SongDetails.Add('language', Song.Language);
+      SongDetails.Add('edition', Song.Edition);
+      SongDetails.Add('lang', Song.Language);
 
-      if CurrentSong.Creator <> '' then
-        SongDetails.Add('creator', UTF8Encode(CurrentSong.Creator))
+      if Song.Creator <> '' then
+        SongDetails.Add('creator', Song.Creator)
       else
         SongDetails.Nulls['creator'] := True;
 
-      SongDetails.Add('duet', CurrentSong.isDuet);
-      SongDetails.Add('hasRap', CurrentSong.hasRap);
+      SongDetails.Add('duet', Song.isDuet);
+      SongDetails.Add('hasRap', Song.hasRap);
 
       JSONRoot.Add('song', SongDetails);
     end
