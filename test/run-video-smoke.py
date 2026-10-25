@@ -88,16 +88,17 @@ def main():
         # The test has no app icon/resources and must retain a console on Windows.
         header = re.sub(r"(?m)^\s*\{\$R [^\n]+\}\s*$", "", header)
         header = header.replace("program VideoSmoke;", "program VideoSmoke;\n{$DEFINE CONSOLE}")
+        source_prefix = compiler_path(src)
         header = re.sub(
             r"in '([^']+)'",
-            lambda match: "in '" + compiler_path(src) + "/" + match[1].replace("\\", "/") + "'",
+            lambda match: "in '" + source_prefix + "/" + match[1].replace("\\", "/") + "'",
             header,
         )
         source = temp / "VideoSmoke.pas"
         source.write_text(header + (root / "test" / "VideoSmoke.inc").read_text())
         executable = temp / ("VideoSmoke" + suffix)
         extra_flags = [
-            "-B", "-Fi" + compiler_path(src), "-FU" + compiler_path(temp),
+            "-B", "-dCONSOLE", "-Fi" + source_prefix, "-FU" + compiler_path(temp),
             "-FE" + compiler_path(temp), "-o" + compiler_path(executable)
         ]
         if windows:
