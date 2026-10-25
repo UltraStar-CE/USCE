@@ -387,8 +387,8 @@ type
   end;
 
   TThemeSong = class(TThemeBasic)
-    TextContinuousStatus, TextConfiguration: TThemeText;
-    StaticContinuousKey: TThemeStatic;
+    TextConfiguration: TThemeText;
+    StaticContinuousKey, StaticContinuousStatus: TThemeStatic;
     TextArtist:       TThemeText;
     TextTitle:        TThemeText;
     TextNumber:       TThemeText;
@@ -4582,26 +4582,29 @@ begin
     X := 50; Y := 548; W := 195; H := 24; Size := 20; Align := 0;
     Z := 0.95; ColR := 1; ColG := 1; ColB := 1;
     Text := Language.Translate('SING_CONFIGURATION');
-    Reflection := false;
+    Reflection := true; ReflectionSpacing := 13;
   end;
   if SectionExists('Song' + prefix + 'TextConfiguration', Enabled) then
     ThemeLoadText(Song.TextConfiguration, 'Song' + prefix + 'TextConfiguration');
-  Song.TextContinuousStatus := Song.TextYear;
-  with Song.TextContinuousStatus do
+  Song.StaticContinuousStatus := Song.VideoIcon;
+  with Song.StaticContinuousStatus do
   begin
-    X := 550; Y := 80; W := 230; H := 24; Size := 20; Align := 2;
-    Z := 0.95; ColR := 1; ColG := 1; ColB := 1; Text := '';
-    Reflection := false;
+    X := 210; Y := 545; W := 32; H := 30; Z := 0.96;
+    Tex := 'icon_song_continuous'; Typ := TEXTURE_TYPE_TRANSPARENT;
+    TexX1 := 0; TexY1 := 0; TexX2 := 1; TexY2 := 1;
+    ColR := 1; ColG := 1; ColB := 1; Alpha := 1;
+    Reflection := true; ReflectionSpacing := 2;
   end;
-  if SectionExists('Song' + prefix + 'TextContinuousStatus', Enabled) then
-    ThemeLoadText(Song.TextContinuousStatus, 'Song' + prefix + 'TextContinuousStatus');
+  if SectionExists('Song' + prefix + 'StaticContinuousStatus', Enabled) then
+    ThemeLoadStatic(Song.StaticContinuousStatus, 'Song' + prefix + 'StaticContinuousStatus');
   Song.StaticContinuousKey := Song.VideoIcon;
   with Song.StaticContinuousKey do
   begin
     X := 15; Y := 545; W := 32; H := 30; Z := 0.95;
     Tex := 'ButtonC'; Typ := TEXTURE_TYPE_TRANSPARENT;
     TexX1 := 0; TexY1 := 0; TexX2 := 1; TexY2 := 1;
-    ColR := 1; ColG := 1; ColB := 1; Alpha := 1; Reflection := false;
+    ColR := 1; ColG := 1; ColB := 1; Alpha := 1;
+    Reflection := true; ReflectionSpacing := 2;
   end;
   if SectionExists('Song' + prefix + 'StaticContinuousKey', Enabled) then
     ThemeLoadStatic(Song.StaticContinuousKey, 'Song' + prefix + 'StaticContinuousKey');

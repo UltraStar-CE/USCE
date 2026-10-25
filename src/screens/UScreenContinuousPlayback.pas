@@ -29,7 +29,6 @@ type
     Session: TContinuousPlayback;
     procedure BeginSession;
     function BeginNormalResults: boolean;
-    function StatusText: UTF8String;
     constructor Create; override;
     destructor Destroy; override;
     procedure OnShow; override;
@@ -153,17 +152,6 @@ function TScreenContinuousPlayback.ParseMouse(MouseButton: integer; BtnDown: boo
 begin
   Result := inherited ParseMouse(MouseButton, BtnDown, X, Y);
   SyncProfile;
-end;
-
-function TScreenContinuousPlayback.StatusText: UTF8String;
-  function OnOff(Value: integer): UTF8String;
-  begin
-    if Value = 0 then Result := Language.Translate('OPTION_VALUE_OFF')
-    else Result := Language.Translate('OPTION_VALUE_ON');
-  end;
-begin
-  Result := Language.Translate('CONTINUOUS_TITLE') + ': ' + OnOff(Enabled);
-
 end;
 
 procedure TScreenContinuousPlayback.OnShow;
