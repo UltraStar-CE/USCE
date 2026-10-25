@@ -36,7 +36,9 @@ interface
 {$I switches.inc}
 
 uses
+  Math,
   URecentNames,
+  UContinuousPlayback,
   Classes,
   IniFiles,
   SysUtils,
@@ -144,6 +146,8 @@ type
       Players:        integer;
       Difficulty:     integer;
       AgeCountry: UTF8String;
+      ContinuousMode: integer;
+      PlaybackProfiles: TPlaybackProfiles;
       Language:       integer;
       SongMenu:       integer;
       Tabs:           integer;
@@ -1705,6 +1709,18 @@ begin
   // Debug
   RecentNames := LoadRecentNames(IniFile);
   RecentTeamNames := LoadRecentNames(IniFile, 'RecentTeamNames');
+  ContinuousMode := EnsureRange(IniFile.ReadInteger('Playback', 'Continuous', 0), 0, 1);
+  for I := 0 to 1 do
+  begin
+    with PlaybackProfiles[I] do
+    begin
+      RepeatSelection := EnsureRange(IniFile.ReadInteger('Playback' + IntToStr(I), 'Repeat', 0), 0, 1);
+      ResultTime := EnsureRange(IniFile.ReadInteger('Playback' + IntToStr(I), 'Results', I), 0, 8);
+      HighScoreTime := EnsureRange(IniFile.ReadInteger('Playback' + IntToStr(I), 'HighScores', I), 0, 8);
+      SongDisplay := EnsureRange(IniFile.ReadInteger('Playback' + IntToStr(I), 'SongDisplay', 0), 0, 3);
+      SingingDisplay := EnsureRange(IniFile.ReadInteger('Playback' + IntToStr(I), 'SingingDisplay', 0), 0, 4);
+    end;
+  end;
   AgeCountry := UpperCase(Trim(IniFile.ReadString('Game', 'AgeCountry', SystemAgeRegion)));
   Debug := ReadArrayIndex(IDebug, IniFile, 'Game', 'Debug', 0);
 
@@ -1885,6 +1901,7 @@ end;
 
 procedure TIni.Save;
 var
+  I: integer;
   IniFile: TIniFile;
 begin
   IniFile := TSafeIniFile.Create(Filename.ToNative, 'TIni.Save');
@@ -1914,6 +1931,16 @@ begin
     IniFile.WriteString('Game', 'ShowScores', IShowScores[ShowScores]);
 
     // Debug
+    IniFile.WriteInteger('Playback', 'Continuous', ContinuousMode);
+    for I := 0 to 1 do
+      with PlaybackProfiles[I] do
+      begin
+        IniFile.WriteInteger('Playback' + IntToStr(I), 'Repeat', RepeatSelection);
+        IniFile.WriteInteger('Playback' + IntToStr(I), 'Results', ResultTime);
+        IniFile.WriteInteger('Playback' + IntToStr(I), 'HighScores', HighScoreTime);
+        IniFile.WriteInteger('Playback' + IntToStr(I), 'SongDisplay', SongDisplay);
+        IniFile.WriteInteger('Playback' + IntToStr(I), 'SingingDisplay', SingingDisplay);
+      end;
     IniFile.WriteString('Game', 'AgeCountry', AgeCountry);
     IniFile.WriteString('Game', 'Debug', IDebug[Debug]);
 

@@ -280,3 +280,16 @@ averages, recent activity and performance facts. Also available in Options → G
 `[Game] AgeCountry=DE` selects Germany for AGE searches. An empty value uses
 the unprefixed local/default entry. Choose it in Options → Game; the initial
 default comes from the OS country/region, not timezone.
+
+### Song-screen configuration
+
+Press C in song selection to edit these settings. `[Playback] Continuous=0` or
+`1` chooses which saved configuration is active. `[Playback0]` holds ordinary
+singing settings; `[Playback1]` holds continuous settings. Both contain `Repeat`,
+`Results`, `HighScores`, `SongDisplay` and `SingingDisplay`.
+
+`Results` and `HighScores` use 0 for Manual, 1 for Skip, then 2 through 8 for
+5, 10, 20, 30, 40, 50 and 60 seconds. `Repeat` affects continuous playback only.
+Display values follow the order shown in Configuration. Missing settings retain
+the full display, manual results for ordinary singing and skipped results for
+continuous playback.

@@ -878,7 +878,7 @@ begin
     DrawInfoLyricBar;
 
   // draw scores
-  if DrawScorePanel or ScreenContinuousPlayback.Session.Active then
+  if DrawScorePanel or ScreenSing.Settings.FeedbackVisible then
   begin
     // Keep popup/score animation state advancing even when its rendering is hidden.
     ScreenSing.Scores.Draw(DrawScorePanel, ScreenSing.Settings.FeedbackVisible);
@@ -949,7 +949,7 @@ var
   w, h: real;
   CountDownText:  UTF8String;
 begin
-  if ScreenContinuousPlayback.Session.Active and not ScreenSing.Settings.FeedbackVisible then Exit;
+  if not ScreenSing.Settings.FeedbackVisible then Exit;
   t := frac(timeDiff);
 
   h := 300*t*ScreenH/RenderH;

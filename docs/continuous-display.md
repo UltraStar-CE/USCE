@@ -1,6 +1,9 @@
-# Continuous mode display
+# Singing configuration
 
-Open continuous-mode settings with C in song selection.
+Press C in song selection to open Configuration. Continuous mode has its own
+on/off selector. Each mode remembers its own display and result settings,
+including after restarting the game. Switching modes saves the current settings
+and restores the other set.
 
 Song display is available with any number of players:
 
@@ -17,10 +20,19 @@ With singers, Singing display also offers:
 - Player info only: names, avatars and scores.
 - Nothing: no player overlays.
 
-These choices apply to continuous playback and carry over to the next song.
-Ordinary singing keeps its normal display. They do not disable microphones,
-scoring, score saving or song advancement. The existing results/highscore timing
-options still control whether those screens appear between songs.
+These choices also apply to ordinary singing. They do not disable microphones,
+scoring or score saving. The normal default remains the full display, with manual
+results and highscores. Result screens can independently wait for input (Manual),
+be skipped, or remain for 5, 10, 20, 30, 40, 50 or 60 seconds. Manual also works
+in continuous mode. Zero-player playback skips results and highscores.
+
+Esc stops a continuous session and returns to the current song in song selection.
+It leaves continuous mode enabled; starting another song begins a new session.
+
+Themes can place the song-selection indicator with `SongRouletteTextContinuousStatus`
+(and the Chessboard/List equivalents). `TextConfiguration` controls the footer
+label, and `StaticContinuousKey` controls its C-key icon. The default indicator
+is near the heading; configuration remains in the footer's left third.
 
 For jukebox playback with only the bottom progress bar, choose zero players and
 Song display: Progress only. Nothing leaves just the background or video.
