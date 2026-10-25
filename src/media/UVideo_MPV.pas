@@ -34,6 +34,7 @@ const
   propertyHeight = 3;
   propertyDuration = 4;
   propertyHardwareDecoder = 5;
+  propertyEndReached = 6;
   requestLoad = 100;
   requestPause = 101;
   requestSpeed = 102;
@@ -73,6 +74,7 @@ type
       fVideoWidth, fVideoHeight: integer;
       fDuration, fPosition, fPlaybackPosition: double;
       fHavePosition: boolean;
+      fEndReached: boolean;
       fHardwareDecoder: string;
       fLoggedDecoder: boolean;
 
@@ -85,6 +87,7 @@ type
 
       procedure Fail(const Message: string);
       function SetOption(const Name, Value: AnsiString): boolean;
+      function SetOptionIfKnown(const Name, Value: AnsiString): boolean;
       function Command(Id: QWord; const Args: array of AnsiString): boolean;
       function Observe(Id: QWord; const Name: AnsiString; Format: cint): boolean;
       function CreatePlayer(): boolean;
@@ -213,6 +216,17 @@ begin
     Fail('Cannot set ' + Name + ': ' + MpvError(code));
 end;
 
+{ Options that only exist in libmpv builds with the matching feature. }
+function TVideo_MPV.SetOptionIfKnown(const Name, Value: AnsiString): boolean;
+var
+  code: cint;
+begin
+  code := mpv_set_option_string(fHandle, PAnsiChar(Name), PAnsiChar(Value));
+  Result := (code >= 0) or (code = MPV_ERROR_OPTION_NOT_FOUND);
+  if not Result then
+    Fail('Cannot set ' + Name + ': ' + MpvError(code));
+end;
+
 function TVideo_MPV.Command(Id: QWord; const Args: array of AnsiString): boolean;
 var
   pointers: array of PAnsiChar;
@@ -262,8 +276,8 @@ begin
           SetOption('audio', 'no') and
           SetOption('sid', 'no') and
           SetOption('sub-auto', 'no') and
-          SetOption('load-scripts', 'no') and
-          SetOption('osc', 'no') and
+          SetOptionIfKnown('load-scripts', 'no') and
+          SetOptionIfKnown('osc', 'no') and
           SetOption('osd-level', '0') and
           SetOption('input-default-bindings', 'no') and
           SetOption('input-vo-keyboard', 'no') and
@@ -286,7 +300,8 @@ begin
             Observe(propertyWidth, 'dwidth', MPV_FORMAT_INT64) and
             Observe(propertyHeight, 'dheight', MPV_FORMAT_INT64) and
             Observe(propertyDuration, 'duration', MPV_FORMAT_DOUBLE) and
-            Observe(propertyHardwareDecoder, 'hwdec-current', MPV_FORMAT_STRING);
+            Observe(propertyHardwareDecoder, 'hwdec-current', MPV_FORMAT_STRING) and
+            Observe(propertyEndReached, 'eof-reached', MPV_FORMAT_FLAG);
 end;
 
 function TVideo_MPV.CreateContext(): boolean;
@@ -440,6 +455,9 @@ begin
         if IsNan(fDuration) or IsInfinite(fDuration) or (fDuration < 0) then
           fDuration := 0;
       end;
+    propertyEndReached:
+      if value^.format = MPV_FORMAT_FLAG then
+        fEndReached := pcint(value^.data)^ <> 0;
     propertyHardwareDecoder:
       if (value^.format = MPV_FORMAT_STRING) and (mpv.PPAnsiChar(value^.data)^ <> nil) then
       begin
@@ -649,7 +667,8 @@ begin
     fSeekNotified := false;
     fSeekStarted := MonotonicTime;
     fSeekWanted := false;
-    fFrameTexValid := false;
+    { The previous frame stays on screen until the seek result is rendered. }
+    fEndReached := false;
   end;
 end;
 
@@ -733,6 +752,7 @@ begin
   fPosition := 0;
   fPlaybackPosition := 0;
   fHavePosition := false;
+  fEndReached := false;
   fHardwareDecoder := '';
   fLoggedDecoder := false;
   fDesiredPause := true;
@@ -824,7 +844,7 @@ begin
   begin
     decision := fSync.Update(Time, fPlaybackPosition, now, fDuration,
       fHavePosition and not fSeekPending and not fSeeking and not fSeekWanted,
-      fLoop, fPaused or fStopped);
+      fLoop, fPaused or fStopped, fEndReached);
     fPosition := decision.Position;
     fDesiredPause := decision.Paused;
     fDesiredSpeed := decision.Speed;
@@ -838,7 +858,7 @@ end;
 
 procedure TVideo_MPV.Draw;
 begin
-  if fFrameTexValid and not fSeeking and not fSeekPending then
+  if fFrameTexValid then
     inherited Draw;
 end;
 

@@ -24,12 +24,13 @@ type
       fLastMovementTime: double;
       fLastCorrectionTime: double;
       fLastSeekTime: double;
+      fLargeDriftSince: double;
       fSpeed: double;
     public
       constructor Create;
       procedure Reset;
       function Update(RequestedTime, PlaybackTime, ClockTime, Duration: double;
-        HavePlayback, Loop, Paused: boolean): TVideoSyncDecision;
+        HavePlayback, Loop, Paused, EndReached: boolean): TVideoSyncDecision;
   end;
 
 function VideoLoopPosition(Time, Duration: double; Loop: boolean): double;
@@ -41,7 +42,11 @@ uses
 
 function VideoLoopPosition(Time, Duration: double; Loop: boolean): double;
 begin
-  Result := Max(0, Time);
+  { Max() with an integer literal would round to single precision. }
+  if Time > 0 then
+    Result := Time
+  else
+    Result := 0;
   if Loop and (Duration > 0) then
     Result := Result - Floor(Result / Duration) * Duration
   else if Duration > 0 then
@@ -62,18 +67,22 @@ begin
   fLastMovementTime := -1;
   fLastCorrectionTime := -1;
   fLastSeekTime := -1;
+  fLargeDriftSince := -1;
   fSpeed := 1;
 end;
 
 function TExternalVideoSync.Update(RequestedTime, PlaybackTime, ClockTime,
-  Duration: double; HavePlayback, Loop, Paused: boolean): TVideoSyncDecision;
+  Duration: double; HavePlayback, Loop, Paused, EndReached: boolean): TVideoSyncDecision;
 var
   elapsed, delta, drift: double;
   discontinuity, firstRequest, atEnd: boolean;
 begin
   Result.Position := VideoLoopPosition(RequestedTime, Duration, Loop);
   Result.Seek := false;
-  atEnd := not Loop and (Duration > 0) and (RequestedTime >= Duration);
+  { The player reports its own end: the video track may be shorter than the
+    file's duration, and the duration may be unknown. }
+  atEnd := not Loop and
+    (EndReached or ((Duration > 0) and (RequestedTime >= Duration)));
   firstRequest := not fHaveRequest;
   discontinuity := false;
   if fHaveRequest then
@@ -89,8 +98,6 @@ begin
     also occur briefly because the audio clock has a coarser resolution. }
   Result.Paused := Paused or (RequestedTime <= 0) or atEnd or
     (fLastMovementTime < 0) or (ClockTime - fLastMovementTime >= 0.100);
-  if Result.Paused then
-    fSpeed := 1;
 
   if HavePlayback then
   begin
@@ -104,17 +111,36 @@ begin
         drift := drift + Duration;
     end;
 
-    { The final frame's timestamp can precede the duration by a long interval.
-      Once the clock reaches EOF, hold it rather than repeatedly correcting that
-      expected difference. Initial positioning and explicit jumps still seek. }
-    if discontinuity or (firstRequest and (Abs(drift) > 0.100)) or
-      (not atEnd and (Abs(drift) > 0.750) and (ClockTime - fLastSeekTime >= 1)) then
+    { Positions arrive once per decoded frame, so a low frame rate shows a
+      brief sawtooth. Only lag that persists is corrected with a seek. }
+    if drift > 0.750 then
+    begin
+      if fLargeDriftSince < 0 then
+        fLargeDriftSince := ClockTime;
+    end
+    else
+      fLargeDriftSince := -1;
+
+    { Explicit jumps seek unless the player already shows that position.
+      A video running ahead of the clock waits for it, as the FFmpeg backend
+      does, instead of seeking backwards; the sing screen relies on this while
+      it requests the bare video gap before its transition finishes. Once the
+      clock reaches EOF, hold the final frame rather than repeatedly
+      correcting that expected difference. }
+    if ((discontinuity or firstRequest) and (drift > 0.100)) or
+      (discontinuity and (drift < -0.100)) or
+      (not atEnd and (drift > 0.750) and
+       (ClockTime - fLargeDriftSince >= 0.500) and
+       (ClockTime - fLastSeekTime >= 1)) then
     begin
       Result.Seek := true;
       fLastSeekTime := ClockTime;
       fLastCorrectionTime := ClockTime;
+      fLargeDriftSince := -1;
       fSpeed := 1;
     end
+    else if drift < -0.250 then
+      Result.Paused := true
     else if not Result.Paused and
       (ClockTime - fLastCorrectionTime >= 0.250) then
     begin
@@ -126,6 +152,8 @@ begin
     end;
   end;
 
+  if Result.Paused then
+    fSpeed := 1;
   Result.Speed := fSpeed;
   fHaveRequest := true;
   fLastRequest := RequestedTime;

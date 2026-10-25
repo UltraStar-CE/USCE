@@ -62,6 +62,15 @@ GPU textures or copy decoded frames back, depending on the platform and graphics
 interop supported by libmpv. This implementation does not force EGL or change
 USDX's minimum GL/GLES requirements; unsupported render contexts fall back.
 
+USDX's audio clock drives playback. The backend adjusts libmpv's speed by up
+to five percent to absorb small differences and seeks only for explicit jumps
+or when the video lags by more than 0.75 seconds for half a second. A video
+that runs ahead of the clock waits for it, as the FFmpeg backend does. The
+previous frame stays on screen while a seek completes. When libmpv reports the
+end of the video track, the last frame is held even if the file's duration or
+the song continues. Looped playback assumes the file's duration matches the
+video track.
+
 ## Validation
 
 Build both `--without-mpv` and `--with-mpv`. Run the independent clock checks:
