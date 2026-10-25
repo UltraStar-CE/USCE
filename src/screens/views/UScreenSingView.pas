@@ -565,6 +565,7 @@ var
   CurLyricsTime:          real;
   VideoFrameTime:         Extended;
   ScorePlayerIndex:       integer;
+  VoiceIndex:             integer;
   medley_end:             boolean;
   medley_start_applause:  boolean;
   LocalPlayerCount:       integer;
