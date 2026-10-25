@@ -671,6 +671,7 @@ function RefreshAudioInputDevices(ScanMode: TAudioInputScanMode): boolean;
 
 function  Visualization(): IVideoPlayback;
 function  VideoPlayback(): IVideoPlayback;
+function OpenVideoFallback(const FileName: IPath; const FailedBackend: IVideoPlayback): IVideo;
 function  AudioPlayback(): IAudioPlayback;
 function  AudioInput(): IAudioInput;
 function  AudioDecoders(): TInterfaceList;
@@ -738,6 +739,7 @@ begin
       Exit(false);
   Result := true;
 end;
+procedure FilterInterfaceList(const IID: TGUID; InList, OutList: TInterfaceList); forward;
 
 
 constructor TAudioFormatInfo.Create(Channels: byte; SampleRate: double; Format: TAudioSampleFormat);
@@ -798,6 +800,44 @@ end;
 function  VideoPlayback(): IVideoPlayback;
 begin
   Result := DefaultVideoPlayback;
+end;
+
+function OpenVideoFallback(const FileName: IPath; const FailedBackend: IVideoPlayback): IVideo;
+var
+  Providers: TInterfaceList;
+  Provider: IVideoPlayback;
+  i: integer;
+  FoundBackend: boolean;
+begin
+  Result := nil;
+  FoundBackend := false;
+  Providers := TInterfaceList.Create;
+  try
+    FilterInterfaceList(IVideoPlayback, MediaManager, Providers);
+    for i := 0 to Providers.Count - 1 do
+    begin
+      Provider := Providers[i] as IVideoPlayback;
+      if Provider = FailedBackend then
+      begin
+        FoundBackend := true;
+        Continue;
+      end;
+      // Only try lower-priority file decoders, never a visualization or dummy.
+      if not FoundBackend or Supports(Provider, IVideoVisualization) then
+        Continue;
+      if Provider.Init() then
+      begin
+        Result := Provider.Open(FileName);
+        if Result <> nil then
+        begin
+          Log.LogInfo('Using fallback ' + Provider.GetName, 'VideoPlayback');
+          Exit;
+        end;
+      end;
+    end;
+  finally
+    Providers.Free;
+  end;
 end;
 
 function  Visualization(): IVideoPlayback;
