@@ -151,6 +151,9 @@ begin
     SetMultiByteRTLFileSystemCodePage(CP_UTF8);
     {$ENDIF}
     WindowTitle := USCEVersionStr;
+    if not SameText(ExtractFileName(ParamStr(0)), 'usce.exe') and
+       not SameText(ExtractFileName(ParamStr(0)), 'usce') then
+      WindowTitle := WindowTitle + ' [' + ExtractFileName(ParamStr(0)) + ']';
 
     Platform.Init;
     Log.Title := WindowTitle;
