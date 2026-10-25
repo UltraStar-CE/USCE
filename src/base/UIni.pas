@@ -577,6 +577,7 @@ type
       constructor Create(const FileName, LogSource: string);
       procedure WriteString(const Section, Ident, Value: string); override;
       procedure DeleteKey(const Section, Ident: string); override;
+      procedure UpdateFile; override;
   end;
 
 const
@@ -741,6 +742,21 @@ begin
   inherited Create(FileName);
   FLogSource := LogSource;
   FWriteFailed := false;
+  // Each Save operation owns this object and frees it in a finally block.
+  // TIniFile writes the dirty cache once when it is destroyed.
+  CacheUpdates := true;
+end;
+
+procedure TSafeIniFile.UpdateFile;
+begin
+  if FWriteFailed then
+    Exit;
+  try
+    inherited UpdateFile;
+  except
+    on E: Exception do
+      LogWriteError(E);
+  end;
 end;
 
 procedure TSafeIniFile.LogWriteError(const E: Exception);
@@ -755,6 +771,8 @@ end;
 procedure TSafeIniFile.WriteString(const Section, Ident, Value: string);
 begin
   if FWriteFailed then
+    Exit;
+  if ValueExists(Section, Ident) and (ReadString(Section, Ident, '') = Value) then
     Exit;
 
   try

@@ -76,13 +76,20 @@ type
     BenchmarkFile:       TextFile;
     BenchmarkFileOpened: boolean;
     Lock:                TRTLCriticalSection;
+    ErrorLogBuffer: array[0..65535] of byte;
+    SongLogBuffer: array[0..65535] of byte;
+    LastFlushTime: QWord;
+    ErrorLogPending: boolean;
+    SongLogPending: boolean;
+    FileWriteFailed: boolean;
 
     LogLevel: integer;
     // level of messages written to the log-file
     LogFileLevel: integer;
 
     procedure LogToFile(const Text: string; const LogName: string;
-            var LogFileOpened: boolean; var LogFile: TextFile);
+            var LogFileOpened: boolean; var LogFile: TextFile;
+            Immediate: boolean = false);
 
   public
     BenchmarkTimeStart:   array[0..31] of real;
@@ -117,6 +124,7 @@ type
     procedure LogError(const Text: string); overload;
     procedure LogError(const Msg, Context: string); overload;
     procedure LogExceptionReport(const Report: string);
+    procedure FlushPending;
     procedure LogSongError(const LogMsg: string); overload;
     procedure LogSongError(const LogMsg, Context: string); overload;
     //Critical Error (Halt + MessageBox)
@@ -175,20 +183,24 @@ begin
   ErrorLogFileOpened := false;
   SongLogFileOpened := false;
   BenchmarkFileOpened := false;
+  LastFlushTime := GetTickCount64;
+  ErrorLogPending := false;
+  SongLogPending := false;
+  FileWriteFailed := false;
   InitCriticalSection(Lock);
 end;
 
 destructor TLog.Destroy;
 begin
-  DoneCriticalSection(Lock);
   if BenchmarkFileOpened then
-    CloseFile(BenchmarkFile);
+    try CloseFile(BenchmarkFile); except end;
   //if AnalyzeFileOpened then
   //  CloseFile(AnalyzeFile);
   if ErrorLogFileOpened then
-    CloseFile(ErrorLogFile);
+    try CloseFile(ErrorLogFile); except end;
   if SongLogFileOpened then
-    CloseFile(SongLogFile);
+    try CloseFile(SongLogFile); except end;
+  DoneCriticalSection(Lock);
 
   inherited;
 end;
@@ -291,7 +303,8 @@ begin
 end;
 
 procedure TLog.LogToFile(const Text: string; const LogName: string;
-                        var LogFileOpened: boolean; var LogFile: TextFile);
+                        var LogFileOpened: boolean; var LogFile: TextFile;
+                        Immediate: boolean);
 
   procedure WriteLogLine(const Line: string);
   begin
@@ -300,13 +313,22 @@ procedure TLog.LogToFile(const Text: string; const LogName: string;
 
 begin
   EnterCriticalSection(Lock);
+  try
+  if FileWriteFailed then
+    Exit;
   if (FileOutputEnabled and not LogFileOpened) then
   begin
     AssignFile(LogFile, LogPath.Append(LogName).ToNative);
     {$I-}
     Rewrite(LogFile);
     if IOResult = 0 then
+    begin
       LogFileOpened := true;
+      if LogName = 'Error.log' then
+        SetTextBuf(LogFile, ErrorLogBuffer)
+      else
+        SetTextBuf(LogFile, SongLogBuffer);
+    end;
     {$I+}
 
     //If File is opened write Date to Error File
@@ -324,12 +346,56 @@ begin
   begin
     try
       WriteLogLine(Text);
-      Flush(LogFile);
+      if LogName = 'Error.log' then
+        ErrorLogPending := true
+      else
+        SongLogPending := true;
+      if Immediate then
+      begin
+        Flush(LogFile);
+        if LogName = 'Error.log' then
+          ErrorLogPending := false
+        else
+          SongLogPending := false;
+      end;
     except
-      LogFileOpened := false;
+      // Keep the handle for close; reopening with Rewrite would truncate it.
+      FileWriteFailed := true;
     end;
   end;
-  LeaveCriticalSection(Lock);
+  finally
+    LeaveCriticalSection(Lock);
+  end;
+end;
+
+procedure TLog.FlushPending;
+begin
+  // Called from the main loop, including when no new messages arrive.
+  if GetTickCount64 - LastFlushTime < 1000 then
+    Exit;
+  EnterCriticalSection(Lock);
+  try
+    LastFlushTime := GetTickCount64;
+    if FileWriteFailed then
+      Exit;
+    try
+      if ErrorLogFileOpened and ErrorLogPending then
+      begin
+        Flush(ErrorLogFile);
+        ErrorLogPending := false;
+      end;
+      if SongLogFileOpened and SongLogPending then
+      begin
+        Flush(SongLogFile);
+        SongLogPending := false;
+      end;
+    except
+      // A failed log flush must not interrupt gameplay or its error dialog.
+      FileWriteFailed := true;
+    end;
+  finally
+    LeaveCriticalSection(Lock);
+  end;
 end;
 
 procedure TLog.LogExceptionReport(const Report: string);
@@ -337,7 +403,7 @@ begin
   // Persist the complete report before showing a modal error dialog. Bypass
   // verbosity filters and console output, which may already be shutting down.
   try
-    LogToFile('EXCEPTION: ' + Report, 'Error.log', ErrorLogFileOpened, ErrorLogFile);
+    LogToFile('EXCEPTION: ' + Report, 'Error.log', ErrorLogFileOpened, ErrorLogFile, true);
   except
     // A logging failure must not replace the original exception dialog.
   end;
@@ -391,7 +457,8 @@ begin
     // write message to log-file
     if (Level <= LogFileLevel) then
     begin
-      LogToFile(LogMsg, 'Error.log', ErrorLogFileOpened, ErrorLogFile);
+      LogToFile(LogMsg, 'Error.log', ErrorLogFileOpened, ErrorLogFile,
+        Level <= LOG_LEVEL_ERROR_MAX);
     end;
   end;
 
@@ -453,7 +520,7 @@ begin
     DebugWriteLn(LogMsg);
   end;
 
-  LogToFile(LogMsg, 'SongError.log', SongLogFileOpened, SongLogFile);
+  LogToFile(LogMsg, 'SongError.log', SongLogFileOpened, SongLogFile, true);
 end;
 
 procedure TLog.CriticalError(const Text: string);
