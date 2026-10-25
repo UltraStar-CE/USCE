@@ -604,11 +604,11 @@ const
   LAST_SOUNDID = SOUNDID_OPTION;
 
   BaseSoundFilenames: array[0..LAST_SOUNDID] of IPath = (
-    '%SOUNDPATH%/Common start.mp3',                 // Start
-    '%SOUNDPATH%/Common back.mp3',                  // Back
-    '%SOUNDPATH%/menu swoosh.mp3',                  // Swoosh
-    '%SOUNDPATH%/select music change music 50.mp3', // Change
-    '%SOUNDPATH%/option change col.mp3'             // Option
+    '%SOUNDPATH%/Common start.ogg',                 // Start
+    '%SOUNDPATH%/Common back.ogg',                  // Back
+    '%SOUNDPATH%/menu swoosh.ogg',                  // Swoosh
+    '%SOUNDPATH%/select music change music 50.ogg', // Change
+    '%SOUNDPATH%/option change col.ogg'             // Option
     {
     '%SOUNDPATH%/bassdrumhard076b.mp3',             // Drum (unused)
     '%SOUNDPATH%/hihatclosed068b.mp3',              // Hihat (unused)
@@ -1156,14 +1156,14 @@ procedure TSoundLibrary.LoadSounds();
 begin
   UnloadSounds();
 
-  Start   := AudioPlayback.OpenSound(ResolveSoundAsset('Common start.mp3'));
-  Back    := AudioPlayback.OpenSound(ResolveSoundAsset('Common back.mp3'));
-  Swoosh  := AudioPlayback.OpenSound(ResolveSoundAsset('menu swoosh.mp3'));
-  Change  := AudioPlayback.OpenSound(ResolveSoundAsset('select music change music 50.mp3'));
-  Option  := AudioPlayback.OpenSound(ResolveSoundAsset('option change col.mp3'));
-  Applause:= AudioPlayback.OpenSound(ResolveSoundAsset('Applause.mp3'));
+  Start   := AudioPlayback.OpenSound(ResolveSoundAsset('Common start.ogg'));
+  Back    := AudioPlayback.OpenSound(ResolveSoundAsset('Common back.ogg'));
+  Swoosh  := AudioPlayback.OpenSound(ResolveSoundAsset('menu swoosh.ogg'));
+  Change  := AudioPlayback.OpenSound(ResolveSoundAsset('select music change music 50.ogg'));
+  Option  := AudioPlayback.OpenSound(ResolveSoundAsset('option change col.ogg'));
+  Applause:= AudioPlayback.OpenSound(ResolveSoundAsset('Applause.ogg'));
 
-  BGMusic := AudioPlayback.OpenSound(ResolveSoundAsset('background track.mp3'));
+  BGMusic := AudioPlayback.OpenSound(ResolveSoundAsset('background track.ogg'));
 
   if (BGMusic <> nil) then
   begin
