@@ -123,7 +123,7 @@ begin
         Theme.LoadTheme(Ini.Theme, Ini.Color);
         SoundLib.LoadSounds();
         SoundLib.StartBgMusic();
-        UGraphic.LoadScreens(USCEVersionStr);
+        UGraphic.LoadScreens(Log.Title);
       end;
 
       SDLK_T: begin

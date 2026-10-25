@@ -1072,7 +1072,7 @@ end;
 
 function LoadingThreadFunction: integer;
 begin
-  LoadScreens(USCEVersionStr);
+  LoadScreens(Log.Title);
   Result:= 1;
 end;
 
