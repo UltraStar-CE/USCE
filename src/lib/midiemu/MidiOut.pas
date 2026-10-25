@@ -181,7 +181,7 @@ end;
 
 procedure TMidiOutput.Play;
 begin
-  if Assigned(FPlaybackStream) then
+  if Assigned(FPlaybackStream) and (FPlaybackStream.Status <> ssPlaying) then
     FPlaybackStream.Play;
 end;
 

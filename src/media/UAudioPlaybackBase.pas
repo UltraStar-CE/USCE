@@ -567,7 +567,11 @@ end;
 procedure TAudioPlaybackBase.PlaySound(stream: TAudioPlaybackStream);
 begin
   if assigned(stream) then
+  begin
+    stream.Stop();
+    stream.Position := 0;
     stream.Play();
+  end;
 end;
 
 procedure TAudioPlaybackBase.StopSound(stream: TAudioPlaybackStream);
