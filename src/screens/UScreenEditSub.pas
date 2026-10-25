@@ -385,6 +385,7 @@ type
       FAnalysisThreadTrack:    Integer;
       FAnalysisCancelRequested: Boolean;
       FPreserveAnalysisOnShow: Boolean;
+      FAnalysisSourceIdentity: UTF8String;
       FAnalysisProgressPct:    Integer;
       FAnalysisFailed:         Boolean;
       FAnalysisError:          UTF8String;
@@ -404,6 +405,7 @@ type
       function  GetEditorScoreDifficulty: Integer;
       function  HasVocalsPreviewDirectSource: Boolean;
       function  GetVocalsPreviewSourcePath: IPath;
+      function GetAnalysisSourceIdentity: UTF8String;
       function  HasVocalsPreviewSource: Boolean;
       function  HasVocalsPreviewPlayback: Boolean;
       function  HasVocalsPreviewPlaybackAtTime(const Time: Real): Boolean;
@@ -1420,6 +1422,8 @@ end;
 procedure TScreenEditSub.ReloadSong(SDL_ModState: word);
 //reload
 begin
+  RestoreStandardPlayback(false);
+  StopAnalysisThread;
   AudioPlayback.Stop;
   StopMidiPlayback;
   FreeAndNil(MidiOut);
@@ -1622,6 +1626,7 @@ procedure TScreenEditSub.HandleVideo(SDL_ModState: word);
 begin
   if (SDL_ModState = 0) or (SDL_ModState = KMOD_LALT) then // play current line/remainder of song with video
   begin
+    RestoreStandardPlayback(false);
     Statics[BackgroundImageId].Visible := false;
     StopVideoPreview;
     AudioPlayback.Stop;
@@ -5521,6 +5526,17 @@ begin
     CurrentSong.Path.Append(CurrentSong.Vocals).Exists;
 end;
 
+function TScreenEditSub.GetAnalysisSourceIdentity: UTF8String;
+  function NameOf(const FilePath: IPath): UTF8String;
+  begin
+    if Assigned(FilePath) then Result := FilePath.ToUTF8
+    else Result := '';
+  end;
+begin
+  Result := NameOf(CurrentSong.Path) + #0 + NameOf(CurrentSong.Audio) + #0 +
+    NameOf(CurrentSong.Vocals) + #0 + NameOf(CurrentSong.Karaoke);
+end;
+
 function TScreenEditSub.GetVocalsPreviewSourcePath: IPath;
 begin
   if HasVocalsPreviewDirectSource then
@@ -8148,9 +8164,12 @@ begin
     end;
 
     AudioPlayBack.Open(CurrentSong.Path.Append(CurrentSong.Audio),nil);
-    if not FPreserveAnalysisOnShow then
+    if not FPreserveAnalysisOnShow or
+       (FAnalysisSourceIdentity <> GetAnalysisSourceIdentity) then
     begin
-      ClearVocalsWaveformCache(false);
+      StopAnalysisThread;
+      ClearVocalsWaveformCache(true);
+      FAnalysisSourceIdentity := GetAnalysisSourceIdentity;
       if HasVocalsPreviewSource then
       begin
         StartAnalysisThread(true, CurrentTrack);
