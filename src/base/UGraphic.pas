@@ -1006,6 +1006,8 @@ procedure LoadScreens(Title: string);
   end;
 
 begin
+  // Theme/language reloads must retain the executable-aware startup title.
+  if Log.Title <> '' then Title := Log.Title;
   SetLoadingTitle('Loading ScreenMain & ScreenName');
   ScreenMain :=             TScreenMain.Create;
   ScreenName :=             TScreenName.Create;
