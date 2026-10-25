@@ -284,6 +284,8 @@ begin
         if ScreenSong.Mode = smMedley then Exit;
         SeekTo(fStartTime);
         PlaybackSeeked := false;
+        SungPaused := false;
+        SungToEnd := false;
         Exit;
       end;
 
