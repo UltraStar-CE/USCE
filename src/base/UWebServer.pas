@@ -28,7 +28,7 @@ unit UWebServer;
 interface
 
 uses
-  Classes, SysUtils, fphttpserver, httproute, HTTPDefs, USongs, USong, UPlatform, UPath, UPathUtils, fpjson, jsonparser, UDisplay, UNote, UGraphic;
+  Classes, SysUtils, fphttpserver, httproute, HTTPDefs, USongs, USong, UPlatform, UPath, UPathUtils, UWebSongCatalogue, fpjson, jsonparser, UDisplay, UNote, UGraphic;
 
 type
   TLoopbackHTTPServer = class(TFPHTTPServer)
@@ -41,6 +41,7 @@ type
     FServer: TLoopbackHTTPServer;
     FRouter: THTTPRouter;
     FPort: Integer;
+    FCatalogue: TWebSongArray;
   protected
     procedure Execute; override;
     procedure HandleRequest(Sender: TObject; var ARequest: TFPHTTPConnectionRequest;
@@ -65,6 +66,7 @@ constructor TWebServer.Create(APort: Integer);
 begin
   inherited Create(True); // Create suspended
   FPort := APort;
+  FCatalogue := CaptureWebSongCatalogue(Songs.SongList);
   FreeOnTerminate := True;
 end;
 
@@ -119,6 +121,7 @@ var
   WebFilePath: IPath;
   FileStream: TFileStream;
 begin
+  FileStream := nil;
   FileName := ARequest.URI;
   while FileName.StartsWith('/') do
     Delete(FileName, 1, 1);
@@ -149,30 +152,31 @@ procedure TWebServer.routeSongFile(ARequest: TRequest; AResponse: TResponse);
 var
   RequestedFile: string;
   Id: LongInt;
-  Song: TSong;
+  Song: TWebSong;
   FilePath: IPath;
   FileStream: TFileStream;
 begin
+  FileStream := nil;
   try
     try
       RequestedFile := ARequest.RouteParams['file'];
       Id := StrToInt(ARequest.RouteParams['id']);
 
-      if (Id < 0) or (Id >= Songs.SongList.Count) then
+      if (Id < 0) or (Id >= Length(FCatalogue)) then
         raise Exception.Create('ID is out of bounds');
 
-      Song := TSong(Songs.SongList[Id]);
+      Song := FCatalogue[Id];
 
       if RequestedFile = 'cover' then
-        FilePath := Song.Path.Append(Song.Cover)
+        FilePath := Song.Directory.Append(Song.Cover)
       else if RequestedFile = 'background' then
-        FilePath := Song.Path.Append(Song.Background)
+        FilePath := Song.Directory.Append(Song.Background)
       else if RequestedFile = 'audio' then
-        FilePath := Song.Path.Append(Song.Audio)
+        FilePath := Song.Directory.Append(Song.Audio)
       else if RequestedFile = 'video' then
-        FilePath := Song.Path.Append(Song.Video)
+        FilePath := Song.Directory.Append(Song.Video)
       else if (RequestedFile = 'file') or (RequestedFile = 'txt') then
-        FilePath := Song.Path.Append(Song.FileName)
+        FilePath := Song.Directory.Append(Song.FileName)
       else
         raise Exception.Create('Invalid file');
 
@@ -233,50 +237,54 @@ end;
 function TWebServer.GenerateJSONWithSongs: string;
 var
   I: Integer;
-  Song: TSong;
+  Song: TWebSong;
   JSONRoot, Item: TJSONObject;
   JSONSongs: TJSONArray;
   Edition, Genre, Year: string;
 begin
   JSONRoot := TJSONObject.Create;
-  JSONSongs := TJSONArray.Create;
-  JSONRoot.Add('songs', JSONSongs);
+  try
+    JSONSongs := TJSONArray.Create;
+    JSONRoot.Add('songs', JSONSongs);
 
-  for I := 0 to Songs.SongList.Count - 1 do
-  begin
-    Song := TSong(Songs.SongList[I]);
-    Edition := UTF8Encode(Song.Edition);
-    Genre := UTF8Encode(Song.Genre);
-    Year := IntToStr(Song.Year);
+    for I := 0 to Length(FCatalogue) - 1 do
+    begin
+      Song := FCatalogue[I];
+      Edition := Song.Edition;
+      Genre := Song.Genre;
+      Year := IntToStr(Song.Year);
 
-    if (Edition = 'Unknown') or (Edition = 'None') then
-      Edition := '';
-    if Genre = 'Unknown' then
-      Genre := '';
-    if Year = '0' then
-      Year := '';
+      if (Edition = 'Unknown') or (Edition = 'None') then
+        Edition := '';
+      if Genre = 'Unknown' then
+        Genre := '';
+      if Year = '0' then
+        Year := '';
 
-    Item := TJSONObject.Create;
-    Item.Add('artist', UTF8Encode(Song.Artist));
-    Item.Add('title', UTF8Encode(Song.Title));
-    Item.Add('lang', UTF8Encode(Song.Language));
-    Item.Add('edition', Edition);
-    Item.Add('genre', Genre);
-    Item.Add('year', Year);
+      Item := TJSONObject.Create;
+      Item.Add('artist', Song.Artist);
+      Item.Add('title', Song.Title);
+      Item.Add('lang', Song.Language);
+      Item.Add('edition', Edition);
+      Item.Add('genre', Genre);
+      Item.Add('year', Year);
 
-    if Song.Creator <> '' then
-      Item.Add('creator', UTF8Encode(Song.Creator));
+      if Song.Creator <> '' then
+        Item.Add('creator', Song.Creator);
 
-    if Song.isDuet then
-      Item.Add('duet', True);
+      if Song.isDuet then
+        Item.Add('duet', True);
 
-    if Song.hasRap then
-      Item.Add('hasRap', True);
+      if Song.hasRap then
+        Item.Add('hasRap', True);
 
-    JSONSongs.Add(Item);
+      JSONSongs.Add(Item);
+    end;
+
+    Result := JSONRoot.AsJSON;
+  finally
+    JSONRoot.Free;
   end;
-
-  Result := JSONRoot.AsJSON;
 end;
 
 function TWebServer.GenerateJSONWithCurrentSong: string;
@@ -285,34 +293,38 @@ var
   JSONRoot: TJSONObject;
 begin
   JSONRoot := TJSONObject.Create;
-  if Assigned(CurrentSong) and (Display.CurrentScreen = @ScreenSing) then
-  begin
-    JSONRoot.Add('playing', true);
-    SongDetails := TJSONObject.Create;
-    SongDetails.Add('artist', UTF8Encode(CurrentSong.Artist));
-    SongDetails.Add('title', UTF8Encode(CurrentSong.Title));
-    SongDetails.Add('genre', UTF8Encode(CurrentSong.Genre));
-    SongDetails.Add('year', CurrentSong.Year);
-    SongDetails.Add('language', UTF8Encode(CurrentSong.Language));
-    SongDetails.Add('edition', UTF8Encode(CurrentSong.Edition));
-    SongDetails.Add('lang', UTF8Encode(CurrentSong.Language));
+  try
+    if Assigned(CurrentSong) and (Display.CurrentScreen = @ScreenSing) then
+    begin
+      JSONRoot.Add('playing', true);
+      SongDetails := TJSONObject.Create;
+      SongDetails.Add('artist', UTF8Encode(CurrentSong.Artist));
+      SongDetails.Add('title', UTF8Encode(CurrentSong.Title));
+      SongDetails.Add('genre', UTF8Encode(CurrentSong.Genre));
+      SongDetails.Add('year', CurrentSong.Year);
+      SongDetails.Add('language', UTF8Encode(CurrentSong.Language));
+      SongDetails.Add('edition', UTF8Encode(CurrentSong.Edition));
+      SongDetails.Add('lang', UTF8Encode(CurrentSong.Language));
 
-    if CurrentSong.Creator <> '' then
-      SongDetails.Add('creator', UTF8Encode(CurrentSong.Creator))
+      if CurrentSong.Creator <> '' then
+        SongDetails.Add('creator', UTF8Encode(CurrentSong.Creator))
+      else
+        SongDetails.Nulls['creator'] := True;
+
+      SongDetails.Add('duet', CurrentSong.isDuet);
+      SongDetails.Add('hasRap', CurrentSong.hasRap);
+
+      JSONRoot.Add('song', SongDetails);
+    end
     else
-      SongDetails.Nulls['creator'] := True;
-
-    SongDetails.Add('duet', CurrentSong.isDuet);
-    SongDetails.Add('hasRap', CurrentSong.hasRap);
-
-    JSONRoot.Add('song', SongDetails);
-  end
-  else
-  begin
-    JSONRoot.Add('playing', false);
-    JSONRoot.Nulls['song'] := True;
+    begin
+      JSONRoot.Add('playing', false);
+      JSONRoot.Nulls['song'] := True;
+    end;
+    Result := JSONRoot.AsJSON;
+  finally
+    JSONRoot.Free;
   end;
-  Result := JSONRoot.AsJSON;
 end;
 
 function TWebServer.ContentTypeForExt(Ext: IPath): string;
