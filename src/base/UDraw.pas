@@ -1110,6 +1110,14 @@ begin
     GetLaneLayout(PlayerIndex, LaneLeft, LaneRight, LaneWidth, LineTop, LineSpacing);
 
     TrackIndex := Player[PlayerIndex].Track;
+    if CurrentSong.isDuet then
+      LyricEngine := ScreenSing.VoiceLyrics[TrackIndex]
+    else
+      LyricEngine := ScreenSing.Lyrics;
+    // Clear the final target notes and sung trace when their lyrics fade out.
+    // Each duet voice finishes independently; scoring is unaffected.
+    if LyricEngine.GetUpperLine.LastLine and
+      not LyricEngine.HasVisibleText(LyricsState.MidBeat) then Continue;
 
     SingDrawPlayerBGLine(LaneLeft, LineTop, LaneRight, TrackIndex, PlayerIndex, LineSpacing);
     SingDrawLine(LaneLeft, LineTop, LaneRight, TrackIndex, PlayerIndex, LineSpacing);
