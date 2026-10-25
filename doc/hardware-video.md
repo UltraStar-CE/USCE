@@ -55,7 +55,9 @@ with incompatible versions when bundling dependencies.
 
 The renderer uses an offscreen texture, with no fixed 1080p limit. It preserves
 the original video presentation, aspect correction, cropping, alpha and
-reflections. libmpv handles color conversion. Hardware decoding may use direct
+reflections. libmpv handles color conversion. Chroma upsampling uses bilinear
+filtering to avoid a reproduced black first frame with libmpv 0.41.0 and Mesa
+llvmpipe. Hardware decoding may use direct
 GPU textures or copy decoded frames back, depending on the platform and graphics
 interop supported by libmpv. This implementation does not force EGL or change
 USDX's minimum GL/GLES requirements; unsupported render contexts fall back.

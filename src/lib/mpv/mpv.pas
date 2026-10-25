@@ -57,12 +57,8 @@ const
   MPV_RENDER_PARAM_FLIP_Y = 4;
   MPV_RENDER_PARAM_X11_DISPLAY = 8;
   MPV_RENDER_PARAM_WL_DISPLAY = 9;
-  MPV_RENDER_PARAM_NEXT_FRAME_INFO = 11;
   MPV_RENDER_PARAM_BLOCK_FOR_TARGET_TIME = 12;
   MPV_RENDER_UPDATE_FRAME = 1;
-  MPV_RENDER_FRAME_INFO_PRESENT = 1;
-  MPV_RENDER_FRAME_INFO_REDRAW = 2;
-  MPV_RENDER_FRAME_INFO_REPEAT = 4;
 
 type
   Pmpv_handle = Pointer;
@@ -107,11 +103,6 @@ type
   end;
   Pmpv_render_param = ^Tmpv_render_param;
 
-  Tmpv_render_frame_info = record
-    flags: cuint64;
-    target_time: cint64;
-  end;
-
   Tmpv_get_proc_address = function(Context: Pointer; Name: PAnsiChar): Pointer; cdecl;
   Tmpv_render_update_fn = procedure(Context: Pointer); cdecl;
 
@@ -144,7 +135,6 @@ var
   mpv_render_context_create: function(out Context: Pmpv_render_context; Handle: Pmpv_handle; Params: Pmpv_render_param): cint; cdecl;
   mpv_render_context_set_update_callback: procedure(Context: Pmpv_render_context; Callback: Tmpv_render_update_fn; CallbackContext: Pointer); cdecl;
   mpv_render_context_update: function(Context: Pmpv_render_context): cuint64; cdecl;
-  mpv_render_context_get_info: function(Context: Pmpv_render_context; Param: Tmpv_render_param): cint; cdecl;
   mpv_render_context_render: function(Context: Pmpv_render_context; Params: Pmpv_render_param): cint; cdecl;
   mpv_render_context_free: procedure(Context: Pmpv_render_context); cdecl;
 
@@ -221,7 +211,6 @@ begin
     LoadSymbol('mpv_render_context_create', mpv_render_context_create) and
     LoadSymbol('mpv_render_context_set_update_callback', mpv_render_context_set_update_callback) and
     LoadSymbol('mpv_render_context_update', mpv_render_context_update) and
-    LoadSymbol('mpv_render_context_get_info', mpv_render_context_get_info) and
     LoadSymbol('mpv_render_context_render', mpv_render_context_render) and
     LoadSymbol('mpv_render_context_free', mpv_render_context_free);
   if Result then

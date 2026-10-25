@@ -66,7 +66,7 @@ type
       fSync: TExternalVideoSync;
       fLibraryLoaded: boolean;
       fOpened, fFileLoaded, fFailed: boolean;
-      fHaveVideoFrame, fPlaybackStarted: boolean;
+      fPlaybackStarted: boolean;
       fPaused, fStopped, fLoop: boolean;
       fUpdatePending: longint;
       fRenderPending: boolean;
@@ -252,10 +252,13 @@ begin
   end;
 
   { Do not inherit mpv.conf, scripts, audio, subtitles or input bindings. USDX
-    owns those features, and its audio clock remains the playback master. }
+    owns those features, and its audio clock remains the playback master.
+    Bilinear chroma upsampling avoids black paused startup
+    frames seen with mpv's default multipass chroma scaler on Mesa. }
   if not (SetOption('config', 'no') and
           SetOption('terminal', 'no') and
           SetOption('vo', 'libmpv') and
+          SetOption('cscale', 'bilinear') and
           SetOption('audio', 'no') and
           SetOption('sid', 'no') and
           SetOption('sub-auto', 'no') and
@@ -298,8 +301,7 @@ var
 begin
   Result := false;
   { The first frame must be rendered before mpv publishes display dimensions.
-    A 1x1 bootstrap target can round its letterboxed video area down to zero,
-    leaving a paused frame black. Start with the window's drawable area. }
+    Start with the window's drawable area, then use the video's dimensions. }
   fTarget := Renderer.CreateRenderTarget(
     Min(Max(16, ScreenWPerScreen), Renderer.MaxTextureSize),
     Min(Max(16, ScreenH), Renderer.MaxTextureSize));
@@ -474,9 +476,8 @@ begin
       MPV_EVENT_PLAYBACK_RESTART:
       begin
         fPlaybackStarted := true;
-        { The VO can retain the first decoded frame after its presentation
-          timeout, so it need not still appear as NEXT_FRAME_INFO. }
-        fHaveVideoFrame := true;
+        { Redraw after startup or a seek, including a frame that the VO moved
+          into its cache after its presentation timeout. }
         fRenderPending := true;
         if fSeekNotified then
           fSeeking := false;
@@ -538,8 +539,6 @@ var
   flags: QWord;
   fbo: Tmpv_opengl_fbo;
   params: array[0..3] of Tmpv_render_param;
-  infoParam: Tmpv_render_param;
-  frameInfo: Tmpv_render_frame_info;
   flipY, blockForTime, code: cint;
   targetReady, updatePending: boolean;
 begin
@@ -564,16 +563,6 @@ begin
     if not fRenderPending then
       Exit;
 
-    FillChar(frameInfo, SizeOf(frameInfo), 0);
-    infoParam.param_type := MPV_RENDER_PARAM_NEXT_FRAME_INFO;
-    infoParam.data := @frameInfo;
-    code := mpv_render_context_get_info(fContext, infoParam);
-    if code < 0 then
-    begin
-      Fail('Cannot query libmpv frame readiness: ' + MpvError(code));
-      Exit;
-    end;
-
     fbo.fbo := fTarget.NativeHandle;
     fbo.w := fTarget.Width;
     fbo.h := fTarget.Height;
@@ -592,23 +581,9 @@ begin
     if code < 0 then
       Fail('libmpv rendering failed: ' + MpvError(code))
     else
-    begin
-      { Successful render calls also include initialization redraws with no
-        image. Only a new decoded frame establishes the cached image. }
-      if ((frameInfo.flags and MPV_RENDER_FRAME_INFO_PRESENT) <> 0) and
-         ((frameInfo.flags and (MPV_RENDER_FRAME_INFO_REDRAW or
-           MPV_RENDER_FRAME_INFO_REPEAT)) = 0) then
-        fHaveVideoFrame := true;
-      fFrameTexValid := targetReady and fHaveVideoFrame;
-    end;
-    {$IFDEF MPV_TRACE}
-    if not fOpened then
-      Log.LogInfo('frame flags=' + IntToStr(frameInfo.flags) +
-        ' target=' + BoolToStr(targetReady, true) +
-        ' decoded=' + BoolToStr(fHaveVideoFrame, true) +
-        ' started=' + BoolToStr(fPlaybackStarted, true) +
-        ' valid=' + BoolToStr(fFrameTexValid, true), 'MPV_TRACE');
-    {$ENDIF}
+      { A successful render may draw only an initialization background.
+        PLAYBACK_RESTART confirms the first video frame and forces a redraw. }
+      fFrameTexValid := targetReady and fPlaybackStarted;
   finally
     fTarget.EndRender;
   end;
@@ -744,7 +719,6 @@ begin
   fLibraryLoaded := false;
   fOpened := false;
   fFileLoaded := false;
-  fHaveVideoFrame := false;
   fPlaybackStarted := false;
   fFailed := false;
   fPaused := false;
