@@ -81,7 +81,7 @@ type
     PlaybackSeeked: boolean;
     fStartTime, fFirstNote: real;
 
-    procedure SeekTo(Position: real);
+    procedure SeekTo(Position: real; ResetScoring: boolean = true);
     procedure LoadNextSong();
     procedure SongError();
     procedure ResetLinesAndLyrics();
@@ -407,7 +407,7 @@ begin
         begin
           if (not CurrentSong.isDuet and (GetTimeFromBeat(Lyrics.GetUpperLine().StartNote) - AudioPlayback.Position > 6)) then
           begin
-            SeekTo(GetTimeFromBeat(Lyrics.GetUpperLine().StartNote) - 5);
+            SeekTo(GetTimeFromBeat(Lyrics.GetUpperLine().StartNote) - 5, false);
           end
           else if CurrentSong.isDuet then
           begin
@@ -417,7 +417,7 @@ begin
                 IntroPosition := Min(IntroPosition,
                   GetTimeFromBeat(VoiceLyrics[VoiceIndex].GetUpperLine.StartNote));
             if (IntroPosition < 1.0E20) and (IntroPosition - AudioPlayback.Position > 6) then
-              SeekTo(IntroPosition - 5);
+              SeekTo(IntroPosition - 5, false);
           end;
           Exit;
         end;
@@ -620,22 +620,25 @@ begin
   Result := inherited ParseMouse(MouseButton, BtnDown, MouseX, MouseY);
 end;
 
-procedure TScreenSingController.SeekTo(Position: real);
+procedure TScreenSingController.SeekTo(Position: real; ResetScoring: boolean);
 var I: integer; Color: TRGB;
 begin
-  PlaybackSeeked := true;
-  for I := 0 to High(Player) do
+  if ResetScoring then
   begin
-    Player[I].ResetScores;
-    Player[I].ScoreLast := 0;
-    Player[I].LastSentencePerfect := false;
+    PlaybackSeeked := true;
+    for I := 0 to High(Player) do
+    begin
+      Player[I].ResetScores;
+      Player[I].ScoreLast := 0;
+      Player[I].LastSentencePerfect := false;
+    end;
+    Scores.KillAllPopUps;
+    Scores.ClearPlayers;
+    Color.R := 0; Color.G := 0; Color.B := 0;
+    for I := 0 to PlayersPlay - 1 do Scores.AddPlayer(Tex_ScoreBG[I], Color);
+    Scores.Init;
+    GoldenRec.KillAll;
   end;
-  Scores.KillAllPopUps;
-  Scores.ClearPlayers;
-  Color.R := 0; Color.G := 0; Color.B := 0;
-  for I := 0 to PlayersPlay - 1 do Scores.AddPlayer(Tex_ScoreBG[I], Color);
-  Scores.Init;
-  GoldenRec.KillAll;
   StopSingClicks;
   AudioPlayback.SetPosition(Position);
   LyricsState.SetCurrentTime(Position);
