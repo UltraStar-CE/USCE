@@ -4602,6 +4602,7 @@ begin
   begin
     X := 15; Y := 545; W := 32; H := 30; Z := 0.95;
     Tex := 'ButtonC'; Typ := TEXTURE_TYPE_TRANSPARENT;
+    ScaleMode := lsUniform;
     TexX1 := 0; TexY1 := 0; TexX2 := 1; TexY2 := 1;
     ColR := 1; ColG := 1; ColB := 1; Alpha := 1;
     Reflection := true; ReflectionSpacing := 2;
