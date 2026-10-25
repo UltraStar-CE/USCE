@@ -28,7 +28,7 @@ unit UWebServer;
 interface
 
 uses
-  Classes, SysUtils, fphttpserver, HTTPDefs, USongs, USong, UPlatform, UPath, UPathUtils;
+  Classes, SysUtils, fphttpserver, HTTPDefs, USongs, USong, UPlatform, UPath, UPathUtils, UWebSongCatalogue;
 
 type
   TLoopbackHTTPServer = class(TFPHTTPServer)
@@ -40,6 +40,7 @@ type
   private
     FServer: TLoopbackHTTPServer;
     FPort: Integer;
+    FCatalogue: TWebSongArray;
   protected
     procedure Execute; override;
     procedure HandleRequest(Sender: TObject; var ARequest: TFPHTTPConnectionRequest;
@@ -53,10 +54,20 @@ type
 
 implementation
 
+function EscapeHTML(const Value: string): string;
+begin
+  Result := StringReplace(Value, '&', '&amp;', [rfReplaceAll]);
+  Result := StringReplace(Result, '<', '&lt;', [rfReplaceAll]);
+  Result := StringReplace(Result, '>', '&gt;', [rfReplaceAll]);
+  Result := StringReplace(Result, '"', '&quot;', [rfReplaceAll]);
+  Result := StringReplace(Result, #39, '&#39;', [rfReplaceAll]);
+end;
+
 constructor TWebServer.Create(APort: Integer);
 begin
   inherited Create(True); // Create suspended
   FPort := APort;
+  FCatalogue := CaptureWebSongCatalogue(Songs.SongList);
   FreeOnTerminate := True;
 end;
 
@@ -125,11 +136,11 @@ var
   Edition, Genre, Year: string;
 begin
   SongRows := '';
-  for I := 0 to Songs.SongList.Count - 1 do
+  for I := 0 to Length(FCatalogue) - 1 do
   begin
-    Edition := UTF8Encode(TSong(Songs.SongList[I]).Edition);
-    Genre := UTF8Encode(TSong(Songs.SongList[I]).Genre);
-    Year := IntToStr(TSong(Songs.SongList[I]).Year);
+    Edition := FCatalogue[I].Edition;
+    Genre := FCatalogue[I].Genre;
+    Year := IntToStr(FCatalogue[I].Year);
 
     if Edition = 'Unknown' then
       Edition := '';
@@ -139,10 +150,10 @@ begin
       Year := '';
 
     SongRows := SongRows + '<tr>' + sLineBreak +
-                '<td>' + UTF8Encode(TSong(Songs.SongList[I]).Artist) + '</td>' + sLineBreak +
-                '<td>' + UTF8Encode(TSong(Songs.SongList[I]).Title) + '</td>' + sLineBreak +
-                '<td>' + Edition + '</td>' + sLineBreak +
-                '<td>' + Genre + '</td>' + sLineBreak +
+                '<td>' + EscapeHTML(FCatalogue[I].Artist) + '</td>' + sLineBreak +
+                '<td>' + EscapeHTML(FCatalogue[I].Title) + '</td>' + sLineBreak +
+                '<td>' + EscapeHTML(Edition) + '</td>' + sLineBreak +
+                '<td>' + EscapeHTML(Genre) + '</td>' + sLineBreak +
                 '<td>' + Year + '</td>' + sLineBreak +
                 '</tr>' + sLineBreak;
   end;
