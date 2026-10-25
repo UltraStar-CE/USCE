@@ -338,6 +338,7 @@ uses
   UAvatars                in 'base\UAvatars.pas',
   UScreenAbout            in 'screens\UScreenAbout.pas',
 
+  UWebSongCatalogue       in 'base\UWebSongCatalogue.pas',
   UWebServer              in 'base\UWebServer.pas',
 
   SysUtils;
