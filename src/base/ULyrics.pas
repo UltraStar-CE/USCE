@@ -50,6 +50,7 @@ type
     Start:      Longint; // start of the word in quarters (beats)
     Length:     Longint; // length of the word in quarters
     Text:       UTF8String; // text
+    ScoreExcluded: boolean;
     NoteType:   TNoteType; // scoring type of the source note
     Freestyle:  boolean;  // is freestyle?
   end;
@@ -329,6 +330,7 @@ begin
       LyricLine.Words[NoteIndex].Start     := Line.Notes[NoteIndex].StartBeat;
       LyricLine.Words[NoteIndex].Length    := Line.Notes[NoteIndex].Duration;
       LyricLine.Words[NoteIndex].Text      := Line.Notes[NoteIndex].Text;
+      LyricLine.Words[NoteIndex].ScoreExcluded := Line.Notes[NoteIndex].ScoreExcluded;
       LyricLine.Words[NoteIndex].NoteType  := Line.Notes[NoteIndex].NoteType;
       LyricLine.Words[NoteIndex].Freestyle := Line.Notes[NoteIndex].NoteType = ntFreestyle;
 

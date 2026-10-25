@@ -564,11 +564,9 @@ var
   T:                      integer;
   CurLyricsTime:          real;
   VideoFrameTime:         Extended;
-  Line:                   TLyricLine;
-  VoiceIndex:             integer;
+  ScorePlayerIndex:       integer;
   medley_end:             boolean;
   medley_start_applause:  boolean;
-  LastLineSungToEnd:      boolean;
   LocalPlayerCount:       integer;
   LocalStartIndex:        integer;
   FrameSlots:             TSlotArray;
@@ -581,6 +579,17 @@ var
   SingPlayer:             TThemeSingPlayer;
   DrawScorePanel:         boolean;
   ScoreMode:              TSingInfoBarMode;
+  function LastScoringLineFinished(const LyricLine: TLyricLine): boolean;
+  var WordIndex: integer;
+  begin
+    Result := Assigned(LyricLine) and LyricLine.LastLine;
+    if not Result then Exit;
+    for WordIndex := 0 to High(LyricLine.Words) do
+      with LyricLine.Words[WordIndex] do
+        if not ScoreExcluded and (ScoreFactor[NoteType] > 0) and
+           (CurLyricsTime < GetTimeFromBeat(Start + Length)) then
+          Exit(false);
+  end;
   procedure SetPlayerNameTexts(const Slots: TSlotArray; FirstPlayerIndex: integer; UseDuetNames: boolean);
   var
     J: integer;
@@ -724,37 +733,19 @@ begin
   ScreenSing.Text[TextTimeText].Text := Format('%s%.2d:%.2d', [DisplayPrefix, DisplayMin, DisplaySec]);
   ScreenSing.Text[TextTimeText].Visible := ScreenSing.Settings.TimeBarVisible;
 
-  LastLineSungToEnd := false;
-  //the song was sung to the end?
-  if not ScreenSing.SungToEnd and not CurrentSong.isDuet then
+  // Completion follows assigned scoring voices, not clipped or zero-weight tails.
+  if not ScreenSing.SungToEnd then
   begin
-    Line := ScreenSing.Lyrics.GetUpperLine();
-    if Line.LastLine then
+    if not CurrentSong.isDuet then
+      ScreenSing.SungToEnd := LastScoringLineFinished(ScreenSing.Lyrics.GetUpperLine())
+    else
     begin
-      LastLineSungToEnd := true;
-      for T := 0 to High(Line.Words) do
-      begin
-        if (CurLyricsTime < GetTimeFromBeat(Line.Words[T].Start + Line.Words[T].Length)) and
-           (ScoreFactor[Line.Words[T].NoteType] > 0) then
-          LastLineSungToEnd := false;
-      end;
-    end;
-    if LastLineSungToEnd then
       ScreenSing.SungToEnd := true;
-  end;
-
-  if not ScreenSing.SungToEnd and CurrentSong.isDuet then
-  begin
-    LastLineSungToEnd := true;
-    for VoiceIndex := 0 to High(ScreenSing.VoiceLyrics) do
-    begin
-      Line := ScreenSing.VoiceLyrics[VoiceIndex].GetUpperLine;
-      if not Line.LastLine or (Length(Line.Words) = 0) then
-        LastLineSungToEnd := false
-      else if CurLyricsTime < GetTimeFromBeat(Line.Words[High(Line.Words)].Start +
-        Line.Words[High(Line.Words)].Length) then LastLineSungToEnd := false;
+      for ScorePlayerIndex := 0 to PlayersPlay - 1 do
+        if not LastScoringLineFinished(ScreenSing.VoiceLyrics[
+          Player[ScorePlayerIndex].Track].GetUpperLine()) then
+          ScreenSing.SungToEnd := false;
     end;
-    if LastLineSungToEnd then ScreenSing.SungToEnd := true;
   end;
 
   // for medley-mode:
