@@ -2318,7 +2318,6 @@ end;
 procedure TScreenSong.OnSongDeSelect;
 begin
   VoiceAssignments.SelectSong(nil);
-  RapToFreestyle := false;
 
   CoverTime := 10;
   //UnloadCover(Interaction);

@@ -549,7 +549,6 @@ var
 implementation
 
 uses
-  Math,
   StrUtils,
   sdl2,
   UCommandLine,
