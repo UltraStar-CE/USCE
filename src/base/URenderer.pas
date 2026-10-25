@@ -200,6 +200,29 @@ type
 
   end;
 
+  // An offscreen texture owned by the renderer. External rendering libraries may
+  // use NativeHandle only for NativeAPI, with the graphics context current.
+  // The target owns Texture; callers must not release or free it separately.
+  TRenderTarget = class
+    protected
+      fTexture: TTexture;
+      fWidth, fHeight: integer;
+      fNativeHandle: cardinal;
+      fNativeAPI: string;
+    public
+      // Bracket all calls that may change graphics state, including external
+      // renderer initialization and destruction. Pair these with try/finally.
+      procedure BeginRender(); virtual; abstract;
+      procedure EndRender(); virtual; abstract;
+      destructor Destroy; override;
+
+      property Texture: TTexture read fTexture;
+      property Width: integer read fWidth;
+      property Height: integer read fHeight;
+      property NativeHandle: cardinal read fNativeHandle;
+      property NativeAPI: string read fNativeAPI;
+  end;
+
 const
   TextureTypeStr: array[TTextureType] of string = (
     'Plain',
@@ -290,6 +313,9 @@ type
       // Data should be in RGB format (no alpha)
       function CreateTexture(Data: PChar; const Name: IPath; Width, Height: word; Typ: TTextureType; UseMipmaps: boolean = true): TTexture;
       function CreateEmptyTexture(const Identifier: IPath): TTexture; virtual; abstract;
+      // Returns nil if offscreen rendering or the requested size is unsupported.
+      // Targets must be destroyed before their renderer and graphics context.
+      function CreateRenderTarget(Width, Height: integer): TRenderTarget; virtual;
       procedure UnloadTexture(const Name: IPath; Typ: TTextureType); overload;
       procedure UnloadTexture(const Name: IPath; Typ: TTextureType; Col: cardinal); overload;
 
@@ -329,6 +355,17 @@ uses
 
 const
   DEFAULT_TEXTURE_LIMIT = 4096;
+
+destructor TRenderTarget.Destroy;
+begin
+  fTexture.Free;
+  inherited;
+end;
+
+function TRenderer.CreateRenderTarget(Width, Height: integer): TRenderTarget;
+begin
+  Result := nil;
+end;
 
 constructor TTexture.Create(const Identifier: IPath);
 begin

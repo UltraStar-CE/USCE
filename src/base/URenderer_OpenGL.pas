@@ -133,6 +133,7 @@ type
       procedure ResetState(); override;
       function GetFrameBufferData(out RowSize: integer): PByte; override;
       function CreateEmptyTexture(const Identifier: IPath): TTexture; override;
+      function CreateRenderTarget(Width, Height: integer): TRenderTarget; override;
 
   end;
 
@@ -303,6 +304,241 @@ type
       procedure Release(); override;
       function Clone(): TTexture; overload; override;
   end;
+
+  TGLVertexAttributeState = record
+    Enabled, Buffer, Size, Typ, Normalized, Stride: GLint;
+    Data: Pointer;
+  end;
+
+  TRenderTarget_OpenGL = class(TRenderTarget)
+    private
+      fRenderer: TRenderer_OpenGLBase;
+      fRendering: boolean;
+      fSeparateFramebuffers, fRowLength, fPixelBuffers: boolean;
+      fFramebuffer, fReadFramebuffer, fRenderbuffer: GLint;
+      fViewPort, fScissor: array[0..3] of GLint;
+      fProgram, fVertexArray, fArrayBuffer, fElementBuffer: GLint;
+      fActiveTexture, fTexture0, fActiveTextureBinding: GLint;
+      fBlendSrcRGB, fBlendDstRGB, fBlendSrcAlpha, fBlendDstAlpha: GLint;
+      fBlendEquationRGB, fBlendEquationAlpha, fDepthFunc: GLint;
+      fPackAlignment, fUnpackAlignment, fUnpackRowLength: GLint;
+      fPackBuffer, fUnpackBuffer: GLint;
+      fClearColor, fBlendColor: array[0..3] of GLfloat;
+      fDepthRange: array[0..1] of GLfloat;
+      fColorMask: array[0..3] of GLboolean;
+      fDepthMask: GLboolean;
+      fBlend, fDepthTest, fScissorTest, fCullFace, fStencilTest, fDither: GLboolean;
+      fAttributes: array[0..2] of TGLVertexAttributeState;
+    public
+      constructor Create(ARenderer: TRenderer_OpenGLBase; Width, Height: integer);
+      destructor Destroy; override;
+      procedure BeginRender(); override;
+      procedure EndRender(); override;
+  end;
+
+constructor TRenderTarget_OpenGL.Create(ARenderer: TRenderer_OpenGLBase; Width, Height: integer);
+begin
+  inherited Create;
+  fRenderer := ARenderer;
+  fWidth := Width;
+  fHeight := Height;
+  fNativeAPI := 'opengl';
+  // Desktop GL 2 uses ARB_framebuffer_object, which also has separate read
+  // and draw bindings. GLES 2 only has the combined framebuffer binding.
+  fSeparateFramebuffers := not (fRenderer is TRenderer_OpenGLES) or (fRenderer.MajorVersion >= 3);
+  fRowLength := not (fRenderer is TRenderer_OpenGLES) or (fRenderer.MajorVersion >= 3);
+  fPixelBuffers := (fRenderer.MajorVersion >= 3) or
+    ((fRenderer is TRenderer_OpenGL2) and (fRenderer.MinorVersion >= 1));
+
+  BeginRender;
+  try
+    fTexture := TTexture_OpenGL.Create(nil, Width, Height, PATH_NONE, GL_RGBA, 4, GL_CLAMP_TO_EDGE, false);
+    glGenFramebuffers(1, @fNativeHandle);
+    glBindFramebuffer(GL_FRAMEBUFFER, fNativeHandle);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+      TTexture_OpenGL(fTexture).TexID, 0);
+    if glCheckFramebufferStatus(GL_FRAMEBUFFER) <> GL_FRAMEBUFFER_COMPLETE then
+      raise Exception.Create('Could not create a complete video render target');
+  finally
+    EndRender;
+  end;
+end;
+
+destructor TRenderTarget_OpenGL.Destroy;
+begin
+  if fRendering then
+    EndRender;
+  if fNativeHandle <> 0 then
+    glDeleteFramebuffers(1, @fNativeHandle);
+  inherited;
+end;
+
+procedure TRenderTarget_OpenGL.BeginRender();
+var
+  I: integer;
+begin
+  if fRendering then
+    raise Exception.Create('Render target is already in use');
+
+  glGetIntegerv(GL_FRAMEBUFFER_BINDING, @fFramebuffer);
+  if fSeparateFramebuffers then
+    glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, @fReadFramebuffer);
+  glGetIntegerv(GL_RENDERBUFFER_BINDING, @fRenderbuffer);
+  glGetIntegerv(GL_VIEWPORT, @fViewPort[0]);
+  glGetIntegerv(GL_SCISSOR_BOX, @fScissor[0]);
+  glGetIntegerv(GL_CURRENT_PROGRAM, @fProgram);
+  glGetIntegerv(GL_ARRAY_BUFFER_BINDING, @fArrayBuffer);
+  glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, @fElementBuffer);
+  if fRenderer.SupportsVAO then
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, @fVertexArray)
+  else
+    for I := Low(fAttributes) to High(fAttributes) do
+    begin
+      glGetVertexAttribiv(I, GL_VERTEX_ATTRIB_ARRAY_ENABLED, @fAttributes[I].Enabled);
+      glGetVertexAttribiv(I, GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING, @fAttributes[I].Buffer);
+      glGetVertexAttribiv(I, GL_VERTEX_ATTRIB_ARRAY_SIZE, @fAttributes[I].Size);
+      glGetVertexAttribiv(I, GL_VERTEX_ATTRIB_ARRAY_TYPE, @fAttributes[I].Typ);
+      glGetVertexAttribiv(I, GL_VERTEX_ATTRIB_ARRAY_NORMALIZED, @fAttributes[I].Normalized);
+      glGetVertexAttribiv(I, GL_VERTEX_ATTRIB_ARRAY_STRIDE, @fAttributes[I].Stride);
+      glGetVertexAttribPointerv(I, GL_VERTEX_ATTRIB_ARRAY_POINTER, @fAttributes[I].Data);
+    end;
+  glGetIntegerv(GL_ACTIVE_TEXTURE, @fActiveTexture);
+  glGetIntegerv(GL_TEXTURE_BINDING_2D, @fActiveTextureBinding);
+  glActiveTexture(GL_TEXTURE0);
+  glGetIntegerv(GL_TEXTURE_BINDING_2D, @fTexture0);
+  glGetIntegerv(GL_BLEND_SRC_RGB, @fBlendSrcRGB);
+  glGetIntegerv(GL_BLEND_DST_RGB, @fBlendDstRGB);
+  glGetIntegerv(GL_BLEND_SRC_ALPHA, @fBlendSrcAlpha);
+  glGetIntegerv(GL_BLEND_DST_ALPHA, @fBlendDstAlpha);
+  glGetIntegerv(GL_BLEND_EQUATION_RGB, @fBlendEquationRGB);
+  glGetIntegerv(GL_BLEND_EQUATION_ALPHA, @fBlendEquationAlpha);
+  glGetFloatv(GL_BLEND_COLOR, @fBlendColor[0]);
+  glGetIntegerv(GL_DEPTH_FUNC, @fDepthFunc);
+  glGetFloatv(GL_DEPTH_RANGE, @fDepthRange[0]);
+  glGetBooleanv(GL_DEPTH_WRITEMASK, @fDepthMask);
+  glGetBooleanv(GL_COLOR_WRITEMASK, @fColorMask[0]);
+  glGetFloatv(GL_COLOR_CLEAR_VALUE, @fClearColor[0]);
+  glGetIntegerv(GL_PACK_ALIGNMENT, @fPackAlignment);
+  glGetIntegerv(GL_UNPACK_ALIGNMENT, @fUnpackAlignment);
+  if fRowLength then
+    glGetIntegerv(GL_UNPACK_ROW_LENGTH, @fUnpackRowLength);
+  if fPixelBuffers then
+  begin
+    glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, @fPackBuffer);
+    glGetIntegerv(GL_PIXEL_UNPACK_BUFFER_BINDING, @fUnpackBuffer);
+  end;
+  fBlend := glIsEnabled(GL_BLEND);
+  fDepthTest := glIsEnabled(GL_DEPTH_TEST);
+  fScissorTest := glIsEnabled(GL_SCISSOR_TEST);
+  fCullFace := glIsEnabled(GL_CULL_FACE);
+  fStencilTest := glIsEnabled(GL_STENCIL_TEST);
+  fDither := glIsEnabled(GL_DITHER);
+  fRendering := true;
+
+  // External renderers expect standard defaults. Detach our VAO before they
+  // change vertex attributes or element bindings, preserving its contents.
+  if fRenderer.SupportsVAO then
+    glBindVertexArray(0)
+  else
+  begin
+    for I := Low(fAttributes) to High(fAttributes) do
+      glDisableVertexAttribArray(I);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+  end;
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  if fPixelBuffers then
+  begin
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+  end;
+  glUseProgram(0);
+  glBindTexture(GL_TEXTURE_2D, 0);
+  glBindFramebuffer(GL_FRAMEBUFFER, fNativeHandle);
+  glBindRenderbuffer(GL_RENDERBUFFER, 0);
+  glDisable(GL_BLEND);
+  glDisable(GL_DEPTH_TEST);
+  glDisable(GL_SCISSOR_TEST);
+  glDisable(GL_CULL_FACE);
+  glDisable(GL_STENCIL_TEST);
+  glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ONE, GL_ZERO);
+  glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
+  glBlendColor(0, 0, 0, 0);
+  glDepthFunc(GL_LESS);
+  fRenderer.SetDepthRange(0, 1);
+  glDepthMask(GL_TRUE);
+  glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+  glPixelStorei(GL_PACK_ALIGNMENT, 4);
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+  if fRowLength then
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+end;
+
+procedure TRenderTarget_OpenGL.EndRender();
+var
+  I: integer;
+  procedure RestoreEnabled(Capability: GLenum; Enabled: GLboolean);
+  begin
+    if Enabled then
+      glEnable(Capability)
+    else
+      glDisable(Capability);
+  end;
+begin
+  if not fRendering then
+    Exit;
+  glBindFramebuffer(GL_FRAMEBUFFER, fFramebuffer);
+  if fSeparateFramebuffers then
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, fReadFramebuffer);
+  glBindRenderbuffer(GL_RENDERBUFFER, fRenderbuffer);
+  glViewport(fViewPort[0], fViewPort[1], fViewPort[2], fViewPort[3]);
+  glScissor(fScissor[0], fScissor[1], fScissor[2], fScissor[3]);
+  glBlendFuncSeparate(fBlendSrcRGB, fBlendDstRGB, fBlendSrcAlpha, fBlendDstAlpha);
+  glBlendEquationSeparate(fBlendEquationRGB, fBlendEquationAlpha);
+  glBlendColor(fBlendColor[0], fBlendColor[1], fBlendColor[2], fBlendColor[3]);
+  glDepthFunc(fDepthFunc);
+  fRenderer.SetDepthRange(fDepthRange[0], fDepthRange[1]);
+  glDepthMask(fDepthMask);
+  glColorMask(fColorMask[0], fColorMask[1], fColorMask[2], fColorMask[3]);
+  glClearColor(fClearColor[0], fClearColor[1], fClearColor[2], fClearColor[3]);
+  RestoreEnabled(GL_BLEND, fBlend);
+  RestoreEnabled(GL_DEPTH_TEST, fDepthTest);
+  RestoreEnabled(GL_SCISSOR_TEST, fScissorTest);
+  RestoreEnabled(GL_CULL_FACE, fCullFace);
+  RestoreEnabled(GL_STENCIL_TEST, fStencilTest);
+  RestoreEnabled(GL_DITHER, fDither);
+  glPixelStorei(GL_PACK_ALIGNMENT, fPackAlignment);
+  glPixelStorei(GL_UNPACK_ALIGNMENT, fUnpackAlignment);
+  if fRowLength then
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, fUnpackRowLength);
+  if fPixelBuffers then
+  begin
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, fPackBuffer);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, fUnpackBuffer);
+  end;
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, fTexture0);
+  glActiveTexture(fActiveTexture);
+  glBindTexture(GL_TEXTURE_2D, fActiveTextureBinding);
+  if fRenderer.SupportsVAO then
+    glBindVertexArray(fVertexArray)
+  else
+  begin
+    for I := Low(fAttributes) to High(fAttributes) do
+    begin
+      glBindBuffer(GL_ARRAY_BUFFER, fAttributes[I].Buffer);
+      glVertexAttribPointer(I, fAttributes[I].Size, fAttributes[I].Typ,
+        GLboolean(fAttributes[I].Normalized <> 0), fAttributes[I].Stride, fAttributes[I].Data);
+      if fAttributes[I].Enabled <> 0 then
+        glEnableVertexAttribArray(I)
+      else
+        glDisableVertexAttribArray(I);
+    end;
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, fElementBuffer);
+  end;
+  glBindBuffer(GL_ARRAY_BUFFER, fArrayBuffer);
+  glUseProgram(fProgram);
+  fRendering := false;
+end;
 
 
 constructor TTexture_OpenGL.Create(Data: PByte; W, H: integer; const Identifier: IPath; Format: GLint; Alignment: GLint; WrapMode: GLint; UseMipmaps: boolean);
@@ -1706,6 +1942,24 @@ begin
   {$ENDIF};
 end;
 
+function TRenderer_OpenGLBase.CreateRenderTarget(Width, Height: integer): TRenderTarget;
+begin
+  Result := nil;
+  if not SupportsFBO or (Width < 1) or (Height < 1) or
+    (Width > MaxTextureSize) or (Height > MaxTextureSize) or
+    not Assigned(glGenFramebuffers) or not Assigned(glBindFramebuffer) or
+    not Assigned(glBindRenderbuffer) or
+    not Assigned(glFramebufferTexture2D) or not Assigned(glCheckFramebufferStatus) or
+    not Assigned(glDeleteFramebuffers) then
+    Exit;
+  try
+    Result := TRenderTarget_OpenGL.Create(Self, Width, Height);
+  except
+    on E: Exception do
+      Log.LogError(E.Message, 'TRenderer_OpenGLBase.CreateRenderTarget');
+  end;
+end;
+
 procedure TRenderer_OpenGLBase.SetDepthTest(Enabled: boolean);
 begin
   if (Enabled) then
@@ -2075,7 +2329,7 @@ begin
     SupportsMappedBuffer := true;
   SupportsMipMap := true;
   fSupportsProjectM := false;
-  SupportsFBO := false;
+  SupportsFBO := Int_CheckExtension(Extensions, 'GL_ARB_framebuffer_object');
   GlyphTextureFormat := GL_LUMINANCE;
 end;
 
