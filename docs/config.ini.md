@@ -272,9 +272,6 @@ INI key. Adding these keys does not enable those features.
 Theme definitions, song TXT files, plugin settings and projectM's own
 configuration are separate files. Do not paste their sections into `config.ini`.
 
-`[Game] StatisticsView=Reduced` selects compact statistics; `Full` includes
-averages, recent activity and performance facts. Also available in Options → Game.
-
 ### Age rating country
 
 `[Game] AgeCountry=DE` selects Germany for AGE searches. An empty value uses

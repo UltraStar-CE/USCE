@@ -47,7 +47,6 @@ uses
 type
   TScreenOptionsGame = class(TOptionsMenu)
     private
-      StatisticsViewLabels: array[0..1] of UTF8String;
       AgeCountryIndex: integer;
       AgeCountries: array of UTF8String;
       AgeCountryLabels: array of UTF8String;
@@ -99,7 +98,6 @@ type
     iSortingSlide,
     iShowScoresSlide,
     iDebugSlide,
-    iStatisticsViewSlide,
     iAgeCountrySlide,
     iAVDelaySlide,
     iMicDelaySlide,
@@ -347,9 +345,6 @@ begin
   AddSelectSlide('SING_OPTIONS_GAME_SORTING', Ini.Sorting, ISortingTranslated);
   AddSelectSlide('SING_OPTIONS_GAME_SHOWSCORES', Ini.ShowScores, IShowScoresTranslated);
   AddSelectSlide('SING_OPTIONS_GAME_DEBUG', Ini.Debug, IDebugTranslated);
-  StatisticsViewLabels[0] := Language.Translate('OPTION_VALUE_STATISTICS_REDUCED');
-  StatisticsViewLabels[1] := Language.Translate('OPTION_VALUE_STATISTICS_FULL');
-  AddSelectSlide('SING_OPTIONS_GAME_STATISTICS', Ini.StatisticsView, StatisticsViewLabels);
   AddSelectSlide('SING_OPTIONS_GAME_AGE_COUNTRY', AgeCountryIndex, AgeCountryLabels);
   UpdateCalculatedSelectSlides(true);
 end;
