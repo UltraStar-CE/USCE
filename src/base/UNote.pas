@@ -415,6 +415,7 @@ begin
   for LineIndex := 0 to CurrentSong.Tracks[Track].High do
     for NoteIndex := 0 to CurrentSong.Tracks[Track].Lines[LineIndex].HighNote do
       with CurrentSong.Tracks[Track].Lines[LineIndex].Notes[NoteIndex] do
+      if NoteType in [ntNormal, ntGolden] then
       begin
         MinTone := Min(MinTone, Tone);
         MaxTone := Max(MaxTone, Tone);
