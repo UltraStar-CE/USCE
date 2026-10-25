@@ -384,10 +384,12 @@ end;
 
 procedure NewBeatClick;
 var
-  LineIndex, NoteIndex, Track, MinTone, MaxTone, PitchOffset: integer;
+  LineIndex, NoteIndex, Track, PlayerIndex, ClickTrack, MinTone, MaxTone, PitchOffset: integer;
   Origin, EndTime, ClickTime, NoteEnd: real;
+  ActiveTracks: array of boolean;
+  ClickBeats: TStringList;
 begin
-  if BeatClickScheduled or (Ini.ClickAssist = 0) then Exit;
+  if BeatClickScheduled or (Ini.ClickAssist = 0) or (PlayersPlay <= 0) or (Length(Player) = 0) then Exit;
   if not Assigned(BeatClickOutput) then
   begin
     BeatClickOutput := TMidiOutput.Create(nil);
@@ -431,9 +433,6 @@ begin
       begin
         ClickTime := GetTimeFromBeat(StartBeat);
         NoteEnd := Min(EndTime, GetTimeFromBeat(StartBeat + Duration));
-        if (ClickTime >= Origin) and (ClickTime < EndTime) and
-           (Ini.ClickAssist in [1, 3]) then
-          BeatClickOutput.QueueClick(127, ClickTime - Origin);
         if (Ini.ClickAssist in [2, 3]) and (NoteEnd > Origin) and
            (ClickTime < EndTime) and (NoteType in [ntNormal, ntGolden]) then
         begin
@@ -443,6 +442,34 @@ begin
             NoteEnd - Origin);
         end;
       end;
+  if Ini.ClickAssist in [1, 3] then
+  begin
+    SetLength(ActiveTracks, Length(CurrentSong.Tracks));
+    for PlayerIndex := 0 to Min(PlayersPlay, Length(Player)) - 1 do
+      if (Player[PlayerIndex].Track >= 0) and
+        (Player[PlayerIndex].Track < Length(ActiveTracks)) then
+        ActiveTracks[Player[PlayerIndex].Track] := true;
+    ClickBeats := TStringList.Create;
+    try
+      ClickBeats.Sorted := true;
+      for ClickTrack := 0 to High(ActiveTracks) do
+        if ActiveTracks[ClickTrack] then
+          for LineIndex := 0 to CurrentSong.Tracks[ClickTrack].High do
+            for NoteIndex := 0 to CurrentSong.Tracks[ClickTrack].Lines[LineIndex].HighNote do
+              with CurrentSong.Tracks[ClickTrack].Lines[LineIndex].Notes[NoteIndex] do
+              begin
+                ClickTime := GetTimeFromBeat(StartBeat);
+                if (ClickTime >= Origin) and (ClickTime < EndTime) and
+                  (ClickBeats.IndexOf(IntToStr(StartBeat)) < 0) then
+                begin
+                  ClickBeats.Add(IntToStr(StartBeat));
+                  BeatClickOutput.QueueClick(127, ClickTime - Origin);
+                end;
+              end;
+    finally
+      ClickBeats.Free;
+    end;
+  end;
   BeatClickOutput.Play;
   BeatClickScheduled := true;
 end;
