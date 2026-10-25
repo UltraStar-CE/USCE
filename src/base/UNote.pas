@@ -384,10 +384,10 @@ end;
 
 procedure NewBeatClick;
 var
-  Beat, LastBeat, LineIndex, NoteIndex, Track: integer;
-  Origin, EndTime, ClickTime: real;
+  LineIndex, NoteIndex, Track, MinTone, MaxTone, PitchOffset: integer;
+  Origin, EndTime, ClickTime, NoteEnd: real;
 begin
-  if BeatClickScheduled or ((Ini.BeatClick = 0) and (Ini.ClickAssist = 0)) then Exit;
+  if BeatClickScheduled or (Ini.ClickAssist = 0) then Exit;
   if not Assigned(BeatClickOutput) then
   begin
     BeatClickOutput := TMidiOutput.Create(nil);
@@ -410,26 +410,37 @@ begin
   BeatClickClock.Origin := Origin;
   BeatClickOutput.SetSyncSource(BeatClickClock);
   BeatClickOutput.SetVolume(EnsureRange(Ini.SfxVolume, 0, 100) / 100);
-  if Ini.BeatClick = 1 then
-  begin
-    Beat := Ceil((GetMidBeat(Origin - CurrentSong.GAP / 1000) +
-      CurrentSong.Tracks[Track].NotesGAP) / USong.DEFAULT_RESOLUTION) *
-      USong.DEFAULT_RESOLUTION - CurrentSong.Tracks[Track].NotesGAP;
-    LastBeat := Floor(GetMidBeat(EndTime - CurrentSong.GAP / 1000));
-    while Beat <= LastBeat do
-    begin
-      ClickTime := GetTimeFromBeat(Beat) - Origin;
-      if ClickTime >= 0 then BeatClickOutput.QueueClick(127, ClickTime);
-      Inc(Beat, USong.DEFAULT_RESOLUTION);
-    end;
-  end;
-  if Ini.ClickAssist = 1 then
-    for LineIndex := 0 to CurrentSong.Tracks[Track].High do
-      for NoteIndex := 0 to CurrentSong.Tracks[Track].Lines[LineIndex].HighNote do
+  MinTone := High(Integer);
+  MaxTone := Low(Integer);
+  for LineIndex := 0 to CurrentSong.Tracks[Track].High do
+    for NoteIndex := 0 to CurrentSong.Tracks[Track].Lines[LineIndex].HighNote do
+      with CurrentSong.Tracks[Track].Lines[LineIndex].Notes[NoteIndex] do
       begin
-        ClickTime := GetTimeFromBeat(CurrentSong.Tracks[Track].Lines[LineIndex].Notes[NoteIndex].StartBeat);
-        if (ClickTime >= Origin) and (ClickTime <= EndTime) then
+        MinTone := Min(MinTone, Tone);
+        MaxTone := Max(MaxTone, Tone);
+      end;
+  // Match the editor's relative-tone and already-absolute-MIDI handling.
+  PitchOffset := 60;
+  if (MinTone >= 0) and (MaxTone <= 127) and
+     ((MaxTone + 60 > 127) or ((MinTone >= 36) and (MaxTone <= 96) and
+      (MaxTone + 60 > 96))) then PitchOffset := 0;
+  for LineIndex := 0 to CurrentSong.Tracks[Track].High do
+    for NoteIndex := 0 to CurrentSong.Tracks[Track].Lines[LineIndex].HighNote do
+      with CurrentSong.Tracks[Track].Lines[LineIndex].Notes[NoteIndex] do
+      begin
+        ClickTime := GetTimeFromBeat(StartBeat);
+        NoteEnd := Min(EndTime, GetTimeFromBeat(StartBeat + Duration));
+        if (ClickTime >= Origin) and (ClickTime < EndTime) and
+           (Ini.ClickAssist in [1, 3]) then
           BeatClickOutput.QueueClick(127, ClickTime - Origin);
+        if (Ini.ClickAssist in [2, 3]) and (NoteEnd > Origin) and
+           (ClickTime < EndTime) and (NoteType in [ntNormal, ntGolden]) then
+        begin
+          BeatClickOutput.QueueNoteOn(EnsureRange(Tone + PitchOffset, 0, 127),
+            127, Max(0, ClickTime - Origin));
+          BeatClickOutput.QueueNoteOff(EnsureRange(Tone + PitchOffset, 0, 127),
+            NoteEnd - Origin);
+        end;
       end;
   BeatClickOutput.Play;
   BeatClickScheduled := true;

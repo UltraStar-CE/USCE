@@ -184,7 +184,6 @@ type
       // Sound
       MicBoost:       integer;
       ClickAssist:    integer;
-      BeatClick:      integer;
       SavePlayback:   integer;
       ThresholdIndex: integer;
       AudioOutputBufferSizeIndex: integer;
@@ -348,8 +347,7 @@ const
   IVideoPreview:     array[0..1] of UTF8String  = ('Off', 'On');
   IVideoEnabled:     array[0..1] of UTF8String  = ('Off', 'On');
 
-  IClickAssist:      array[0..1] of UTF8String  = ('Off', 'On');
-  IBeatClick:        array[0..1] of UTF8String  = ('Off', 'On');
+  IClickAssist:      array[0..3] of UTF8String  = ('Off', 'On', 'Synth', 'SynthAndClicks');
   ISavePlayback:     array[0..1] of UTF8String  = ('Off', 'On');
   IReplayGain:       array[0..1] of UTF8String  = ('Off', 'On');
 
@@ -471,8 +469,7 @@ var
   IVideoPreviewTranslated:     array[0..1] of UTF8String  = ('Off', 'On');
   IVideoEnabledTranslated:     array[0..1] of UTF8String  = ('Off', 'On');
 
-  IClickAssistTranslated:      array[0..1] of UTF8String  = ('Off', 'On');
-  IBeatClickTranslated:        array[0..1] of UTF8String  = ('Off', 'On');
+  IClickAssistTranslated:      array[0..3] of UTF8String  = ('Off', 'On', 'Synth', 'SynthAndClicks');
   IReplayGainTranslated:       array[0..1] of UTF8String  = ('Off', 'On');
 
   ISavePlaybackTranslated:     array[0..1] of UTF8String  = ('Off', 'On');
@@ -877,10 +874,10 @@ begin
   IVideoEnabledTranslated[1]          := ULanguage.Language.Translate('OPTION_VALUE_ON');
 
   IClickAssistTranslated[0]           := ULanguage.Language.Translate('OPTION_VALUE_OFF');
-  IClickAssistTranslated[1]           := ULanguage.Language.Translate('OPTION_VALUE_ON');
+  IClickAssistTranslated[1]           := ULanguage.Language.Translate('OPTION_VALUE_NOTE_CLICKS');
+  IClickAssistTranslated[2]           := ULanguage.Language.Translate('OPTION_VALUE_NOTE_SYNTH');
+  IClickAssistTranslated[3]           := ULanguage.Language.Translate('OPTION_VALUE_NOTE_SYNTH_CLICKS');
 
-  IBeatClickTranslated[0]             := ULanguage.Language.Translate('OPTION_VALUE_OFF');
-  IBeatClickTranslated[1]             := ULanguage.Language.Translate('OPTION_VALUE_ON');
 
   IReplayGainTranslated[0]            := ULanguage.Language.Translate('OPTION_VALUE_OFF');
   IReplayGainTranslated[1]            := ULanguage.Language.Translate('OPTION_VALUE_ON');
@@ -1769,8 +1766,6 @@ begin
   // ClickAssist
   ClickAssist := ReadArrayIndex(IClickAssist, IniFile, 'Sound', 'ClickAssist', IGNORE_INDEX, 'Off');
 
-  // BeatClick
-  BeatClick := ReadArrayIndex(IBeatClick, IniFile, 'Sound', 'BeatClick', 0);
 
   // SavePlayback
   SavePlayback := ReadArrayIndex(ISavePlayback, IniFile, 'Sound', 'SavePlayback', 0);
@@ -2012,8 +2007,7 @@ begin
     // ClickAssist
     IniFile.WriteString('Sound', 'ClickAssist', IClickAssist[ClickAssist]);
 
-    // BeatClick
-    IniFile.WriteString('Sound', 'BeatClick', IBeatClick[BeatClick]);
+    IniFile.DeleteKey('Sound', 'BeatClick');
 
     // ReplayGain
     IniFile.WriteString('Sound', 'ReplayGain', IReplayGain[ReplayGain]);
