@@ -38,8 +38,8 @@ uses sysutils;
 function anyascii(utf32: cardinal; out ascii: PAnsiChar): integer;
 var
 	b: PAnsiChar;
-	loffset: integer;
-	boffset: integer;
+	loffset: SizeInt;
+	boffset: SizeInt;
 begin
 	anyascii := 0;
 	b := block(utf32 shr 8);
@@ -65,8 +65,8 @@ end;
 
 function transliterate(s: UCS4String): UCS4String;
 var
-	i: Integer;
-	n: Integer;
+	i: SizeInt;
+	n: SizeInt;
 	l: Integer;
 	a: PAnsiChar;
 	ret: UCS4String; // Free Pascal doesn't like us working directly on the result variable
