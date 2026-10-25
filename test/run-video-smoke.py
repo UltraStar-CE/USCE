@@ -78,6 +78,9 @@ def main():
         temp = Path(tempfile.mkdtemp(prefix="usdx-video-smoke-"))
     success = False
     try:
+        # FPC can reuse PPUs beside the program source even with -B. Keep every
+        # compiler search/output directory fresh when --output-dir is reused.
+        compile_dir = Path(tempfile.mkdtemp(prefix="compile-", dir=temp))
         # USDX's main program explicitly orders cyclic Pascal units and selects
         # versioned bindings. Reuse that list instead of maintaining a second one.
         project = (src / "ultrastardx.dpr").read_text()
@@ -94,12 +97,13 @@ def main():
             lambda match: "in '" + source_prefix + "/" + match[1].replace("\\", "/") + "'",
             header,
         )
-        source = temp / "VideoSmoke.pas"
+        source = compile_dir / "VideoSmoke.pas"
         source.write_text(header + (root / "test" / "VideoSmoke.inc").read_text())
         executable = temp / ("VideoSmoke" + suffix)
+        compiled_executable = compile_dir / executable.name
         extra_flags = [
-            "-B", "-dCONSOLE", "-Fi" + source_prefix, "-FU" + compiler_path(temp),
-            "-FE" + compiler_path(temp), "-o" + compiler_path(executable)
+            "-B", "-dCONSOLE", "-Fi" + source_prefix, "-FU" + compiler_path(compile_dir),
+            "-FE" + compiler_path(compile_dir), "-o" + compiler_path(compiled_executable)
         ]
         if windows:
             extra_flags.append("-WC")
@@ -110,9 +114,10 @@ def main():
         recipe = "video-smoke-build:; $(PPC) $(PFLAGS_ALL) " + extra
         subprocess.run([
             "make", "--no-print-directory", "-s", "-C", str(src),
-            "PCUNIT_DIR=" + compiler_path(temp),
+            "PCUNIT_DIR=" + compiler_path(compile_dir),
             "--eval=.PHONY: video-smoke-build", "--eval=" + recipe, "video-smoke-build"
         ], check=True)
+        shutil.copy2(compiled_executable, executable)
         if args.build_only:
             print("Built", executable, flush=True)
             success = True
