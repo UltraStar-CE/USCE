@@ -4488,7 +4488,7 @@ end;
 procedure TScreenSong.OpenContinuousPlayback;
 begin
   if (Mode <> smNormal) or Party.bPartyGame then Exit;
-  StopMusicPreview;
+  KeepPreviewMusicOnHide := true;
   StopVideoPreview;
   FadeTo(@ScreenContinuousPlayback);
 end;

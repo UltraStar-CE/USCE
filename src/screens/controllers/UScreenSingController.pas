@@ -674,7 +674,8 @@ begin
     LyricsState.Start();
 
     // play music
-      if not ScoringTailActive then AudioPlayback.Play;
+      if not ScoringTailActive or not AudioPlayback.Finished then
+        AudioPlayback.Play;
 
     // video
     if (fCurrentVideo <> nil) then
@@ -1598,10 +1599,10 @@ begin
   if not ScoringTailActive then
   begin
     ScoringTailActive := true;
-    // The audio clock has stopped. Let the lyrics timer run independently
-    // while microphone input catches up, without extending the scoring range.
+    // Let scoring catch up independently of playback. A song with an explicit
+    // finish point can still have audio to carry into the results screens.
+    // ScoringTailEndBeat keeps that audio from extending the scoring range.
     AudioPlayback.SetSyncSource(nil);
-    AudioPlayback.Stop;
     LyricsState.SetSyncSource(nil);
     LyricsState.SetCurrentTime(EndTime);
     LyricsState.Start;
