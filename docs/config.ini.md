@@ -131,8 +131,7 @@ File section: `[Sound]`. Most settings are under **Options → Sound**.
 | `PreviewFading` | `Off`, `1 Sec`, `2 Secs`, `3 Secs`, `4 Secs`, `5 Secs`; `3 Secs` | Fade duration for song previews. |
 | `ReplayGain` | `Off`, `On`; `Off` | Uses available ReplayGain information to reduce loudness differences. |
 | `VoicePassthrough` | `Off`, `On`; `Off` | Plays microphone input through speakers. This can cause feedback; use suitable volume or headphones. |
-| `ClickAssist` | `Off`, `On`; `Off` | Plays a click at the start of each note. |
-| `BeatClick` | `Off`, `On`; `Off` | Plays a beat click during singing. |
+| `ClickAssist` | `Off`, `On`, `Synth`, `SynthAndClicks`; `Off` | Note assistance during singing: clicks at note starts, synth notes, or both. `On` retains click assistance. |
 | `AudioOutputBufferSize` | `Auto`, `256`, `512`, `1024`, `2048`, `4096`, `8192`, `16384`, `32768`, `65536`; `Auto` | Output buffer size in samples. Larger buffers can reduce dropouts but add delay. Prefer Auto. |
 | `SavePlayback` | `Off`, `On`; `Off` | Saves captured microphone audio during singing. Keep off unless you want recordings. |
 
