@@ -140,7 +140,6 @@ begin
   SaveProfile;
   Ini.ContinuousMode := Enabled;
   Ini.Save;
-  ScreenSong.PreservePreviewForReturn;
   inherited;
 end;
 
