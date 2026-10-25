@@ -521,9 +521,6 @@ var
     ColumnCount := EnsureRange(Table.ColumnCount, 0, STAT_DETAIL_MAX_COLUMNS);
     while (ColumnCount > 0) and (Definitions[ColumnCount - 1].Value = scvNone) do
       Dec(ColumnCount);
-    // Compact popularity tables show how often, Full also shows how well.
-    if (Ini.StatisticsView = 0) and (Typ in [stMostSungSong, stMostPopBand]) then
-      ColumnCount := Min(ColumnCount, 3);
     SetLength(Specs, ColumnCount);
     for Column := 0 to ColumnCount - 1 do
     begin
