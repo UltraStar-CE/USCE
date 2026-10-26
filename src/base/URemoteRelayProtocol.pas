@@ -6,7 +6,7 @@ unit URemoteRelayProtocol;
 
 interface
 
-uses SysUtils, fpjson;
+uses SysUtils, fpjson, URemoteSongSnapshot;
 
 type
   TRelayProtocolEvent = procedure(Message: TJSONObject) of object;
@@ -15,6 +15,7 @@ type
   TRemoteRelayProtocol = class
   private
     FPlayers, FCache: TJSONObject;
+    FSongs: TRemoteSongSnapshot;
     FRoomId: string;
     FOnGame: TRelayProtocolEvent;
     FOnSend: TRelayProtocolSend;
@@ -32,6 +33,7 @@ type
     destructor Destroy; override;
     procedure FromRelay(Message: TJSONObject);
     function FromGame(Message: TJSONObject): boolean;
+    property Songs: TRemoteSongSnapshot read FSongs;
     property OnGame: TRelayProtocolEvent read FOnGame write FOnGame;
     property OnSend: TRelayProtocolSend read FOnSend write FOnSend;
     property Clock: TRelayClock read FClock write FClock;
@@ -74,12 +76,14 @@ end;
 constructor TRemoteRelayProtocol.Create;
 begin
   inherited;
+  FSongs := TRemoteSongSnapshot.Create;
   FPlayers := TJSONObject.Create;
   FCache := TJSONObject.Create;
 end;
 
 destructor TRemoteRelayProtocol.Destroy;
 begin
+  FSongs.Free;
   FPlayers.Free;
   FCache.Free;
   inherited;
@@ -270,10 +274,16 @@ function TRemoteRelayProtocol.FromGame(Message: TJSONObject): boolean;
 var Kind: string;
     PublicMessage: TJSONObject;
     Media: int64;
-    Previous: TJSONData;
+    Previous, LibraryData: TJSONData;
 begin
   Kind := Message.Get('type', '');
   if (Kind = 'bridge.ping') or (Kind = 'continuous.state') then Exit(true);
+  if Kind = 'song.select.state' then
+  begin
+    LibraryData := Message.Find('library');
+    if (LibraryData <> nil) and (LibraryData.JSONType = jtArray) then
+      FSongs.Replace(TJSONArray(LibraryData));
+  end;
   PublicMessage := CopyPublic(Message);
   try
     if Kind = 'game.state' then

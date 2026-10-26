@@ -24,7 +24,7 @@ def main():
                'libusce-phone-audio.dylib' if sys.platform == 'darwin' else
                'libusce-phone-audio.so')
     fixture = build / ('relay-socket-test' + extension)
-    for name, mode in [('relay_protocol_test', None), ('relay_socket_test', '--echo-server'),
+    for name, mode in [('song_snapshot_test', None), ('relay_protocol_test', None), ('relay_socket_test', '--echo-server'),
                        ('relay_session_test', '--session-server')]:
         subprocess.run([args.fpc, *args.fpc_arg, '-Fu' + str(root / 'src/base'),
                         '-FU' + str(output), '-FE' + str(output),
@@ -41,7 +41,10 @@ def main():
                              daemon=True).start()
             address = ready.get(timeout=5)
             if not re.fullmatch(r'ws://127\.0\.0\.1:\d+/ws/host', address):
-                raise RuntimeError('Native fixture did not return a loopback address')
+                raise RuntimeError(
+                    'Native fixture did not return a loopback address '
+                    f'(exit={server.poll()}, first_line={address!r}). '
+                    'On Windows, ensure the native build runtime DLL directory is on PATH.')
             subprocess.run([str(output / (name + extension)), str(build / library), address],
                            check=True, timeout=15)
             if server.wait(timeout=5) != 0:

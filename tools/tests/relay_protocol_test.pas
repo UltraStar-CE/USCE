@@ -72,6 +72,8 @@ begin
     Game('{"type":"song.select.state","currentSong":{"audioPath":"private.wav","title":"Test"},"results":[{"txtPath":"private.txt"}],"library":[{"audioPath":"other.wav"}],"playlistItems":[]}');
     Assert(Pos('private', Probe.Sent.Items[Probe.Sent.Count-1].AsJSON) = 0);
     Assert(TJSONObject(Probe.Sent.Items[Probe.Sent.Count-1]).Find('library') = nil);
+    Assert(Adapter.Songs.Count = 1, 'Game library must feed generic song snapshot');
+    Assert(Adapter.Songs.Id <> '', 'Song snapshot needs a stable content identity');
     Game('{"type":"song.started","songSeq":1,"mediaStartUs":2000000}');
     Assert(TJSONObject(Probe.Sent.Items[Probe.Sent.Count-1]).Get('hostSongStartUs', int64(0)) = TestClock - 2000000);
     Game('{"type":"song.lyrics","songSeq":1,"lines":[]}');
