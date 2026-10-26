@@ -97,7 +97,8 @@ type
 
       function    AddItem(const SongID: Cardinal; const iPlaylist: Integer = -1): Boolean;
       function    AddVisibleItems(const iPlaylist: Integer = -1): Cardinal;
-      procedure   DelItem(const iItem: Cardinal; const iPlaylist: Integer = -1);
+      procedure   DelItem(const iItem: Cardinal; const iPlaylist: Integer = -1;
+        const PreserveEmpty: boolean = false);
       procedure   DelVisibleItems(const iPlaylist: Integer = -1);
       procedure   SortPlaylist(const Order: TPlaylistSortOrder; const iPlaylist: Integer = -1);
       function    MoveItem(const SongID: Cardinal; const Direction: Integer; const iPlaylist: Integer = -1): Integer; overload;
@@ -673,7 +674,8 @@ end;
 //----------
 //DelItem - Deletes an Item from a specific Playlist
 //----------
-Procedure   TPlayListManager.DelItem(const iItem: Cardinal; const iPlaylist: Integer);
+Procedure   TPlayListManager.DelItem(const iItem: Cardinal; const iPlaylist: Integer;
+  const PreserveEmpty: boolean);
 var
   I: Integer;
   P: Cardinal;
@@ -698,8 +700,8 @@ begin
     SavePlayList(P);
   end;
 
-  //Delete Playlist if Last Song is deleted
-  if (Length(PlayLists[P].Items) = 0) then
+  // Remote item removal preserves the playlist; explicit deletion is separate.
+  if (Length(PlayLists[P].Items) = 0) and not PreserveEmpty then
   begin
     DelPlaylist(P);
   end
