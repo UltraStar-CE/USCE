@@ -23,6 +23,10 @@ var Session: TRemoteRelaySession;
     I: integer;
 begin
   Assert(ParamCount = 2, 'Usage: relay_session_test library-path relay-host-url');
+  Assert(NormalizeRelayHostUrl('https://usdx.at/') = 'wss://usdx.at/ws/host');
+  Assert(NormalizeRelayHostUrl('https://usdx.at/ws/host?test=1#ignored') = 'wss://usdx.at/ws/host?test=1');
+  Assert(NormalizeRelayHostUrl('http://localhost:8080/') = 'ws://localhost:8080/ws/host');
+  Assert(NormalizeRelayHostUrl('wss://usdx.at/ws/host') = 'wss://usdx.at/ws/host');
   Session := TRemoteRelaySession.Create;
   Observer := TObserver.Create;
   try

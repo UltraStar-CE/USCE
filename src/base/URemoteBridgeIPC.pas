@@ -90,11 +90,17 @@ type
 
 function RemoteBridgeIPC(): TRemoteBridgeIPC;
 function RemoteJsonEscape(const Value: UTF8String): string;
+function NativeRelayRequested: boolean;
+function RemoteScoringClockFields: string;
 
 implementation
 
 uses
   UPhoneAudio,
+  URemoteRelaySession,
+  URemoteRelayProtocol,
+  UConfig,
+  UMusic,
   fpjson,
   jsonparser,
   ULog,
@@ -129,7 +135,12 @@ type
     FSendQueue: TStringList;
     FSendQueueBytes: int64;
     FAsyncWrites: boolean;
+    FNativeRelay: TRemoteRelaySession;
+    FNativeProtocol: TRemoteRelayProtocol;
 
+    procedure ExecuteNative;
+    procedure FlushNativeWrites;
+    function SendNativeMessage(Message: TJSONObject): boolean;
     procedure HandleLine(const Line: string);
     procedure HandleMessage(Obj: TJSONObject);
     procedure HandlePlayerAssigned(Obj: TJSONObject);
@@ -168,6 +179,20 @@ var
   singleton_RemoteBridgeIPC: TRemoteBridgeIPC = nil;
   remotePitchLogCounter: integer = 0;
   remotePitchRejectLogCounter: integer = 0;
+
+function NativeRelayRequested: boolean;
+begin
+  // Development mode until catalog/media/Party parity is implemented.
+  Result := GetEnvironmentVariable('USCE_NATIVE_RELAY') = '1';
+end;
+
+function RemoteScoringClockFields: string;
+begin
+  Result := '';
+  if NativeRelayRequested and Assigned(LyricsState) and (LyricsState.FrameHostUs > 0) then
+    Result := ',"hostStateUs":' + IntToStr(LyricsState.FrameHostUs) +
+      ',"scoringSongTimeUs":' + IntToStr(Round(LyricsState.FrameTime * 1000000));
+end;
 
 function RemoteBridgeIPC(): TRemoteBridgeIPC;
 begin
@@ -617,7 +642,7 @@ begin
   InitCriticalSection(FSocketLock);
   InitCriticalSection(FQueueLock);
   FSendQueue := TStringList.Create;
-  FAsyncWrites := GetEnvironmentVariable('USCE_RAW_AUDIO') = '1';
+  FAsyncWrites := PhoneAudio.Enabled or NativeRelayRequested;
 end;
 
 destructor TRemoteBridgeIPCThread.Destroy;
@@ -745,6 +770,7 @@ begin
     ',"durationUs":' + IntToStr(DurationUs) +
     ',"title":"' + JsonEscape(Title) + '"' +
     ',"artist":"' + JsonEscape(Artist) + '"' +
+    RemoteScoringClockFields +
     '}' + #10
   );
 end;
@@ -790,6 +816,7 @@ procedure TRemoteBridgeIPCThread.SendSongEvent(const EventType: string; SongSeq:
 begin
   SendLine(
     '{"type":"' + JsonEscape(UTF8String(EventType)) + '","protocol":1' +
+    RemoteScoringClockFields +
     ',"songSeq":' + IntToStr(SongSeq) +
     ',"mediaStartUs":' + IntToStr(MediaStartUs) +
     ',"durationUs":' + IntToStr(DurationUs) +
@@ -834,6 +861,11 @@ var
   ReadError: integer;
   Line: string;
 begin
+  if NativeRelayRequested then
+  begin
+    ExecuteNative;
+    Exit;
+  end;
   while (not Terminated) do
   begin
     try
@@ -889,6 +921,79 @@ begin
   end;
 end;
 
+function TRemoteBridgeIPCThread.SendNativeMessage(Message: TJSONObject): boolean;
+begin
+  Result := FNativeRelay.Send(Message);
+end;
+
+procedure TRemoteBridgeIPCThread.FlushNativeWrites;
+var I: integer;
+    Line: string;
+    Data: TJSONData;
+    Accepted: boolean;
+begin
+  for I := 1 to 8 do
+  begin
+    EnterCriticalSection(FQueueLock);
+    try
+      if FSendQueue.Count = 0 then Exit;
+      Line := FSendQueue[0];
+    finally LeaveCriticalSection(FQueueLock); end;
+    Accepted := true;
+    Data := nil;
+    try
+      try
+        Data := GetJSON(Trim(Line));
+        if Data.JSONType = jtObject then
+          Accepted := FNativeProtocol.FromGame(TJSONObject(Data));
+      except
+        Log.LogWarn('Invalid native relay output message', 'Remote relay');
+      end;
+    finally Data.Free; end;
+    if not Accepted then Exit;
+    EnterCriticalSection(FQueueLock);
+    try
+      FSendQueue.Delete(0);
+      Dec(FSendQueueBytes, Length(Line));
+    finally LeaveCriticalSection(FQueueLock); end;
+  end;
+end;
+
+procedure TRemoteBridgeIPCThread.ExecuteNative;
+var Url: string;
+    Shutdown: TJSONObject;
+begin
+  FNativeRelay := TRemoteRelaySession.Create;
+  FNativeProtocol := TRemoteRelayProtocol.Create;
+  try
+    FNativeRelay.OnMessage := FNativeProtocol.FromRelay;
+    FNativeProtocol.OnGame := HandleMessage;
+    FNativeProtocol.OnSend := SendNativeMessage;
+    Url := GetEnvironmentVariable('USDX_REMOTE_SERVER');
+    if Url = '' then Url := Ini.RemoteBridgeServerUrl;
+    if Url = '' then Url := DEFAULT_REMOTE_BRIDGE_SERVER_URL;
+    FNativeRelay.Start(Url, GetEnvironmentVariable('USCE_RAW_AUDIO_LIBRARY'), USCE_VERSION);
+    Log.LogStatus('In-process relay enabled; catalog/media/Party migration pending', 'Remote relay');
+    while not Terminated do
+    begin
+      FNativeRelay.Tick;
+      FlushNativeWrites;
+      Sleep(5);
+    end;
+    Shutdown := TJSONObject.Create(['type', 'host.shutdown', 'reason', 'game_exit']);
+    try
+      if FNativeRelay.Registered then
+      begin
+        FNativeRelay.Send(Shutdown);
+        Sleep(50);
+      end;
+    finally Shutdown.Free; end;
+  finally
+    FreeAndNil(FNativeRelay);
+    FreeAndNil(FNativeProtocol);
+  end;
+end;
+
 procedure TRemoteBridgeIPCThread.HandleLine(const Line: string);
 var
   Data: TJSONData;
@@ -925,7 +1030,10 @@ begin
   begin
     DisplayCode := JsonGetString(Obj, 'displayCode', '');
     if (DisplayCode <> '') then
+    begin
       FOwner.SetRoomStatus(true, UTF8String(DisplayCode));
+      if NativeRelayRequested then Log.LogStatus('Room code: ' + DisplayCode, 'Remote relay');
+    end;
   end
   else if (MessageType = 'room.resumed') then
   begin

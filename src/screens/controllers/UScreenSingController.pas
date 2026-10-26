@@ -1752,6 +1752,7 @@ begin
 
   RemoteBridgeIPC.SendJsonMessage(
     '{"type":"score.snapshot","protocol":1' +
+    RemoteScoringClockFields +
     ',"songSeq":' + IntToStr(RemoteSongSeq) +
     ',"mediaStartUs":' + IntToStr(RemoteMediaStartUs) +
     ',"durationUs":' + IntToStr(RemoteSongDurationUs) +

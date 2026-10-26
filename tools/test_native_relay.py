@@ -24,12 +24,15 @@ def main():
                'libusce-phone-audio.dylib' if sys.platform == 'darwin' else
                'libusce-phone-audio.so')
     fixture = build / ('relay-socket-test' + extension)
-    for name, mode in [('relay_socket_test', '--echo-server'),
+    for name, mode in [('relay_protocol_test', None), ('relay_socket_test', '--echo-server'),
                        ('relay_session_test', '--session-server')]:
         subprocess.run([args.fpc, *args.fpc_arg, '-Fu' + str(root / 'src/base'),
                         '-FU' + str(output), '-FE' + str(output),
                         str(root / 'tools/tests' / (name + '.pas'))],
                        check=True, timeout=60)
+        if mode is None:
+            subprocess.run([str(output / (name + extension))], check=True, timeout=15)
+            continue
         server = subprocess.Popen([str(fixture), mode], stdout=subprocess.PIPE,
                                   text=True, encoding='utf-8')
         try:

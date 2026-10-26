@@ -316,7 +316,7 @@ begin
     { prepare software cursor }
     Display.SetCursor;
 
-    if (GetEnvironmentVariable('USCE_RAW_AUDIO') = '1') then
+    if (GetEnvironmentVariable('USCE_RAW_AUDIO') = '1') or NativeRelayRequested then
     begin
       if Ini.RemoteBridgeEnabled = 1 then
       begin
@@ -337,7 +337,7 @@ begin
       Log.LogStatus('Remote Bridge IPC', 'Initialization');
       RemoteBridgeIPC.Host := Ini.RemoteBridgeIpcHost;
       RemoteBridgeIPC.Port := Ini.RemoteBridgeIpcPort;
-      RemoteBridgeProcess.Start;
+      if not NativeRelayRequested then RemoteBridgeProcess.Start;
       if (RemoteBridgeProcess.LastError <> '') then
         Log.LogWarn(RemoteBridgeProcess.LastError, 'Remote Bridge Process');
       RemoteBridgeIPC.OnCommand := RemoteBridgeCommandReceived;

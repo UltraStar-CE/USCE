@@ -34,9 +34,31 @@ type
     property OnMessage: TRelayMessageEvent read FOnMessage write FOnMessage;
   end;
 
+function NormalizeRelayHostUrl(const Url: string): string;
+
 implementation
 
 uses jsonparser;
+
+function NormalizeRelayHostUrl(const Url: string): string;
+var Address, Scheme, Query: string;
+    Start, I: integer;
+begin
+  Result := Trim(Url);
+  Scheme := LowerCase(Copy(Result, 1, 8));
+  if Scheme = 'https://' then begin Scheme := 'wss://'; Start := 9; end
+  else if Copy(Scheme, 1, 7) = 'http://' then begin Scheme := 'ws://'; Start := 8; end
+  else Exit;
+  Address := Copy(Result, Start, MaxInt);
+  I := Pos('#', Address);
+  if I > 0 then Delete(Address, I, MaxInt);
+  Query := '';
+  I := Pos('?', Address);
+  if I > 0 then begin Query := Copy(Address, I, MaxInt); Delete(Address, I, MaxInt); end;
+  I := Pos('/', Address);
+  if I > 0 then Delete(Address, I, MaxInt);
+  Result := Scheme + Address + '/ws/host' + Query;
+end;
 
 constructor TRemoteRelaySession.Create;
 begin
@@ -54,7 +76,7 @@ end;
 procedure TRemoteRelaySession.Start(const Url, LibraryPath, GameVersion: string);
 begin
   Stop;
-  FUrl := Url;
+  FUrl := NormalizeRelayHostUrl(Url);
   FLibraryPath := LibraryPath;
   FGameVersion := GameVersion;
   FRunning := true;
