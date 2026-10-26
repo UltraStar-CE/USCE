@@ -324,6 +324,8 @@ begin
     begin
       // Catalog and preview transfer are separate handlers. Never upload a
       // game's full private library (or local paths) as live screen state.
+      RemoveField(PublicMessage, 'apiCapabilities');
+      PublicMessage.Add('apiCapabilities', TJSONArray.Create(['song.list']));
       RemoveField(PublicMessage, 'library');
       RemoveField(PublicMessage, 'playlistItems');
       RemoveField(PublicMessage, 'audioPath');
