@@ -119,16 +119,16 @@ task_desktop_file_utils() {
 task_AppImageKit() {
 	start_build AppImageKit || return 0
 	patch -p1 < $root/appimagekit-deps.patch
-	# SquashFS 4.4 predates GCC 10's -fno-common default. Limit the
-	# compatibility flag to that external C dependency, not the game/runtime.
-	sed -i 's/-DXZ_SUPPORT ${CFLAGS}/-DXZ_SUPPORT -fcommon ${CFLAGS}/' cmake/dependencies.cmake
 	! pkg-config --exists libarchive || EXTRA_CMAKE_FLAGS="-DUSE_SYSTEM_LIBARCHIVE=ON"
 	rm -rf build
 	mkdir -p build
 	cd build
+	# Only this old packaging tool and its bundled C dependencies need -fcommon.
 	cmake \
 		-DCMAKE_INSTALL_PREFIX="$PREFIX" \
 		-DCMAKE_BUILD_TYPE="Release" \
+		-DCMAKE_C_FLAGS="$CFLAGS -fcommon" \
+		-DDEPENDENCIES_CFLAGS="$CFLAGS -fcommon" \
 		-DBUILD_TESTING=OFF \
 		-DAPPIMAGEKIT_PACKAGE_DEBS=OFF \
 		$EXTRA_CMAKE_FLAGS \
