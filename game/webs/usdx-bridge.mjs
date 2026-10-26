@@ -2632,7 +2632,7 @@ function gameState(state = 'lobby') {
 }
 
 function gameStateAfterPlayerChange() {
-  return songSeq ? (currentGameState || 'singing') : 'lobby';
+  return currentGameState || (songSeq ? 'singing' : 'lobby');
 }
 
 function scheduleGameState(state = 'lobby') {

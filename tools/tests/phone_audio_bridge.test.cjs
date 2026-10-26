@@ -5,6 +5,19 @@ const path = require('node:path');
 const test = require('node:test');
 const source = readFileSync(path.join(__dirname,'../../game/webs/usdx-bridge.mjs'),'utf8');
 
+test('joining and switching mics preserve the game screen before the first song', () => {
+  const context=vm.createContext({songSeq:0,currentGameState:'song_select'});
+  vm.runInContext(source.slice(source.indexOf('function gameStateAfterPlayerChange('),source.indexOf('function scheduleGameState(')),context);
+  for(const screen of ['song_select','player_setup','results','high_scores']) {
+    context.currentGameState=screen;
+    assert.equal(context.gameStateAfterPlayerChange(),screen);
+  }
+  context.currentGameState='';
+  assert.equal(context.gameStateAfterPlayerChange(),'lobby');
+  context.songSeq=1;
+  assert.equal(context.gameStateAfterPlayerChange(),'singing');
+});
+
 test('an assignment without a preceding join preserves name, difficulty and avatar through Mic 2 changes', async () => {
   const messages = [];
   const context = vm.createContext({players: new Map(), playerAssignmentFingerprints: new Map(),
