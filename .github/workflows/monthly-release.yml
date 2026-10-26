@@ -1,7 +1,7 @@
 name: Monthly release preparation
 on:
   schedule:
-    - cron: '15 7 * * *'
+    - cron: '15 * * * *'
   workflow_dispatch:
 permissions:
   contents: read

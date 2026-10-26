@@ -13,10 +13,18 @@ function chooseRelease({now, upstream, releases}) {
   if (releases.some(r => !r.prerelease && new RegExp('^v' + month.replace('.', '\\.') + '\\.[0-9]+$').test(r.tag_name))) return null;
   const currentUpstream = upstream && !upstream.draft && !upstream.prerelease && VERSION.test(upstream.tag_name.replace(/^v/, ''))
     && upstream.tag_name.startsWith('v' + month + '.');
+  let releaseAfter = null;
+  if (currentUpstream) {
+    const publishedAt = Date.parse(upstream.published_at);
+    if (!Number.isFinite(publishedAt)) throw Error('Missing or invalid USDX publication time');
+    releaseAfter = new Date(publishedAt + 24 * 60 * 60 * 1000).toISOString();
+    if (now.getTime() < Date.parse(releaseAfter)) return null;
+  }
   if (!currentUpstream && Number(date.day) < 24) return null;
   return {version, ready: true, trigger: currentUpstream ? 'upstream-release' : 'calendar-fallback',
     date: `${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`,
-    upstream: upstream ? {tag: upstream.tag_name, sha: upstream.sha} : null};
+    upstream: upstream ? {tag: upstream.tag_name, sha: upstream.sha} : null,
+    ...(releaseAfter ? {releaseAfter} : {})};
 }
 async function chooseComparisonRelease({version, initial, upstream, resolveTag}) {
   const tag = initial && version === '2026.10.0' ? 'v2026.9.0' : 'v' + version;
