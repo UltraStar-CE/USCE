@@ -16,13 +16,14 @@ public:
   uint64_t packets = 0, gaps = 0, rejected = 0, duplicates = 0, dropped = 0;
   bool haveSequence = false;
   uint32_t sequence = 0;
+  uint32_t endSampleCounter = 0, readEndSampleCounter = 0;
   Clock::time_point last{};
   float peak = 0;
   double maxPacketIntervalMs = 0, maxQueuedMs = 0;
   static uint32_t u32(const uint8_t *p) {
     return uint32_t(p[0]) | (uint32_t(p[1]) << 8) | (uint32_t(p[2]) << 16) | (uint32_t(p[3]) << 24);
   }
-  void reset() { samples.clear(); haveSequence = false; peak = 0; last = {}; }
+  void reset() { samples.clear(); haveSequence = false; peak = 0; last = {}; endSampleCounter = readEndSampleCounter = 0; }
   bool push(const uint8_t *data, size_t size, Clock::time_point now = Clock::now()) {
     if (size < 20 || data[0] != 'U' || data[1] != 'A' || data[2] != 'P' || data[3] != '1') { ++rejected; return false; }
     const auto seq = u32(data + 4), rate = u32(data + 8), count = u32(data + 12);
@@ -52,12 +53,14 @@ public:
     while (samples.size() > limit) { samples.pop_front(); ++dropped; }
     maxQueuedMs = std::max(maxQueuedMs, samples.size() / 48.0);
     last = now; sequence = seq; haveSequence = true; ++packets;
+    endSampleCounter = u32(data + 16) + count;
     return true;
   }
   int32_t read(int16_t *out, int32_t capacity, Clock::time_point now = Clock::now()) {
     if (last == Clock::time_point{} || now - last > std::chrono::milliseconds(250)) { reset(); return 0; }
     const auto count = std::min(samples.size(), size_t(capacity));
     for (size_t i = 0; i < count; ++i) { out[i] = samples.front(); samples.pop_front(); }
+    if (count) readEndSampleCounter = endSampleCounter - uint32_t(samples.size());
     return int32_t(count);
   }
 };

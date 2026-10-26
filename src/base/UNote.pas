@@ -1056,6 +1056,23 @@ begin
         else
         begin
           CurrentSound.AnalyzeBuffer;
+          if PhoneAudio.Enabled and RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) and
+            (GetEnvironmentVariable('USCE_AUDIO_ALIGNMENT_TRACE') = '1') then
+          begin
+            ActualTone := -100;
+            if CurrentLineFragment <> nil then ActualTone := CurrentLineFragment.Tone;
+            Log.LogStatus('{"slot":' + IntToStr(PlayerIndex+1) +
+              ',"hostUs":' + IntToStr(GetTickCount64 * 1000) +
+              ',"mediaUs":' + IntToStr(Round(LyricsState.FrameTime * 1000000)) +
+              ',"beat":' + IntToStr(ActualBeat) +
+              ',"expectedTone":' + IntToStr(ActualTone) +
+              ',"detectedTone":' + IntToStr(CurrentSound.RawToneAbs) +
+              ',"valid":' + LowerCase(BoolToStr(CurrentSound.ToneValid, true)) +
+              ',"globalDelayMs":' + IntToStr(Ini.MicDelay) +
+              ',"playerDelayMs":' + IntToStr(Player[PlayerIndex].DetectionDelay) +
+              ',"windowSamples":' + IntToStr(CurrentSound.AnalysisBufferSize) +
+              ',"native":' + string(PhoneAudio.Status(PlayerIndex)) + '}', 'Audio alignment');
+          end;
         end;
 
         // add some noise

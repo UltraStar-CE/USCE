@@ -449,6 +449,7 @@ int32_t usce_pa_status(void *p, char *buffer, int32_t capacity) {
       {"audioRoute", route},
       {"packets", q.packets}, {"gaps", q.gaps}, {"rejected", q.rejected}, {"droppedSamples", q.dropped},
       {"duplicateOrLatePackets", q.duplicates},
+      {"sequence", q.sequence}, {"readEndSampleCounter", q.readEndSampleCounter},
       {"queueMs", q.samples.size() / 48.0}, {"packetAgeMs", age}, {"peak", q.peak},
       {"maxQueueMs", q.maxQueuedMs}, {"maxPacketIntervalMs", q.maxPacketIntervalMs},
       {"maxGamePollIntervalMs", self->maxPollIntervalMs}}).dump();

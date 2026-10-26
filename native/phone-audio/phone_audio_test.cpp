@@ -21,6 +21,7 @@ static std::vector<uint8_t> packet(uint32_t sequence) {
   p[0] = 'U'; p[1] = 'A'; p[2] = 'P'; p[3] = '1';
   auto put = [&](int offset, uint32_t v) { for (int i = 0; i < 4; ++i) p[offset+i] = uint8_t(v >> (8*i)); };
   put(4, sequence); put(8, 48000); put(12, 480);
+  put(16, sequence * 480);
   for (int i = 0; i < 480; ++i) { p[20+i*2] = 0; p[21+i*2] = 64; }
   return p;
 }
@@ -35,6 +36,7 @@ int main() {
   assert(q.gaps == 1 && q.samples.size() == 1440);
   int16_t out[9600];
   assert(q.read(out, 9600, now) == 1440);
+  assert(q.readEndSampleCounter == 4 * 480);
   assert(out[0] == 16384 && out[480] == 0 && out[960] == 16384);
   p[8] = 0; assert(!q.push(p.data(), p.size(), now));
   for (int i = 4; i < 40; ++i) { p = packet(i); assert(q.push(p.data(), p.size(), now)); }

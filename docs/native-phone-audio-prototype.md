@@ -16,9 +16,11 @@ browser JavaScript also remains part of the phone app.
 `URemoteRelaySocket` exposes the native module's bounded, TLS-verified text
 WebSocket to Pascal. `URemoteRelaySession` owns room registration, 500 ms
 heartbeats and reconnect/resume credentials in memory. Neither starts a local
-server or subprocess. These units compile with the game but are not yet selected
-by normal integrated startup: changing startup before feature parity would lose
-existing behavior.
+server or subprocess. `USCE_NATIVE_RELAY=1` selects a development-only in-process
+backend when RemoteBridge is enabled. It handles room/roster, assignments,
+settings, typed game controls, clock requests, state replay and native PCM/P2P.
+Normal integrated startup retains the existing bridge until the remaining
+features reach parity.
 
 The native loopback regression covers UTF-8, short caller buffers, message and
 queue limits, and sharing the library lifetime with audio contexts. The Pascal
@@ -32,12 +34,46 @@ After building the module, `python3 tools/test_native_relay.py` runs both Pascal
 regressions against native loopback fixtures (requires FPC and FCL JSON units).
 CI runs these on Linux in addition to native socket/PCM tests on all four targets.
 
-Still to move: roster/settings reconciliation and slot assignment; command/ack
-routing; game/song/screen state and clock messages; catalog manifests/chunks,
+Still to move: catalog manifests/chunks,
 covers and preview streaming; playlist editing, favorites/votes; Party queue and
 leaderboard orchestration using the game's continuous playback. Existing
 Pascal/native PCM receivers remain the audio and scoring path. The switch to
 native startup requires end-to-end parity checks for all of these features.
+
+### Alternating-note alignment experiment
+
+A 20-second owned fixture alternates C2/F2 every second from song time 2 s.
+The browser's optional alignment source generates PCM without capture devices.
+`USCE_AUDIO_ALIGNMENT_TRACE=1` logs each actual scoring decision, its pitch,
+expected note, both configured offsets, native queue diagnostics and the latest
+consumed source sample counter. It does not record audio samples.
+
+The test must follow the game's scoring clock rather than assuming the audio
+playback clock is identical. Native score snapshots expose `scoringSongTimeUs`
+with `hostStateUs` captured by the game thread. `TLyricsState.FrameTime` records
+the same time used by UpdateBeats; reading diagnostics does not call the
+stateful lyric synchronization routine again. The I/O thread preserves these
+captured timestamps rather than replacing them after queueing.
+
+Actual Windows/browser tests at 4096/CAMDF, Direct WebRTC, global delay 0 ms:
+
+| Clock reference | Player offset | Matched scoring decisions |
+| --- | --- | --- |
+| Playback clock, initial experiment | 0 ms | 109 / 128 |
+| Scoring clock | 0 ms | 127 / 128, twice |
+| Scoring clock | +20 ms | 128 / 128, twice |
+
+The +20 ms run showed 10,000 points in the normal browser app. This is a useful
+scoring trim for the tested synthetic path, not a general input-latency default
+or a one-way transport measurement. The initial clock mismatch invalidates
+using its late transitions as a calibration estimate. At this song's tempo the
+scoring decisions are 125 ms apart and already use a half-beat reference.
+
+Idle digital calibration and its latency/compensation indicator are still to
+be implemented. The intended correction is per device/player, accounting for
+the existing global baseline: player trim = desired total compensation minus
+global compensation. This prevents compensating the same delay twice or moving
+other inputs. Physical capture delay is outside this requested calibration.
 
 ## What is implemented
 
