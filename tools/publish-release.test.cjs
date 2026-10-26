@@ -50,6 +50,7 @@ test('draft publisher pins source, avoids cross-references and retries matching 
   await publishDraft(x,'2026.10.0');
   assert.equal(x.state.releases[0].draft,true);
   assert.equal(x.state.releases[0].target_commitish,x.context.sha);
+  assert(x.state.releases[0].body.includes('<!-- usce-upstream-release:v2026.10.0 -->'));
   assert(!x.state.releases[0].body.includes('#123'));
   assert(!x.state.releases[0].body.includes('@contributor'));
   assert(x.state.releases[0].body.includes(themePin.sha));
