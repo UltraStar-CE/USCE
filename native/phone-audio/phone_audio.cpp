@@ -33,6 +33,8 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
   std::shared_ptr<rtc::PeerConnection> peer;
   std::shared_ptr<rtc::DataChannel> channel;
   std::string ice, code, player, error, state = "connecting";
+  std::string owner;
+  bool assignmentKnown = false;
   int attempt = 0;
   Clock::time_point heartbeat{};
   Clock::time_point previousPoll{};
@@ -92,6 +94,7 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
   void offer(const Json &message) {
     // Slot and player identity come from the authenticated relay, not audio data.
     if (message.value("slot", 0) != 1) return;
+    if (assignmentKnown && message.value("playerId", "") != owner) return;
     closePeer();
     player = message.at("playerId").get<std::string>();
     attempt = message.value("attempt", 0);
@@ -160,6 +163,13 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
     }
     peer->setRemoteDescription(rtc::Description(message.at("description").at("sdp").get<std::string>(), "offer"));
   }
+  void setOwner(const std::string &who) {
+    assignmentKnown = true;
+    if (owner == who) return;
+    closePeer();
+    owner = who;
+    player.clear();
+  }
   void process(const Json &m) {
     const auto type = m.value("type", "");
     if (type == "native.open") {
@@ -170,7 +180,19 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
       code = m["displayCode"].get<std::string>();
       error.clear();
       std::lock_guard<std::mutex> lock(mutex); state = "waiting for phone";
+    } else if (type == "player.assigned" || type == "player.joined") {
+      const auto who = m.value("playerId", "");
+      if (m.value("slot", 0) == 1) setOwner(who);
+      else if (who == owner) setOwner("");
+    } else if (type == "remote.players.snapshot") {
+      std::string who;
+      if (m.contains("players") && m["players"].is_array())
+        for (const auto &entry : m["players"])
+          if (entry.is_object() && entry.value("slot", 0) == 1 && entry.value("connected", true))
+            who = entry.value("playerId", "");
+      setOwner(who);
     } else if (type == "audio.pcm" && m.value("slot", 0) == 1) {
+      if (assignmentKnown && (owner.empty() || m.value("playerId", "") != owner)) return;
       auto bytes = decodePcm(m.value("pcm", ""));
       if (!bytes.empty()) {
         std::lock_guard<std::mutex> lock(mutex);
@@ -183,12 +205,15 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
     } else if (type == "p2p.ice" && peer && m.value("playerId", "") == player && m.value("attempt", 0) == attempt) {
       const auto &c = m.at("candidate");
       peer->addRemoteCandidate(rtc::Candidate(c.at("candidate").get<std::string>(), c.value("sdpMid", "0")));
+    } else if ((type == "player.left" || type == "player.disconnected") && m.value("playerId", "") == owner) {
+      setOwner("");
     } else if ((type == "p2p.close" || type == "player.left" || type == "player.disconnected") && m.value("playerId", "") == player) {
       closePeer(); player.clear();
     } else if (type == "native.peer_closed" && m.value("generation", uint64_t(0)) == generation) {
       closePeer();
     } else if (type == "native.closed" || type == "native.error" || type == "bridge.disconnected") {
       closePeer();
+      owner.clear(); assignmentKnown = true; player.clear();
       { std::lock_guard<std::mutex> lock(mutex); state = "relay disconnected"; }
       fail(m.value("reason", "Restart the prototype to reconnect"));
     } else if (type == "error") fail(m.value("code", "relay error"));
@@ -286,7 +311,12 @@ int32_t usce_pa_poll(void *p, int16_t *samples, int32_t capacity) {
       }
     }
     try {
-      if (channel && channel->isOpen()) channel->send(Json({{"type", "audio.pcm.ack"}, {"sequence", sequence}}).dump());
+      if (channel && channel->isOpen()) {
+        rtc::Candidate local, remote;
+        const bool selected = self->peer && self->peer->getSelectedCandidatePair(&local, &remote);
+        const bool direct = selected && local.type() != rtc::Candidate::Type::Relayed && remote.type() != rtc::Candidate::Type::Relayed;
+        channel->send(Json({{"type", "audio.pcm.ack"}, {"sequence", sequence}, {"route", direct ? "direct" : "server"}}).dump());
+      }
     } catch (...) { /* A lost acknowledgment must not discard drained audio. */ }
     return count;
   } catch (...) { return -1; }

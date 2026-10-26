@@ -56,6 +56,24 @@ int main() {
   assert(usce_pa_status(receiver, status, sizeof(status)) > 0);
   assert(std::string(status).find("TEST") != std::string::npos);
   assert(usce_pa_event(receiver, status, sizeof(status)) == 0);
+  auto second = usce_pa_create("ipc://", "");
+  assert(second);
+  assert(usce_pa_signal(receiver, "{\"type\":\"player.assigned\",\"playerId\":\"one\",\"slot\":1}") == 0);
+  assert(usce_pa_signal(second, "{\"type\":\"player.assigned\",\"playerId\":\"two\",\"slot\":1}") == 0);
+  const auto firstPcm = std::string("{\"type\":\"audio.pcm\",\"playerId\":\"one\",\"slot\":1,\"pcm\":\"") + base64(packet(1)) + "\"}";
+  const auto secondPcm = std::string("{\"type\":\"audio.pcm\",\"playerId\":\"two\",\"slot\":1,\"pcm\":\"") + base64(packet(1)) + "\"}";
+  assert(usce_pa_signal(receiver, firstPcm.c_str()) == 0);
+  assert(usce_pa_signal(second, secondPcm.c_str()) == 0);
+  assert(usce_pa_poll(receiver, out, 9600) == 480);
+  assert(usce_pa_poll(second, out, 9600) == 480);
+  // Moving a phone clears its old lane, including queued PCM and sequence state.
+  assert(usce_pa_signal(second, "{\"type\":\"player.assigned\",\"playerId\":\"two\",\"slot\":0}") == 0);
+  assert(usce_pa_signal(second, secondPcm.c_str()) == 0);
+  assert(usce_pa_poll(second, out, 9600) == 0);
+  assert(usce_pa_signal(second, "{\"type\":\"player.assigned\",\"playerId\":\"three\",\"slot\":1}") == 0);
+  assert(usce_pa_signal(second, secondPcm.c_str()) == 0);
+  assert(usce_pa_poll(second, out, 9600) == 0);
+  usce_pa_destroy(second);
   usce_pa_destroy(receiver);
   std::cout << "PCM validation, gaps, stale frames, bounds and sequence wrap passed\n";
 }
