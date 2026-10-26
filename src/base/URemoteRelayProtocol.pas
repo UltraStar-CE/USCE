@@ -108,11 +108,23 @@ begin
 end;
 
 procedure TRemoteRelayProtocol.Cache(Message: TJSONObject);
-var Kind: string;
+var Kind: string; Previous: TJSONData; Merged: TJSONObject; I: integer;
 begin
   Kind := Message.Get('type', '');
+  Previous := FCache.Find(Kind);
+  if (Kind = 'song.select.state') and (Previous <> nil) and
+    (Previous.JSONType = jtObject) then
+  begin
+    Merged := CloneObject(TJSONObject(Previous));
+    for I := 0 to Message.Count - 1 do
+    begin
+      RemoveField(Merged, Message.Names[I]);
+      Merged.Add(Message.Names[I], Message.Items[I].Clone);
+    end;
+  end
+  else Merged := CloneObject(Message);
   RemoveField(FCache, Kind);
-  FCache.Add(Kind, Message.Clone);
+  FCache.Add(Kind, Merged);
 end;
 
 function TRemoteRelayProtocol.CopyPublic(Message: TJSONObject): TJSONObject;

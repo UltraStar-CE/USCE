@@ -76,6 +76,11 @@ begin
       'Sanitized current playlist items must reach clients');
     Assert(Adapter.Songs.Count = 1, 'Game library must feed generic song snapshot');
     Assert(Adapter.Songs.Id <> '', 'Song snapshot needs a stable content identity');
+    Game('{"type":"song.select.state","selectedSongId":8}');
+    Relay('{"type":"song.state.request"}');
+    Assert(TJSONObject(Probe.Sent.Items[Probe.Sent.Count-1]).Arrays['playlistItems'].Count = 1,
+      'Partial selection updates must preserve full cached metadata for reconnect');
+
     Relay('{"type":"control.command","playerId":"phone","commandId":42,"command":"song.list","args":{"offset":0,"limit":10}}');
     Assert(TJSONObject(Probe.Sent.Items[Probe.Sent.Count-1]).Get('accepted', false));
     Assert(TJSONObject(Probe.Sent.Items[Probe.Sent.Count-1]).Objects['data'].Arrays['songs'].Count = 1);
