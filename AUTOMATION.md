@@ -43,6 +43,12 @@ deferral. An assessment checkpoint records what was reviewed; it does not imply
 that every change was adopted. Changes that depend on earlier work are reviewed
 in order, with compatibility adjustments recorded in the PR.
 
+Automated proposals retain upstream links and contributor mentions, including
+maintainers. Upstream issues and PRs use fully qualified references such as
+`UltraStar-Deluxe/USDX#1460` so they point to the correct repository. The tracker
+links both the source proposal and its USCE counterpart. Release notes retain
+relevant source references and attribution alongside links to the USCE changes.
+
 ## Validation and merge decisions
 
 Automated proposals follow our [contribution policy](CONTRIBUTING.md), including
