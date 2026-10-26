@@ -94,7 +94,6 @@ uses
   URecord,
   UPhoneAudio,
   URemoteBridgeIPC,
-  URemoteBridgeProcess,
   URemoteControl,
   UBeatTimer,
   UPlatform,
@@ -337,9 +336,6 @@ begin
       Log.LogStatus('Remote Bridge IPC', 'Initialization');
       RemoteBridgeIPC.Host := Ini.RemoteBridgeIpcHost;
       RemoteBridgeIPC.Port := Ini.RemoteBridgeIpcPort;
-      if not NativeRelayRequested then RemoteBridgeProcess.Start;
-      if (RemoteBridgeProcess.LastError <> '') then
-        Log.LogWarn(RemoteBridgeProcess.LastError, 'Remote Bridge Process');
       RemoteBridgeIPC.OnCommand := RemoteBridgeCommandReceived;
       RemoteBridgeIPC.Start;
       RemoteBridgeIPC.SendGameState('boot', 0, 0);
@@ -373,7 +369,6 @@ begin
     if (Ini.RemoteBridgeEnabled = 1) then
     begin
       Log.LogStatus('Remote Bridge IPC', 'Finalization');
-      RemoteBridgeProcess.Stop;
       RemoteBridgeIPC.Stop;
     end;
 

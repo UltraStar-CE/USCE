@@ -381,7 +381,7 @@ var Kind: string;
     Previous, LibraryData: TJSONData;
 begin
   Kind := Message.Get('type', '');
-  if (Kind = 'bridge.ping') or (Kind = 'continuous.state') then Exit(true);
+  if Kind = 'bridge.ping' then Exit(true);
   if Kind = 'song.select.state' then
   begin
     LibraryData := Message.Find('library');
@@ -410,7 +410,7 @@ begin
       // Catalog and preview transfer are separate handlers. Never upload a
       // game's full private library (or local paths) as live screen state.
       RemoveField(PublicMessage, 'apiCapabilities');
-      PublicMessage.Add('apiCapabilities', TJSONArray.Create(['song.list']));
+      PublicMessage.Add('apiCapabilities', TJSONArray.Create(['song.list', 'continuous.start', 'continuous.queue', 'continuous.stop', 'continuous.skip']));
       RemoveField(PublicMessage, 'library');
       RemoveField(PublicMessage, 'audioPath');
       RemoveField(PublicMessage, 'coverPath');

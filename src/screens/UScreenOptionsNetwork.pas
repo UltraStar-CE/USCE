@@ -50,11 +50,6 @@ type
   private
     RemoteBridgeWebAppIndex: integer;
     RemoteBridgeServerUrlIndex: integer;
-    RemoteBridgeIpcHostIndex: integer;
-    RemoteBridgeIpcPortIndex: integer;
-    RemoteBridgeNodeExecutableIndex: integer;
-    RemoteBridgeScriptPathIndex: integer;
-    RemoteBridgeStartCommandIndex: integer;
     RemoteEditingSlide: integer;
     RemoteEditingOriginal: UTF8String;
     RemoteEditingText: UTF8String;
@@ -117,7 +112,6 @@ uses
   ULanguage,
   ULog,
   UMain,
-  URemoteBridgeProcess,
   UUnicodeUtils,
   SysUtils;
 
@@ -126,11 +120,6 @@ type
     iRemoteEnabledSlide,
     iRemoteWebAppSlide,
     iRemoteServerUrlSlide,
-    iRemoteIpcHostSlide,
-    iRemoteIpcPortSlide,
-    iRemoteNodeExecutableSlide,
-    iRemoteBridgeScriptSlide,
-    iRemoteStartCommandSlide,
     iWebsiteSlide,
     iUsernameSlide,
     iSendNameSlide,
@@ -151,45 +140,6 @@ begin
   Result := nil;
   SetLength(Result, 1);
   Result[0] := Value;
-end;
-
-function ReadIntegerText(const Value: UTF8String; DefaultValue, MinValue: integer): integer;
-begin
-  Result := StrToIntDef(Trim(Value), DefaultValue);
-  if (Result < MinValue) then
-    Result := MinValue;
-end;
-
-function QuoteCommandPart(const Value: UTF8String): UTF8String;
-begin
-  if (Pos(' ', Value) > 0) or (Pos(#9, Value) > 0) then
-    Result := '"' + Value + '"'
-  else
-    Result := Value;
-end;
-
-function DefaultBridgeScriptPath: UTF8String;
-begin
-  Result := DefaultRemoteBridgeScriptPath;
-end;
-
-function DefaultNodeExecutablePath: UTF8String;
-begin
-  Result := GetEnvironmentVariable('USDX_REMOTE_NODE');
-  if (Result <> '') then
-    Exit;
-
-  {$IF Defined(MSWindows)}
-  Result := 'C:\Program Files\nodejs\node.exe';
-  if FileExists(Result) then
-    Exit;
-
-  Result := 'C:\Program Files (x86)\nodejs\node.exe';
-  if FileExists(Result) then
-    Exit;
-  {$IFEND}
-
-  Result := 'node';
 end;
 
 // My   *silly*   write function just counts the number of "<" characters.
@@ -343,12 +293,7 @@ function TScreenOptionsNetwork.IsRemoteTextSlide(Slide: integer): boolean;
 begin
   Result := Slide in [
     Ord(iRemoteWebAppSlide),
-    Ord(iRemoteServerUrlSlide),
-    Ord(iRemoteIpcHostSlide),
-    Ord(iRemoteIpcPortSlide),
-    Ord(iRemoteNodeExecutableSlide),
-    Ord(iRemoteBridgeScriptSlide),
-    Ord(iRemoteStartCommandSlide)
+    Ord(iRemoteServerUrlSlide)
   ];
 end;
 
@@ -359,24 +304,12 @@ begin
       Result := Ini.RemoteBridgeWebApp;
     iRemoteServerUrlSlide:
       Result := Ini.RemoteBridgeServerUrl;
-    iRemoteIpcHostSlide:
-      Result := Ini.RemoteBridgeIpcHost;
-    iRemoteIpcPortSlide:
-      Result := IntToStr(Ini.RemoteBridgeIpcPort);
-    iRemoteNodeExecutableSlide:
-      Result := Ini.RemoteBridgeNodeExecutable;
-    iRemoteBridgeScriptSlide:
-      Result := Ini.RemoteBridgeScriptPath;
-    iRemoteStartCommandSlide:
-      Result := Ini.RemoteBridgeStartCommand;
   else
     Result := '';
   end;
 end;
 
 function TScreenOptionsNetwork.GetRemoteDefaultText(Slide: integer): UTF8String;
-var
-  WebApp: UTF8String;
 begin
   case InteractionID(Slide) of
     iRemoteWebAppSlide:
@@ -387,27 +320,6 @@ begin
       end;
     iRemoteServerUrlSlide:
       Result := DEFAULT_REMOTE_BRIDGE_SERVER_URL;
-    iRemoteIpcHostSlide:
-      Result := DEFAULT_REMOTE_BRIDGE_IPC_HOST;
-    iRemoteIpcPortSlide:
-      Result := IntToStr(DEFAULT_REMOTE_BRIDGE_IPC_PORT);
-    iRemoteNodeExecutableSlide:
-      Result := DefaultNodeExecutablePath;
-    iRemoteBridgeScriptSlide:
-      Result := DefaultBridgeScriptPath;
-    iRemoteStartCommandSlide:
-      begin
-        Result :=
-          QuoteCommandPart(GetRemoteDisplayText(Ord(iRemoteNodeExecutableSlide))) + ' ' +
-          QuoteCommandPart(GetRemoteDisplayText(Ord(iRemoteBridgeScriptSlide))) +
-          ' --server ' + QuoteCommandPart(GetRemoteDisplayText(Ord(iRemoteServerUrlSlide))) +
-          ' --ipc-host ' + QuoteCommandPart(GetRemoteDisplayText(Ord(iRemoteIpcHostSlide))) +
-          ' --ipc-port ' + GetRemoteDisplayText(Ord(iRemoteIpcPortSlide)) +
-          ' --mock-song=false --auto-ack=false --auto-assign=false --p2p=false';
-        WebApp := GetRemoteDisplayText(Ord(iRemoteWebAppSlide));
-        if (WebApp <> '') then
-          Result := Result + ' --web-app ' + QuoteCommandPart(WebApp);
-      end;
   else
     Result := '';
   end;
@@ -431,20 +343,6 @@ begin
         if (Ini.RemoteBridgeServerUrl = '') then
           Ini.RemoteBridgeServerUrl := DEFAULT_REMOTE_BRIDGE_SERVER_URL;
       end;
-    iRemoteIpcHostSlide:
-      begin
-        Ini.RemoteBridgeIpcHost := Trim(Value);
-        if (Ini.RemoteBridgeIpcHost = '') then
-          Ini.RemoteBridgeIpcHost := DEFAULT_REMOTE_BRIDGE_IPC_HOST;
-      end;
-    iRemoteIpcPortSlide:
-      Ini.RemoteBridgeIpcPort := ReadIntegerText(Value, DEFAULT_REMOTE_BRIDGE_IPC_PORT, 1);
-    iRemoteNodeExecutableSlide:
-      Ini.RemoteBridgeNodeExecutable := Trim(Value);
-    iRemoteBridgeScriptSlide:
-      Ini.RemoteBridgeScriptPath := Trim(Value);
-    iRemoteStartCommandSlide:
-      Ini.RemoteBridgeStartCommand := Trim(Value);
   end;
 
   RefreshRemoteSlide(Slide, GetRemoteDisplayText(Slide));
@@ -487,11 +385,6 @@ begin
   SelectsS[Ord(iRemoteEnabledSlide)].SetSelectOpt(Ini.RemoteBridgeEnabled);
   RefreshRemoteSlide(Ord(iRemoteWebAppSlide), GetRemoteDisplayText(Ord(iRemoteWebAppSlide)));
   RefreshRemoteSlide(Ord(iRemoteServerUrlSlide), GetRemoteDisplayText(Ord(iRemoteServerUrlSlide)));
-  RefreshRemoteSlide(Ord(iRemoteIpcHostSlide), GetRemoteDisplayText(Ord(iRemoteIpcHostSlide)));
-  RefreshRemoteSlide(Ord(iRemoteIpcPortSlide), GetRemoteDisplayText(Ord(iRemoteIpcPortSlide)));
-  RefreshRemoteSlide(Ord(iRemoteNodeExecutableSlide), GetRemoteDisplayText(Ord(iRemoteNodeExecutableSlide)));
-  RefreshRemoteSlide(Ord(iRemoteBridgeScriptSlide), GetRemoteDisplayText(Ord(iRemoteBridgeScriptSlide)));
-  RefreshRemoteSlide(Ord(iRemoteStartCommandSlide), GetRemoteDisplayText(Ord(iRemoteStartCommandSlide)));
 end;
 
 procedure TScreenOptionsNetwork.StartRemoteTextEdit(Slide: integer);
@@ -988,11 +881,6 @@ begin
   AddSelectSlide('SING_OPTIONS_NETWORK_REMOTE_ENABLED', Ini.RemoteBridgeEnabled, ITabsTranslated);
   AddRemoteTextSlide('SING_OPTIONS_NETWORK_REMOTE_WEB_APP', GetRemoteDisplayText(Ord(iRemoteWebAppSlide)), RemoteBridgeWebAppIndex);
   AddRemoteTextSlide('SING_OPTIONS_NETWORK_REMOTE_SERVER_URL', GetRemoteDisplayText(Ord(iRemoteServerUrlSlide)), RemoteBridgeServerUrlIndex);
-  AddRemoteTextSlide('SING_OPTIONS_NETWORK_REMOTE_IPC_HOST', GetRemoteDisplayText(Ord(iRemoteIpcHostSlide)), RemoteBridgeIpcHostIndex);
-  AddRemoteTextSlide('SING_OPTIONS_NETWORK_REMOTE_IPC_PORT', GetRemoteDisplayText(Ord(iRemoteIpcPortSlide)), RemoteBridgeIpcPortIndex);
-  AddRemoteTextSlide('SING_OPTIONS_NETWORK_REMOTE_NODE_EXECUTABLE', GetRemoteDisplayText(Ord(iRemoteNodeExecutableSlide)), RemoteBridgeNodeExecutableIndex);
-  AddRemoteTextSlide('SING_OPTIONS_NETWORK_REMOTE_BRIDGE_SCRIPT', GetRemoteDisplayText(Ord(iRemoteBridgeScriptSlide)), RemoteBridgeScriptPathIndex);
-  AddRemoteTextSlide('SING_OPTIONS_NETWORK_REMOTE_START_COMMAND', GetRemoteDisplayText(Ord(iRemoteStartCommandSlide)), RemoteBridgeStartCommandIndex);
 
   if (High(DataBase.NetworkUser) = -1) then
   begin

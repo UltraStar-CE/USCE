@@ -178,7 +178,6 @@ uses
   URemoteMediaStream in 'base\URemoteMediaStream.pas',
   URemoteMediaTransfer in 'base\URemoteMediaTransfer.pas',
   URemoteBridgeIPC  in 'base\URemoteBridgeIPC.pas',
-  URemoteBridgeProcess in 'base\URemoteBridgeProcess.pas',
   URemoteControl    in 'base\URemoteControl.pas',
   URemoteInput      in 'base\URemoteInput.pas',
   URemoteOverlay    in 'base\URemoteOverlay.pas',

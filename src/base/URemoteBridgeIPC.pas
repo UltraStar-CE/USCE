@@ -182,8 +182,8 @@ var
 
 function NativeRelayRequested: boolean;
 begin
-  // Development mode until catalog/media/Party parity is implemented.
-  Result := GetEnvironmentVariable('USCE_NATIVE_RELAY') = '1';
+  // The relay runs inside the game; no local Node process is required.
+  Result := true;
 end;
 
 function RemoteScoringClockFields: string;
@@ -973,7 +973,7 @@ begin
     if Url = '' then Url := Ini.RemoteBridgeServerUrl;
     if Url = '' then Url := DEFAULT_REMOTE_BRIDGE_SERVER_URL;
     FNativeRelay.Start(Url, GetEnvironmentVariable('USCE_RAW_AUDIO_LIBRARY'), USCE_VERSION);
-    Log.LogStatus('In-process relay enabled; catalog/media/Party migration pending', 'Remote relay');
+    Log.LogStatus('In-process relay enabled', 'Remote relay');
     while not Terminated do
     begin
       FNativeRelay.Tick;
