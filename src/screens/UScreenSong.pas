@@ -2615,6 +2615,8 @@ begin
     smChessboard: SetChessboardScrollRefresh;
     else SetListScrollRefresh;
   end;
+  if (CatSongs.CatNumShow = -3) and (CatSongs.VisibleSongs = 0) then
+    WriteMessage(Language.Translate('LOCKDOWN_NO_SONGS'));
   {if Button[Interaction].Texture.TexNum > 0 then
   begin
     glDeleteTextures(1, PGLuint(@Button[Interaction].Texture.TexNum));
