@@ -15,6 +15,7 @@ type
     procedure Replace(Songs: TJSONArray);
     function Chunk(Offset, Limit: integer): TJSONArray;
     function Count: integer;
+    function Query(Request: TJSONObject): TJSONObject;
     property Id: string read FId;
   end;
 implementation
@@ -73,5 +74,26 @@ begin
   Last := Offset + Limit - 1;
   if Last >= Count then Last := Count - 1;
   for I := Offset to Last do Result.Add(FSongs.Items[I].Clone);
+end;
+function TRemoteSongSnapshot.Query(Request: TJSONObject): TJSONObject;
+var Offset, Limit: integer; Expected: string;
+begin
+  Result := TJSONObject.Create(['snapshotId', FId, 'total', Count]);
+  Expected := Request.Get('snapshotId', '');
+  Offset := Request.Get('offset', 0);
+  Limit := Request.Get('limit', 100);
+  if (Expected <> '') and (Expected <> FId) then
+  begin
+    Result.Add('error', 'snapshot_changed');
+    Exit;
+  end;
+  if (Offset < 0) or (Limit < 1) or (Limit > 100) then
+  begin
+    Result.Add('error', 'invalid_page');
+    Exit;
+  end;
+  Result.Add('offset', Offset);
+  Result.Add('limit', Limit);
+  Result.Add('songs', Chunk(Offset, Limit));
 end;
 end.

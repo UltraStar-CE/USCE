@@ -1,7 +1,7 @@
 program song_snapshot_test;
 {$mode Delphi}{$H+}{$ASSERTIONS ON}
 uses SysUtils, fpjson, URemoteSongSnapshot;
-var Snapshot: TRemoteSongSnapshot; Songs, Page: TJSONArray; OriginalId: string; I: integer;
+var Snapshot: TRemoteSongSnapshot; Songs, Page: TJSONArray; OriginalId: string; I: integer; Request, Reply: TJSONObject;
 begin
   Snapshot := TRemoteSongSnapshot.Create;
   Songs := TJSONArray.Create;
@@ -28,6 +28,20 @@ begin
     TJSONObject(Songs.Items[0]).Strings['title'] := 'Changed song';
     Snapshot.Replace(Songs);
     Assert(Snapshot.Id <> OriginalId);
+    Request := TJSONObject.Create(['snapshotId', OriginalId, 'offset', 0, 'limit', 100]);
+    try
+      Reply := Snapshot.Query(Request);
+      try Assert(Reply.Get('error', '') = 'snapshot_changed'); finally Reply.Free; end;
+      Request.Strings['snapshotId'] := Snapshot.Id;
+      Reply := Snapshot.Query(Request);
+      try
+        Assert(Reply.Find('error') = nil);
+        Assert(Reply.Arrays['songs'].Count = 100);
+      finally Reply.Free; end;
+      Request.Integers['limit'] := 101;
+      Reply := Snapshot.Query(Request);
+      try Assert(Reply.Get('error', '') = 'invalid_page'); finally Reply.Free; end;
+    finally Request.Free; end;
     Page := Snapshot.Chunk(-1, 100);
     try Assert(Page.Count = 0); finally Page.Free; end;
   finally Songs.Free; Snapshot.Free; end;
