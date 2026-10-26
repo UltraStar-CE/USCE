@@ -191,10 +191,32 @@ function playerAssignmentFingerprint(player) {
   return JSON.stringify({
     slot: player.slot ?? null,
     role: player.role || '',
+      name: player.name || '',
+      difficulty: player.difficulty,
+      difficultyMode: player.difficultyMode,
+      avatarId: player.avatarId,
+      avatarFile: player.avatarFile,
     connected: player.connected !== false,
     phoneMicDelayMs: player.phoneMicDelayMs || 0,
     micDelayMs: player.micDelayMs || 0
   });
+}
+
+function updatePlayerProfile(message) {
+  const playerId = String(message.playerId || '');
+  if (!playerId) return null;
+  const player = players.get(playerId) || {playerId, slot: 0, role: 'singer', phoneMicDelayMs: 0};
+  for (const key of ['name', 'difficulty', 'difficultyMode', 'avatarId', 'avatarFile', 'avatarUrl']) {
+    if (Object.prototype.hasOwnProperty.call(message, key)) player[key] = message[key];
+  }
+  player.slot = message.slot ?? player.slot;
+  player.role = message.role || player.role;
+  if (Object.prototype.hasOwnProperty.call(message, 'micDelayMs'))
+    player.phoneMicDelayMs = phoneMicDelayToRawMs(message.micDelayMs);
+  player.micDelayMs = phoneMicDelayToEffectiveMs(player.phoneMicDelayMs);
+  player.connected = true;
+  players.set(playerId, player);
+  return player;
 }
 
 function sendGameStateMessage(message, options = {}) {
@@ -2719,23 +2741,15 @@ async function handleMessage(msg) {
   if (msg.type === 'player.joined') {
     const phoneMicDelayMs = phoneMicDelayToRawMs(msg.micDelayMs);
     const micDelayMs = phoneMicDelayToEffectiveMs(phoneMicDelayMs);
-    const joinedPlayer = {
-      playerId: msg.playerId,
-      name: msg.name,
-      slot: msg.slot,
-      role: msg.role,
-      phoneMicDelayMs,
-      micDelayMs,
-      connected: true
-    };
-    players.set(msg.playerId, joinedPlayer);
+    const joinedPlayer = updatePlayerProfile(msg);
+    if (!joinedPlayer) return;
     playerAssignmentFingerprints.set(msg.playerId, playerAssignmentFingerprint(joinedPlayer));
     log('player joined', { playerId: msg.playerId, name: msg.name, slot: msg.slot, role: msg.role, phoneMicDelayMs, micDelayMs, players: players.size, p2pEnabled });
     sendToIpc({
       type: 'player.joined',
       roomId: room?.roomId,
       playerId: msg.playerId,
-      name: msg.name,
+      ...joinedPlayer,
       slot: msg.slot,
       role: msg.role,
       micDelayMs
@@ -2756,16 +2770,8 @@ async function handleMessage(msg) {
 
   if (msg.type === 'player.assigned') {
     const playerId = String(msg.playerId || '');
-    const player = players.get(playerId);
-    if (player) {
-      player.slot = msg.slot ?? player.slot;
-      player.role = msg.role || player.role;
-      if (Object.prototype.hasOwnProperty.call(msg, 'micDelayMs')) {
-        player.phoneMicDelayMs = phoneMicDelayToRawMs(msg.micDelayMs);
-        player.micDelayMs = phoneMicDelayToEffectiveMs(player.phoneMicDelayMs);
-      }
-      player.connected = true;
-    }
+    const player = updatePlayerProfile(msg);
+    if (!player) return;
     const fingerprint = playerAssignmentFingerprint(player);
     if (fingerprint && playerAssignmentFingerprints.get(playerId) === fingerprint) {
       return;
@@ -2777,6 +2783,10 @@ async function handleMessage(msg) {
       roomId: room?.roomId,
       playerId: msg.playerId,
       name: player?.name || '',
+      difficulty: player.difficulty,
+      difficultyMode: player.difficultyMode,
+      avatarId: player.avatarId,
+      avatarFile: player.avatarFile,
       slot: msg.slot,
       role: msg.role,
       micDelayMs: player?.micDelayMs || 0
