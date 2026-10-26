@@ -1,11 +1,13 @@
 unit UInputSource;
 {$mode Delphi}{$H+}
 interface
+uses UScale;
 type TPlayerInputSource = (pisNone, pisLocal, pisDirect, pisServer);
   TInputBadgeScreen = (ibsSetup, ibsSing, ibsScore);
 function PlayerInputSource(PlayerIndex: integer): TPlayerInputSource;
 procedure DrawInputSourceBadge(Source: TPlayerInputSource; X, Y, W, H: single;
-  Screen: TInputBadgeScreen = ibsSetup; Opacity: single = 1);
+  Screen: TInputBadgeScreen = ibsSetup; Opacity: single = 1;
+  LayoutMode: TLayoutScaleMode = lsStretch);
 procedure ReleaseInputSourceBadges;
 implementation
 uses Math, SysUtils, Types, UIni, URecord, URemoteInput, UPhoneAudio, URenderer,
@@ -108,10 +110,11 @@ begin
 end;
 
 procedure DrawInputSourceBadge(Source: TPlayerInputSource; X, Y, W, H: single;
-  Screen: TInputBadgeScreen; Opacity: single);
+  Screen: TInputBadgeScreen; Opacity: single; LayoutMode: TLayoutScaleMode);
 var Size,Inset: single; Style: TInputSourceBadgeTheme; Texture: TTexture; Custom: string;
 begin
   if (Source=pisNone) or (W<=0) or (H<=0) then Exit;
+  ResolveLayoutRect(X,Y,W,H,LayoutMode);
   Style:=Theme.InputSourceBadges[Ord(Screen)];
   if not Style.Visible or (Style.Alpha<=0) or (Opacity<=0) then Exit;
   Inset:=Min(Style.Inset,Min(W,H)*0.1);
@@ -131,6 +134,7 @@ begin
     Texture:=Glyphs[Source];
   end;
   Texture.X:=X; Texture.Y:=Y; Texture.Z:=1; Texture.W:=Size; Texture.H:=Size;
+  Texture.ScaleMode:=lsUniform;
   Texture.Alpha:=Style.Alpha*EnsureRange(Opacity,0.0,1.0);
   if Source=pisServer then
   begin

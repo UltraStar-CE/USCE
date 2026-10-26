@@ -1347,7 +1347,7 @@ begin
     if (PlayerPositionMap[PlayerCounter-1].Screen = ScreenAct) and
       Statics[AvatarStaticRef[PlayerCounter]].Visible then
       with Statics[AvatarStaticRef[PlayerCounter]].Texture do
-        DrawInputSourceBadge(TPlayerInputSource(Player[PlayerCounter-1].InputSource), X, Y, W, H, ibsScore, Alpha);
+        DrawInputSourceBadge(TPlayerInputSource(Player[PlayerCounter-1].InputSource), X, Y, W, H, ibsScore, Alpha, ScaleMode);
   ScreenContinuousPlayback.Update;
   Result := true;
 end;

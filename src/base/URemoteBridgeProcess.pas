@@ -233,6 +233,8 @@ begin
       Proc.Parameters.Add(Ini.RemoteBridgeIpcHost);
       Proc.Parameters.Add('--ipc-port');
       Proc.Parameters.Add(IntToStr(Ini.RemoteBridgeIpcPort));
+      Proc.Parameters.Add('--song-config');
+      Proc.Parameters.Add(Ini.Filename.ToNative);
       Proc.Parameters.Add('--mock-song=false');
       Proc.Parameters.Add('--auto-ack=false');
       Proc.Parameters.Add('--auto-assign=false');

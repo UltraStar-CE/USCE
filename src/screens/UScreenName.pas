@@ -1431,7 +1431,7 @@ begin
   for I := 0 to SelectedPlayerCount - 1 do
     if Statics[PlayerCurrentAvatar[I]].Visible then
       with Statics[PlayerCurrentAvatar[I]].Texture do
-        DrawInputSourceBadge(PlayerInputSource(I), X, Y, W, H, ibsSetup, Alpha);
+        DrawInputSourceBadge(PlayerInputSource(I), X, Y, W, H, ibsSetup, Alpha, ScaleMode);
   for I := 0 to High(Text) do
     Text[I].Draw;
 
