@@ -332,4 +332,3 @@ It starts only when `Enabled=On`.
 | `WebApp` | Client flavor; empty | Selects the adapter client flavor. |
 
 The [bridge protocol reference](usce-game-bridge-ipc.md) describes messages and examples.
-
