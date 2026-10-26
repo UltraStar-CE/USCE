@@ -10,6 +10,8 @@ on:
       - 'src/base/UContinuousPlayback.pas'
       - 'src/screens/UScreenContinuousPlayback.pas'
       - 'tools/tests/phone_audio*'
+      - 'tools/tests/relay_*'
+      - 'tools/test_native_relay.py'
       - 'tools/tests/party_session.test.mjs'
       - '.github/workflows/native-phone-audio.yml'
   workflow_dispatch:
@@ -41,7 +43,7 @@ jobs:
             mingw-w64-ucrt-x86_64-openssl
       - name: Linux build dependencies
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build libssl-dev
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build libssl-dev fp-compiler fp-units-fcl
       - name: macOS build dependencies
         if: runner.os == 'macOS'
         run: brew install cmake ninja openssl@3
@@ -62,5 +64,8 @@ jobs:
           cmake -S native/phone-audio -B build/phone-audio -G Ninja -DCMAKE_BUILD_TYPE=Release
           cmake --build build/phone-audio --parallel 3
           ctest --test-dir build/phone-audio --output-on-failure
+      - name: Pascal relay protocol and native binding tests
+        if: runner.os == 'Linux'
+        run: python3 tools/test_native_relay.py
       - name: Browser packet tests
         run: node --test tools/tests/phone_audio_worklet.test.cjs tools/tests/phone_audio_bridge.test.cjs tools/tests/party_session.test.mjs

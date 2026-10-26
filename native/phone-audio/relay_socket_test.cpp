@@ -1,6 +1,8 @@
 #include "phone_audio.h"
 #include <rtc/rtc.hpp>
+#include <nlohmann/json.hpp>
 #include <cassert>
+#include <atomic>
 #include <chrono>
 #include <iostream>
 #include <mutex>
@@ -26,19 +28,41 @@ int main(int argc, char **argv) {
   rtc::WebSocketServer server(config);
   std::mutex mutex;
   std::shared_ptr<rtc::WebSocket> peer;
+  const bool sessionFixture = argc == 2 && std::string(argv[1]) == "--session-server";
+  auto closed = std::make_shared<std::atomic<int>>(0);
   server.onClient([&](std::shared_ptr<rtc::WebSocket> client) {
     std::weak_ptr<rtc::WebSocket> weak = client;
-    client->onMessage([weak](rtc::message_variant message) {
-      if (auto socket = weak.lock()) socket->send(std::move(message));
+    client->onClosed([closed] { ++*closed; });
+    client->onMessage([weak, sessionFixture](rtc::message_variant message) {
+      auto socket = weak.lock();
+      if (!socket) return;
+      if (!sessionFixture) { socket->send(std::move(message)); return; }
+      try {
+        auto text = std::get_if<std::string>(&message);
+        if (!text) return;
+        auto request = nlohmann::json::parse(*text);
+        const auto type = request.value("type", "");
+        if (type == "host.hello") {
+          const bool resumed = request.value("roomId", "") == "fixture-room" &&
+            request.value("hostToken", "") == "fixture-token";
+          socket->send(nlohmann::json({{"type", resumed ? "room.resumed" : "room.created"},
+            {"protocol", 1}, {"roomId", "fixture-room"}, {"hostToken", "fixture-token"},
+            {"displayCode", "TEST"}}).dump());
+        } else if (type == "host.heartbeat") {
+          socket->send(std::string("{\"type\":\"ack\",\"protocol\":1,\"accepted\":true}"));
+        } else if (type == "host.shutdown") socket->close();
+      } catch (...) { socket->close(); }
     });
     std::lock_guard<std::mutex> lock(mutex);
     peer = std::move(client);
   });
   const auto address = "ws://127.0.0.1:" + std::to_string(server.port()) + "/ws/host";
-  if (argc == 2 && std::string(argv[1]) == "--echo-server") {
+  if (argc == 2 && (std::string(argv[1]) == "--echo-server" || sessionFixture)) {
     // A bounded fixture for exercising the actual Pascal DLL binding.
     std::cout << address << std::endl;
-    std::this_thread::sleep_for(std::chrono::seconds(20));
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(20);
+    while (*closed < 2 && std::chrono::steady_clock::now() < deadline)
+      std::this_thread::sleep_for(std::chrono::milliseconds(5));
     {
       std::lock_guard<std::mutex> lock(mutex);
       if (peer) { peer->resetCallbacks(); peer->close(); peer.reset(); }

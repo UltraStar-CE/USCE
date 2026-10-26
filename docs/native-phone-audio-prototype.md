@@ -28,6 +28,10 @@ over `wss://usdx.at/ws/host`, resumed the same room after reconnect, and sent
 shutdown. This verifies the transport/session foundation, not replacement of the
 complete local bridge or gameplay through that replacement.
 
+After building the module, `python3 tools/test_native_relay.py` runs both Pascal
+regressions against native loopback fixtures (requires FPC and FCL JSON units).
+CI runs these on Linux in addition to native socket/PCM tests on all four targets.
+
 Still to move: roster/settings reconciliation and slot assignment; command/ack
 routing; game/song/screen state and clock messages; catalog manifests/chunks,
 covers and preview streaming; playlist editing, favorites/votes; Party queue and
@@ -137,7 +141,8 @@ node --test tools/tests/phone_audio_worklet.test.cjs
 ```
 
 Windows: use MSYS2 UCRT64 GCC/CMake/Ninja/OpenSSL; bundle `usce-phone-audio.dll`
-with its OpenSSL and compiler runtime DLLs. Linux: bundle/find
+with its compiler runtime DLLs. OpenSSL is linked statically by default; builds
+overriding that option must also provide its runtime libraries. Linux: bundle/find
 `libusce-phone-audio.so` and its matching runtime libraries. macOS: build separately
 for Intel and ARM and bundle `libusce-phone-audio.dylib`, fixing dependency install
 names/rpaths and signing it with the app. The CI matrix compiles/tests the native
