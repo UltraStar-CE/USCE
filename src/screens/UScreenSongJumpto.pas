@@ -402,13 +402,12 @@ end;
 procedure TScreenSongJumpto.SetSearchText(const Query: UTF8String);
 begin
   Visible := true;
-  Interaction := 0;
-  Button[0].Text[0].ColR := Theme.SongJumpto.ButtonSearchText.ColR;
-  Button[0].Text[0].ColG := Theme.SongJumpto.ButtonSearchText.ColG;
-  Button[0].Text[0].ColB := Theme.SongJumpto.ButtonSearchText.ColB;
-  Button[0].Text[0].Text := Query;
-  SetTextFound(CatSongs.SetFilter(Query, sfTitle));
-  ScreenSong.NextRandomSearchIdx := CatSongs.VisibleSongs;
+  SetLength(fRows, 1);
+  fRows[0].Kind := fltAll;
+  fRows[0].Query := Query;
+  fFocus := 0;
+  fFirst := 0;
+  Changed;
 end;
 
 function TScreenSongJumpto.Draw: boolean;

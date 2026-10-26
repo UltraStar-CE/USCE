@@ -903,7 +903,8 @@ begin
   begin
     Slot := Profiles[I].Slot - 1;
     if (Slot < 0) or (Slot >= IMaxPlayerCount) or
-      (Profiles[I].Role <> 'singer') or not Profiles[I].Connected then Continue;
+      ((Profiles[I].Role <> 'singer') and (Profiles[I].Role <> 'controller')) or
+      not Profiles[I].Connected then Continue;
     Ini.Name[Slot] := Profiles[I].Name;
     Ini.PlayerLevel[Slot] := Profiles[I].Difficulty;
     Ini.PlayerAvatar[Slot] := '';

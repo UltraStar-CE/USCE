@@ -898,8 +898,11 @@ begin
           Player[PlayerIndex].DetectionBeat := Floor(LyricsState.MidBeatD - DelayBeats) - 1;
         end;
         DelayBeats := GetBeats(CurrentSong.BPM, Player[PlayerIndex].DetectionDelay / 1000);
-        Player[PlayerIndex].DetectionBeat :=
-          Floor(LyricsState.MidBeatD - DelayBeats) - 1;
+        PlayerOldBeat := Player[PlayerIndex].DetectionBeat;
+        PlayerCurBeat := Floor(LyricsState.MidBeatD - DelayBeats);
+        if Screen.ScoringTailActive then
+          PlayerCurBeat := Min(PlayerCurBeat, Screen.ScoringTailEndBeat);
+        FirstBeatToAnalyze := PlayerOldBeat + 1;
 
       end;
 
@@ -912,7 +915,7 @@ begin
         Continue;
       end;
 
-      for ActualBeat := PlayerOldBeat+1 to PlayerCurBeat do
+      for ActualBeat := FirstBeatToAnalyze to PlayerCurBeat do
 
       begin
         // Finish each player's line after its last delayed beat and before
@@ -1158,7 +1161,7 @@ begin
                 CurrentLineFragment := @Line.Notes[LineFragmentIndex];
                 if (CurrentLineFragment.StartBeat  = LastPlayerNote.Start) and
                   (CurrentLineFragment.Duration = LastPlayerNote.Duration) and
-                  (CurrentLineFragment.Tone   = LastPlayerNote.Tone) then
+                  (CurrentLineFragment.DisplayTone = LastPlayerNote.Tone) then
                 begin
                   LastPlayerNote.Perfect := true;
                 end;
