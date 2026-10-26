@@ -476,7 +476,6 @@ begin
       else
       begin
         Session.Paused := not Session.Paused;
-        if Session.Paused then AudioPlayback.Pause else AudioPlayback.Play;
       end;
     SDLK_LEFT, SDLK_RIGHT:
     begin
