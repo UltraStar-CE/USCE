@@ -27,6 +27,15 @@ particular adapter. On hybrid systems the graphics adapter is selected by the
 OS/driver when starting USDX. Check the actual decoder in USDX's log; selecting
 the MPV backend alone does not prove hardware decoding is active.
 
+Every video opens with software decoding and switches to the hardware decoder
+after its first frame, so libmpv's decoder probe never delays the open. The
+probe runs once per video codec and session; its result is reused for later
+videos of that codec, including `no` when the GPU cannot decode the codec. One
+idle libmpv player is kept after a video closes and reused by the next open,
+which keeps its decoder devices. The log shows `Probing hardware decoding for`,
+`Using remembered decoder` and `Reusing libmpv player`; `Hardware decoder:` is
+logged for the software start and again after the switch.
+
 Use `VideoHardwareDecoding=no` for a software-decoding comparison through the
 same backend. Use `VideoBackend=ffmpeg` to restore the original video path.
 Disabled MPV is skipped without an initialization error. Unknown values revert

@@ -165,23 +165,32 @@ end;
 
 {$IFDEF UseMpvVideo}
 procedure TestVideoStartup;
-var Provider: IVideoPlayback; Video: IVideo; I: integer;
+var Provider: IVideoPlayback; Video: IVideo; I: integer; Saved: string; Wait: cardinal;
 begin
   Provider:=FindVideoProvider('MPV_Video');
   Require(Provider<>nil,'missing MPV provider');
   Require(Provider.Init,'cannot initialize MPV provider for startup test');
-  for I:=1 to 4 do
-  begin
-    Video:=Provider.Open(Path(ParamStr(2)));
-    Require(Video<>nil,'cannot reopen MPV video');
-    ConsoleWriteLn('Testing MPV_Video startup ' + IntToStr(I));
-    PumpVideo(Video,0,100,false);
-    CheckVideoColors(0,'MPV startup '+IntToStr(I));
-    Video:=nil;
+  Saved:=Ini.VideoHardwareDecoding;
+  if Saved='no' then Ini.VideoHardwareDecoding:='auto';
+  try
+    for I:=1 to 5 do
+    begin
+      Video:=Provider.Open(Path(ParamStr(2)));
+      Require(Video<>nil,'cannot reopen MPV video');
+      ConsoleWriteLn('Testing MPV_Video startup ' + IntToStr(I));
+      // The first and last open wait for the decoder switch after frame 0; the
+      // others close while the reused player is still switching.
+      if (I=1) or (I=5) then Wait:=3000 else Wait:=100;
+      PumpVideo(Video,0,Wait,false);
+      CheckVideoColors(0,'MPV startup '+IntToStr(I));
+      Video:=nil;
+    end;
+  finally
+    Ini.VideoHardwareDecoding:=Saved;
   end;
   Provider.Finalize;
   CheckError('repeated startup/destruction');
-  ConsoleWriteLn('PASS MPV startup: four paused initial frames and repeated destruction');
+  ConsoleWriteLn('PASS MPV startup: five paused initial frames, player reuse and decoder memory');
 end;
 
 procedure TestVideoFallback;

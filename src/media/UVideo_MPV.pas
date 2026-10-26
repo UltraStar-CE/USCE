@@ -14,6 +14,7 @@ interface
 implementation
 
 uses
+  Classes,
   SysUtils,
   Math,
   ctypes,
@@ -40,7 +41,9 @@ const
   requestSpeed = 102;
   requestSeek = 103;
   requestLoop = 104;
+  requestHwdec = 105;
   openTimeout = 5.0;
+  parkTimeout = 2.0;
   seekTimeout = 5.0;
 
 type
@@ -77,6 +80,9 @@ type
       fEndReached: boolean;
       fHardwareDecoder: string;
       fLoggedDecoder: boolean;
+      fCodec: string;
+      fDecoderSwitchSent, fDecoderSwitchReplied, fDecoderProbed: boolean;
+      fInitialRead: boolean;
 
       fDesiredPause, fAppliedPause, fSentPause, fPausePending: boolean;
       fDesiredSpeed, fAppliedSpeed, fSentSpeed: double;
@@ -89,9 +95,18 @@ type
       function SetOption(const Name, Value: AnsiString): boolean;
       function SetOptionIfKnown(const Name, Value: AnsiString): boolean;
       function Command(Id: QWord; const Args: array of AnsiString): boolean;
+      function CommandSync(const Args: array of AnsiString): boolean;
+      function GetStringProperty(const Name: AnsiString): string;
+      function GetInt64Property(const Name: AnsiString; out Value: Int64): boolean;
+      function GetDoubleProperty(const Name: AnsiString; out Value: double): boolean;
+      procedure ReadInitialProperties;
       function Observe(Id: QWord; const Name: AnsiString; Format: cint): boolean;
       function CreatePlayer(): boolean;
       function CreateContext(): boolean;
+      function AdoptParkedPlayer(): boolean;
+      function ParkPlayer(): boolean;
+      procedure RequestHardwareDecoding;
+      procedure RememberDecoder;
       function EnsureTarget(): boolean;
       procedure ReadProperty(Event: Pmpv_event);
       procedure PumpEvents;
@@ -123,6 +138,33 @@ type
       function Finalize(): boolean;
       function Open(const FileName: IPath): IVideo;
   end;
+
+var
+  { One idle player outlives Close so the next Open reuses its decoder devices.
+    CUDA device creation alone took 3 s on every open. }
+  parkedHandle: Pmpv_handle;
+  parkedContext: Pmpv_render_context;
+  parkedTarget: TRenderTarget;
+  { hwdec-current per video codec for this session. mpv probes every decoder
+    on every open; a codec the GPU cannot decode spent 10 s per open. }
+  rememberedDecoders: TStringList;
+
+procedure DestroyParkedPlayer;
+begin
+  if parkedHandle = nil then
+    Exit;
+  parkedTarget.BeginRender;
+  try
+    mpv_render_context_free(parkedContext);
+  finally
+    parkedTarget.EndRender;
+  end;
+  FreeAndNil(parkedTarget);
+  parkedContext := nil;
+  mpv_terminate_destroy(parkedHandle);
+  parkedHandle := nil;
+  UnloadMpv;
+end;
 
 function MonotonicTime: double;
 begin
@@ -166,7 +208,10 @@ end;
 function TVideoPlayback_MPV.Finalize(): boolean;
 begin
   if fInitialized then
+  begin
+    DestroyParkedPlayer;
     UnloadMpv();
+  end;
   fInitialized := false;
   Result := true;
 end;
@@ -243,6 +288,72 @@ begin
     Fail('Cannot queue libmpv command: ' + MpvError(code));
 end;
 
+function TVideo_MPV.CommandSync(const Args: array of AnsiString): boolean;
+var
+  pointers: array of PAnsiChar;
+  i: integer;
+  code: cint;
+begin
+  SetLength(pointers, Length(Args) + 1);
+  for i := 0 to High(Args) do
+    pointers[i] := PAnsiChar(Args[i]);
+  pointers[Length(Args)] := nil;
+  code := mpv_command(fHandle, @pointers[0]);
+  Result := code >= 0;
+  if not Result then
+    Fail('libmpv command failed: ' + MpvError(code));
+end;
+
+function TVideo_MPV.GetStringProperty(const Name: AnsiString): string;
+var
+  value: PAnsiChar;
+begin
+  Result := '';
+  value := nil;
+  if (mpv_get_property(fHandle, PAnsiChar(Name), MPV_FORMAT_STRING, @value) >= 0) and
+     (value <> nil) then
+  begin
+    Result := string(value);
+    mpv_free(value);
+  end;
+end;
+
+function TVideo_MPV.GetInt64Property(const Name: AnsiString; out Value: Int64): boolean;
+begin
+  Value := 0;
+  Result := mpv_get_property(fHandle, PAnsiChar(Name), MPV_FORMAT_INT64, @Value) >= 0;
+end;
+
+function TVideo_MPV.GetDoubleProperty(const Name: AnsiString; out Value: double): boolean;
+begin
+  Value := 0;
+  Result := mpv_get_property(fHandle, PAnsiChar(Name), MPV_FORMAT_DOUBLE, @Value) >= 0;
+end;
+
+{ A reused player sends no change event for a value equal to the previous
+  file's, so the first values are read once playback has started. }
+procedure TVideo_MPV.ReadInitialProperties;
+var
+  size: Int64;
+  duration: double;
+  decoder: string;
+begin
+  fInitialRead := true;
+  if GetInt64Property('dwidth', size) and (size > 0) and (size <= High(integer)) then
+    fVideoWidth := size;
+  if GetInt64Property('dheight', size) and (size > 0) and (size <= High(integer)) then
+    fVideoHeight := size;
+  if GetDoubleProperty('duration', duration) and not IsNan(duration) and
+     not IsInfinite(duration) and (duration >= 0) then
+    fDuration := duration;
+  decoder := GetStringProperty('hwdec-current');
+  if (decoder <> '') and (decoder <> fHardwareDecoder) then
+  begin
+    fHardwareDecoder := decoder;
+    fLoggedDecoder := false;
+  end;
+end;
+
 function TVideo_MPV.Observe(Id: QWord; const Name: AnsiString; Format: cint): boolean;
 var
   code: cint;
@@ -268,9 +379,12 @@ begin
   { Do not inherit mpv.conf, scripts, audio, subtitles or input bindings. USDX
     owns those features, and its audio clock remains the playback master.
     Bilinear chroma upsampling avoids black paused startup
-    frames seen with mpv's default multipass chroma scaler on Mesa. }
+    frames seen with mpv's default multipass chroma scaler on Mesa.
+    Every file opens with software decoding; the hardware decoder is selected
+    after the first frame, so a decoder probe never blocks the open. }
   if not (SetOption('config', 'no') and
           SetOption('terminal', 'no') and
+          SetOption('idle', 'yes') and
           SetOption('vo', 'libmpv') and
           SetOption('cscale', 'bilinear') and
           SetOption('audio', 'no') and
@@ -285,7 +399,7 @@ begin
           SetOption('keep-open', 'yes') and
           SetOption('keep-open-pause', 'no') and
           SetOption('video-timing-offset', '0') and
-          SetOption('hwdec', AnsiString(Ini.VideoHardwareDecoding))) then
+          SetOption('hwdec', 'no')) then
     Exit;
 
   code := mpv_initialize(fHandle);
@@ -375,6 +489,118 @@ begin
   end;
   mpv_render_context_set_update_callback(fContext, MpvUpdate, @fUpdatePending);
   Result := true;
+end;
+
+function TVideo_MPV.AdoptParkedPlayer(): boolean;
+begin
+  Result := parkedHandle <> nil;
+  if not Result then
+    Exit;
+  fHandle := parkedHandle;
+  fContext := parkedContext;
+  fTarget := parkedTarget;
+  parkedHandle := nil;
+  parkedContext := nil;
+  parkedTarget := nil;
+  { The parked player kept its LoadMpv reference. }
+  fLibraryLoaded := true;
+  mpv_render_context_set_update_callback(fContext, MpvUpdate, @fUpdatePending);
+  fUpdatePending := 1;
+  Log.LogInfo('Reusing libmpv player', 'TVideo_MPV');
+end;
+
+function TVideo_MPV.ParkPlayer(): boolean;
+var
+  event: Pmpv_event;
+  deadline: double;
+begin
+  Result := false;
+  if (parkedHandle <> nil) or fFailed or not fOpened or
+     (fHandle = nil) or (fContext = nil) or (fTarget = nil) then
+    Exit;
+  mpv_render_context_set_update_callback(fContext, nil, nil);
+  if not (CommandSync(['stop']) and
+          CommandSync(['set', 'pause', 'yes']) and
+          CommandSync(['set', 'speed', '1']) and
+          CommandSync(['set', 'loop-file', 'no']) and
+          CommandSync(['set', 'hwdec', 'no'])) then
+    Exit;
+  { stop unloads the file asynchronously. Its END_FILE must not reach the
+    next video, which would read it as a failed load. }
+  deadline := MonotonicTime + parkTimeout;
+  repeat
+    event := mpv_wait_event(fHandle, 0.05);
+    if event^.event_id = MPV_EVENT_END_FILE then
+      Break;
+  until MonotonicTime >= deadline;
+  if event^.event_id <> MPV_EVENT_END_FILE then
+    Exit;
+  repeat
+    event := mpv_wait_event(fHandle, 0);
+  until event^.event_id = MPV_EVENT_NONE;
+  parkedHandle := fHandle;
+  parkedContext := fContext;
+  parkedTarget := fTarget;
+  fHandle := nil;
+  fContext := nil;
+  fTarget := nil;
+  fFrameTex := nil;
+  fLibraryLoaded := false;
+  Result := true;
+end;
+
+procedure TVideo_MPV.RequestHardwareDecoding;
+var
+  wanted: AnsiString;
+  value: PAnsiChar;
+  index: integer;
+  code: cint;
+begin
+  if fDecoderSwitchSent or (Ini.VideoHardwareDecoding = 'no') then
+    Exit;
+  fDecoderSwitchSent := true;
+  fCodec := GetStringProperty('video-codec');
+  index := rememberedDecoders.IndexOfName(fCodec);
+  if index >= 0 then
+  begin
+    wanted := AnsiString(rememberedDecoders.ValueFromIndex[index]);
+    fDecoderProbed := true;
+    Log.LogInfo('Using remembered decoder ' + wanted + ' for ' + fCodec, 'TVideo_MPV');
+    if wanted = 'no' then
+      Exit;
+  end
+  else
+  begin
+    wanted := AnsiString(Ini.VideoHardwareDecoding);
+    Log.LogInfo('Probing hardware decoding for ' + fCodec, 'TVideo_MPV');
+  end;
+  value := PAnsiChar(wanted);
+  code := mpv_set_property_async(fHandle, requestHwdec, 'hwdec', MPV_FORMAT_STRING, @value);
+  if code < 0 then
+  begin
+    fDecoderProbed := true;
+    Log.LogWarn('Cannot request hardware decoding: ' + MpvError(code), 'TVideo_MPV');
+  end;
+end;
+
+{ The decoder switch ends with a refresh seek; its PLAYBACK_RESTART means the
+  new decoder produced a frame. Observed hwdec-current may still be queued
+  behind that event, so the final value is read directly. }
+procedure TVideo_MPV.RememberDecoder;
+var
+  decoder: string;
+begin
+  fDecoderProbed := true;
+  decoder := GetStringProperty('hwdec-current');
+  if decoder = '' then
+    decoder := 'no';
+  if decoder <> fHardwareDecoder then
+  begin
+    fHardwareDecoder := decoder;
+    fLoggedDecoder := false;
+  end;
+  if fCodec <> '' then
+    rememberedDecoders.Values[fCodec] := decoder;
 end;
 
 function TVideo_MPV.EnsureTarget(): boolean;
@@ -499,6 +725,8 @@ begin
         fRenderPending := true;
         if fSeekNotified then
           fSeeking := false;
+        if fDecoderSwitchReplied and not fDecoderProbed then
+          RememberDecoder;
       end;
       MPV_EVENT_COMMAND_REPLY:
       begin
@@ -515,7 +743,18 @@ begin
       end;
       MPV_EVENT_SET_PROPERTY_REPLY:
       begin
-        if event^.error < 0 then
+        if event^.reply_userdata = requestHwdec then
+        begin
+          { Software decoding continues when the request is refused. }
+          if event^.error < 0 then
+          begin
+            fDecoderProbed := true;
+            Log.LogWarn('Hardware decoding refused: ' + MpvError(event^.error), 'TVideo_MPV');
+          end
+          else
+            fDecoderSwitchReplied := true;
+        end
+        else if event^.error < 0 then
           Fail('libmpv playback control failed: ' + MpvError(event^.error));
         case event^.reply_userdata of
           requestPause:
@@ -680,12 +919,15 @@ begin
   Close;
   ResetPresentation;
   Result := false;
-  fLibraryLoaded := LoadMpv();
-  if not fLibraryLoaded then
-    Exit;
+  if not AdoptParkedPlayer() then
+  begin
+    fLibraryLoaded := LoadMpv();
+    if not fLibraryLoaded then
+      Exit;
+  end;
 
   try
-    if not CreatePlayer() or not CreateContext() then
+    if (fHandle = nil) and (not CreatePlayer() or not CreateContext()) then
       Exit;
     filenameUTF8 := FileName.GetAbsolutePath().ToUTF8();
     if not Command(requestLoad, ['loadfile', filenameUTF8, 'replace']) then
@@ -694,6 +936,8 @@ begin
     deadline := MonotonicTime + openTimeout;
     repeat
       PumpEvents;
+      if fFileLoaded and fPlaybackStarted and not fInitialRead then
+        ReadInitialProperties;
       RenderFrame;
       if fFailed then
         Exit;
@@ -702,11 +946,13 @@ begin
         fOpened := true;
         Log.LogInfo('Using libmpv video (' + IntToStr(fVideoWidth) + 'x' +
           IntToStr(fVideoHeight) + ') for ' + FileName.ToUTF8(), 'TVideo_MPV');
+        RequestHardwareDecoding;
         Exit(true);
       end;
       SDL_Delay(1);
     until MonotonicTime >= deadline;
-    Fail('Timed out opening video with libmpv');
+    Fail(Format('Timed out opening video with libmpv (loaded %s, started %s, %dx%d)',
+      [BoolToStr(fFileLoaded, true), BoolToStr(fPlaybackStarted, true), fVideoWidth, fVideoHeight]));
   finally
     if not fOpened then
       Close;
@@ -715,6 +961,7 @@ end;
 
 procedure TVideo_MPV.Close;
 begin
+  ParkPlayer;
   if fContext <> nil then
   begin
     mpv_render_context_set_update_callback(fContext, nil, nil);
@@ -755,6 +1002,11 @@ begin
   fEndReached := false;
   fHardwareDecoder := '';
   fLoggedDecoder := false;
+  fCodec := '';
+  fDecoderSwitchSent := false;
+  fDecoderSwitchReplied := false;
+  fDecoderProbed := false;
+  fInitialRead := false;
   fDesiredPause := true;
   fAppliedPause := true;
   fPausePending := false;
@@ -863,6 +1115,10 @@ begin
 end;
 
 initialization
+  rememberedDecoders := TStringList.Create;
   MediaManager.Insert(0, TVideoPlayback_MPV.Create);
+
+finalization
+  rememberedDecoders.Free;
 
 end.
