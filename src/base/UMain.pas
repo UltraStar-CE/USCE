@@ -641,7 +641,7 @@ begin
           Result := PlaylistItemIndex >= 0;
           if Result then
           begin
-            PlaylistMan.DelItem(PlaylistItemIndex, ArgsIndex);
+            PlaylistMan.DelItem(PlaylistItemIndex, ArgsIndex, true);
             ScreenSong.SendRemoteSongSelectState(true);
           end;
         end;
