@@ -1,6 +1,6 @@
 program relay_protocol_test;
 {$MODE Delphi}{$H+}{$ASSERTIONS ON}
-uses SysUtils, fpjson, jsonparser, URemoteRelayProtocol;
+uses Classes, SysUtils, base64, fpjson, jsonparser, URemoteRelayProtocol;
 type
   TProbe = class
     Sent, Received: TJSONArray;
@@ -26,6 +26,7 @@ var Adapter: TRemoteRelayProtocol;
     Probe: TProbe;
     Data: TJSONData;
     I, Before: integer;
+    MediaPath: string; FileStream: TFileStream; Payload: RawByteString; Snapshot: TJSONObject;
 
 procedure Relay(const Text: string);
 begin
@@ -107,6 +108,28 @@ begin
     Relay('{"type":"song.state.request"}');
     for I := 0 to Probe.Sent.Count - 1 do
       Assert(TJSONObject(Probe.Sent.Items[I]).Get('protocol', 0) = 1);
+    MediaPath := GetTempFileName;
+    try
+      FileStream := TFileStream.Create(MediaPath, fmCreate);
+      Payload := 'abcdefghij';
+      try FileStream.WriteBuffer(Payload[1], Length(Payload)); finally FileStream.Free; end;
+      Snapshot := TJSONObject.Create(['type', 'song.select.state']);
+      Snapshot.Add('library', TJSONArray.Create);
+      Snapshot.Arrays['library'].Add(TJSONObject.Create(['songId', 7, 'audioPath', MediaPath]));
+      try Assert(Adapter.FromGame(Snapshot)); finally Snapshot.Free; end;
+      Relay('{"type":"song.preview.request","requestId":"media","songId":7,"purpose":"song-preview","rangeStart":2,"rangeEnd":5}');
+      Adapter.TickMedia;
+      Assert(TJSONObject(Probe.Sent.Items[Probe.Sent.Count-1]).Get('statusCode', 0) = 206);
+      Adapter.TickMedia;
+      Assert(DecodeStringBase64(TJSONObject(Probe.Sent.Items[Probe.Sent.Count-1]).Get('data', '')) = 'cdef');
+      Adapter.TickMedia;
+      Assert(TJSONObject(Probe.Sent.Items[Probe.Sent.Count-1]).Get('type', '') = 'song.preview.end');
+      Relay('{"type":"song.preview.request","requestId":"cancelled","songId":7,"purpose":"song-preview"}');
+      Relay('{"type":"song.preview.cancel","requestId":"cancelled"}');
+      Before := Probe.Sent.Count;
+      Adapter.TickMedia;
+      Assert(Probe.Sent.Count = Before, 'Cancelled media must not emit another message');
+    finally DeleteFile(MediaPath); end;
     Relay('{"type":"bridge.disconnected"}');
     Before := Probe.Sent.Count;
     Game('{"type":"game.state","state":"results","songSeq":1}');

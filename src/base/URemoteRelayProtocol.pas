@@ -6,7 +6,7 @@ unit URemoteRelayProtocol;
 
 interface
 
-uses SysUtils, fpjson, URemoteSongSnapshot, URemoteMediaSources;
+uses Classes, SysUtils, fpjson, URemoteSongSnapshot, URemoteMediaSources, URemoteMediaTransfer;
 
 type
   TRelayProtocolEvent = procedure(Message: TJSONObject) of object;
@@ -17,11 +17,14 @@ type
     FPlayers, FCache: TJSONObject;
     FSongs: TRemoteSongSnapshot;
     FMediaSources: TRemoteMediaSources;
+    FTransfers: TStringList;
     FRoomId: string;
     FOnGame: TRelayProtocolEvent;
     FOnSend: TRelayProtocolSend;
     FClock: TRelayClock;
     FReady: boolean;
+    procedure MediaRequest(Message: TJSONObject);
+    procedure CancelMedia(const Id: string);
     function NowUs: int64;
     function Send(Message: TJSONObject): boolean;
     procedure Deliver(Message: TJSONObject);
@@ -32,6 +35,7 @@ type
   public
     constructor Create;
     destructor Destroy; override;
+    procedure TickMedia;
     procedure FromRelay(Message: TJSONObject);
     function FromGame(Message: TJSONObject): boolean;
     property MediaSources: TRemoteMediaSources read FMediaSources;
@@ -80,12 +84,15 @@ begin
   inherited;
   FSongs := TRemoteSongSnapshot.Create;
   FMediaSources := TRemoteMediaSources.Create;
+  FTransfers := TStringList.Create;
   FPlayers := TJSONObject.Create;
   FCache := TJSONObject.Create;
 end;
 
 destructor TRemoteRelayProtocol.Destroy;
 begin
+  while FTransfers.Count > 0 do CancelMedia(FTransfers[0]);
+  FTransfers.Free;
   FMediaSources.Free;
   FSongs.Free;
   FPlayers.Free;
@@ -193,6 +200,62 @@ begin
   if Notify then Deliver(Profile);
 end;
 
+procedure TRemoteRelayProtocol.CancelMedia(const Id: string);
+var I: integer;
+begin
+ I := FTransfers.IndexOf(Id);
+ if I < 0 then Exit;
+ FTransfers.Objects[I].Free; FTransfers.Delete(I);
+end;
+procedure TRemoteRelayProtocol.MediaRequest(Message: TJSONObject);
+var Id, Path, Mime, Ext: string; First, Last: int64; Value: TJSONData;
+    Transfer: TRemoteMediaTransfer; Error: TJSONObject;
+begin
+ Id := Message.Get('requestId', '');
+ if (Id = '') or (Length(Id) > 200) then Exit;
+ CancelMedia(Id);
+ try
+  if FTransfers.Count >= 4 then raise Exception.Create('too_many_active_previews');
+  Path := FMediaSources.Resolve(Message.Get('songId', -1), Message.Get('purpose', 'song-preview'));
+  if Path = '' then raise Exception.Create('media_unavailable');
+  Ext := LowerCase(ExtractFileExt(Path));
+  Mime := 'application/octet-stream';
+  if Ext = '.wav' then Mime := 'audio/wav'
+  else if Ext = '.mp3' then Mime := 'audio/mpeg'
+  else if Ext = '.ogg' then Mime := 'audio/ogg'
+  else if Ext = '.flac' then Mime := 'audio/flac'
+  else if Ext = '.m4a' then Mime := 'audio/mp4'
+  else if Ext = '.png' then Mime := 'image/png'
+  else if (Ext = '.jpg') or (Ext = '.jpeg') then Mime := 'image/jpeg';
+  First := 0; Last := -1;
+  Value := Message.Find('rangeStart');
+  if (Value <> nil) and (Value.JSONType = jtNumber) then First := Value.AsInt64;
+  Value := Message.Find('rangeEnd');
+  if (Value <> nil) and (Value.JSONType = jtNumber) then Last := Value.AsInt64;
+  Transfer := TRemoteMediaTransfer.Create(Id, Path, Mime, First, Last);
+  FTransfers.AddObject(Id, Transfer);
+ except
+  // Do not expose local filenames from filesystem exception messages.
+  Error := TJSONObject.Create(['type', 'song.preview.error', 'requestId', Id, 'reason', 'media_unavailable']);
+  try Send(Error); finally Error.Free; end;
+ end;
+end;
+procedure TRemoteRelayProtocol.TickMedia;
+var Transfer: TRemoteMediaTransfer; Id: string; Error: TJSONObject;
+begin
+ if not FReady or (FTransfers.Count = 0) then Exit;
+ Id := FTransfers[0]; Transfer := TRemoteMediaTransfer(FTransfers.Objects[0]);
+ try
+  if Send(Transfer.Peek) then Transfer.Accepted;
+  if Transfer.Done then CancelMedia(Id)
+  else FTransfers.Move(0, FTransfers.Count - 1);
+ except
+  CancelMedia(Id);
+  Error := TJSONObject.Create(['type', 'song.preview.error', 'requestId', Id, 'reason', 'media_read_failed']);
+  try Send(Error); finally Error.Free; end;
+ end;
+end;
+
 procedure TRemoteRelayProtocol.FromRelay(Message: TJSONObject);
 var Kind, Id: string;
     Reply: TJSONObject;
@@ -217,9 +280,12 @@ begin
     Replay;
     Exit;
   end;
+  if Kind = 'song.preview.request' then begin MediaRequest(Message); Exit; end;
+  if Kind = 'song.preview.cancel' then begin CancelMedia(Message.Get('requestId', '')); Exit; end;
   if Kind = 'bridge.disconnected' then
   begin
     FReady := false;
+    while FTransfers.Count > 0 do CancelMedia(FTransfers[0]);
     Deliver(Message);
     Exit;
   end;

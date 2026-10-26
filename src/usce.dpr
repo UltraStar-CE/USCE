@@ -176,6 +176,7 @@ uses
   URemoteSongSnapshot in 'base\URemoteSongSnapshot.pas',
   URemoteMediaSources in 'base\URemoteMediaSources.pas',
   URemoteMediaStream in 'base\URemoteMediaStream.pas',
+  URemoteMediaTransfer in 'base\URemoteMediaTransfer.pas',
   URemoteBridgeIPC  in 'base\URemoteBridgeIPC.pas',
   URemoteBridgeProcess in 'base\URemoteBridgeProcess.pas',
   URemoteControl    in 'base\URemoteControl.pas',

@@ -978,6 +978,7 @@ begin
     begin
       FNativeRelay.Tick;
       FlushNativeWrites;
+      FNativeProtocol.TickMedia;
       Sleep(5);
     end;
     Shutdown := TJSONObject.Create(['type', 'host.shutdown', 'reason', 'game_exit']);
