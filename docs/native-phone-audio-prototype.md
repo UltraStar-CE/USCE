@@ -4,7 +4,7 @@ This optional prototype receives microphone PCM inside the USCE process. The
 normal phone web app and signaling use the hosted relay. Integrated mode keeps
 the existing local feature bridge for controls, catalog and game state; PCM is
 received in the game. The standalone receiver-only mode needs no local bridge.
-It builds on the unmerged game API branch from PR #89, without merging that PR.
+PR #168 consolidates the game API and native receiver against current main.
 
 ## What is implemented
 
@@ -14,15 +14,18 @@ for WebRTC and secure relay WebSockets. Pascal polls a bounded queue on the game
 thread and submits PCM to `TCaptureBuffer`, using the existing game pitch detector
 and scoring path. Network callbacks do not call game objects.
 
-Player 1 is reserved for the phone while the experiment is enabled. Its physical
-microphone is disconnected from capture without rewriting saved device settings.
-Other local players retain their inputs. Native audio is neither played through
-the speakers nor added to the debug recording buffer.
+Integrated mode has twelve independent native receiver contexts, one per remote
+mic slot. Assignment selects the matching game capture buffer. Local devices
+retain their assignments and remote users cannot claim occupied local slots.
+The game derives its player count from the highest assigned input (including
+local slots through 24); no assigned input means zero players. Native audio is
+neither played through the speakers nor added to the debug recording buffer.
 
 The existing hosted service is `usdx.service` on `ssh g2www`, running Node from
 `/var/www/usdx`. Apache proxies `usdx.at` and `/ws/{host,client}` to port 8080.
-The prototype page is `https://usdx.at/raw-audio-prototype/index.html`.
-It is separate from the existing phone app. `ultrastar.at` routing is not changed.
+Use `https://usdx.at/` for integrated feature tests. The isolated
+`/raw-audio-prototype/index.html` remains a developer tool. `ultrastar.at`
+routing is not changed.
 
 ## Trying the prototype
 
@@ -36,11 +39,12 @@ USCE_AUDIO_DETECTOR=amdf
 USCE_AUDIO_DIAGNOSTICS=1
 ```
 
-Keep `[RemoteBridge] Enabled=Off`; this experiment and the Node bridge must not
-compete for player input. Start the game, read the `PCM` room code in its overlay,
-and open the prototype page on the phone. Enter the code and choose microphone
-or a test tone. Grant microphone access only when testing a real microphone.
-Both devices need internet access. The game can use its ordinary local song library.
+For integrated testing set `[RemoteBridge] Enabled=On`, start the game, and enter
+its room code in the normal phone app. Choose an available mic slot and tap
+Start Mic. The game starts the existing local bridge for controls and game state;
+the native receiver handles PCM. Standalone receiver testing instead uses
+`Enabled=Off` and the isolated prototype page. Both devices need internet access.
+The game uses its ordinary local song library.
 
 `USCE_RAW_AUDIO_RELAY` overrides the host URL (`wss://usdx.at/ws/host`).
 `USCE_RAW_AUDIO_ICE` overrides the ICE server URI. TURN credentials, if used,
@@ -148,9 +152,10 @@ was acknowledged; the server count then stopped while direct audio continued.
 That run reported five sequence gaps and six late/duplicate packets during
 startup/handover. These are recorded limitations, not a claim of seamless routing.
 
-This prototype does not replace the bridge's catalog, controls, party features,
-lyrics, or media streaming. It has one phone slot, no automatic reconnect, no
-QR provisioning, no adaptive jitter/clock-drift correction, and no audio playout.
+This prototype preserves the bridge's catalog, controls, lyrics and media
+streaming. Party matchmaking now queues songs through the game's continuous
+playback controller, which owns transitions and results. There is no adaptive
+jitter/clock-drift correction or microphone audio playout.
 Real microphone tests, cross-NAT/TURN tests, packet-loss tests, alignment with
 song timing, low-voice recordings with explicit consent, and macOS/Linux hardware
 tests remain required before considering it a supported feature.
@@ -161,8 +166,10 @@ A fixed amber triangle with “Via server” stays visible on the prototype phon
 page while direct PCM has no receiver acknowledgment younger than 250 ms.
 An open data channel alone does not hide it. Forced fallback and acknowledgment
 expiry restore it. The normal web app keeps a Direct / Via server corner badge.
-The game screen has no connection warning. Native diagnostics still report
-the actual receiving route for testing.
+The global game overlay shows only the room URL. Player cards have compact
+local, direct Wi-Fi or server Wi-Fi badges on setup, singing and results screens.
+Native diagnostics report the actual receiving route for testing. A confirmed
+TURN candidate pair still counts as a server route.
 
 The capture buffer already holds a rolling history: each callback appends new
 samples and analysis reads the newest selected window when scoring requests it.
@@ -178,18 +185,61 @@ No ring-buffer or scoring-timeline change is included in this prototype update.
 
 ## Integrated normal web app
 
+### Player input badges
+
+Setup, singing and results use a filtered, antialiased badge inside the avatar
+bounds. Unassigned slots display the existing translated "None" label, while
+saved local names stay intact. A remote Mic 2 assignment creates two slots;
+only slot 2 carries the phone's name and Wi-Fi badge.
+
+Themes can define shared defaults in `[InputSourceBadge]` and override them in
+`[NameInputSourceBadge]`, `[SingInputSourceBadge]` and `[ScoreInputSourceBadge]`:
+
+```ini
+[InputSourceBadge]
+Visible=1
+Size=16
+Inset=3
+Corner=TopRight
+Alpha=1
+Red=1
+Green=1
+Blue=1
+ServerRed=1
+ServerGreen=0.77
+ServerBlue=0.2
+```
+
+Size and inset use the theme's layout coordinates and are clamped to fit the
+avatar. Corner accepts TopLeft, TopRight, BottomLeft or BottomRight. Badges follow
+avatar visibility and opacity. Optional `LocalTexture`, `DirectTexture` and
+`ServerTexture` keys name skin textures, replacing the built-in glyphs. Theme
+inheritance applies to these sections like other theme sections.
+
+### Screen-share test audio
+
+The normal phone app offers 65, 220 and 440 Hz synthetic PCM under Settings,
+Advanced microphone and timing. It opens neither microphone capture nor an
+AudioContext, allowing Android screen sharing to remain active. Generated packets
+use the same sender, direct acknowledgment/fallback and native game receiver as
+real capture. The visible TEST AUDIO label stays on while active; Stop audio
+ends generation, and reload resets the choice. Synthetic runs measure transport
+and game processing, excluding hardware capture and the browser audio graph.
+
 For feature testing, enable RemoteBridge in the test configuration and start
 with USCE_RAW_AUDIO=1. The game starts its existing bridge with --native-pcm=true.
-Use normal https://usdx.at, join the shared room, select Mic 1 and Start Mic.
+Use normal https://usdx.at, join the shared room, select an available Mic and Start Mic.
 There is no second room or separate phone UI. Controls, song browsing, playlists,
-lyrics and device playback keep their existing routes. Other slots and older
-games retain browser pitch input. The native channel carries unreliable PCM;
+lyrics and device playback keep their existing routes. All twelve remote slots
+use native PCM when advertised; older games retain browser pitch input. The
+phone shows level and capture status, with no pitch/confidence decisions. Its
+native-rate capture is resampled to the 48 kHz wire format. The native channel carries unreliable PCM;
 room/control/clock messages remain on the existing WebSocket bridge path.
 
 The native C ABI accepts optional bounded external JSON signaling (ipc://),
 and exposes outgoing WebRTC events to the Pascal main loop. The existing JSONL
-bridge forwards authenticated server PCM and signaling. Pascal scores slot 1
-from its capture buffer even when the player profile is remotely assigned.
+bridge forwards authenticated server PCM and signaling. Pascal scores each
+assigned slot from its own capture buffer, including remote player profiles.
 Standalone hosted-room mode remains available for isolated developer tests.
 
 Phone PCM bypasses the global physical-microphone boost. A user's USB +18 dB

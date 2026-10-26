@@ -17,7 +17,8 @@ type
   TPhoneAudio = class
   private
     FLibrary: TLibHandle;
-    FContext: pointer;
+    FContexts: array[0..11] of pointer;
+    FSignalLock: TRTLCriticalSection;
     FError: string;
     FCreate: TPaCreate;
     FDestroy: TPaDestroy;
@@ -28,11 +29,12 @@ type
     FEvent: TPaStatus;
     function GetEnabled: boolean;
   public
+    constructor Create;
     destructor Destroy; override;
     function Start(const Url, Ice: UTF8String; const LibraryPath: string = ''): boolean;
     procedure Stop;
-    function Poll(Samples: pointer; Capacity: integer): integer;
-    function Status: UTF8String;
+    function Poll(Samples: pointer; Capacity: integer; PlayerIndex: integer = 0): integer;
+    function Status(PlayerIndex: integer = 0): UTF8String;
     procedure Signal(const Json: UTF8String);
     property Enabled: boolean read GetEnabled;
     property LastError: string read FError;
@@ -42,7 +44,7 @@ function PhoneAudio: TPhoneAudio;
 
 implementation
 
-uses URemoteBridgeIPC;
+uses URemoteBridgeIPC, fpjson, jsonparser;
 
 var Instance: TPhoneAudio;
 
@@ -54,12 +56,19 @@ end;
 
 function TPhoneAudio.GetEnabled: boolean;
 begin
-  Result := FContext <> nil;
+  Result := FContexts[0] <> nil;
+end;
+
+constructor TPhoneAudio.Create;
+begin
+  inherited;
+  InitCriticalSection(FSignalLock);
 end;
 
 function TPhoneAudio.Start(const Url, Ice: UTF8String; const LibraryPath: string): boolean;
 var Path: string;
     RelayUrl, IceServer: UTF8String;
+    I, Last: integer;
 begin
   Stop;
   FError := '';
@@ -94,39 +103,58 @@ begin
       IceServer := Ice;
       if RelayUrl = '' then RelayUrl := 'wss://usdx.at/ws/host';
       if IceServer = '' then IceServer := 'stun:stun.l.google.com:19302';
-      FContext := FCreate(PAnsiChar(RelayUrl), PAnsiChar(IceServer));
-      if FContext = nil then FError := 'Native phone audio receiver could not start';
+      Last := 0;
+      if RelayUrl = 'ipc://' then Last := High(FContexts);
+      for I := 0 to Last do
+      begin
+        FContexts[I] := FCreate(PAnsiChar(RelayUrl), PAnsiChar(IceServer));
+        if FContexts[I] = nil then
+        begin
+          FError := 'Native phone audio receiver could not start';
+          Stop;
+          Break;
+        end;
+      end;
     end;
   end;
-  Result := FContext <> nil;
+  Result := FContexts[0] <> nil;
   if not Result then Stop;
 end;
 
 procedure TPhoneAudio.Stop;
+var I: integer;
 begin
-  if FContext <> nil then FDestroy(FContext);
-  FContext := nil;
+  EnterCriticalSection(FSignalLock);
+  try
+  for I := Low(FContexts) to High(FContexts) do
+  begin
+    if FContexts[I] <> nil then FDestroy(FContexts[I]);
+    FContexts[I] := nil;
+  end;
   if FLibrary <> NilHandle then UnloadLibrary(FLibrary);
   FLibrary := NilHandle;
+  finally LeaveCriticalSection(FSignalLock); end;
 end;
 
 destructor TPhoneAudio.Destroy;
 begin
   Stop;
+  DoneCriticalSection(FSignalLock);
   inherited;
 end;
 
-function TPhoneAudio.Poll(Samples: pointer; Capacity: integer): integer;
+function TPhoneAudio.Poll(Samples: pointer; Capacity: integer; PlayerIndex: integer): integer;
 var Buffer: array[0..131071] of AnsiChar;
     I, Count: integer;
 begin
   Result := 0;
-  if Enabled then
+  if Enabled and (PlayerIndex >= 0) and (PlayerIndex <= High(FContexts)) and
+    (FContexts[PlayerIndex] <> nil) then
   begin
-    Result := FPoll(FContext, Samples, Capacity);
+    Result := FPoll(FContexts[PlayerIndex], Samples, Capacity);
     for I := 1 to 128 do
     begin
-      Count := FEvent(FContext, @Buffer[0], Length(Buffer));
+      Count := FEvent(FContexts[PlayerIndex], @Buffer[0], Length(Buffer));
       if Count <= 0 then Break;
       RemoteBridgeIPC.SendJsonMessage(string(PAnsiChar(@Buffer[0])));
     end;
@@ -134,15 +162,67 @@ begin
 end;
 
 procedure TPhoneAudio.Signal(const Json: UTF8String);
+var Data: TJSONData; Obj: TJSONObject; Entries: TJSONArray;
+    I, J, Slot, OriginalSlot: integer; Kind, Text: UTF8String;
 begin
-  if Enabled then FSignal(FContext, PAnsiChar(Json));
+  EnterCriticalSection(FSignalLock);
+  try
+  if not Enabled then Exit;
+  Data := nil;
+  try
+    try
+      Data := GetJSON(string(Json));
+      if Data.JSONType <> jtObject then Exit;
+      Obj := TJSONObject(Data);
+      Kind := UTF8String(Obj.Get('type', ''));
+      OriginalSlot := Obj.Get('slot', 0);
+      for I := Low(FContexts) to High(FContexts) do
+      begin
+        if FContexts[I] = nil then Continue;
+        // These fields originate in the authenticated relay's roster, never in PCM.
+        if (Kind = 'audio.pcm') or (Copy(Kind, 1, 4) = 'p2p.') then
+          if OriginalSlot <> I + 1 then Continue;
+        if Obj.IndexOfName('slot') >= 0 then
+        begin
+          Slot := 0;
+          if OriginalSlot = I + 1 then Slot := 1;
+          Obj.Integers['slot'] := Slot;
+        end;
+        if Kind = 'remote.players.snapshot' then
+        begin
+          // Reparse per lane so each snapshot preserves its original slot numbers.
+          Data.Free;
+          Data := nil;
+          Data := GetJSON(string(Json));
+          Obj := TJSONObject(Data);
+          Entries := Obj.Arrays['players'];
+          for J := 0 to Entries.Count - 1 do
+            if Entries.Items[J].JSONType = jtObject then
+            begin
+              Slot := TJSONObject(Entries.Items[J]).Get('slot', 0);
+              if Slot = I + 1 then Slot := 1 else Slot := 0;
+              TJSONObject(Entries.Items[J]).Integers['slot'] := Slot;
+            end;
+        end;
+        Text := UTF8String(Obj.AsJSON);
+        FSignal(FContexts[I], PAnsiChar(Text));
+      end;
+    except
+      // Malformed signaling must not terminate the bridge reader thread.
+    end;
+  finally
+    Data.Free;
+  end;
+  finally LeaveCriticalSection(FSignalLock); end;
 end;
 
-function TPhoneAudio.Status: UTF8String;
+function TPhoneAudio.Status(PlayerIndex: integer): UTF8String;
 var Buffer: array[0..2047] of AnsiChar;
 begin
   Result := '';
-  if Enabled and (FStatus(FContext, @Buffer[0], Length(Buffer)) >= 0) then
+  if Enabled and (PlayerIndex >= 0) and (PlayerIndex <= High(FContexts)) and
+    (FContexts[PlayerIndex] <> nil) and
+    (FStatus(FContexts[PlayerIndex], @Buffer[0], Length(Buffer)) >= 0) then
     Result := PAnsiChar(@Buffer[0]);
 end;
 

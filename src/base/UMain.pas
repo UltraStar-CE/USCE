@@ -442,6 +442,16 @@ begin
   Key := 0;
 
   case Command of
+    rccContinuousStart: Exit(ScreenContinuousPlayback.StartRemoteQueue(ArgsText));
+    rccContinuousQueue: Exit(ScreenContinuousPlayback.ReplaceRemoteQueue(ArgsText));
+    rccContinuousStop, rccContinuousSkip:
+      begin
+        Result := ScreenContinuousPlayback.IsRemoteSession;
+        if Result then
+          if Command = rccContinuousStop then ScreenContinuousPlayback.Stop
+          else ScreenContinuousPlayback.HandlePlaybackKey(SDLK_RIGHT, true);
+        Exit;
+      end;
     rccMenuUp:     Key := SDLK_UP;
     rccMenuDown:   Key := SDLK_DOWN;
     rccMenuLeft:   Key := SDLK_LEFT;
@@ -678,14 +688,28 @@ begin
     Exit;
   end;
 
-  if (Key <> 0) and (not Assigned(Display.NextScreen)) then
+  if Key <> 0 then
   begin
-    Result := Display.ParseInput(Key, 0, true);
+    if Assigned(Display.NextScreen) then Exit(false);
+    if (ScreenPopupError <> nil) and ScreenPopupError.Visible then
+      begin ScreenPopupError.ParseInput(Key, 0, true); Exit(true); end
+    else if (ScreenPopupInfo <> nil) and ScreenPopupInfo.Visible then
+      begin ScreenPopupInfo.ParseInput(Key, 0, true); Exit(true); end
+    else if (ScreenPopupCheck <> nil) and ScreenPopupCheck.Visible then
+      begin ScreenPopupCheck.ParseInput(Key, 0, true); Exit(true); end
+    else if (ScreenPopupInsertUser <> nil) and ScreenPopupInsertUser.Visible then
+      begin ScreenPopupInsertUser.ParseInput(Key, 0, true); Exit(true); end
+    else if (ScreenPopupSendScore <> nil) and ScreenPopupSendScore.Visible then
+      begin ScreenPopupSendScore.ParseInput(Key, 0, true); Exit(true); end
+    else if (ScreenPopupScoreDownload <> nil) and ScreenPopupScoreDownload.Visible then
+      begin ScreenPopupScoreDownload.ParseInput(Key, 0, true); Exit(true); end
+    else if (ScreenPopupHelp <> nil) and ScreenPopupHelp.Visible then
+      begin ScreenPopupHelp.ParseInput(Key, 0, true); Exit(true); end
+    else
+      Result := Display.ParseInput(Key, 0, true);
     if not Result then
       DoQuit;
   end;
-  if (Key <> 0) and Assigned(Display.NextScreen) then
-    Result := false;
 end;
 
 procedure FreeRemoteCommandData(CommandData: PRemoteCommandData);
@@ -864,8 +888,7 @@ begin
       // keyboard/mouse/joystick events
       CheckEvents;
       UpdatePhoneAudio;
-      if Display.CurrentScreen <> @ScreenSing then
-        RemoteBridgeIPC.ApplyPendingPlayerCount;
+      RemoteBridgeIPC.ApplyPendingPlayerCount;
       ProcessRemoteCommandQueue;
 
       // display

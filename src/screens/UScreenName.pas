@@ -71,6 +71,7 @@ type
 
       CountIndex:   integer;
       PlayerCountOffset: integer;
+      FInputCount: integer;
       PlayerIndex:  integer;
       ColorIndex:   integer;
       LevelIndex:   integer;
@@ -143,6 +144,9 @@ uses
 
   UCommon,
   UParty,
+  URecord,
+  URemoteBridgeIPC,
+  UInputSource,
   UGraphic,
   UHelp,
   ULanguage,
@@ -433,7 +437,7 @@ begin
         begin
           StopTextInput;
           LyricsOnly := (PlayerCountOffset = 1) and (SelectedPlayerCount = 0);
-          if not LyricsOnly then Ini.Players := CountIndex - PlayerCountOffset;
+          if not LyricsOnly then Ini.Players := SelectedPlayerCount - 1;
 
           for I := 1 to SelectedPlayerCount do
           begin
@@ -736,6 +740,7 @@ end;
 
 function TScreenName.SelectedPlayerCount: integer;
 begin
+  if not Party.bPartyGame then Exit(AudioInputProcessor.ConfiguredPlayerCount);
   if CountIndex < PlayerCountOffset then Result := 0
   else Result := UIni.IPlayersVals[CountIndex - PlayerCountOffset];
 end;
@@ -778,12 +783,16 @@ begin
   // list players
   for I := 0 to Count -1 do
   begin
-    Text[PlayerCurrentText[I]].Text := PlayerNames[I];
+    if not Party.bPartyGame and (PlayerInputSource(I) = pisNone) then
+      Text[PlayerCurrentText[I]].Text := Language.Translate('SING_OPTIONS_RECORD_NOONE')
+    else
+      Text[PlayerCurrentText[I]].Text := PlayerNames[I];
     SetPlayerAvatar(I);
   end;
 
-  Button[PlayerName].Visible := Count > 0;
-  Button[PlayerName].Selectable := Count > 0;
+  Button[PlayerName].Visible := (Count > 0) and
+    (Party.bPartyGame or (PlayerInputSource(PlayerIndex) <> pisNone));
+  Button[PlayerName].Selectable := Button[PlayerName].Visible;
   Button[PlayerSelect].Visible := Count > 0;
   Button[PlayerSelect].Selectable := false;
   Button[PlayerAvatar].Visible := Count > 0;
@@ -1099,17 +1108,27 @@ var
   AvatarIndex: integer;
   Col:         TRGB;
 begin
-  PlayersPlay := UIni.IPlayersVals[Ini.Players];
+  if Party.bPartyGame then PlayersPlay := UIni.IPlayersVals[Ini.Players]
+  else PlayersPlay := AudioInputProcessor.ConfiguredPlayerCount;
   SetLength(Player, PlayersPlay);
 
   for I := 0 to PlayersPlay - 1 do
   begin
-    Player[I].Name := Ini.Name[I];
+    PlayerNames[I] := Ini.Name[I];
+    PlayerLevel[I] := Ini.PlayerLevel[I];
+    PlayerAvatars[I] := Max(0, GetArrayIndex(AvatarsMD5, Ini.PlayerAvatar[I]));
+    if not Party.bPartyGame and (PlayerInputSource(I) = pisNone) then
+      Player[I].Name := Language.Translate('SING_OPTIONS_RECORD_NOONE')
+    else
+      Player[I].Name := Ini.Name[I];
     Player[I].Level := Ini.PlayerLevel[I];
 
     if not LoadAvatars then
       Continue;
 
+    if Assigned(AvatarPlayerTextures[I+1]) and
+      (AvatarPlayerTextures[I+1] <> NoAvatarTexture[I+1]) then
+      FreeAndNil(AvatarPlayerTextures[I+1]);
     AvatarIndex := GetArrayIndex(AvatarsMD5, Ini.PlayerAvatar[I]);
     if (AvatarIndex > 0) then
     begin
@@ -1126,6 +1145,11 @@ begin
       AvatarPlayerTextures[I+1].ColG := Col.G;
       AvatarPlayerTextures[I+1].ColB := Col.B;
     end;
+  end;
+  if Display.CurrentScreen = @ScreenName then
+  begin
+    RefreshPlayers;
+    RefreshProfile;
   end;
 end;
 
@@ -1144,11 +1168,20 @@ begin
   AudioPlayback.SetVolume(EnsureRange(Ini.PreviewVolume, 0, 100) / 100);
 
   Ini.ReloadNames;
+  RemoteBridgeIPC.ApplyPendingPlayerCount(true);
   PlayerCountOffset := Ord(not Party.bPartyGame);
   SetLength(Counts, Length(IPlayers) + PlayerCountOffset);
   if PlayerCountOffset = 1 then Counts[0] := Language.Translate('CONTINUOUS_ZERO_PLAYERS');
   for I := 0 to High(IPlayers) do Counts[I + PlayerCountOffset] := IPlayers[I];
   CountIndex := Ini.Players + PlayerCountOffset;
+  if not Party.bPartyGame then
+  begin
+    FInputCount := AudioInputProcessor.ConfiguredPlayerCount;
+    SetLength(Counts,1);
+    Counts[0] := IntToStr(FInputCount);
+    CountIndex := 0;
+    LyricsOnly := FInputCount = 0;
+  end;
   if LyricsOnly and (PlayerCountOffset = 1) then CountIndex := 0;
   UpdateSelectSlideOptions(PlayersCount, Counts, CountIndex);
 
@@ -1333,7 +1366,16 @@ var
   dx: real;
   dt: real;
   I: integer;
+  Counts: array of UTF8String;
 begin
+  if not Party.bPartyGame and (FInputCount <> AudioInputProcessor.ConfiguredPlayerCount) then
+  begin
+    FInputCount := AudioInputProcessor.ConfiguredPlayerCount;
+    SetLength(Counts,1); Counts[0] := IntToStr(FInputCount); CountIndex := 0;
+    LyricsOnly := FInputCount = 0;
+    UpdateSelectSlideOptions(PlayersCount,Counts,CountIndex);
+    RefreshPlayers;
+  end;
   //inherited Draw;
   //heres a little Hack, that causes the Statics
   //are Drawn after the Buttons because of some Blending Problems.
@@ -1367,7 +1409,10 @@ begin
   if SelectedPlayerCount > 0 then SetAvatarScroll;
 
   // set current name = name in list
-  Text[PlayerCurrentText[PlayerIndex]].Text := Button[PlayerName].Text[0].Text;
+  if not Party.bPartyGame and (PlayerInputSource(PlayerIndex) = pisNone) then
+    Text[PlayerCurrentText[PlayerIndex]].Text := Language.Translate('SING_OPTIONS_RECORD_NOONE')
+  else
+    Text[PlayerCurrentText[PlayerIndex]].Text := Button[PlayerName].Text[0].Text;
 
   //Instead of Draw FG Procedure:
   //We draw Buttons for our own
@@ -1383,6 +1428,10 @@ begin
     Statics[I].Draw;
 
   // and texts
+  for I := 0 to SelectedPlayerCount - 1 do
+    if Statics[PlayerCurrentAvatar[I]].Visible then
+      with Statics[PlayerCurrentAvatar[I]].Texture do
+        DrawInputSourceBadge(PlayerInputSource(I), X, Y, W, H, ibsSetup, Alpha);
   for I := 0 to High(Text) do
     Text[I].Draw;
 

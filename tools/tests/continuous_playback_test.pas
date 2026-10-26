@@ -27,6 +27,11 @@ begin
     Session.Start([11, 22, 33], 11, true, true, false); Next(11);
     Expect(Session.PreviousSong(Song) and (Song = 33), 'Previous did not wrap repeating selection');
     Session.Start([11, 22, 33], 11, true, false, false); Next(11);
+    Session.ReplaceUpcoming([33, 33, 11, 44]);
+    Expect(Session.Stage = psSong, 'Queue update interrupted the current song');
+    Next(33); Next(44);
+    Expect(not Session.NextSong(Song), 'Queue update retained removed or duplicate songs');
+    Session.Start([11, 22, 33], 11, true, false, false); Next(11);
     Session.RejectCurrentSong; Next(22); Next(33);
     Expect(Session.PreviousSong(Song) and (Song = 22), 'Previous did not find valid entry');
     Expect(Session.PreviousSong(Song) and (Song = 22), 'Previous replayed rejected entry');

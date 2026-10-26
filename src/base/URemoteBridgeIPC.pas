@@ -51,6 +51,8 @@ type
     FRequestedPlayerCount: integer;
     FProfilesDirty: boolean;
     FPlayers: array of TRemoteBridgePlayer;
+    FLastInputState: string;
+    FLastInputTick: QWord;
     procedure ClearRoomStatus;
     procedure SetRoomStatus(Connected: boolean; const DisplayCode: UTF8String);
     procedure ClearPlayers;
@@ -99,6 +101,10 @@ uses
   UIni,
   UAvatars,
   UGraphic,
+  URecord,
+  UDisplay,
+  UInputSource,
+  UParty,
   UNote,
   ssockets,
   sockets
@@ -433,6 +439,9 @@ begin
       if (FPlayers[I].PlayerId = PlayerId) then
       begin
         FPlayers[I].Connected := Connected;
+        FProfilesDirty := true;
+        if not Connected and (FPlayers[I].Slot > 0) then
+          RemoteInputProcessor.ClearPlayerSlot(SlotToPlayerIndex(FPlayers[I].Slot));
         Exit;
       end;
     end;
@@ -903,7 +912,7 @@ begin
   MessageType := JsonGetString(Obj, 'type', '');
   if PhoneAudio.Enabled and ((Pos('p2p.', MessageType) = 1) or
     (Pos('room.', MessageType) = 1) or (Pos('player.', MessageType) = 1) or
-    (MessageType = 'audio.pcm') or (MessageType = 'bridge.ready') or
+    (MessageType = 'audio.pcm') or (MessageType = 'remote.players.snapshot') or (MessageType = 'bridge.ready') or
     (MessageType = 'bridge.disconnected')) then
     PhoneAudio.Signal(UTF8String(Obj.AsJSON));
   if (MessageType = 'bridge.ready') then
@@ -952,8 +961,12 @@ end;
 procedure TRemoteBridgeIPC.ApplyPendingPlayerCount(RefreshProfiles: boolean = false);
 var
   Count, I, Slot, A: integer;
+  Local: TBooleanDynArray;
+  InputState, SourceName: string;
+  Remote: boolean;
   Profiles: array of TRemoteBridgePlayer;
 begin
+  if Assigned(Party) and Party.bPartyGame then Exit;
   EnterCriticalSection(FStatusLock);
   try
     Count := FRequestedPlayerCount;
@@ -985,19 +998,46 @@ begin
     if Slot <= High(Player) then
     begin
       Player[Slot].Name := Ini.Name[Slot];
-      Player[Slot].Level := Ini.PlayerLevel[Slot];
+      if Display.CurrentScreen <> @ScreenSing then Player[Slot].Level := Ini.PlayerLevel[Slot];
     end;
     if Assigned(ScreenSing) then ScreenSing.PlayerNames[Slot + 1] := Ini.Name[Slot];
   end;
-  if (Length(Profiles) > 0) and Assigned(ScreenName) then
-    ScreenName.LoadPlayersFromIni(true);
-  if Count <= 0 then Exit;
-  for I := Low(IPlayersVals) to High(IPlayersVals) do
-    if IPlayersVals[I] >= Count then
+  // The adapter's suggested count cannot account for local microphones.
+  Count := AudioInputProcessor.ConfiguredPlayerCount;
+  if Assigned(ScreenSing) and (Display.CurrentScreen = @ScreenSing) and
+    (Display.NextScreen = nil) then ScreenSing.RefreshInputRoster(Count);
+  if (FLastInputTick = 0) or (GetTickCount64 - FLastInputTick >= 100) then
+  begin
+    FLastInputTick := GetTickCount64;
+    AudioInputProcessor.CheckPlayersConfig(IMaxPlayerCount, Local);
+    InputState := '{"type":"input.state","playerCount":' + IntToStr(Count) + ',"inputs":[';
+    Slot := 0;
+    for I := 0 to High(Local) do
     begin
-      Ini.Players := I;
-      Exit;
+      Remote := RemoteInputProcessor.HasAssignedPlayer(I);
+      if not Local[I] and not Remote then Continue;
+      if Slot > 0 then InputState := InputState + ',';
+      Inc(Slot);
+      case PlayerInputSource(I) of
+        pisLocal: SourceName := 'local';
+        pisDirect: SourceName := 'direct';
+        else SourceName := 'server';
+      end;
+      InputState := InputState + '{"slot":' + IntToStr(I+1) + ',"local":' + LowerCase(BoolToStr(Local[I],true)) +
+        ',"source":"' + SourceName + '","name":"' + JsonEscape(Ini.Name[I]) + '"}';
     end;
+    InputState := InputState + ']}';
+    if InputState <> FLastInputState then
+    begin
+      SendJsonMessage(InputState);
+      FLastInputState := InputState;
+    end;
+  end;
+  if Count > 0 then Ini.Players := Count - 1;
+  if Assigned(ScreenName) and
+    ((Display.CurrentScreen = @ScreenName) or (Display.CurrentScreen = @ScreenSong)) and
+    ((Length(Profiles) > 0) or (PlayersPlay <> Count)) then
+    ScreenName.LoadPlayersFromIni(true);
 end;
 
 procedure TRemoteBridgeIPCThread.HandlePlayersSnapshot(Obj: TJSONObject);

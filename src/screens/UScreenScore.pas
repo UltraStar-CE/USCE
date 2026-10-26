@@ -222,6 +222,7 @@ uses
   UPlayerLayout,
   UPathUtils,
   URemoteBridgeIPC,
+  UInputSource,
   UScreenPopup,
   UScreenSong,
   USkins,
@@ -1116,6 +1117,7 @@ var
   P: integer;  // player
   I: integer;
   V: array[1..UIni.IMaxPlayerCount] of boolean; // visibility array
+  EntriesJson: string;
 begin
   AudioPlayback.SetVolume(EnsureRange(Ini.PreviewVolume, 0, 100) / 100);
   if not Help.SetHelpID(ID) then
@@ -1198,6 +1200,18 @@ begin
     StartVoice;
   end;
 
+  EntriesJson := '[';
+  for P := 0 to PlayersPlay - 1 do
+  begin
+    if P > 0 then EntriesJson := EntriesJson + ',';
+    EntriesJson := EntriesJson + '{"slot":' + IntToStr(P + 1) + ',"name":"' +
+      RemoteJsonEscape(Player[P].Name) + '","score":' + IntToStr(Player[P].ScoreTotalInt) + '}';
+  end;
+  EntriesJson := EntriesJson + ']';
+  RemoteBridgeIPC.SendGameState('results', 0, 0);
+  RemoteBridgeIPC.SendJsonMessage('{"type":"screen.info","protocol":1,"screen":"results"' +
+    ',"title":"' + RemoteJsonEscape(CurrentSong.Title) + '","artist":"' +
+    RemoteJsonEscape(CurrentSong.Artist) + '","entries":' + EntriesJson + '}');
 end;
 
 procedure TScreenScore.ResetScores;
@@ -1228,6 +1242,7 @@ begin
   BarGolden_EaseOut_Step := 1;
 
   BarTime := SDL_GetTicks();
+
 end;
 
 procedure TScreenScore.onShowFinish;
@@ -1328,6 +1343,11 @@ begin
   end;
    //Draw Theme Objects
   DrawFG;
+  for PlayerCounter := 1 to PlayersPlay do
+    if (PlayerPositionMap[PlayerCounter-1].Screen = ScreenAct) and
+      Statics[AvatarStaticRef[PlayerCounter]].Visible then
+      with Statics[AvatarStaticRef[PlayerCounter]].Texture do
+        DrawInputSourceBadge(TPlayerInputSource(Player[PlayerCounter-1].InputSource), X, Y, W, H, ibsScore, Alpha);
   ScreenContinuousPlayback.Update;
   Result := true;
 end;

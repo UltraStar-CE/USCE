@@ -103,6 +103,7 @@ uses
   UHelp,
   ULog,
   UMain,
+  URemoteBridgeIPC,
   UIni,
   UNote,
   UUnicodeUtils;
@@ -495,7 +496,8 @@ begin
     Log.LogWarn('No Entry for Help-ID ' + HighScoresHelpID, 'ScreenHighScores');
 
   IsFadingOut := false;
-  VisibleDifficulty := Player[0].Level;
+  VisibleDifficulty := EnsureRange(Ini.Difficulty, 0, 2);
+  if Length(Player) > 0 then VisibleDifficulty := Player[0].Level;
 
   UpdateEntryLayout;
   UpdateHeaderText;
@@ -505,14 +507,14 @@ begin
 
   // An explicitly timed continuous-mode screen also stays visible when this
   // difficulty has no saved scores yet.
-  if (Length(CurrentSong.Score[Player[0].Level]) = 0) and
+  if (Length(CurrentSong.Score[VisibleDifficulty]) = 0) and
      not ScreenContinuousPlayback.Session.Active then
   begin
     ScreenSong.PreservePreviewForReturn;
     FadeTo(@ScreenSong);
   end;
 
-  ShowScoresForDifficulty(Player[0].Level);
+  ShowScoresForDifficulty(VisibleDifficulty);
 end;
 
 procedure TScreenHighScores.ShowScoresForDifficulty(difficulty: integer);
@@ -520,6 +522,7 @@ var
   I:    integer;
   Track: integer;
   Name: UTF8String;
+  EntriesJson: string;
 begin
   VisibleDifficulty := difficulty;
   LayoutEntryCount := EnsureRange(Length(CurrentSong.Score[difficulty]), 5, EntryCount);
@@ -545,6 +548,21 @@ begin
   end;
 
   Text[TextDifficulty].Text := IDifficultyTranslated[difficulty];
+  EntriesJson := '[';
+  for I := 0 to Min(EntryCount, Length(CurrentSong.Score[difficulty])) - 1 do
+  begin
+    if I > 0 then EntriesJson := EntriesJson + ',';
+    EntriesJson := EntriesJson + '{"name":"' +
+      RemoteJsonEscape(CurrentSong.Score[difficulty, I].Name) + '","score":' +
+      IntToStr(CurrentSong.Score[difficulty, I].Score) + ',"date":"' +
+      RemoteJsonEscape(CurrentSong.Score[difficulty, I].Date) + '"}';
+  end;
+  EntriesJson := EntriesJson + ']';
+  RemoteBridgeIPC.SendGameState('high_scores', 0, 0);
+  RemoteBridgeIPC.SendJsonMessage('{"type":"screen.info","protocol":1,"screen":"high_scores"' +
+    ',"title":"' + RemoteJsonEscape(CurrentSong.Title) + '","artist":"' +
+    RemoteJsonEscape(CurrentSong.Artist) + '","difficulty":"' +
+    RemoteJsonEscape(IDifficultyTranslated[difficulty]) + '","entries":' + EntriesJson + '}');
 end;
 
 function TScreenHighScores.Draw: boolean;

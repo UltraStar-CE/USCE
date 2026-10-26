@@ -188,6 +188,7 @@ type
     procedure ApplySettings; //< applies changes of settings record
     procedure EndSong;
 
+    procedure RefreshInputRoster(NewCount: integer);
     constructor Create; override;
     destructor Destroy; override;
     procedure OnShow; override;
@@ -242,6 +243,7 @@ uses
   URecord,
   URemoteBridgeIPC,
   URemoteInput,
+  UInputSource,
   UParty,
   UPathUtils,
   USong,
@@ -674,6 +676,36 @@ begin
     fCurrentVideo.Position := CurrentSong.VideoGAP + Position;
 end;
 
+procedure TScreenSingController.RefreshInputRoster(NewCount: integer);
+var I, OldCount: integer; Color: TRGB; Levels: array[0..UIni.IMaxPlayerCount-1] of integer;
+begin
+  if (ScreenSong.Mode <> smNormal) or Party.bPartyGame or FadeOut or
+    ScoringTailActive or not ShowFinish then Exit;
+  NewCount := EnsureRange(NewCount,0,UIni.IMaxPlayerCount);
+  OldCount := PlayersPlay;
+  if NewCount = OldCount then Exit;
+  for I := 0 to High(Player) do Levels[I] := Player[I].Level;
+  ScreenName.LoadPlayersFromIni(true);
+  for I := 0 to Min(OldCount,NewCount)-1 do Player[I].Level := Levels[I];
+  for I := OldCount to NewCount-1 do
+  begin
+    Player[I].ResetScores;
+    Player[I].Track := VoiceAssignments.VoiceForPlayer(I,CurrentSong.VoiceCount);
+    Player[I].InputSource := Ord(PlayerInputSource(I));
+  end;
+  Scores.KillAllPopUps;
+  Scores.ClearPlayers;
+  Color.R:=0; Color.G:=0; Color.B:=0;
+  for I:=0 to NewCount-1 do Scores.AddPlayer(Tex_ScoreBG[I],Color,Player[I].ScoreTotalInt);
+  Scores.Init;
+  if (OldCount=0) and (NewCount>0) then AudioInput.CaptureStart;
+  if NewCount=0 then AudioInput.CaptureStop;
+  if ScreenContinuousPlayback.Session.Active then ScreenContinuousPlayback.Session.Scored:=NewCount>0;
+  SendRemoteScoreSnapshot(true);
+  RemoteBridgeIPC.SendGameState('singing',RemoteSongSeq,0);
+  Log.LogStatus(Format('players %d -> %d',[OldCount,NewCount]),'Input roster');
+end;
+
 procedure TScreenSingController.Pause;
 begin
   if (not Paused) then  // enable pause
@@ -792,7 +824,8 @@ begin
   Text[screenSingViewRef.SongNameText].Visible := false;
 
   BadPlayer := 0;
-  if PlayersPlay > 0 then BadPlayer := AudioInputProcessor.CheckPlayersConfig(PlayersPlay);
+  if (PlayersPlay > 0) and ((ScreenSong.Mode <> smNormal) or Party.bPartyGame) then
+    BadPlayer := AudioInputProcessor.CheckPlayersConfig(PlayersPlay);
 
   if (BadPlayer <> 0) and CheckPlayerConfigOnNextSong then
   begin
@@ -1504,7 +1537,9 @@ begin
 end;
 
 procedure TScreenSingController.AnnounceRemoteSongStarted;
+var I: integer;
 begin
+  for I := 0 to High(Player) do Player[I].InputSource := Ord(PlayerInputSource(I));
   Inc(RemoteSongSeq);
   LastRemoteScoreSnapshotTick := 0;
   RemoteBridgeIPC.SendSongStarted(
@@ -1543,7 +1578,13 @@ begin
 end;
 
 procedure TScreenSingController.AnnounceRemoteSongEnded;
+var I: integer; Source: TPlayerInputSource;
 begin
+  for I := 0 to High(Player) do
+  begin
+    Source := PlayerInputSource(I);
+    if Source <> pisNone then Player[I].InputSource := Ord(Source);
+  end;
   if (RemoteSongSeq > 0) then
   begin
     RemoteInputProcessor.AcceptingInput := false;
@@ -1572,7 +1613,10 @@ procedure TScreenSingController.SendRemoteLyrics;
 var
   TrackIndex: integer;
   LineIndex: integer;
+  NoteIndex: integer;
   TracksJson: string;
+  NotesJson: string;
+  Note: PLineFragment;
   LyricText: UTF8String;
 begin
   if (RemoteSongSeq <= 0) or (Length(CurrentSong.Tracks) = 0) then
@@ -1590,10 +1634,22 @@ begin
     else
       LyricText := '';
 
+    NotesJson := '[';
+    if (LineIndex >= 0) and (LineIndex <= CurrentSong.Tracks[TrackIndex].High) then
+      for NoteIndex := 0 to CurrentSong.Tracks[TrackIndex].Lines[LineIndex].HighNote do
+      begin
+        Note := @CurrentSong.Tracks[TrackIndex].Lines[LineIndex].Notes[NoteIndex];
+        if NoteIndex > 0 then NotesJson := NotesJson + ',';
+        NotesJson := NotesJson + '{"text":"' + RemoteJsonEscape(Note.Text) +
+          '","startUs":' + IntToStr(Round(GetTimeFromBeat(Note.StartBeat) * 1000000)) +
+          ',"endUs":' + IntToStr(Round(GetTimeFromBeat(Note.StartBeat + Note.Duration) * 1000000)) + '}';
+      end;
+    NotesJson := NotesJson + ']';
+
     TracksJson := TracksJson +
       '{"track":' + IntToStr(TrackIndex) +
       ',"line":' + IntToStr(LineIndex) +
-      ',"text":"' + RemoteJsonEscape(LyricText) + '"}';
+      ',"text":"' + RemoteJsonEscape(LyricText) + '","notes":' + NotesJson + '}';
   end;
   TracksJson := TracksJson + ']';
 

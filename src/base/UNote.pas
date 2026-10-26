@@ -98,6 +98,7 @@ type
     LengthNote:     integer; // number of notes (= Length(Note)?).
     Note:           array of TPlayerNote;
     SentenceScore:  array of array of real;
+    InputSource: integer;
 
     // Scores
     property Score:       real read _Score write SetScore;
@@ -866,7 +867,7 @@ begin
     begin
 
       IsRemotePlayer := RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) and
-        not (PhoneAudio.Enabled and (PlayerIndex = 0));
+        not PhoneAudio.Enabled;
       PlayerDelayMs := Ini.PlayerDelay[PlayerIndex];
       if IsRemotePlayer then
       begin

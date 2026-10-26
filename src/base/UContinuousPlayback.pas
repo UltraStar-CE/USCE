@@ -31,6 +31,7 @@ type
     ResultSeconds, HighScoreSeconds, Skipped: integer;
     procedure Start(const Selection: TPlaybackSongs; FirstSong: integer;
       InOrder, RepeatSelection, WithPlayers: boolean);
+    procedure ReplaceUpcoming(const Selection: TPlaybackSongs);
     function NextSong(out Song: integer): boolean;
     function PreviousSong(out Song: integer): boolean;
     procedure RejectCurrentSong;
@@ -88,6 +89,28 @@ begin
       Break;
     end;
   if Length(Songs) > 0 then Stage := psAdvance;
+end;
+
+procedure TContinuousPlayback.ReplaceUpcoming(const Selection: TPlaybackSongs);
+var Current, I, J: integer; Duplicate: boolean;
+begin
+  if not Active or (Position < 0) or (Position > High(Songs)) then Exit;
+  Current := Songs[Position];
+  SetLength(Songs, 1);
+  Songs[0] := Current;
+  for I := 0 to High(Selection) do
+  begin
+    Duplicate := false;
+    for J := 0 to High(Songs) do Duplicate := Duplicate or (Songs[J] = Selection[I]);
+    if not Duplicate then
+    begin
+      SetLength(Songs, Length(Songs) + 1);
+      Songs[High(Songs)] := Selection[I];
+    end;
+  end;
+  Position := 0;
+  SetLength(Rejected, 0);
+  SetLength(Rejected, Length(Songs));
 end;
 
 function TContinuousPlayback.NextSong(out Song: integer): boolean;

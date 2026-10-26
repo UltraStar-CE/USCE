@@ -49,7 +49,8 @@ type
     rccPlaylistAddSongs,
     rccPlaylistRemoveSong,
     rccPlaylistMoveItemUp,
-    rccPlaylistMoveItemDown
+    rccPlaylistMoveItemDown,
+    rccContinuousStart, rccContinuousQueue, rccContinuousStop, rccContinuousSkip
   );
 
 function TryParseRemoteControlCommand(const CommandName: UTF8String;
@@ -126,6 +127,10 @@ begin
     Command := rccPlaylistMoveItemUp
   else if (Name = 'playlist.moveitemdown') then
     Command := rccPlaylistMoveItemDown
+  else if Name = 'continuous.start' then Command := rccContinuousStart
+  else if Name = 'continuous.queue' then Command := rccContinuousQueue
+  else if Name = 'continuous.stop' then Command := rccContinuousStop
+  else if Name = 'continuous.skip' then Command := rccContinuousSkip
   else
   begin
     Command := rccUnknown;
@@ -165,6 +170,10 @@ begin
     rccPlaylistRemoveSong: Result := 'playlist.removeSong';
     rccPlaylistMoveItemUp: Result := 'playlist.moveItemUp';
     rccPlaylistMoveItemDown: Result := 'playlist.moveItemDown';
+    rccContinuousStart: Result := 'continuous.start';
+    rccContinuousQueue: Result := 'continuous.queue';
+    rccContinuousStop: Result := 'continuous.stop';
+    rccContinuousSkip: Result := 'continuous.skip';
   else
     Result := '';
   end;

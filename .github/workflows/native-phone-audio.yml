@@ -1,9 +1,16 @@
-name: Native phone audio prototype
+name: Native phone audio
 on:
   pull_request:
     paths:
       - 'native/phone-audio/**'
-      - 'game/webs/raw-audio/**'
+      - 'game/webs/**'
+      - 'src/base/UPhoneAudio.pas'
+      - 'src/base/URecord.pas'
+      - 'src/base/URemote*.pas'
+      - 'src/base/UContinuousPlayback.pas'
+      - 'src/screens/UScreenContinuousPlayback.pas'
+      - 'tools/tests/phone_audio*'
+      - 'tools/tests/party_session.test.mjs'
       - '.github/workflows/native-phone-audio.yml'
   workflow_dispatch:
 permissions:
@@ -56,4 +63,4 @@ jobs:
           cmake --build build/phone-audio --parallel 3
           ctest --test-dir build/phone-audio --output-on-failure
       - name: Browser packet tests
-        run: node --test tools/tests/phone_audio_worklet.test.cjs tools/tests/phone_audio_bridge.test.cjs
+        run: node --test tools/tests/phone_audio_worklet.test.cjs tools/tests/phone_audio_bridge.test.cjs tools/tests/party_session.test.mjs

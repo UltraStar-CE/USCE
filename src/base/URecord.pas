@@ -205,6 +205,7 @@ type
        * Same as the array version but it does not output a state for each player.
        *}
       function CheckPlayersConfig(PlayerCount: cardinal): integer; overload;
+      function ConfiguredPlayerCount: integer;
 
       {**
        * Handle microphone input
@@ -246,12 +247,13 @@ implementation
 uses
   ULog,
   UPhoneAudio,
+  URemoteInput,
   UNote;
 
 var
   singleton_AudioInputProcessor : TAudioInputProcessor = nil;
-  PhoneInputWasLive: boolean = false;
-  PhoneInputLastSamples: QWord = 0;
+  PhoneInputWasLive: array[0..UIni.IMaxPlayerCount-1] of boolean;
+  PhoneInputLastSamples: array[0..UIni.IMaxPlayerCount-1] of QWord;
   LastAudioDiagnostics: QWord = 0;
 
 procedure LogAudioInputDiagnostics;
@@ -271,27 +273,33 @@ begin
       [I + 1, Capture.AudioFormat.SampleRate, Capture.LastInputBlockMs, WindowMs,
       GetTickCount64 - Capture.LastInputTicks, Capture.LastAnalysisMicroseconds, Capture.ToneString]), 'Audio timing');
   end;
-  if PhoneAudio.Enabled then Log.LogStatus(string(PhoneAudio.Status), 'Native audio timing');
+  if PhoneAudio.Enabled then
+    for I := 0 to Min(11, High(AudioInputProcessor.Sound)) do
+      if RemoteInputProcessor.HasAssignedPlayer(I) then
+        Log.LogStatus('slot=' + IntToStr(I+1) + ' ' + string(PhoneAudio.Status(I)), 'Native audio timing');
 end;
 
 procedure UpdatePhoneAudio;
 var Samples: array[0..9599] of smallint;
-    Count: integer;
+    Count, I: integer;
 begin
   if not PhoneAudio.Enabled then Exit;
-  // Initialize the format even before the phone's first packet arrives.
-  AudioInputProcessor.Sound[0].SubmitPhonePcm(nil, 0);
-  Count := PhoneAudio.Poll(@Samples[0], Length(Samples));
-  if Count > 0 then
+  for I := 0 to High(AudioInputProcessor.Sound) do
   begin
-    AudioInputProcessor.Sound[0].SubmitPhonePcm(@Samples[0], Count);
-    PhoneInputLastSamples := GetTickCount64;
-    PhoneInputWasLive := true;
-  end
-  else if PhoneInputWasLive and (GetTickCount64 - PhoneInputLastSamples > 250) then
-  begin
-    AudioInputProcessor.Sound[0].Clear;
-    PhoneInputWasLive := false;
+    Count := PhoneAudio.Poll(@Samples[0], Length(Samples), I);
+    if RemoteInputProcessor.HasAssignedPlayer(I) or (Count > 0) then
+      AudioInputProcessor.Sound[I].SubmitPhonePcm(nil, 0);
+    if Count > 0 then
+    begin
+      AudioInputProcessor.Sound[I].SubmitPhonePcm(@Samples[0], Count);
+      PhoneInputLastSamples[I] := GetTickCount64;
+      PhoneInputWasLive[I] := true;
+    end
+    else if PhoneInputWasLive[I] and (GetTickCount64 - PhoneInputLastSamples[I] > 250) then
+    begin
+      AudioInputProcessor.Sound[I].Clear;
+      PhoneInputWasLive[I] := false;
+    end;
   end;
 end;
 
@@ -1007,7 +1015,6 @@ begin
   end;
 
   Result := 0;
-  if (PlayerCount > 0) and PhoneAudio.Enabled then PlayerState[0] := true;
   for I := 0 to High(PlayerState) do
   begin
     if (PlayerState[I] = false) then
@@ -1023,6 +1030,15 @@ var
   PlayerState: TBooleanDynArray;
 begin
   Result := CheckPlayersConfig(PlayerCount, PlayerState);
+end;
+
+function TAudioInputProcessor.ConfiguredPlayerCount: integer;
+var Local: TBooleanDynArray; I: integer;
+begin
+  CheckPlayersConfig(UIni.IMaxPlayerCount, Local);
+  Result := 0;
+  for I := 0 to High(Local) do
+    if Local[I] or RemoteInputProcessor.HasAssignedPlayer(I) then Result := I + 1;
 end;
 
 {*
@@ -1071,8 +1087,7 @@ begin
     begin
       CaptureChannel := InputDevice.CaptureChannel[ChannelIndex];
       // check if a capture buffer was assigned, otherwise there is nothing to do
-      if (CaptureChannel <> nil) and not
-        (PhoneAudio.Enabled and (CaptureChannel = Sound[0])) then
+      if CaptureChannel <> nil then
       begin
         // Use pointer arithmetic instead of open-array indexing to avoid range
         // checks on bogus channel layouts reported by some devices.
@@ -1182,8 +1197,7 @@ begin
     for ChannelIndex := 0 to High(DeviceCfg.ChannelToPlayerMap) do
     begin
       Player := DeviceCfg.ChannelToPlayerMap[ChannelIndex] - 1;
-      if (Player < 0) or (Player >= PlayersPlay) or
-        (PhoneAudio.Enabled and (Player = 0)) then
+      if (Player < 0) or (Player >= PlayersPlay) then
       begin
         Device.LinkCaptureBuffer(ChannelIndex, nil);
       end

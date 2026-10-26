@@ -330,7 +330,10 @@ type
 
 implementation
 
+
 uses
+  URecord,
+  UInputSource,
   UAudioPlaybackBase,
   UGraphic,
   UHelp,
@@ -3294,11 +3297,15 @@ begin
     Mode := smNormal;
 
   Ini.ReloadNames;
-  PlayersPlay := UIni.IPlayersVals[Ini.Players];
+  RemoteBridgeIPC.ApplyPendingPlayerCount(true);
+  PlayersPlay := AudioInputProcessor.ConfiguredPlayerCount;
   SetLength(Player, PlayersPlay);
   for I := 0 to PlayersPlay - 1 do
   begin
-    Player[I].Name := Ini.Name[I];
+    if PlayerInputSource(I) = pisNone then
+      Player[I].Name := Language.Translate('SING_OPTIONS_RECORD_NOONE')
+    else
+      Player[I].Name := Ini.Name[I];
     Player[I].Level := Ini.PlayerLevel[I];
   end;
 
@@ -4810,12 +4817,17 @@ begin
   if (not Party.bPartyGame) and (Mode <> smPartyTournament) then
   begin
     Ini.ReloadNames;
-    PlayersPlay := UIni.IPlayersVals[Ini.Players];
+    RemoteBridgeIPC.ApplyPendingPlayerCount(true);
+    PlayersPlay := AudioInputProcessor.ConfiguredPlayerCount;
+    ScreenName.LyricsOnly := PlayersPlay = 0;
     SetLength(Player, PlayersPlay);
 
     for I := 0 to PlayersPlay - 1 do
     begin
-      Player[I].Name := Ini.Name[I];
+      if PlayerInputSource(I) = pisNone then
+        Player[I].Name := Language.Translate('SING_OPTIONS_RECORD_NOONE')
+      else
+        Player[I].Name := Ini.Name[I];
       Player[I].Level := Ini.PlayerLevel[I];
       ScreenSing.PlayerNames[I + 1] := Player[I].Name;
       ScreenSing.PlayerDuetNames[I + 1] := Player[I].Name;
@@ -5059,6 +5071,7 @@ begin
 end;
 
 procedure TScreenSong.SongScore;
+var Difficulty: integer;
   procedure setVisible(elements: array of integer; visible: boolean);
   var
     J: integer;
@@ -5075,7 +5088,8 @@ procedure TScreenSong.SongScore;
     setVisible(elements, true);
   end;
 begin
-
+  Difficulty := EnsureRange(Ini.Difficulty, 0, 2);
+  if Length(Player) > 0 then Difficulty := Player[0].Level;
   if ((Mode <> smNormal) or (Ini.ShowScores = 0) or (CatSongs.Song[Interaction].Edition = '') or ((Ini.ShowScores = 1) and ((Text[TextMaxScore2].Text = '0') and (Text[TextMaxScoreLocal].Text = '0')))) then
   begin
     hide([
@@ -5120,14 +5134,14 @@ begin
   if (High(DLLMan.Websites) >= 0) then
   begin
     Text[TextScore].Text       := UTF8Encode(DLLMan.Websites[Ini.ShowWebScore].Name);
-    Text[TextMaxScore2].Text   := IntToStr(DataBase.ReadMax_Score(CatSongs.Song[Interaction].Artist, CatSongs.Song[Interaction].Title, DllMan.Websites[Ini.ShowWebScore].ID, Player[0].Level));
-    Text[TextMediaScore2].Text := IntToStr(DataBase.ReadMedia_Score(CatSongs.Song[Interaction].Artist, CatSongs.Song[Interaction].Title, DllMan.Websites[Ini.ShowWebScore].ID, Player[0].Level));
-    Text[TextScoreUser].Text   := DataBase.ReadUser_Score(CatSongs.Song[Interaction].Artist, CatSongs.Song[Interaction].Title, DllMan.Websites[Ini.ShowWebScore].ID, Player[0].Level);
+    Text[TextMaxScore2].Text   := IntToStr(DataBase.ReadMax_Score(CatSongs.Song[Interaction].Artist, CatSongs.Song[Interaction].Title, DllMan.Websites[Ini.ShowWebScore].ID, Difficulty));
+    Text[TextMediaScore2].Text := IntToStr(DataBase.ReadMedia_Score(CatSongs.Song[Interaction].Artist, CatSongs.Song[Interaction].Title, DllMan.Websites[Ini.ShowWebScore].ID, Difficulty));
+    Text[TextScoreUser].Text   := DataBase.ReadUser_Score(CatSongs.Song[Interaction].Artist, CatSongs.Song[Interaction].Title, DllMan.Websites[Ini.ShowWebScore].ID, Difficulty);
   end;
 
-  Text[TextMaxScoreLocal].Text   := IntToStr(DataBase.ReadMax_ScoreLocal(CatSongs.Song[Interaction], Player[0].Level));
-  Text[TextMediaScoreLocal].Text := IntToStr(DataBase.ReadMedia_ScoreLocal(CatSongs.Song[Interaction], Player[0].Level));
-  Text[TextScoreUserLocal].Text  := DataBase.ReadUser_ScoreLocal(CatSongs.Song[Interaction], Player[0].Level);
+  Text[TextMaxScoreLocal].Text   := IntToStr(DataBase.ReadMax_ScoreLocal(CatSongs.Song[Interaction], Difficulty));
+  Text[TextMediaScoreLocal].Text := IntToStr(DataBase.ReadMedia_ScoreLocal(CatSongs.Song[Interaction], Difficulty));
+  Text[TextScoreUserLocal].Text  := DataBase.ReadUser_ScoreLocal(CatSongs.Song[Interaction], Difficulty);
 
 end;
 

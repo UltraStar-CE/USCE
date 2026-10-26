@@ -12,6 +12,7 @@ type
   private
     SingingSlide, ActiveProfile: integer;
     ResultsOnly: boolean;
+    RemoteOwned: boolean;
     RepeatSelection, ResultTime, HighScoreTime: integer;
     PreviousRequested: boolean;
     StageChanged, SkipResults: boolean;
@@ -29,6 +30,9 @@ type
     SongDisplay, SingingDisplay: integer;
     Session: TContinuousPlayback;
     procedure BeginSession;
+    function StartRemoteQueue(const SongIds: UTF8String): boolean;
+    function ReplaceRemoteQueue(const SongIds: UTF8String): boolean;
+    function IsRemoteSession: boolean;
     function BeginNormalResults: boolean;
     constructor Create; override;
     destructor Destroy; override;
@@ -42,13 +46,14 @@ type
     procedure SongFinished;
     procedure SongFailed;
     procedure Update;
-    procedure Stop;
+    procedure Stop(const Reason: UTF8String = 'manual');
   end;
 
 implementation
 
-uses SysUtils, UNote, UGraphic, ULanguage, UHelp, ULog, UMusic, UPlaylist,
-  USongs, USong, UIni, ULyrics, UDisplay;
+uses SysUtils, Classes, UNote, UGraphic, ULanguage, UHelp, ULog, UMusic, UPlaylist,
+  USongs, USong, UIni, UThemes, ULyrics, UDisplay, URecord, URemoteBridgeIPC,
+  UScreenScore, UScreenSingController;
 
 const
   DisplaySeconds: array[0..8] of integer = (-1, 0, 5, 10, 20, 30, 40, 50, 60);
@@ -192,6 +197,7 @@ end;
 procedure TScreenContinuousPlayback.BeginSession;
 var Selection: TPlaybackSongs; I, SongIndex: integer; Ordered: boolean;
 begin
+  RemoteOwned := false;
   ResultsOnly := false;
   SyncProfile;
   Ordered := (CatSongs.CatNumShow = -3) and (PlaylistMan.CurPlaylist >= 0) and
@@ -227,6 +233,53 @@ begin
   Advance;
 end;
 
+function RemoteSelection(const SongIds: UTF8String): TPlaybackSongs;
+var Parts: TStringList; I, Id: integer;
+begin
+  Result := nil;
+  Parts := TStringList.Create;
+  try
+    Parts.StrictDelimiter := true; Parts.Delimiter := ','; Parts.DelimitedText := string(SongIds);
+    for I := 0 to Parts.Count - 1 do
+      if TryStrToInt(Parts[I], Id) and (Id >= 0) and (Id < Length(CatSongs.Song)) and
+        CatSongs.Song[Id].Visible and not CatSongs.Song[Id].Main then
+      begin
+        SetLength(Result, Length(Result)+1); Result[High(Result)] := Id;
+      end;
+  finally Parts.Free; end;
+end;
+
+function TScreenContinuousPlayback.IsRemoteSession: boolean;
+begin Result := RemoteOwned and Session.Active; end;
+
+function TScreenContinuousPlayback.StartRemoteQueue(const SongIds: UTF8String): boolean;
+var Selection: TPlaybackSongs;
+begin
+  Result := false;
+  if Session.Active or (Display.CurrentScreen <> @ScreenSong) then Exit;
+  Selection := RemoteSelection(SongIds);
+  if Length(Selection) = 0 then Exit;
+  ScreenName.LoadPlayersFromIni;
+  if not Assigned(ScreenScore) then begin Theme.ThemeScoreLoad; ScreenScore := TScreenScore.Create; end;
+  if not Assigned(ScreenSing) then ScreenSing := TScreenSingController.Create;
+  ScreenSong.StopMusicPreview;
+  ScreenSong.Mode := smNormal;
+  ResultsOnly := false; RemoteOwned := true;
+  Session.ResultSeconds := DisplaySeconds[Ini.PlaybackProfiles[1].ResultTime];
+  Session.HighScoreSeconds := DisplaySeconds[Ini.PlaybackProfiles[1].HighScoreTime];
+  SongDisplay := Ini.PlaybackProfiles[1].SongDisplay;
+  SingingDisplay := Ini.PlaybackProfiles[1].SingingDisplay;
+  Session.Start(Selection, Selection[0], true, false, PlayersPlay > 0);
+  Advance;
+  Result := true;
+end;
+
+function TScreenContinuousPlayback.ReplaceRemoteQueue(const SongIds: UTF8String): boolean;
+begin
+  Result := IsRemoteSession;
+  if Result then Session.ReplaceUpcoming(RemoteSelection(SongIds));
+end;
+
 function TScreenContinuousPlayback.BeginNormalResults: boolean;
 begin
   SyncProfile;
@@ -253,7 +306,7 @@ begin
   else if not Session.NextSong(SongIndex) then
   begin
     Skipped := Session.Skipped;
-    Stop;
+    Stop('exhausted');
     Message := Language.Translate('CONTINUOUS_FINISHED');
     if Skipped > 0 then Message := Message + ' ' +
       Format(Language.Translate('CONTINUOUS_SKIPPED'), [Skipped]);
@@ -276,10 +329,16 @@ begin
   else FadeTo(@ScreenSing);
 end;
 
-procedure TScreenContinuousPlayback.Stop;
+procedure TScreenContinuousPlayback.Stop(const Reason: UTF8String);
 begin
   if not Session.Active then Exit;
   Session.Stop;
+  if RemoteOwned then
+  begin
+    RemoteBridgeIPC.SendJsonMessage('{"type":"continuous.state","active":false,"reason":"' + RemoteJsonEscape(Reason) + '"}');
+    RemoteOwned := false;
+    LoadProfile;
+  end;
   PreviousRequested := false;
   if PlayersPlay > 0 then AudioInput.CaptureStop;
   AudioPlayback.SetSyncSource(nil);

@@ -1084,6 +1084,14 @@ type
   end;
   TThemeSectionlist = array of TThemeSection;
 
+  TInputSourceBadgeTheme = record
+    Visible: boolean;
+    Size, Inset, Alpha: single;
+    Corner: integer; // 0 top-left, 1 top-right, 2 bottom-left, 3 bottom-right
+    Color, ServerColor: TRGB;
+    LocalTexture, DirectTexture, ServerTexture: string;
+  end;
+
   TTheme = class
   private
     ThemeIni:         TMemIniFile;
@@ -1105,6 +1113,7 @@ type
     function ReadFloat(const Sections: TThemeSectionList; const Key: string; DefaultValue: real): real;
     procedure LoadStatMainRecentPeriods;
     procedure LoadSongFilterLayout;
+    procedure LoadInputSourceBadges;
     procedure LoadStatDetailColumn(var Column: TThemeStatDetailColumn; const SectionName: string);
     procedure LoadStatDetailTable(var Table: TThemeStatDetailTable; const SectionName: string);
   public
@@ -1119,6 +1128,7 @@ type
     RemoteRoomText: TThemeText;
     RemoteRoomVisible, RemoteRoomAnchorRight: boolean;
     RemoteRoomAlpha: real;
+    InputSourceBadges: array[0..2] of TInputSourceBadgeTheme; // setup, singing, results
     LyricBar:         TThemeLyricBar;
     LyricBarDuetP1:   TThemeLyricBar;
     LyricBarDuetP2:   TThemeLyricBar;
@@ -2135,6 +2145,7 @@ begin
       RemoteRoomVisible := ReadBool(SectionList, 'Visible', true);
       RemoteRoomAnchorRight := ReadBool(SectionList, 'AnchorRight', true);
       RemoteRoomAlpha := EnsureRange(ReadFloat(SectionList, 'Alpha', 1), 0.0, 1.0);
+      LoadInputSourceBadges;
 
 
       //ThemeLoadStatics(Sing.StaticDuet, 'SingStaticDuet');
@@ -2876,6 +2887,43 @@ destructor TThemeSongJumpTo.Destroy;
 begin
   Footer.Free;
   inherited;
+end;
+
+procedure TTheme.LoadInputSourceBadges;
+var Defaults: TInputSourceBadgeTheme;
+  procedure Load(var Badge: TInputSourceBadgeTheme; const Section: string);
+  var Sections: TThemeSectionList; Corner: string;
+  begin
+    Sections := GetSectionList(Section);
+    Badge.Visible := ReadBool(Sections, 'Visible', Badge.Visible);
+    Badge.Size := EnsureRange(ReadFloat(Sections, 'Size', Badge.Size), 4.0, 48.0);
+    Badge.Inset := EnsureRange(ReadFloat(Sections, 'Inset', Badge.Inset), 0.0, 48.0);
+    Badge.Alpha := EnsureRange(ReadFloat(Sections, 'Alpha', Badge.Alpha), 0.0, 1.0);
+    Corner := LowerCase(ReadString(Sections, 'Corner', ''));
+    if Corner = 'topleft' then Badge.Corner := 0;
+    if Corner = 'topright' then Badge.Corner := 1;
+    if Corner = 'bottomleft' then Badge.Corner := 2;
+    if Corner = 'bottomright' then Badge.Corner := 3;
+    Badge.Color.R := EnsureRange(ReadFloat(Sections, 'Red', Badge.Color.R), 0.0, 1.0);
+    Badge.Color.G := EnsureRange(ReadFloat(Sections, 'Green', Badge.Color.G), 0.0, 1.0);
+    Badge.Color.B := EnsureRange(ReadFloat(Sections, 'Blue', Badge.Color.B), 0.0, 1.0);
+    Badge.ServerColor.R := EnsureRange(ReadFloat(Sections, 'ServerRed', Badge.ServerColor.R), 0.0, 1.0);
+    Badge.ServerColor.G := EnsureRange(ReadFloat(Sections, 'ServerGreen', Badge.ServerColor.G), 0.0, 1.0);
+    Badge.ServerColor.B := EnsureRange(ReadFloat(Sections, 'ServerBlue', Badge.ServerColor.B), 0.0, 1.0);
+    Badge.LocalTexture := ReadString(Sections, 'LocalTexture', Badge.LocalTexture);
+    Badge.DirectTexture := ReadString(Sections, 'DirectTexture', Badge.DirectTexture);
+    Badge.ServerTexture := ReadString(Sections, 'ServerTexture', Badge.ServerTexture);
+  end;
+begin
+  Defaults.Visible := true; Defaults.Size := 16; Defaults.Inset := 3;
+  Defaults.Corner := 1; Defaults.Alpha := 1;
+  Defaults.Color.R := 1; Defaults.Color.G := 1; Defaults.Color.B := 1;
+  Defaults.ServerColor.R := 1; Defaults.ServerColor.G := 0.77; Defaults.ServerColor.B := 0.2;
+  Defaults.LocalTexture := ''; Defaults.DirectTexture := ''; Defaults.ServerTexture := '';
+  Load(Defaults, 'InputSourceBadge');
+  InputSourceBadges[0] := Defaults; Load(InputSourceBadges[0], 'NameInputSourceBadge');
+  InputSourceBadges[1] := Defaults; Load(InputSourceBadges[1], 'SingInputSourceBadge');
+  InputSourceBadges[2] := Defaults; Load(InputSourceBadges[2], 'ScoreInputSourceBadge');
 end;
 
 procedure TTheme.LoadSongFilterLayout;

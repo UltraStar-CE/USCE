@@ -5,6 +5,7 @@ import net from 'node:net';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { PartySession } from './party-session.mjs';
 
 const protocol = 1;
 const gameVersion = 'usdx-dev';
@@ -81,6 +82,8 @@ let seq = 1;
 let songSeq = 0;
 let currentGameState = 'lobby';
 let lastSongClockMessage = null;
+let lastInputState = null;
+let lastScreenInfo = null;
 let songScanStarted = false;
 let songScanPromise = null;
 let songScanGeneration = 0;
@@ -107,6 +110,13 @@ let songScanProgress = {
   roots: []
 };
 const players = new Map();
+let partyGameLibrary = [];
+let partyGamePlaylist = [];
+const party = new PartySession({players:()=>players, library:()=>partyGameLibrary,
+  playlist:()=>partyGamePlaylist, gameState:()=>currentGameState, send,
+  command:message=>sendToIpc({...message,protocol,roomId:room?.roomId})});
+const partyTimer = setInterval(()=>party.tick(),100);
+partyTimer.unref();
 const playerAssignmentFingerprints = new Map();
 const pitchStats = new Map();
 const ipcClients = new Set();
@@ -2409,6 +2419,13 @@ function streamPreviewToServer(msgOrRequestId, songId = null, startSec = 0, purp
 
 function handleIpcMessage(msg) {
   if (!msg || typeof msg.type !== 'string') return;
+  if(msg.type==='input.state') { lastInputState=msg; send(msg); return; }
+  if (msg.type === 'song.select.state') {
+    if (Array.isArray(msg.library) && msg.library.length) { partyGameLibrary=msg.library; party.rosterChanged(); }
+    if (Array.isArray(msg.playlistItems)) { partyGamePlaylist=msg.playlistItems; party.rosterChanged(); }
+  }
+  party.observe(msg);
+  if (msg.type === 'continuous.state') return;
   if (nativePcmEnabled && ['p2p.answer', 'p2p.ice', 'p2p.error'].includes(msg.type)) {
     send(msg);
     return;
@@ -2432,6 +2449,9 @@ function handleIpcMessage(msg) {
   if (msg.type === 'game.state') {
     seq = Math.max(seq, Number(msg.seq || 0) + 1);
     currentGameState = String(msg.state || currentGameState || 'lobby');
+    if (lastScreenInfo?.screen !== currentGameState) lastScreenInfo = null;
+  } else if (msg.type === 'screen.info') {
+    lastScreenInfo = msg;
   } else if (msg.type === 'song.select.state') {
     msg.hostStateUs = receivedHostUs;
   } else if (msg.type === 'song.started' || msg.type === 'song.resumed') {
@@ -2496,6 +2516,7 @@ function handleIpcMessage(msg) {
     'clock.sync.pong',
     'song.state.request',
     'audio.stop',
+    'screen.info',
     'error'
   ]);
   if (!allowed.has(msg.type)) {
@@ -2620,6 +2641,8 @@ function startMockSong() {
 }
 
 async function handleMessage(msg) {
+  if (party.handle(msg)) return;
+  if (String(msg.type).startsWith('player.') || msg.type === 'remote.players.snapshot') party.rosterChanged();
   if (nativePcmEnabled && (msg.type === 'audio.pcm' || String(msg.type).startsWith('p2p.'))) {
     sendToIpc(msg);
     return;
@@ -2650,6 +2673,7 @@ async function handleMessage(msg) {
       closeAllP2pSessions('new_room');
     }
     room = mergeRoomMessage(msg);
+    if(lastInputState) send(lastInputState);
     log('room created', { code: room.displayCode, roomId: room.roomId });
     console.log(`Join at https://usdx.at`);
     console.log(`Code: ${room.displayCode}`);
@@ -2669,11 +2693,13 @@ async function handleMessage(msg) {
     resumeFailureCount = 0;
     room = mergeRoomMessage(msg);
     log('room resumed', { code: room.displayCode, roomId: room.roomId });
+    if(lastInputState) send(lastInputState);
     console.log(`Join at https://usdx.at`);
     console.log(`Code: ${room.displayCode}`);
     sendToIpc({ type: 'room.resumed', roomId: room.roomId, displayCode: room.displayCode, expiresAt: room.expiresAt });
     resetGameStateDedupe();
-    sendGameStateMessage(gameState(songSeq ? 'singing' : 'lobby'));
+    sendGameStateMessage(gameState(currentGameState));
+    if (lastScreenInfo) send(lastScreenInfo);
     scanSongLibrary().catch((error) => {
       sendSongLibraryProgress({ status: 'error', message: error.message });
       log('song scan failed', { error: error.message });
@@ -2863,6 +2889,7 @@ async function handleMessage(msg) {
   }
 
   if (msg.type === 'song.state.request') {
+    if (lastScreenInfo) send(lastScreenInfo);
     if (lastSongClockMessage) send(lastSongClockMessage);
     sendSongLibraryProgress();
     if (!hasIpcClient() && scannedSongState) send(sanitizeSongStateForServer(scannedSongState), { lowPriority: true });
