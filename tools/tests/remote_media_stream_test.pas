@@ -1,9 +1,9 @@
 program remote_media_stream_test;
 {$mode Delphi}{$H+}{$ASSERTIONS ON}
-uses Classes, SysUtils, URemoteMediaStream;
-var Path: string; Output: TFileStream; Reader: TRemoteMediaStream; Data, Chunk: RawByteString; I: integer;
+uses Classes, SysUtils, URemoteMediaStream{$IFDEF MSWINDOWS}, Windows{$ENDIF};
+var Path, UnicodePath: string; Output: TFileStream; Reader: TRemoteMediaStream; Data, Chunk: RawByteString; I: integer;
 begin
- Path := GetTempFileName;
+ Path := SysUtils.GetTempFileName;
  try
   SetLength(Data, 70000);
   for I := 1 to Length(Data) do Data[I] := AnsiChar(I mod 251);
@@ -20,6 +20,20 @@ begin
    Reader := TRemoteMediaStream.Create(Path, 80000);
    Reader.Free; Assert(false);
   except on E: ERangeError do ; end;
- finally DeleteFile(Path); end;
+  UnicodePath := Path + ' - ' + #$C3#$A4 + '.wav';
+  {$IFDEF MSWINDOWS}
+  Assert(CopyFileW(PWideChar(UTF8Decode(Path)), PWideChar(UTF8Decode(UnicodePath)), true));
+  {$ELSE}
+  Output := TFileStream.Create(UnicodePath, fmCreate);
+  try Output.WriteBuffer(Data[1], Length(Data)); finally Output.Free; end;
+  {$ENDIF}
+  try
+   Reader := TRemoteMediaStream.Create(UnicodePath, 0, 9);
+   try Assert(Reader.ReadChunk = Copy(Data, 1, 10)); finally Reader.Free; end;
+  finally
+   {$IFDEF MSWINDOWS}Assert(DeleteFileW(PWideChar(UTF8Decode(UnicodePath))));
+   {$ELSE}Assert(SysUtils.DeleteFile(UnicodePath));{$ENDIF}
+  end;
+ finally SysUtils.DeleteFile(Path); end;
  WriteLn('Bounded media range reads and invalid-range handling passed');
 end.

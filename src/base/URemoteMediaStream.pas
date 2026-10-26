@@ -7,7 +7,8 @@ uses Classes, SysUtils;
 type
  TRemoteMediaStream = class
  private
-  FStream: TFileStream;
+  FStream: THandleStream;
+  FHandle: THandle;
   FRemaining, FStart, FTotal: int64;
  public
   constructor Create(const ResolvedPath: string; RangeStart: int64 = 0; RangeEnd: int64 = -1);
@@ -18,11 +19,21 @@ type
   property Total: int64 read FTotal;
  end;
 implementation
+{$IFDEF MSWINDOWS}uses Windows;{$ENDIF}
 constructor TRemoteMediaStream.Create(const ResolvedPath: string; RangeStart, RangeEnd: int64);
 begin
  inherited Create;
+ FHandle := THandle(-1);
  if (RangeStart < 0) or (RangeEnd < -1) then raise ERangeError.Create('invalid_media_range');
- FStream := TFileStream.Create(ResolvedPath, fmOpenRead or fmShareDenyNone);
+ {$IFDEF MSWINDOWS}
+ FHandle := CreateFileW(PWideChar(UTF8Decode(ResolvedPath)), GENERIC_READ,
+   FILE_SHARE_READ or FILE_SHARE_WRITE or FILE_SHARE_DELETE, nil, OPEN_EXISTING,
+   FILE_ATTRIBUTE_NORMAL, 0);
+ {$ELSE}
+ FHandle := FileOpen(ResolvedPath, fmOpenRead or fmShareDenyNone);
+ {$ENDIF}
+ if FHandle = THandle(-1) then raise EFOpenError.Create('cannot_open_media');
+ FStream := THandleStream.Create(FHandle);
  FTotal := FStream.Size;
  if (RangeStart > FTotal) or ((RangeStart = FTotal) and (FTotal <> 0)) then
   raise ERangeError.Create('invalid_media_range');
@@ -34,7 +45,11 @@ begin
  FStream.Position := RangeStart;
 end;
 destructor TRemoteMediaStream.Destroy;
-begin FStream.Free; inherited; end;
+begin
+ FStream.Free;
+ if FHandle <> THandle(-1) then FileClose(FHandle);
+ inherited;
+end;
 function TRemoteMediaStream.ReadChunk: RawByteString;
 var Amount, Received: integer;
 begin
