@@ -76,9 +76,22 @@ begin
   for I := Offset to Last do Result.Add(FSongs.Items[I].Clone);
 end;
 function TRemoteSongSnapshot.Query(Request: TJSONObject): TJSONObject;
-var Offset, Limit: integer; Expected: string;
+var Offset, Limit: integer; Expected: string; Value: TJSONData;
 begin
   Result := TJSONObject.Create(['snapshotId', FId, 'total', Count]);
+  Value := Request.Find('offset');
+  if (Value <> nil) and ((Value.JSONType <> jtNumber) or
+    (Value.AsFloat < 0) or (Value.AsFloat > MaxInt) or
+    (Frac(Value.AsFloat) <> 0)) then
+  begin Result.Add('error', 'invalid_page'); Exit; end;
+  Value := Request.Find('limit');
+  if (Value <> nil) and ((Value.JSONType <> jtNumber) or
+    (Value.AsFloat < 1) or (Value.AsFloat > 100) or
+    (Frac(Value.AsFloat) <> 0)) then
+  begin Result.Add('error', 'invalid_page'); Exit; end;
+  Value := Request.Find('snapshotId');
+  if (Value <> nil) and (Value.JSONType <> jtString) then
+  begin Result.Add('error', 'invalid_snapshot'); Exit; end;
   Expected := Request.Get('snapshotId', '');
   Offset := Request.Get('offset', 0);
   Limit := Request.Get('limit', 100);

@@ -519,3 +519,32 @@ Recommended codes:
 | `message.unknown_type` | Unknown `type`. |
 | `message.invalid` | Invalid shape. |
 | `command.rejected` | Valid command rejected in current state. |
+
+### Paged song metadata queries
+
+The native adapter accepts `song.list` through the existing `control.command`
+envelope. This is a game capability for any authorized client, independent of
+frontend type. The relay applies its normal command permission policy; an app
+name does not grant access. Forwarding destination policy belongs to the
+connection configuration, not to this song query.
+
+Request example:
+
+```json
+{"type":"control.command","protocol":1,"commandId":42,"command":"song.list","args":{"offset":0,"limit":100}}
+```
+
+The targeted `ack` has `accepted`, `reason` and `data`. Successful `data` contains
+`snapshotId`, `total`, `offset`, `limit` and `songs`. IDs are the game's existing
+song IDs. Metadata excludes local audio, cover, TXT and file paths. The caller
+may pass `snapshotId` on subsequent pages. A changed snapshot returns
+`accepted:false` with `reason:"snapshot_changed"`; restart paging from zero.
+Offsets must be nonnegative integers and limits must be integers from 1 to 100.
+Malformed pagination returns `invalid_page`. A non-string snapshot ID returns
+`invalid_snapshot`.
+
+The snapshot is populated from game song-selection updates. Before the first
+such update it is empty. Existing catalog transfer messages remain a separate
+compatibility protocol; clients must not assume that this command implements
+media transfer, search, votes or playlist mutation. The legacy local adapter
+does not yet implement this command.

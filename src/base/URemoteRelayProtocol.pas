@@ -244,6 +244,28 @@ begin
     if (Data <> nil) and (Data.JSONType = jtObject) then
       TJSONObject(Data).Booleans['connected'] := false;
   end;
+  if (Kind = 'control.command') and (Message.Get('command', '') = 'song.list') then
+  begin
+    Data := Message.Find('args');
+    Reply := TJSONObject.Create(['type', 'ack',
+      'playerId', Message.Get('playerId', ''),
+      'commandId', Message.Get('commandId', int64(0))]);
+    try
+      if (Data = nil) or (Data.JSONType <> jtObject) then
+      begin
+        Reply.Add('accepted', false);
+        Reply.Add('reason', 'invalid_args');
+      end
+      else
+      begin
+        Reply.Add('data', FSongs.Query(TJSONObject(Data)));
+        Reply.Add('accepted', Reply.Objects['data'].Find('error') = nil);
+        Reply.Add('reason', Reply.Objects['data'].Get('error', ''));
+      end;
+      Send(Reply);
+    finally Reply.Free; end;
+    Exit;
+  end;
   if (Kind = 'control.command') or (Kind = 'settings.update') then
   begin
     Reply := CloneObject(Message);

@@ -74,6 +74,10 @@ begin
     Assert(TJSONObject(Probe.Sent.Items[Probe.Sent.Count-1]).Find('library') = nil);
     Assert(Adapter.Songs.Count = 1, 'Game library must feed generic song snapshot');
     Assert(Adapter.Songs.Id <> '', 'Song snapshot needs a stable content identity');
+    Relay('{"type":"control.command","playerId":"phone","commandId":42,"command":"song.list","args":{"offset":0,"limit":10}}');
+    Assert(TJSONObject(Probe.Sent.Items[Probe.Sent.Count-1]).Get('accepted', false));
+    Assert(TJSONObject(Probe.Sent.Items[Probe.Sent.Count-1]).Objects['data'].Arrays['songs'].Count = 1);
+
     Game('{"type":"song.started","songSeq":1,"mediaStartUs":2000000}');
     Assert(TJSONObject(Probe.Sent.Items[Probe.Sent.Count-1]).Get('hostSongStartUs', int64(0)) = TestClock - 2000000);
     Game('{"type":"song.lyrics","songSeq":1,"lines":[]}');

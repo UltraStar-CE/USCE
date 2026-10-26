@@ -41,6 +41,10 @@ begin
       Request.Integers['limit'] := 101;
       Reply := Snapshot.Query(Request);
       try Assert(Reply.Get('error', '') = 'invalid_page'); finally Reply.Free; end;
+      Request.Delete('offset');
+      Request.Add('offset', 0.5);
+      Reply := Snapshot.Query(Request);
+      try Assert(Reply.Get('error', '') = 'invalid_page'); finally Reply.Free; end;
     finally Request.Free; end;
     Page := Snapshot.Chunk(-1, 100);
     try Assert(Page.Count = 0); finally Page.Free; end;
