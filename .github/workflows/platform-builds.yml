@@ -227,7 +227,7 @@ jobs:
           fi
       - name: Install Homebrew Dependencies
         run: |
-          brew install fpc sdl2-compat sdl2_image automake portaudio lua ffmpeg opencv
+          brew install fpc sdl2-compat sdl2_image automake portaudio lua ffmpeg opencv cmake ninja openssl@3
       - name: Cache ProjectM
         if: inputs.use-caches
         id: cache-projectm
@@ -250,6 +250,15 @@ jobs:
             -DCMAKE_INSTALL_NAME_DIR=$GITHUB_WORKSPACE/projectm/lib \
             -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON
           cmake --build libprojectM-$PROJECTM_VERSION/build --target install --parallel
+      - name: Stage native phone receiver
+        run: |
+          export OPENSSL_ROOT_DIR="$(brew --prefix openssl@3)"
+          cmake -S native/phone-audio -B build/phone-audio -G Ninja -DCMAKE_BUILD_TYPE=Release -DOPENSSL_USE_STATIC_LIBS=TRUE
+          cmake --build build/phone-audio --parallel 3
+          ctest --test-dir build/phone-audio --output-on-failure
+          license="$OPENSSL_ROOT_DIR/share/doc/openssl@3/LICENSE.txt"
+          test -f "$license"
+          python3 tools/stage-phone-audio.py --platform darwin --openssl-license "$license"
       - name: Generate Build Scripts
         run: ./autogen.sh
       - name: Configure Project
