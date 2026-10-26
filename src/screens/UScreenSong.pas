@@ -3923,6 +3923,8 @@ begin
     PreviewInteraction := Interaction;
     LastPreviewStartTime := SDL_GetTicks;
     PreviewSettledTime := 0;
+    // Hover and direct selection changes have no scrolling completion callback.
+    SelectionSettled := SelectionSettled or not isScrolling;
   end;
 
   if SelectionSettled then
@@ -4027,6 +4029,7 @@ begin
     begin
       fCurrentVideo.Position := Song.VideoGAP + AudioPlayback.Position;
       fCurrentVideo.Play;
+      CoverTime := 0;
     end;
   end;
 end;
