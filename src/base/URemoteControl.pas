@@ -13,7 +13,7 @@ interface
   {$MODE Delphi}
 {$ENDIF}
 
-{$I switches.inc}
+{$H+}
 
 uses
   SysUtils;
