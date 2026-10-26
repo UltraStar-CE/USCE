@@ -25,12 +25,12 @@ int main(int argc, char **argv) {
   config.port = 0;
   config.bindAddress = "127.0.0.1";
   config.maxMessageSize = 1024 * 1024;
-  rtc::WebSocketServer server(config);
+  auto server = std::make_unique<rtc::WebSocketServer>(config);
   std::mutex mutex;
   std::shared_ptr<rtc::WebSocket> peer;
   const bool sessionFixture = argc == 2 && std::string(argv[1]) == "--session-server";
   auto closed = std::make_shared<std::atomic<int>>(0);
-  server.onClient([&](std::shared_ptr<rtc::WebSocket> client) {
+  server->onClient([&](std::shared_ptr<rtc::WebSocket> client) {
     std::weak_ptr<rtc::WebSocket> weak = client;
     client->onClosed([closed] { ++*closed; });
     client->onMessage([weak, sessionFixture](rtc::message_variant message) {
@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
     std::lock_guard<std::mutex> lock(mutex);
     peer = std::move(client);
   });
-  const auto address = "ws://127.0.0.1:" + std::to_string(server.port()) + "/ws/host";
+  const auto address = "ws://127.0.0.1:" + std::to_string(server->port()) + "/ws/host";
   if (argc == 2 && (std::string(argv[1]) == "--echo-server" || sessionFixture)) {
     // A bounded fixture for exercising the actual Pascal DLL binding.
     std::cout << address << std::endl;
@@ -67,7 +67,7 @@ int main(int argc, char **argv) {
       std::lock_guard<std::mutex> lock(mutex);
       if (peer) { peer->resetCallbacks(); peer->close(); peer.reset(); }
     }
-    server.stop();
+    server->stop(); server.reset();
     return 0;
   }
   auto relay = usce_relay_create(address.c_str());
@@ -96,12 +96,14 @@ int main(int argc, char **argv) {
   usce_relay_destroy(relay);
   // Destroying the relay must not tear down the active microphone library.
   assert(usce_pa_status(audio, buffer, sizeof(buffer)) > 0);
-  usce_pa_destroy(audio);
   sender->resetCallbacks(); sender->close(); sender.reset();
   {
     std::lock_guard<std::mutex> lock(mutex);
     peer.reset();
   }
-  server.stop();
+  // Unix symbol interposition can make the executable and DLL share RTC's
+  // global lifetime. Release the fixture before the final native Cleanup wait.
+  server->stop(); server.reset();
+  usce_pa_destroy(audio);
   std::cout << "Relay loopback, UTF-8, short buffers, bounds, overflow and shared audio lifetime passed\n";
 }
