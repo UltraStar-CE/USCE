@@ -23,6 +23,7 @@ test('party waits for matching votes and asks USCE to run a continuous queue',()
   assert.equal(f.party.gameActive,false,'do not pretend the game accepted a start');
   f.party.observe({type:'ack',commandId:f.commands[0].commandId,accepted:true});
   f.party.observe({type:'song.started',songId:1,songSeq:10}); f.advance(0);
+  assert.equal(f.party.currentMatch.likedBy.length,2,'now-playing retains the votes that selected it');
   assert.equal(f.commands.at(-1).command,'continuous.queue');
   assert.deepEqual(f.commands.at(-1).args.songIds,[2]);
 });

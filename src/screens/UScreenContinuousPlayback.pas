@@ -343,6 +343,9 @@ begin
   else if not Session.NextSong(SongIndex) then
   begin
     Skipped := Session.Skipped;
+    // Party reports its empty queue on the phone and can receive new votes.
+    // A modal completion dialog would obstruct the next remote session.
+    if RemoteOwned then begin Stop('exhausted'); Exit; end;
     Stop('exhausted');
     Message := Language.Translate('CONTINUOUS_FINISHED');
     if Skipped > 0 then Message := Message + ' ' +

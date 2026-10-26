@@ -72,7 +72,7 @@ export class PartySession {
     }
     if(message.type==='song.started'&&this.gameActive) {
       const id=Number(message.songId); this.played.add(id);
-      this.currentMatch=this.library().find(s=>Number(s.songId)===id)||{songId:id,title:message.title,artist:message.artist};
+      this.currentMatch=this.matches.find(s=>Number(s.songId)===id)||this.library().find(s=>Number(s.songId)===id)||{songId:id,title:message.title,artist:message.artist};
       this.participants=new Map(this.eligible().map(p=>[Number(p.slot),{...p}]));
       this.dirty=true;
     }
@@ -130,7 +130,7 @@ export class PartySession {
       neededLikes:Math.max(0,this.minPlayers-(s.likedBy?.length||0)),matched:(s.likedBy?.length||0)>=this.minPlayers});
     this.send({type:'party.state',available:true,enabled:this.enabled,minPlayers:this.minPlayers,
       endless:this.endless,playerSetupSeconds:null,resultSeconds:null,highScoreSeconds:null,songDisplay:null,singingDisplay:null,...this.playback,source:this.source,
-      phase:this.gameActive?({player_setup:'calling_players',results:'scoring',high_scores:'highscores'}[this.gameState()]||'singing'):this.enabled?'collecting_votes':'off',
+      phase:this.gameActive?({player_setup:'calling_players',results:'scoring',high_scores:'highscores',paused:'paused'}[this.gameState()]||'singing'):this.enabled?'collecting_votes':'off',
       notice:this.notice||(!this.gameActive&&this.enabled&&this.gameState()!=='song_select'?'Open song selection in the game to start the party.':''),
       currentMatch:this.currentMatch?compact(this.currentMatch):null,
       queue:this.queue.slice(0,30).map(compact),matches:this.matches.slice(0,30).map(compact),matchesTotal:this.matches.length,

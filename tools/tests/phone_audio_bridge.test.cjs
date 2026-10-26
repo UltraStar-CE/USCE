@@ -5,6 +5,15 @@ const path = require('node:path');
 const test = require('node:test');
 const source = readFileSync(path.join(__dirname,'../../game/webs/usdx-bridge.mjs'),'utf8');
 
+test('a relay roster echo cannot replace the connected game screen with an older state', async () => {
+  const messages=[];
+  const context=vm.createContext({party:{handle:()=>false,rosterChanged(){}},nativePcmEnabled:false,currentGameState:'results',ipcClients:new Set(['game']),sendToIpc:m=>messages.push(m),protocol:1});
+  vm.runInContext(source.slice(source.indexOf('async function handleMessage('),source.indexOf('function connect(')),context);
+  await context.handleMessage({type:'game.state',state:'singing'});
+  assert.equal(context.currentGameState,'results');
+  assert.equal(messages[0].type,'game.state','roster data still reaches the game');
+});
+
 test('joining and switching mics preserve the game screen before the first song', () => {
   const context=vm.createContext({songSeq:0,currentGameState:'song_select'});
   vm.runInContext(source.slice(source.indexOf('function gameStateAfterPlayerChange('),source.indexOf('function scheduleGameState(')),context);

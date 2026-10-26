@@ -2730,7 +2730,7 @@ async function handleMessage(msg) {
   }
 
   if (msg.type === 'game.state') {
-    currentGameState = String(msg.state || currentGameState || 'lobby');
+    if (!ipcClients.size) currentGameState = String(msg.state || currentGameState || 'lobby');
     if (Number.isFinite(Number(msg.maxPlayers))) {
       maxPlayers = Math.max(1, Math.min(12, Number(msg.maxPlayers)));
     }
