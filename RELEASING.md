@@ -1,11 +1,21 @@
 # USCE releases
 
 We aim for one monthly release, following a stable USDX release with additional
-USCE improvements. A daily check runs at 07:15 UTC. If no current-month upstream
+USCE features and bug fixes. Release preparation becomes eligible 24 hours after
+GitHub's USDX publication timestamp. An hourly check runs at 15 minutes past the
+hour; GitHub scheduling delays can postpone it. If no current-month upstream
 release is available, preparation starts on or after the 24th in Europe/Vienna.
+An upstream release published around that fallback still gets the full 24-hour
+wait. A missing publication timestamp stops preparation for investigation.
 A delayed run catches up. An existing draft, published release or preparation PR
 prevents a second automatic release for the same month. Later upstream changes
 can enter the next monthly release or a separately reviewed patch.
+
+Release highlights include concrete examples of additional features and bugs
+fixed compared with the referenced USDX release, with links to the USCE changes.
+Each release retains the two comparison
+sections and their graphics: changes since USCE's previous release, and changes
+compared with the referenced USDX release.
 
 ## Preparation and publication
 
