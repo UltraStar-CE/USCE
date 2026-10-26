@@ -147,12 +147,16 @@ def main():
                     "Using fallback FFmpeg_Video" not in output:
                 raise RuntimeError("The forced render-context failure did not use FFmpeg fallback")
             if "Testing MPV_Video startup" in output:
-                if output.count("Probing hardware decoding for") != 1:
-                    raise RuntimeError("The hardware decoder was not probed exactly once per session")
-                if "Using remembered decoder" not in output:
-                    raise RuntimeError("The probed decoder was not remembered for the next open")
                 if "Reusing libmpv player" not in output:
                     raise RuntimeError("The libmpv player was not reused across opens")
+                if args.hwdec == "no":
+                    if "Probing hardware decoding for" in output:
+                        raise RuntimeError("Software decoding probed a hardware decoder")
+                else:
+                    if output.count("Probing hardware decoding for") != 1:
+                        raise RuntimeError("The hardware decoder was not probed exactly once per session")
+                    if "Using remembered decoder" not in output:
+                        raise RuntimeError("The probed decoder was not remembered for the next open")
             if args.require_hardware:
                 decoders = re.findall(r"Hardware decoder: ([\w-]+)", output)
                 if not decoders or decoders[-1] == "no":
