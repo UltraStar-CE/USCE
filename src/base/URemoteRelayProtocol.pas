@@ -327,7 +327,6 @@ begin
       RemoveField(PublicMessage, 'apiCapabilities');
       PublicMessage.Add('apiCapabilities', TJSONArray.Create(['song.list']));
       RemoveField(PublicMessage, 'library');
-      RemoveField(PublicMessage, 'playlistItems');
       RemoveField(PublicMessage, 'audioPath');
       RemoveField(PublicMessage, 'coverPath');
       RemoveField(PublicMessage, 'txtPath');

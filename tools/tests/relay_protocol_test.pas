@@ -69,9 +69,11 @@ begin
     Relay('{"type":"clock.sync.ping","playerId":"phone","clientSendUs":987654321.5}');
     Assert(TJSONObject(Probe.Sent.Items[Probe.Sent.Count-1]).Get('hostReceiveUs', int64(0)) = TestClock);
     Assert(TJSONObject(Probe.Sent.Items[Probe.Sent.Count-1]).Get('clientSendUs', double(0)) = 987654321.5);
-    Game('{"type":"song.select.state","currentSong":{"audioPath":"private.wav","title":"Test"},"results":[{"txtPath":"private.txt"}],"library":[{"audioPath":"other.wav"}],"playlistItems":[]}');
+    Game('{"type":"song.select.state","currentSong":{"audioPath":"private.wav","title":"Test"},"results":[{"txtPath":"private.txt"}],"library":[{"audioPath":"other.wav"}],"playlistItems":[{"songId":4,"title":"Playlist song","audioPath":"private.wav"}]}');
     Assert(Pos('private', Probe.Sent.Items[Probe.Sent.Count-1].AsJSON) = 0);
     Assert(TJSONObject(Probe.Sent.Items[Probe.Sent.Count-1]).Find('library') = nil);
+    Assert(TJSONObject(Probe.Sent.Items[Probe.Sent.Count-1]).Arrays['playlistItems'].Count = 1,
+      'Sanitized current playlist items must reach clients');
     Assert(Adapter.Songs.Count = 1, 'Game library must feed generic song snapshot');
     Assert(Adapter.Songs.Id <> '', 'Song snapshot needs a stable content identity');
     Relay('{"type":"control.command","playerId":"phone","commandId":42,"command":"song.list","args":{"offset":0,"limit":10}}');
