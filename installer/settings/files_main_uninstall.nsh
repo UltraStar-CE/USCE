@@ -175,6 +175,11 @@
 
 ; Self delete:
 
+ Delete "$INSTDIR\usce-phone-audio.dll"
+ Delete "$INSTDIR\runtime\native-licenses.txt"
+ Delete "$INSTDIR\runtime\phone-audio.json"
+ RMDir "$INSTDIR\runtime"
+
  Delete "$INSTDIR\${exeuninstall}.exe"
 
  StrCpy $0 "$INSTDIR"

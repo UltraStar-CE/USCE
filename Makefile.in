@@ -242,6 +242,15 @@ install-all: install-exec install-plugins install-data
 install-exec:
 	$(MKDIR) "$(DESTDIR)$(bindir)"
 	$(INSTALL_PROGRAM) "$(USCE_BIN)" "$(DESTDIR)$(bindir)"
+	@for lib in "$(USCE_GAME_DIR)/usce-phone-audio.dll" "$(USCE_GAME_DIR)/libusce-phone-audio.so" "$(USCE_GAME_DIR)/libusce-phone-audio.dylib"; do \
+	  if test -f "$$lib"; then $(INSTALL_PROGRAM) "$$lib" "$(DESTDIR)$(bindir)"; fi; \
+	done
+	@for file in native-licenses.txt phone-audio.json; do \
+	  if test -f "$(USCE_GAME_DIR)/runtime/$$file"; then \
+	    $(MKDIR) "$(DESTDIR)$(INSTALL_DATADIR)/runtime"; \
+	    $(INSTALL_DATA) "$(USCE_GAME_DIR)/runtime/$$file" "$(DESTDIR)$(INSTALL_DATADIR)/runtime"; \
+	  fi; \
+	done
 
 # FPC target platform and processor
 PPLATFORM  := @FPC_PLATFORM@
@@ -280,9 +289,6 @@ install-data:
 	        RECURSIVE_DST_DIR="$(DESTDIR)$(INSTALL_DATADIR)/visuals" \
 	        install-data-recursive ; \
 	fi
-	$(MAKE) RECURSIVE_SRC_DIR="$(USCE_GAME_DIR)/webs" \
-            RECURSIVE_DST_DIR="$(DESTDIR)$(INSTALL_DATADIR)/webs" \
-            install-data-recursive
 	$(INSTALL_DATA) "LICENSE" "$(DESTDIR)$(INSTALL_DATADIR)/LICENSE"
 
 .PHONY: install-data-recursive
@@ -402,6 +408,7 @@ HDIUTIL := /usr/bin/hdiutil
 # pkgingLibDir := path for libraries installed using packaging system
 pkgingLibDir := @MACOS_PACKAGING_LIBDIR@
 EXTRA_DYLIBS := @EXTRA_DYLIBS@
+EXTRA_DYLIBS += $(wildcard $(USCE_GAME_DIR)/libusce-phone-audio.dylib)
 
 #################################################
 # macOS app-bundle
@@ -462,7 +469,7 @@ macos-standalone-app: macos-app
 
 	@rm -f $(macos_bundle_path)/MacOS/$(USCE_BIN_NAME)
 	@$(MAKE) -f Makefile.macos-helper
-	codesign --force --deep --sign - "./UltraStar Community Edition.app"
+	python3 tools/sign-macos-bundle.py "./UltraStar Community Edition.app"
 
 
 # final messages

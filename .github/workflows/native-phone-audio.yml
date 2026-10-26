@@ -12,6 +12,7 @@ on:
       - 'tools/tests/phone_audio*'
       - 'tools/tests/relay_*'
       - 'tools/test_native_relay.py'
+      - 'tools/stage-phone-audio.py'
       - 'tools/tests/party_session.test.mjs'
       - '.github/workflows/native-phone-audio.yml'
   workflow_dispatch:
@@ -40,6 +41,7 @@ jobs:
             mingw-w64-ucrt-x86_64-gcc
             mingw-w64-ucrt-x86_64-cmake
             mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-python
             mingw-w64-ucrt-x86_64-openssl
       - name: Linux build dependencies
         if: runner.os == 'Linux'
@@ -54,6 +56,7 @@ jobs:
           cmake -S native/phone-audio -B build/phone-audio -G Ninja -DCMAKE_BUILD_TYPE=Release
           cmake --build build/phone-audio --parallel 3
           ctest --test-dir build/phone-audio --output-on-failure
+          python tools/stage-phone-audio.py --platform windows --openssl-license /ucrt64/share/licenses/openssl/LICENSE
       - name: Build and test on Unix
         if: runner.os != 'Windows'
         shell: bash

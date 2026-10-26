@@ -72,7 +72,7 @@ def portable(game, themes, destination, pin):
             raise ValueError('Portable destination must be separate from its sources')
     if destination.exists():
         raise ValueError('Portable destination must not already exist')
-    shutil.copytree(str(game), str(destination), ignore=lambda directory, names: ['themes'] if Path(directory) == game else [])
+    shutil.copytree(str(game), str(destination), ignore=lambda directory, names: ['themes', 'webs'] if Path(directory) == game else [])
     shutil.copytree(str(themes), str(destination / 'themes'))
 
 
