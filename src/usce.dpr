@@ -168,6 +168,7 @@ uses
   UMain             in 'base\UMain.pas',
   UDraw             in 'base\UDraw.pas',
   URecord           in 'base\URecord.pas',
+  UInputSource      in 'base\UInputSource.pas',
   UPhoneAudio       in 'base\UPhoneAudio.pas',
   URemoteBridgeIPC  in 'base\URemoteBridgeIPC.pas',
   URemoteBridgeProcess in 'base\URemoteBridgeProcess.pas',
