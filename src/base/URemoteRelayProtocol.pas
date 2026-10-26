@@ -6,7 +6,7 @@ unit URemoteRelayProtocol;
 
 interface
 
-uses SysUtils, fpjson, URemoteSongSnapshot;
+uses SysUtils, fpjson, URemoteSongSnapshot, URemoteMediaSources;
 
 type
   TRelayProtocolEvent = procedure(Message: TJSONObject) of object;
@@ -16,6 +16,7 @@ type
   private
     FPlayers, FCache: TJSONObject;
     FSongs: TRemoteSongSnapshot;
+    FMediaSources: TRemoteMediaSources;
     FRoomId: string;
     FOnGame: TRelayProtocolEvent;
     FOnSend: TRelayProtocolSend;
@@ -33,6 +34,7 @@ type
     destructor Destroy; override;
     procedure FromRelay(Message: TJSONObject);
     function FromGame(Message: TJSONObject): boolean;
+    property MediaSources: TRemoteMediaSources read FMediaSources;
     property Songs: TRemoteSongSnapshot read FSongs;
     property OnGame: TRelayProtocolEvent read FOnGame write FOnGame;
     property OnSend: TRelayProtocolSend read FOnSend write FOnSend;
@@ -77,12 +79,14 @@ constructor TRemoteRelayProtocol.Create;
 begin
   inherited;
   FSongs := TRemoteSongSnapshot.Create;
+  FMediaSources := TRemoteMediaSources.Create;
   FPlayers := TJSONObject.Create;
   FCache := TJSONObject.Create;
 end;
 
 destructor TRemoteRelayProtocol.Destroy;
 begin
+  FMediaSources.Free;
   FSongs.Free;
   FPlayers.Free;
   FCache.Free;
@@ -316,7 +320,10 @@ begin
   begin
     LibraryData := Message.Find('library');
     if (LibraryData <> nil) and (LibraryData.JSONType = jtArray) then
+    begin
+      FMediaSources.Replace(TJSONArray(LibraryData));
       FSongs.Replace(TJSONArray(LibraryData));
+    end;
   end;
   PublicMessage := CopyPublic(Message);
   try

@@ -43,8 +43,9 @@ var Value: TJSONData; Key: string;
 begin
  Result := '';
  if SongId < 0 then Exit;
- if Purpose = 'cover' then Key := 'cover'
- else if (Purpose = 'preview') or (Purpose = 'device-music') then Key := 'audio'
+ if (Purpose = 'cover') or (Purpose = 'song-cover') then Key := 'cover'
+ else if (Purpose = 'preview') or (Purpose = 'device-music') or
+   (Purpose = 'song-preview') or (Purpose = 'game-audio') then Key := 'audio'
  else Exit;
  Value := FEntries.Find(IntToStr(SongId));
  if (Value <> nil) and (Value.JSONType = jtObject) then

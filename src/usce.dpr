@@ -174,6 +174,8 @@ uses
   URemoteRelaySession in 'base\URemoteRelaySession.pas',
   URemoteRelayProtocol in 'base\URemoteRelayProtocol.pas',
   URemoteSongSnapshot in 'base\URemoteSongSnapshot.pas',
+  URemoteMediaSources in 'base\URemoteMediaSources.pas',
+  URemoteMediaStream in 'base\URemoteMediaStream.pas',
   URemoteBridgeIPC  in 'base\URemoteBridgeIPC.pas',
   URemoteBridgeProcess in 'base\URemoteBridgeProcess.pas',
   URemoteControl    in 'base\URemoteControl.pas',

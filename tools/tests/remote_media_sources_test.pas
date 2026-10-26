@@ -8,6 +8,9 @@ begin
   Songs.Add(TJSONObject.Create(['songId', 7, 'audioPath', '/game/song.wav', 'coverPath', '/game/cover.png']));
   Sources.Replace(Songs);
   Assert(Sources.Resolve(7, 'preview') = '/game/song.wav');
+  Assert(Sources.Resolve(7, 'song-preview') = '/game/song.wav');
+  Assert(Sources.Resolve(7, 'game-audio') = '/game/song.wav');
+  Assert(Sources.Resolve(7, 'song-cover') = '/game/cover.png');
   Assert(Sources.Resolve(7, 'device-music') = '/game/song.wav');
   Assert(Sources.Resolve(7, 'cover') = '/game/cover.png');
   Assert(Sources.Resolve(8, 'preview') = '');
