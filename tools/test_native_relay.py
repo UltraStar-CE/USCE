@@ -24,7 +24,7 @@ def main():
                'libusce-phone-audio.dylib' if sys.platform == 'darwin' else
                'libusce-phone-audio.so')
     fixture = build / ('relay-socket-test' + extension)
-    for name, mode in [('remote_playlist_name_test', None), ('song_snapshot_test', None), ('relay_protocol_test', None), ('relay_socket_test', '--echo-server'),
+    for name, mode in [('remote_media_sources_test', None), ('remote_media_stream_test', None), ('remote_playlist_name_test', None), ('song_snapshot_test', None), ('relay_protocol_test', None), ('relay_socket_test', '--echo-server'),
                        ('relay_session_test', '--session-server')]:
         subprocess.run([args.fpc, *args.fpc_arg, '-Fi' + str(root / 'src'), '-Fu' + str(root / 'src/base'),
                         '-FU' + str(output), '-FE' + str(output),
