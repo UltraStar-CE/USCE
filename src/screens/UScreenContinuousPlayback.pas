@@ -13,9 +13,11 @@ type
     SingingSlide, ActiveProfile: integer;
     ResultsOnly: boolean;
     RemoteOwned: boolean;
-    RepeatSelection, ResultTime, HighScoreTime: integer;
+    RepeatSelection, ResultTime, HighScoreTime, PlayerTime: integer;
+    PreparingPlayers: boolean;
     PreviousRequested: boolean;
     StageChanged, SkipResults: boolean;
+    procedure StartSelectedSong;
     procedure SaveProfile;
     procedure LoadProfile;
     procedure SyncProfile;
@@ -29,6 +31,8 @@ type
     Enabled: integer;
     SongDisplay, SingingDisplay: integer;
     Session: TContinuousPlayback;
+    function WaitingForPlayers: boolean;
+    procedure PlayersReady;
     procedure BeginSession;
     function StartRemoteQueue(const SongIds: UTF8String): boolean;
     function ReplaceRemoteQueue(const SongIds: UTF8String): boolean;
@@ -51,7 +55,7 @@ type
 
 implementation
 
-uses SysUtils, Classes, UNote, UGraphic, ULanguage, UHelp, ULog, UMusic, UPlaylist,
+uses SysUtils, Classes, fpjson, jsonparser, Math, UNote, UGraphic, ULanguage, UHelp, ULog, UMusic, UPlaylist,
   USongs, USong, UIni, UThemes, ULyrics, UDisplay, URecord, URemoteBridgeIPC,
   UScreenScore, UScreenSingController;
 
@@ -96,12 +100,14 @@ begin
     [Language.Translate('CONTINUOUS_FULL'), Language.Translate('CONTINUOUS_NOTES_PLAYER_INFO'),
      Language.Translate('CONTINUOUS_NOTES_ONLY'), Language.Translate('CONTINUOUS_PLAYER_INFO_ONLY'),
      Language.Translate('CONTINUOUS_NOTHING')]);
+  AddSelectSlide('CONTINUOUS_PLAYER_SETUP', PlayerTime, Times);
 end;
 
 procedure TScreenContinuousPlayback.SaveProfile;
 begin
   with Ini.PlaybackProfiles[ActiveProfile] do
   begin
+    PlayerTime := Self.PlayerTime;
     RepeatSelection := Self.RepeatSelection;
     ResultTime := Self.ResultTime;
     HighScoreTime := Self.HighScoreTime;
@@ -114,14 +120,16 @@ procedure TScreenContinuousPlayback.LoadProfile;
 begin
   with Ini.PlaybackProfiles[ActiveProfile] do
   begin
+    Self.PlayerTime := PlayerTime;
     Self.RepeatSelection := RepeatSelection;
     Self.ResultTime := ResultTime;
     Self.HighScoreTime := HighScoreTime;
     Self.SongDisplay := SongDisplay;
     Self.SingingDisplay := SingingDisplay;
   end;
-  if Length(SelectsS) >= 6 then
+  if Length(SelectsS) >= 7 then
   begin
+    SelectsS[6].SelectedOption := PlayerTime;
     SelectsS[1].SelectedOption := RepeatSelection;
     SelectsS[2].SelectedOption := ResultTime;
     SelectsS[3].SelectedOption := HighScoreTime;
@@ -225,6 +233,7 @@ begin
         Selection[High(Selection)] := I;
       end;
   if Length(Selection) = 0 then Exit;
+  Session.PlayerSeconds := DisplaySeconds[PlayerTime];
   Session.ResultSeconds := DisplaySeconds[ResultTime];
   Session.HighScoreSeconds := DisplaySeconds[HighScoreTime];
   Session.Start(Selection, ScreenSong.Interaction, Ordered,
@@ -253,11 +262,28 @@ function TScreenContinuousPlayback.IsRemoteSession: boolean;
 begin Result := RemoteOwned and Session.Active; end;
 
 function TScreenContinuousPlayback.StartRemoteQueue(const SongIds: UTF8String): boolean;
-var Selection: TPlaybackSongs;
+var Selection: TPlaybackSongs; Options: TJSONData; Obj: TJSONObject;
+  Ids: TJSONArray; I: integer; IdText: UTF8String;
 begin
   Result := false;
   if Session.Active or (Display.CurrentScreen <> @ScreenSong) then Exit;
-  Selection := RemoteSelection(SongIds);
+  // Keep the legacy comma list for local callers; IPC sends the complete options.
+  Obj := nil; Options := nil; IdText := SongIds;
+  if (Length(SongIds) > 0) and (SongIds[1] = '{') then
+  begin
+    try Options := GetJSON(string(SongIds)); except Exit; end;
+    if not (Options is TJSONObject) then begin Options.Free; Exit; end;
+    Obj := TJSONObject(Options);
+    Ids := Obj.Get('songIds', TJSONArray(nil));
+    IdText := '';
+    if Assigned(Ids) then for I := 0 to Ids.Count - 1 do
+    begin
+      if I > 0 then IdText := IdText + ',';
+      IdText := IdText + UTF8String(IntToStr(Ids.Integers[I]));
+    end;
+  end;
+  try
+  Selection := RemoteSelection(IdText);
   if Length(Selection) = 0 then Exit;
   ScreenName.LoadPlayersFromIni;
   if not Assigned(ScreenScore) then begin Theme.ThemeScoreLoad; ScreenScore := TScreenScore.Create; end;
@@ -265,13 +291,23 @@ begin
   ScreenSong.StopMusicPreview;
   ScreenSong.Mode := smNormal;
   ResultsOnly := false; RemoteOwned := true;
+  Session.PlayerSeconds := DisplaySeconds[Ini.PlaybackProfiles[1].PlayerTime];
   Session.ResultSeconds := DisplaySeconds[Ini.PlaybackProfiles[1].ResultTime];
   Session.HighScoreSeconds := DisplaySeconds[Ini.PlaybackProfiles[1].HighScoreTime];
   SongDisplay := Ini.PlaybackProfiles[1].SongDisplay;
   SingingDisplay := Ini.PlaybackProfiles[1].SingingDisplay;
+  if Assigned(Obj) then
+  begin
+    Session.PlayerSeconds := EnsureRange(Obj.Get('playerSetupSeconds', Session.PlayerSeconds), -1, 120);
+    Session.ResultSeconds := EnsureRange(Obj.Get('resultSeconds', Session.ResultSeconds), -1, 120);
+    Session.HighScoreSeconds := EnsureRange(Obj.Get('highScoreSeconds', Session.HighScoreSeconds), -1, 120);
+    SongDisplay := EnsureRange(Obj.Get('songDisplay', SongDisplay), 0, 3);
+    SingingDisplay := EnsureRange(Obj.Get('singingDisplay', SingingDisplay), 0, 4);
+  end;
   Session.Start(Selection, Selection[0], true, false, PlayersPlay > 0);
   Advance;
   Result := true;
+  finally Options.Free; end;
 end;
 
 function TScreenContinuousPlayback.ReplaceRemoteQueue(const SongIds: UTF8String): boolean;
@@ -289,6 +325,7 @@ begin
   ResultsOnly := true;
   Session.Stop;
   Session.Scored := PlayersPlay > 0;
+  Session.PlayerSeconds := DisplaySeconds[PlayerTime];
   Session.ResultSeconds := DisplaySeconds[ResultTime];
   Session.HighScoreSeconds := DisplaySeconds[HighScoreTime];
   Session.FinishSong(true);
@@ -296,7 +333,7 @@ begin
 end;
 
 procedure TScreenContinuousPlayback.Advance;
-var SongIndex, Skipped: integer; RestartSing: boolean; Message: UTF8String;
+var SongIndex, Skipped: integer; Message: UTF8String;
 begin
   if PreviousRequested then
   begin
@@ -316,6 +353,31 @@ begin
   CatSongs.Selected := SongIndex;
   ScreenSong.Interaction := SongIndex;
   SkipResults := false;
+  Session.PreparePlayers;
+  PreparingPlayers := Session.Stage = psPlayers;
+  if PreparingPlayers then
+  begin
+    ScreenName.Goto_SingScreen := true;
+    FadeTo(@ScreenName);
+  end
+  else StartSelectedSong;
+end;
+
+function TScreenContinuousPlayback.WaitingForPlayers: boolean;
+begin Result := Session.Active and PreparingPlayers; end;
+
+procedure TScreenContinuousPlayback.PlayersReady;
+begin
+  if not WaitingForPlayers then Exit;
+  PreparingPlayers := false;
+  if Session.Stage = psPlayers then Session.NextStage;
+  Session.Scored := PlayersPlay > 0;
+  StartSelectedSong;
+end;
+
+procedure TScreenContinuousPlayback.StartSelectedSong;
+var RestartSing: boolean;
+begin
   RestartSing := Display.CurrentScreen = @ScreenSing;
   if RestartSing then
   begin
@@ -333,6 +395,8 @@ procedure TScreenContinuousPlayback.Stop(const Reason: UTF8String);
 begin
   if not Session.Active then Exit;
   Session.Stop;
+  PreparingPlayers := false;
+  ScreenName.Goto_SingScreen := false;
   if RemoteOwned then
   begin
     RemoteBridgeIPC.SendJsonMessage('{"type":"continuous.state","active":false,"reason":"' + RemoteJsonEscape(Reason) + '"}');
@@ -362,6 +426,14 @@ begin
   StageChanged := false;
   if (Session.Stage = psHighScores) and not CanShowHighScores then Session.NextStage;
   case Session.Stage of
+    psSong: if PreparingPlayers then
+      begin
+        // Accept a pending name edit before the timer continues through the
+        // normal setup action. Enter in a name field otherwise accepts only
+        // the suggestion and would leave this stage waiting forever.
+        ScreenName.SetInteraction(0);
+        ScreenName.ParseInput(SDLK_RETURN, 0, true);
+      end;
     psResults: FadeTo(@ScreenScore);
     psHighScores: FadeTo(@ScreenHighScores);
     psAdvance: if ResultsOnly then Stop else Advance;

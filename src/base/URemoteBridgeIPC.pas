@@ -1386,6 +1386,7 @@ begin
         ArgsText := ArgsText + UTF8String(IntToStr(SongIds.Items[I].AsInteger));
       end;
     end;
+    if Command = rccContinuousStart then ArgsText := UTF8String(Args.AsJSON);
     ArgsIndex := JsonGetInt(Args, 'playlistIndex',
       JsonGetInt(Args, 'songId', JsonGetInt(Args, 'index', -1)));
     ArgsItemIndex := JsonGetInt(Args, 'itemIndex', JsonGetInt(Args, 'songId', -1));

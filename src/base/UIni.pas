@@ -1766,6 +1766,7 @@ begin
     with PlaybackProfiles[I] do
     begin
       RepeatSelection := EnsureRange(IniFile.ReadInteger('Playback' + IntToStr(I), 'Repeat', 0), 0, 1);
+      PlayerTime := EnsureRange(IniFile.ReadInteger('Playback' + IntToStr(I), 'PlayerSetup', 1), 0, 8);
       ResultTime := EnsureRange(IniFile.ReadInteger('Playback' + IntToStr(I), 'Results', I), 0, 8);
       HighScoreTime := EnsureRange(IniFile.ReadInteger('Playback' + IntToStr(I), 'HighScores', I), 0, 8);
       SongDisplay := EnsureRange(IniFile.ReadInteger('Playback' + IntToStr(I), 'SongDisplay', 0), 0, 3);
@@ -1991,6 +1992,7 @@ begin
       with PlaybackProfiles[I] do
       begin
         IniFile.WriteInteger('Playback' + IntToStr(I), 'Repeat', RepeatSelection);
+        IniFile.WriteInteger('Playback' + IntToStr(I), 'PlayerSetup', PlayerTime);
         IniFile.WriteInteger('Playback' + IntToStr(I), 'Results', ResultTime);
         IniFile.WriteInteger('Playback' + IntToStr(I), 'HighScores', HighScoreTime);
         IniFile.WriteInteger('Playback' + IntToStr(I), 'SongDisplay', SongDisplay);

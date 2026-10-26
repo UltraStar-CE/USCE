@@ -303,13 +303,21 @@ default comes from the OS country/region, not timezone.
 Press C in song selection to edit these settings. `[Playback] Continuous=0` or
 `1` chooses which saved configuration is active. `[Playback0]` holds ordinary
 singing settings; `[Playback1]` holds continuous settings. Both contain `Repeat`,
-`Results`, `HighScores`, `SongDisplay` and `SingingDisplay`.
+`PlayerSetup`, `Results`, `HighScores`, `SongDisplay` and `SingingDisplay`.
 
-`Results` and `HighScores` use 0 for Manual, 1 for Skip, then 2 through 8 for
+`PlayerSetup`, `Results` and `HighScores` use 0 for Manual, 1 for Skip, then 2 through 8 for
 5, 10, 20, 30, 40, 50 and 60 seconds. `Repeat` affects continuous playback only.
 Display values follow the order shown in Configuration. Missing settings retain
 the full display, manual results for ordinary singing and skipped results for
 continuous playback.
+
+`PlayerSetup` defaults to Skip. When enabled for continuous playback, the game
+opens player setup before each song and waits for that duration (or manual
+confirmation). Party queues use the same game-owned stages. Their optional
+`playerSetupSeconds`, `resultSeconds` and `highScoreSeconds` overrides use seconds,
+with -1 for Manual and 0 for Skip; omitted values use the game's continuous
+profile. Party display overrides use the same `SongDisplay` and `SingingDisplay`
+option order and apply to the session without overwriting saved game settings.
 
 `[Game] StatisticsView=Reduced` selects compact statistics; `Full` includes
 averages, recent activity and performance facts. Also available in Options → Game.

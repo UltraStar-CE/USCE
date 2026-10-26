@@ -4,7 +4,7 @@ export class PartySession {
     Object.assign(this,{players,library,playlist,gameState,send,command,now});
     this.likes=new Map(); this.played=new Set(); this.leaderboard=new Map();
     this.enabled=false; this.gameActive=false; this.dirty=true;
-    this.minPlayers=2; this.endless=false; this.countdownSeconds=15; this.source='all';
+    this.minPlayers=2; this.endless=false; this.playback={}; this.source='all';
     this.deadline=0; this.owner=null; this.sequence=1000000000; this.pending=new Map();
     this.queue=[]; this.matches=[]; this.notice=''; this.currentMatch=null;
   }
@@ -29,7 +29,11 @@ export class PartySession {
     switch(message.command) {
       case 'party.configure': case 'party.startMatchmaking':
         this.minPlayers=Math.max(1,Math.min(12,Math.round(Number(args.minPlayers)||2)));
-        this.countdownSeconds=Math.max(1,Math.min(120,Math.round(Number(args.countdownSeconds)||15)));
+        this.playback={};
+        for (const [key,max] of [['playerSetupSeconds',120],['resultSeconds',120],['highScoreSeconds',120],['songDisplay',3],['singingDisplay',4]]) {
+          const value=Number(args[key]);
+          if(args[key] != null && Number.isInteger(value) && value >= (key.endsWith('Seconds')?-1:0) && value <= max) this.playback[key]=value;
+        }
         this.endless=Boolean(args.endless); this.source=args.source==='playlist'?'playlist':'all';
         if(message.command==='party.startMatchmaking') {
           this.owner=message; this.enabled=true; this.notice='';
@@ -55,6 +59,7 @@ export class PartySession {
     return commandId;
   }
   observe(message) {
+    if(message.type==='game.state') this.dirty=true;
     if(message.type==='ack'&&this.pending.has(message.commandId)) {
       const kind=this.pending.get(message.commandId); this.pending.delete(message.commandId);
       if(kind==='start') this.gameActive=Boolean(message.accepted);
@@ -101,17 +106,15 @@ export class PartySession {
     const fingerprint=ids.join(',');
     if(this.enabled&&this.gameActive&&fingerprint!==this.queueFingerprint) this.issue('continuous.queue',{songIds:ids},'queue');
     this.queueFingerprint=fingerprint;
-    if(!this.enabled||this.gameActive||!ids.length) this.deadline=0;
-    else if(!this.deadline) this.deadline=this.now()+this.countdownSeconds*1000;
     this.dirty=false;
     this.publish();
   }
   tick() {
     if(this.dirty) this.refresh();
-    if(this.enabled&&!this.gameActive&&this.deadline&&this.now()>=this.deadline&&
+    if(this.enabled&&!this.gameActive&&this.queue.length&&
       ![...this.pending.values()].includes('start')&&this.gameState()==='song_select') {
       this.deadline=0;
-      this.issue('continuous.start',{songIds:this.queue.map(s=>Number(s.songId))},'start');
+      this.issue('continuous.start',{songIds:this.queue.map(s=>Number(s.songId)),...this.playback},'start');
     }
   }
   publish() {
@@ -126,9 +129,8 @@ export class PartySession {
       likedBy:(s.likedBy||[]).map(p=>({playerId:p.playerId,name:p.name})),likedByCount:s.likedBy?.length||0,
       neededLikes:Math.max(0,this.minPlayers-(s.likedBy?.length||0)),matched:(s.likedBy?.length||0)>=this.minPlayers});
     this.send({type:'party.state',available:true,enabled:this.enabled,minPlayers:this.minPlayers,
-      endless:this.endless,countdownSeconds:this.countdownSeconds,source:this.source,
-      phase:this.gameActive?'singing':this.deadline?'next_countdown':this.enabled?'collecting_votes':'off',
-      countdownDeadlineAt:this.deadline?new Date(this.deadline).toISOString():null,
+      endless:this.endless,playerSetupSeconds:null,resultSeconds:null,highScoreSeconds:null,songDisplay:null,singingDisplay:null,...this.playback,source:this.source,
+      phase:this.gameActive?({player_setup:'calling_players',results:'scoring',high_scores:'highscores'}[this.gameState()]||'singing'):this.enabled?'collecting_votes':'off',
       notice:this.notice||(!this.gameActive&&this.enabled&&this.gameState()!=='song_select'?'Open song selection in the game to start the party.':''),
       currentMatch:this.currentMatch?compact(this.currentMatch):null,
       queue:this.queue.slice(0,30).map(compact),matches:this.matches.slice(0,30).map(compact),matchesTotal:this.matches.length,

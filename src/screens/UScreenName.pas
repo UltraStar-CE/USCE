@@ -157,6 +157,7 @@ uses
   UPlayerLayout,
   URenderer,
   UScreenSong,
+  UContinuousPlayback,
   USkins,
   USongs,
   UTime,
@@ -420,6 +421,8 @@ begin
 
       SDLK_ESCAPE :
         begin
+          if ScreenContinuousPlayback.WaitingForPlayers then
+          begin ScreenContinuousPlayback.Stop; Exit; end;
           StopTextInput;
           Ini.SaveNames;
           AudioPlayback.PlaySound(SoundLib.Back);
@@ -481,7 +484,9 @@ begin
             AudioPlayback.SetVolume(1.0);
             ScreenSong.StopMusicPreview();
             ScreenSong.StopVideoPreview();
-            ScreenSong.StartSong;
+            if ScreenContinuousPlayback.WaitingForPlayers then
+              ScreenContinuousPlayback.PlayersReady
+            else ScreenSong.StartSong;
             GoTo_SingScreen := false;
           end
           else
@@ -1165,6 +1170,7 @@ var
   Counts: array of UTF8String;
 begin
   inherited;
+  RemoteBridgeIPC.SendGameState('player_setup', 0, 0);
   AudioPlayback.SetVolume(EnsureRange(Ini.PreviewVolume, 0, 100) / 100);
 
   Ini.ReloadNames;
@@ -1435,6 +1441,7 @@ begin
   for I := 0 to High(Text) do
     Text[I].Draw;
 
+  ScreenContinuousPlayback.Update;
   Result := true;
 end;
 

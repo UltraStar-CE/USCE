@@ -9,7 +9,7 @@ function fixture() {
   const party=new PartySession({players:()=>players,library:()=>library,playlist:()=>[library[1]],
     gameState:()=>state,send:m=>sent.push(m),command:m=>commands.push(m),now:()=>clock});
   const like=(playerId,songs)=>party.handle({type:'party.likeShown',playerId,songs:songs.map(songId=>({songId}))});
-  const start=()=>party.handle({type:'control.command',playerId:'a',commandId:1,command:'party.startMatchmaking',args:{countdownSeconds:1}});
+  const start=(args={})=>party.handle({type:'control.command',playerId:'a',commandId:1,command:'party.startMatchmaking',args});
   return {party,players,sent,commands,like,start,advance:ms=>{clock+=ms;party.tick();},setState:s=>state=s};
 }
 test('party waits for matching votes and asks USCE to run a continuous queue',()=>{
@@ -27,7 +27,7 @@ test('party waits for matching votes and asks USCE to run a continuous queue',()
   assert.deepEqual(f.commands.at(-1).args.songIds,[2]);
 });
 test('unlikes, offline phones and game rejection cannot leave a phantom playing party',()=>{
-  const f=fixture(); f.start(); f.like('a',[1]); f.like('b',[1]); f.advance(0);
+  const f=fixture(); f.start(); f.like('a',[1]); f.like('b',[1]);
   f.party.handle({type:'party.unlikeShown',playerId:'b',songs:[{songId:1}]}); f.advance(2000);
   assert.equal(f.commands.length,0);
   f.like('b',[1]); f.players.get('b').connected=false; f.party.rosterChanged(); f.advance(2000);
@@ -36,6 +36,16 @@ test('unlikes, offline phones and game rejection cannot leave a phantom playing 
   f.party.observe({type:'ack',commandId:f.commands[0].commandId,accepted:false,reason:'unavailable'}); f.advance(0);
   assert.equal(f.party.enabled,false); assert.equal(f.party.gameActive,false);
   assert.match(f.party.notice,/rejected/);
+});
+
+test('party starts immediately and passes screen timing to the game instead of running a relay countdown',()=>{
+  const f=fixture(); f.like('a',[1]); f.like('b',[1]);
+  f.start({playerSetupSeconds:10,resultSeconds:5,highScoreSeconds:-1,songDisplay:1,singingDisplay:2});
+  f.advance(0);
+  assert.equal(f.commands.length,1);
+  assert.deepEqual(f.commands[0].args,{songIds:[1],playerSetupSeconds:10,resultSeconds:5,highScoreSeconds:-1,songDisplay:1,singingDisplay:2});
+  f.advance(10000);
+  assert.equal(f.commands.length,1,'a pending game acknowledgement must not start duplicate sessions');
 });
 test('scores use the singers present at song start and duplicate endings do not double count',()=>{
   const f=fixture(); f.start(); f.like('a',[1]); f.like('b',[1]); f.advance(0); f.advance(1000);
