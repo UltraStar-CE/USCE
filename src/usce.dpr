@@ -173,6 +173,7 @@ uses
   URemoteRelaySocket in 'base\URemoteRelaySocket.pas',
   URemoteRelaySession in 'base\URemoteRelaySession.pas',
   URemoteRelayProtocol in 'base\URemoteRelayProtocol.pas',
+  URemoteSongSnapshot in 'base\URemoteSongSnapshot.pas',
   URemoteBridgeIPC  in 'base\URemoteBridgeIPC.pas',
   URemoteBridgeProcess in 'base\URemoteBridgeProcess.pas',
   URemoteControl    in 'base\URemoteControl.pas',
