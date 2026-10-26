@@ -13,6 +13,7 @@ type
   TPaPoll = function(Context: pointer; Samples: pointer; Capacity: longint): longint; cdecl;
   TPaStatus = function(Context: pointer; Buffer: PAnsiChar; Capacity: longint): longint; cdecl;
   TPaVersion = function: longint; cdecl;
+  TPaSignal = function(Context: pointer; Json: PAnsiChar): longint; cdecl;
   TPhoneAudio = class
   private
     FLibrary: TLibHandle;
@@ -23,6 +24,8 @@ type
     FPoll: TPaPoll;
     FStatus: TPaStatus;
     FVersion: TPaVersion;
+    FSignal: TPaSignal;
+    FEvent: TPaStatus;
     function GetEnabled: boolean;
   public
     destructor Destroy; override;
@@ -30,6 +33,7 @@ type
     procedure Stop;
     function Poll(Samples: pointer; Capacity: integer): integer;
     function Status: UTF8String;
+    procedure Signal(const Json: UTF8String);
     property Enabled: boolean read GetEnabled;
     property LastError: string read FError;
   end;
@@ -37,6 +41,8 @@ type
 function PhoneAudio: TPhoneAudio;
 
 implementation
+
+uses URemoteBridgeIPC;
 
 var Instance: TPhoneAudio;
 
@@ -75,8 +81,10 @@ begin
     FDestroy := TPaDestroy(GetProcedureAddress(FLibrary, 'usce_pa_destroy'));
     FPoll := TPaPoll(GetProcedureAddress(FLibrary, 'usce_pa_poll'));
     FStatus := TPaStatus(GetProcedureAddress(FLibrary, 'usce_pa_status'));
+    FSignal := TPaSignal(GetProcedureAddress(FLibrary, 'usce_pa_signal'));
+    FEvent := TPaStatus(GetProcedureAddress(FLibrary, 'usce_pa_event'));
     if not (Assigned(FVersion) and Assigned(FCreate) and Assigned(FDestroy) and
-      Assigned(FPoll) and Assigned(FStatus)) then
+      Assigned(FPoll) and Assigned(FStatus) and Assigned(FSignal) and Assigned(FEvent)) then
       FError := 'Native phone audio library has an incomplete ABI'
     else if FVersion() <> 1 then
       FError := 'Native phone audio library ABI version mismatch'
@@ -109,9 +117,25 @@ begin
 end;
 
 function TPhoneAudio.Poll(Samples: pointer; Capacity: integer): integer;
+var Buffer: array[0..131071] of AnsiChar;
+    I, Count: integer;
 begin
   Result := 0;
-  if Enabled then Result := FPoll(FContext, Samples, Capacity);
+  if Enabled then
+  begin
+    Result := FPoll(FContext, Samples, Capacity);
+    for I := 1 to 128 do
+    begin
+      Count := FEvent(FContext, @Buffer[0], Length(Buffer));
+      if Count <= 0 then Break;
+      RemoteBridgeIPC.SendJsonMessage(string(PAnsiChar(@Buffer[0])));
+    end;
+  end;
+end;
+
+procedure TPhoneAudio.Signal(const Json: UTF8String);
+begin
+  if Enabled then FSignal(FContext, PAnsiChar(Json));
 end;
 
 function TPhoneAudio.Status: UTF8String;

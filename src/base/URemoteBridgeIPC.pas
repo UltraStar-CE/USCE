@@ -2,7 +2,7 @@
  *
  * Local JSONL IPC reader for game/webs/usdx-bridge.mjs.
  * This connects to 127.0.0.1:8765 and consumes typed remote-control and
- * remote-pitch observations. It never handles raw microphone audio.
+ * remote-pitch observations, plus bounded native microphone signaling/PCM.
  *}
 
 unit URemoteBridgeIPC;
@@ -92,6 +92,7 @@ function RemoteJsonEscape(const Value: UTF8String): string;
 implementation
 
 uses
+  UPhoneAudio,
   fpjson,
   jsonparser,
   ULog,
@@ -118,6 +119,10 @@ type
     FSocketLock: TRTLCriticalSection;
     FSocketFailed: boolean;
     FLineBuffer: string;
+    FQueueLock: TRTLCriticalSection;
+    FSendQueue: TStringList;
+    FSendQueueBytes: int64;
+    FAsyncWrites: boolean;
 
     procedure HandleLine(const Line: string);
     procedure HandleMessage(Obj: TJSONObject);
@@ -143,6 +148,8 @@ type
     procedure SendSongResumed(SongSeq: integer; MediaStartUs: int64; DurationUs: int64);
     procedure SendSongEnded(SongSeq: integer; MediaStartUs: int64; DurationUs: int64);
     procedure SendLine(const Line: string);
+    procedure WriteLine(const Line: string);
+    procedure FlushWrites;
     procedure CloseSocket;
   protected
     procedure Execute; override;
@@ -599,11 +606,16 @@ begin
   FreeOnTerminate := false;
   FOwner := Owner;
   InitCriticalSection(FSocketLock);
+  InitCriticalSection(FQueueLock);
+  FSendQueue := TStringList.Create;
+  FAsyncWrites := GetEnvironmentVariable('USCE_RAW_AUDIO') = '1';
 end;
 
 destructor TRemoteBridgeIPCThread.Destroy;
 begin
   CloseSocket;
+  FSendQueue.Free;
+  DoneCriticalSection(FQueueLock);
   DoneCriticalSection(FSocketLock);
   inherited;
 end;
@@ -619,6 +631,52 @@ begin
 end;
 
 procedure TRemoteBridgeIPCThread.SendLine(const Line: string);
+begin
+  if not FAsyncWrites then
+  begin
+    WriteLine(Line);
+    Exit;
+  end;
+  // Never let socket backpressure block the game/render/audio consumer thread.
+  EnterCriticalSection(FQueueLock);
+  try
+    if Terminated then Exit;
+    if (FSendQueue.Count >= 128) or (FSendQueueBytes + Length(Line) > 32 * 1024 * 1024) then
+    begin
+      Log.LogWarn('Native bridge output queue full; update dropped', 'Remote Bridge IPC');
+      Exit;
+    end;
+    FSendQueue.Add(Line);
+    Inc(FSendQueueBytes, Length(Line));
+  finally
+    LeaveCriticalSection(FQueueLock);
+  end;
+end;
+
+procedure TRemoteBridgeIPCThread.FlushWrites;
+var I: integer;
+    Line: string;
+begin
+  if not FAsyncWrites then Exit;
+  for I := 1 to 4 do
+  begin
+    EnterCriticalSection(FQueueLock);
+    try
+      if FSendQueue.Count = 0 then Exit;
+      Line := FSendQueue[0];
+      FSendQueue.Delete(0);
+      Dec(FSendQueueBytes, Length(Line));
+    finally
+      LeaveCriticalSection(FQueueLock);
+    end;
+    FSocket.IOTimeout := 1000;
+    WriteLine(Line);
+    FSocket.IOTimeout := 20;
+    if FSocketFailed then Exit;
+  end;
+end;
+
+procedure TRemoteBridgeIPCThread.WriteLine(const Line: string);
 var Written, Count: integer;
 begin
   EnterCriticalSection(FSocketLock);
@@ -773,7 +831,7 @@ begin
       EnterCriticalSection(FSocketLock);
       try
         FSocket := TInetSocket.Create(FOwner.Host, FOwner.Port, CONNECT_TIMEOUT_MS);
-        FSocket.IOTimeout := 1000;
+        if FAsyncWrites then FSocket.IOTimeout := 20 else FSocket.IOTimeout := 1000;
         FSocketFailed := false;
       finally
         LeaveCriticalSection(FSocketLock);
@@ -783,6 +841,8 @@ begin
 
       while (not Terminated) and not FSocketFailed do
       begin
+        FlushWrites;
+        if FSocketFailed then Break;
         ReadCount := FSocket.Read(Buffer, SizeOf(Buffer));
         if ReadCount < 0 then
         begin
@@ -841,6 +901,11 @@ var
   DisplayCode: string;
 begin
   MessageType := JsonGetString(Obj, 'type', '');
+  if PhoneAudio.Enabled and ((Pos('p2p.', MessageType) = 1) or
+    (Pos('room.', MessageType) = 1) or (Pos('player.', MessageType) = 1) or
+    (MessageType = 'audio.pcm') or (MessageType = 'bridge.ready') or
+    (MessageType = 'bridge.disconnected')) then
+    PhoneAudio.Signal(UTF8String(Obj.AsJSON));
   if (MessageType = 'bridge.ready') then
   begin
     DisplayCode := JsonGetString(Obj, 'displayCode', '');

@@ -55,3 +55,11 @@ JSONL messages with a configured local adapter for control, pitch input and
 game state. The adapter can connect to remote services. This optional feature
 extends the local-playback assumptions; its contract is documented in
 [`docs/usce-game-bridge-ipc.md`](docs/usce-game-bridge-ipc.md).
+
+In native PCM mode, the existing local bridge accepts raw audio only after
+server-side capability/slot/format validation and forwards it through JSONL.
+The native ABI bounds incoming signals and PCM; the game bounds outbound IPC
+at 128 messages / 32 MiB and writes them from its existing I/O thread so a
+stalled bridge cannot block the main audio-consumption loop. Browser PCM is
+not subjected to global physical-microphone boost. No microphone recordings
+are created by these diagnostics.

@@ -49,6 +49,7 @@ const gameStateRefreshMs = Number(getArg('game-state-refresh-ms', '30000'));
 const ipcHost = getArg('ipc-host', '127.0.0.1');
 const ipcPort = Number(getArg('ipc-port', '8765'));
 const p2pEnabled = getBoolArg('p2p', false);
+const nativePcmEnabled = getBoolArg('native-pcm', false);
 const p2pIceServersArg = getArg('ice-servers', 'stun:stun.l.google.com:19302');
 const mockSong = getBoolArg('mock-song', true);
 const autoAck = getBoolArg('auto-ack', true);
@@ -1902,7 +1903,7 @@ function markRemoteAudioAvailability(msg) {
 }
 
 function sanitizeSongStateForServer(msg) {
-  const copy = JSON.parse(JSON.stringify(msg));
+  const copy = { ...msg };
   const maxLibrarySongs = Number.isFinite(maxSongStateLibrarySongs)
     ? Math.max(0, Math.floor(maxSongStateLibrarySongs))
     : 200;
@@ -1914,6 +1915,13 @@ function sanitizeSongStateForServer(msg) {
     copy.librarySent = copy.library.length;
     copy.libraryTruncated = true;
   }
+  // Clone only the retained rows, rather than serializing the full game
+  // catalog just to discard nearly all of it afterward.
+  for (const field of ['library', 'results', 'playlistItems']) {
+    if (Array.isArray(copy[field])) copy[field] = copy[field].map(song => ({ ...song }));
+  }
+  if (copy.currentSong) copy.currentSong = { ...copy.currentSong };
+  if (Array.isArray(copy.playlists)) copy.playlists = copy.playlists.map(playlist => ({ ...playlist }));
 
   if (Array.isArray(copy.playlists)) {
     for (const playlist of copy.playlists) {
@@ -2001,6 +2009,15 @@ function sanitizeSongStateForServer(msg) {
     delete song.coverLookupDone;
     delete song.txtPath;
     delete song.audioPath;
+  }
+  // Catalog rows travel through the existing chunked transfer. Never drop
+  // a current selection/preview-clock update because its catalog is too big.
+  if (Array.isArray(copy.library) && Number.isFinite(maxLowPriorityMessageBytes) &&
+      maxLowPriorityMessageBytes > 0 && Buffer.byteLength(JSON.stringify(copy)) > maxLowPriorityMessageBytes) {
+    copy.libraryTotal = msg.libraryTotal || msg.library?.length || copy.library.length;
+    copy.libraryTruncated = true;
+    delete copy.library;
+    copy.librarySent = 0;
   }
   return copy;
 }
@@ -2392,6 +2409,10 @@ function streamPreviewToServer(msgOrRequestId, songId = null, startSec = 0, purp
 
 function handleIpcMessage(msg) {
   if (!msg || typeof msg.type !== 'string') return;
+  if (nativePcmEnabled && ['p2p.answer', 'p2p.ice', 'p2p.error'].includes(msg.type)) {
+    send(msg);
+    return;
+  }
   if (msg.type === 'bridge.shutdown') {
     shutdown('ipc_shutdown');
     return;
@@ -2599,6 +2620,10 @@ function startMockSong() {
 }
 
 async function handleMessage(msg) {
+  if (nativePcmEnabled && (msg.type === 'audio.pcm' || String(msg.type).startsWith('p2p.'))) {
+    sendToIpc(msg);
+    return;
+  }
   if (msg.type === 'p2p.offer') {
     await handleP2pOffer(msg);
     return;
@@ -3014,7 +3039,9 @@ function connect() {
       bridgeVersion,
       catalogSchemaVersion,
       webApp: webApp || undefined,
-      capabilities: ['remotePitch', 'remoteControl', 'clockSync', 'songCatalog', 'diagnostics', ...(p2pEnabled ? ['p2pDataChannel'] : [])],
+      capabilities: ['remotePitch', 'remoteControl', 'clockSync', 'songCatalog', 'diagnostics',
+        ...(p2pEnabled || nativePcmEnabled ? ['p2pDataChannel'] : []),
+        ...(nativePcmEnabled ? ['rawPcmV1'] : [])],
       maxPlayers,
       roomId: room?.roomId,
       hostToken: room?.hostToken

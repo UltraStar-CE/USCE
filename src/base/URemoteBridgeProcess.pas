@@ -40,6 +40,7 @@ function DefaultRemoteBridgeScriptPath: string;
 implementation
 
 uses
+  UPhoneAudio,
   Classes,
   Process,
   ssockets,
@@ -236,6 +237,7 @@ begin
       Proc.Parameters.Add('--auto-ack=false');
       Proc.Parameters.Add('--auto-assign=false');
       Proc.Parameters.Add('--p2p=false');
+      if PhoneAudio.Enabled then Proc.Parameters.Add('--native-pcm=true');
       if (RequestedWebApp <> '') then
       begin
         Proc.Parameters.Add('--web-app');

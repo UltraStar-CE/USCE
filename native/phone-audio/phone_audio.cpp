@@ -27,7 +27,8 @@ std::vector<uint8_t> decodePcm(const std::string &text) {
 struct Receiver : std::enable_shared_from_this<Receiver> {
   std::mutex mutex;
   PcmQueue pcm;
-  std::deque<Json> incoming, outgoing;
+  std::deque<Json> incoming, outgoing, externalEvents;
+  bool external = false;
   std::shared_ptr<rtc::WebSocket> socket;
   std::shared_ptr<rtc::PeerConnection> peer;
   std::shared_ptr<rtc::DataChannel> channel;
@@ -49,6 +50,11 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
   }
   void send(Json message) {
     message["protocol"] = 1;
+    if (external) {
+      std::lock_guard<std::mutex> lock(mutex);
+      if (externalEvents.size() < 128) externalEvents.push_back(std::move(message));
+      return;
+    }
     if (socket && socket->isOpen()) socket->send(message.dump());
   }
   void closePeer() {
@@ -64,6 +70,7 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
     if (old) { old->resetCallbacks(); old->close(); }
   }
   void start(const std::string &url) {
+    if (url == "ipc://") { external = true; state = "waiting for bridge"; return; }
     auto weak = weak_from_this();
     rtc::WebSocket::Configuration cfg;
     cfg.maxMessageSize = 128 * 1024;
@@ -158,8 +165,10 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
     if (type == "native.open") {
       send({{"type", "host.hello"}, {"maxPlayers", 1}, {"gameVersion", "usce-native-pcm-prototype"},
         {"capabilities", Json::array({"p2pDataChannel", "rawPcmV1"})}});
-    } else if (type == "room.created") {
-      code = m.at("displayCode").get<std::string>();
+    } else if (type == "room.created" || type == "room.resumed" || type == "bridge.ready") {
+      if (!m.contains("displayCode") || !m["displayCode"].is_string()) return;
+      code = m["displayCode"].get<std::string>();
+      error.clear();
       std::lock_guard<std::mutex> lock(mutex); state = "waiting for phone";
     } else if (type == "audio.pcm" && m.value("slot", 0) == 1) {
       auto bytes = decodePcm(m.value("pcm", ""));
@@ -178,7 +187,7 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
       closePeer(); player.clear();
     } else if (type == "native.peer_closed" && m.value("generation", uint64_t(0)) == generation) {
       closePeer();
-    } else if (type == "native.closed" || type == "native.error") {
+    } else if (type == "native.closed" || type == "native.error" || type == "bridge.disconnected") {
       closePeer();
       { std::lock_guard<std::mutex> lock(mutex); state = "relay disconnected"; }
       fail(m.value("reason", "Restart the prototype to reconnect"));
@@ -197,7 +206,7 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
     for (auto &m : signals) {
       if (m.value("playerId", "") == player && m.value("attempt", 0) == attempt) send(std::move(m));
     }
-    if (Clock::now() - heartbeat > std::chrono::seconds(2)) { send({{"type", "host.heartbeat"}}); heartbeat = Clock::now(); }
+    if (!external && Clock::now() - heartbeat > std::chrono::seconds(2)) { send({{"type", "host.heartbeat"}}); heartbeat = Clock::now(); }
   }
   void stop() {
     stopped = true;
@@ -210,6 +219,31 @@ std::mutex lifecycleMutex;
 size_t contextCount = 0;
 }
 int32_t usce_pa_version() { return 1; }
+int32_t usce_pa_signal(void *p, const char *text) {
+  if (!p || !text) return -1;
+  try {
+    size_t length = 0;
+    while (length <= 128 * 1024 && text[length]) ++length;
+    if (length > 128 * 1024) return -1;
+    auto message = Json::parse(text, text + length);
+    if (!message.is_object()) return -1;
+    (*static_cast<Handle *>(p))->enqueue(std::move(message));
+    return 0;
+  } catch (...) { return -1; }
+}
+int32_t usce_pa_event(void *p, char *buffer, int32_t capacity) {
+  if (!p || !buffer || capacity <= 0) return -1;
+  try {
+    const auto &self = *static_cast<Handle *>(p);
+    std::lock_guard<std::mutex> lock(self->mutex);
+    if (self->externalEvents.empty()) return 0;
+    const auto text = self->externalEvents.front().dump();
+    if (text.size() + 1 > size_t(capacity)) return -1;
+    std::memcpy(buffer, text.c_str(), text.size() + 1);
+    self->externalEvents.pop_front();
+    return int32_t(text.size());
+  } catch (...) { return -1; }
+}
 void *usce_pa_create(const char *url, const char *ice) {
   std::lock_guard<std::mutex> lock(lifecycleMutex);
   try {

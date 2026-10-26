@@ -92,6 +92,14 @@ begin
   Capture.AnalysisBufferSize := 4096;
   OctaveAlternatives := 0;
   try
+    Ini.MicBoost := 3;
+    for I := 0 to High(Samples) do Samples[I] := 8000;
+    Capture.SubmitPhonePcm(@Samples[0], Length(Samples));
+    if (Capture.AnalysisBuffer[High(Capture.AnalysisBuffer)] <> 8000) or
+       (Samples[0] <> 8000) then
+      raise Exception.Create('Phone PCM inherited physical microphone boost/clipping');
+    Ini.MicBoost := 0;
+    Capture.Clear;
     for Note := 21 to 45 do
     begin
       Frequency := 440 * Power(2, (Note - 33) / 12);
