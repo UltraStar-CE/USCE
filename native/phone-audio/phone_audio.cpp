@@ -36,7 +36,7 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
   Clock::time_point heartbeat{};
   Clock::time_point previousPoll{};
   double maxPollIntervalMs = 0;
-  Clock::time_point lastDirectPacket{}, lastDirectAck{};
+  Clock::time_point lastDirectPacket{}, lastDirectAck{}, lastRelayPacket{};
   uint32_t directSequence = 0;
   std::atomic<bool> stopped{false};
   std::atomic<uint64_t> generation{0};
@@ -59,7 +59,7 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
     {
       std::lock_guard<std::mutex> lock(mutex);
       old.swap(channel);
-      outgoing.clear(); pcm.reset(); lastDirectPacket = {}; state = "waiting for phone";
+      outgoing.clear(); pcm.reset(); lastDirectPacket = {}; lastRelayPacket = {}; state = "waiting for phone";
     }
     if (old) { old->resetCallbacks(); old->close(); }
   }
@@ -165,7 +165,9 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
       auto bytes = decodePcm(m.value("pcm", ""));
       if (!bytes.empty()) {
         std::lock_guard<std::mutex> lock(mutex);
+        const auto rejected = pcm.rejected;
         if (pcm.push(bytes.data(), bytes.size())) state = "receiving PCM";
+        if (pcm.rejected == rejected) lastRelayPacket = Clock::now();
       }
     } else if (type == "p2p.offer") {
       offer(m);
@@ -259,10 +261,20 @@ int32_t usce_pa_status(void *p, char *buffer, int32_t capacity) {
   if (!p || !buffer || capacity <= 0) return -1;
   try {
     const auto &self = *static_cast<Handle *>(p);
+    rtc::Candidate local, remote;
+    const bool selected = self->peer && self->peer->getSelectedCandidatePair(&local, &remote);
+    const bool directPath = selected && local.type() != rtc::Candidate::Type::Relayed &&
+      remote.type() != rtc::Candidate::Type::Relayed;
     std::lock_guard<std::mutex> lock(self->mutex);
     const auto &q = self->pcm;
-    const auto age = q.last == Clock::time_point{} ? -1 : std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - q.last).count();
+    const auto now = Clock::now();
+    const auto age = q.last == Clock::time_point{} ? -1 : std::chrono::duration_cast<std::chrono::milliseconds>(now - q.last).count();
+    const bool recentDirect = self->lastDirectPacket != Clock::time_point{} && now - self->lastDirectPacket < std::chrono::milliseconds(250);
+    const bool recentRelay = self->lastRelayPacket != Clock::time_point{} && now - self->lastRelayPacket < std::chrono::milliseconds(250);
+    const char *route = age < 0 || age >= 250 ? "inactive" :
+      recentDirect && directPath && !recentRelay ? "direct" : "server";
     const auto text = Json({{"code", self->code}, {"state", self->state}, {"error", self->error},
+      {"audioRoute", route},
       {"packets", q.packets}, {"gaps", q.gaps}, {"rejected", q.rejected}, {"droppedSamples", q.dropped},
       {"duplicateOrLatePackets", q.duplicates},
       {"queueMs", q.samples.size() / 48.0}, {"packetAgeMs", age}, {"peak", q.peak},

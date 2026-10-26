@@ -153,3 +153,26 @@ QR provisioning, no adaptive jitter/clock-drift correction, and no audio playout
 Real microphone tests, cross-NAT/TURN tests, packet-loss tests, alignment with
 song timing, low-voice recordings with explicit consent, and macOS/Linux hardware
 tests remain required before considering it a supported feature.
+
+## Route warning and rolling analysis
+
+A fixed amber triangle with “Via server” stays visible on the prototype phone
+page while direct PCM has no receiver acknowledgment younger than 250 ms.
+An open data channel alone does not hide it. Forced fallback and acknowledgment
+expiry restore it; stopping hides it. The game also draws an amber corner
+warning independently of the theme's room-status visibility. Native diagnostics
+report direct only with recent direct PCM, a selected non-TURN candidate pair,
+and no server PCM within 250 ms. An inactive receiver says “Direct audio
+unconfirmed” rather than claiming that server audio is arriving.
+
+The capture buffer already holds a rolling history: each callback appends new
+samples and analysis reads the newest selected window when scoring requests it.
+It does not wait for non-overlapping 2048/4096-sample blocks. It currently shifts
+samples rather than maintaining circular indices. A ring buffer can reduce
+copying and, with a snapshot outside the capture lock, callback contention;
+it does not itself change the observation time needed for pitch detection.
+At 48 kHz, 2048 samples span 42.67 ms and their average age is about 21.33 ms.
+That average age is not a worst-case bound on recognizing a changed pitch.
+The next latency experiment should separate window length from analysis hop,
+produce timestamped overlapping estimates, and align them with scoring time.
+No ring-buffer or scoring-timeline change is included in this prototype update.

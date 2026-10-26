@@ -4,13 +4,22 @@ $('code').value = query.get('code') || '';
 if (query.has('relay')) $('relay').value = query.get('relay');
 let session = null;
 const status = text => { $('status').textContent = text; };
+function directAudioConfirmed(s, now = performance.now()) {
+  return !$('relayOnly').checked && s.dc?.readyState === 'open' &&
+    s.lastAudioAck > 0 && now - s.lastAudioAck < 250;
+}
+function renderRouteWarning() {
+  $('routeWarning').hidden = !session?.worklet || directAudioConfirmed(session);
+}
 
 async function stop() {
   const s = session;
   session = null;
+  renderRouteWarning();
   if (!s) return;
   clearInterval(s.heartbeat);
   clearInterval(s.statsTimer);
+  clearInterval(s.routeTimer);
   clearTimeout(s.deadline);
   s.stream?.getTracks().forEach(track => track.stop());
   s.source?.disconnect();
@@ -83,11 +92,13 @@ async function start(useTone) {
           if (m.slot !== 1) throw Error('Player 1 is already occupied. Stop its phone session first.');
           if (!m.p2p?.enabled) throw Error('This room does not support native PCM');
           s.worklet = new AudioWorkletNode(s.audio, 'usce-pcm');
+          renderRouteWarning();
+          s.routeTimer = setInterval(renderRouteWarning, 50);
           s.worklet.port.onmessage = event => {
             if (session !== s) return;
             const packet = event.data;
             const forceRelay = $('relayOnly').checked;
-            let confirmed = !forceRelay && s.lastAudioAck > 0 && performance.now() - s.lastAudioAck < 250;
+            let confirmed = directAudioConfirmed(s);
             if (!forceRelay && s.dc?.readyState === 'open' && s.dc.bufferedAmount < 9600) {
               try {
                 s.dc.send(packet); ++s.sent;
@@ -160,7 +171,7 @@ async function start(useTone) {
               if (s.dc.readyState === 'open') s.dc.send(JSON.stringify({ type: 'latency.ping', sentMs: performance.now() }));
               $('stats').textContent = JSON.stringify({ source: useTone ? `${s.toneHz} Hz tone` : 'microphone',
                 sampleRate: s.audio.sampleRate, sentPackets: s.sent, relayedPackets: s.relayed, droppedBeforeSend: s.dropped,
-                audioRoute: !$('relayOnly').checked && s.lastAudioAck > 0 && performance.now() - s.lastAudioAck < 250 ? 'P2P confirmed by receiver' : 'server fallback / P2P probing',
+                audioRoute: directAudioConfirmed(s) ? 'P2P confirmed by receiver' : 'server fallback / P2P probing',
                 bufferedBytes: s.dc.bufferedAmount, roundTripMs: s.applicationRttMs ?? null,
                 bestRoundTripMs: s.bestRttMs ?? null, packetAssemblyMs: 10,
                 note: 'RTT excludes microphone hardware and pitch analysis. It is not mouth-to-screen latency.',
@@ -182,7 +193,7 @@ async function start(useTone) {
 $('mic').onclick = () => start(false);
 $('tone').onclick = () => start(true);
 $('stop').onclick = stop;
-$('relayOnly').onchange = () => { if (session) session.lastAudioAck = 0; };
+$('relayOnly').onchange = () => { if (session) session.lastAudioAck = 0; renderRouteWarning(); };
 window.addEventListener('pagehide', stop);
 $('frequency').oninput = () => {
   const hz = Number($('frequency').value);

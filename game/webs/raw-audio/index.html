@@ -11,7 +11,14 @@
   input { display: block; width: 95%; margin-top: .3rem; }
   button { margin: .3rem .3rem .3rem 0; cursor: pointer; }
   pre { white-space: pre-wrap; background: #1f2937; padding: 1rem; }
+  #routeWarning { position: fixed; top: .6rem; right: .6rem; padding: .4rem .6rem;
+    border-radius: .4rem; background: #422f08; color: #fcd34d; font-size: .85rem; }
+  #routeWarning svg { width: 1.1rem; height: 1.1rem; vertical-align: -.2rem; }
 </style>
+<div id="routeWarning" role="status" hidden title="Direct audio is not confirmed. Audio uses a server and may have higher latency.">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2 23 22H1Z"/><path stroke="#422f08" stroke-width="2" d="M12 9v6m0 2v2"/></svg>
+  Via server
+</div>
 <h1>Phone audio experiment</h1>
 <p>One phone supplies player 1's microphone. Audio goes to the game for pitch
 detection. This prototype does not record audio or play it through your speakers.</p>
