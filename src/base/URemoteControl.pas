@@ -59,7 +59,26 @@ function RemoteControlCommandToString(Command: TRemoteControlCommand): UTF8Strin
 function IsMenuRemoteControlCommand(Command: TRemoteControlCommand): boolean;
 function IsSongRemoteControlCommand(Command: TRemoteControlCommand): boolean;
 
+function IsValidRemotePlaylistName(const Name: UTF8String): boolean;
+
 implementation
+
+function IsValidRemotePlaylistName(const Name: UTF8String): boolean;
+var I: integer; Stem: string;
+begin
+  Result := false;
+  if (Trim(string(Name)) = '') or (Length(Name) > 200) then Exit;
+  if Name[Length(Name)] in [' ', '.'] then Exit;
+  for I := 1 to Length(Name) do
+    if (Ord(Name[I]) < 32) or (Pos(Name[I], '<>:"/\|?*') > 0) then Exit;
+  Stem := UpperCase(string(Name));
+  I := Pos('.', Stem);
+  if I > 0 then Stem := Copy(Stem, 1, I - 1);
+  if (Stem = 'CON') or (Stem = 'PRN') or (Stem = 'AUX') or (Stem = 'NUL') then Exit;
+  if (Length(Stem) = 4) and ((Copy(Stem, 1, 3) = 'COM') or
+    (Copy(Stem, 1, 3) = 'LPT')) and (Stem[4] in ['1'..'9']) then Exit;
+  Result := true;
+end;
 
 function TryParseRemoteControlCommand(const CommandName: UTF8String;
   out Command: TRemoteControlCommand): boolean;

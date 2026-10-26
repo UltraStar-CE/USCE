@@ -316,8 +316,9 @@ begin
     Exit;
 
   // open file for rewriting
-  TextStream := TMemTextFileStream.Create(PlaylistFile, fmCreate);
+  TextStream := nil;
   try
+    TextStream := TMemTextFileStream.Create(PlaylistFile, fmCreate);
     // Write version (not nessecary but helpful)
     TextStream.WriteLine('######################################');
     TextStream.WriteLine('#UltraStar Community Edition Playlist Format v1.0');

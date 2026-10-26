@@ -573,7 +573,7 @@ begin
       end;
     rccPlaylistCreate:
       begin
-        Result := (Display.CurrentScreen = @ScreenSong) and (ArgsText <> '');
+        Result := (Display.CurrentScreen = @ScreenSong) and IsValidRemotePlaylistName(ArgsText);
         if Result then
         begin
           PlaylistMan.AddPlaylist(ArgsText);
