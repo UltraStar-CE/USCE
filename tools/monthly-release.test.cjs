@@ -29,7 +29,7 @@ test('the calendar fallback does not bypass a freshly published USDX release', (
 });
 test('drafts and published releases prevent a second regular monthly release', () => {
   for (const release of [{tag_name:'v2026.10.0',draft:true}, {tag_name:'v2026.10.0'}, {tag_name:'v2026.10.1'}]) {
-    assert.equal(pick('2026-10-26T12:00:00Z', {tag_name:'v2026.10.0'}, [release]), null);
+    assert.equal(pick('2026-10-26T12:00:00Z', {tag_name:'v2026.10.0'}, [release], {upstream:{tag:'v2026.10.0'}}), null);
   }
   assert.equal(pick('2026-11-24T12:00:00Z',null,[{tag_name:'v2026.10.0'}]).version,'2026.11.0');
 });
@@ -44,10 +44,16 @@ test('bugfix releases get a follow-up after 24 hours using the next unused USCE 
   assert.equal(plan.upstream.tag, 'v2026.10.1');
 });
 
-test('regular USDX releases after the fallback do not trigger a second release, bugfixes do', () => {
+test('a late regular USDX release triggers a USCE patch after the fallback', () => {
   const releases = [{tag_name:'v2026.10.0'}];
   const source = {tag_name:'v2026.10.0',published_at:'2026-10-25T12:00:00Z'};
-  assert.equal(pick('2026-10-26T12:00:00Z', source, releases), null);
+  assert.equal(pick('2026-10-26T11:59:59Z', source, releases), null);
+  const plan = pick('2026-10-26T12:00:00Z', source, releases, {upstream:{tag:'v2026.9.0'}});
+  assert.equal(plan.version, '2026.10.1');
+  assert.equal(plan.trigger, 'upstream-followup');
+  assert.equal(plan.upstream.tag, 'v2026.10.0');
+  assert.equal(pick('2026-10-27T12:00:00Z', source, [...releases,
+    {tag_name:'v2026.10.1',body:'<!-- usce-upstream-release:v2026.10.0 -->'}]), null);
   assert.equal(pick('2026-10-26T12:00:00Z', {...source,tag_name:'v2026.10.1'}, releases).version, '2026.10.1');
 });
 
@@ -71,8 +77,14 @@ test('bugfix follow-ups cross month boundaries and can be the first release of a
 
 test('bugfix comparisons use the actual source tag when USCE patch numbers differ', async () => {
   const upstream = {tag:'v2026.11.1',sha:'fix'};
-  assert.deepEqual(await chooseComparisonRelease({version:'2026.11.4',bugfix:true,upstream,
+  assert.deepEqual(await chooseComparisonRelease({version:'2026.11.4',followup:true,upstream,
     resolveTag:async()=>{throw Error('Should not guess the corresponding patch tag');}}), upstream);
+});
+
+test('late regular-release follow-ups compare against USDX .0 rather than a guessed .1', async () => {
+  const upstream = {tag:'v2026.11.0',sha:'monthly'};
+  assert.deepEqual(await chooseComparisonRelease({version:'2026.11.1',followup:true,upstream,
+    resolveTag:async()=>{throw Error('Should not guess a USDX patch release');}}), upstream);
 });
 
 test('comparison uses the corresponding monthly tag even after a newer patch release', async () => {

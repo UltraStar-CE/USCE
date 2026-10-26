@@ -15,14 +15,15 @@ function chooseRelease({now, upstream, releases, previousPlan = null}) {
   const marker = upstream ? '<!-- usce-upstream-release:' + upstream.tag_name + ' -->' : '';
   const followed = source && (previousPlan?.upstream?.tag === upstream.tag_name ||
     releases.some(r => !r.prerelease && r.body?.includes(marker)));
-  const bugfix = source && Number(source[3]) > 0 && !followed;
-  if (monthReleases.length && !bugfix) return null;
+  const followup = source && !followed && (Number(source[3]) > 0 ||
+    (monthReleases.length > 0 && upstream.tag_name.startsWith('v' + month + '.')));
+  if (monthReleases.length && !followup) return null;
   // Finish publication of an existing draft before allocating another version.
-  if (bugfix && releases.some(r => r.draft && !r.prerelease && VERSION.test(r.tag_name.replace(/^v/, '')))) return null;
-  if (bugfix && monthReleases.length) {
+  if (followup && releases.some(r => r.draft && !r.prerelease && VERSION.test(r.tag_name.replace(/^v/, '')))) return null;
+  if (followup && monthReleases.length) {
     version = month + '.' + (Math.max(...monthReleases.map(r => Number(r.tag_name.split('.').at(-1)))) + 1);
   }
-  const currentUpstream = source && (upstream.tag_name.startsWith('v' + month + '.') || bugfix);
+  const currentUpstream = source && (upstream.tag_name.startsWith('v' + month + '.') || followup);
   let releaseAfter = null;
   if (currentUpstream) {
     const publishedAt = Date.parse(upstream.published_at);
@@ -31,13 +32,13 @@ function chooseRelease({now, upstream, releases, previousPlan = null}) {
     if (now.getTime() < Date.parse(releaseAfter)) return null;
   }
   if (!currentUpstream && Number(date.day) < 24) return null;
-  return {version, ready: true, trigger: bugfix ? 'upstream-bugfix' : currentUpstream ? 'upstream-release' : 'calendar-fallback',
+  return {version, ready: true, trigger: followup ? (Number(source[3]) > 0 ? 'upstream-bugfix' : 'upstream-followup') : currentUpstream ? 'upstream-release' : 'calendar-fallback',
     date: `${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`,
     upstream: upstream ? {tag: upstream.tag_name, sha: upstream.sha} : null,
     ...(releaseAfter ? {releaseAfter} : {})};
 }
-async function chooseComparisonRelease({version, initial, upstream, resolveTag, bugfix = false}) {
-  if (bugfix) return upstream;
+async function chooseComparisonRelease({version, initial, upstream, resolveTag, followup = false}) {
+  if (followup) return upstream;
   const tag = initial && version === '2026.10.0' ? 'v2026.9.0' : 'v' + version;
   if (upstream?.tag === tag) return upstream;
   try { return {tag, sha: await resolveTag(tag)}; }
@@ -61,7 +62,7 @@ async function prepareMonthly({github, context, core, now = new Date()}) {
   const previousPlan = fs.existsSync('release-plan.json') ? JSON.parse(fs.readFileSync('release-plan.json', 'utf8')) : null;
   const plan = chooseRelease({now, upstream, releases, previousPlan});
   if (!plan) { core.notice('No monthly release preparation is due.'); return; }
-  plan.comparisons = {upstream: await chooseComparisonRelease({version: plan.version, bugfix: plan.trigger === 'upstream-bugfix',
+  plan.comparisons = {upstream: await chooseComparisonRelease({version: plan.version, followup: ['upstream-bugfix', 'upstream-followup'].includes(plan.trigger),
     initial: !releaseBaseline(releases, plan.version).label.startsWith('USCE '), upstream: plan.upstream,
     resolveTag: async ref => {
       const release = (await github.rest.repos.getReleaseByTag({owner:'UltraStar-Deluxe',repo:'USDX',tag:ref})).data;

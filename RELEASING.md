@@ -7,10 +7,11 @@ hour; GitHub scheduling delays can postpone it. If no current-month upstream
 release is available, preparation starts on or after the 24th in Europe/Vienna.
 An upstream release published around that fallback still gets the full 24-hour
 wait. A missing publication timestamp stops preparation for investigation.
-A delayed run catches up. There is at most one regular USCE release per month,
-including when USDX publishes its regular release after our calendar fallback.
-USDX bugfix releases are the exception: they trigger another USCE release after
-the same 24-hour wait, even when the only change is incorporating those fixes.
+A delayed run catches up. There is at most one regular USCE release per month.
+If USDX publishes its regular release after our calendar fallback, we follow it
+with a USCE patch release after the same 24-hour wait. USDX bugfix releases also
+trigger USCE patch releases, even when the only change is incorporating the
+upstream changes. This keeps USCE current with USDX between regular releases.
 The next unused USCE patch number is selected; it need not equal USDX's patch
 number. Existing preparation PRs and draft packages are retained, and each
 upstream release is recorded to prevent duplicate follow-ups. Publication of an
