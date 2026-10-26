@@ -242,6 +242,114 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
 using Handle = std::shared_ptr<Receiver>;
 std::mutex lifecycleMutex;
 size_t contextCount = 0;
+
+// Transport only. Pascal owns protocol, reconnects, room credentials and game
+// state. Keep callbacks bounded, and fail the connection rather than silently
+// losing roster or control messages if the consumer stops keeping up.
+struct RelaySocket : std::enable_shared_from_this<RelaySocket> {
+  static constexpr size_t maxMessage = 1024 * 1024;
+  static constexpr size_t maxQueued = 32 * 1024 * 1024;
+  std::mutex mutex;
+  std::deque<std::string> messages;
+  size_t queuedBytes = 0;
+  std::atomic<int32_t> state{0};
+  std::shared_ptr<rtc::WebSocket> socket;
+  void start(const std::string &url) {
+    rtc::WebSocket::Configuration config;
+    config.maxMessageSize = maxMessage;
+    socket = std::make_shared<rtc::WebSocket>(config);
+    auto weak = weak_from_this();
+    socket->onOpen([weak] { if (auto self = weak.lock()) self->state = 1; });
+    socket->onClosed([weak] {
+      if (auto self = weak.lock()) {
+        int32_t expected = 1;
+        if (!self->state.compare_exchange_strong(expected, 2)) {
+          expected = 0;
+          self->state.compare_exchange_strong(expected, 2);
+        }
+      }
+    });
+    socket->onError([weak](std::string) { if (auto self = weak.lock()) self->state = 3; });
+    socket->onMessage([weak](rtc::message_variant data) {
+      if (auto self = weak.lock()) {
+        auto text = std::get_if<std::string>(&data);
+        if (!text) return;
+        std::lock_guard<std::mutex> lock(self->mutex);
+        if (self->state != 1) return;
+        if (text->size() > maxMessage || text->find('\0') != std::string::npos ||
+            self->messages.size() >= 128 || self->queuedBytes + text->size() > maxQueued) {
+          self->state = 3;
+          return;
+        }
+        self->queuedBytes += text->size();
+        self->messages.push_back(std::move(*text));
+      }
+    });
+    socket->open(url);
+  }
+  void stop() { socket->resetCallbacks(); socket->close(); }
+};
+using RelayHandle = std::shared_ptr<RelaySocket>;
+}
+
+void *usce_relay_create(const char *url) {
+  if (!url) return nullptr;
+  std::lock_guard<std::mutex> lock(lifecycleMutex);
+  try {
+    size_t size = 0;
+    while (size <= 8192 && url[size]) ++size;
+    if (size > 8192) return nullptr;
+    const std::string address(url, size);
+    if (address.rfind("ws://", 0) != 0 && address.rfind("wss://", 0) != 0) return nullptr;
+    auto self = std::make_shared<RelaySocket>();
+    self->start(address);
+    auto handle = new RelayHandle(std::move(self));
+    ++contextCount;
+    return handle;
+  } catch (...) {
+    if (!contextCount) try { rtc::Cleanup().wait(); } catch (...) {}
+    return nullptr;
+  }
+}
+void usce_relay_destroy(void *context) {
+  if (!context) return;
+  std::lock_guard<std::mutex> lock(lifecycleMutex);
+  auto handle = static_cast<RelayHandle *>(context);
+  try { (*handle)->stop(); } catch (...) {}
+  delete handle;
+  if (--contextCount == 0) try { rtc::Cleanup().wait(); } catch (...) {}
+}
+int32_t usce_relay_state(void *context) {
+  if (!context) return 3;
+  return (*static_cast<RelayHandle *>(context))->state;
+}
+int32_t usce_relay_send(void *context, const char *text) {
+  if (!context || !text) return -1;
+  try {
+    size_t size = 0;
+    while (size <= RelaySocket::maxMessage && text[size]) ++size;
+    if (!size || size > RelaySocket::maxMessage) return -1;
+    const auto &self = *static_cast<RelayHandle *>(context);
+    if (self->state != 1 || self->socket->bufferedAmount() > RelaySocket::maxMessage) return 0;
+    // Channel::send(false) means accepted but queued, not rejected.
+    self->socket->send(std::string(text, size));
+    return 1;
+  } catch (...) { return -1; }
+}
+int32_t usce_relay_receive(void *context, char *text, int32_t capacity) {
+  if (!context || !text || capacity <= 0) return -1;
+  try {
+    const auto &self = *static_cast<RelayHandle *>(context);
+    std::lock_guard<std::mutex> lock(self->mutex);
+    if (self->messages.empty()) return 0;
+    const auto &message = self->messages.front();
+    if (message.size() + 1 > size_t(capacity)) return -2;
+    const auto size = message.size();
+    std::memcpy(text, message.c_str(), size + 1);
+    self->queuedBytes -= size;
+    self->messages.pop_front();
+    return int32_t(size);
+  } catch (...) { return -1; }
 }
 int32_t usce_pa_version() { return 1; }
 int32_t usce_pa_signal(void *p, const char *text) {

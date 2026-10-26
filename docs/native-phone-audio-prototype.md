@@ -6,6 +6,35 @@ the existing local feature bridge for controls, catalog and game state; PCM is
 received in the game. The standalone receiver-only mode needs no local bridge.
 PR #168 consolidates the game API and native receiver against current main.
 
+The intended integrated product has no local Node.js process. The current
+feature bridge is temporary and has not yet been fully replaced. Bundling Node
+is not the implementation plan. The hosted relay may continue using Node;
+browser JavaScript also remains part of the phone app.
+
+### Replacing the remaining local bridge
+
+`URemoteRelaySocket` exposes the native module's bounded, TLS-verified text
+WebSocket to Pascal. `URemoteRelaySession` owns room registration, 500 ms
+heartbeats and reconnect/resume credentials in memory. Neither starts a local
+server or subprocess. These units compile with the game but are not yet selected
+by normal integrated startup: changing startup before feature parity would lose
+existing behavior.
+
+The native loopback regression covers UTF-8, short caller buffers, message and
+queue limits, and sharing the library lifetime with audio contexts. The Pascal
+binding has been exercised over a real loopback socket with a 1 MiB message and
+close/reopen. On Windows, the Pascal session has also created a temporary room
+over `wss://usdx.at/ws/host`, resumed the same room after reconnect, and sent
+shutdown. This verifies the transport/session foundation, not replacement of the
+complete local bridge or gameplay through that replacement.
+
+Still to move: roster/settings reconciliation and slot assignment; command/ack
+routing; game/song/screen state and clock messages; catalog manifests/chunks,
+covers and preview streaming; playlist editing, favorites/votes; Party queue and
+leaderboard orchestration using the game's continuous playback. Existing
+Pascal/native PCM receivers remain the audio and scoring path. The switch to
+native startup requires end-to-end parity checks for all of these features.
+
 ## What is implemented
 
 The phone AudioWorklet emits 10 ms packets of mono signed 16-bit PCM at 48 kHz

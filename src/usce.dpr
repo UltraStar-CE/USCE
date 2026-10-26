@@ -170,6 +170,8 @@ uses
   URecord           in 'base\URecord.pas',
   UInputSource      in 'base\UInputSource.pas',
   UPhoneAudio       in 'base\UPhoneAudio.pas',
+  URemoteRelaySocket in 'base\URemoteRelaySocket.pas',
+  URemoteRelaySession in 'base\URemoteRelaySession.pas',
   URemoteBridgeIPC  in 'base\URemoteBridgeIPC.pas',
   URemoteBridgeProcess in 'base\URemoteBridgeProcess.pas',
   URemoteControl    in 'base\URemoteControl.pas',
