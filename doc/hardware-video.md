@@ -1,7 +1,7 @@
 # Hardware-assisted video playback
 
-USDX can use libmpv for video decoding and color conversion. This backend is
-optional and disabled by default. Song audio and lyrics keep using USDX's audio
+USCE can use libmpv for video decoding and color conversion. This backend is
+optional and disabled by default. Song audio and lyrics keep using USCE's audio
 clock. The existing FFmpeg backend remains the default.
 
 Build with libmpv development files installed:
@@ -12,7 +12,7 @@ Build with libmpv development files installed:
 make
 ```
 
-Enable it in `config.ini` and restart USDX:
+Enable it in `config.ini` and restart USCE:
 
 ```ini
 [Graphics]
@@ -24,7 +24,7 @@ VideoHardwareDecoding=auto
 GPUs are supported according to libmpv, the codec, the driver, and the active
 graphics context. This setting does not force the integrated GPU or select a
 particular adapter. On hybrid systems the graphics adapter is selected by the
-OS/driver when starting USDX. Check the actual decoder in USDX's log; selecting
+OS/driver when starting USCE. Check the actual decoder in USCE's log; selecting
 the MPV backend alone does not prove hardware decoding is active.
 
 Every video opens with software decoding and switches to the hardware decoder
@@ -41,7 +41,7 @@ same backend. Use `VideoBackend=ffmpeg` to restore the original video path.
 Disabled MPV is skipped without an initialization error. Unknown values revert
 to the defaults.
 
-When libmpv is unavailable, USDX selects its normal FFmpeg backend. When opening
+When libmpv is unavailable, USCE selects its normal FFmpeg backend. When opening
 a file or creating its render context fails, the MPV provider tries the
 lower-priority FFmpeg provider. libmpv also performs its own software fallback
 when a hardware decoder cannot handle a file. No hardware path is guaranteed
@@ -49,18 +49,18 @@ for every GPU or codec.
 
 ## Dependencies and distribution
 
-The backend loads libmpv dynamically, so the regular USDX builds do not acquire
+The backend loads libmpv dynamically, so the regular USCE builds do not acquire
 a mandatory runtime dependency. The library must include the OpenGL render API.
 
 | Platform | Runtime library | Packaging |
 | --- | --- | --- |
 | Linux | `libmpv.so.2` or compatible `libmpv.so.1` | Install the distribution's libmpv package and video drivers. AppImage/Flatpak distributors must include libmpv and its dependencies explicitly. |
-| Windows | `libmpv-2.dll` or `mpv-2.dll` | Place an architecture-matching libmpv build and all its dependencies alongside USDX. The MSYS2 UCRT64 mpv package is one source. |
+| Windows | `libmpv-2.dll` or `mpv-2.dll` | Place an architecture-matching libmpv build and all its dependencies alongside USCE. The MSYS2 UCRT64 mpv package is one source. |
 | macOS | `libmpv.2.dylib` or compatible `libmpv.1.dylib` | Install libmpv, or bundle it and its dependencies with suitable loader paths. The existing dependency scanner cannot discover a dynamically loaded library automatically. |
 
 The normal release packaging is unchanged. `--with-mpv=nocheck` is useful for
 compiling the optional loader on a target without development metadata; it does
-not package or install libmpv. Do not overwrite USDX's existing FFmpeg libraries
+not package or install libmpv. Do not overwrite USCE's existing FFmpeg libraries
 with incompatible versions when bundling dependencies.
 
 The renderer uses an offscreen texture, with no fixed 1080p limit. It preserves
@@ -70,9 +70,9 @@ filtering to avoid a reproduced black first frame with libmpv 0.41.0 and Mesa
 llvmpipe. Hardware decoding may use direct
 GPU textures or copy decoded frames back, depending on the platform and graphics
 interop supported by libmpv. This implementation does not force EGL or change
-USDX's minimum GL/GLES requirements; unsupported render contexts fall back.
+USCE's minimum GL/GLES requirements; unsupported render contexts fall back.
 
-USDX's audio clock drives playback. The backend adjusts libmpv's speed by up
+USCE's audio clock drives playback. The backend adjusts libmpv's speed by up
 to five percent to absorb small differences and seeks only for explicit jumps
 or when the video lags by more than 0.75 seconds for half a second. A video
 that runs ahead of the clock waits for it, as the FFmpeg backend does. The
@@ -123,3 +123,7 @@ software, and MPV automatic decoding with the same song and settings.
 
 WSL software-rendered playback is useful for lifecycle and fallback checks, but
 does not establish native Windows or Linux hardware-decoding support.
+
+USCE exposes these choices in Tools > Options > Graphics. Restart after changing the video backend. Hardware decoding applies to MPV only.
+
+USCE exposes these choices in Tools > Options > Graphics. Restart after changing the video backend. Hardware decoding applies to MPV only.

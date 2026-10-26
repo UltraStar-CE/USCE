@@ -1,0 +1,57 @@
+name: Video backends
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  build_linux:
+    name: Linux (${{ matrix.mpv }} libmpv)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        mpv: [with, without]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            autoconf automake make gcc fpc pkg-config \
+            libsdl2-dev libsdl2-image-dev libfreetype6-dev libsqlite3-dev \
+            libavformat-dev libavcodec-dev libavutil-dev libswresample-dev libswscale-dev \
+            portaudio19-dev libportmidi-dev liblua5.3-dev libmpv-dev \
+            python3 ffmpeg xvfb xauth libgl1 libegl1 libgles2 \
+            libgl1-mesa-dri libglx-mesa0 libegl-mesa0
+      - name: Configure
+        run: |
+          ./autogen.sh
+          ./configure --enable-debug --without-opencv --${{ matrix.mpv }}-mpv
+      - name: Build
+        run: make
+      - name: Test video clock synchronization
+        run: |
+          mkdir -p build/video-tests
+          fpc -Fusrc/media -FUbuild/video-tests -FEbuild/video-tests test/VideoSyncTest.pas
+          build/video-tests/VideoSyncTest
+      - name: Test rendering and video playback
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          SDL_VIDEODRIVER: x11
+        run: |
+          xvfb-run -a -s '-screen 0 1280x720x24' \
+            python3 test/run-video-smoke.py --renderers gl gl2 gles2 gles3
+      - name: Test hardware decoder selection
+        if: matrix.mpv == 'with'
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          SDL_VIDEODRIVER: x11
+        run: |
+          xvfb-run -a -s '-screen 0 1280x720x24' \
+            python3 test/run-video-smoke.py --renderers gl --hwdec auto

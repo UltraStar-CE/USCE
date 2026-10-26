@@ -91,3 +91,9 @@ The CI does this for you, but if you need to do it manually:
   * Copy the DLLs from `game` to `installer/dependencies/dll`
   * `C:\...\makensis "installer/UltraStar Community Edition.nsi"` (this will take a while)
   * The .exe will be placed in `installer/dist`
+
+## Optional MPV video playback
+
+On Ubuntu install `libmpv-dev`, then build with `./configure --enable-debug --with-mpv` and `make`. The default `./configure` build keeps FFmpeg only. MPV is loaded dynamically; its runtime must be installed separately.
+
+Choose the video backend and hardware decoding in Tools > Options > Graphics and restart after changing the backend. FFmpeg remains the default and fallback. See [hardware video](doc/hardware-video.md) for configuration, platform runtime names and validation.

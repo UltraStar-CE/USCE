@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build and run the actual USDX renderer/video units in an isolated test program."""
+"""Build and run the actual USCE renderer/video units in an isolated test program."""
 
 import argparse
 import os
@@ -59,7 +59,7 @@ def main():
     root = Path(__file__).resolve().parent.parent
     src = root / "src"
     if not (src / "Makefile").exists() or not (src / "paths.inc").exists():
-        parser.error("configure and build USDX before running this test")
+        parser.error("configure and build USCE before running this test")
     makefile = (src / "Makefile").read_text()
     suffix = re.search(r"(?m)^EXEEXT[ \t]*\?=[ \t]*(.*)$", makefile).group(1).strip()
     windows = suffix == ".exe"
@@ -67,8 +67,12 @@ def main():
     def compiler_path(path):
         # The MSYS Python interpreter returns POSIX paths; native FPC needs
         # drive paths inside Pascal source as well as in compiler arguments.
-        if windows and os.name != "nt":
-            return subprocess.check_output(["cygpath", "-m", str(path)], text=True).strip()
+        if windows:
+            if os.name != "nt":
+                return subprocess.check_output(["cygpath", "-w", str(path)], text=True).strip()
+            # MSYS rewrites prefixed forward-slash drive paths such as
+            # -FUD:/a/build. Backslashes inside quoted arguments avoid that.
+            return str(path).replace("/", "\\")
         return path.as_posix()
 
     if args.output_dir:
@@ -81,13 +85,13 @@ def main():
         # FPC can reuse PPUs beside the program source even with -B. Keep every
         # compiler search/output directory fresh when --output-dir is reused.
         compile_dir = Path(tempfile.mkdtemp(prefix="compile-", dir=temp))
-        # USDX's main program explicitly orders cyclic Pascal units and selects
+        # USCE's main program explicitly orders cyclic Pascal units and selects
         # versioned bindings. Reuse that list instead of maintaining a second one.
-        project = (src / "ultrastardx.dpr").read_text()
+        project = (src / "usce.dpr").read_text()
         marker = re.search(r"(?m)^const\s*\n\s*sLineBreakWin", project)
         if not marker:
             raise RuntimeError("Could not locate the end of the application's unit list")
-        header = project[:marker.start()].replace("program ultrastardx;", "program VideoSmoke;")
+        header = project[:marker.start()].replace("program usce;", "program VideoSmoke;")
         # The test has no app icon/resources and must retain a console on Windows.
         header = re.sub(r"(?m)^\s*\{\$R [^\n]+\}\s*$", "", header)
         header = header.replace("program VideoSmoke;", "program VideoSmoke;\n{$DEFINE CONSOLE}")
@@ -114,7 +118,7 @@ def main():
         recipe = "video-smoke-build:; $(PPC) $(PFLAGS_ALL) " + extra
         subprocess.run([
             "make", "--no-print-directory", "-s", "-C", str(src),
-            "PCUNIT_DIR=" + compiler_path(compile_dir),
+            "PCUNIT_FLAGS=",
             "--eval=.PHONY: video-smoke-build", "--eval=" + recipe, "video-smoke-build"
         ], check=True)
         shutil.copy2(compiled_executable, executable)
