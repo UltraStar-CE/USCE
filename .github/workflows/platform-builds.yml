@@ -256,7 +256,7 @@ jobs:
           cmake -S native/phone-audio -B build/phone-audio -G Ninja -DCMAKE_BUILD_TYPE=Release -DOPENSSL_USE_STATIC_LIBS=TRUE
           cmake --build build/phone-audio --parallel 3
           ctest --test-dir build/phone-audio --output-on-failure
-          license="$OPENSSL_ROOT_DIR/share/doc/openssl@3/LICENSE.txt"
+          license="$(find -L "$OPENSSL_ROOT_DIR" -type f -name LICENSE.txt -print -quit)"
           test -f "$license"
           python3 tools/stage-phone-audio.py --platform darwin --openssl-license "$license"
       - name: Generate Build Scripts
