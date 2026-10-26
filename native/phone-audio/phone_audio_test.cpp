@@ -1,6 +1,21 @@
 #include "pcm_queue.h"
+#include "phone_audio.h"
 #include <cassert>
 #include <iostream>
+#include <string>
+static std::string base64(const std::vector<uint8_t> &bytes) {
+  const char *alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  std::string text;
+  for (size_t i = 0; i < bytes.size(); i += 3) {
+    const uint32_t value = (uint32_t(bytes[i]) << 16) |
+      (i + 1 < bytes.size() ? uint32_t(bytes[i+1]) << 8 : 0) |
+      (i + 2 < bytes.size() ? bytes[i+2] : 0);
+    text += alphabet[(value >> 18) & 63]; text += alphabet[(value >> 12) & 63];
+    text += i + 1 < bytes.size() ? alphabet[(value >> 6) & 63] : '=';
+    text += i + 2 < bytes.size() ? alphabet[value & 63] : '=';
+  }
+  return text;
+}
 static std::vector<uint8_t> packet(uint32_t sequence) {
   std::vector<uint8_t> p(980);
   p[0] = 'U'; p[1] = 'A'; p[2] = 'P'; p[3] = '1';
@@ -28,5 +43,19 @@ int main() {
   p = packet(0xffffffff); assert(q.push(p.data(), p.size(), now));
   p = packet(0); assert(q.push(p.data(), p.size(), now));
   p = packet(1); p.resize(24); assert(!q.push(p.data(), p.size(), now));
+  auto receiver = usce_pa_create("ipc://", "");
+  assert(receiver);
+  assert(usce_pa_signal(receiver, "{\"type\":\"bridge.ready\",\"displayCode\":null}") == 0);
+  assert(usce_pa_signal(receiver, "not json") == -1);
+  assert(usce_pa_signal(receiver, "{\"type\":\"room.created\",\"displayCode\":\"TEST\"}") == 0);
+  const auto pcm = std::string("{\"type\":\"audio.pcm\",\"slot\":1,\"pcm\":\"") + base64(packet(1)) + "\"}";
+  assert(usce_pa_signal(receiver, pcm.c_str()) == 0);
+  assert(usce_pa_poll(receiver, out, 9600) == 480);
+  assert(out[0] == 16384);
+  char status[4096];
+  assert(usce_pa_status(receiver, status, sizeof(status)) > 0);
+  assert(std::string(status).find("TEST") != std::string::npos);
+  assert(usce_pa_event(receiver, status, sizeof(status)) == 0);
+  usce_pa_destroy(receiver);
   std::cout << "PCM validation, gaps, stale frames, bounds and sequence wrap passed\n";
 }

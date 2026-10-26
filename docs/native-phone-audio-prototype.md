@@ -1,8 +1,9 @@
 # Native phone microphone experiment
 
 This optional prototype receives microphone PCM inside the USCE process. The
-phone page and room signaling run on the hosted relay. There is no local Node
-runtime, bridge process, virtual microphone, PipeWire configuration, or web server.
+normal phone web app and signaling use the hosted relay. Integrated mode keeps
+the existing local feature bridge for controls, catalog and game state; PCM is
+received in the game. The standalone receiver-only mode needs no local bridge.
 It builds on the unmerged game API branch from PR #89, without merging that PR.
 
 ## What is implemented
@@ -159,11 +160,9 @@ tests remain required before considering it a supported feature.
 A fixed amber triangle with “Via server” stays visible on the prototype phone
 page while direct PCM has no receiver acknowledgment younger than 250 ms.
 An open data channel alone does not hide it. Forced fallback and acknowledgment
-expiry restore it; stopping hides it. The game also draws an amber corner
-warning independently of the theme's room-status visibility. Native diagnostics
-report direct only with recent direct PCM, a selected non-TURN candidate pair,
-and no server PCM within 250 ms. An inactive receiver says “Direct audio
-unconfirmed” rather than claiming that server audio is arriving.
+expiry restore it. The normal web app keeps a Direct / Via server corner badge.
+The game screen has no connection warning. Native diagnostics still report
+the actual receiving route for testing.
 
 The capture buffer already holds a rolling history: each callback appends new
 samples and analysis reads the newest selected window when scoring requests it.
@@ -176,3 +175,47 @@ That average age is not a worst-case bound on recognizing a changed pitch.
 The next latency experiment should separate window length from analysis hop,
 produce timestamped overlapping estimates, and align them with scoring time.
 No ring-buffer or scoring-timeline change is included in this prototype update.
+
+## Integrated normal web app
+
+For feature testing, enable RemoteBridge in the test configuration and start
+with USCE_RAW_AUDIO=1. The game starts its existing bridge with --native-pcm=true.
+Use normal https://usdx.at, join the shared room, select Mic 1 and Start Mic.
+There is no second room or separate phone UI. Controls, song browsing, playlists,
+lyrics and device playback keep their existing routes. Other slots and older
+games retain browser pitch input. The native channel carries unreliable PCM;
+room/control/clock messages remain on the existing WebSocket bridge path.
+
+The native C ABI accepts optional bounded external JSON signaling (ipc://),
+and exposes outgoing WebRTC events to the Pascal main loop. The existing JSONL
+bridge forwards authenticated server PCM and signaling. Pascal scores slot 1
+from its capture buffer even when the player profile is remotely assigned.
+Standalone hosted-room mode remains available for isolated developer tests.
+
+Phone PCM bypasses the global physical-microphone boost. A user's USB +18 dB
+setting must not multiply phone samples by eight and clip them. For the next
+real-voice comparison the installed test launcher uses the normal 4096/CAMDF
+baseline. 2048/AMDF remains an optional synthetic-tested experiment; the earlier
+65 Hz tests do not establish real-voice reliability.
+
+Live control responsiveness: unchanged preview clocks reuse the in-memory
+catalog, hidden song lists do not render, retained bridge state rows are cloned
+without deep-copying the complete catalog, and oversized state updates omit
+catalog rows rather than dropping the clock/selection. Full catalogs continue
+through their existing chunked transfer. Pascal uses a string stream to build
+full library snapshots instead of repeatedly copying their growing strings.
+
+Device playback no longer targets a temporary 500 ms startup lead. Large drift
+can recover after startup through a guarded seek (no overlapping seeks and a
+2 s cooldown); smaller drift uses bounded rate correction, checked every 250 ms.
+These policy tests pass; physical-phone seek duration and audible sync still
+need user testing. No microphone recording was created for this investigation.
+Native-audio mode queues outbound JSONL messages for the existing I/O thread
+(maximum 128 messages / 32 MiB), with a 20 ms read poll interval. The game thread
+never performs the potentially blocking socket write. The paused-reader
+regression submits an 8 MiB message to a deliberately non-reading loopback
+bridge and requires the caller to return within 250 ms; it returned below the
+clock's millisecond resolution on the Windows test machine. This protects the
+game's PCM polling from bridge write backpressure. Full catalog construction
+and game rendering can still consume frame time, so real-run stalls remain
+measured rather than claimed eliminated.

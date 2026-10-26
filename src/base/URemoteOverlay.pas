@@ -19,45 +19,9 @@ implementation
 
 uses
   SysUtils,
-  UText, UThemes, UGraphic, URenderer, ULanguage,
+  UText, UThemes, UGraphic,
   UPhoneAudio, fpjson, jsonparser,
   URemoteBridgeIPC;
-
-procedure DrawPhoneRouteWarning;
-var
-  Status: TJSONData;
-  Route: string;
-  Caption: UTF8String;
-  X: real;
-begin
-  if not PhoneAudio.Enabled then Exit;
-  Status := nil;
-  Route := 'inactive';
-  try
-    Status := GetJSON(PhoneAudio.Status);
-    if Status is TJSONObject then
-      Route := TJSONObject(Status).Get('audioRoute', 'inactive');
-  except
-    // Missing diagnostics must not hide an unconfirmed route.
-  end;
-  Status.Free;
-  if Route = 'direct' then Exit;
-  if Route = 'server' then Caption := Language.Translate('PHONE_AUDIO_VIA_SERVER')
-  else Caption := Language.Translate('PHONE_AUDIO_NO_DIRECT');
-  SetFont(0, 0);
-  SetFontSize(16);
-  SetFontItalic(false);
-  SetFontReflection(false, 0);
-  SetFontZ(0);
-  X := RenderW - TextWidth(Caption) - 12;
-  Renderer.DrawTriangle(X - 22, 28, X - 4, 28, X - 13, 11, 0, 1, 0.78, 0.2, 1);
-  Renderer.DrawLine(X - 13, 17, X - 13, 22, 0, 2, 0.15, 0.12, 0.05, 1);
-  Renderer.DrawLine(X - 13, 24, X - 13, 26, 0, 2, 0.15, 0.12, 0.05, 1);
-  SetFontColor(1, 0.78, 0.2, 1);
-  SetFontPos(X, 10);
-  PrintText(Caption);
-  SetFontColor(1, 1, 1, 1);
-end;
 
 procedure DrawRemoteRoomOverlay;
 var
@@ -69,7 +33,6 @@ var
   TextW, X: real;
   Status: TJSONData;
 begin
-  DrawPhoneRouteWarning;
   if not Theme.RemoteRoomVisible then Exit;
   RemoteBridgeIPC.GetRoomStatus(Connected, DisplayCode, StatusSeq, ConnectedPlayers);
   if PhoneAudio.Enabled then

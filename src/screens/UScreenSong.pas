@@ -35,6 +35,8 @@ interface
 
 uses
   UVoiceAssignments,
+  Classes,
+
   UCatCovers,
   UCommon,
   UDataBase,
@@ -415,6 +417,7 @@ var
   SongJson: string;
   ResultsJson: string;
   LibraryJson: string;
+  LibraryStream: TStringStream;
   PlaylistsJson: string;
   PlaylistItemsJson: string;
   Song: TSong;
@@ -581,20 +584,27 @@ begin
   end;
   ResultsJson := ResultsJson + ']';
 
-  LibraryJson := '[';
-  Sent := 0;
-  for I := 0 to High(CatSongs.Song) do
-  begin
-    Song := CatSongs.Song[I];
-    if Assigned(Song) and (not Song.Main) then
+  // A large catalog must not repeatedly copy the entire accumulated string
+  // for every song while the main thread is also consuming microphone PCM.
+  LibraryStream := TStringStream.Create('');
+  try
+    LibraryStream.WriteString('[');
+    Sent := 0;
+    for I := 0 to High(CatSongs.Song) do
     begin
-      if Sent > 0 then
-        LibraryJson := LibraryJson + ',';
-      LibraryJson := LibraryJson + SongToJson(I);
-      Inc(Sent);
+      Song := CatSongs.Song[I];
+      if Assigned(Song) and (not Song.Main) then
+      begin
+        if Sent > 0 then LibraryStream.WriteString(',');
+        LibraryStream.WriteString(SongToJson(I));
+        Inc(Sent);
+      end;
     end;
+    LibraryStream.WriteString(']');
+    LibraryJson := LibraryStream.DataString;
+  finally
+    LibraryStream.Free;
   end;
-  LibraryJson := LibraryJson + ']';
 
   PlaylistsJson := '[';
   for PlaylistIndex := 0 to High(PlaylistMan.Playlists) do

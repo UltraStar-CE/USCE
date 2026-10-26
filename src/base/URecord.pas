@@ -80,7 +80,8 @@ type
       function GetToneCandidate(Index: integer): TToneCandidate;
 
       procedure BoostBuffer(Buffer: PByteArray; Size: integer);
-      procedure ProcessNewBuffer(Buffer: PByteArray; BufferSize: integer; AllowRecording: boolean = true);
+      procedure ProcessNewBuffer(Buffer: PByteArray; BufferSize: integer; AllowRecording: boolean = true;
+        AllowBoost: boolean = true);
 
       procedure StartCapture(Format: TAudioFormatInfo);
       procedure StopCapture();
@@ -411,7 +412,8 @@ begin
   ResetToneDiagnostics;
 end;
 
-procedure TCaptureBuffer.ProcessNewBuffer(Buffer: PByteArray; BufferSize: integer; AllowRecording: boolean);
+procedure TCaptureBuffer.ProcessNewBuffer(Buffer: PByteArray; BufferSize: integer; AllowRecording: boolean;
+  AllowBoost: boolean);
 var
   BufferOffset: integer;
   SampleCount:  integer;
@@ -421,7 +423,7 @@ begin
   if (AudioFormat <> nil) and (AudioFormat.SampleRate > 0) then
     LastInputBlockMs := BufferSize * 1000 / (SizeOf(smallint) * AudioFormat.SampleRate);
   // apply software boost
-  BoostBuffer(Buffer, BufferSize);
+  if AllowBoost then BoostBuffer(Buffer, BufferSize);
 
   // voice passthrough (send data to playback-device)
   if (assigned(fVoiceStream)) then
@@ -531,10 +533,11 @@ begin
     fAudioFormat := TAudioFormatInfo.Create(1, 48000, asfS16);
     Clear;
   end;
-  // Reuse exactly the normal capture buffering/boost and pitch detector.
+  // Browser input already has its own gain controls. Do not inherit the global
+  // physical-microphone boost, which can severely clip phone PCM.
   // No voice passthrough: avoid playing a delayed phone mic through speakers.
   FreeAndNil(fVoiceStream);
-  if Count > 0 then ProcessNewBuffer(PByteArray(Samples), Count * SizeOf(smallint), false);
+  if Count > 0 then ProcessNewBuffer(PByteArray(Samples), Count * SizeOf(smallint), false, false);
 end;
 
 function TCaptureBuffer.ArrayIndexOfMinimum(const AValues: array of real): Integer;

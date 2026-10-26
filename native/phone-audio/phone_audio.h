@@ -19,6 +19,9 @@ USCE_PA void usce_pa_destroy(void *context);
 // Called on the game thread. Performs signaling, drains fresh mono S16/48k PCM.
 USCE_PA int32_t usce_pa_poll(void *context, int16_t *samples, int32_t capacity);
 USCE_PA int32_t usce_pa_status(void *context, char *json, int32_t capacity);
+// Optional external signaling: create with "ipc://". Bounded queues, no socket.
+USCE_PA int32_t usce_pa_signal(void *context, const char *json);
+USCE_PA int32_t usce_pa_event(void *context, char *json, int32_t capacity);
 #ifdef __cplusplus
 }
 #endif

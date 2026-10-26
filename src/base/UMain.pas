@@ -316,10 +316,16 @@ begin
     { prepare software cursor }
     Display.SetCursor;
 
-    if (GetEnvironmentVariable('USCE_RAW_AUDIO') = '1') and
-      (Ini.RemoteBridgeEnabled <> 1) then
+    if (GetEnvironmentVariable('USCE_RAW_AUDIO') = '1') then
     begin
-      if not PhoneAudio.Start(
+      if Ini.RemoteBridgeEnabled = 1 then
+      begin
+        if not PhoneAudio.Start('ipc://',
+          UTF8String(GetEnvironmentVariable('USCE_RAW_AUDIO_ICE')),
+          GetEnvironmentVariable('USCE_RAW_AUDIO_LIBRARY')) then
+          Log.LogWarn(PhoneAudio.LastError, 'Native phone audio');
+      end
+      else if not PhoneAudio.Start(
         UTF8String(GetEnvironmentVariable('USCE_RAW_AUDIO_RELAY')),
         UTF8String(GetEnvironmentVariable('USCE_RAW_AUDIO_ICE')),
         GetEnvironmentVariable('USCE_RAW_AUDIO_LIBRARY')) then

@@ -165,6 +165,7 @@ function  GetPlayerSentenceScore(PlayerIndex, Track, SentenceIndex: integer; out
 implementation
 
 uses
+  UPhoneAudio,
   Math,
   StrUtils,
   UCatCovers,
@@ -864,7 +865,8 @@ begin
     if (not CurrentSong.isDuet) or (Player[PlayerIndex].Track = CP) then
     begin
 
-      IsRemotePlayer := RemoteInputProcessor.HasAssignedPlayer(PlayerIndex);
+      IsRemotePlayer := RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) and
+        not (PhoneAudio.Enabled and (PlayerIndex = 0));
       PlayerDelayMs := Ini.PlayerDelay[PlayerIndex];
       if IsRemotePlayer then
       begin
