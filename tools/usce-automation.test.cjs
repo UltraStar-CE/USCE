@@ -1,7 +1,14 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {validateFiles, validateResult, openDraft, upstreamDelta, unrecordedDelta, prepare, publish, trackUpstream} = require('./usce-automation.cjs');
+const {validateFiles, validateResult, openDraft, upstreamDelta, unrecordedDelta, prepare, publish, trackUpstream, upstreamAuthorCredit} = require('./usce-automation.cjs');
+
+test('upstream credit mentions verified logins, including maintainers, without guessing from names', () => {
+  assert.equal(upstreamAuthorCredit({authorLogin: 'complexlogic', author: {name: 'Different Name'}}), '@complexlogic');
+  assert.equal(upstreamAuthorCredit({authorLogin: 'contributor-name'}), '@contributor-name');
+  assert.equal(upstreamAuthorCredit({author: {name: 'Source Author'}}), 'Source Author');
+  assert.equal(upstreamAuthorCredit({authorLogin: 'invalid login', author: {name: 'Source Author'}}), 'Source Author');
+});
 
 test('candidate publication rejects paths outside the source scope and path tricks', () => {
   for (const path of ['.github/workflows/evil.yml', '../src/base/Test.pas', 'src/base/../lib/Test.pas',

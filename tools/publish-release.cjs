@@ -27,8 +27,7 @@ function gitChanges(ref, sha, repositoryUrl) {
   const commits = execFileSync('git', ['log', '--first-parent', '--format=%H%x09%s', range], {encoding: 'utf8'});
   const notes = commits.trim().split('\n').filter(Boolean).map(line => {
     const [hash, ...subject] = line.split('\t');
-    const title = subject.join('\t').replace(/https?:\/\/github\.com\/[^\s)]+/g, '[source reference omitted]')
-      .replace(/#/g, ' PR ').replace(/@([A-Za-z0-9_-]+)/g, '$1').replace(/[\[\]]/g, '');
+    const title = subject.join('\t').replace(/[\[\]]/g, '\\$&');
     return '- ' + title + ' ([`' + hash.slice(0, 7) + '`](' + repositoryUrl + '/commit/' + hash + '))';
   }).join('\n');
   const count = Number(execFileSync('git', ['rev-list', '--count', range], {encoding: 'utf8'}).trim());

@@ -99,7 +99,7 @@ async function prepareMonthly({github, context, core, now = new Date()}) {
       ...noteFiles],
     'Prepare USCE ' + plan.version,
     `Proposed USCE release: ${plan.version}. Trigger: ${plan.trigger}.\n\n` +
-    `Release notes separately compare the previous USCE release and USDX ${plan.comparisons.upstream.tag}, each with a comparison graphic. Entries link to USCE PRs or commits.\n\n` +
+    `Release notes separately compare the previous USCE release and USDX ${plan.comparisons.upstream.tag}, each with a comparison graphic. Entries link to USCE PRs or commits and retain relevant upstream references and contributor mentions.\n\n` +
     `Upstream reference: ${plan.upstream?.tag || 'no stable upstream release available'}. The release candidate requires the full upstream release history and a comparison against its release notes.\n\n` +
     `Themes revision: ${plan.themes.sha}. Every platform package includes all themes and their assets from this snapshot.\n\n` +
     'Merging prepares draft packages from the exact merged revision. Release review covers upstream changes, USCE additions, compatibility, release notes and required CI. Packages remain drafts until installation, launch, song and microphone testing are complete and a maintainer publishes the release.');
