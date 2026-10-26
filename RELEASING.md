@@ -7,23 +7,27 @@ hour; GitHub scheduling delays can postpone it. If no current-month upstream
 release is available, preparation starts on or after the 24th in Europe/Vienna.
 An upstream release published around that fallback still gets the full 24-hour
 wait. A missing publication timestamp stops preparation for investigation.
-A delayed run catches up. An existing draft, published release or preparation PR
-prevents a second automatic release for the same month. Later upstream changes
-can enter the next monthly release or a separately reviewed patch.
+A delayed run catches up. There is at most one regular USCE release per month,
+including when USDX publishes its regular release after our calendar fallback.
+USDX bugfix releases are the exception: they trigger another USCE release after
+the same 24-hour wait, even when the only change is incorporating those fixes.
+The next unused USCE patch number is selected; it need not equal USDX's patch
+number. Existing preparation PRs and draft packages are retained, and each
+upstream release is recorded to prevent duplicate follow-ups. Publication of an
+existing draft finishes before another release is prepared.
 
 Release highlights include concrete examples of additional features and bugs
 fixed compared with the referenced USDX release, with links to the USCE changes.
-Each release retains the two comparison
-sections and their graphics: changes since USCE's previous release, and changes
-compared with the referenced USDX release.
+Each release retains the two comparison sections and their graphics: changes
+since USCE's previous release, and changes compared with the referenced USDX release.
 
 ## Preparation and publication
 
 Automation opens a draft preparation PR updating VERSION and release-plan.json.
 The plan records whether upstream or the calendar triggered it, and identifies
-an upstream reference separately from the USCE version. That reference does not
-claim every upstream change has been incorporated. We review that coverage,
-USCE additions, compatibility and release notes before merging. Marking the draft
+an upstream reference separately from the USCE version. Release validation
+requires that upstream release's complete history to be incorporated. We review
+coverage, USCE additions, compatibility and release notes before merging. Marking the draft
 ready for review starts PR checks, including when the workflow token created it.
 
 After the preparation PR merges, release CI builds Windows, Linux, ARM macOS and
