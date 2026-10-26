@@ -17,4 +17,4 @@ Upstream commits (in port order):
 - `d242574359ed51fe1c1fc2cfa83a037af55ac4d5`
 - `f2bb269968c3cf4fc0fa2b83a2f9277dd915adef`
 
-USCE adaptations: preserve its sound-asset helpers and current renderer changes; integrate units into usce.dpr; adapt the smoke runner to USCE; expose backend and hardware decoding in Graphics with English fallback text and help. This is a local development port, not a published or merged change.
+USCE adaptations: preserve its sound-asset helpers and current renderer changes; integrate units into usce.dpr; adapt the smoke runner to USCE; expose backend and hardware decoding in Graphics with English fallback text and help. USCE adaptations and local validation were assisted by OpenAI Codex. The imported commits retain the original author metadata; USCE adaptations are recorded separately.
