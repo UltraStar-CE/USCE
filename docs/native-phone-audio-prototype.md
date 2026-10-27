@@ -1,44 +1,35 @@
-# Native phone microphone experiment
+# Native phone microphone integration
 
-This optional prototype receives microphone PCM inside the USCE process. The
-normal phone web app and signaling use the hosted relay. Integrated mode keeps
-the existing local feature bridge for controls, catalog and game state; PCM is
-received in the game. The standalone receiver-only mode needs no local bridge.
-PR #168 consolidates the game API and native receiver against current main.
+The game owns room registration, controls, generic song queries, playlists,
+media transfers and PCM reception. It starts no local Node process or HTTP
+server. The web app and hosted relay remain JavaScript; hosted Node is allowed.
+USCE PR #168 contains the game/API/native changes, with web/service work in the
+separate usrelay PR. The in-process Pascal client is the default when
+RemoteBridge is enabled; no USCE_NATIVE_RELAY environment flag is required.
 
-The intended integrated product has no local Node.js process. The current
-feature bridge is temporary and has not yet been fully replaced. Bundling Node
-is not the implementation plan. The hosted relay may continue using Node;
-browser JavaScript also remains part of the phone app.
+`URemoteRelaySocket` provides a bounded, TLS-verified outgoing WebSocket.
+`URemoteRelaySession` handles registration, heartbeats and reconnect/resume.
+Hosted Party delegates playback and screen timing to the game's continuous mode.
+`python3 tools/test_native_relay.py` runs the Pascal/native loopback regressions.
+Existing platform builds run native tests on Windows, Linux and Intel/ARM macOS;
+the Linux job also runs the Pascal suites. Full feature readiness remains unproven.
 
-### Replacing the remaining local bridge
+### Idle digital calibration
 
-`URemoteRelaySocket` exposes the native module's bounded, TLS-verified text
-WebSocket to Pascal. `URemoteRelaySession` owns room registration, 500 ms
-heartbeats and reconnect/resume credentials in memory. Neither starts a local
-server or subprocess. `USCE_NATIVE_RELAY=1` selects a development-only in-process
-backend when RemoteBridge is enabled. It handles room/roster, assignments,
-settings, typed game controls, clock requests, state replay and native PCM/P2P.
-Normal integrated startup retains the existing bridge until the remaining
-features reach parity.
+An authenticated `audio.calibration.request` applies only to the requesting
+player's mic. The game supplies a four-second up/down ladder and monotonic start
+time, then fits observations from its own pitch detector. Fits include clock and
+game-frame uncertainty; weak, stalled or interrupted measurements are rejected.
 
-The native loopback regression covers UTF-8, short caller buffers, message and
-queue limits, and sharing the library lifetime with audio contexts. The Pascal
-binding has been exercised over a real loopback socket with a 1 MiB message and
-close/reopen. On Windows, the Pascal session has also created a temporary room
-over `wss://usdx.at/ws/host`, resumed the same room after reconnect, and sent
-shutdown. This verifies the transport/session foundation, not replacement of the
-complete local bridge or gameplay through that replacement.
+Normal packets are UAP1; calibration packets are UAC1. Both have bounded 980-byte
+framing, sequence numbers and sample clocks, but use separate receiver queues,
+polling functions and capture buffers. Test tones cannot enter microphone
+metering, singing or scoring, or confirm microphone delivery. Normal capture
+continues during calibration.
 
-After building the module, `python3 tools/test_native_relay.py` runs both Pascal
-regressions against native loopback fixtures (requires FPC and FCL JSON units).
-CI runs these on Linux in addition to native socket/PCM tests on all four targets.
-
-Still to move: catalog manifests/chunks,
-covers and preview streaming; playlist editing, favorites/votes; Party queue and
-leaderboard orchestration using the game's continuous playback. Existing
-Pascal/native PCM receivers remain the audio and scoring path. The switch to
-native startup requires end-to-end parity checks for all of these features.
+Compensation replaces the global baseline for the calibrated input and adds the
+per-player trim once. Hardware/browser capture buffers are excluded. Automatic
+browser triggering/display and compensated-gameplay validation remain unfinished.
 
 ### Alternating-note alignment experiment
 
@@ -98,20 +89,20 @@ routing is not changed.
 
 ## Trying the prototype
 
-Build the game normally, build the optional native module below, and place its
-shared library and runtime dependencies beside the game executable. Enable:
+The integrated packages include the native library and its dependencies. For a
+developer build, build the module below and place it beside the executable.
+Normal integrated startup needs no audio environment flags. Optional diagnostics:
 
 ```text
 USCE_RAW_AUDIO=1
-USCE_AUDIO_WINDOW=2048
-USCE_AUDIO_DETECTOR=amdf
+USCE_AUDIO_WINDOW=4096
+USCE_AUDIO_DETECTOR=camdf
 USCE_AUDIO_DIAGNOSTICS=1
 ```
 
 For integrated testing set `[RemoteBridge] Enabled=On`, start the game, and enter
 its room code in the normal phone app. Choose an available mic slot and tap
-Start Mic. The game starts the existing local bridge for controls and game state;
-the native receiver handles PCM. Standalone receiver testing instead uses
+Start Mic. The Pascal relay handles controls and game state; the native receiver handles PCM. Standalone receiver testing instead uses
 `Enabled=Off` and the isolated prototype page. Both devices need internet access.
 The game uses its ordinary local song library.
 
@@ -297,18 +288,18 @@ ends generation, and reload resets the choice. Synthetic runs measure transport
 and game processing, excluding hardware capture and the browser audio graph.
 
 For feature testing, enable RemoteBridge in the test configuration and start
-with USCE_RAW_AUDIO=1. The game starts its existing bridge with --native-pcm=true.
+normally; the Pascal relay and native receiver are the defaults.
 Use normal https://usdx.at, join the shared room, select an available Mic and Start Mic.
 There is no second room or separate phone UI. Controls, song browsing, playlists,
 lyrics and device playback keep their existing routes. All twelve remote slots
-use native PCM when advertised; older games retain browser pitch input. The
+use native PCM with this game build. The
 phone shows level and capture status, with no pitch/confidence decisions. Its
 native-rate capture is resampled to the 48 kHz wire format. The native channel carries unreliable PCM;
-room/control/clock messages remain on the existing WebSocket bridge path.
+room/control/clock messages use the outgoing Pascal relay WebSocket.
 
 The native C ABI accepts optional bounded external JSON signaling (ipc://),
-and exposes outgoing WebRTC events to the Pascal main loop. The existing JSONL
-bridge forwards authenticated server PCM and signaling. Pascal scores each
+and exposes outgoing WebRTC events to the Pascal main loop. The Pascal relay
+forwards authenticated server PCM and signaling to its matching native context. Pascal scores each
 assigned slot from its own capture buffer, including remote player profiles.
 Standalone hosted-room mode remains available for isolated developer tests.
 

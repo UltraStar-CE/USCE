@@ -9,7 +9,9 @@
 
 // Pure packet/buffer logic; shared by the receiver and its regression tests.
 class PcmQueue {
+  const uint8_t marker;
 public:
+  explicit PcmQueue(bool calibration = false) : marker(calibration ? 'C' : 'P') {}
   using Clock = std::chrono::steady_clock;
   static constexpr size_t limit = 9600; // 200 ms, drop oldest on overload.
   std::deque<int16_t> samples;
@@ -25,7 +27,7 @@ public:
   }
   void reset() { samples.clear(); haveSequence = false; peak = 0; last = {}; endSampleCounter = readEndSampleCounter = 0; }
   bool push(const uint8_t *data, size_t size, Clock::time_point now = Clock::now()) {
-    if (size < 20 || data[0] != 'U' || data[1] != 'A' || data[2] != 'P' || data[3] != '1') { ++rejected; return false; }
+    if (size < 20 || data[0] != 'U' || data[1] != 'A' || data[2] != marker || data[3] != '1') { ++rejected; return false; }
     const auto seq = u32(data + 4), rate = u32(data + 8), count = u32(data + 12);
     if (rate != 48000 || count != 480 || size != 20 + count * 2) { ++rejected; return false; }
     // Forget the old timeline after a stall; never score old buffered sound.

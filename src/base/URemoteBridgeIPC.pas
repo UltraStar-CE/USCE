@@ -1,8 +1,8 @@
 {* UltraStar Deluxe - Karaoke Game
  *
- * Local JSONL IPC reader for game/webs/usdx-bridge.mjs.
- * This connects to 127.0.0.1:8765 and consumes typed remote-control and
- * remote-pitch observations, plus bounded native microphone signaling/PCM.
+ * In-process hosted relay client and typed game command adapter.
+ * Room/control messages and bounded microphone signaling/PCM use the outgoing
+ * native WebSocket; queued writes keep backpressure off the game thread.
  *}
 
 unit URemoteBridgeIPC;
@@ -1019,7 +1019,8 @@ begin
   MessageType := JsonGetString(Obj, 'type', '');
   if PhoneAudio.Enabled and ((Pos('p2p.', MessageType) = 1) or
     (Pos('room.', MessageType) = 1) or (Pos('player.', MessageType) = 1) or
-    (MessageType = 'audio.pcm') or (MessageType = 'remote.players.snapshot') or (MessageType = 'bridge.ready') or
+    (MessageType = 'audio.pcm') or (MessageType = 'audio.calibration.pcm') or
+    (MessageType = 'remote.players.snapshot') or (MessageType = 'bridge.ready') or
     (MessageType = 'bridge.disconnected')) then
     PhoneAudio.Signal(UTF8String(Obj.AsJSON));
   if (MessageType = 'bridge.ready') then

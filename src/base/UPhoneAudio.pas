@@ -24,6 +24,7 @@ type
     FCreate: TPaCreate;
     FDestroy: TPaDestroy;
     FPoll: TPaPoll;
+    FPollCalibration: TPaPoll;
     FStatus: TPaStatus;
     FVersion: TPaVersion;
     FSignal: TPaSignal;
@@ -35,6 +36,7 @@ type
     function Start(const Url, Ice: UTF8String; const LibraryPath: string = ''): boolean;
     procedure Stop;
     function Poll(Samples: pointer; Capacity: integer; PlayerIndex: integer = 0): integer;
+    function PollCalibration(Samples: pointer; Capacity: integer; PlayerIndex: integer): integer;
     function Status(PlayerIndex: integer = 0): UTF8String;
     procedure Signal(const Json: UTF8String);
     property Enabled: boolean read GetEnabled;
@@ -92,11 +94,12 @@ begin
     FCreate := TPaCreate(GetProcedureAddress(FLibrary, 'usce_pa_create'));
     FDestroy := TPaDestroy(GetProcedureAddress(FLibrary, 'usce_pa_destroy'));
     FPoll := TPaPoll(GetProcedureAddress(FLibrary, 'usce_pa_poll'));
+    FPollCalibration := TPaPoll(GetProcedureAddress(FLibrary, 'usce_pa_poll_calibration'));
     FStatus := TPaStatus(GetProcedureAddress(FLibrary, 'usce_pa_status'));
     FSignal := TPaSignal(GetProcedureAddress(FLibrary, 'usce_pa_signal'));
     FEvent := TPaStatus(GetProcedureAddress(FLibrary, 'usce_pa_event'));
     if not (Assigned(FVersion) and Assigned(FCreate) and Assigned(FDestroy) and
-      Assigned(FPoll) and Assigned(FStatus) and Assigned(FSignal) and Assigned(FEvent)) then
+      Assigned(FPoll) and Assigned(FPollCalibration) and Assigned(FStatus) and Assigned(FSignal) and Assigned(FEvent)) then
       FError := 'Native phone audio library has an incomplete ABI'
     else if FVersion() <> 1 then
       FError := 'Native phone audio library ABI version mismatch'
@@ -165,6 +168,14 @@ begin
   end;
 end;
 
+function TPhoneAudio.PollCalibration(Samples: pointer; Capacity: integer; PlayerIndex: integer): integer;
+begin
+  Result := 0;
+  if Enabled and (PlayerIndex >= 0) and (PlayerIndex <= High(FContexts)) and
+    (FContexts[PlayerIndex] <> nil) then
+    Result := FPollCalibration(FContexts[PlayerIndex], Samples, Capacity);
+end;
+
 procedure TPhoneAudio.Signal(const Json: UTF8String);
 var Data: TJSONData; Obj: TJSONObject; Entries: TJSONArray;
     I, J, Slot, OriginalSlot: integer; Kind, Text: UTF8String;
@@ -184,7 +195,7 @@ begin
       begin
         if FContexts[I] = nil then Continue;
         // These fields originate in the authenticated relay's roster, never in PCM.
-        if (Kind = 'audio.pcm') or (Copy(Kind, 1, 4) = 'p2p.') then
+        if (Kind = 'audio.pcm') or (Kind = 'audio.calibration.pcm') or (Copy(Kind, 1, 4) = 'p2p.') then
           if OriginalSlot <> I + 1 then Continue;
         if Obj.IndexOfName('slot') >= 0 then
         begin

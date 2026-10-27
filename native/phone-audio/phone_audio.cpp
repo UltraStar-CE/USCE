@@ -27,6 +27,7 @@ std::vector<uint8_t> decodePcm(const std::string &text) {
 struct Receiver : std::enable_shared_from_this<Receiver> {
   std::mutex mutex;
   PcmQueue pcm;
+  PcmQueue calibration{true};
   std::deque<Json> incoming, outgoing, externalEvents;
   bool external = false;
   std::shared_ptr<rtc::WebSocket> socket;
@@ -67,7 +68,7 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
     {
       std::lock_guard<std::mutex> lock(mutex);
       old.swap(channel);
-      outgoing.clear(); pcm.reset(); lastDirectPacket = {}; lastRelayPacket = {}; state = "waiting for phone";
+      outgoing.clear(); pcm.reset(); calibration.reset(); lastDirectPacket = {}; lastRelayPacket = {}; state = "waiting for phone";
     }
     if (old) { old->resetCallbacks(); old->close(); }
   }
@@ -145,6 +146,10 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
               std::lock_guard<std::mutex> guard(owner->mutex);
               if (!owner->stopped && owner->generation == gen && data->size() <= 4096) {
                 const auto *bytes = reinterpret_cast<const uint8_t *>(data->data());
+                if (data->size() >= 4 && bytes[2] == 'C') {
+                  owner->calibration.push(bytes, data->size());
+                  return;
+                }
                 // A duplicate may have reached the game through the relay first.
                 if (data->size() == 980 && bytes[0] == 'U' && bytes[1] == 'A' && bytes[2] == 'P' && bytes[3] == '1' &&
                     PcmQueue::u32(bytes + 8) == 48000 && PcmQueue::u32(bytes + 12) == 480) {
@@ -191,11 +196,15 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
           if (entry.is_object() && entry.value("slot", 0) == 1 && entry.value("connected", true))
             who = entry.value("playerId", "");
       setOwner(who);
-    } else if (type == "audio.pcm" && m.value("slot", 0) == 1) {
+    } else if ((type == "audio.pcm" || type == "audio.calibration.pcm") && m.value("slot", 0) == 1) {
       if (assignmentKnown && (owner.empty() || m.value("playerId", "") != owner)) return;
       auto bytes = decodePcm(m.value("pcm", ""));
       if (!bytes.empty()) {
         std::lock_guard<std::mutex> lock(mutex);
+        if (type == "audio.calibration.pcm") {
+          calibration.push(bytes.data(), bytes.size());
+          return;
+        }
         const auto rejected = pcm.rejected;
         if (pcm.push(bytes.data(), bytes.size())) state = "receiving PCM";
         if (pcm.rejected == rejected) lastRelayPacket = Clock::now();
@@ -429,6 +438,15 @@ int32_t usce_pa_poll(void *p, int16_t *samples, int32_t capacity) {
     return count;
   } catch (...) { return -1; }
 }
+int32_t usce_pa_poll_calibration(void *p, int16_t *samples, int32_t capacity) {
+  if (!p || !samples || capacity <= 0 || capacity > 9600) return -1;
+  try {
+    const auto &self = *static_cast<Handle *>(p);
+    self->tick();
+    std::lock_guard<std::mutex> lock(self->mutex);
+    return self->calibration.read(samples, capacity);
+  } catch (...) { return -1; }
+}
 int32_t usce_pa_status(void *p, char *buffer, int32_t capacity) {
   if (!p || !buffer || capacity <= 0) return -1;
   try {
@@ -448,6 +466,7 @@ int32_t usce_pa_status(void *p, char *buffer, int32_t capacity) {
     const auto text = Json({{"code", self->code}, {"state", self->state}, {"error", self->error},
       {"audioRoute", route},
       {"packets", q.packets}, {"gaps", q.gaps}, {"rejected", q.rejected}, {"droppedSamples", q.dropped},
+      {"calibrationPackets", self->calibration.packets},
       {"duplicateOrLatePackets", q.duplicates},
       {"sequence", q.sequence}, {"readEndSampleCounter", q.readEndSampleCounter},
       {"queueMs", q.samples.size() / 48.0}, {"packetAgeMs", age}, {"peak", q.peak},

@@ -255,6 +255,7 @@ var
   singleton_AudioInputProcessor : TAudioInputProcessor = nil;
   PhoneInputWasLive: array[0..UIni.IMaxPlayerCount-1] of boolean;
   PhoneInputLastSamples: array[0..UIni.IMaxPlayerCount-1] of QWord;
+  PhoneCalibrationBuffers: array[0..UIni.IMaxPlayerCount-1] of TCaptureBuffer;
   LastAudioDiagnostics: QWord = 0;
 
 procedure LogAudioInputDiagnostics;
@@ -309,11 +310,17 @@ begin
     NeedsAnalysis := PhoneAudio.Calibration.Tick(I, Owner, CalibrationAllowed,
       PhoneInputWasLive[I], NowUs, Message);
     if Message <> '' then RemoteBridgeIPC.SendJsonMessage(string(Message));
+    Count := PhoneAudio.PollCalibration(@Samples[0], Length(Samples), I);
+    if not NeedsAnalysis then FreeAndNil(PhoneCalibrationBuffers[I]);
     if NeedsAnalysis and (Count > 0) then
     begin
-      AudioInputProcessor.Sound[I].AnalyzeBuffer;
+      if PhoneCalibrationBuffers[I] = nil then PhoneCalibrationBuffers[I] := TCaptureBuffer.Create;
+      PhoneCalibrationBuffers[I].AnalysisBufferSize := AudioInputProcessor.Sound[I].AnalysisBufferSize;
+      PhoneCalibrationBuffers[I].PitchAlgorithm := AudioInputProcessor.Sound[I].PitchAlgorithm;
+      PhoneCalibrationBuffers[I].SubmitPhonePcm(@Samples[0], Count);
+      PhoneCalibrationBuffers[I].AnalyzeBuffer;
       PhoneAudio.Calibration.Observe(I, int64(GetTickCount64) * 1000,
-        AudioInputProcessor.Sound[I].ToneAbs, AudioInputProcessor.Sound[I].ToneValid);
+        PhoneCalibrationBuffers[I].ToneAbs, PhoneCalibrationBuffers[I].ToneValid);
     end;
   end;
 end;
@@ -871,7 +878,10 @@ var
   i: integer;
 begin
   for i := 0 to High(Sound) do
+  begin
     Sound[i].Free;
+    FreeAndNil(PhoneCalibrationBuffers[i]);
+  end;
   SetLength(Sound, 0);
   inherited;
 end;

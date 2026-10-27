@@ -18,6 +18,8 @@ USCE_PA void *usce_pa_create(const char *relay_url, const char *ice_server);
 USCE_PA void usce_pa_destroy(void *context);
 // Called on the game thread. Performs signaling, drains fresh mono S16/48k PCM.
 USCE_PA int32_t usce_pa_poll(void *context, int16_t *samples, int32_t capacity);
+// Separate digital test input. These samples must never enter singing/scoring.
+USCE_PA int32_t usce_pa_poll_calibration(void *context, int16_t *samples, int32_t capacity);
 USCE_PA int32_t usce_pa_status(void *context, char *json, int32_t capacity);
 // Optional external signaling: create with "ipc://". Bounded queues, no socket.
 USCE_PA int32_t usce_pa_signal(void *context, const char *json);

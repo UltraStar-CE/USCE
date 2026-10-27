@@ -54,6 +54,19 @@ int main() {
   assert(usce_pa_signal(receiver, pcm.c_str()) == 0);
   assert(usce_pa_poll(receiver, out, 9600) == 480);
   assert(out[0] == 16384);
+  auto calibrationPacket = packet(2);
+  calibrationPacket[2] = 'C';
+  const auto calibrationMessage = std::string("{\"type\":\"audio.calibration.pcm\",\"slot\":1,\"pcm\":\"") + base64(calibrationPacket) + "\"}";
+  const auto wronglyLabelled = std::string("{\"type\":\"audio.pcm\",\"slot\":1,\"pcm\":\"") + base64(calibrationPacket) + "\"}";
+  assert(usce_pa_signal(receiver, calibrationMessage.c_str()) == 0);
+  assert(usce_pa_signal(receiver, wronglyLabelled.c_str()) == 0);
+  assert(usce_pa_poll(receiver, out, 9600) == 0); // Calibration cannot become a singing sample.
+  assert(usce_pa_poll_calibration(receiver, out, 9600) == 480);
+  assert(out[0] == 16384);
+  const auto realMicrophone = std::string("{\"type\":\"audio.pcm\",\"slot\":1,\"pcm\":\"") + base64(packet(2)) + "\"}";
+  assert(usce_pa_signal(receiver, realMicrophone.c_str()) == 0);
+  assert(usce_pa_poll_calibration(receiver, out, 9600) == 0);
+  assert(usce_pa_poll(receiver, out, 9600) == 480); // Same sequence, independent queues.
   char status[4096];
   assert(usce_pa_status(receiver, status, sizeof(status)) > 0);
   assert(std::string(status).find("TEST") != std::string::npos);
@@ -68,9 +81,13 @@ int main() {
   assert(usce_pa_signal(second, secondPcm.c_str()) == 0);
   assert(usce_pa_poll(receiver, out, 9600) == 480);
   assert(usce_pa_poll(second, out, 9600) == 480);
+  const auto secondCalibration = std::string("{\"type\":\"audio.calibration.pcm\",\"playerId\":\"two\",\"slot\":1,\"pcm\":\"") + base64(calibrationPacket) + "\"}";
+  assert(usce_pa_signal(second, secondCalibration.c_str()) == 0);
+  assert(usce_pa_poll(second, out, 9600) == 0); // Leave calibration queued independently.
   // Moving a phone clears its old lane, including queued PCM and sequence state.
   assert(usce_pa_signal(second, "{\"type\":\"player.assigned\",\"playerId\":\"two\",\"slot\":0}") == 0);
   assert(usce_pa_signal(second, secondPcm.c_str()) == 0);
+  assert(usce_pa_poll_calibration(second, out, 9600) == 0);
   assert(usce_pa_poll(second, out, 9600) == 0);
   assert(usce_pa_signal(second, "{\"type\":\"player.assigned\",\"playerId\":\"three\",\"slot\":1}") == 0);
   assert(usce_pa_signal(second, secondPcm.c_str()) == 0);
