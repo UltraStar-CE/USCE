@@ -2022,8 +2022,21 @@ end;
 constructor TScreenSong.Create;
 var
   I, Num, Padding: integer;
-  TextArtistY, TextTitleY, TextYearY, StaticVideoY, StaticDuetY: integer;
+  ListStaticTheme: TThemeStatic;
+  ArtistBottom, RowBottom: integer;
   StaticY: real;
+
+  function AddListText(const Template: TThemeText; RowPadding, Bottom: integer): integer;
+  var Item: TThemeText;
+  begin
+    Item := Template;
+    // Older themes omit H. Keep long list text inside its own row, while
+    // respecting any explicit height supplied by the theme.
+    if (Item.H <= 0) and (Bottom > Item.Y) then
+      Item.H := Bottom - Item.Y;
+    Inc(Item.Y, RowPadding);
+    Result := AddText(Item);
+  end;
 begin
   inherited Create;
 
@@ -2177,33 +2190,25 @@ begin
   SetLength(ListVideoIcon, Num);
   SetLength(ListDuetIcon, Num);
 
-  TextArtistY := Theme.Song.TextArtist.Y;
-  TextTitleY := Theme.Song.TextTitle.Y;
-  TextYearY := Theme.Song.TextYear.Y;
-
-  StaticVideoY := Theme.Song.VideoIcon.Y;
-  StaticDuetY := Theme.Song.DuetIcon.Y;
+  RowBottom := Theme.Song.ListCover.Y + Theme.Song.ListCover.H;
+  ArtistBottom := RowBottom;
+  if (Theme.Song.TextTitle.Y > Theme.Song.TextArtist.Y) and
+     (Theme.Song.TextTitle.Y < ArtistBottom) then
+    ArtistBottom := Theme.Song.TextTitle.Y;
 
   for I := 0 to Num - 1 do
   begin
     Padding := I * (Theme.Song.ListCover.H + Theme.Song.ListCover.Padding);
+    ListTextArtist[I] := AddListText(Theme.Song.TextArtist, Padding, ArtistBottom);
+    ListTextTitle[I] := AddListText(Theme.Song.TextTitle, Padding, RowBottom);
+    ListTextYear[I] := AddListText(Theme.Song.TextYear, Padding, 0);
 
-    Theme.Song.TextArtist.Y  := TextArtistY + Padding;
-
-    ListTextArtist[I] := AddText(Theme.Song.TextArtist);
-
-    Theme.Song.TextTitle.Y  := TextTitleY + Padding;
-    ListTextTitle[I]  := AddText(Theme.Song.TextTitle);
-
-    Theme.Song.TextYear.Y  := TextYearY + Padding;
-    ListTextYear[I]   := AddText(Theme.Song.TextYear);
-
-    Theme.Song.VideoIcon.Y  := StaticVideoY + Padding;
-    ListVideoIcon[I]  := AddStatic(Theme.Song.VideoIcon);
-
-    Theme.Song.DuetIcon.Y  := StaticDuetY + Padding;
-    ListDuetIcon[I] := AddStatic(Theme.Song.DuetIcon);
-
+    ListStaticTheme := Theme.Song.VideoIcon;
+    Inc(ListStaticTheme.Y, Padding);
+    ListVideoIcon[I] := AddStatic(ListStaticTheme);
+    ListStaticTheme := Theme.Song.DuetIcon;
+    Inc(ListStaticTheme.Y, Padding);
+    ListDuetIcon[I] := AddStatic(ListStaticTheme);
   end;
 
   MainChessboardMinLine := 0;
