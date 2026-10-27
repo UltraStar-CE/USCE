@@ -46,12 +46,20 @@ begin
     Adapter.OnSend := Probe.Send;
     Adapter.OnGame := Probe.Receive;
     Adapter.Clock := TestClock;
+    Game('{"type":"song.library","library":[{"songId":3,"title":"Startup song","audioPath":"private.wav"}]}');
+    Assert(Adapter.Songs.Count = 1, 'Generic API must be ready without opening song selection');
+    Assert(Probe.Sent.Count = 0, 'Private library snapshots must never be broadcast');
     Game('{"type":"game.state","state":"player_setup","songSeq":0}');
     Assert(Probe.Sent.Count = 0, 'Disconnected state must wait for registration');
     Relay('{"type":"room.created","roomId":"room","displayCode":"TEST","hostToken":"private"}');
     Assert(Probe.Last.Find('hostToken') = nil, 'Credentials must stay in session');
     Assert(TJSONObject(Probe.Sent.Items[0]).Get('state', '') = 'player_setup');
     Relay('{"type":"player.joined","playerId":"phone","name":"Daniel","slot":1,"difficulty":2,"avatarFile":"phone.jpg","role":"controller"}');
+    Relay('{"type":"control.command","playerId":"phone","commandId":40,"command":"song.list","args":{"offset":0,"limit":10}}');
+    Assert(TJSONObject(Probe.Sent.Items[Probe.Sent.Count-1]).Get('accepted', false));
+    Assert(TJSONObject(Probe.Sent.Items[Probe.Sent.Count-1]).Objects['data'].Arrays['songs'].Objects[0].Get('title', '') = 'Startup song',
+      'Queries before song selection must return the startup snapshot');
+    Assert(Pos('private.wav', Probe.Sent.AsJSON) = 0, 'Startup paths must not leave the game');
     Relay('{"type":"player.assigned","playerId":"phone","slot":2}');
     Assert(Probe.Last.Get('slot', 0) = 2);
     Assert(Probe.Last.Get('name', '') = 'Daniel');
@@ -113,7 +121,7 @@ begin
       FileStream := TFileStream.Create(MediaPath, fmCreate);
       Payload := 'abcdefghij';
       try FileStream.WriteBuffer(Payload[1], Length(Payload)); finally FileStream.Free; end;
-      Snapshot := TJSONObject.Create(['type', 'song.select.state']);
+      Snapshot := TJSONObject.Create(['type', 'song.library']);
       Snapshot.Add('library', TJSONArray.Create);
       Snapshot.Arrays['library'].Add(TJSONObject.Create(['songId', 7, 'audioPath', MediaPath]));
       try Assert(Adapter.FromGame(Snapshot)); finally Snapshot.Free; end;

@@ -94,6 +94,7 @@ uses
   URecord,
   UPhoneAudio,
   URemoteBridgeIPC,
+  URemoteSongLibrary,
   URemoteControl,
   UBeatTimer,
   UPlatform,
@@ -336,6 +337,9 @@ begin
       Log.LogStatus('Remote Bridge IPC', 'Initialization');
       RemoteBridgeIPC.OnCommand := RemoteBridgeCommandReceived;
       RemoteBridgeIPC.Start;
+      // Seed generic song/media queries before any screen is opened.
+      RemoteBridgeIPC.SendJsonMessage(
+        '{"type":"song.library","library":' + RemoteSongLibraryJson + '}');
       if Display.CurrentScreen = @ScreenMain then
         RemoteBridgeIPC.SendGameState('main_menu', 0, 0)
       else

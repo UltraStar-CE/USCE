@@ -382,7 +382,7 @@ var Kind: string;
 begin
   Kind := Message.Get('type', '');
   if Kind = 'bridge.ping' then Exit(true);
-  if Kind = 'song.select.state' then
+  if (Kind = 'song.select.state') or (Kind = 'song.library') then
   begin
     LibraryData := Message.Find('library');
     if (LibraryData <> nil) and (LibraryData.JSONType = jtArray) then
@@ -391,6 +391,8 @@ begin
       FSongs.Replace(TJSONArray(LibraryData));
     end;
   end;
+  // This is a private game-thread snapshot, never live screen state.
+  if Kind = 'song.library' then Exit(true);
   PublicMessage := CopyPublic(Message);
   try
     if Kind = 'game.state' then

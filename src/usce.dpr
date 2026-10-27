@@ -175,6 +175,7 @@ uses
   URemoteRelaySocket in 'base\URemoteRelaySocket.pas',
   URemoteRelaySession in 'base\URemoteRelaySession.pas',
   URemoteRelayProtocol in 'base\URemoteRelayProtocol.pas',
+  URemoteSongLibrary in 'base\URemoteSongLibrary.pas',
   URemoteSongSnapshot in 'base\URemoteSongSnapshot.pas',
   URemoteMediaSources in 'base\URemoteMediaSources.pas',
   URemoteMediaStream in 'base\URemoteMediaStream.pas',
