@@ -38,10 +38,16 @@ async function baseInfo(github, context) {
   return {branch, sha: commit.data.sha, tree: commit.data.tree.sha};
 }
 
-async function openDraft(github, context, base, branch, files, title, body) {
+async function openDraft(github, context, base, branch, files, title, body, {reopenClosed = false} = {}) {
   const repo = context.repo;
   const existing = await github.rest.pulls.list({...repo, state: 'all', head: repo.owner + ':' + branch, per_page: 100});
-  if (existing.data.length) return existing.data[0];
+  if (existing.data.length) {
+    const prior = existing.data[0];
+    if (reopenClosed && prior.state === 'closed' && !prior.merged_at) {
+      return (await github.rest.pulls.update({...repo, pull_number: prior.number, state: 'open'})).data;
+    }
+    return prior;
+  }
   validateCandidateProse(title + '\n' + body);
   const now = await github.rest.git.getRef({...repo, ref: 'heads/' + base.branch});
   if (now.data.object.sha !== base.sha) throw Error('Default branch changed; rerun against its new head');

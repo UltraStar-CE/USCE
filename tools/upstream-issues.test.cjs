@@ -139,3 +139,32 @@ test('incremental collection uses the last assessed cutoff and produces no uncha
   assert.equal(x.proposals.length, 0);
   assert.equal(x.requests.find(args => args.repo === 'USDX' && args.state === 'closed').since, previous.checkedAt);
 });
+
+
+test('closed unmerged assessments are reopened instead of permanently blocking unchanged reports', async () => {
+  const x = fixture();
+  const prior = {number: 42, state: 'closed', merged_at: null, html_url: 'reopened-assessment'};
+  const reopened = [];
+  x.github.rest.pulls.list = async args => ({data: args.head?.includes('upstream-issues-usdx') ? [prior] : []});
+  x.github.rest.pulls.update = async args => {
+    reopened.push(args);
+    prior.state = args.state;
+    return {data: prior};
+  };
+  await trackIssues(x);
+  assert.equal(reopened.length, 1);
+  assert.equal(reopened[0].pull_number, 42);
+  assert.equal(reopened[0].state, 'open');
+  assert.equal(x.proposals.length, 0);
+  await trackIssues(x);
+  assert.equal(reopened.length, 1);
+});
+
+test('merged issue assessments remain deduplicated', async () => {
+  const x = fixture();
+  x.github.rest.pulls.list = async args => ({data: args.head?.includes('upstream-issues-usdx') ?
+    [{number: 42, state: 'closed', merged_at: '2026-10-27T01:00:00Z', html_url: 'merged'}] : []});
+  x.github.rest.pulls.update = async () => {throw Error('must not reopen a merged assessment');};
+  await trackIssues(x);
+  assert.equal(x.proposals.length, 0);
+});
