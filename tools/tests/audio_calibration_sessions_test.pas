@@ -47,6 +47,11 @@ begin
       Effective := Sessions.EffectivePlayerDelay(Lane, 140, 20);
       Assert(140 + Effective = Fitted + 20, 'Global delay must not be applied twice');
       Assert(Sessions.EffectivePlayerDelay(Lane, 0, 20) = Fitted + 20);
+      Assert(140 + Sessions.EffectivePlayerDelay(Lane, 140, -20) = Fitted - 20,
+        'A negative trim must reduce compensation without adding the global baseline');
+      Assert(Sessions.EffectivePlayerDelay(Lane, 0, -20) = Fitted - 20);
+      Assert(280 + Sessions.EffectivePlayerDelay(Lane, 280, 0) = Fitted,
+        'A zero trim must replace, not retain, a larger global baseline');
       if Lane = 0 then
       begin
         Sessions.Cancel(Lane, 'forged', 'trial0');
