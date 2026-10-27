@@ -105,7 +105,7 @@ uses
   UTime,
   UWebcam,
   ULibraryLockdown,
-  ULockdownUI;
+  ULockdownUI, UDuplicateSongUI;
   //UVideoAcinerella;
 
 // starts singing the song given with the -song parameter
@@ -136,6 +136,12 @@ begin
   ScreenName.LoadPlayersFromIni;
   ScreenSing := TScreenSingController.Create;
   Display.CurrentScreen^.FadeTo(@ScreenSing);
+end;
+
+procedure ContinueStartup;
+begin
+  if Params.Song.IsSet then StartSingleSong
+  else SoundLib.StartBgMusic;
 end;
 
 procedure Main;
@@ -282,10 +288,7 @@ begin
     {**
       * Start background music
       *}
-    if Params.Song.IsSet then
-      StartSingleSong
-    else
-      SoundLib.StartBgMusic;
+    CheckStartupSongIdentities(@ContinueStartup);
 
     //------------------------------
     // Start Mainloop
