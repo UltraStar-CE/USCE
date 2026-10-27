@@ -68,10 +68,10 @@ merges game changes from issue text, and requires no additional paid AI service.
 
 The daily assessment also discovers USDX forks pushed within the last two years,
 including forks listed in GitHub's active-forks view. Archived and disabled
-repositories and USCE itself are excluded. New fork heads with commits ahead of
+repositories and USCE itself are excluded. All branch tips are checked, including feature branches. New tips with commits ahead of
 USDX produce a draft assessment with immutable comparisons and commit excerpts.
 These commits may already have equivalent ports in USCE; they are discovery
-candidates, not automatic imports. Assessments contain up to 20 forks, with one
+candidates, not automatic imports. Assessments contain up to 20 branch tips, with one
 outstanding fork assessment at a time. Decisions and existing USCE references
 are recorded in `doc/upstream/usdx-forks.json`. Unchanged assessed heads do not
 produce duplicate proposals. Closing an unmerged assessment leaves it eligible
