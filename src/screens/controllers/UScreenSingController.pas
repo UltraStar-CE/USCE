@@ -560,7 +560,10 @@ begin
       SDLK_RIGHT:
       begin
         if ((SDL_ModState and KMOD_LCTRL) <> 0) then
-          SeekTo(Min(AudioPlayback.Position + 5.0, LyricsState.TotalTime));
+        begin
+          SeekTo(Min(AudioPlayback.Position + 5.0, LyricsState.TotalTime), false);
+          PlaybackSeeked := true;
+        end;
       end;
 
       SDLK_LEFT:
@@ -639,6 +642,9 @@ begin
     Scores.Init;
     GoldenRec.KillAll;
   end;
+  // Resume detection at the destination without scoring the skipped beats.
+  for I := 0 to High(Player) do
+    Player[I].DetectionReady := false;
   StopSingClicks;
   AudioPlayback.SetPosition(Position);
   LyricsState.SetCurrentTime(Position);
