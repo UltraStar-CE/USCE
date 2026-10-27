@@ -6,12 +6,20 @@ applying the app's signing options to every helper with codesign --deep.
 https://developer.apple.com/documentation/xcode/creating-distribution-signed-code-for-the-mac/
 """
 from pathlib import Path
+import plistlib
 import subprocess
 import sys
 
 bundle = Path(sys.argv[1]).resolve()
+with (bundle / 'Contents/Info.plist').open('rb') as source:
+    executable = plistlib.load(source)['CFBundleExecutable']
+main_program = bundle / 'Contents/MacOS' / executable
 magics = {bytes.fromhex(value) for value in ['feedface','cefaedfe','feedfacf','cffaedfe','cafebabe','bebafeca','cafebabf','bfbafeca']}
 for program in sorted((bundle / 'Contents/MacOS').rglob('*')):
+    # Signing the main executable signs its containing app before resources are sealed.
+    # Sign it only through the final bundle operation, after all nested libraries.
+    if program == main_program:
+        continue
     if not program.is_file() or not program.resolve().is_relative_to(bundle):
         continue
     with program.open('rb') as source:
