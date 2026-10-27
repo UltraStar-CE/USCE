@@ -177,9 +177,32 @@ begin
       'Reconnect must replay actual continuous activity before API readiness');
     Game('{"type":"continuous.state","active":false,"reason":"exhausted"}');
     Before := Probe.Sent.Count;
+    Snapshot := nil;
     Relay('{"type":"song.state.request"}');
     Assert(not TJSONObject(Probe.Sent.Items[Before+1]).Get('active', true),
       'A stopped session must not replay an old active snapshot');
+    Relay('{"type":"player.joined","playerId":"original","name":"Original singer","slot":2}');
+    Game('{"type":"song.library","library":[{"songId":7,"catalogKey":"stable-file","title":"Fixture"}]}');
+    Game('{"type":"continuous.state","active":true}');
+    Game('{"type":"song.started","songSeq":31,"songId":7}');
+    Relay('{"type":"bridge.disconnected"}');
+    Relay('{"type":"player.left","playerId":"original"}');
+    Relay('{"type":"player.joined","playerId":"replacement","name":"Other singer","slot":2}');
+    Game('{"type":"song.ended","songSeq":31,"players":[{"slot":2,"scoreTotal":9000}]}');
+    Game('{"type":"continuous.state","active":false,"reason":"exhausted"}');
+    Before := Probe.Sent.Count;
+    Relay('{"type":"room.resumed","roomId":"room","displayCode":"TEST"}');
+    for I := Before to Probe.Sent.Count - 1 do
+      if TJSONObject(Probe.Sent.Items[I]).Get('type', '') = 'song.results' then
+      begin
+        Snapshot := TJSONObject(Probe.Sent.Items[I]);
+        Assert(Snapshot.Arrays['rounds'].Count = 1);
+        Assert(Snapshot.Arrays['rounds'].Objects[0].Get('catalogKey', '') = 'stable-file');
+        Assert(Snapshot.Arrays['rounds'].Objects[0].Arrays['participants'].Objects[0].Get('playerId', '') = 'original',
+          'Results retain the singer at song start, not the replacement in the slot');
+        Assert(Snapshot.Arrays['rounds'].Objects[0].Arrays['players'].Objects[0].Get('scoreTotal', 0) = 9000);
+      end;
+    Assert(Assigned(Snapshot), 'Reconnect must contain the result journal');
   finally Adapter.Free; Probe.Free; end;
   WriteLn('Native relay protocol: profile/slot merge, controls, clocks, state authority, privacy and ended-song replay passed');
 end.

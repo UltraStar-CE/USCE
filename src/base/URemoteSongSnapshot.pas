@@ -15,10 +15,20 @@ type
     procedure Replace(Songs: TJSONArray);
     function Chunk(Offset, Limit: integer): TJSONArray;
     function Count: integer;
+    function IdentityForSong(SongId: integer): string;
     function Query(Request: TJSONObject): TJSONObject;
     property Id: string read FId;
   end;
 implementation
+function TRemoteSongSnapshot.IdentityForSong(SongId: integer): string;
+var I: integer;
+begin
+  Result := '';
+  for I := 0 to FSongs.Count - 1 do
+    if FSongs.Objects[I].Get('songId', -1) = SongId then
+      Exit(FSongs.Objects[I].Get('catalogKey', ''));
+end;
+
 procedure Sanitize(Data: TJSONData);
 var I: integer; Obj: TJSONObject; Key: string;
 begin

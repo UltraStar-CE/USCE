@@ -15,6 +15,9 @@ type
   TRemoteRelayProtocol = class
   private
     FPlayers, FCache: TJSONObject;
+    FCurrentRound: TJSONObject;
+    FResults: TJSONArray;
+    FContinuousSeq: int64;
     FSongs: TRemoteSongSnapshot;
     FMediaSources: TRemoteMediaSources;
     FTransfers: TStringList;
@@ -30,6 +33,8 @@ type
     procedure Deliver(Message: TJSONObject);
     procedure Cache(Message: TJSONObject);
     procedure Replay;
+    procedure UpdateResults;
+    procedure RecordRound(Message: TJSONObject);
     procedure PlayerUpdate(Message: TJSONObject; Notify: boolean = true);
     function CopyPublic(Message: TJSONObject): TJSONObject;
   public
@@ -87,8 +92,10 @@ begin
   FTransfers := TStringList.Create;
   FPlayers := TJSONObject.Create;
   FCache := TJSONObject.Create;
+  FResults := TJSONArray.Create;
+  UpdateResults;
   FCache.Add('continuous.state', TJSONObject.Create(['type', 'continuous.state',
-    'active', false, 'reason', 'initial']));
+    'active', false, 'reason', 'initial', 'sessionSeq', 0]));
 end;
 
 destructor TRemoteRelayProtocol.Destroy;
@@ -99,6 +106,8 @@ begin
   FSongs.Free;
   FPlayers.Free;
   FCache.Free;
+  FCurrentRound.Free;
+  FResults.Free;
   inherited;
 end;
 
@@ -157,7 +166,7 @@ begin
 end;
 
 procedure TRemoteRelayProtocol.Replay;
-const Order: array[0..9] of string = ('input.state', 'game.state', 'continuous.state', 'api.state', 'screen.info',
+const Order: array[0..10] of string = ('input.state', 'game.state', 'continuous.state', 'api.state', 'song.results', 'screen.info',
   'playlist.state', 'song.select.state', 'song.clock', 'song.lyrics', 'score.sheet');
 var I: integer;
     Data: TJSONData;
@@ -169,6 +178,58 @@ begin
     if (Data = nil) or (Data.JSONType <> jtObject) then Continue;
     Message := CopyPublic(TJSONObject(Data));
     try Send(Message); finally Message.Free; end;
+  end;
+end;
+
+procedure TRemoteRelayProtocol.UpdateResults;
+var Snapshot: TJSONObject;
+begin
+  Snapshot := TJSONObject.Create(['type', 'song.results']);
+  try
+    Snapshot.Add('rounds', FResults.Clone);
+    if Assigned(FCurrentRound) then Snapshot.Add('currentRound', FCurrentRound.Clone);
+    Cache(Snapshot);
+  finally Snapshot.Free; end;
+end;
+
+procedure TRemoteRelayProtocol.RecordRound(Message: TJSONObject);
+var Kind: string; Active: TJSONData; Participants: TJSONArray;
+    I, Seq: integer; Player, Round: TJSONObject;
+begin
+  Kind := Message.Get('type', '');
+  if Kind = 'song.started' then
+  begin
+    FreeAndNil(FCurrentRound);
+    Active := FCache.Find('continuous.state');
+    if (Active <> nil) and TJSONObject(Active).Get('active', false) then
+    begin
+      FCurrentRound := TJSONObject.Create(['songSeq', Message.Get('songSeq', -1),
+        'sessionSeq', FContinuousSeq, 'songId', Message.Get('songId', -1),
+        'catalogKey', FSongs.IdentityForSong(Message.Get('songId', -1))]);
+      Participants := TJSONArray.Create;
+      FCurrentRound.Add('participants', Participants);
+      for I := 0 to FPlayers.Count - 1 do
+      begin
+        Player := TJSONObject(FPlayers.Items[I]);
+        if Player.Get('slot', 0) > 0 then Participants.Add(TJSONObject.Create([
+          'playerId', Player.Get('playerId', ''), 'name', Player.Get('name', ''), 'slot', Player.Get('slot', 0)]));
+      end;
+    end;
+    UpdateResults;
+  end
+  else if (Kind = 'song.ended') and Assigned(FCurrentRound) and
+    (FCurrentRound.Get('songSeq', -1) = Message.Get('songSeq', -2)) then
+  begin
+    Seq := Message.Get('songSeq', -1);
+    for I := 0 to FResults.Count - 1 do
+      if FResults.Objects[I].Get('songSeq', -2) = Seq then Exit;
+    Round := CloneObject(FCurrentRound);
+    if Message.Find('players') <> nil then Round.Add('players', Message.Find('players').Clone);
+    FResults.Add(Round);
+    // Enough for brief reconnects without growing a session-long network log.
+    while FResults.Count > 32 do FResults.Delete(0);
+    FreeAndNil(FCurrentRound);
+    UpdateResults;
   end;
 end;
 
@@ -272,6 +333,9 @@ begin
     if FRoomId <> Message.Get('roomId', '') then
     begin
       FPlayers.Clear;
+      FResults.Clear;
+      FreeAndNil(FCurrentRound);
+      UpdateResults;
       FRoomId := Message.Get('roomId', '');
       Reply := TJSONObject.Create(['type', 'remote.players.snapshot', 'protocol', 1]);
       Reply.Add('players', TJSONArray.Create);
@@ -385,6 +449,7 @@ var Kind: string;
 begin
   Kind := Message.Get('type', '');
   if Kind = 'bridge.ping' then Exit(true);
+  RecordRound(Message);
   if (Kind = 'song.select.state') or (Kind = 'song.library') or (Kind = 'playlist.library') then
   begin
     LibraryData := Message.Find('library');
@@ -423,6 +488,11 @@ begin
   if (Kind = 'song.library') or (Kind = 'playlist.library') then Exit(true);
   PublicMessage := CopyPublic(Message);
   try
+    if Kind = 'continuous.state' then
+    begin
+      if Message.Get('active', false) then Inc(FContinuousSeq);
+      PublicMessage.Int64s['sessionSeq'] := FContinuousSeq;
+    end;
     if Kind = 'game.state' then
     begin
       Previous := FCache.Find('game.state');
@@ -477,6 +547,9 @@ begin
     // signaling retain their position in the caller's bounded output queue.
     Result := Send(PublicMessage);
     if not FReady and (FCache.Find(Kind) <> nil) then Result := true;
+    if not FReady and (Kind = 'song.ended') and (FResults.Count > 0) then
+      if FResults.Objects[FResults.Count - 1].Get('songSeq', -1) = Message.Get('songSeq', -2) then
+        Result := true;
   finally PublicMessage.Free; end;
 end;
 
