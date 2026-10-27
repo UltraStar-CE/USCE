@@ -76,6 +76,9 @@ type
       Song:       IPath;
 
       Renderer: string;
+      Lockdown: boolean;
+      PlaylistNames: array of UTF8String;
+      LockdownPassword, StartupError: UTF8String;
 
       // pseudo integer values
       property Language:      integer read GetLanguage;
@@ -136,6 +139,8 @@ begin
   writeln('  '+ Fmt(cDebug) +' : Display Debugging info');
   writeln('  '+ Fmt(cCheckSongs) +' : Fully validate song files during startup');
   writeln('  '+ Fmt(cSong + ' <file>') +' : Sing only the given song file, then exit');
+  writeln('  -lockdown -playlist <name[,name]> -password <password>');
+  writeln('    Start locked playback; -playlist can be repeated.');
   writeln;
 
   platform.halt;
@@ -146,6 +151,10 @@ end;
  *}
 procedure TCMDParams.ResetVariables;
 begin
+  Lockdown := false;
+  PlaylistNames := nil;
+  LockdownPassword := '';
+  StartupError := '';
   Debug       := false;
   Benchmark   := False;
   NoLog       := false;
@@ -175,13 +184,17 @@ var
   I:        integer;
   PCount:   integer;
   Command:  string;
+  SkipThrough, Start, J: integer;
+  Value, Name: UTF8String;
 begin
+  SkipThrough := 0;
   PCount := ParamCount;
   //Log.LogError('ParamCount: ' + Inttostr(PCount));
 
   // check all parameters
   for I := 1 to PCount do
   begin
+    if I <= SkipThrough then Continue;
     Command := ParamStr(I);
     // check if the string is a parameter
     if (Length(Command) > 1) and (Command[1] = '-') then
@@ -193,7 +206,35 @@ begin
       // check command
 
       // boolean triggers
-      if (Command = 'debug') then
+      if Command = 'lockdown' then
+        Lockdown := true
+      else if (Command = 'playlist') or (Command = 'password') then
+      begin
+        if (I = PCount) or (ParamStr(I + 1) = '') or (ParamStr(I + 1)[1] = '-') then
+        begin
+          StartupError := 'Missing value for -' + Command;
+          Continue;
+        end;
+        SkipThrough := I + 1;
+        Value := UTF8Encode(UnicodeString(ParamStr(I + 1)));
+        if Command = 'password' then LockdownPassword := Value
+        else
+        begin
+          Start := 1;
+          for J := 1 to Length(Value) + 1 do
+            if (J > Length(Value)) or (Value[J] = ',') then
+            begin
+              Name := Trim(Copy(Value, Start, J - Start));
+              if Name = '' then StartupError := 'Empty playlist name'
+              else begin
+                SetLength(PlaylistNames, Length(PlaylistNames) + 1);
+                PlaylistNames[High(PlaylistNames)] := Name;
+              end;
+              Start := J + 1;
+            end;
+        end;
+      end
+      else if (Command = 'debug') then
         Debug       := True
       else if (Command = cCheckSongs) then
         CheckSongs  := True
@@ -338,6 +379,15 @@ begin
   Log.LogInfo('SongPath: ' + SongPath);
   Log.LogInfo('ScoreFile: ' + ScoreFile);
 }
+
+  if Lockdown then
+  begin
+    if LockdownPassword = '' then StartupError := '-lockdown requires -password';
+    if Length(PlaylistNames) = 0 then StartupError := '-lockdown requires -playlist';
+    if Song.IsSet then StartupError := '-lockdown cannot be combined with -song';
+  end
+  else if (Length(PlaylistNames) > 0) or (LockdownPassword <> '') then
+    StartupError := '-playlist and -password require -lockdown';
 
 end;
 
