@@ -87,6 +87,8 @@ begin
   FTransfers := TStringList.Create;
   FPlayers := TJSONObject.Create;
   FCache := TJSONObject.Create;
+  FCache.Add('continuous.state', TJSONObject.Create(['type', 'continuous.state',
+    'active', false, 'reason', 'initial']));
 end;
 
 destructor TRemoteRelayProtocol.Destroy;
@@ -155,7 +157,7 @@ begin
 end;
 
 procedure TRemoteRelayProtocol.Replay;
-const Order: array[0..8] of string = ('input.state', 'game.state', 'api.state', 'screen.info',
+const Order: array[0..9] of string = ('input.state', 'game.state', 'continuous.state', 'api.state', 'screen.info',
   'playlist.state', 'song.select.state', 'song.clock', 'song.lyrics', 'score.sheet');
 var I: integer;
     Data: TJSONData;
@@ -469,7 +471,7 @@ begin
       RemoveField(FCache, 'song.lyrics');
     end;
     if (Kind = 'input.state') or (Kind = 'game.state') or (Kind = 'screen.info') or
-      (Kind = 'playlist.state') or (Kind = 'song.select.state') or
+      (Kind = 'playlist.state') or (Kind = 'song.select.state') or (Kind = 'continuous.state') or
       (Kind = 'song.lyrics') or (Kind = 'score.sheet') then Cache(PublicMessage);
     // State can wait in the cache while reconnecting. Command results and
     // signaling retain their position in the caller's bounded output queue.

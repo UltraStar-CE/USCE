@@ -76,6 +76,9 @@ begin
     Before := Probe.Sent.Count;
     Relay('{"type":"song.state.request"}');
     Assert(TJSONObject(Probe.Sent.Items[Before]).Get('state', '') = 'player_setup');
+    Assert(TJSONObject(Probe.Sent.Items[Before+1]).Get('type', '') = 'continuous.state');
+    Assert(not TJSONObject(Probe.Sent.Items[Before+1]).Get('active', true));
+    Inc(Before);
     Assert(TJSONObject(Probe.Sent.Items[Before+1]).Get('type', '') = 'api.state');
     Assert(TJSONObject(Probe.Sent.Items[Before+1]).Arrays['playlists'].Objects[0].Get('name', '') = 'Startup list');
     Assert(TJSONObject(Probe.Sent.Items[Before+1]).Find('library') = nil);
@@ -162,12 +165,21 @@ begin
       Adapter.TickMedia;
       Assert(Probe.Sent.Count = Before, 'Cancelled media must not emit another message');
     finally DeleteFile(MediaPath); end;
+    Game('{"type":"continuous.state","active":true}');
     Relay('{"type":"bridge.disconnected"}');
     Before := Probe.Sent.Count;
     Game('{"type":"game.state","state":"results","songSeq":1}');
     Assert(Probe.Sent.Count = Before);
     Relay('{"type":"room.resumed","roomId":"room","displayCode":"TEST","hostToken":"private"}');
     Assert(Probe.Sent.Count > Before);
+    Assert(TJSONObject(Probe.Sent.Items[Before+1]).Get('type', '') = 'continuous.state');
+    Assert(TJSONObject(Probe.Sent.Items[Before+1]).Get('active', false),
+      'Reconnect must replay actual continuous activity before API readiness');
+    Game('{"type":"continuous.state","active":false,"reason":"exhausted"}');
+    Before := Probe.Sent.Count;
+    Relay('{"type":"song.state.request"}');
+    Assert(not TJSONObject(Probe.Sent.Items[Before+1]).Get('active', true),
+      'A stopped session must not replay an old active snapshot');
   finally Adapter.Free; Probe.Free; end;
   WriteLn('Native relay protocol: profile/slot merge, controls, clocks, state authority, privacy and ended-song replay passed');
 end.

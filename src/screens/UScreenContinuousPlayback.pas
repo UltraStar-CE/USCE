@@ -308,6 +308,7 @@ begin
     SingingDisplay := EnsureRange(Obj.Get('singingDisplay', SingingDisplay), 0, 4);
   end;
   Session.Start(Selection, Selection[0], true, false, PlayersPlay > 0);
+  RemoteBridgeIPC.SendJsonMessage('{"type":"continuous.state","active":true}');
   Advance;
   Result := true;
   finally Options.Free; end;
