@@ -1147,6 +1147,7 @@ type
     SongMenu:         TThemeSongMenu;
     SongJumpto:       TThemeSongJumpTo;
     DuplicateSongs: TThemeDuplicateSongs;
+    BoldSelection: boolean;
     //Party Screens:
     PartyNewRound:    TThemePartyNewRound;
     PartyScore:       TThemePartyScore;
@@ -1956,6 +1957,7 @@ begin
   begin
     Result := true;
     OpenFile(ThemeNum);
+    BoldSelection := ReadBool(GetSectionList('Selection'), 'Bold', false);
     if ThemeIni.ReadString('Theme', 'Name', '') <> '' then
     begin
       LayoutScreenW := ThemeIni.ReadInteger('Theme', 'ScreenW', 0);
