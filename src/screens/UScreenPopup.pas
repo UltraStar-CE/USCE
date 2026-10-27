@@ -1561,6 +1561,7 @@ function TScreenPopup.Draw: boolean;
 begin
   Renderer.ClearFrameBuffer(CLEAR_DEPTH);
   Result := inherited Draw;
+  DrawDialogFocus;
 end;
 
 procedure TScreenPopup.OnShow;

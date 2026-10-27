@@ -276,6 +276,11 @@ type
   end;
 
   PThemeBasic = ^TThemeBasic;
+  TThemeFocusOutline = record
+    Color: TRGB;
+    Width, Alpha: real;
+  end;
+
   TThemeDuplicateSongs = record
     Panel: TThemeStatic;
     Heading, Hint: TThemeText;
@@ -1147,6 +1152,7 @@ type
     SongMenu:         TThemeSongMenu;
     SongJumpto:       TThemeSongJumpTo;
     DuplicateSongs: TThemeDuplicateSongs;
+    DialogFocus: TThemeFocusOutline;
     //Party Screens:
     PartyNewRound:    TThemePartyNewRound;
     PartyScore:       TThemePartyScore;
@@ -2876,6 +2882,12 @@ procedure TTheme.LoadDuplicateSongLayout;
 var I: integer; Sections: TThemeSectionList; X, Y, W, H, Gap, RowSpace: integer;
   LabelStyle: TThemeText;
 begin
+  Sections := GetSectionList('DialogFocusOutline');
+  DialogFocus.Color.R := EnsureRange(ReadFloat(Sections, 'Red', 1), 0.0, 1.0);
+  DialogFocus.Color.G := EnsureRange(ReadFloat(Sections, 'Green', 1), 0.0, 1.0);
+  DialogFocus.Color.B := EnsureRange(ReadFloat(Sections, 'Blue', 1), 0.0, 1.0);
+  DialogFocus.Width := Max(0, ReadFloat(Sections, 'Width', 2));
+  DialogFocus.Alpha := EnsureRange(ReadFloat(Sections, 'Alpha', 1), 0.0, 1.0);
   Sections := GetSectionList('DuplicateSongs');
   X := ReadInteger(Sections, 'X', 80);
   Y := ReadInteger(Sections, 'Y', 130);
