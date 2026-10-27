@@ -1,0 +1,11 @@
+function plugin_init()
+ register(current_filename,'1.0')
+ require('Usdx.Music')
+ calls=0;selected=0
+ Usdx.Hook('ScreenSong.ParseInput','input')
+ Usdx.Hook('ScreenSong.SongSelected','selection')
+ return true
+end
+function input(breakable,event) calls=calls+1;last=event;return true end
+function selection() selected=selected+1 end
+function plugin_unload() end

@@ -33,69 +33,85 @@ interface
 
 {$I switches.inc}
 
-uses ULua, UMusic, UPathUtils, UPath, SysUtils;
-
-function luaopen_Music (L: Plua_State): Integer; cdecl;
-
+uses ULua;
 function ULuaMusic_OpenSound(L: Plua_State): Integer; cdecl;
 function ULuaMusic_PlaySound(L: Plua_State): Integer; cdecl;
-
+function ULuaMusic_UnloadSound(L: Plua_State): Integer; cdecl;
+procedure LuaMusicReleasePlugin(Owner: integer);
+procedure LuaMusicReleaseAll;
 const
-  ULuaMusic_Lib_f: array [0..2] of lual_reg = (
-   (name:'OpenSound';func:ULuaMusic_OpenSound),
-   (name:'PlaySound';func:ULuaMusic_PlaySound),
-   (name:nil;func:nil)
-   );
-
+  ULuaMusic_Lib_f: array[0..3] of luaL_reg = (
+    (name:'OpenSound';func:ULuaMusic_OpenSound),
+    (name:'LoadSound';func:ULuaMusic_OpenSound),
+    (name:'PlaySound';func:ULuaMusic_PlaySound),
+    (name:'UnloadSound';func:ULuaMusic_UnloadSound)
+  );
 implementation
-
+uses SysUtils, Math, UMusic, UIni, UPath, UPathUtils, ULuaUtils;
+type TPluginSound = record
+  Owner, Handle: integer;
+  Stream: TAudioPlaybackStream;
+end;
+var Sounds: array of TPluginSound;NextHandle: integer = 1;
+procedure ReleaseSound(Index: integer);
+begin
+  if Sounds[Index].Stream = nil then Exit;
+  Sounds[Index].Stream.Stop;
+  FreeAndNil(Sounds[Index].Stream);
+  Sounds[Index].Owner := -1;
+end;
+procedure LuaMusicReleasePlugin(Owner: integer);
+var I: integer;
+begin
+  for I := 0 to High(Sounds) do if Sounds[I].Owner = Owner then ReleaseSound(I);
+end;
+procedure LuaMusicReleaseAll;
+var I: integer;
+begin
+  for I := 0 to High(Sounds) do ReleaseSound(I);
+  SetLength(Sounds,0);
+end;
+function OwnedSound(L: Plua_State): integer;
+var I,Owner: integer;Handle: lua_Integer;
+begin
+  Result := -1;
+  if not lua_IsInteger(L,1) then begin luaL_argerror(L,1,'Sound ID expected');Exit;end;
+  Handle := lua_tointeger(L,1);Owner := Lua_GetOwner(L).Id;
+  for I := 0 to High(Sounds) do
+    if (Sounds[I].Handle=Handle) and (Sounds[I].Owner=Owner) and (Sounds[I].Stream<>nil) then Exit(I);
+  luaL_argerror(L,1,'Sound ID is unloaded or belongs to another plugin');
+end;
 function ULuaMusic_OpenSound(L: Plua_State): Integer; cdecl;
-  var
-    Name: string;
-    FilePath: IPath;
-    SoundId: integer;
+var FilePath: IPath;Name: UTF8String;Owner,I: integer;Stream: TAudioPlaybackStream;
 begin
-  if (lua_IsString(L, 1)) then begin
-    Name := lua_toString(L, 1);
-    FilePath := SoundPath.Append(Name); // assume filename (relative to sound path) by default
-    if pos(SysUtils.PathDelim, Name) > 0 then begin
-      // user seems to be using a file path, let him do that
-      FilePath := Path(Name);
-    end;
-    SoundId := SoundLib.AddSound(FilePath);
-    // return the sound id (index) for use with PlaySound
-    lua_pushinteger(L, SoundId);
-    result := 1;
-  end else begin
-    luaL_argerror(L, 1, PChar('filename (as string) expected'));
-    result := 0;
-  end;
+  Result := 0;
+  if not lua_IsString(L,1) then begin luaL_argerror(L,1,'UTF-8 filename expected');Exit;end;
+  Owner := Lua_GetOwner(L).Id;
+  if (AudioPlayback=nil) or (NextHandle=High(integer)) then begin luaL_error(L,'Sound playback unavailable');Exit;end;
+  Name := lua_toString(L,1);
+  if (Pos('/',Name)=0) and (Pos('\',Name)=0) then FilePath := ResolveSoundAsset(Name)
+  else FilePath := Path(Name);
+  Stream := AudioPlayback.OpenSound(FilePath);
+  FilePath := nil;Name := '';
+  if Stream=nil then begin luaL_error(L,'Unable to open sound file');Exit;end;
+  I := 0;while (I<Length(Sounds)) and (Sounds[I].Stream<>nil) do Inc(I);
+  if I=Length(Sounds) then SetLength(Sounds,I+1);
+  Sounds[I].Owner := Owner;Sounds[I].Handle := NextHandle;Sounds[I].Stream := Stream;
+  Inc(NextHandle);
+  Stream.Volume := EnsureRange(Ini.SfxVolume,0,100)/100;
+  lua_pushinteger(L,Sounds[I].Handle);Result := 1;
 end;
-
 function ULuaMusic_PlaySound(L: Plua_State): Integer; cdecl;
-  var
-    PlaybackStream: TAudioPlaybackStream;
+var I:integer;
 begin
-  result := 0; // never return anything to lua
-  // expect a sound id (index) obtained by OpenSound
-  if lua_IsInteger(L, 1) then begin
-    PlaybackStream := SoundLib.GetSound(lua_tointeger(L, 1));
-    if PlaybackStream <> nil then begin
-      AudioPlayback.PlaySound(PlaybackStream);
-    end else begin
-      luaL_argerror(L, 1, PChar('failed to get sound by id'));
-    end;
-  end else begin
-    luaL_argerror(L, 1, PChar('sound id expected'));
-  end;
+  Result := 0;I := OwnedSound(L);
+  if I<0 then Exit;
+  Sounds[I].Stream.Volume := EnsureRange(Ini.SfxVolume,0,100)/100;
+  AudioPlayback.PlaySound(Sounds[I].Stream);
 end;
-
-// TODO: add RemoveSound
-
-function luaopen_Music (L: Plua_State): Integer; cdecl;
+function ULuaMusic_UnloadSound(L: Plua_State): Integer; cdecl;
+var I:integer;
 begin
-    luaL_register(L, 'Music', @ULuaMusic_Lib_f[0]);
-    result := 1;
+  Result := 0;I := OwnedSound(L);if I>=0 then ReleaseSound(I);
 end;
-
 end.

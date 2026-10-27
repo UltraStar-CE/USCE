@@ -369,6 +369,7 @@ begin
          DataBase.Destroy();
     end;
 
+    LuaMusicReleaseAll;
     Log.LogStatus('Finalize Media', 'Finalization');
     FinalizeMedia();
 

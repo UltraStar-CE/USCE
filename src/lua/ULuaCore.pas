@@ -211,7 +211,8 @@ uses
   ULog,
   ULuaUsdx,
   UPathUtils,
-  ULuaUtils;
+  ULuaUtils,
+  ULuaMusic;
 
 constructor TLuaCore.Create;
 begin
@@ -910,6 +911,7 @@ begin
     if (Status in [psRunning, psErrorOnRun]) then
       CallFunctionByName('plugin_unload');
 
+    LuaMusicReleasePlugin(Id);
     ClearStack;
     lua_close(State);
     State := nil; // don't forget to nil it ;)

@@ -330,6 +330,8 @@ type
       procedure OpenContinuousFromMainMenu;
   end;
 
+procedure RegisterSongHooks;
+
 implementation
 
 uses
@@ -424,6 +426,16 @@ begin
 
   lua_PushBoolean(L, InputHookDown);
   lua_SetField(L, -2, PChar('Down'));
+end;
+
+procedure RegisterSongHooks;
+begin
+  if (ParseInputEvent = nil) then
+    ParseInputEvent := THookableEvent.Create('ScreenSong.ParseInput',
+                         @PrepareStack_ScreenSongParseInput);
+  if (SongSelectedEvent = nil) then
+    SongSelectedEvent := THookableEvent.Create('ScreenSong.SongSelected');
+
 end;
 
 // ***** Public methods ****** //
@@ -1969,11 +1981,7 @@ begin
   inherited Create;
 
   MarkedPlaylistSong := -1;
-  if (ParseInputEvent = nil) then
-    ParseInputEvent := THookableEvent.Create('ScreenSong.ParseInput',
-                         @PrepareStack_ScreenSongParseInput);
-  if (SongSelectedEvent = nil) then
-    SongSelectedEvent := THookableEvent.Create('ScreenSong.SongSelected');
+  RegisterSongHooks;
 
   // aliases: the events outlive this instance, see the note at their declaration
   eParseInput   := ParseInputEvent;
