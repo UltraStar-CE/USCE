@@ -145,7 +145,7 @@ begin
   Selected := TList.Create;
   try
     if Error = '' then
-      CollectLaunchSongs(Params.PlaylistNames, PlaylistMan.Playlists,
+      CollectLaunchSongs(Params.PlaylistName, PlaylistMan.Playlists,
         CatSongs.Song, Selected, Error);
     if Error = '' then
     begin
@@ -168,9 +168,7 @@ begin
         ScreenName.LoadPlayersFromIni;
         ScreenSing := TScreenSingController.Create;
         Display.CurrentScreen := @ScreenSong;
-        if ScreenContinuousPlayback.Enabled <> 0 then
-          ScreenContinuousPlayback.BeginSession
-        else Display.CurrentScreen^.FadeTo(@ScreenSing);
+        ScreenContinuousPlayback.BeginSession;
       end;
     end;
     if Error <> '' then
