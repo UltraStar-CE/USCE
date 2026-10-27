@@ -99,6 +99,7 @@ implementation
 
 uses
   UDataBase,
+  UInputSource,
   UGraphic,
   UHelp,
   ULog,
@@ -488,6 +489,7 @@ begin
 end;
 
 procedure TScreenHighScores.OnShow;
+var I: integer;
 begin
   inherited;
   AudioPlayback.SetVolume(EnsureRange(Ini.PreviewVolume, 0, 100) / 100);
@@ -497,7 +499,14 @@ begin
 
   IsFadingOut := false;
   VisibleDifficulty := EnsureRange(Ini.Difficulty, 0, 2);
-  if Length(Player) > 0 then VisibleDifficulty := Player[0].Level;
+  // Sparse mic assignments leave earlier player cards unassigned. Use the
+  // first singer's captured input, including when the phone has since left.
+  for I := 0 to Min(PlayersPlay, Length(Player)) - 1 do
+    if Player[I].InputSource <> Ord(pisNone) then
+    begin
+      VisibleDifficulty := EnsureRange(Player[I].Level, 0, 2);
+      Break;
+    end;
 
   UpdateEntryLayout;
   UpdateHeaderText;
