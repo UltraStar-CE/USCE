@@ -81,6 +81,24 @@ begin
     Assert(TJSONObject(Probe.Sent.Items[Before+1]).Find('library') = nil);
     Assert(Pos('private.wav', Probe.Sent.Items[Before+1].AsJSON) = 0);
 
+    Game('{"type":"song.select.state","playlists":[{"index":0,"name":"Old list"}]}');
+    Before := Probe.Sent.Count;
+    Game('{"type":"playlist.library","playlists":[{"index":0,"name":"Updated list","fixedOrder":true,"items":[{"itemIndex":0,"songId":3}]}],"curPlaylist":-1}');
+    Assert(Probe.Sent.Count = Before + 1, 'Metadata edits send only the API update');
+    Assert(Adapter.Songs.Count = 1, 'Playlist edits preserve the song snapshot');
+    Assert(TJSONObject(Probe.Sent.Items[Before]).Get('type', '') = 'api.state');
+    Assert(TJSONObject(Probe.Sent.Items[Before]).Arrays['playlists'].Objects[0].Get('fixedOrder', false));
+    Assert(TJSONObject(Probe.Sent.Items[Before]).Arrays['playlists'].Objects[0].Arrays['items'].Objects[0].Get('songId', -1) = 3);
+    Relay('{"type":"control.command","playerId":"phone","commandId":41,"command":"song.list","args":{"offset":0,"limit":10}}');
+    Assert(TJSONObject(Probe.Sent.Items[Probe.Sent.Count-1]).Objects['data'].Arrays['songs'].Objects[0].Get('title', '') = 'Startup song');
+
+    Before := Probe.Sent.Count;
+    Relay('{"type":"song.state.request"}');
+    for I := Before to Probe.Sent.Count - 1 do
+      if TJSONObject(Probe.Sent.Items[I]).Get('type', '') = 'song.select.state' then
+        Assert(TJSONObject(Probe.Sent.Items[I]).Arrays['playlists'].Objects[0].Get('name', '') = 'Updated list',
+          'Screen replay must not restore stale playlist metadata');
+
     Relay('{"type":"clock.sync.ping","playerId":"phone","clientSendUs":987654321.5}');
     Assert(TJSONObject(Probe.Sent.Items[Probe.Sent.Count-1]).Get('hostReceiveUs', int64(0)) = TestClock);
     Assert(TJSONObject(Probe.Sent.Items[Probe.Sent.Count-1]).Get('clientSendUs', double(0)) = 987654321.5);

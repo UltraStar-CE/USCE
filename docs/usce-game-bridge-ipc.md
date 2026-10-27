@@ -556,3 +556,19 @@ in the current folder/search; category entries are not playable. Normal
 continuous-mode player setup, results and highscore timing still apply.
 The query itself does not implement media transfer, votes or playlist mutation;
 those retain their separate commands and game-state restrictions.
+
+### Playlist API behavior
+
+`api.state.playlists` includes each playlist's `fixedOrder` flag and complete
+ordered `items` membership (`itemIndex`, `songId`). Browsing a playlist in a
+frontend does not load it into the game's song selector or reorder song IDs.
+Explicit `playlist.load` remains a song-selection command.
+
+Create, delete, add/remove explicit songs, move items and
+`playlist.toggleFixedOrder` are accepted while the game is at the main menu or
+song selection, outside screen transitions. Main-menu edits save playlist data
+without refreshing the song-selection screen or starting preview playback.
+The private `playlist.library` update refreshes public API metadata without
+replacing the song snapshot. Native and hosted replay caches retain those edits.
+Playlist edits are unavailable during gameplay; browsing, likes and Party voting
+remain available. Removing the last item preserves the empty playlist.

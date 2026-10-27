@@ -50,6 +50,7 @@ type
     rccPlaylistRemoveSong,
     rccPlaylistMoveItemUp,
     rccPlaylistMoveItemDown,
+    rccPlaylistToggleFixedOrder,
     rccContinuousStart, rccContinuousQueue, rccContinuousStop, rccContinuousSkip
   );
 
@@ -146,6 +147,7 @@ begin
     Command := rccPlaylistMoveItemUp
   else if (Name = 'playlist.moveitemdown') then
     Command := rccPlaylistMoveItemDown
+  else if Name = 'playlist.togglefixedorder' then Command := rccPlaylistToggleFixedOrder
   else if Name = 'continuous.start' then Command := rccContinuousStart
   else if Name = 'continuous.queue' then Command := rccContinuousQueue
   else if Name = 'continuous.stop' then Command := rccContinuousStop
@@ -189,6 +191,7 @@ begin
     rccPlaylistRemoveSong: Result := 'playlist.removeSong';
     rccPlaylistMoveItemUp: Result := 'playlist.moveItemUp';
     rccPlaylistMoveItemDown: Result := 'playlist.moveItemDown';
+    rccPlaylistToggleFixedOrder: Result := 'playlist.toggleFixedOrder';
     rccContinuousStart: Result := 'continuous.start';
     rccContinuousQueue: Result := 'continuous.queue';
     rccContinuousStop: Result := 'continuous.stop';
@@ -235,7 +238,8 @@ begin
     rccPlaylistAddSongs,
     rccPlaylistRemoveSong,
     rccPlaylistMoveItemUp,
-    rccPlaylistMoveItemDown
+    rccPlaylistMoveItemDown,
+    rccPlaylistToggleFixedOrder
   ];
 end;
 

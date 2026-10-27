@@ -383,13 +383,17 @@ var Kind: string;
 begin
   Kind := Message.Get('type', '');
   if Kind = 'bridge.ping' then Exit(true);
-  if (Kind = 'song.select.state') or (Kind = 'song.library') then
+  if (Kind = 'song.select.state') or (Kind = 'song.library') or (Kind = 'playlist.library') then
   begin
     LibraryData := Message.Find('library');
     if (LibraryData <> nil) and (LibraryData.JSONType = jtArray) then
     begin
       FMediaSources.Replace(TJSONArray(LibraryData));
       FSongs.Replace(TJSONArray(LibraryData));
+    end;
+    if ((LibraryData <> nil) and (LibraryData.JSONType = jtArray)) or
+       (Kind = 'playlist.library') then
+    begin
       ApiState := TJSONObject.Create(['type', 'api.state', 'libraryHash', FSongs.Id,
         'totalSongs', FSongs.Count]);
       try
@@ -400,12 +404,21 @@ begin
             ApiState.Add(FieldName, Message.Find(FieldName).Clone);
         StripLocalPaths(ApiState);
         Cache(ApiState);
+        // A later replay of screen state must not restore pre-edit playlists.
+        Previous := FCache.Find('song.select.state');
+        if (Previous <> nil) and (Previous.JSONType = jtObject) then
+          for FieldName in ['playlists', 'playlistItems', 'curPlaylist'] do
+            if ApiState.Find(FieldName) <> nil then
+            begin
+              RemoveField(TJSONObject(Previous), FieldName);
+              TJSONObject(Previous).Add(FieldName, ApiState.Find(FieldName).Clone);
+            end;
         Send(ApiState);
       finally ApiState.Free; end;
     end;
   end;
   // This is a private game-thread snapshot, never live screen state.
-  if Kind = 'song.library' then Exit(true);
+  if (Kind = 'song.library') or (Kind = 'playlist.library') then Exit(true);
   PublicMessage := CopyPublic(Message);
   try
     if Kind = 'game.state' then

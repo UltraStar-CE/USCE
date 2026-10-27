@@ -118,7 +118,7 @@ begin
 end;
 function RemotePlaylistFieldsJson: string;
 var
-  PlaylistIndex, CurrentPlaylist, PlaylistItemIndex, PlaylistSongId, Sent: integer;
+  PlaylistIndex, CurrentPlaylist, PlaylistItemIndex, PlaylistSongId, Sent, ItemIndex: integer;
   PlaylistsJson, PlaylistItemsJson: string;
   PlaylistAudioPath: IPath;
   PlaylistAudioSource: UTF8String;
@@ -135,7 +135,15 @@ begin
       ',"name":"' + RemoteJsonEscape(PlaylistMan.Playlists[PlaylistIndex].Name) + '"' +
       ',"size":' + IntToStr(Length(PlaylistMan.Playlists[PlaylistIndex].Items)) +
       ',"current":' + BoolJson(PlaylistIndex = PlaylistMan.CurPlaylist) +
-      '}';
+      ',"fixedOrder":' + BoolJson(PlaylistMan.Playlists[PlaylistIndex].FixedOrder) +
+      ',"items":[';
+    for ItemIndex := 0 to High(PlaylistMan.Playlists[PlaylistIndex].Items) do
+    begin
+      if ItemIndex > 0 then PlaylistsJson := PlaylistsJson + ',';
+      PlaylistsJson := PlaylistsJson + '{"itemIndex":' + IntToStr(ItemIndex) +
+        ',"songId":' + IntToStr(PlaylistMan.Playlists[PlaylistIndex].Items[ItemIndex].SongID) + '}';
+    end;
+    PlaylistsJson := PlaylistsJson + ']}';
   end;
   PlaylistsJson := PlaylistsJson + ']';
 

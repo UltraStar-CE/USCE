@@ -408,6 +408,21 @@ var
   PlaylistItemIndex: integer;
   Key: cardinal;
 
+  function CanEditRemotePlaylist: boolean;
+  begin
+    Result := (Display.CurrentScreen = @ScreenSong) or
+      (Display.CurrentScreen = @ScreenMain);
+    Result := Result and (Display.NextScreen = nil);
+  end;
+
+  procedure PublishRemotePlaylists;
+  begin
+    if Display.CurrentScreen = @ScreenSong then
+      ScreenSong.SendRemoteSongSelectState(true)
+    else
+      RemoteBridgeIPC.SendJsonMessage('{"type":"playlist.library"' + RemotePlaylistFieldsJson + '}');
+  end;
+
   function AddSongIdListToPlaylist(const SongIdsText: UTF8String; PlaylistIndex: integer): boolean;
   var
     Parts: TStringList;
@@ -430,7 +445,7 @@ var
            Assigned(CatSongs.Song[SongId]) and (not CatSongs.Song[SongId].Main) then
         begin
           if PlaylistMan.GetIndexbySongID(SongId, PlaylistIndex) < 0 then
-            PlaylistMan.AddItem(SongId, PlaylistIndex);
+            PlaylistMan.AddItem(SongId, PlaylistIndex, Display.CurrentScreen = @ScreenSong);
           Result := true;
         end;
       end;
@@ -572,24 +587,38 @@ begin
         end;
         Exit;
       end;
+    rccPlaylistToggleFixedOrder:
+      begin
+        Result := CanEditRemotePlaylist and (ArgsIndex >= 0) and
+          (ArgsIndex <= High(PlaylistMan.Playlists));
+        if Result then
+        begin
+          PlaylistMan.Playlists[ArgsIndex].FixedOrder := not PlaylistMan.Playlists[ArgsIndex].FixedOrder;
+          PlaylistMan.SavePlaylist(ArgsIndex);
+          if (Display.CurrentScreen = @ScreenSong) and (PlaylistMan.CurPlaylist = ArgsIndex) then
+            PlaylistMan.SetPlaylist(ArgsIndex);
+          PublishRemotePlaylists;
+        end;
+        Exit;
+      end;
     rccPlaylistCreate:
       begin
-        Result := (Display.CurrentScreen = @ScreenSong) and IsValidRemotePlaylistName(ArgsText);
+        Result := CanEditRemotePlaylist and IsValidRemotePlaylistName(ArgsText);
         if Result then
         begin
           PlaylistMan.AddPlaylist(ArgsText);
-          ScreenSong.SendRemoteSongSelectState(true);
+          PublishRemotePlaylists;
         end;
         Exit;
       end;
     rccPlaylistDelete:
       begin
-        Result := (Display.CurrentScreen = @ScreenSong) and (ArgsIndex >= 0) and
+        Result := CanEditRemotePlaylist and (ArgsIndex >= 0) and
           (ArgsIndex <= High(PlaylistMan.Playlists));
         if Result then
         begin
-          PlaylistMan.DelPlaylist(ArgsIndex);
-          ScreenSong.SendRemoteSongSelectState(true);
+          PlaylistMan.DelPlaylist(ArgsIndex, Display.CurrentScreen = @ScreenSong);
+          PublishRemotePlaylists;
         end;
         Exit;
       end;
@@ -622,19 +651,19 @@ begin
       end;
     rccPlaylistAddSongs:
       begin
-        Result := (Display.CurrentScreen = @ScreenSong) and (ArgsIndex >= 0) and
+        Result := CanEditRemotePlaylist and (ArgsIndex >= 0) and
           (ArgsIndex <= High(PlaylistMan.Playlists));
         if Result then
         begin
           Result := AddSongIdListToPlaylist(ArgsText, ArgsIndex);
           if Result then
-            ScreenSong.SendRemoteSongSelectState(true);
+            PublishRemotePlaylists;
         end;
         Exit;
       end;
     rccPlaylistRemoveSong:
       begin
-        Result := (Display.CurrentScreen = @ScreenSong) and (ArgsIndex >= 0) and
+        Result := CanEditRemotePlaylist and (ArgsIndex >= 0) and
           (ArgsIndex <= High(PlaylistMan.Playlists)) and (ArgsItemIndex >= 0);
         if Result then
         begin
@@ -642,45 +671,45 @@ begin
           Result := PlaylistItemIndex >= 0;
           if Result then
           begin
-            PlaylistMan.DelItem(PlaylistItemIndex, ArgsIndex, true);
-            ScreenSong.SendRemoteSongSelectState(true);
+            PlaylistMan.DelItem(PlaylistItemIndex, ArgsIndex, true, Display.CurrentScreen = @ScreenSong);
+            PublishRemotePlaylists;
           end;
         end;
         Exit;
       end;
     rccPlaylistRemoveItem:
       begin
-        Result := (Display.CurrentScreen = @ScreenSong) and (ArgsIndex >= 0) and
+        Result := CanEditRemotePlaylist and (ArgsIndex >= 0) and
           (ArgsIndex <= High(PlaylistMan.Playlists)) and (ArgsItemIndex >= 0) and
           (ArgsItemIndex <= High(PlaylistMan.Playlists[ArgsIndex].Items));
         if Result then
         begin
-          PlaylistMan.DelItem(ArgsItemIndex, ArgsIndex, true);
-          ScreenSong.SendRemoteSongSelectState(true);
+          PlaylistMan.DelItem(ArgsItemIndex, ArgsIndex, true, Display.CurrentScreen = @ScreenSong);
+          PublishRemotePlaylists;
         end;
         Exit;
       end;
     rccPlaylistMoveItemUp:
       begin
-        Result := (Display.CurrentScreen = @ScreenSong) and (ArgsIndex >= 0) and
+        Result := CanEditRemotePlaylist and (ArgsIndex >= 0) and
           (ArgsIndex <= High(PlaylistMan.Playlists)) and (ArgsItemIndex > 0) and
           (ArgsItemIndex <= High(PlaylistMan.Playlists[ArgsIndex].Items));
         if Result then
         begin
-          PlaylistMan.MoveItem(Cardinal(ArgsItemIndex), Cardinal(ArgsItemIndex - 1), ArgsIndex);
-          ScreenSong.SendRemoteSongSelectState(true);
+          PlaylistMan.MoveItem(Cardinal(ArgsItemIndex), Cardinal(ArgsItemIndex - 1), ArgsIndex, Display.CurrentScreen = @ScreenSong);
+          PublishRemotePlaylists;
         end;
         Exit;
       end;
     rccPlaylistMoveItemDown:
       begin
-        Result := (Display.CurrentScreen = @ScreenSong) and (ArgsIndex >= 0) and
+        Result := CanEditRemotePlaylist and (ArgsIndex >= 0) and
           (ArgsIndex <= High(PlaylistMan.Playlists)) and (ArgsItemIndex >= 0) and
           (ArgsItemIndex < High(PlaylistMan.Playlists[ArgsIndex].Items));
         if Result then
         begin
-          PlaylistMan.MoveItem(Cardinal(ArgsItemIndex), Cardinal(ArgsItemIndex + 1), ArgsIndex);
-          ScreenSong.SendRemoteSongSelectState(true);
+          PlaylistMan.MoveItem(Cardinal(ArgsItemIndex), Cardinal(ArgsItemIndex + 1), ArgsIndex, Display.CurrentScreen = @ScreenSong);
+          PublishRemotePlaylists;
         end;
         Exit;
       end;
