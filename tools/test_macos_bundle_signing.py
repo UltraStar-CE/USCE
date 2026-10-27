@@ -12,7 +12,7 @@ from unittest.mock import patch
 class BundleSigningTest(unittest.TestCase):
     def test_main_is_signed_through_bundle_after_nested_code(self):
         with tempfile.TemporaryDirectory() as temporary:
-            bundle = Path(temporary) / 'USCE.app'
+            bundle = Path(temporary).resolve() / 'USCE.app'
             programs = bundle / 'Contents/MacOS'
             programs.mkdir(parents=True)
             (bundle / 'Contents/Info.plist').write_bytes(

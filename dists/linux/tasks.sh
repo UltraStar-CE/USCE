@@ -119,6 +119,8 @@ task_desktop_file_utils() {
 task_AppImageKit() {
 	start_build AppImageKit || return 0
 	patch -p1 < $root/appimagekit-deps.patch
+	# Every bundled autotools dependency needs env when flags contain spaces.
+	sed -i 's/COMMAND CC=/COMMAND ${CMAKE_COMMAND} -E env CC=/g' lib/libappimage/cmake/dependencies.cmake
 	! pkg-config --exists libarchive || EXTRA_CMAKE_FLAGS="-DUSE_SYSTEM_LIBARCHIVE=ON"
 	rm -rf build
 	mkdir -p build
