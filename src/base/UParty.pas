@@ -34,7 +34,7 @@ interface
 {$I switches.inc}
 
 uses
-  ULua;
+  ULua, UCommon;
 
 type
   { array holds ids of modes or Party_Round_Random
@@ -134,6 +134,9 @@ type
     Modes: array of TParty_ModeInfo;  //< holds info of registered party modes
 
     SungPartySongs: array of integer;
+    ShufflePool, ShuffleOrder: CardinalArray;
+    NextShuffleIndex: cardinal;
+    function NextRandomSong(const Candidates: CardinalArray): integer;
 
     property CurrentRound: Integer read CurRound;
 
@@ -297,6 +300,9 @@ begin
     TimesPlayed[I] := 0;
 
   SetLength(SungPartySongs, 0);
+  ShufflePool := nil;
+  ShuffleOrder := nil;
+  NextShuffleIndex := 0;
 end;
 
 { private: some intelligent randomnes for plugins }
@@ -1040,6 +1046,11 @@ begin
 
   if (Length(Result) = 0) then
     Result := Language.Translate('PARTY_NOBODY');
+end;
+
+function TPartyGame.NextRandomSong(const Candidates: CardinalArray): integer;
+begin
+  Result := NextShuffled(Candidates, ShufflePool, ShuffleOrder, NextShuffleIndex);
 end;
 
 procedure TPartyGame.SaveSungPartySong(ID: integer);

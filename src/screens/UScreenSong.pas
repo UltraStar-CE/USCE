@@ -89,9 +89,9 @@ type
 
       SongReturnPending: boolean; // song selection is pending a return from singing
 
-      RandomSongOrder: CardinalArray;
+      RandomSongOrder, RandomSongPool: CardinalArray;
       NextRandomSongIdx: cardinal;
-      RandomSearchOrder: CardinalArray;
+      RandomSearchOrder, RandomSearchPool: CardinalArray;
       MarkedPlaylistSong: integer;
       KeepPreviewMusicOnHide: boolean;
 
@@ -268,7 +268,7 @@ type
       function FreeListMode: boolean;
 
       //Party Mode
-      procedure SelectRandomSong;
+      function SelectRandomSong: boolean;
       procedure SetJoker;
       procedure SetStatics;
       procedure FilterDuetsInPartyMode;
@@ -709,26 +709,7 @@ var
   Fix: boolean;
   VS: integer;
   NeedPlayersScreen: boolean;
-
-  function RandomPermute(Num: integer): CardinalArray;
-  var
-    Ordered: array of cardinal;
-    Idx, i: cardinal;
-  begin
-    Result := nil;
-    if Num <= 0 then
-      Exit;
-    SetLength(Ordered, Num);
-    SetLength(Result, Num);
-    for i := 0 to Num-1 do Ordered[i] := i;
-    for i := 0 to Num-1 do
-    begin
-      Idx := Random(Num);
-      Result[i] := Ordered[Idx];
-      Delete(Ordered, Idx, 1);
-      Dec(Num);
-    end;
-  end;
+  Candidates: CardinalArray;
 
 begin
   Result := true;
@@ -1102,28 +1083,21 @@ begin
             end
             else // random in one category
             begin
+              SetLength(Candidates, Length(CatSongs.Song));
+              I2 := 0;
+              for I := 0 to High(CatSongs.Song) do
+                if CatSongs.Song[I].Visible then
+                begin
+                  Candidates[I2] := I;
+                  Inc(I2);
+                end;
+              SetLength(Candidates, I2);
               if CatSongs.CatNumShow = -2 then
-              begin
-                if (Length(RandomSearchOrder) <> CatSongs.VisibleSongs) or
-                   (NextRandomSearchIdx >= CatSongs.VisibleSongs) then
-                begin
-                  NextRandomSearchIdx := 0;
-                  RandomSearchOrder := RandomPermute(CatSongs.VisibleSongs);
-                end;
-                SkipTo(RandomSearchOrder[NextRandomSearchIdx]);
-                Inc(NextRandomSearchIdx);
-              end
+                I := NextShuffled(Candidates, RandomSearchPool, RandomSearchOrder, NextRandomSearchIdx)
               else
-              begin
-                if (Length(RandomSongOrder) <> CatSongs.VisibleSongs) or
-                   (NextRandomSongIdx >= CatSongs.VisibleSongs) then
-                begin
-                  NextRandomSongIdx := 0;
-                  RandomSongOrder := RandomPermute(CatSongs.VisibleSongs);
-                end;
-                SkipTo(RandomSongOrder[NextRandomSongIdx]);
-                Inc(NextRandomSongIdx);
-              end
+                I := NextShuffled(Candidates, RandomSongPool, RandomSongOrder, NextRandomSongIdx);
+              if I < 0 then Exit;
+              SkipTo(CatSongs.VisibleIndex(I), I, CatSongs.VisibleSongs);
             end;
             AudioPlayback.PlaySound(SoundLib.Change);
 
@@ -4165,161 +4139,66 @@ begin
   end;
 end;
 
-procedure TScreenSong.SelectRandomSong;
+function TScreenSong.SelectRandomSong: boolean;
 var
-  I, I2, Count, RealTarget: integer;
-  Target: cardinal;
+  I, Category, Target: integer;
+  AllCategories: boolean;
+  Candidates: CardinalArray;
 begin
-  if (CatSongs.VisibleSongs <= 0) then
-    Exit;
+  Result := false;
+  AllCategories := (PlayListMan.Mode = smAll) and (Ini.TabsAtStartup = 1);
   case PlayListMan.Mode of
-      smAll:  // all songs just select random song
-        begin
-          // when tabs are activated then use tab method
-          if (Ini.TabsAtStartup = 1) then
-          begin
-            repeat
-              I2 := Low(CatSongs.Song) + Random(High(CatSongs.Song) + 1 - Low(CatSongs.Song));
-            until CatSongs.Song[I2].Main = false;
-
-            // search cat
-            for I := I2 downto Low(CatSongs.Song) do
-            begin
-              if CatSongs.Song[I].Main and (PermitCategory(I)) then
-                break;
-            end;
-            // I is the cat number, I2 is the no of the song within this cat
-
-            // choose cat
-            CatSongs.ShowCategoryList;
-
-            // show cat in top left mod
-            ShowCatTL(I);
-
-            CatSongs.ClickCategoryButton(I);
-            SelectNext;
-
-            // choose song
-            // duets not playable
-            if (Mode = smPartyClassic) then
-            begin
-              repeat
-                Target := Random(CatSongs.VisibleSongs);
-
-                RealTarget := -1;
-                Count := -1;
-
-                repeat
-                  Inc(RealTarget);
-
-                  if (CatSongs.Song[RealTarget].Visible) then
-                    Inc(Count);
-                until (Count = Target);
-
-              until not(CatSongs.Song[RealTarget].isDuet);
-            end
-            else
-              Target := Random(CatSongs.VisibleSongs);
-
-            SkipTo(Target, RealTarget, CatSongs.VisibleSongs);
-            //SkipTo(I2 - I);
-          end
-          // when tabs are deactivated use easy method
-          else
-          begin
-            // duets not playable
-            if (Mode = smPartyClassic) then
-            begin
-              repeat
-                Target := Random(CatSongs.VisibleSongs);
-
-                RealTarget := -1;
-                Count := -1;
-
-                repeat
-                  Inc(RealTarget);
-
-                  if (CatSongs.Song[RealTarget].Visible) then
-                    Inc(Count);
-                until (Count = Target);
-
-              until not(CatSongs.Song[RealTarget].isDuet);
-            end
-            else
-              Target := Random(CatSongs.VisibleSongs);
-
-            SkipTo(Target);
-          end;
-        end;
-      smCategory:  // one category select category and select random song
-        begin
-
-          CatSongs.ShowCategoryList;
-          CatSongs.ClickCategoryButton(PlaylistMan.CurPlayList);
-          ShowCatTL(PlaylistMan.CurPlayList);
-
-          SelectNext;
-          FixSelected2;
-
-          // duets not playable
-          if (Mode = smPartyClassic) then
-          begin
-            repeat
-              Target := Random(CatSongs.VisibleSongs);
-
-              RealTarget := -1;
-              Count := -1;
-
-              repeat
-                Inc(RealTarget);
-
-                if (CatSongs.Song[RealTarget].Visible) then
-                  Inc(Count);
-              until (Count = Target);
-
-            until not(CatSongs.Song[RealTarget].isDuet);
-          end
-          else
-            Target := Random(CatSongs.VisibleSongs);
-
-          SkipTo(Target);
-        end;
-      smPlaylist:  // playlist: select playlist and select random song
-        begin
-          if (PlaylistMan.CurPlayList <> -1) then
-          begin
-            PlaylistMan.ReloadPlayList(PlaylistMan.CurPlayList);
-            PlaylistMan.SetPlayList(PlaylistMan.CurPlayList);
-          end;
-
-          // duets not playable
-          if (Mode = smPartyClassic) then
-          begin
-            repeat
-              Target := Random(CatSongs.VisibleSongs);
-
-              RealTarget := -1;
-              Count := -1;
-
-              repeat
-                Inc(RealTarget);
-
-                if (CatSongs.Song[RealTarget].Visible) then
-                  Inc(Count);
-              until (Count = Target);
-
-            until not(CatSongs.Song[RealTarget].isDuet);
-          end
-          else
-            Target := Random(CatSongs.VisibleSongs);
-
-          SkipTo(Target);
-          FixSelected2;
-        end;
+    smCategory:
+      begin
+        CatSongs.ShowCategoryList;
+        CatSongs.ClickCategoryButton(PlaylistMan.CurPlayList);
+        ShowCatTL(PlaylistMan.CurPlayList);
+        SelectNext;
+        FixSelected2;
+      end;
+    smPlaylist:
+      if PlaylistMan.CurPlayList <> -1 then
+      begin
+        PlaylistMan.ReloadPlayList(PlaylistMan.CurPlayList);
+        PlaylistMan.SetPlayList(PlaylistMan.CurPlayList);
+      end;
   end;
 
+  SetLength(Candidates, Length(CatSongs.Song));
+  Target := 0;
+  for I := 0 to High(CatSongs.Song) do
+    if not CatSongs.Song[I].Main and (AllCategories or CatSongs.Song[I].Visible) and
+       ((Mode <> smPartyClassic) or not CatSongs.Song[I].isDuet) then
+    begin
+      Candidates[Target] := I;
+      Inc(Target);
+    end;
+  SetLength(Candidates, Target);
+  Target := Party.NextRandomSong(Candidates);
+  if Target < 0 then
+  begin
+    ScreenPopupError.ShowPopup(Language.Translate('SONG_JUMPTO_NOSONGSFOUND'));
+    Exit;
+  end;
+
+  if AllCategories then
+  begin
+    Category := Target;
+    while (Category >= 0) and not CatSongs.Song[Category].Main do Dec(Category);
+    if Category >= 0 then
+    begin
+      CatSongs.ShowCategoryList;
+      ShowCatTL(Category);
+      CatSongs.ClickCategoryButton(Category);
+      SelectNext;
+    end;
+  end;
+  FilterDuetsInPartyMode;
+  SkipTo(CatSongs.VisibleIndex(Target), Target, CatSongs.VisibleSongs);
+  FixSelected2;
   AudioPlayback.PlaySound(SoundLib.Change);
   SetScroll;
+  Result := true;
 end;
 
 function TScreenSong.PermitCategory(ID: integer): boolean;
@@ -4553,11 +4432,12 @@ begin
      (High(Party.Teams) >= Team) and
      (Party.Teams[Team].JokersLeft > 0) then
   begin
+    if not SelectRandomSong then Exit;
+
     //Use Joker (unless ALT modifier is used to cheat)
     if (SDL_ModState <> KMOD_LALT) then
       Dec(Party.Teams[Team].JokersLeft);
 
-    SelectRandomSong;
     SetJoker;
     SetScrollRefresh;
     FixSelected;
