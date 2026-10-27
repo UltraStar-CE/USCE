@@ -81,7 +81,7 @@ type
 
   TScreenPopupInsertUser = class(TMenu)
     private
-      fPasswordOnly, fPlainSecondValue: boolean;
+      fPasswordOnly: boolean;
       fHandler: TPopupInsertUserHandler;
       fHandlerData: Pointer;
 
@@ -92,8 +92,6 @@ type
       InteractionTmp: integer;
 
       procedure SetInteraction(Num: integer); override;
-      procedure ShowIdentityPrompt(const Title, Msg, Artist, SongTitle: UTF8String;
-        Handler: TPopupInsertUserHandler; Data: Pointer);
       procedure ShowPasswordPrompt(const Title, Msg: UTF8String;
         Handler: TPopupInsertUserHandler; HandlerData: Pointer);
 
@@ -432,13 +430,6 @@ begin
   Result := true;
   if (PressedDown) then
   begin // Key Down
-    if fPlainSecondValue and (PressedKey = SDLK_a) and
-       (SDL_GetModState and KMOD_CTRL <> 0) and (Interaction in [0, 1]) then
-    begin
-      Button[Interaction].Text[0].Text := '';
-      if Interaction = 0 then Username := '' else Password := '';
-      Exit;
-    end;
     // check normal keys
     if (IsPrintableChar(CharCode)) then
     begin
@@ -452,8 +443,7 @@ begin
         else
         begin
           Password := Password + UCS4ToUTF8String(CharCode);
-          if fPlainSecondValue then Button[1].Text[0].Text := Password
-          else Button[1].Text[0].Text := Button[1].Text[0].Text + '*';
+          Button[1].Text[0].Text := Button[1].Text[0].Text + '*';
         end;
       end;
     end;
@@ -569,7 +559,6 @@ begin
   fHandler := Handler;
   fHandlerData := HandlerData;
   fPasswordOnly := false;
-  fPlainSecondValue := false;
 
   Text[0].Text := Language.Translate(Msg);
   Text[1].Text := Title;
@@ -606,18 +595,6 @@ begin
   Button[0].Visible := false;
   Button[2].Text[0].Text := Language.Translate('SONG_MENU_YES');
   Interaction := 1;
-end;
-
-procedure TScreenPopupInsertUser.ShowIdentityPrompt(const Title, Msg, Artist, SongTitle: UTF8String;
-  Handler: TPopupInsertUserHandler; Data: Pointer);
-begin
-  ShowPopup(Title, Msg, Handler, Data);
-  fPlainSecondValue := true;
-  Username := Artist;
-  Password := SongTitle;
-  Button[0].Text[0].Text := Artist;
-  Button[1].Text[0].Text := SongTitle;
-  Button[2].Text[0].Text := Language.Translate('DUPLICATE_SAVE');
 end;
 
 { TScreenPopupSendScore }

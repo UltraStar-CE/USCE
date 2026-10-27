@@ -319,6 +319,7 @@ begin
     FinalizeJoyStick;
 
     Log.LogStatus('Uninitialize 3D', 'Finalization');
+    FreeAndNil(DuplicateSongPopup);
     Finalize3D();
 
     Log.LogStatus('Finalize SDL', 'Finalization');
@@ -357,7 +358,7 @@ var
 begin
   Max_FPS := Ini.MaxFramerateGet;
   // need to explicitly stop this because it appears to be started by default
-  SDL_StopTextInput;
+  if (DuplicateSongPopup = nil) or not DuplicateSongPopup.Visible then SDL_StopTextInput;
   Done := false;
   J := 1;
   CountSkipTime();
@@ -516,6 +517,8 @@ begin
               KeepGoing := ScreenPopupInfo.ParseMouse(mouseBtn, mouseDown, Event.button.x, Event.button.y)
             else if (ScreenPopupCheck <> nil) and (ScreenPopupCheck.Visible) then
               KeepGoing := ScreenPopupCheck.ParseMouse(mouseBtn, mouseDown, Event.button.x, Event.button.y)
+            else if (DuplicateSongPopup <> nil) and DuplicateSongPopup.Visible then
+              KeepGoing := DuplicateSongPopup.ParseMouse(mouseBtn, mouseDown, Event.button.x, Event.button.y)
             else if (ScreenPopupInsertUser <> nil) and (ScreenPopupInsertUser.Visible) then
               KeepGoing := ScreenPopupInsertUser.ParseMouse(mouseBtn, mouseDown, Event.button.x, Event.button.y)
             else if (ScreenPopupSendScore <> nil) and (ScreenPopupSendScore.Visible) then
@@ -612,6 +615,8 @@ begin
               KeepGoing := ScreenPopupInfo.ParseInput(SimKey, KeyCharUnicode, true)
             else if (ScreenPopupCheck <> nil) and (ScreenPopupCheck.Visible) then
               KeepGoing := ScreenPopupCheck.ParseInput(SimKey, KeyCharUnicode, true)
+            else if (DuplicateSongPopup <> nil) and DuplicateSongPopup.Visible then
+              KeepGoing := DuplicateSongPopup.ParseInput(SimKey, KeyCharUnicode, true)
             else if (ScreenPopupInsertUser <> nil) and (ScreenPopupInsertUser.Visible) then
               KeepGoing := ScreenPopupInsertUser.ParseInput(SimKey, KeyCharUnicode, true)
             else if (ScreenPopupSendScore <> nil) and (ScreenPopupSendScore.Visible) then
