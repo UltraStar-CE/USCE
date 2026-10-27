@@ -1,5 +1,6 @@
 #include "phone_audio.h"
 #include "pcm_queue.h"
+#include "game_clock.h"
 #include <rtc/rtc.hpp>
 #include <nlohmann/json.hpp>
 #include <atomic>
@@ -28,6 +29,7 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
   std::mutex mutex;
   PcmQueue pcm;
   PcmQueue calibration{true};
+  GameClockAnchor gameClock;
   std::deque<Json> incoming, outgoing, externalEvents;
   bool external = false;
   std::shared_ptr<rtc::WebSocket> socket;
@@ -137,8 +139,25 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
             if (auto text = std::get_if<std::string>(&payload)) {
               if (text->size() <= 256) {
                 const auto ping = Json::parse(*text);
-                if (ping.is_object() && ping.value("type", "") == "latency.ping")
-                  if (auto ch = weakChannel.lock()) ch->send(*text);
+                if (!ping.is_object()) return;
+                if (auto owner = weak.lock()) {
+                  Json reply;
+                  {
+                    std::lock_guard<std::mutex> guard(owner->mutex);
+                    if (owner->stopped || owner->generation != gen) return;
+                    const auto type = ping.value("type", "");
+                    if (type == "latency.ping") reply = ping;
+                    else if (type == "clock.sync.ping" && owner->gameClock.ready &&
+                             ping.contains("clientSendUs") && ping["clientSendUs"].is_number()) {
+                      const double sent = ping["clientSendUs"].get<double>();
+                      if (!std::isfinite(sent) || sent < 0 || sent > 9e15) return;
+                      const auto received = owner->gameClock.nowUs();
+                      reply = {{"type", "clock.sync.pong"}, {"clientSendUs", ping["clientSendUs"]},
+                        {"hostReceiveUs", received}, {"hostSendUs", owner->gameClock.nowUs()}};
+                    }
+                  }
+                  if (!reply.is_null()) if (auto ch = weakChannel.lock()) ch->send(reply.dump());
+                }
               }
               return;
             }
@@ -361,6 +380,12 @@ int32_t usce_relay_receive(void *context, char *text, int32_t capacity) {
   } catch (...) { return -1; }
 }
 int32_t usce_pa_version() { return 1; }
+void usce_pa_set_clock(void *p, int64_t host_time_us) {
+  if (!p) return;
+  const auto &self = *static_cast<Handle *>(p);
+  std::lock_guard<std::mutex> lock(self->mutex);
+  self->gameClock.set(host_time_us);
+}
 int32_t usce_pa_signal(void *p, const char *text) {
   if (!p || !text) return -1;
   try {

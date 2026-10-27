@@ -1,4 +1,5 @@
 #include "pcm_queue.h"
+#include "game_clock.h"
 #include "phone_audio.h"
 #include <cassert>
 #include <iostream>
@@ -26,6 +27,18 @@ static std::vector<uint8_t> packet(uint32_t sequence) {
   return p;
 }
 int main() {
+  GameClockAnchor anchor;
+  const auto epoch = GameClockAnchor::Clock::time_point{};
+  assert(!anchor.ready);
+  anchor.set(123456000, epoch);
+  assert(anchor.ready);
+  assert(anchor.nowUs(epoch + std::chrono::microseconds(137)) == 123456137);
+  assert(anchor.nowUs(epoch + std::chrono::seconds(3)) == 126456000);
+  anchor.set(99000000, epoch + std::chrono::seconds(4));
+  assert(anchor.nowUs(epoch + std::chrono::milliseconds(4001)) == 99001000);
+  anchor.set(0, epoch);
+  assert(!anchor.ready);
+
   PcmQueue q;
   auto now = PcmQueue::Clock::now();
   auto p = packet(1);

@@ -14,6 +14,8 @@ extern "C" {
 #endif
 // ABI v1: opaque context, fixed-width scalars, caller-owned UTF-8 / PCM buffers.
 USCE_PA int32_t usce_pa_version(void);
+// Anchor direct clock replies to the same monotonic clock used by Pascal scoring.
+USCE_PA void usce_pa_set_clock(void *context, int64_t host_time_us);
 USCE_PA void *usce_pa_create(const char *relay_url, const char *ice_server);
 USCE_PA void usce_pa_destroy(void *context);
 // Called on the game thread. Performs signaling, drains fresh mono S16/48k PCM.

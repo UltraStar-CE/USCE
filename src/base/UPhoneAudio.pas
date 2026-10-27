@@ -12,6 +12,7 @@ type
   TPaDestroy = procedure(Context: pointer); cdecl;
   TPaPoll = function(Context: pointer; Samples: pointer; Capacity: longint): longint; cdecl;
   TPaStatus = function(Context: pointer; Buffer: PAnsiChar; Capacity: longint): longint; cdecl;
+  TPaSetClock = procedure(Context: pointer; HostTimeUs: int64); cdecl;
   TPaVersion = function: longint; cdecl;
   TPaSignal = function(Context: pointer; Json: PAnsiChar): longint; cdecl;
   TPhoneAudio = class
@@ -25,6 +26,7 @@ type
     FDestroy: TPaDestroy;
     FPoll: TPaPoll;
     FPollCalibration: TPaPoll;
+    FSetClock: TPaSetClock;
     FStatus: TPaStatus;
     FVersion: TPaVersion;
     FSignal: TPaSignal;
@@ -90,6 +92,7 @@ begin
     FError := 'Cannot load native phone audio library: ' + Path
   else
   begin
+    FSetClock := TPaSetClock(GetProcedureAddress(FLibrary, 'usce_pa_set_clock'));
     FVersion := TPaVersion(GetProcedureAddress(FLibrary, 'usce_pa_version'));
     FCreate := TPaCreate(GetProcedureAddress(FLibrary, 'usce_pa_create'));
     FDestroy := TPaDestroy(GetProcedureAddress(FLibrary, 'usce_pa_destroy'));
@@ -99,7 +102,7 @@ begin
     FSignal := TPaSignal(GetProcedureAddress(FLibrary, 'usce_pa_signal'));
     FEvent := TPaStatus(GetProcedureAddress(FLibrary, 'usce_pa_event'));
     if not (Assigned(FVersion) and Assigned(FCreate) and Assigned(FDestroy) and
-      Assigned(FPoll) and Assigned(FPollCalibration) and Assigned(FStatus) and Assigned(FSignal) and Assigned(FEvent)) then
+      Assigned(FSetClock) and Assigned(FPoll) and Assigned(FPollCalibration) and Assigned(FStatus) and Assigned(FSignal) and Assigned(FEvent)) then
       FError := 'Native phone audio library has an incomplete ABI'
     else if FVersion() <> 1 then
       FError := 'Native phone audio library ABI version mismatch'
@@ -158,6 +161,7 @@ begin
   if Enabled and (PlayerIndex >= 0) and (PlayerIndex <= High(FContexts)) and
     (FContexts[PlayerIndex] <> nil) then
   begin
+    FSetClock(FContexts[PlayerIndex], int64(GetTickCount64) * 1000);
     Result := FPoll(FContexts[PlayerIndex], Samples, Capacity);
     for I := 1 to 128 do
     begin
