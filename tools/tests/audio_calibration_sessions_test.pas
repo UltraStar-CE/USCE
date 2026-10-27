@@ -47,6 +47,18 @@ begin
       Effective := Sessions.EffectivePlayerDelay(Lane, 140, 20);
       Assert(140 + Effective = Fitted + 20, 'Global delay must not be applied twice');
       Assert(Sessions.EffectivePlayerDelay(Lane, 0, 20) = Fitted + 20);
+      if Lane = 0 then
+      begin
+        Sessions.Cancel(Lane, 'forged', 'trial0');
+        Sessions.Cancel(Lane, 'p0', 'old-trial');
+        Assert(Sessions.EffectivePlayerDelay(Lane, 0, 20) = Fitted + 20);
+        Sessions.Cancel(Lane, 'p0', 'trial0');
+        Assert(Sessions.EffectivePlayerDelay(Lane, 140, 20) = 20,
+          'Only matching owner/session cancellation may invalidate compensation');
+        Assert(Sessions.Queue(Lane, 'p0', 'new-input', 0, StartUs + 5000000),
+          'Restarting capture must allow a fresh measurement without the old cooldown');
+        Sessions.Cancel(Lane, 'p0', 'new-input');
+      end;
       Sessions.Tick(Lane, 'replacement', true, true, StartUs + 5000000, Message);
       Assert(Sessions.EffectivePlayerDelay(Lane, 140, 20) = 20,
         'Replacement singer must not inherit another device calibration');

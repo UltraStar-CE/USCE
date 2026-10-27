@@ -28,8 +28,10 @@ metering, singing or scoring, or confirm microphone delivery. Normal capture
 continues during calibration.
 
 Compensation replaces the global baseline for the calibrated input and adds the
-per-player trim once. Hardware/browser capture buffers are excluded. Automatic
-browser triggering/display and compensated-gameplay validation remain unfinished.
+per-player trim once. Hardware/browser capture buffers are excluded. The normal web app starts calibration after audio is running, the clock is synced
+and the route/game are idle; it displays the fitted delay and invalidates stale
+sessions on mic/route changes. Browser synthetic-input tests have exercised this
+over direct P2P. Compensated-gameplay validation remains unfinished.
 
 ### Alternating-note alignment experiment
 

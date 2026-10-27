@@ -1065,6 +1065,10 @@ begin
       finally CalibrationReply.Free; end;
     end;
   end
+  else if (MessageType = 'audio.calibration.cancel') then
+    PhoneAudio.Calibration.Cancel(JsonGetInt(Obj, 'slot', 0) - 1,
+      UTF8String(JsonGetString(Obj, 'playerId', '')),
+      UTF8String(JsonGetString(Obj, 'requestId', '')))
   else if (MessageType = 'player.disconnected') then
     HandlePlayerDisconnected(Obj)
   else if (MessageType = 'player.left') then

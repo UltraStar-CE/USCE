@@ -26,6 +26,7 @@ type
     function Tick(Index: integer; const CurrentPlayer: UTF8String;
       Idle, StreamLive: boolean; NowUs: int64; out Message: UTF8String): boolean;
     procedure Observe(Index: integer; NowUs: int64; Tone: integer; Valid: boolean);
+    procedure Cancel(Index: integer; const PlayerId, RequestId: UTF8String);
     function EffectivePlayerDelay(Index, GlobalDelayMs, ManualTrimMs: integer): integer;
   end;
 implementation
@@ -163,6 +164,19 @@ begin
   EnterCriticalSection(FLock);
   try
     if FLanes[Index].Active then FLanes[Index].Estimator.Observe(NowUs, Tone, Valid);
+  finally LeaveCriticalSection(FLock); end;
+end;
+
+procedure TAudioCalibrationSessions.Cancel(Index: integer; const PlayerId, RequestId: UTF8String);
+begin
+  if (Index < 0) or (Index > High(FLanes)) then Exit;
+  EnterCriticalSection(FLock);
+  try
+    if (FLanes[Index].RequestPlayer <> PlayerId) or (FLanes[Index].RequestId <> RequestId) then Exit;
+    FLanes[Index].Pending := false;
+    FLanes[Index].Active := false;
+    FLanes[Index].Calibrated := false;
+    FLanes[Index].LastRequestUs := 0; // A restarted input need not wait for the cancelled session's cooldown.
   finally LeaveCriticalSection(FLock); end;
 end;
 
