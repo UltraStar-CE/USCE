@@ -315,7 +315,7 @@ begin
     { prepare software cursor }
     Display.SetCursor;
 
-    if (GetEnvironmentVariable('USCE_RAW_AUDIO') = '1') or NativeRelayRequested then
+    if (GetEnvironmentVariable('USCE_RAW_AUDIO') = '1') or (Ini.RemoteBridgeEnabled = 1) then
     begin
       if Ini.RemoteBridgeEnabled = 1 then
       begin
@@ -336,7 +336,10 @@ begin
       Log.LogStatus('Remote Bridge IPC', 'Initialization');
       RemoteBridgeIPC.OnCommand := RemoteBridgeCommandReceived;
       RemoteBridgeIPC.Start;
-      RemoteBridgeIPC.SendGameState('boot', 0, 0);
+      if Display.CurrentScreen = @ScreenMain then
+        RemoteBridgeIPC.SendGameState('main_menu', 0, 0)
+      else
+        RemoteBridgeIPC.SendGameState('boot', 0, 0);
     end;
 
     {**
