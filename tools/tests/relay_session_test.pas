@@ -6,6 +6,7 @@ uses
 type
   TObserver = class
     Created, Resumed: integer;
+    Work: integer;
     procedure Handle(Message: TJSONObject);
   end;
 
@@ -13,6 +14,11 @@ procedure TObserver.Handle(Message: TJSONObject);
 begin
   if Message.Get('type', '') = 'room.created' then Inc(Created);
   if Message.Get('type', '') = 'room.resumed' then Inc(Resumed);
+  if Message.Get('type', '') = 'fixture.work' then
+  begin
+    Inc(Work);
+    Sleep(15);
+  end;
 end;
 
 var Session: TRemoteRelaySession;
@@ -20,7 +26,7 @@ var Session: TRemoteRelaySession;
     Deadline: QWord;
     Code: UTF8String;
     Message: TJSONObject;
-    I: integer;
+    I, BeforeWork: integer;
 begin
   Assert(ParamCount = 2, 'Usage: relay_session_test library-path relay-host-url');
   Assert(NormalizeRelayHostUrl('https://usdx.at/') = 'wss://usdx.at/ws/host');
@@ -35,9 +41,11 @@ begin
     for I := 1 to 2 do
     begin
       Deadline := GetTickCount64 + 10000;
-      while not Session.Registered do
+      while not Session.Registered or ((I = 1) and (Observer.Work < 64)) do
       begin
+        BeforeWork := Observer.Work;
         Session.Tick;
+        Assert(Observer.Work - BeforeWork <= 2, 'Relay batch exceeded its time budget');
         Assert(GetTickCount64 < Deadline, 'Room registration timed out');
         Sleep(5);
       end;

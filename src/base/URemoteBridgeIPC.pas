@@ -962,6 +962,7 @@ end;
 procedure TRemoteBridgeIPCThread.ExecuteNative;
 var Url: string;
     Shutdown: TJSONObject;
+    LoopStart, TickEnd, WriteEnd, MediaEnd, PreviousEnd, GapMs: QWord;
 begin
   FNativeRelay := TRemoteRelaySession.Create;
   FNativeProtocol := TRemoteRelayProtocol.Create;
@@ -974,11 +975,22 @@ begin
     if Url = '' then Url := DEFAULT_REMOTE_BRIDGE_SERVER_URL;
     FNativeRelay.Start(Url, GetEnvironmentVariable('USCE_RAW_AUDIO_LIBRARY'), USCE_VERSION);
     Log.LogStatus('In-process relay enabled', 'Remote relay');
+    PreviousEnd := GetTickCount64;
     while not Terminated do
     begin
+      LoopStart := GetTickCount64;
+      GapMs := LoopStart - PreviousEnd;
       FNativeRelay.Tick;
+      TickEnd := GetTickCount64;
       FlushNativeWrites;
+      WriteEnd := GetTickCount64;
       FNativeProtocol.TickMedia;
+      MediaEnd := GetTickCount64;
+      if (MediaEnd - LoopStart >= 250) or (GapMs >= 250) then
+        Log.LogWarn(Format('gapMs=%d relayMs=%d writeMs=%d mediaMs=%d registered=%s',
+          [GapMs, TickEnd-LoopStart, WriteEnd-TickEnd, MediaEnd-WriteEnd,
+           BoolToStr(FNativeRelay.Registered, true)]), 'Remote relay timing');
+      PreviousEnd := MediaEnd;
       Sleep(5);
     end;
     Shutdown := TJSONObject.Create(['type', 'host.shutdown', 'reason', 'game_exit']);

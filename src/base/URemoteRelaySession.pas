@@ -20,6 +20,7 @@ type
     FOnMessage: TRelayMessageEvent;
     procedure Hello;
     procedure Handle(Message: TJSONObject);
+    procedure Heartbeat;
   public
     constructor Create;
     destructor Destroy; override;
@@ -152,11 +153,22 @@ begin
   if Assigned(FOnMessage) then FOnMessage(Message);
 end;
 
+procedure TRemoteRelaySession.Heartbeat;
+var Now: QWord; Message: TJSONObject;
+begin
+  Now := GetTickCount64;
+  if not FRegistered or (Now < FHeartbeatAt) then Exit;
+  Message := TJSONObject.Create(['type', 'host.heartbeat']);
+  try
+    if Send(Message) then FHeartbeatAt := Now + 500;
+  finally Message.Free; end;
+end;
+
 procedure TRemoteRelaySession.Tick;
 var Now: QWord;
     Text: UTF8String;
     Data: TJSONData;
-    Message: TJSONObject;
+    ReceiveStarted: QWord;
     I: integer;
 begin
   if not FRunning then Exit;
@@ -176,8 +188,12 @@ begin
   end;
   if FSocket.State <> 1 then Exit;
   if not FHelloSent then Hello;
+  Heartbeat;
+  ReceiveStarted := GetTickCount64;
   for I := 1 to 128 do
   begin
+    // A burst of expensive handlers cannot monopolize relay I/O or heartbeats.
+    if GetTickCount64 - ReceiveStarted >= 20 then Break;
     if not FSocket.Receive(Text) then Break;
     Data := nil;
     try
@@ -189,13 +205,7 @@ begin
       end;
     finally Data.Free; end;
   end;
-  if FRegistered and (Now >= FHeartbeatAt) then
-  begin
-    Message := TJSONObject.Create(['type', 'host.heartbeat']);
-    try
-      if Send(Message) then FHeartbeatAt := Now + 500;
-    finally Message.Free; end;
-  end;
+  Heartbeat;
 end;
 
 end.

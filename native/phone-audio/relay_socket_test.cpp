@@ -48,6 +48,8 @@ int main(int argc, char **argv) {
           socket->send(nlohmann::json({{"type", resumed ? "room.resumed" : "room.created"},
             {"protocol", 1}, {"roomId", "fixture-room"}, {"hostToken", "fixture-token"},
             {"displayCode", "TEST"}}).dump());
+          if (!resumed) for (int i = 0; i < 64; ++i)
+            socket->send(std::string("{\"type\":\"fixture.work\",\"protocol\":1}"));
         } else if (type == "host.heartbeat") {
           socket->send(std::string("{\"type\":\"ack\",\"protocol\":1,\"accepted\":true}"));
         } else if (type == "host.shutdown") socket->close();
