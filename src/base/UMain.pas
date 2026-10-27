@@ -90,6 +90,7 @@ uses
   UPlatform,
   URenderer,
   UScreenSingController,
+  UScreenScore,
   USkins,
   USongs,
   UThemes,
@@ -139,14 +140,14 @@ begin
 end;
 
 procedure StartLockedPlayback;
-var Selected: TList; FirstSong: TSong; I: integer; Error: UTF8String;
+var Selected: TList; FirstSong: TSong; I, PlaylistIndex: integer; Error: UTF8String;
 begin
   Error := Params.StartupError;
   Selected := TList.Create;
   try
     if Error = '' then
       CollectLaunchSongs(Params.PlaylistName, PlaylistMan.Playlists,
-        CatSongs.Song, Selected, Error);
+        CatSongs.Song, Selected, PlaylistIndex, Error);
     if Error = '' then
     begin
       FirstSong := TSong(Selected[0]);
@@ -154,10 +155,7 @@ begin
         Error := 'Could not activate library lockdown'
       else
       begin
-        for I := 0 to High(CatSongs.Song) do
-          CatSongs.Song[I].Visible := not CatSongs.Song[I].Main;
-        CatSongs.CatNumShow := -2;
-        CatSongs.ResetVisibleIndexCache;
+        PlaylistMan.ApplyPlayList(PlaylistIndex);
         for I := 0 to High(CatSongs.Song) do
           if CatSongs.Song[I] = FirstSong then
           begin
@@ -166,6 +164,11 @@ begin
             Break;
           end;
         ScreenName.LoadPlayersFromIni;
+        LoadPlayersColors;
+        Theme.ThemeScoreLoad;
+        ScreenScore.Free;
+        ScreenScore := TScreenScore.Create;
+        ScreenSing.Free;
         ScreenSing := TScreenSingController.Create;
         Display.CurrentScreen := @ScreenSong;
         ScreenContinuousPlayback.BeginSession;
