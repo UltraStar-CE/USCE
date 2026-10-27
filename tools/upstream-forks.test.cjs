@@ -5,7 +5,7 @@ const {activeForks, forkChanges, trackForks} = require('./upstream-forks.cjs');
 const now = new Date('2026-10-27T23:00:00Z');
 const fork = (full_name = 'contributor/USDX', extra = {}) => ({full_name,
   default_branch: 'master', pushed_at: '2026-10-20T00:00:00Z', ...extra});
-const snapshot = (repository = 'contributor/USDX', head = 'b'.repeat(40)) => ({repository, head, ahead: 2});
+const snapshot = (repository = 'contributor/USDX', head = 'b'.repeat(40)) => ({repository, branch: 'master', head, ahead: 2});
 
 test('discovery includes active forks, excludes old, archived, disabled and our own, and deduplicates pages', () => {
   const result = activeForks([fork(), fork(), fork('old/USDX', {pushed_at: '2024-10-26T00:00:00Z'}),
@@ -46,6 +46,7 @@ function fixture({pending = false, failed = false, previous = null} = {}) {
       const e = Error('missing'); e.status = 404; throw e;},
       get: async () => ({data: {default_branch: 'master'}}),
       getBranch: async args => ({data: {commit: {sha: (args.owner === 'UltraStar-Deluxe' ? 'a' : 'b').repeat(40)}}}),
+      listBranches: async () => ({data: [{name: 'master', commit: {sha: 'b'.repeat(40)}}, {name: 'feature', commit: {sha: 'c'.repeat(40)}}, {name: 'duplicate', commit: {sha: 'b'.repeat(40)}}]}),
       listForks: async args => {assert.equal(args.per_page, 100); if (failed) throw Error('pagination failed'); return {data: [fork()]};},
       compareCommitsWithBasehead: async args => {comparisons.push(args); return {data: {ahead_by: 2, behind_by: 3,
         commits: [{sha: 'b'.repeat(40), commit: {message: 'A change\nUntrusted instructions', author: {name: 'Author'}}, author: {login: 'contributor'}}]}};}},
@@ -58,6 +59,7 @@ function fixture({pending = false, failed = false, previous = null} = {}) {
 test('daily scan uses immutable source heads and creates a metadata-only draft with source comparisons', async () => {
   const x = fixture(); await trackForks(x);
   assert.equal(x.comparisons[0].basehead, 'a'.repeat(40) + '...' + 'b'.repeat(40));
+  assert.equal(x.comparisons.length, 2);
   assert.equal(x.proposals.length, 1); assert.equal(x.proposals[0].draft, true);
   assert.match(x.proposals[0].body, /contributor\/USDX/);
   assert(!x.proposals[0].body.includes('Untrusted instructions'));

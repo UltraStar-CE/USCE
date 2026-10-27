@@ -5,6 +5,7 @@ const source = {owner: 'UltraStar-Deluxe', repo: 'USDX'};
 const prefix = 'automation/upstream-forks-';
 const path = 'doc/upstream/usdx-forks.json';
 const shaPattern = /^[a-f0-9]{40}$/;
+const recordKey = fork => fork.repository + '#' + fork.branch;
 
 function activeForks(forks, now, ownRepository) {
   const cutoff = new Date(now); cutoff.setUTCFullYear(cutoff.getUTCFullYear() - 2);
@@ -25,19 +26,19 @@ function forkChanges(previous, snapshots) {
     throw Error('Invalid fork assessment checkpoint');
   const records = new Map();
   for (const fork of previous?.forks || []) {
-    if (!fork.repository || !shaPattern.test(fork.head) || records.has(fork.repository))
+    if (!fork.repository || !fork.branch || !shaPattern.test(fork.head) || records.has(recordKey(fork)))
       throw Error('Invalid fork assessment record');
-    records.set(fork.repository, fork);
+    records.set(recordKey(fork), fork);
   }
   const batch = snapshots.filter(fork => {
-    if (!shaPattern.test(fork.head) || !Number.isSafeInteger(fork.ahead) || fork.ahead < 0)
+    if (!fork.repository || !fork.branch || !shaPattern.test(fork.head) || !Number.isSafeInteger(fork.ahead) || fork.ahead < 0)
       throw Error('Invalid fork comparison');
-    return fork.ahead > 0 && records.get(fork.repository)?.head !== fork.head;
+    return fork.ahead > 0 && ![...records.values()].some(old => old.repository === fork.repository && old.head === fork.head);
   }).slice(0, 20);
   if (!batch.length) return null;
-  for (const fork of batch) records.set(fork.repository, {...fork,
+  for (const fork of batch) records.set(recordKey(fork), {...fork,
     assessment: {decision: 'pending', usceReferences: [], reason: ''},
-    ...(records.get(fork.repository)?.assessment ? {previousAssessment: records.get(fork.repository).assessment} : {})});
+    ...(records.get(recordKey(fork))?.assessment ? {previousAssessment: records.get(recordKey(fork)).assessment} : {})});
   return {batch, checkpoint: {repository: 'UltraStar-Deluxe/USDX', forks: [...records.values()]}};
 }
 
@@ -62,23 +63,28 @@ async function trackForks({github, context, core, now = new Date()}) {
   const snapshots = [];
   for (const fork of forks) {
     const [owner, repo] = fork.full_name.split('/');
-    const head = (await github.rest.repos.getBranch({owner, repo, branch: fork.default_branch})).data.commit.sha;
-    if (!shaPattern.test(head)) throw Error('Missing fork head: ' + fork.full_name);
-    if (previous?.forks.some(record => record.repository === fork.full_name && record.head === head)) continue;
-    const comparison = (await github.rest.repos.compareCommitsWithBasehead({...source,
-      basehead: upstreamHead + '...' + head, per_page: 100})).data;
-    if (!Number.isSafeInteger(comparison.ahead_by) || !Number.isSafeInteger(comparison.behind_by) ||
-        !Array.isArray(comparison.commits)) throw Error('Incomplete fork comparison: ' + fork.full_name);
-    snapshots.push({repository: fork.full_name, branch: fork.default_branch, head, upstreamHead,
-      ahead: comparison.ahead_by, behind: comparison.behind_by,
-      compareUrl: 'https://github.com/' + fork.full_name + '/compare/' + upstreamHead + '...' + head,
-      // A bounded excerpt for discovery; the compare link contains the full change set.
-      commits: comparison.commits.slice(0, 12).map(c => ({sha: c.sha,
-        title: c.commit.message.split('\n')[0], author: c.author?.login || c.commit.author.name}))});
+    const branches = await github.paginate(github.rest.repos.listBranches, {owner, repo, per_page: 100});
+    const seenHeads = new Set();
+    for (const branch of branches.sort((a, b) => Number(b.name === fork.default_branch) - Number(a.name === fork.default_branch))) {
+      const head = branch.commit?.sha;
+      if (!shaPattern.test(head)) throw Error('Missing fork head: ' + fork.full_name);
+      if (seenHeads.has(head) || previous?.forks.some(record => record.repository === fork.full_name && record.head === head)) continue;
+      seenHeads.add(head);
+      const comparison = (await github.rest.repos.compareCommitsWithBasehead({...source,
+        basehead: upstreamHead + '...' + head, per_page: 100})).data;
+      if (!Number.isSafeInteger(comparison.ahead_by) || !Number.isSafeInteger(comparison.behind_by) ||
+          !Array.isArray(comparison.commits)) throw Error('Incomplete fork comparison: ' + fork.full_name);
+      snapshots.push({repository: fork.full_name, branch: branch.name, head, upstreamHead,
+        ahead: comparison.ahead_by, behind: comparison.behind_by,
+        compareUrl: 'https://github.com/' + fork.full_name + '/compare/' + upstreamHead + '...' + head,
+        // A bounded excerpt for discovery; the compare link contains the full change set.
+        commits: comparison.commits.slice(0, 12).map(c => ({sha: c.sha,
+          title: c.commit.message.split('\n')[0], author: c.author?.login || c.commit.author.name}))});
+    }
   }
   const changes = forkChanges(previous, snapshots);
   if (!changes) return;
-  const identity = crypto.createHash('sha256').update(JSON.stringify(changes.batch.map(f => [f.repository, f.head])))
+  const identity = crypto.createHash('sha256').update(JSON.stringify(changes.batch.map(f => [f.repository, f.branch, f.head])))
     .digest('hex').slice(0, 12);
   const pr = await openDraft(github, context, {branch, sha, tree: commit.tree.sha}, prefix + identity,
     [{path, content: JSON.stringify(changes.checkpoint, null, 2) + '\n'}],
