@@ -121,6 +121,7 @@ type
     destructor Destroy; override;
 
     procedure Clear;
+    procedure ClearFrames;
     procedure SetSongSeq(SongSeq: integer);
     procedure AssignPlayerSlot(PlayerIndex: integer; const PlayerId, Role: UTF8String; Slot, MicDelayMs: integer);
     procedure ClearPlayerSlot(PlayerIndex: integer);
@@ -678,6 +679,12 @@ begin
   FAcceptingInput := false;
   for I := 0 to High(FPlayers) do
     FPlayers[I].Clear;
+end;
+
+procedure TRemoteInputProcessor.ClearFrames;
+var I: integer;
+begin
+  for I := 0 to High(FPlayers) do FPlayers[I].ClearFrames;
 end;
 
 procedure TRemoteInputProcessor.SetSongSeq(SongSeq: integer);

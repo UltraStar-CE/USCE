@@ -1084,7 +1084,9 @@ begin
   else if (MessageType = 'bridge.disconnected') then
   begin
     FOwner.ClearRoomStatus;
-    RemoteInputProcessor.Clear;
+    // A transport interruption does not unassign singers or erase live scores.
+    // A new room/player snapshot still clears actual departed assignments.
+    RemoteInputProcessor.ClearFrames;
   end;
 end;
 

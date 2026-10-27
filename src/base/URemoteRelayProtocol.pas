@@ -166,8 +166,8 @@ begin
 end;
 
 procedure TRemoteRelayProtocol.Replay;
-const Order: array[0..10] of string = ('input.state', 'game.state', 'continuous.state', 'api.state', 'song.results', 'screen.info',
-  'playlist.state', 'song.select.state', 'song.clock', 'song.lyrics', 'score.sheet');
+const Order: array[0..11] of string = ('input.state', 'game.state', 'continuous.state', 'api.state', 'song.results', 'screen.info',
+  'playlist.state', 'song.select.state', 'song.clock', 'song.lyrics', 'score.snapshot', 'score.sheet');
 var I: integer;
     Data: TJSONData;
     Message: TJSONObject;
@@ -504,6 +504,7 @@ begin
     begin
       RemoveField(FCache, 'song.lyrics');
       RemoveField(FCache, 'score.sheet');
+      RemoveField(FCache, 'score.snapshot');
     end;
     if Kind = 'song.select.state' then
     begin
@@ -542,14 +543,11 @@ begin
     end;
     if (Kind = 'input.state') or (Kind = 'game.state') or (Kind = 'screen.info') or
       (Kind = 'playlist.state') or (Kind = 'song.select.state') or (Kind = 'continuous.state') or
-      (Kind = 'song.lyrics') or (Kind = 'score.sheet') then Cache(PublicMessage);
-    // State can wait in the cache while reconnecting. Command results and
-    // signaling retain their position in the caller's bounded output queue.
+      (Kind = 'song.lyrics') or (Kind = 'score.sheet') or (Kind = 'score.snapshot') then Cache(PublicMessage);
+    // Cache state even offline. Obsolete ACKs/signaling must not block later
+    // state/results or replay into a freshly negotiated connection.
     Result := Send(PublicMessage);
-    if not FReady and (FCache.Find(Kind) <> nil) then Result := true;
-    if not FReady and (Kind = 'song.ended') and (FResults.Count > 0) then
-      if FResults.Objects[FResults.Count - 1].Get('songSeq', -1) = Message.Get('songSeq', -2) then
-        Result := true;
+    if not FReady then Result := true;
   finally PublicMessage.Free; end;
 end;
 

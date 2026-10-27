@@ -21,6 +21,10 @@ begin
   RemoteInputProcessor.ClearPlayerSlot(0);
   RemoteInputProcessor.AssignPlayerSlot(1, 'one', 'controller', 2, 0);
   ExpectCount(2);
+  RemoteInputProcessor.ClearFrames;
+  ExpectCount(2); // A transport loss cannot erase singers or live scores.
+  if RemoteInputProcessor.AssignedPlayerId(1) <> 'one' then
+    raise Exception.Create('Temporary transport loss changed the singer identity');
   SetLength(Ini.InputDeviceConfig, 1);
   SetLength(Ini.InputDeviceConfig[0].ChannelToPlayerMap, 1);
   Ini.InputDeviceConfig[0].ChannelToPlayerMap[0] := 7;

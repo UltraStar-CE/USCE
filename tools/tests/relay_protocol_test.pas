@@ -188,6 +188,9 @@ begin
     Relay('{"type":"bridge.disconnected"}');
     Relay('{"type":"player.left","playerId":"original"}');
     Relay('{"type":"player.joined","playerId":"replacement","name":"Other singer","slot":2}');
+    Game('{"type":"ack","commandId":99,"accepted":true}');
+    Game('{"type":"p2p.ice","playerId":"original"}');
+    Game('{"type":"score.snapshot","songSeq":31,"players":[{"slot":2,"scoreTotal":9000}]}');
     Game('{"type":"song.ended","songSeq":31,"players":[{"slot":2,"scoreTotal":9000}]}');
     Game('{"type":"continuous.state","active":false,"reason":"exhausted"}');
     Before := Probe.Sent.Count;
