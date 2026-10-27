@@ -449,6 +449,25 @@ var Kind: string;
 begin
   Kind := Message.Get('type', '');
   if Kind = 'bridge.ping' then Exit(true);
+  if Kind = 'input.state' then
+  begin
+    Previous := FCache.Find('api.state');
+    LibraryData := Message.Find('playerColors');
+    if (Previous is TJSONObject) and (LibraryData is TJSONArray) then
+    begin
+      ApiState := TJSONObject(Previous.Clone);
+      try
+        if (ApiState.Find('playerColors') = nil) or
+          (ApiState.Find('playerColors').AsJSON <> LibraryData.AsJSON) then
+        begin
+          RemoveField(ApiState, 'playerColors');
+          ApiState.Add('playerColors', LibraryData.Clone);
+          Cache(ApiState);
+          Send(ApiState);
+        end;
+      finally ApiState.Free; end;
+    end;
+  end;
   RecordRound(Message);
   if (Kind = 'song.select.state') or (Kind = 'song.library') or (Kind = 'playlist.library') then
   begin
@@ -466,6 +485,9 @@ begin
       try
         ApiState.Add('apiCapabilities', TJSONArray.Create(['song.list', 'continuous.start',
           'continuous.queue', 'continuous.stop', 'continuous.skip']));
+        Previous := FCache.Find('input.state');
+        if (Previous is TJSONObject) and (TJSONObject(Previous).Find('playerColors') is TJSONArray) then
+          ApiState.Add('playerColors', TJSONObject(Previous).Find('playerColors').Clone);
         for FieldName in ['playlists', 'playlistItems', 'curPlaylist'] do
           if Message.Find(FieldName) <> nil then
             ApiState.Add(FieldName, Message.Find(FieldName).Clone);

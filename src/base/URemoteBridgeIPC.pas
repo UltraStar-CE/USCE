@@ -110,6 +110,8 @@ uses
   URecord,
   UDisplay,
   UInputSource,
+  UThemes,
+  UCommon,
   UParty,
   UNote,
   ssockets,
@@ -1107,6 +1109,7 @@ var
   Count, I, Slot, A: integer;
   Local: TBooleanDynArray;
   InputState, SourceName: string;
+  PlayerColor: TRGB;
   Remote: boolean;
   Profiles: array of TRemoteBridgePlayer;
 begin
@@ -1169,6 +1172,14 @@ begin
       end;
       InputState := InputState + '{"slot":' + IntToStr(I+1) + ',"local":' + LowerCase(BoolToStr(Local[I],true)) +
         ',"source":"' + SourceName + '","name":"' + JsonEscape(Ini.Name[I]) + '"}';
+    end;
+    InputState := InputState + '],"playerColors":[';
+    for I := 0 to IMaxPlayerCount - 1 do
+    begin
+      if I > 0 then InputState := InputState + ',';
+      PlayerColor := GetPlayerColor(Ini.PlayerColor[I]);
+      InputState := InputState + '"#' + IntToHex(Round(PlayerColor.R * 255), 2) +
+        IntToHex(Round(PlayerColor.G * 255), 2) + IntToHex(Round(PlayerColor.B * 255), 2) + '"';
     end;
     InputState := InputState + ']}';
     if InputState <> FLastInputState then

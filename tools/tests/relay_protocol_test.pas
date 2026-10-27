@@ -206,6 +206,18 @@ begin
         Assert(Snapshot.Arrays['rounds'].Objects[0].Arrays['players'].Objects[0].Get('scoreTotal', 0) = 9000);
       end;
     Assert(Assigned(Snapshot), 'Reconnect must contain the result journal');
+    Before := Probe.Sent.Count;
+    Game('{"type":"input.state","inputs":[],"playerColors":["#123456","#ABCDEF"]}');
+    Assert(TJSONObject(Probe.Sent.Items[Before]).Get('type', '') = 'api.state');
+    Assert(TJSONObject(Probe.Sent.Items[Before]).Arrays['playerColors'].Strings[1] = '#ABCDEF');
+    Before := Probe.Sent.Count;
+    Game('{"type":"input.state","inputs":[],"playerColors":["#123456","#ABCDEF"]}');
+    Assert(Probe.Sent.Count = Before + 1, 'Unchanged colors must not republish API metadata');
+    Before := Probe.Sent.Count;
+    Game('{"type":"song.library","library":[]}');
+    Assert(TJSONObject(Probe.Sent.Items[Before]).Get('type', '') = 'api.state');
+    Assert(TJSONObject(Probe.Sent.Items[Before]).Arrays['playerColors'].Strings[0] = '#123456',
+      'Catalog refresh must retain the game color palette');
   finally Adapter.Free; Probe.Free; end;
   WriteLn('Native relay protocol: profile/slot merge, controls, clocks, state authority, privacy and ended-song replay passed');
 end.
