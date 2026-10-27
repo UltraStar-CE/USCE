@@ -189,7 +189,6 @@ type
 
       function DrawBG: boolean; virtual;
       function DrawFG: boolean; virtual;
-      procedure DrawDialogFocus;
       function Draw: boolean; virtual;
       function ShouldHandleInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown : boolean; out SuppressKey: boolean): boolean; virtual;
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown : boolean; Repeated : boolean = false): boolean; virtual;
@@ -1235,24 +1234,6 @@ begin
   for J := Low(Widgets) to High(Widgets) do
     Widgets[J].ScrollOffset := 0.0;
   ScrollBar.Y := ScrollArea.Y;
-end;
-
-procedure TMenu.DrawDialogFocus;
-var B: integer; X, Y, W, H, Z: real;
-begin
-  if (Interaction < 0) or (Interaction >= Length(Interactions)) or
-     (Interactions[Interaction].Typ <> iButton) or (Theme.DialogFocus.Width <= 0) then Exit;
-  B := Interactions[Interaction].Num;
-  if (B < 0) or (B >= Length(Button)) or not Button[B].Visible then Exit;
-  X := Button[B].X - 2; Y := Button[B].Y - 2;
-  W := Button[B].W + 4; H := Button[B].H + 4; Z := Min(1, Button[B].Z + 0.01);
-  with Theme.DialogFocus do
-  begin
-    Renderer.DrawLine(X, Y, X + W, Y, Z, Width, Color.R, Color.G, Color.B, Alpha);
-    Renderer.DrawLine(X + W, Y, X + W, Y + H, Z, Width, Color.R, Color.G, Color.B, Alpha);
-    Renderer.DrawLine(X + W, Y + H, X, Y + H, Z, Width, Color.R, Color.G, Color.B, Alpha);
-    Renderer.DrawLine(X, Y + H, X, Y, Z, Width, Color.R, Color.G, Color.B, Alpha);
-  end;
 end;
 
 function TMenu.Draw: boolean;
