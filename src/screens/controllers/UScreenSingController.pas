@@ -1894,7 +1894,7 @@ begin
   for PlayerIndex := 0 to PlayersPlay - 1 do
   begin
     if not Player[PlayerIndex].DetectionReady or
-      (Player[PlayerIndex].DetectionDelay <= 0) then Continue;
+      (Ini.MicDelay + Player[PlayerIndex].DetectionDelay <= 0) then Continue;
     TrackIndex := 0;
     if CurrentSong.isDuet then
       TrackIndex := Player[PlayerIndex].Track;

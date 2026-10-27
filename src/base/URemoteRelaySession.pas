@@ -127,7 +127,7 @@ begin
     'bridgeVersion', 'usce-native', 'maxPlayers', 12]);
   try
     Message.Add('capabilities', TJSONArray.Create(['remoteControl', 'clockSync',
-      'p2pDataChannel', 'rawPcmV1']));
+      'p2pDataChannel', 'rawPcmV1', 'audioCalibrationV1']));
     if FRoomId <> '' then
     begin
       Message.Add('roomId', string(FRoomId));

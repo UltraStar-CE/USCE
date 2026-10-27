@@ -1014,6 +1014,7 @@ procedure TRemoteBridgeIPCThread.HandleMessage(Obj: TJSONObject);
 var
   MessageType: string;
   DisplayCode: string;
+  CalibrationReply: TJSONObject;
 begin
   MessageType := JsonGetString(Obj, 'type', '');
   if PhoneAudio.Enabled and ((Pos('p2p.', MessageType) = 1) or
@@ -1048,6 +1049,21 @@ begin
     HandlePlayerAssigned(Obj)
   else if (MessageType = 'settings.update') then
     HandleSettingsUpdate(Obj)
+  else if (MessageType = 'audio.calibration.request') then
+  begin
+    if not PhoneAudio.Enabled or not PhoneAudio.Calibration.Queue(
+      JsonGetInt(Obj, 'slot', 0) - 1, UTF8String(JsonGetString(Obj, 'playerId', '')),
+      UTF8String(JsonGetString(Obj, 'requestId', '')),
+      JsonGetInt(Obj, 'clockUncertaintyMs', -1), int64(GetTickCount64) * 1000) then
+    begin
+      CalibrationReply := TJSONObject.Create(['type', 'audio.calibration.result',
+        'playerId', JsonGetString(Obj, 'playerId', ''),
+        'requestId', JsonGetString(Obj, 'requestId', ''),
+        'accepted', false, 'reason', 'request_not_ready', 'scope', 'digital-path']);
+      try FOwner.SendJsonMessage(CalibrationReply.AsJSON);
+      finally CalibrationReply.Free; end;
+    end;
+  end
   else if (MessageType = 'player.disconnected') then
     HandlePlayerDisconnected(Obj)
   else if (MessageType = 'player.left') then

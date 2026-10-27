@@ -130,6 +130,7 @@ type
     function TryGetTone(PlayerIndex: integer; SongTimeUs: int64; out Tone: TRemoteToneSample): boolean;
     function TryConsumeToneForBeat(PlayerIndex, Beat: integer; SongTimeUs: int64; out Tone: TRemoteToneSample): boolean;
     function HasAssignedPlayer(PlayerIndex: integer): boolean;
+    function AssignedPlayerId(PlayerIndex: integer): UTF8String;
     function RequiredGameDelayMs(): integer;
 
     property CurrentSongSeq: integer read FCurrentSongSeq;
@@ -782,6 +783,19 @@ begin
   finally
     SDL_UnlockMutex(Buffer.FLock);
   end;
+end;
+
+function TRemoteInputProcessor.AssignedPlayerId(PlayerIndex: integer): UTF8String;
+var Buffer: TRemotePlayerBuffer;
+begin
+  Result := '';
+  Buffer := GetPlayerBuffer(PlayerIndex);
+  if Buffer = nil then Exit;
+  SDL_LockMutex(Buffer.FLock);
+  try
+    if Buffer.FEnabled and ((Buffer.FRole = 'singer') or (Buffer.FRole = 'controller')) then
+      Result := Buffer.FPlayerId;
+  finally SDL_UnlockMutex(Buffer.FLock); end;
 end;
 
 function TRemoteInputProcessor.RequiredGameDelayMs(): integer;

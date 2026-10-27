@@ -323,6 +323,13 @@ begin
   Result := BPM * msTime / 60;
 end;
 
+function ConfiguredPlayerDelayMs(PlayerIndex: integer): integer;
+begin
+  Result := Ini.PlayerDelay[PlayerIndex];
+  if PhoneAudio.Enabled and RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) then
+    Result := PhoneAudio.Calibration.EffectivePlayerDelay(PlayerIndex, Ini.MicDelay, Result);
+end;
+
 function ShouldRunNoteDetection: boolean;
 var
   PlayerIndex: integer;
@@ -337,7 +344,7 @@ begin
   // the microphone sample captured at its shifted time.
   for PlayerIndex := 0 to PlayersPlay - 1 do
   begin
-    DelayBeats := GetBeats(CurrentSong.BPM, Ini.PlayerDelay[PlayerIndex] / 1000);
+    DelayBeats := GetBeats(CurrentSong.BPM, ConfiguredPlayerDelayMs(PlayerIndex) / 1000);
     if Floor(LyricsState.MidBeatD - DelayBeats) >= 0 then
     begin
       Result := true;
@@ -681,7 +688,7 @@ var
 begin
   Result := 0;
   for PlayerIndex := 0 to PlayersPlay - 1 do
-    Result := Max(Result, Ini.PlayerDelay[PlayerIndex]);
+    Result := Max(Result, ConfiguredPlayerDelayMs(PlayerIndex));
 end;
 
 procedure NewBeatDetect(Screen: TScreenSingController);
@@ -868,7 +875,7 @@ begin
 
       IsRemotePlayer := RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) and
         not PhoneAudio.Enabled;
-      PlayerDelayMs := Ini.PlayerDelay[PlayerIndex];
+      PlayerDelayMs := ConfiguredPlayerDelayMs(PlayerIndex);
       if IsRemotePlayer then
       begin
         // CurrentBeatD already includes Ini.MicDelay. Remote beat frames are
@@ -895,7 +902,7 @@ begin
         // delay in beats (Ini.PlayerDelay is ms)
         if not Player[PlayerIndex].DetectionReady then
         begin
-          Player[PlayerIndex].DetectionDelay := Ini.PlayerDelay[PlayerIndex];
+          Player[PlayerIndex].DetectionDelay := PlayerDelayMs;
           Player[PlayerIndex].DetectionReady := true;
           DelayBeats := GetBeats(CurrentSong.BPM, Player[PlayerIndex].DetectionDelay / 1000);
           Player[PlayerIndex].DetectionBeat := Floor(LyricsState.MidBeatD - DelayBeats) - 1;

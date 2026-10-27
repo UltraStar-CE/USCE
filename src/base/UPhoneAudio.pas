@@ -5,7 +5,7 @@ unit UPhoneAudio;
 
 interface
 
-uses SysUtils, Dynlibs;
+uses SysUtils, Dynlibs, UAudioCalibrationSessions;
 
 type
   TPaCreate = function(Url, Ice: PAnsiChar): pointer; cdecl;
@@ -20,6 +20,7 @@ type
     FContexts: array[0..11] of pointer;
     FSignalLock: TRTLCriticalSection;
     FError: string;
+    FCalibration: TAudioCalibrationSessions;
     FCreate: TPaCreate;
     FDestroy: TPaDestroy;
     FPoll: TPaPoll;
@@ -38,6 +39,7 @@ type
     procedure Signal(const Json: UTF8String);
     property Enabled: boolean read GetEnabled;
     property LastError: string read FError;
+    property Calibration: TAudioCalibrationSessions read FCalibration;
   end;
 
 function PhoneAudio: TPhoneAudio;
@@ -63,6 +65,7 @@ constructor TPhoneAudio.Create;
 begin
   inherited;
   InitCriticalSection(FSignalLock);
+  FCalibration := TAudioCalibrationSessions.Create;
 end;
 
 function TPhoneAudio.Start(const Url, Ice: UTF8String; const LibraryPath: string): boolean;
@@ -139,6 +142,7 @@ end;
 destructor TPhoneAudio.Destroy;
 begin
   Stop;
+  FCalibration.Free;
   DoneCriticalSection(FSignalLock);
   inherited;
 end;

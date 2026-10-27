@@ -114,7 +114,10 @@ begin
   if (LowDelay <= 0) or (HighDelay >= AUDIO_CALIBRATION_MAX_DELAY_MS) or
     (HighDelay - LowDelay > 80) then Exit;
   Result.DelayMs := (LowDelay + HighDelay) div 2;
-  Result.UncertaintyMs := (HighDelay - LowDelay + 1) div 2 + ClockUncertaintyMs + 5;
+  // Include the observation cadence: a 40 ms game frame must not claim the
+  // same temporal precision as the 10 ms synthetic unit-test observations.
+  Result.UncertaintyMs := (HighDelay - LowDelay + 1) div 2 + ClockUncertaintyMs +
+    (FMaxGapUs + 1999) div 2000;
   Result.Accepted := true;
 end;
 

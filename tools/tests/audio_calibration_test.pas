@@ -17,6 +17,7 @@ begin
     Detected := AudioCalibrationNote(Time * 10000 - EffectiveDelay * 1000);
     if Mode = 2 then Detected := 0;
     if (Mode = 3) and (Time > 190) and (Time < 230) then Continue;
+    if (Mode = 7) and (Time mod 4 <> 0) then Continue;
     if (Mode = 4) and (Detected >= 0) then Inc(Detected, 48);
     if (Mode = 5) and (Time > 250) then Break;
     Calibration.Observe(1000000 + Time * 10000, Detected, Detected >= 0);
@@ -47,6 +48,10 @@ begin
     Feed(80);
     Assert(not Calibration.Estimate(-1).Accepted);
     Assert(not Calibration.Estimate(101).Accepted);
+    Feed(80, 7);
+    Fit := Calibration.Estimate(3);
+    Assert(Fit.Accepted);
+    Assert(Fit.UncertaintyMs >= 23, 'Slow game frames must widen timing uncertainty');
     Feed(0);
     Assert(not Calibration.Estimate(0).Accepted, 'Boundary fit must not be accepted');
     Feed(500);

@@ -239,7 +239,7 @@ type
 
   function AudioInputProcessor(): TAudioInputProcessor;
   function ToneAbsToString(const ToneAbs: integer): string;
-  procedure UpdatePhoneAudio;
+  procedure UpdatePhoneAudio(CalibrationAllowed: boolean = false);
   procedure LogAudioInputDiagnostics;
 
 implementation
@@ -247,6 +247,7 @@ implementation
 uses
   ULog,
   UPhoneAudio,
+  URemoteBridgeIPC,
   URemoteInput,
   UNote;
 
@@ -279,9 +280,12 @@ begin
         Log.LogStatus('slot=' + IntToStr(I+1) + ' ' + string(PhoneAudio.Status(I)), 'Native audio timing');
 end;
 
-procedure UpdatePhoneAudio;
+procedure UpdatePhoneAudio(CalibrationAllowed: boolean);
 var Samples: array[0..9599] of smallint;
     Count, I: integer;
+    Message, Owner: UTF8String;
+    NowUs: int64;
+    NeedsAnalysis: boolean;
 begin
   if not PhoneAudio.Enabled then Exit;
   for I := 0 to High(AudioInputProcessor.Sound) do
@@ -299,6 +303,17 @@ begin
     begin
       AudioInputProcessor.Sound[I].Clear;
       PhoneInputWasLive[I] := false;
+    end;
+    Owner := RemoteInputProcessor.AssignedPlayerId(I);
+    NowUs := int64(GetTickCount64) * 1000;
+    NeedsAnalysis := PhoneAudio.Calibration.Tick(I, Owner, CalibrationAllowed,
+      PhoneInputWasLive[I], NowUs, Message);
+    if Message <> '' then RemoteBridgeIPC.SendJsonMessage(string(Message));
+    if NeedsAnalysis and (Count > 0) then
+    begin
+      AudioInputProcessor.Sound[I].AnalyzeBuffer;
+      PhoneAudio.Calibration.Observe(I, int64(GetTickCount64) * 1000,
+        AudioInputProcessor.Sound[I].ToneAbs, AudioInputProcessor.Sound[I].ToneValid);
     end;
   end;
 end;

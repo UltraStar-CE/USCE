@@ -880,7 +880,8 @@ begin
 
       // keyboard/mouse/joystick events
       CheckEvents;
-      UpdatePhoneAudio;
+      UpdatePhoneAudio((Display.CurrentScreen <> @ScreenSing) and
+        (Display.NextScreen <> @ScreenSing));
       RemoteBridgeIPC.ApplyPendingPlayerCount;
       ProcessRemoteCommandQueue;
 
