@@ -519,6 +519,7 @@ task_usce() {
 	cmake -S native/phone-audio -B build/phone-audio -G Ninja -DCMAKE_BUILD_TYPE=Release -DOPENSSL_ROOT_DIR=/usr -DOPENSSL_USE_STATIC_LIBS=TRUE
 	cmake --build build/phone-audio --parallel 3
 	ctest --test-dir build/phone-audio --output-on-failure
+	python3 tools/test_native_relay.py
 	python3 tools/stage-phone-audio.py --platform linux --openssl-license /usr/share/doc/libssl-dev/copyright --openssl-license /usr/share/common-licenses/Apache-2.0
 	bash ./autogen.sh
 	./configure --prefix=/usr PKG_CONFIG_PATH="$PKG_CONFIG_PATH" CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH" CC="$CC" CXX="$CXX" --enable-debug --without-portaudio --with-libprojectM
