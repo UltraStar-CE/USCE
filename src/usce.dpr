@@ -173,6 +173,7 @@ uses
   USongs            in 'base\USongs.pas',
   UAge              in 'base\UAge.pas',
   UFilterTerms      in 'base\UFilterTerms.pas',
+  UFilterPresets     in 'base\UFilterPresets.pas',
   ULibraryLockdown   in 'base\ULibraryLockdown.pas',
   ULockdownUI        in 'screens\ULockdownUI.pas',
   UIni              in 'base\UIni.pas',

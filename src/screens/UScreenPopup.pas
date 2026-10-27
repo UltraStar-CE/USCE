@@ -81,7 +81,9 @@ type
 
   TScreenPopupInsertUser = class(TMenu)
     private
-      fPasswordOnly: boolean;
+      fPasswordOnly, fTextOnly: boolean;
+      fTextChoices: array of UTF8String;
+      fTextChoice: integer;
       fHandler: TPopupInsertUserHandler;
       fHandlerData: Pointer;
 
@@ -95,6 +97,8 @@ type
       procedure ShowPasswordPrompt(const Title, Msg: UTF8String;
         Handler: TPopupInsertUserHandler; HandlerData: Pointer);
 
+      procedure ShowTextPrompt(const Title, Msg, Caption: UTF8String;
+        const Choices: array of UTF8String; Handler: TPopupInsertUserHandler; Data: Pointer);
       constructor Create; override;
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       procedure OnShow; override;
@@ -430,6 +434,16 @@ begin
   Result := true;
   if (PressedDown) then
   begin // Key Down
+    if fTextOnly and (Interaction = 0) and
+       ((PressedKey = SDLK_UP) or (PressedKey = SDLK_DOWN)) and
+       (Length(fTextChoices) > 0) then
+    begin
+      if PressedKey = SDLK_DOWN then Inc(fTextChoice) else Dec(fTextChoice);
+      fTextChoice := (fTextChoice + Length(fTextChoices)) mod Length(fTextChoices);
+      Username := fTextChoices[fTextChoice];
+      Button[0].Text[0].Text := Username;
+      Exit;
+    end;
     // check normal keys
     if (IsPrintableChar(CharCode)) then
     begin
@@ -439,6 +453,7 @@ begin
         begin
           Button[0].Text[0].Text := Button[0].Text[0].Text + UCS4ToUTF8String(CharCode);
           Username := Username + UCS4ToUTF8String(CharCode);
+          fTextChoice := -1;
         end
         else
         begin
@@ -559,6 +574,8 @@ begin
   fHandler := Handler;
   fHandlerData := HandlerData;
   fPasswordOnly := false;
+  fTextOnly := false;
+  fTextChoices := nil;
 
   Text[0].Text := Language.Translate(Msg);
   Text[1].Text := Title;
@@ -584,6 +601,8 @@ end;
 procedure TScreenPopupInsertUser.SetInteraction(Num: integer);
 begin
   if fPasswordOnly and (Num = 0) then Num := 1;
+  if fTextOnly and (Num = 1) then
+    if Interaction = 0 then Num := 2 else Num := 0;
   inherited SetInteraction(Num);
 end;
 
@@ -595,6 +614,26 @@ begin
   Button[0].Visible := false;
   Button[2].Text[0].Text := Language.Translate('SONG_MENU_YES');
   Interaction := 1;
+end;
+
+procedure TScreenPopupInsertUser.ShowTextPrompt(const Title, Msg, Caption: UTF8String;
+  const Choices: array of UTF8String; Handler: TPopupInsertUserHandler; Data: Pointer);
+var I: integer;
+begin
+  ShowPopup(Title, Msg, Handler, Data);
+  fTextOnly := true;
+  Button[1].Visible := false;
+  Button[2].Text[0].Text := Caption;
+  SetLength(fTextChoices, Length(Choices));
+  for I := 0 to High(Choices) do fTextChoices[I] := Choices[I];
+  fTextChoice := -1;
+  if Length(Choices) > 0 then
+  begin
+    fTextChoice := 0;
+    Username := Choices[0];
+    Button[0].Text[0].Text := Username;
+  end;
+  Interaction := 0;
 end;
 
 { TScreenPopupSendScore }
