@@ -9,7 +9,7 @@ function RemoteSongLibraryJson: string;
 function RemotePlaylistFieldsJson: string;
 procedure SelectRemoteAudio(const Item: TSong; var AudioPath: IPath; var AudioSource: UTF8String);
 implementation
-uses Classes, SysUtils, Math, UIni, USongs, UPlaylist, URemoteBridgeIPC;
+uses Classes, SysUtils, Math, sha1, UIni, USongs, UPlaylist, URemoteBridgeIPC;
 function BoolJson(Value: boolean): string;
 begin
   if Value then Result := 'true' else Result := 'false';
@@ -55,7 +55,7 @@ var
   Item: TSong;
   AudioPath: IPath;
   AudioSource: UTF8String;
-  SongKey: UTF8String;
+  SongKey, CatalogKey: UTF8String;
   SearchText: UTF8String;
 begin
   Result := 'null';
@@ -67,6 +67,8 @@ begin
 
   SelectRemoteAudio(Item, AudioPath, AudioSource);
   SongKey := LowerCase(Item.Artist + ' - ' + Item.Title);
+  // Stable within this game installation, without exposing the song file path.
+  CatalogKey := SHA1Print(SHA1String(Item.Path.Append(Item.FileName).ToUTF8(false)));
   SearchText := Trim(
     Item.ArtistASCII + ' ' +
     Item.TitleASCII + ' ' +
@@ -80,6 +82,7 @@ begin
   Result :=
     '{"songId":' + IntToStr(SongIndex) +
     ',"songKey":"' + RemoteJsonEscape(SongKey) + '"' +
+    ',"catalogKey":"' + CatalogKey + '"' +
     ',"artist":"' + RemoteJsonEscape(Item.Artist) + '"' +
     ',"title":"' + RemoteJsonEscape(Item.Title) + '"' +
     ',"year":' + IntToStr(Item.Year) +

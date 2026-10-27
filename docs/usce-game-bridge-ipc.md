@@ -572,3 +572,19 @@ The private `playlist.library` update refreshes public API metadata without
 replacing the song snapshot. Native and hosted replay caches retain those edits.
 Playlist edits are unavailable during gameplay; browsing, likes and Party voting
 remain available. Removing the last item preserves the empty playlist.
+
+### Song identity across catalog revisions
+
+Every `song.list` entry includes an opaque `catalogKey` derived from its song
+file path. The path itself stays private. The key distinguishes files with the
+same artist/title and stays stable across sorting, filtering and fixed-order
+playlist loads within the same installation. Moving a song file changes its key.
+The key identifies content; it is not a credential or permission grant.
+
+Numeric `songId` values belong to a catalog snapshot. Use `catalogKey` on Party
+like/unlike messages to preserve the intended file while catalogs are changing.
+Party remaps votes and played-song history onto a replacement snapshot by this
+identity, drops removed/ambiguous entries, and publishes its `libraryHash` with
+vote state. While loading a replacement it publishes loading state without old
+IDs and does not issue continuous playback commands. Superseded loads cannot
+replace a more recently announced catalog.
