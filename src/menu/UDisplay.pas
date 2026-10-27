@@ -161,7 +161,7 @@ const
 
 implementation
 
-uses
+uses UDuplicateSongUI,
   UText,
   StrUtils,
   UCommandLine,
@@ -347,6 +347,8 @@ begin
         ScreenPopupInfo.Draw
       else if (ScreenPopupCheck <> nil) and ScreenPopupCheck.Visible then
         ScreenPopupCheck.Draw
+      else if (DuplicateSongPopup <> nil) and DuplicateSongPopup.Visible then
+        DuplicateSongPopup.Draw
       else if (ScreenPopupInsertUser <> nil) and ScreenPopupInsertUser.Visible then
         ScreenPopupInsertUser.Draw
       else if (ScreenPopupSendScore <> nil) and ScreenPopupSendScore.Visible then

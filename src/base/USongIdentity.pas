@@ -5,6 +5,8 @@ uses Classes, USong;
 function FindDuplicateIdentity(LibrarySongs: TList; out First, Second: TSong): boolean;
 procedure RenameSongIdentity(LibrarySongs: TList; Song: TSong;
   const Artist, Title: UTF8String);
+procedure RenameSongIdentityPair(LibrarySongs: TList; First, Second: TSong;
+  const Artist1, Title1, Artist2, Title2: UTF8String);
 implementation
 uses SysUtils, UPath, UTextEncoding, UUnicodeUtils;
 function IdentityKey(const Artist, Title: UTF8String): string;
@@ -51,7 +53,7 @@ begin
     if Result <> '' then Stream.ReadBuffer(Result[1], Length(Result));
   finally Stream.Free; end;
 end;
-procedure RenameSongIdentity(LibrarySongs: TList; Song: TSong;
+procedure RenameSongIdentityInternal(LibrarySongs: TList; Song, Exclude: TSong;
   const Artist, Title: UTF8String);
 var I, Start, Stop, AfterLine, Colon, Offset, BackupIndex: integer;
   Other: TSong; Source, Updated, Line, EncArtist, EncTitle, Tag: RawByteString;
@@ -66,7 +68,7 @@ begin
   for I := 0 to LibrarySongs.Count - 1 do
   begin
     Other := TSong(LibrarySongs[I]);
-    if (Other <> Song) and (Other.Artist = NewArtist) and (Other.Title = NewTitle) then
+    if (Other <> Song) and (Other <> Exclude) and (Other.Artist = NewArtist) and (Other.Title = NewTitle) then
       raise Exception.Create('DUPLICATE_NAME_EXISTS');
   end;
   Filename := Song.Path.Append(Song.FileName);
@@ -126,5 +128,35 @@ begin
   Song.ArtistASCII := LowerCase(TransliterateToASCII(NewArtist));
   Song.TitleASCII := LowerCase(TransliterateToASCII(NewTitle));
   Song.MD5 := '';
+end;
+procedure RenameSongIdentity(LibrarySongs: TList; Song: TSong;
+  const Artist, Title: UTF8String);
+begin
+  RenameSongIdentityInternal(LibrarySongs, Song, nil, Artist, Title);
+end;
+procedure RenameSongIdentityPair(LibrarySongs: TList; First, Second: TSong;
+  const Artist1, Title1, Artist2, Title2: UTF8String);
+var A1, T1, A2, T2: UTF8String; Other: TSong; I: integer;
+begin
+  A1 := Trim(Artist1); T1 := Trim(Title1); A2 := Trim(Artist2); T2 := Trim(Title2);
+  if (A1 = '') or (T1 = '') or (A2 = '') or (T2 = '') or
+     (Pos(#10, A1 + T1 + A2 + T2) > 0) or (Pos(#13, A1 + T1 + A2 + T2) > 0) or
+     (Pos(#0, A1 + T1 + A2 + T2) > 0) then
+    raise Exception.Create('DUPLICATE_NAME_EMPTY');
+  if (A1 = A2) and (T1 = T2) then raise Exception.Create('DUPLICATE_NAME_EXISTS');
+  for I := 0 to LibrarySongs.Count - 1 do
+  begin
+    Other := TSong(LibrarySongs[I]);
+    if (Other = First) or (Other = Second) then Continue;
+    if (((First.Artist <> A1) or (First.Title <> T1)) and
+        (Other.Artist = A1) and (Other.Title = T1)) or
+       (((Second.Artist <> A2) or (Second.Title <> T2)) and
+        (Other.Artist = A2) and (Other.Title = T2)) then
+      raise Exception.Create('DUPLICATE_NAME_EXISTS');
+  end;
+  if (First.Artist <> A1) or (First.Title <> T1) then
+    RenameSongIdentityInternal(LibrarySongs, First, Second, A1, T1);
+  if (Second.Artist <> A2) or (Second.Title <> T2) then
+    RenameSongIdentityInternal(LibrarySongs, Second, First, A2, T2);
 end;
 end.

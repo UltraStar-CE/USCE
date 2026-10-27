@@ -36,6 +36,14 @@ begin
  Check(ReadFile(A.Path.Append(A.FileName))=Expected,'failed edit preserves file');
  A.Encoding:=encAuto;RenameSongIdentity(LibrarySongs,A,'Grüße','Auto legacy');
  Check(Pos(RawByteString('Gr'+#$FC+#$DF+'e'),ReadFile(A.Path.Append(A.FileName)))>0,'auto encoding preserves legacy bytes');
+ WriteFile(B.Path.Append(B.FileName),'#TITLE:Same'+#10+'#ARTIST:Grüße'+#10+': 0 4 60 Test'+#10+'E'+#10);
+ OldBytes:=ReadFile(A.Path.Append(A.FileName));
+ Failed:=false;try RenameSongIdentityPair(LibrarySongs,A,B,'New','One','New','One');except Failed:=true;end;
+ Check(Failed and (ReadFile(A.Path.Append(A.FileName))=OldBytes),'pair must differ before writing');
+ Failed:=false;try RenameSongIdentityPair(LibrarySongs,A,B,'a','bc','New','Two');except Failed:=true;end;
+ Check(Failed and (ReadFile(A.Path.Append(A.FileName))=OldBytes),'pair validated against third song before writes');
+ RenameSongIdentityPair(LibrarySongs,A,B,'New','One','New','Two');
+ Check((A.Title='One') and (B.Title='Two'),'both rows saved');
  for I:=0 to LibrarySongs.Count-1 do TSong(LibrarySongs[I]).Free;LibrarySongs.Free;
  Writeln('PASS: duplicate pairs, all-library collisions, repeated resolution, same-file entries, key boundaries, UTF8/legacy encoding and byte-preserving header edits/backups');
 end.
