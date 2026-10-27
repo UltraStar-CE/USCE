@@ -72,7 +72,28 @@ type
       function GetScrollOffset(): single; override;
     end;
 
+procedure DrawSelectionOutline(X, Y, W, H, Z: real);
+
 implementation
+
+uses Math, UThemes, URenderer;
+
+procedure DrawSelectionOutline(X, Y, W, H, Z: real);
+begin
+  if (Theme = nil) or (Theme.SelectionFocus.Width <= 0) or
+     (Theme.SelectionFocus.Alpha <= 0) or (W <= 0) or (H <= 0) then Exit;
+  with Theme.SelectionFocus do
+  begin
+    X := X - Padding; Y := Y - Padding;
+    W := W + 2 * Padding; H := H + 2 * Padding;
+    Z := Min(1, Z + 0.01);
+    Renderer.DrawLine(X, Y, X + W, Y, Z, Width, Color.R, Color.G, Color.B, Alpha);
+    Renderer.DrawLine(X + W, Y, X + W, Y + H, Z, Width, Color.R, Color.G, Color.B, Alpha);
+    Renderer.DrawLine(X + W, Y + H, X, Y + H, Z, Width, Color.R, Color.G, Color.B, Alpha);
+    Renderer.DrawLine(X, Y + H, X, Y, Z, Width, Color.R, Color.G, Color.B, Alpha);
+  end;
+end;
+
 
 procedure IMenuWidget.SetScrollOffset(ScrollOffset: single);
 begin

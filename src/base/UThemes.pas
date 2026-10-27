@@ -284,6 +284,11 @@ type
     Actions: array[0..1] of TThemeButton;
   end;
 
+  TThemeSelectionFocus = record
+    Color: TRGB;
+    Width, Alpha, Padding: real;
+  end;
+
   TThemeBasic = class
     Background:       TThemeBackground;
     Text:             AThemeText;
@@ -1114,6 +1119,7 @@ type
     procedure LoadStatMainRecentPeriods;
     procedure LoadSongFilterLayout;
     procedure LoadDuplicateSongLayout;
+    procedure LoadSelectionFocus;
     procedure LoadStatDetailColumn(var Column: TThemeStatDetailColumn; const SectionName: string);
     procedure LoadStatDetailTable(var Table: TThemeStatDetailTable; const SectionName: string);
   public
@@ -1147,6 +1153,7 @@ type
     SongMenu:         TThemeSongMenu;
     SongJumpto:       TThemeSongJumpTo;
     DuplicateSongs: TThemeDuplicateSongs;
+    SelectionFocus: TThemeSelectionFocus;
     //Party Screens:
     PartyNewRound:    TThemePartyNewRound;
     PartyScore:       TThemePartyScore;
@@ -1956,6 +1963,7 @@ begin
   begin
     Result := true;
     OpenFile(ThemeNum);
+    LoadSelectionFocus;
     if ThemeIni.ReadString('Theme', 'Name', '') <> '' then
     begin
       LayoutScreenW := ThemeIni.ReadInteger('Theme', 'ScreenW', 0);
@@ -2954,6 +2962,18 @@ begin
     if Length(GetSectionList('DuplicateSongsPath' + IntToStr(I + 1))) > 0 then
       ThemeLoadText(DuplicateSongs.Paths[I], 'DuplicateSongsPath' + IntToStr(I + 1));
   end;
+end;
+
+procedure TTheme.LoadSelectionFocus;
+var Sections: TThemeSectionList;
+begin
+  Sections := GetSectionList('SelectionFocus');
+  SelectionFocus.Color.R := EnsureRange(ReadFloat(Sections, 'Red', 1), 0.0, 1.0);
+  SelectionFocus.Color.G := EnsureRange(ReadFloat(Sections, 'Green', 1), 0.0, 1.0);
+  SelectionFocus.Color.B := EnsureRange(ReadFloat(Sections, 'Blue', 1), 0.0, 1.0);
+  SelectionFocus.Width := Max(0, ReadFloat(Sections, 'Width', 0));
+  SelectionFocus.Alpha := EnsureRange(ReadFloat(Sections, 'Alpha', 1), 0.0, 1.0);
+  SelectionFocus.Padding := Max(0, ReadFloat(Sections, 'Padding', 2));
 end;
 
 procedure TTheme.LoadSongFilterLayout;
