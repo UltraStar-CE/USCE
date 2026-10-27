@@ -308,8 +308,6 @@ jobs:
           key: linux-docker-${{ hashFiles('dists/linux/dl.sh', 'dists/linux/tasks.sh', 'dists/linux/dockerenv.sh', 'dists/linux/Dockerfile.in') }}
           path: |
             dists/linux/prefix
-      - name: Browser audio and Party regressions
-        run: node --test tools/tests/phone_audio_worklet.test.cjs tools/tests/phone_audio_bridge.test.cjs tools/tests/party_session.test.mjs
       - name: Start container builder
         uses: docker/setup-buildx-action@v4
       - name: Generate Dockerfile

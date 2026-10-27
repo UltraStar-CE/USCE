@@ -322,21 +322,20 @@ option order and apply to the session without overwriting saved game settings.
 `[Game] StatisticsView=Reduced` selects compact statistics; `Full` includes
 averages, recent activity and performance facts. Also available in Options → Game.
 
-## Remote bridge
+## Remote connection
 
-File section: `[RemoteBridge]`. This optional connection supports external
-controllers, remote singers and other integrations through a local adapter.
-It starts only when `Enabled=On`.
+File section: `[RemoteBridge]`. The native client connects directly to the hosted
+relay. No local adapter, Node runtime or HTTP server is needed.
 
 | Option | Values and default | What it does |
 | --- | --- | --- |
-| `Enabled` | `Off`, `On`; `Off` | Enables the local adapter connection and configured bridge process. |
-| `IpcHost` | Host address; `127.0.0.1` | Address of the local adapter. |
-| `IpcPort` | TCP port; `8765` | Adapter connection port. |
-| `ServerUrl` | WebSocket URL; `wss://usdx.at/ws/host` | Relay URL passed to the bundled adapter. |
-| `NodeExecutable` | Executable path; automatic lookup | Node.js executable used to launch the adapter. |
-| `BridgeScriptPath` | Script path; bundled `webs/usdx-bridge.mjs` | Adapter script to launch. |
-| `StartCommand` | Command; empty | Replaces the generated adapter command when set. |
-| `WebApp` | Client flavor; empty | Selects the adapter client flavor. |
+| `Enabled` | `Off`, `On`; `Off` | Enables the native relay and room code. |
+| `ServerUrl` | `wss://usdx.at/ws/host` | Hosted relay endpoint. An empty value restores this default. |
+| `WebApp` | Empty | Optional hosted client flavor; not an API permission grant. |
 
-The [bridge protocol reference](usce-game-bridge-ipc.md) describes messages and examples.
+Enable the connection in Network settings, then enter the displayed room code
+at https://usdx.at/. Downloaded builds already include the native library and
+working server default. `USDX_REMOTE_SERVER` is a developer endpoint override.
+
+See the [remote API contract](usce-game-bridge-ipc.md) and
+[native runtime reference](native-phone-audio.md).

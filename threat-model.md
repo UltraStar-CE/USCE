@@ -37,29 +37,22 @@ Keep repository and build automation in its own scope, as described in
 [`AUTOMATION.md`](AUTOMATION.md). Revisit these operating assumptions if future
 features introduce remote input or services.
 
-## Optional remote bridge
+## Optional native remote connection
 
-The optional native phone-audio prototype (`USCE_RAW_AUDIO=1`) adds a direct
-WebRTC receiver inside the game. Network callbacks only write bounded signaling
-and PCM queues; the game thread consumes PCM for each assigned remote slot. Frames have fixed
-format/size limits, stale audio expires, and duplicate routes share sequence
-de-duplication. A malformed signaling message is caught outside gameplay logic.
-TLS verification remains enabled. The hosted relay can forward PCM in memory
-as fallback; no audio is logged or recorded by this prototype. Only a paired
-room's assigned slots 1 through 12 are accepted and isolated. The room code is the current pairing boundary, not
-an identity guarantee. See `docs/native-phone-audio-prototype.md` for experimental
-scope and outstanding real-network tests. Normal local play remains unchanged.
+Remote connections are disabled by default. When enabled, the Pascal client
+connects directly to the configured hosted relay; there is no local Node adapter.
+The bundled native transport provides bounded signaling/PCM queues and TLS-verified
+WebSocket I/O. Only assigned remote slots 1 through 12 receive authenticated,
+size-limited PCM; local microphones retain their assignments. Stale frames expire
+and duplicated direct/server packets share sequence de-duplication.
 
-The remote bridge is disabled by default. When enabled, the game exchanges
-JSONL messages with a configured local adapter for control, pitch input and
-game state. The adapter can connect to remote services. This optional feature
-extends the local-playback assumptions; its contract is documented in
-[`docs/usce-game-bridge-ipc.md`](docs/usce-game-bridge-ipc.md).
+The game owns pitch/scoring and consumes audio on its game thread. Network
+callbacks do not call game objects. Calibration uses separate queues/buffers and
+cannot become singing input. The relay can forward PCM in memory as fallback;
+this is not end-to-end encryption through the server. A room code is a pairing
+boundary, not an identity guarantee. The generic API strips local paths and limits
+media to the current catalog; it does not provide arbitrary file access.
 
-In native PCM mode, the existing local bridge accepts raw audio only after
-server-side capability/slot/format validation and forwards it through JSONL.
-The native ABI bounds incoming signals and PCM; the game bounds outbound IPC
-at 128 messages / 32 MiB and writes them from its existing I/O thread so a
-stalled bridge cannot block the main audio-consumption loop. Browser PCM is
-not subjected to global physical-microphone boost. No microphone recordings
-are created by these diagnostics.
+Outgoing messages/media work are bounded and handled on the I/O thread. Slow-stage
+diagnostics do not record audio samples. See the [native runtime reference](docs/native-phone-audio.md)
+and [API contract](docs/usce-game-bridge-ipc.md).

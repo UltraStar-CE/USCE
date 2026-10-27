@@ -39,8 +39,6 @@ type
 
   TRemoteBridgeIPC = class
   private
-    FHost: string;
-    FPort: integer;
     FThread: TThread;
     FOnCommand: TRemoteBridgeCommandEvent;
     FStatusLock: TRTLCriticalSection;
@@ -82,8 +80,6 @@ type
     procedure GetRoomStatus(out Connected: boolean; out DisplayCode: UTF8String;
       out StatusSeq: integer; out ConnectedPlayers: integer);
 
-    property Host: string read FHost write FHost;
-    property Port: integer read FPort write FPort;
     property OnCommand: TRemoteBridgeCommandEvent read FOnCommand write FOnCommand;
     property GameStateSeq: integer read FGameStateSeq;
   end;
@@ -113,37 +109,21 @@ uses
   UThemes,
   UCommon,
   UParty,
-  UNote,
-  ssockets,
-  sockets
-  {$IFDEF MSWINDOWS}, Winsock2{$ELSE}, BaseUnix{$ENDIF};
-
-const
-  DEFAULT_BRIDGE_HOST = '127.0.0.1';
-  DEFAULT_BRIDGE_PORT = 8765;
-  READ_BUFFER_SIZE = 4096;
-  RECONNECT_DELAY_MS = 1000;
-  CONNECT_TIMEOUT_MS = 250;
+  UNote;
 
 type
   TRemoteBridgeIPCThread = class(TThread)
   private
     FOwner: TRemoteBridgeIPC;
-    FSocket: TInetSocket;
-    FSocketLock: TRTLCriticalSection;
-    FSocketFailed: boolean;
-    FLineBuffer: string;
     FQueueLock: TRTLCriticalSection;
     FSendQueue: TStringList;
     FSendQueueBytes: int64;
-    FAsyncWrites: boolean;
     FNativeRelay: TRemoteRelaySession;
     FNativeProtocol: TRemoteRelayProtocol;
 
     procedure ExecuteNative;
     procedure FlushNativeWrites;
     function SendNativeMessage(Message: TJSONObject): boolean;
-    procedure HandleLine(const Line: string);
     procedure HandleMessage(Obj: TJSONObject);
     procedure HandlePlayerAssigned(Obj: TJSONObject);
     procedure HandlePlayersSnapshot(Obj: TJSONObject);
@@ -167,9 +147,6 @@ type
     procedure SendSongResumed(SongSeq: integer; MediaStartUs: int64; DurationUs: int64);
     procedure SendSongEnded(SongSeq: integer; MediaStartUs: int64; DurationUs: int64);
     procedure SendLine(const Line: string);
-    procedure WriteLine(const Line: string);
-    procedure FlushWrites;
-    procedure CloseSocket;
   protected
     procedure Execute; override;
   public
@@ -345,8 +322,6 @@ end;
 constructor TRemoteBridgeIPC.Create;
 begin
   inherited;
-  FHost := DEFAULT_BRIDGE_HOST;
-  FPort := DEFAULT_BRIDGE_PORT;
   InitCriticalSection(FStatusLock);
 end;
 
@@ -641,38 +616,19 @@ begin
   inherited Create(true);
   FreeOnTerminate := false;
   FOwner := Owner;
-  InitCriticalSection(FSocketLock);
   InitCriticalSection(FQueueLock);
   FSendQueue := TStringList.Create;
-  FAsyncWrites := PhoneAudio.Enabled or NativeRelayRequested;
 end;
 
 destructor TRemoteBridgeIPCThread.Destroy;
 begin
-  CloseSocket;
   FSendQueue.Free;
   DoneCriticalSection(FQueueLock);
-  DoneCriticalSection(FSocketLock);
   inherited;
-end;
-
-procedure TRemoteBridgeIPCThread.CloseSocket;
-begin
-  EnterCriticalSection(FSocketLock);
-  try
-    FreeAndNil(FSocket);
-  finally
-    LeaveCriticalSection(FSocketLock);
-  end;
 end;
 
 procedure TRemoteBridgeIPCThread.SendLine(const Line: string);
 begin
-  if not FAsyncWrites then
-  begin
-    WriteLine(Line);
-    Exit;
-  end;
   // Never let socket backpressure block the game/render/audio consumer thread.
   EnterCriticalSection(FQueueLock);
   try
@@ -686,52 +642,6 @@ begin
     Inc(FSendQueueBytes, Length(Line));
   finally
     LeaveCriticalSection(FQueueLock);
-  end;
-end;
-
-procedure TRemoteBridgeIPCThread.FlushWrites;
-var I: integer;
-    Line: string;
-begin
-  if not FAsyncWrites then Exit;
-  for I := 1 to 4 do
-  begin
-    EnterCriticalSection(FQueueLock);
-    try
-      if FSendQueue.Count = 0 then Exit;
-      Line := FSendQueue[0];
-      FSendQueue.Delete(0);
-      Dec(FSendQueueBytes, Length(Line));
-    finally
-      LeaveCriticalSection(FQueueLock);
-    end;
-    FSocket.IOTimeout := 1000;
-    WriteLine(Line);
-    FSocket.IOTimeout := 20;
-    if FSocketFailed then Exit;
-  end;
-end;
-
-procedure TRemoteBridgeIPCThread.WriteLine(const Line: string);
-var Written, Count: integer;
-begin
-  EnterCriticalSection(FSocketLock);
-  try
-    if (FSocket = nil) or FSocketFailed then Exit;
-    try
-      Written := 0;
-      while Written < Length(Line) do
-      begin
-        Count := FSocket.Write(Line[Written + 1], Length(Line) - Written);
-        if Count <= 0 then raise Exception.Create('IPC write failed');
-        Inc(Written, Count);
-      end;
-    except
-      // The reader owns destruction. A sender must never free its live socket.
-      FSocketFailed := true;
-    end;
-  finally
-    LeaveCriticalSection(FSocketLock);
   end;
 end;
 
@@ -855,72 +765,8 @@ begin
 end;
 
 procedure TRemoteBridgeIPCThread.Execute;
-var
-  Buffer: array[0..READ_BUFFER_SIZE - 1] of char;
-  ReadCount: longint;
-  Chunk: string;
-  NewLinePos: integer;
-  ReadError: integer;
-  Line: string;
 begin
-  if NativeRelayRequested then
-  begin
-    ExecuteNative;
-    Exit;
-  end;
-  while (not Terminated) do
-  begin
-    try
-      EnterCriticalSection(FSocketLock);
-      try
-        FSocket := TInetSocket.Create(FOwner.Host, FOwner.Port, CONNECT_TIMEOUT_MS);
-        if FAsyncWrites then FSocket.IOTimeout := 20 else FSocket.IOTimeout := 1000;
-        FSocketFailed := false;
-      finally
-        LeaveCriticalSection(FSocketLock);
-      end;
-      SendLine('{"type":"bridge.ping","protocol":1}' + #10);
-      FLineBuffer := '';
-
-      while (not Terminated) and not FSocketFailed do
-      begin
-        FlushWrites;
-        if FSocketFailed then Break;
-        ReadCount := FSocket.Read(Buffer, SizeOf(Buffer));
-        if ReadCount < 0 then
-        begin
-          ReadError := SocketError;
-          {$IFDEF MSWINDOWS}
-          if (ReadError = WSAETIMEDOUT) or (ReadError = WSAEWOULDBLOCK) then
-          {$ELSE}
-          if (ReadError = ESysEAGAIN) or (ReadError = ESysEWOULDBLOCK) then
-          {$ENDIF}
-            Continue;
-          Break;
-        end;
-        if ReadCount = 0 then
-          Break;
-
-        SetString(Chunk, PChar(@Buffer[0]), ReadCount);
-        FLineBuffer := FLineBuffer + Chunk;
-        NewLinePos := Pos(#10, FLineBuffer);
-        while (NewLinePos > 0) do
-        begin
-          Line := Trim(Copy(FLineBuffer, 1, NewLinePos - 1));
-          Delete(FLineBuffer, 1, NewLinePos);
-          if (Line <> '') then
-            HandleLine(Line);
-          NewLinePos := Pos(#10, FLineBuffer);
-        end;
-      end;
-    except
-      // Connection failures are expected while the bridge is not running.
-    end;
-
-    CloseSocket;
-    if (not Terminated) then
-      Sleep(RECONNECT_DELAY_MS);
-  end;
+  ExecuteNative;
 end;
 
 function TRemoteBridgeIPCThread.SendNativeMessage(Message: TJSONObject): boolean;
@@ -1007,21 +853,6 @@ begin
     FreeAndNil(FNativeRelay);
     FreeAndNil(FNativeProtocol);
   end;
-end;
-
-procedure TRemoteBridgeIPCThread.HandleLine(const Line: string);
-var
-  Data: TJSONData;
-begin
-  Data := nil;
-  try
-    Data := GetJSON(Line);
-    if (Data <> nil) and (Data.JSONType = jtObject) then
-      HandleMessage(TJSONObject(Data));
-  except
-    // Ignore malformed bridge lines. The bridge/server handles diagnostics.
-  end;
-  FreeAndNil(Data);
 end;
 
 procedure TRemoteBridgeIPCThread.HandleMessage(Obj: TJSONObject);
