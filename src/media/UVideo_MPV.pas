@@ -949,6 +949,13 @@ begin
         RequestHardwareDecoding;
         Exit(true);
       end;
+      { keep-open holds a cleanly ended file instead of sending END_FILE.
+        Without a frame by then, none will arrive before the timeout. }
+      if fFileLoaded and fPlaybackStarted and fEndReached then
+      begin
+        Fail('libmpv reached the end without a video frame');
+        Exit;
+      end;
       SDL_Delay(1);
     until MonotonicTime >= deadline;
     Fail(Format('Timed out opening video with libmpv (loaded %s, started %s, %dx%d)',

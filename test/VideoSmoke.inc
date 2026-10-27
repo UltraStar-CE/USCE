@@ -214,6 +214,25 @@ begin
   CheckError('fallback video destruction');
   ConsoleWriteLn('PASS fallback: missing/corrupt files rejected, FFmpeg opens after libmpv failure');
 end;
+
+procedure TestVideoWithoutFrame;
+var Provider: IVideoPlayback; Video: IVideo; Started, Elapsed: cardinal;
+begin
+  Provider:=FindVideoProvider('MPV_Video');
+  Require(Provider<>nil,'missing MPV provider');
+  Require(Provider.Init,'cannot initialize MPV provider for end-of-file test');
+  ConsoleWriteLn('Testing libmpv end without a video frame');
+  Started:=SDL_GetTicks;
+  Video:=Provider.Open(Path(ParamStr(2)+'.noframe'));
+  Elapsed:=SDL_GetTicks-Started;
+  // The FFmpeg fallback may accept the file; only libmpv's wait is checked.
+  Video:=nil;
+  Provider.Finalize;
+  CheckError('end-of-file video destruction');
+  // libmpv's open timeout is 5 s; failing over must not wait for it.
+  Require(Elapsed<3000,'libmpv took '+IntToStr(Elapsed)+' ms to give up on a stream without frames');
+  ConsoleWriteLn('PASS libmpv end without a frame: gave up after '+IntToStr(Elapsed)+' ms');
+end;
 {$ENDIF}
 
 procedure Run;
@@ -315,6 +334,7 @@ begin
     TestVideo('MPV_Video');
     TestVideoStartup;
     TestVideoFallback;
+    TestVideoWithoutFrame;
     {$ENDIF}
   end;
   Renderer.Free; Renderer:=nil;

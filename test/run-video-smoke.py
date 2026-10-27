@@ -41,6 +41,17 @@ def make_fixture(destination):
         if encoder.wait() != 0:
             raise RuntimeError("Could not encode the video test fixture")
     destination.with_suffix(destination.suffix + ".corrupt").write_bytes(b"invalid video\n")
+    # A video stream that loads and ends without a decodable frame: dropping
+    # the only IDR slice leaves P frames that reference a missing picture.
+    frame = bytes(colors[0]) * (640 * 180) + bytes(colors[2]) * (640 * 180)
+    subprocess.run([
+        ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
+        "-f", "rawvideo", "-pixel_format", "rgb24", "-video_size", "640x360",
+        "-framerate", "25", "-i", "pipe:0",
+        "-c:v", "libx264", "-g", "250", "-bf", "0", "-x264-params", "scenecut=0",
+        "-pix_fmt", "yuv420p", "-bsf:v", "filter_units=remove_types=5",
+        "-f", "mp4", str(destination.with_suffix(destination.suffix + ".noframe"))
+    ], input=frame * 10, check=True)
 
 
 def main():
@@ -156,6 +167,9 @@ def main():
             if "Testing expected libmpv initialization failure" in output and \
                     "Using fallback FFmpeg_Video" not in output:
                 raise RuntimeError("The forced render-context failure did not use FFmpeg fallback")
+            if "Testing libmpv end without a video frame" in output and \
+                    "libmpv reached the end without a video frame" not in output:
+                raise RuntimeError("libmpv did not reject a stream that ended without a frame")
             if "Testing MPV_Video startup" in output:
                 if "Reusing libmpv player" not in output:
                     raise RuntimeError("The libmpv player was not reused across opens")
