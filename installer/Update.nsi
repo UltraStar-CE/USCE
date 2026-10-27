@@ -2,6 +2,8 @@
 ; UltraStar Community Edition Installer: Update
 ; ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~ ~+~
 
+Unicode true
+
 !include MUI2.nsh
 !include WordFunc.nsh 
 !include StrFunc.nsh
