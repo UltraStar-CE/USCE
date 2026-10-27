@@ -169,11 +169,17 @@ function ULuaScreenSing_GetPlayerNotes(L: Plua_State): Integer; cdecl;
 
 { ScreenSing.GetSongInfo - returns a table identifying the song that is
   currently being sung, or nil if there is none:
-    | Path: string     - absolute path of the song's directory
-    | FileName: string - absolute path of the song's .txt file
-    | Artist: string   - artist as given in the song header
-    | Title: string    - title as given in the song header
-  the path is authoritative; do not rebuild it from artist and title. }
+    | Path: string         - the song's directory, in the encoding the
+                             platform's file API expects, so Lua's io library
+                             can open it directly
+    | FileName: string     - the song's .txt file, same encoding
+    | PathUTF8: string     - the same directory as UTF-8, for display
+    | FileNameUTF8: string - the same file as UTF-8, for display
+    | Artist: string       - artist as given in the song header, UTF-8
+    | Title: string        - title as given in the song header, UTF-8
+  the path is authoritative; do not rebuild it from artist and title.
+  note that on Windows the native encoding is the ANSI code page, so a path
+  holding characters it can not represent is not openable from Lua at all. }
 function ULuaScreenSing_GetSongInfo(L: Plua_State): Integer; cdecl;
 
 const
