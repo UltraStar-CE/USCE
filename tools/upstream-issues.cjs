@@ -91,7 +91,7 @@ async function trackIssues({github, context, core, now = new Date()}) {
       'Assess applicability to current USCE, reproduction steps, workarounds and existing local reports. ' +
       'Record a decision, links to related USCE issues or PRs, and the reason before merging. ' +
       'An upstream report is not a verified USCE bug. This proposal does not change the game or post upstream.' +
-      (changes.remaining ? '\n\nAdditional changed reports remain for the next assessment.' : ''));
+      (changes.remaining ? '\n\nAdditional changed reports remain for the next assessment.' : ''), {reopenClosed: true});
     core.notice('Upstream issue assessment: ' + pr.html_url);
   }
 }
