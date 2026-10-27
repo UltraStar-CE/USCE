@@ -50,6 +50,54 @@ begin
     WriteLn(Size, ',', Size / 48:0:2, ',', Exact, ',', CorrectClass, ',49,', CpuUs / 49:0:1, ',', ResponseMs);
   end;
 end;
+// Measure acquisition of low-note changes through the actual rolling capture
+// buffer and game detector. This excludes transport, capture and frame scheduling.
+procedure TransitionWindowTest;
+const Sizes: array[0..1] of integer = (2048, 4096);
+var Size, Trial, Direction, J, Step, FirstMs, StableMs, Run, Expected,
+    InitialNote, FinalNote: integer;
+    Phase, Hz: double;
+    Block: array[0..479] of smallint;
+begin
+  Capture.PitchAlgorithm := PDA_CAMDF;
+  WriteLn('windowSamples,fromNote,toNote,phaseTrial,firstCorrectMs,threeConsecutiveCorrectMs,finalDetectedNote');
+  for Size in Sizes do
+  begin
+    Capture.AnalysisBufferSize := Size;
+    for Direction := 0 to 1 do
+      for Trial := 0 to 11 do
+      begin
+        InitialNote := Direction * 5;
+        FinalNote := (1 - Direction) * 5;
+        Phase := Trial * 2 * Pi / 12;
+        Hz := 440 * Power(2, (InitialNote - 33) / 12);
+        for J := 0 to High(Samples) do
+          Samples[J] := Round(8192 * Sin(2 * Pi * Hz * J / 48000 + Phase));
+        Capture.Clear;
+        Capture.SubmitPhonePcm(@Samples[0], Length(Samples));
+        FirstMs := -1; StableMs := -1; Run := 0;
+        Expected := FinalNote;
+        // Preserve oscillator phase at the transition, as the browser generator does.
+        Phase := Phase + 2 * Pi * Hz * Length(Samples) / 48000;
+        Hz := 440 * Power(2, (FinalNote - 33) / 12);
+        for Step := 0 to 29 do
+        begin
+          for J := 0 to High(Block) do
+            Block[J] := Round(8192 * Sin(2 * Pi * Hz * (Step * 480 + J) / 48000 + Phase));
+          Capture.SubmitPhonePcm(@Block[0], Length(Block));
+          Capture.AnalyzeBuffer;
+          if Capture.ToneValid and (Capture.ToneAbs mod 12 = Expected mod 12) then
+          begin
+            if FirstMs < 0 then FirstMs := (Step + 1) * 10;
+            Inc(Run);
+            if (Run = 3) and (StableMs < 0) then StableMs := (Step + 1) * 10;
+          end
+          else Run := 0;
+        end;
+        WriteLn(Size, ',', InitialNote, ',', FinalNote, ',', Trial, ',', FirstMs, ',', StableMs, ',', Capture.ToneAbs);
+      end;
+  end;
+end;
 procedure LowWindowTest;
 const Sizes: array[0..3] of integer = (512, 1024, 2048, 4096);
 var Size, Trial, Shape, J, Passed, Detector: integer;
@@ -125,6 +173,7 @@ begin
     WriteLn('Existing game detector: 25 pitch classes (220-880 Hz) and silence passed; octave alternatives=', OctaveAlternatives);
     if ParamStr(1) = '--benchmark' then Benchmark;
     if ParamStr(1) = '--low-window' then LowWindowTest;
+    if ParamStr(1) = '--transition-window' then TransitionWindowTest;
     if ParamStr(1) = '--live' then
     begin
       case StrToIntDef(GetEnvironmentVariable('USCE_AUDIO_WINDOW'), 4096) of
