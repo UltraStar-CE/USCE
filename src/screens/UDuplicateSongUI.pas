@@ -148,7 +148,6 @@ function TDuplicateSongPopup.Draw: boolean;
 begin
   Renderer.ClearFrameBuffer(CLEAR_DEPTH);
   Result := inherited Draw;
-  DrawDialogFocus;
 end;
 procedure CheckStartupSongIdentities(ContinueStartup: TStartupContinuation);
 begin
