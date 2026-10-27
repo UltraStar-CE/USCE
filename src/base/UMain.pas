@@ -105,7 +105,7 @@ uses
   UTime,
   UWebcam,
   ULibraryLockdown,
-  ULockdownUI, UDuplicateSongUI;
+  ULockdownUI, UDuplicateSongUI, ULockdownLaunch, USong, UScreenContinuousPlayback, Classes;
   //UVideoAcinerella;
 
 // starts singing the song given with the -song parameter
@@ -138,9 +138,60 @@ begin
   Display.CurrentScreen^.FadeTo(@ScreenSing);
 end;
 
+procedure StartLockedPlayback;
+var Selected: TList; FirstSong: TSong; I: integer; Error: UTF8String;
+begin
+  Error := Params.StartupError;
+  Selected := TList.Create;
+  try
+    if Error = '' then
+      CollectLaunchSongs(Params.PlaylistNames, PlaylistMan.Playlists,
+        CatSongs.Song, Selected, Error);
+    if Error = '' then
+    begin
+      FirstSong := TSong(Selected[0]);
+      if not ActivateLibraryLockdown(Selected, Params.LockdownPassword) then
+        Error := 'Could not activate library lockdown'
+      else
+      begin
+        for I := 0 to High(CatSongs.Song) do
+          CatSongs.Song[I].Visible := not CatSongs.Song[I].Main;
+        CatSongs.CatNumShow := -2;
+        CatSongs.ResetVisibleIndexCache;
+        for I := 0 to High(CatSongs.Song) do
+          if CatSongs.Song[I] = FirstSong then
+          begin
+            CatSongs.Selected := I;
+            ScreenSong.Interaction := I;
+            Break;
+          end;
+        ScreenName.LoadPlayersFromIni;
+        ScreenSing := TScreenSingController.Create;
+        Display.CurrentScreen := @ScreenSong;
+        if ScreenContinuousPlayback.Enabled <> 0 then
+          ScreenContinuousPlayback.BeginSession
+        else Display.CurrentScreen^.FadeTo(@ScreenSing);
+      end;
+    end;
+    if Error <> '' then
+    begin
+      Log.LogError(Error, 'Startup');
+      SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, 'USCE', PChar(Error), nil);
+      ExitCode := 1;
+      Display.Fade := 0;
+      Display.NextScreenWithCheck := nil;
+      Display.CheckOK := true;
+    end;
+  finally
+    Params.LockdownPassword := '';
+    Selected.Free;
+  end;
+end;
+
 procedure ContinueStartup;
 begin
-  if Params.Song.IsSet then StartSingleSong
+  if Params.Lockdown or (Params.StartupError <> '') then StartLockedPlayback
+  else if Params.Song.IsSet then StartSingleSong
   else SoundLib.StartBgMusic;
 end;
 
