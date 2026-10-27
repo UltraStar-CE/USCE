@@ -49,6 +49,23 @@ maintainers. Upstream issues and PRs use fully qualified references such as
 links both the source proposal and its USCE counterpart. Release notes retain
 relevant source references and attribution alongside links to the USCE changes.
 
+The same daily assessment also monitors the upstream USDX and Themes issue
+trackers, even when there are no new commits. Only reports created on or after
+the fixed cutoff in `doc/upstream/issues-watch.json` are included. Older issues
+stay excluded even when updated or reopened. Later activity on the new reports,
+including comments and changes of state, prompts reassessment. Titles, source
+links, description excerpts, labels and comment counts provide context for
+assessing bugs, regressions, feature requests and workarounds against current
+USCE. An upstream report is not automatically a confirmed USCE bug.
+
+Issue assessments contain up to 20 reports, with one outstanding assessment per
+source repository. Decisions and related USCE issue or PR links are recorded in
+`doc/upstream/usdx-issues.json` or `doc/upstream/themes-issues.json` before merge.
+Unchanged reports are not proposed again; new activity prompts reassessment and
+retains the prior decision. Closing an assessment without merging does not mark
+its reports as assessed. The workflow neither posts upstream nor generates or
+merges game changes from issue text, and requires no additional paid AI service.
+
 ## Validation and merge decisions
 
 Automated proposals follow our [contribution policy](CONTRIBUTING.md), including
