@@ -31,4 +31,4 @@ for program in sorted((bundle / 'Contents/MacOS').rglob('*')):
         command.append('--preserve-metadata=entitlements')
     subprocess.run(command + [str(program)], check=True)
 subprocess.run(['codesign','--force','--sign','-',str(bundle)], check=True)
-subprocess.run(['codesign','--verify','--deep','--strict',str(bundle)], check=True)
+subprocess.run(['codesign','--verify','--deep','--strict','--verbose=4',str(bundle)], check=True)

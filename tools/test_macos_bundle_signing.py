@@ -35,7 +35,7 @@ class BundleSigningTest(unittest.TestCase):
                 ['codesign', '--force', '--sign', '-',
                  '--preserve-metadata=entitlements', nested],
                 ['codesign', '--force', '--sign', '-', str(bundle)],
-                ['codesign', '--verify', '--deep', '--strict', str(bundle)],
+                ['codesign', '--verify', '--deep', '--strict', '--verbose=4', str(bundle)],
             ])
 
 
