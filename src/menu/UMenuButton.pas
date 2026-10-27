@@ -471,6 +471,14 @@ begin
     if Fade and (FadeTex <> nil) then
       Renderer.DrawTexture(FadeTex);
 
+    if SelectBool then
+    begin
+      BaseX := Texture.X; BaseY := Texture.Y;
+      BaseW := Texture.W; BaseH := Texture.H;
+      ResolveLayoutRect(BaseX, BaseY, BaseW, BaseH, Texture.ScaleMode);
+      DrawSelectionOutline(BaseX, BaseY, BaseW, BaseH, Texture.Z);
+    end;
+
     for T := 0 to High(Text) do
     begin
       Text[T].NameSuggestionWidth := W - 8;

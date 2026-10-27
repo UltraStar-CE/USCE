@@ -661,6 +661,12 @@ begin
     for SO := Low(TextOpt) to High(TextOpt) do
       TextOpt[SO].Draw;
   end;
+  if SelectBool and Visible then
+  begin
+    DrawSelectionOutline(Texture.X, Texture.Y,
+      Max(Texture.X + Texture.W, TextureSBG.X + TextureSBG.W) - Texture.X,
+      Max(Texture.H, TextureSBG.H), Max(Texture.Z, TextureSBG.Z));
+  end;
 end;
 
 procedure TSelectSlide.GenLines;
