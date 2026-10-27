@@ -580,16 +580,22 @@ var
   SingPlayer:             TThemeSingPlayer;
   DrawScorePanel:         boolean;
   ScoreMode:              TSingInfoBarMode;
-  function LastScoringLineFinished(const LyricLine: TLyricLine): boolean;
-  var WordIndex: integer;
+  function LastScoringLineFinished(TrackIndex: integer): boolean;
+  var
+    LineIndex, NoteIndex: integer;
   begin
-    Result := Assigned(LyricLine) and LyricLine.LastLine;
-    if not Result then Exit;
-    for WordIndex := 0 to High(LyricLine.Words) do
-      with LyricLine.Words[WordIndex] do
-        if not ScoreExcluded and (ScoreFactor[NoteType] > 0) and
-           (CurLyricsTime < GetTimeFromBeat(Start + Length)) then
-          Exit(false);
+    Result := false;
+    for LineIndex := High(CurrentSong.Tracks[TrackIndex].Lines) downto 0 do
+      with CurrentSong.Tracks[TrackIndex].Lines[LineIndex] do
+        if LastLine then
+        begin
+          for NoteIndex := 0 to High(Notes) do
+            with Notes[NoteIndex] do
+              if not ScoreExcluded and (ScoreFactor[NoteType] > 0) and
+                 (CurLyricsTime < GetTimeFromBeat(StartBeat + Duration)) then
+                Exit;
+          Exit(true);
+        end;
   end;
   procedure SetPlayerNameTexts(const Slots: TSlotArray; FirstPlayerIndex: integer; UseDuetNames: boolean);
   var
@@ -738,13 +744,12 @@ begin
   if not ScreenSing.SungToEnd then
   begin
     if not CurrentSong.isDuet then
-      ScreenSing.SungToEnd := LastScoringLineFinished(ScreenSing.Lyrics.GetUpperLine())
+      ScreenSing.SungToEnd := LastScoringLineFinished(0)
     else
     begin
       ScreenSing.SungToEnd := true;
       for ScorePlayerIndex := 0 to PlayersPlay - 1 do
-        if not LastScoringLineFinished(ScreenSing.VoiceLyrics[
-          Player[ScorePlayerIndex].Track].GetUpperLine()) then
+        if not LastScoringLineFinished(Player[ScorePlayerIndex].Track) then
           ScreenSing.SungToEnd := false;
     end;
   end;
