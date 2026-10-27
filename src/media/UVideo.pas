@@ -66,6 +66,7 @@ uses
   UGraphicClasses,
   UGraphic,
   URenderer,
+  UVideoPresenter,
   UPath;
 
 {$IF DEFINED(cpuarm)}
@@ -97,7 +98,7 @@ type
     function Open(const FileName: IPath): boolean;
   end;
 
-  TVideo_FFmpeg = class( TInterfacedObject, IVideo_FFmpeg )
+  TVideo_FFmpeg = class( TVideoPresenter, IVideo_FFmpeg )
   private
     fOpened: boolean;     //**< stream successfully opened
     fPaused: boolean;     //**< stream paused
@@ -114,25 +115,7 @@ type
     fAVFrame:     PAVFrame;
     fAVFrameRGB:  PAVFrame;
 
-    fFrameTex:    TTexture;
-    fFrameTexValid: boolean; //**< if true, fFrameTex contains the current frame
-    fTexWidth, fTexHeight: cardinal;
-    fScaledWidth, fScaledHeight: cardinal;
     fSwScaleContext: PSwsContext;
-    fScreen:          integer; //actual screen to draw on
-
-    fPosX:    double;
-    fPosY:    double;
-    fPosZ:    double;
-    fWidth:   double;
-    fHeight:  double;
-
-    fFrameRange:        TRectCoords;
-
-    fAlpha:             double;
-
-    fAspect: real;        //**< width/height ratio
-    fAspectCorrection: TAspectCorrection;
 
     fFrameDuration: extended; //**< duration of a video frame in seconds (= 1/fps)
     fFrameTime: extended; //**< video time position (absolute)
@@ -144,62 +127,27 @@ type
     function DecodeFrame(): boolean;
     procedure SynchronizeTime(Frame: PAVFrame; pts: double);
 
-    procedure GetVideoRect(var ScreenRect, TexRect: TRectCoords);
-    procedure DrawBorders(ScreenRect: TRectCoords);
-
     procedure ShowDebugInfo();
 
   public
     constructor Create;
     destructor Destroy; override;
 
-    function Open(const FileName: IPath): boolean;
-    procedure Close;
+    function Open(const FileName: IPath): boolean; override;
+    procedure Close; override;
 
-    procedure Play;
-    procedure Pause;
-    procedure Stop;
+    procedure Play; override;
+    procedure Pause; override;
+    procedure Stop; override;
 
-    procedure SetLoop(Enable: boolean);
-    function GetLoop(): boolean;
+    procedure SetLoop(Enable: boolean); override;
+    function GetLoop(): boolean; override;
 
-    procedure SetPosition(Time: real);
-    function GetPosition: real;
+    procedure SetPosition(Time: real); override;
+    function GetPosition: real; override;
 
-    procedure SetScreen(Screen: integer);
-    function GetScreen(): integer;
-
-    procedure SetScreenPosition(X, Y, Z: double);
-    procedure GetScreenPosition(var X, Y, Z: double);
-
-    procedure SetWidth(Width: double);
-    function GetWidth(): double;
-
-    procedure SetHeight(Height: double);
-    function GetHeight(): double;
-
-    {**
-     * Sub-image of the video frame to draw.
-     * This can be used for zooming or similar purposes.
-     *}
-     procedure SetFrameRange(Range: TRectCoords);
-     function GetFrameRange(): TRectCoords;
-
-     function GetFrameAspect(): real;
-
-     procedure SetAspectCorrection(AspectCorrection: TAspectCorrection);
-     function GetAspectCorrection(): TAspectCorrection;
-
-     procedure SetAlpha(Alpha: double);
-     function GetAlpha(): double;
-
-     procedure SetReflection(Enabled: boolean);
-     function GetReflection: boolean;
-     procedure SetReflectionSpacing(Spacing: double);
-     function GetReflectionSpacing(): double;
-
-     procedure GetFrame(Time: Extended);
-     procedure Draw();
+    procedure GetFrame(Time: Extended); override;
+    procedure Draw(); override;
   end;
 
   TVideoPlayback_FFmpeg = class( TInterfacedObject, IVideoPlayback )
@@ -392,12 +340,14 @@ end;
 
 constructor TVideo_FFmpeg.Create;
 begin
+  inherited Create;
   Reset();
 end;
 
 destructor TVideo_FFmpeg.Destroy;
 begin
   Close();
+  inherited Destroy;
 end;
 
 function TVideo_FFmpeg.Open(const FileName : IPath): boolean;
@@ -651,20 +601,7 @@ begin
   fLoop := false;
   fLoopTime := 0;
 
-  fScreen := 1;
-
-  fPosX := 0;
-  fPosY := 0;
-  fPosZ := 0;
-  fWidth := RenderW;
-  fHeight := RenderH;
-
-  fFrameRange.Left := 0;
-  fFrameRange.Right := 1;
-  fFrameRange.Upper := 0;
-  fFrameRange.Lower := 1;
-
-  fAlpha := 1;
+  ResetPresentation;
 end;
 
 procedure TVideo_FFmpeg.Close;
@@ -1001,112 +938,8 @@ begin
   {$ENDIF}
 end;
 
-procedure TVideo_FFmpeg.GetVideoRect(var ScreenRect, TexRect: TRectCoords);
-var
-  ScreenAspect: double;  // aspect of screen resolution
-  ScaledVideoWidth, ScaledVideoHeight: double;
-
-begin
-  // Three aspects to take into account:
-  //  1. Screen/display resolution (e.g. 1920x1080 -> 16:9)
-  //  2. Render aspect (fWidth x fHeight -> variable)
-  //  3. Movie aspect (video frame aspect stored in fAspect)
-  ScreenAspect := (fWidth*VertexW)/(fHeight*VertexH);
-
-  case fAspectCorrection of
-    acoCrop: begin
-      if (ScreenAspect >= fAspect) then
-      begin
-        ScaledVideoWidth  := fWidth;
-        ScaledVideoHeight := fHeight * ScreenAspect/fAspect;
-      end else
-      begin
-        ScaledVideoHeight := fHeight;
-        ScaledVideoWidth  := fWidth * fAspect/ScreenAspect;
-      end;
-    end;
-
-    acoHalfway: begin
-      ScaledVideoWidth  := (fWidth + fWidth * fAspect/ScreenAspect)/2;
-      ScaledVideoHeight := (fHeight + fHeight * ScreenAspect/fAspect)/2;
-    end;
-
-    acoLetterBox: begin
-      if (ScreenAspect <= fAspect) then
-      begin
-        ScaledVideoWidth  := fWidth;
-        ScaledVideoHeight := fHeight * ScreenAspect/fAspect;
-      end else
-      begin
-        ScaledVideoHeight := fHeight;
-        ScaledVideoWidth  := fWidth * fAspect/ScreenAspect;
-      end;
-    end else
-      raise Exception.Create('Unhandled aspect correction!');
-  end;
-
-  //center video
-  ScreenRect.Left  := (fWidth - ScaledVideoWidth) / 2 + fPosX;
-  ScreenRect.Right := ScreenRect.Left + ScaledVideoWidth;
-  ScreenRect.Upper := (fHeight - ScaledVideoHeight) / 2 + fPosY;
-  ScreenRect.Lower := ScreenRect.Upper + ScaledVideoHeight;
-
-  // texture contains right/lower (power-of-2) padding.
-  // Determine the texture coords of the video frame.
-  TexRect.Left  := (fScaledWidth / fTexWidth) * fFrameRange.Left;
-  TexRect.Right := (fScaledWidth / fTexWidth) * fFrameRange.Right;
-  TexRect.Upper := (fScaledHeight / fTexHeight) * fFrameRange.Upper;
-  TexRect.Lower := (fScaledHeight / fTexHeight) * fFrameRange.Lower;
-end;
-
-procedure TVideo_FFmpeg.DrawBorders(ScreenRect: TRectCoords);
-var
-  QuadList: TQuadList;
-
-  procedure DrawRect(left, right, upper, lower: single);
-  begin
-    SetLength(QuadList, Length(QuadList) + 1);
-    with QuadList[High(QuadList)] do
-    begin
-      X := left;
-      Y := upper;
-      Z := fPosZ;
-      W := right - left;
-      H := lower - upper;
-      Gradient := gdNone;
-      ColR := 0;
-      ColG := 0;
-      ColB := 0;
-      Alpha := fAlpha;
-    end;
-  end;
-begin
-  //upper border
-  if(ScreenRect.Upper > fPosY) then
-    DrawRect(fPosX, fPosX+fWidth, fPosY, ScreenRect.Upper);
-
-  //lower border
-  if(ScreenRect.Lower < fPosY+fHeight) then
-    DrawRect(fPosX, fPosX+fWidth, ScreenRect.Lower, fPosY+fHeight);
-
-  //left border
-  if(ScreenRect.Left > fPosX) then
-    DrawRect(fPosX, ScreenRect.Left, fPosY, fPosY+fHeight);
-
-  //right border
-  if(ScreenRect.Right < fPosX+fWidth) then
-    DrawRect(ScreenRect.Right, fPosX+fWidth, fPosY, fPosY+fHeight);
-
-  if (Length(QuadList) > 0 ) then
-    Renderer.DrawQuads(QuadList);
-end;
-
 procedure TVideo_FFmpeg.Draw();
-var
-  ScreenRect:   TRectCoords;
-  TexRect:      TRectCoords;
 begin
-  // exit if there's nothing to draw
   if (not fOpened) then
     Exit;
 
@@ -1114,35 +947,7 @@ begin
   Log.BenchmarkStart(15);
   {$ENDIF}
 
-  // get texture and screen positions
-  GetVideoRect(ScreenRect, TexRect);
-
-  Renderer.SetScissorRect(
-    round(fPosX*VertexW + (ScreenWPerScreen)*(fScreen-1)),
-    round((RenderH-fPosY-fHeight)*VertexH),
-    round(fWidth*VertexW),
-    round(fHeight*VertexH)
-    );
-
-  Renderer.ScissorTest := true;
-  with fFrameTex do
-  begin
-    X := ScreenRect.Left;
-    Y := ScreenRect.Upper;
-    Z := fPosZ;
-    W := ScreenRect.Right - ScreenRect.Left;
-    H := ScreenRect.Lower - ScreenRect.Upper;
-    Alpha := fAlpha;
-    TexX1 := TexRect.Left;
-    TexY1 := TexRect.Upper;
-    TexX2 := TexRect.Right;
-    TexY2 := TexRect.Lower;
-  end;
-  Renderer.DrawTexture(fFrameTex);
-
-  //draw black borders
-  DrawBorders(ScreenRect);
-  Renderer.ScissorTest := false;
+  inherited Draw();
 
   {$IFDEF VideoBenchmark}
   Log.BenchmarkEnd(15);
@@ -1261,124 +1066,6 @@ begin
   Result := fFrameTime;
 end;
 
-procedure TVideo_FFmpeg.SetScreen(Screen: integer);
-begin
-  fScreen := Screen;
-end;
-
-function TVideo_FFmpeg.GetScreen(): integer;
-begin
-  Result := fScreen;
-end;
-
-
-procedure TVideo_FFmpeg.SetScreenPosition(X, Y, Z: double);
-begin
-  fPosX := X;
-  fPosY := Y;
-  fPosZ := Z;
-end;
-
-procedure TVideo_FFmpeg.GetScreenPosition(var X, Y, Z: double);
-begin
-  X := fPosX;
-  Y := fPosY;
-  Z := fPosZ;
-end;
-
-
-procedure TVideo_FFmpeg.SetWidth(Width: double);
-begin
-  fWidth := Width;
-end;
-
-function TVideo_FFmpeg.GetWidth(): double;
-begin
-  Result := fWidth;
-end;
-
-
-procedure TVideo_FFmpeg.SetHeight(Height: double);
-begin
-  fHeight := Height;
-end;
-
-function TVideo_FFmpeg.GetHeight(): double;
-begin
-  Result := fHeight;
-end;
-
-
-procedure TVideo_FFmpeg.SetFrameRange(Range: TRectCoords);
-begin
-  fFrameRange := Range;
-end;
-
-function TVideo_FFmpeg.GetFrameRange(): TRectCoords;
-begin
-  Result := fFrameRange;
-end;
-
-
-function TVideo_FFmpeg.GetFrameAspect(): real;
-begin
-  Result := fAspect;
-end;
-
-
-procedure TVideo_FFmpeg.SetAspectCorrection(AspectCorrection: TAspectCorrection);
-begin
-  fAspectCorrection := AspectCorrection;
-end;
-
-function TVideo_FFmpeg.GetAspectCorrection(): TAspectCorrection;
-begin
-  Result := fAspectCorrection;
-end;
-
-procedure TVideo_FFmpeg.SetAlpha(Alpha: double);
-begin
-  fAlpha := Alpha;
-
-  if (fAlpha>1) then
-    fAlpha := 1;
-
-  if (fAlpha<0) then
-    fAlpha := 0;
-end;
-
-function TVideo_FFmpeg.GetAlpha(): double;
-begin
-  Result := fAlpha;
-end;
-
-procedure TVideo_FFmpeg.SetReflection(Enabled: boolean);
-begin
-  if (assigned(fFrameTex)) then
-    fFrameTex.Reflection := Enabled
-end;
-
-function TVideo_FFmpeg.GetReflection: boolean;
-begin
-  if (assigned(fFrameTex)) then
-    Result := fFrameTex.Reflection
-  else
-    Result := false;
-end;
-
-procedure TVideo_FFmpeg.SetReflectionSpacing(Spacing: double);
-begin
-  if (assigned(fFrameTex)) then
-    fFrameTex.ReflectionSpacing:= Spacing;
-end;
-
-function TVideo_FFmpeg.GetReflectionSpacing(): double;
-begin
-  if (assigned(fFrameTex)) then
-    Result := fFrameTex.ReflectionSpacing
-  else
-    Result := 0;
-end;
 
 
 initialization

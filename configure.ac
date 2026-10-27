@@ -116,6 +116,17 @@ AC_ARG_WITH([libprojectM],
       [enable projectM visualization support @<:@default=no@:>@])],
     [with_libprojectM=$withval], [with_libprojectM="no"])
 
+# add optional hardware video backend
+AC_ARG_WITH([mpv],
+    [AS_HELP_STRING([--with-mpv],
+      [enable optional libmpv video playback @<:@default=no@:>@])],
+    [with_mpv=$withval], [with_mpv="no"])
+
+case "$with_mpv" in
+    yes|no|check|nocheck) ;;
+    *) AC_MSG_ERROR([bad value "$with_mpv" for --with-mpv; use yes, no, check, or nocheck]) ;;
+esac
+
 # add OpenCV option
 AC_ARG_WITH([opencv],
     [AS_HELP_STRING([--with-opencv],
@@ -378,6 +389,10 @@ libprojectM_PKG="projectM-4 >= 4.0"
 PKG_HAVE([libprojectM], [$libprojectM_PKG], no)
 AC_SUBST_DEFINE(HAVE_PROJECTM, $libprojectM_HAVE)
 PKG_VERSION([libprojectM], [$libprojectM_PKG])
+
+# libmpv is loaded at runtime so an unavailable library can fall back to FFmpeg.
+PKG_HAVE([mpv], [mpv >= 1.107.0], no)
+AC_SUBST_DEFINE(HAVE_MPV, $mpv_HAVE)
 
 opencv_core_standalone=no
 opencv_imgproc_standalone=no

@@ -282,37 +282,37 @@ begin
 end;
 
 // data used by the ...Locale() functions
-{$IF Defined(Linux) or Defined(FreeBSD)}
+{$IF Defined(Linux) or Defined(FreeBSD) or Defined(Darwin)}
 
 var
   PrevNumLocale: string;
 
 const
+  {$IF Defined(Linux)}
   LC_NUMERIC  = 1;
+  {$ELSE}
+  LC_NUMERIC  = 4;
+  {$IFEND}
 
 function setlocale(category: integer; locale: pchar): pchar; cdecl; external 'c' name 'setlocale';
 
 {$IFEND}
 
-// In Linux and maybe macOS some units (like cwstring) call setlocale(LC_ALL, '')
+// On Unix some units (like cwstring) call setlocale(LC_ALL, '')
 // to set the language/country specific locale (e.g. charset) for this application.
 // Unfortunately, LC_NUMERIC is set by this call too.
 // It defines the decimal-separator and other country-specific numeric settings.
 // This parameter is used by the C string-to-float parsing functions atof() and strtod().
-// After changing LC_NUMERIC some external C-based libs (like projectM) are not
+// After changing LC_NUMERIC some external C-based libs (like projectM and libmpv) are not
 // able to parse strings correctly
 // (e.g. in Germany "0.9" is not recognized as a valid number anymore but "0,9" is).
 // So we reset the numeric settings to the default ('C').
 // Note: The behaviour of Pascal parsing functions (e.g. strtofloat()) is not
 //   changed by this because it doesn't use the locale-settings.
-// TODO:
-// - Check if this is needed in macOS (at least the locale is set in cwstring)
-// - Find out which libs are concerned by this problem.
-//   If only projectM is concerned by this problem set and restore the numeric locale
-//   for each call to projectM instead of changing it globally.
+// libmpv requires this category to remain 'C' while its client API is in use.
 procedure SetDefaultNumericLocale();
 begin
-  {$IF Defined(LINUX) or Defined(FreeBSD)}
+  {$IF Defined(LINUX) or Defined(FreeBSD) or Defined(Darwin)}
   PrevNumLocale := setlocale(LC_NUMERIC, nil);
   setlocale(LC_NUMERIC, 'C');
   {$IFEND}
@@ -320,7 +320,7 @@ end;
 
 procedure RestoreNumericLocale();
 begin
-  {$IF Defined(LINUX) or Defined(FreeBSD)}
+  {$IF Defined(LINUX) or Defined(FreeBSD) or Defined(Darwin)}
   setlocale(LC_NUMERIC, PChar(PrevNumLocale));
   {$IFEND}
 end;
