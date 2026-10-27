@@ -2,7 +2,7 @@ program phone_audio_pitch_test;
 {$mode Delphi}{$H+}
 uses
   {$IFDEF UNIX}cthreads,{$ENDIF}
-  SysUtils, Math, UIni, URecord, UPhoneAudio;
+  SysUtils, Math, UIni, URecord, UPhoneAudio, UAudioCalibration;
 var Capture: TCaptureBuffer;
     Samples: array[0..4095] of smallint;
     I, Note, Count, OctaveAlternatives: integer;
@@ -98,6 +98,47 @@ begin
       end;
   end;
 end;
+procedure CalibrationDetectorTest;
+var Calibration: TAudioCalibration;
+    Fit: TAudioCalibrationResult;
+    Block: array[0..479] of smallint;
+    Frame, J, Tone: integer;
+    Phase, Hz: double;
+begin
+  Calibration := TAudioCalibration.Create;
+  try
+    Calibration.Start(1000000);
+    Capture.Clear;
+    Capture.AnalysisBufferSize := 4096;
+    Capture.PitchAlgorithm := PDA_CAMDF;
+    Phase := 0;
+    for Frame := 0 to 399 do
+    begin
+      for J := 0 to High(Block) do
+      begin
+        Tone := AudioCalibrationNote((int64(Frame) * 480 + J) * 1000000 div 48000);
+        Hz := 440 * Power(2, (Tone - 33) / 12);
+        Block[J] := Round(8192 * Sin(Phase));
+        Phase := Phase + 2 * Pi * Hz / 48000;
+      end;
+      Capture.SubmitPhonePcm(@Block[0], Length(Block));
+      Capture.AnalyzeBuffer;
+      // Add a known 80 ms digital transport delay. The detector adds its own
+      // measured transition delay; this is deliberately not an end-to-end test.
+      Calibration.Observe(1000000 + (Frame + 1) * 10000 + 80000,
+        Capture.ToneAbs, Capture.ToneValid);
+    end;
+    Fit := Calibration.Estimate(0);
+    WriteLn('calibrationAccepted=', Fit.Accepted, ' delayMs=', Fit.DelayMs,
+      ' uncertaintyMs=', Fit.UncertaintyMs, ' matches=', Fit.Matches,
+      ' observations=', Fit.Observations, ' injectedTransportMs=80');
+    if not Fit.Accepted then raise Exception.Create('Actual detector rejected the calibration ladder');
+    if (Fit.DelayMs < 80) or (Fit.DelayMs > 180) then
+      raise Exception.Create('Actual detector calibration delay is implausible');
+  finally
+    Calibration.Free;
+  end;
+end;
 procedure LowWindowTest;
 const Sizes: array[0..3] of integer = (512, 1024, 2048, 4096);
 var Size, Trial, Shape, J, Passed, Detector: integer;
@@ -174,6 +215,7 @@ begin
     if ParamStr(1) = '--benchmark' then Benchmark;
     if ParamStr(1) = '--low-window' then LowWindowTest;
     if ParamStr(1) = '--transition-window' then TransitionWindowTest;
+    if ParamStr(1) = '--calibration-window' then CalibrationDetectorTest;
     if ParamStr(1) = '--live' then
     begin
       case StrToIntDef(GetEnvironmentVariable('USCE_AUDIO_WINDOW'), 4096) of
