@@ -22,3 +22,15 @@ index 8d96484..455e8a1 100644
 -        CONFIGURE_COMMAND CC=${CC} CXX=${CXX} CFLAGS=${CFLAGS} CPPFLAGS=${CPPFLAGS} LDFLAGS=${LDFLAGS} <SOURCE_DIR>/configure --with-pic --disable-shared --enable-static --disable-bsdtar --disable-bsdcat --disable-bsdcpio --with-zlib --without-bz2lib --without-iconv --without-lz4 --without-lzma --without-lzo2 --without-nettle --without-openssl --without-xml2 --without-expat --prefix=<INSTALL_DIR> --libdir=<INSTALL_DIR>/lib ${EXTRA_CONFIGURE_FLAGS}
 +        CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env CC=${CC} CXX=${CXX} CFLAGS=${CFLAGS} CPPFLAGS=${CPPFLAGS} LDFLAGS=${LDFLAGS} <SOURCE_DIR>/configure --with-pic --disable-shared --enable-static --disable-bsdtar --disable-bsdcat --disable-bsdcpio --with-zlib --without-bz2lib --without-iconv --without-lz4 --without-lzma --without-lzo2 --without-nettle --without-openssl --without-xml2 --without-expat --prefix=<INSTALL_DIR> --libdir=<INSTALL_DIR>/lib ${EXTRA_CONFIGURE_FLAGS}
          BUILD_COMMAND ${MAKE}
+--- a/src/build-runtime.cmake
++++ b/src/build-runtime.cmake
+@@ -24,2 +24,4 @@
+ # must not include -flto in the following flags, otherwise the data sections will be stripped out
++# Custom commands need a list of compiler arguments, not one flag string.
++separate_arguments(runtime_dependency_cflags UNIX_COMMAND "${DEPENDENCIES_CFLAGS}")
+ set(runtime_cflags
+@@ -31,3 +33,3 @@
+     -I${PROJECT_SOURCE_DIR}/lib/libappimage/src/libappimage_hashlib/include
+-    ${DEPENDENCIES_CFLAGS}
++    ${runtime_dependency_cflags}
+ )

@@ -427,20 +427,20 @@ macos-app: all
 
 # Put the icon file into its particular place. 
 # Must be done BEFORE info.plist is created.
-	$(MKDIR) $(macos_bundle_path)/resources
-	$(INSTALL_DATA) icons/usce.icns $(macos_bundle_path)/resources/
+	$(MKDIR) $(macos_bundle_path)/Resources
+	$(INSTALL_DATA) icons/usce.icns $(macos_bundle_path)/Resources/
 
 # the info.plist file
 	$(INSTALL_DATA) $(USCE_SRC_DIR)/macos/Info.plist $(macos_bundle_path)/
 
 # Copy the resources. 
-	$(MAKE) install-all INSTALL_DATADIR=$(macos_bundle_path) bindir=$(macos_bundle_path)/MacOS
+	$(MAKE) install-all INSTALL_DATADIR=$(macos_bundle_path)/Resources bindir=$(macos_bundle_path)/MacOS
 
 # Copy the lua plugins. 
-	$(MAKE) install-plugins INSTALL_DATADIR=$(macos_bundle_path) bindir=$(macos_bundle_path)/MacOS
+	$(MAKE) install-plugins INSTALL_DATADIR=$(macos_bundle_path)/Resources bindir=$(macos_bundle_path)/MacOS
 
 # Create the song directory. 
-	$(MKDIR) $(macos_bundle_path)/songs
+	$(MKDIR) $(macos_bundle_path)/Resources/songs
 
 # final messages
 	@echo ""
@@ -493,7 +493,7 @@ macos-dmg: macos-standalone-app
 	find $(USCE_GAME_DIR) -name 'LICENSE.*' -maxdepth 1 -exec cp {} "/Volumes/UltraStar Community Edition/Licenses" \;
 #	/bin/cp "ultrastardx/icons/UltraStarDeluxeVolumeIcon.icns "/Volumes/UltraStar Community Edition/.VolumeIcon.icns"
 #	/Developer/Tools/SetFile -a C "/Volumes/UltraStar Community Edition/.VolumeIcon.icns" "/Volumes/UltraStar Community Edition"
-	codesign --force --deep --sign - "/Volumes/UltraStar Community Edition/UltraStar Community Edition.app"
+	codesign --verify --deep --strict "/Volumes/UltraStar Community Edition/UltraStar Community Edition.app"
 	python3 tools/detach_macos_image.py "$(HDIUTIL)" "/Volumes/UltraStar Community Edition" "UltraStar Community Edition.sparseimage"
 	$(HDIUTIL) convert "UltraStar Community Edition.sparseimage" -format UDBZ -o "UltraStar Community Edition.dmg"
 	$(RM) "UltraStar Community Edition.sparseimage"
