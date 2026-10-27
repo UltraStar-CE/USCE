@@ -1750,9 +1750,9 @@ begin
   // Oscilloscope
   Oscilloscope := ReadArrayIndex(IOscilloscope, IniFile, 'Graphics', 'Oscilloscope', 1);
 
-  // PitchTrace - continuous display of the singer's pitch, including
+  // PitchTrace - extend the normal sung bars through gaps, including
   // the gaps between notes where the game normally draws nothing
-  PitchTrace := ReadArrayIndex(IPitchTrace, IniFile, 'Graphics', 'PitchTrace', 1);
+  PitchTrace := ReadArrayIndex(IPitchTrace, IniFile, 'Graphics', 'PitchTrace', 0);
 
   // Spectrum
   //Spectrum := ReadArrayIndex(ISpectrum, IniFile, 'Graphics', 'Spectrum', IGNORE_INDEX, 'Off');
