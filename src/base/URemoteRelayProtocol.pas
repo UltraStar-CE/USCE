@@ -155,7 +155,7 @@ begin
 end;
 
 procedure TRemoteRelayProtocol.Replay;
-const Order: array[0..7] of string = ('input.state', 'game.state', 'screen.info',
+const Order: array[0..8] of string = ('input.state', 'game.state', 'api.state', 'screen.info',
   'playlist.state', 'song.select.state', 'song.clock', 'song.lyrics', 'score.sheet');
 var I: integer;
     Data: TJSONData;
@@ -376,7 +376,8 @@ end;
 
 function TRemoteRelayProtocol.FromGame(Message: TJSONObject): boolean;
 var Kind: string;
-    PublicMessage: TJSONObject;
+    PublicMessage, ApiState: TJSONObject;
+    FieldName: string;
     Media: int64;
     Previous, LibraryData: TJSONData;
 begin
@@ -389,6 +390,18 @@ begin
     begin
       FMediaSources.Replace(TJSONArray(LibraryData));
       FSongs.Replace(TJSONArray(LibraryData));
+      ApiState := TJSONObject.Create(['type', 'api.state', 'libraryHash', FSongs.Id,
+        'totalSongs', FSongs.Count]);
+      try
+        ApiState.Add('apiCapabilities', TJSONArray.Create(['song.list', 'continuous.start',
+          'continuous.queue', 'continuous.stop', 'continuous.skip']));
+        for FieldName in ['playlists', 'playlistItems', 'curPlaylist'] do
+          if Message.Find(FieldName) <> nil then
+            ApiState.Add(FieldName, Message.Find(FieldName).Clone);
+        StripLocalPaths(ApiState);
+        Cache(ApiState);
+        Send(ApiState);
+      finally ApiState.Free; end;
     end;
   end;
   // This is a private game-thread snapshot, never live screen state.

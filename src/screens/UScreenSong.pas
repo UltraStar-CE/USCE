@@ -417,24 +417,16 @@ var
   I: integer;
   Sent: integer;
   SongId: integer;
-  PlaylistIndex: integer;
   SongJson: string;
   ResultsJson: string;
   LibraryJson: string;
-  PlaylistsJson: string;
-  PlaylistItemsJson: string;
   Song: TSong;
-  CurrentPlaylist: integer;
-  PlaylistItemIndex: integer;
   PreviewSongId: integer;
   PreviewActive: boolean;
   PreviewPosition: real;
   StateChanged: boolean;
   IncludeFullState: boolean;
   BaseJson: string;
-  PlaylistSongId: integer;
-  PlaylistAudioPath: IPath;
-  PlaylistAudioSource: UTF8String;
 
   function BoolJson(Value: boolean): string;
   begin
@@ -506,52 +498,6 @@ begin
 
   LibraryJson := RemoteSongLibraryJson;
 
-  PlaylistsJson := '[';
-  for PlaylistIndex := 0 to High(PlaylistMan.Playlists) do
-  begin
-    if PlaylistIndex > 0 then
-      PlaylistsJson := PlaylistsJson + ',';
-    PlaylistsJson := PlaylistsJson +
-      '{"index":' + IntToStr(PlaylistIndex) +
-      ',"name":"' + RemoteJsonEscape(PlaylistMan.Playlists[PlaylistIndex].Name) + '"' +
-      ',"size":' + IntToStr(Length(PlaylistMan.Playlists[PlaylistIndex].Items)) +
-      ',"current":' + BoolJson(PlaylistIndex = PlaylistMan.CurPlaylist) +
-      '}';
-  end;
-  PlaylistsJson := PlaylistsJson + ']';
-
-  CurrentPlaylist := PlaylistMan.CurPlaylist;
-  PlaylistItemsJson := '[';
-  if (CurrentPlaylist >= 0) and (CurrentPlaylist <= High(PlaylistMan.Playlists)) then
-  begin
-    Sent := 0;
-    for PlaylistItemIndex := 0 to High(PlaylistMan.Playlists[CurrentPlaylist].Items) do
-    begin
-      if Sent > 0 then
-        PlaylistItemsJson := PlaylistItemsJson + ',';
-      PlaylistItemsJson := PlaylistItemsJson +
-        '{"itemIndex":' + IntToStr(PlaylistItemIndex) +
-        ',"songId":' + IntToStr(PlaylistMan.Playlists[CurrentPlaylist].Items[PlaylistItemIndex].SongID) +
-        ',"artist":"' + RemoteJsonEscape(PlaylistMan.Playlists[CurrentPlaylist].Items[PlaylistItemIndex].Artist) + '"' +
-        ',"title":"' + RemoteJsonEscape(PlaylistMan.Playlists[CurrentPlaylist].Items[PlaylistItemIndex].Title) + '"';
-      PlaylistSongId := PlaylistMan.Playlists[CurrentPlaylist].Items[PlaylistItemIndex].SongID;
-      if (PlaylistSongId >= 0) and
-         (PlaylistSongId <= High(CatSongs.Song)) and
-         Assigned(CatSongs.Song[PlaylistSongId]) then
-      begin
-        SelectRemoteAudio(CatSongs.Song[PlaylistSongId], PlaylistAudioPath, PlaylistAudioSource);
-        PlaylistItemsJson := PlaylistItemsJson +
-          ',"previewStart":' + StringReplace(FloatToStr(CatSongs.Song[PlaylistSongId].PreviewStart), ',', '.', []) +
-          ',"audioSource":"' + RemoteJsonEscape(PlaylistAudioSource) + '"' +
-          ',"audioPath":"' + RemoteJsonEscape(UTF8String(PlaylistAudioPath.ToNative)) + '"';
-      end;
-      PlaylistItemsJson := PlaylistItemsJson + '}';
-      Inc(Sent);
-      if Sent >= 50 then
-        Break;
-    end;
-  end;
-  PlaylistItemsJson := PlaylistItemsJson + ']';
 
   RemoteBridgeIPC.SendJsonMessage(
     BaseJson +
@@ -561,9 +507,7 @@ begin
     ',"playlistActive":' + BoolJson(CatSongs.CatNumShow = -3) +
     ',"results":' + ResultsJson +
     ',"library":' + LibraryJson +
-    ',"playlists":' + PlaylistsJson +
-    ',"playlistItems":' + PlaylistItemsJson +
-    ',"curPlaylist":' + IntToStr(PlaylistMan.CurPlaylist) +
+    RemotePlaylistFieldsJson +
     '}'
   );
 end;

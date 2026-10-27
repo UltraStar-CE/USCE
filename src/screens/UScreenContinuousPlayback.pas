@@ -250,8 +250,9 @@ begin
   try
     Parts.StrictDelimiter := true; Parts.Delimiter := ','; Parts.DelimitedText := string(SongIds);
     for I := 0 to Parts.Count - 1 do
+      // Remote queues use library IDs, independent of the current folder/search.
       if TryStrToInt(Parts[I], Id) and (Id >= 0) and (Id < Length(CatSongs.Song)) and
-        CatSongs.Song[Id].Visible and not CatSongs.Song[Id].Main then
+        Assigned(CatSongs.Song[Id]) and not CatSongs.Song[Id].Main then
       begin
         SetLength(Result, Length(Result)+1); Result[High(Result)] := Id;
       end;
@@ -266,7 +267,8 @@ var Selection: TPlaybackSongs; Options: TJSONData; Obj: TJSONObject;
   Ids: TJSONArray; I: integer; IdText: UTF8String;
 begin
   Result := false;
-  if Session.Active or (Display.CurrentScreen <> @ScreenSong) then Exit;
+  if Session.Active or ((Display.CurrentScreen <> @ScreenSong) and
+    (Display.CurrentScreen <> @ScreenMain)) then Exit;
   // Keep the legacy comma list for local callers; IPC sends the complete options.
   Obj := nil; Options := nil; IdText := SongIds;
   if (Length(SongIds) > 0) and (SongIds[1] = '{') then
@@ -289,6 +291,7 @@ begin
   if not Assigned(ScreenScore) then begin Theme.ThemeScoreLoad; ScreenScore := TScreenScore.Create; end;
   if not Assigned(ScreenSing) then ScreenSing := TScreenSingController.Create;
   ScreenSong.StopMusicPreview;
+  SoundLib.PauseBgMusic;
   ScreenSong.Mode := smNormal;
   ResultsOnly := false; RemoteOwned := true;
   Session.PlayerSeconds := DisplaySeconds[Ini.PlaybackProfiles[1].PlayerTime];

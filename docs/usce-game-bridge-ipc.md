@@ -543,8 +543,16 @@ Offsets must be nonnegative integers and limits must be integers from 1 to 100.
 Malformed pagination returns `invalid_page`. A non-string snapshot ID returns
 `invalid_snapshot`.
 
-The snapshot is populated from game song-selection updates. Before the first
-such update it is empty. Existing catalog transfer messages remain a separate
-compatibility protocol; clients must not assume that this command implements
-media transfer, search, votes or playlist mutation. The legacy local adapter
-does not yet implement this command.
+The game initializes the snapshot after library loading, independently of the
+active screen. A cached `api.state` event advertises `apiCapabilities`, the
+`libraryHash`, `totalSongs`, `playlists`, `playlistItems` and `curPlaylist`.
+It never includes private file paths or changes the current game screen.
+Song-selection updates refresh this metadata; joining clients receive it even
+before song selection has been opened.
+
+The `continuous.start` capability works from the main menu or song selection.
+Remote queues use library song IDs, independently of which songs are visible
+in the current folder/search; category entries are not playable. Normal
+continuous-mode player setup, results and highscore timing still apply.
+The query itself does not implement media transfer, votes or playlist mutation;
+those retain their separate commands and game-state restrictions.

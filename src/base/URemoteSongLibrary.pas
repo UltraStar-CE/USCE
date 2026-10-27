@@ -6,9 +6,10 @@ interface
 uses UPath, USong;
 function RemoteSongToJson(const SongIndex: integer): string;
 function RemoteSongLibraryJson: string;
+function RemotePlaylistFieldsJson: string;
 procedure SelectRemoteAudio(const Item: TSong; var AudioPath: IPath; var AudioSource: UTF8String);
 implementation
-uses Classes, SysUtils, Math, UIni, USongs, URemoteBridgeIPC;
+uses Classes, SysUtils, Math, UIni, USongs, UPlaylist, URemoteBridgeIPC;
 function BoolJson(Value: boolean): string;
 begin
   if Value then Result := 'true' else Result := 'false';
@@ -114,5 +115,64 @@ begin
     Stream.WriteString(']');
     Result := Stream.DataString;
   finally Stream.Free; end;
+end;
+function RemotePlaylistFieldsJson: string;
+var
+  PlaylistIndex, CurrentPlaylist, PlaylistItemIndex, PlaylistSongId, Sent: integer;
+  PlaylistsJson, PlaylistItemsJson: string;
+  PlaylistAudioPath: IPath;
+  PlaylistAudioSource: UTF8String;
+begin
+  if not Assigned(PlaylistMan) then
+    Exit(',"playlists":[],"playlistItems":[],"curPlaylist":-1');
+  PlaylistsJson := '[';
+  for PlaylistIndex := 0 to High(PlaylistMan.Playlists) do
+  begin
+    if PlaylistIndex > 0 then
+      PlaylistsJson := PlaylistsJson + ',';
+    PlaylistsJson := PlaylistsJson +
+      '{"index":' + IntToStr(PlaylistIndex) +
+      ',"name":"' + RemoteJsonEscape(PlaylistMan.Playlists[PlaylistIndex].Name) + '"' +
+      ',"size":' + IntToStr(Length(PlaylistMan.Playlists[PlaylistIndex].Items)) +
+      ',"current":' + BoolJson(PlaylistIndex = PlaylistMan.CurPlaylist) +
+      '}';
+  end;
+  PlaylistsJson := PlaylistsJson + ']';
+
+  CurrentPlaylist := PlaylistMan.CurPlaylist;
+  PlaylistItemsJson := '[';
+  if (CurrentPlaylist >= 0) and (CurrentPlaylist <= High(PlaylistMan.Playlists)) then
+  begin
+    Sent := 0;
+    for PlaylistItemIndex := 0 to High(PlaylistMan.Playlists[CurrentPlaylist].Items) do
+    begin
+      if Sent > 0 then
+        PlaylistItemsJson := PlaylistItemsJson + ',';
+      PlaylistItemsJson := PlaylistItemsJson +
+        '{"itemIndex":' + IntToStr(PlaylistItemIndex) +
+        ',"songId":' + IntToStr(PlaylistMan.Playlists[CurrentPlaylist].Items[PlaylistItemIndex].SongID) +
+        ',"artist":"' + RemoteJsonEscape(PlaylistMan.Playlists[CurrentPlaylist].Items[PlaylistItemIndex].Artist) + '"' +
+        ',"title":"' + RemoteJsonEscape(PlaylistMan.Playlists[CurrentPlaylist].Items[PlaylistItemIndex].Title) + '"';
+      PlaylistSongId := PlaylistMan.Playlists[CurrentPlaylist].Items[PlaylistItemIndex].SongID;
+      if (PlaylistSongId >= 0) and
+         (PlaylistSongId <= High(CatSongs.Song)) and
+         Assigned(CatSongs.Song[PlaylistSongId]) then
+      begin
+        SelectRemoteAudio(CatSongs.Song[PlaylistSongId], PlaylistAudioPath, PlaylistAudioSource);
+        PlaylistItemsJson := PlaylistItemsJson +
+          ',"previewStart":' + StringReplace(FloatToStr(CatSongs.Song[PlaylistSongId].PreviewStart), ',', '.', []) +
+          ',"audioSource":"' + RemoteJsonEscape(PlaylistAudioSource) + '"' +
+          ',"audioPath":"' + RemoteJsonEscape(UTF8String(PlaylistAudioPath.ToNative)) + '"';
+      end;
+      PlaylistItemsJson := PlaylistItemsJson + '}';
+      Inc(Sent);
+      if Sent >= 50 then
+        Break;
+    end;
+  end;
+  PlaylistItemsJson := PlaylistItemsJson + ']';
+
+  Result := ',"playlists":' + PlaylistsJson + ',"playlistItems":' + PlaylistItemsJson +
+    ',"curPlaylist":' + IntToStr(PlaylistMan.CurPlaylist);
 end;
 end.

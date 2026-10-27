@@ -46,7 +46,7 @@ begin
     Adapter.OnSend := Probe.Send;
     Adapter.OnGame := Probe.Receive;
     Adapter.Clock := TestClock;
-    Game('{"type":"song.library","library":[{"songId":3,"title":"Startup song","audioPath":"private.wav"}]}');
+    Game('{"type":"song.library","library":[{"songId":3,"title":"Startup song","audioPath":"private.wav"}],"playlists":[{"index":0,"name":"Startup list","size":0}],"playlistItems":[]}');
     Assert(Adapter.Songs.Count = 1, 'Generic API must be ready without opening song selection');
     Assert(Probe.Sent.Count = 0, 'Private library snapshots must never be broadcast');
     Game('{"type":"game.state","state":"player_setup","songSeq":0}');
@@ -73,8 +73,14 @@ begin
     Before := Probe.Received.Count;
     Relay('{"type":"game.state","state":"lobby","songSeq":0}');
     Assert(Probe.Received.Count = Before, 'Server roster cannot drive game screen');
+    Before := Probe.Sent.Count;
     Relay('{"type":"song.state.request"}');
-    Assert(TJSONObject(Probe.Sent.Items[Probe.Sent.Count-1]).Get('state', '') = 'player_setup');
+    Assert(TJSONObject(Probe.Sent.Items[Before]).Get('state', '') = 'player_setup');
+    Assert(TJSONObject(Probe.Sent.Items[Before+1]).Get('type', '') = 'api.state');
+    Assert(TJSONObject(Probe.Sent.Items[Before+1]).Arrays['playlists'].Objects[0].Get('name', '') = 'Startup list');
+    Assert(TJSONObject(Probe.Sent.Items[Before+1]).Find('library') = nil);
+    Assert(Pos('private.wav', Probe.Sent.Items[Before+1].AsJSON) = 0);
+
     Relay('{"type":"clock.sync.ping","playerId":"phone","clientSendUs":987654321.5}');
     Assert(TJSONObject(Probe.Sent.Items[Probe.Sent.Count-1]).Get('hostReceiveUs', int64(0)) = TestClock);
     Assert(TJSONObject(Probe.Sent.Items[Probe.Sent.Count-1]).Get('clientSendUs', double(0)) = 987654321.5);
