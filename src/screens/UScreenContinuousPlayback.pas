@@ -138,7 +138,7 @@ end;
 
 procedure TScreenContinuousPlayback.SyncProfile;
 begin
-  if LibraryLockdown.Active then
+  if Params.Lockdown and LibraryLockdown.Active then
   begin
     Enabled := 1;
     RepeatSelection := 1;
