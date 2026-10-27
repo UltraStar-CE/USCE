@@ -5,7 +5,6 @@
 !include MUI2.nsh
 !include WinVer.nsh
 !include LogicLib.nsh
-!include InstallOptions.nsh
 !include nsDialogs.nsh
 !include UAC.nsh
 
@@ -176,9 +175,7 @@ Var StartMenuFolder
 
 !insertmacro MUI_PAGE_INSTFILES
 
-; USDX Settings Page
-
-Page custom Settings
+; Game preferences are configured in-game.
 
 
 ; User data info
@@ -186,6 +183,23 @@ Page custom Settings
 Var UseAppData    ; true if APPDATA is used for user data, false for INSTDIR
 Var UserDataPath  ; Path to user data dir (e.g. $INSTDIR)
 Var ConfigIniPath ; Path to config.ini (e.g. "$INSTDIR\config.ini")
+
+; Uninstaller data-selection controls
+Var LABEL_COMPONENTS
+Var CHECKBOX_COVERS
+Var CB_COVERS_State
+Var CHECKBOX_AVATARS
+Var CB_AVATARS_State
+Var CHECKBOX_SCORES
+Var CB_SCORES_State
+Var CHECKBOX_CONFIG
+Var CB_CONFIG_State
+Var CHECKBOX_SCREENSHOTS
+Var CB_SCREENSHOTS_State
+Var CHECKBOX_PLAYLISTS
+Var CB_PLAYLISTS_State
+Var CHECKBOX_SONGS
+Var CB_SONGS_State
 
 ; Checks for write permissions on $INSTDIR\config.ini.
 ; This function creates $INSTDIR\config.use as a marker file if
@@ -224,79 +238,6 @@ end:
 	StrCpy $ConfigIniPath "$UserDataPath\config.ini"
 FunctionEnd
 
-Function Settings
-
-	; localize settings
-	
-	!insertmacro INSTALLOPTIONS_WRITE "Settings" "Field 17" "Text" "$(page_settings_config_title)"
-	!insertmacro INSTALLOPTIONS_WRITE "Settings" "Field 10" "Text" "$(page_settings_config_info)"
-	!insertmacro INSTALLOPTIONS_WRITE "Settings" "Field 1" "Text" "$(page_settings_fullscreen_label)"
-	!insertmacro INSTALLOPTIONS_WRITE "Settings" "Field 9" "Text" "$(page_settings_fullscreen_info)"
-	!insertmacro INSTALLOPTIONS_WRITE "Settings" "Field 2" "Text" "$(page_settings_language_label)"
-	!insertmacro INSTALLOPTIONS_WRITE "Settings" "Field 11" "Text" "$(page_settings_language_info)"
-	!insertmacro INSTALLOPTIONS_WRITE "Settings" "Field 3" "Text" "$(page_settings_resolution_label)"
-	!insertmacro INSTALLOPTIONS_WRITE "Settings" "Field 12" "Text" "$(page_settings_resolution_info)"
-	!insertmacro INSTALLOPTIONS_WRITE "Settings" "Field 4" "Text" "$(page_settings_tabs_label)"
-	!insertmacro INSTALLOPTIONS_WRITE "Settings" "Field 13" "Text" "$(page_settings_tabs_info)"
-	!insertmacro INSTALLOPTIONS_WRITE "Settings" "Field 14" "Text" "$(page_settings_sorting_label)"
-	!insertmacro INSTALLOPTIONS_WRITE "Settings" "Field 16" "Text" "$(page_settings_sorting_info)"
-	!insertmacro INSTALLOPTIONS_WRITE "Settings" "Field 18" "Text" "$(page_settings_songdir_label)"
-	!insertmacro INSTALLOPTIONS_WRITE "Settings" "Field 19" "Text" "$(page_settings_songdir_info)"
-
-	; Set default value
-	
-	!insertmacro INSTALLOPTIONS_WRITE "Settings" "Field 18" "State" "$INSTDIR\songs"
-	
-
-	; show dialog
-	!insertmacro MUI_HEADER_TEXT " " "$(page_settings_subtitle)"   
-	!insertmacro INSTALLOPTIONS_DISPLAY "Settings"
-	
-	; Get all the variables:
-
-	Var /GLOBAL LABEL_COMPONENTS
-
-	Var /GLOBAL CHECKBOX_COVERS
-	Var /GLOBAL CB_COVERS_State
-	Var /GLOBAL CHECKBOX_AVATARS
-	Var /GLOBAL CB_AVATARS_State
-	Var /GLOBAL CHECKBOX_SCORES
-	Var /GLOBAL CB_SCORES_State
-	Var /GLOBAL CHECKBOX_CONFIG
-	Var /GLOBAL CB_CONFIG_State
-	Var /GLOBAL CHECKBOX_SCREENSHOTS
-	Var /GLOBAL CB_SCREENSHOTS_State
-	Var /GLOBAL CHECKBOX_PLAYLISTS
-	Var /GLOBAL CB_PLAYLISTS_State
-	Var /GLOBAL CHECKBOX_SONGS 
-	Var /GLOBAL CB_SONGS_State
-
-	Var /GLOBAL fullscreen
-	Var /GLOBAL language2
-	Var /GLOBAL resolution
-	Var /GLOBAL tabs
-	Var /GLOBAL sorting
-	Var /GLOBAL songdir
-
-	!insertmacro INSTALLOPTIONS_READ $fullscreen "Settings" "Field 5" "State"
-	!insertmacro INSTALLOPTIONS_READ $language2 "Settings" "Field 6" "State"
-	!insertmacro INSTALLOPTIONS_READ $resolution "Settings" "Field 7" "State"
-	!insertmacro INSTALLOPTIONS_READ $tabs "Settings" "Field 8" "State"
-	!insertmacro INSTALLOPTIONS_READ $sorting "Settings" "Field 15" "State"
-	!insertmacro INSTALLOPTIONS_READ $songdir "Settings" "Field 18" "State"
-
-	WriteINIStr "$ConfigIniPath" "Game" "Language" "$language2"
-	WriteINIStr "$ConfigIniPath" "Game" "Tabs" "$tabs"
-	WriteINIStr "$ConfigIniPath" "Game" "Sorting" "$sorting"
-
-	WriteINIStr "$ConfigIniPath" "Graphics" "FullScreen" "$fullscreen"
-	WriteINIStr "$ConfigIniPath" "Graphics" "Resolution" "$resolution"
-
-	${If} $songdir != "$INSTDIR\songs"
-	WriteINIStr "$ConfigIniPath" "Directories" "SongDir1" "$songdir"
-	${EndIf}
-		
-FunctionEnd ; Settings page End
 
 !insertmacro MUI_PAGE_FINISH
 
@@ -655,8 +596,6 @@ Function .onInit
 continue:
 done:
 	!insertmacro MUI_LANGDLL_DISPLAY
-
-	!insertmacro INSTALLOPTIONS_EXTRACT_AS ".\settings\settings.ini" "Settings"
 
 FunctionEnd
 
