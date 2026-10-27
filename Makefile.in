@@ -493,7 +493,9 @@ macos-dmg: macos-standalone-app
 	find $(USCE_GAME_DIR) -name 'LICENSE.*' -maxdepth 1 -exec cp {} "/Volumes/UltraStar Community Edition/Licenses" \;
 #	/bin/cp "ultrastardx/icons/UltraStarDeluxeVolumeIcon.icns "/Volumes/UltraStar Community Edition/.VolumeIcon.icns"
 #	/Developer/Tools/SetFile -a C "/Volumes/UltraStar Community Edition/.VolumeIcon.icns" "/Volumes/UltraStar Community Edition"
-	codesign --verify --deep --strict --verbose=4 "/Volumes/UltraStar Community Edition/UltraStar Community Edition.app"
+# HFS+ normalizes Unicode filenames while copying from the build volume.
+# Seal resource names on the final filesystem, after that normalization.
+	python3 tools/sign-macos-bundle.py "/Volumes/UltraStar Community Edition/UltraStar Community Edition.app"
 	python3 tools/detach_macos_image.py "$(HDIUTIL)" "/Volumes/UltraStar Community Edition" "UltraStar Community Edition.sparseimage"
 	$(HDIUTIL) convert "UltraStar Community Edition.sparseimage" -format UDBZ -o "UltraStar Community Edition.dmg"
 	$(RM) "UltraStar Community Edition.sparseimage"
