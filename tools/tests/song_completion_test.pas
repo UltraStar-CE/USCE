@@ -2,7 +2,9 @@ program SongCompletionTest;
 {$mode Delphi}
 uses Classes, SysUtils, UMusic, USong, UNote, UPath, ULog;
 
-var Song: TSong; ChartFile: TextFile; I: integer; Chart: string;
+var Song: TSong; ChartFile: TextFile; I, Weight: integer; Chart: string;
+    Kind: TNoteType; BaseNote, TailMarker: char;
+const Markers: array[TNoteType] of char = ('F', ':', '*', 'R', 'G');
 
 procedure Check(Value: boolean; const MessageText: string);
 begin
@@ -78,6 +80,50 @@ begin
   Song.SetMedleyMode;
   Check(Song.Tracks[0].HighestScoredBeat = 12, 'medley rebuilds its scoring boundary');
   Check(Song.Tracks[0].Lines[0].Notes[0].ScoreExcluded, 'medley excludes earlier notes');
+  CheckLastLine(0);
+
+  // The last lyric line stays final regardless of whether its type scores.
+  for Kind := Low(TNoteType) to High(TNoteType) do
+    for Weight := 0 to 1 do
+    begin
+      ScoreFactor := StandardScoreFactor;
+      ScoreFactor[Kind] := Weight * 100;
+      if Kind = ntGolden then BaseNote := 'R' else BaseNote := '*';
+      TailMarker := Markers[Kind];
+      LoadChart(BaseNote + ' 0 4 9 scored' + LineEnding + '- 8' + LineEnding +
+        TailMarker + ' 8 8 9 tail' + LineEnding);
+      if Weight = 0 then
+        Check(Song.Tracks[0].HighestScoredBeat = 4, 'zero-weight final type is ignored')
+      else
+        Check(Song.Tracks[0].HighestScoredBeat = 16, 'positive-weight final type is required');
+      CheckLastLine(0);
+    end;
+
+  ScoreFactor := StandardScoreFactor;
+  LoadChart(': 0 4 9 first' + LineEnding + '- 8' + LineEnding +
+    ': 8 4 9 scored' + LineEnding + 'F 12 8 9 unscored tail in same line' + LineEnding);
+  Check(Song.Tracks[0].HighestScoredBeat = 12, 'mixed final line ignores only its unscored tail');
+  CheckLastLine(0);
+
+  ScoreFactor[ntNormal] := 0;
+  ScoreFactor[ntRap] := 0;
+  LoadChart('* 0 4 9 scored' + LineEnding + '- 8' + LineEnding +
+    'F 8 4 9 freestyle' + LineEnding + '- 16' + LineEnding +
+    ': 16 4 9 disabled normal' + LineEnding + '- 24' + LineEnding +
+    'R 24 4 9 disabled rap' + LineEnding);
+  Check(Song.Tracks[0].HighestScoredBeat = 4, 'multiple non-scoring final lines do not delay completion');
+  CheckLastLine(0);
+
+  ScoreFactor := StandardScoreFactor;
+  ScoreFactor[ntFreestyle] := 100;
+  LoadChart(': 0 4 9 before' + LineEnding + ': 8 4 9 inside' + LineEnding +
+    ': 16 4 9 excluded tail' + LineEnding);
+  Song.Medley.StartBeat := 8;
+  Song.Medley.EndBeat := 16;
+  Song.SetMedleyMode;
+  Check(Song.Tracks[0].Lines[0].Notes[2].ScoreExcluded, 'excluded tail remains in final lyric line');
+  Check(Song.Tracks[0].Lines[0].Notes[2].NoteType = ntFreestyle, 'medley converts excluded tail to freestyle');
+  Check(Song.Tracks[0].HighestScoredBeat = 12, 'excluded freestyle cannot score even with positive weight');
   CheckLastLine(0);
 
   Song.Free;
