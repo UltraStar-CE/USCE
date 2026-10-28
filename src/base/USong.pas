@@ -660,6 +660,8 @@ var
   ParamLyric:   UTF8String;
 
   NotesFound:   boolean;
+  NoteStart, NoteEnd: real;
+  NoteExcluded: boolean;
 
   procedure RemoveEmptyLinesFromTrack(const TrackIdx: integer);
   var
@@ -802,13 +804,18 @@ begin
             Param0 := 'F';
           end;
 
-          if (OutOfBoundsToFreestyle and (((Self.Start > 0) and (GetTimeFromBeat(Param1, Self) < Self.Start)) or ((AudioLength > 0) and (GetTimeFromBeat(Param1 + Param3, Self) >= AudioLength)))) then
+          NoteStart := GetTimeFromBeat((Param1 + Rel[CurrentTrack]) * Mult, Self);
+          NoteEnd := GetTimeFromBeat((Param1 + Rel[CurrentTrack] + Param2) * Mult, Self);
+          NoteExcluded := OutOfBoundsToFreestyle and
+            (((Self.Start > 0) and (NoteStart < Self.Start)) or
+             ((AudioLength > 0) and (NoteEnd >= AudioLength)));
+          if NoteExcluded then
           begin
             // convert to freestyle note
             Param0 := 'F';
             Log.LogSongError(
               Format('Note at "%s %d %d %d %s" is before audio start (%.2f < %.2f) or after audio end (%.2f >= %.2f) -> converted to freestyle note',
-              [Param0, Param1, Param2, Param3, ParamLyric, GetTimeFromBeat(Param1, Self), Self.Start, GetTimeFromBeat(Param1 + Param3, Self), AudioLength]),
+              [Param0, Param1, Param2, Param3, ParamLyric, NoteStart, Self.Start, NoteEnd, AudioLength]),
               'TSong.LoadSong'
             );
           end;
@@ -822,8 +829,7 @@ begin
             Break;
           end;
           ParseNote(CurrentTrack, Param0, (Param1+Rel[CurrentTrack]) * Mult, Param2 * Mult, Param3, ParamLyric,
-            OutOfBoundsToFreestyle and (((Self.Start > 0) and (GetTimeFromBeat(Param1, Self) < Self.Start)) or
-            ((AudioLength > 0) and (GetTimeFromBeat(Param1 + Param3, Self) >= AudioLength))));
+            NoteExcluded);
         end // if
 
         else

@@ -36,7 +36,7 @@ def main():
         env['PATH'] = str(args.library_dir.resolve()) + os.pathsep + env.get('PATH', '')
         if os.name != 'nt':
             env['LD_LIBRARY_PATH'] = str(args.library_dir.resolve()) + os.pathsep + env.get('LD_LIBRARY_PATH', '')
-        for name in ('song_completion_test',):
+        for name in ('song_completion_test', 'song_clipping_test'):
             subprocess.run(command + [str(ROOT / 'tools/tests' / (name + '.pas'))], cwd=ROOT / 'src', check=True)
             exe = out / (name + ('.exe' if os.name == 'nt' else ''))
             subprocess.run([str(exe), str(out)], env=env, check=True)
