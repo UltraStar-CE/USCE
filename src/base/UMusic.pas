@@ -164,6 +164,7 @@ type
     Number:      integer;
     NotesGAP:    integer;
     ScoreValue:  integer;
+    HighestScoredBeat: integer; // Highest beat of the last scored note (not including freestyle). The track is considered finished at this point
     Lines:       array of TLine;
   end;
 
