@@ -3123,6 +3123,7 @@ end;
 
 procedure TScreenSong.OnHide;
 begin
+  inherited;
   if not KeepPreviewMusicOnHide then
   begin
     // turn music volume to 100%
