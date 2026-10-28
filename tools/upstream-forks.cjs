@@ -61,9 +61,18 @@ async function trackForks({github, context, core, now = new Date()}) {
   const forks = activeForks(await github.paginate(github.rest.repos.listForks,
     {...source, sort: 'newest', per_page: 100}), now, ownRepository);
   const snapshots = [];
+  const unavailableForks = [];
   for (const fork of forks) {
     const [owner, repo] = fork.full_name.split('/');
-    const branches = await github.paginate(github.rest.repos.listBranches, {owner, repo, per_page: 100});
+    let branches;
+    try {
+      branches = await github.paginate(github.rest.repos.listBranches, {owner, repo, per_page: 100});
+    } catch (error) {
+      if (error.status !== 404) throw error;
+      unavailableForks.push(fork.full_name);
+      core.warning('Fork unavailable; not assessed: ' + fork.full_name);
+      continue;
+    }
     const seenHeads = new Set();
     for (const branch of branches.sort((a, b) => Number(b.name === fork.default_branch) - Number(a.name === fork.default_branch))) {
       const head = branch.commit?.sha;
@@ -84,6 +93,7 @@ async function trackForks({github, context, core, now = new Date()}) {
   }
   const changes = forkChanges(previous, snapshots);
   if (!changes) return;
+  changes.checkpoint.unavailableForks = unavailableForks;
   const identity = crypto.createHash('sha256').update(JSON.stringify(changes.batch.map(f => [f.repository, f.branch, f.head])))
     .digest('hex').slice(0, 12);
   const pr = await openDraft(github, context, {branch, sha, tree: commit.tree.sha}, prefix + identity,
@@ -93,7 +103,8 @@ async function trackForks({github, context, core, now = new Date()}) {
       '- [' + f.repository + '](' + f.compareUrl + '): ' + f.ahead + ' commits ahead of USDX').join('\n') +
     '\n\nThese comparisons identify commits outside upstream history, not necessarily features missing from USCE. ' +
     'The assessment records applicability, existing ports and related USCE issues or PRs. ' +
-    'This proposal contains metadata only and does not import code or post to other repositories.', {reopenClosed: true});
+    'This proposal contains metadata only and does not import code or post to other repositories.' +
+    (unavailableForks.length ? '\n\nUnavailable forks, not assessed: ' + unavailableForks.join(', ') : ''), {reopenClosed: true});
   core.notice('Fork assessment: ' + pr.html_url);
 }
 module.exports = {activeForks, forkChanges, trackForks};
