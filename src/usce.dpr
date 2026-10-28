@@ -307,6 +307,7 @@ uses
   UScreenEditSub          in 'screens\UScreenEditSub.pas',
   UScreenHighScores             in 'screens\UScreenHighScores.pas',
   UScreenSongMenu         in 'screens\UScreenSongMenu.pas',
+  UFilterPresets in 'base/UFilterPresets.pas',
   UScreenSongJumpto       in 'screens\UScreenSongJumpto.pas',
   UScreenStatMain         in 'screens\UScreenStatMain.pas',
   UScreenStatDetail       in 'screens\UScreenStatDetail.pas',

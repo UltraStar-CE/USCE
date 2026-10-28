@@ -30,7 +30,7 @@ unit UScreenSongJumpto;
 
 interface
 
-uses UMenu, USongs, USong, UThemes, sdl2, SysUtils, Classes, UMenuButton;
+uses UFilterPresets, UMenu, USongs, USong, UThemes, sdl2, SysUtils, Classes, UMenuButton;
 
 const
   FILTER_SLOTS = 3;
@@ -63,9 +63,16 @@ type
     fSuggestionX, fSuggestionY, fSuggestionW: single;
     fLastPlayed, fVisSongs, fFocus, fFirst, fPlaylist: integer;
     fRows: TSongFilterRows;
+    fPresetNames: TFilterPresetNames;
+    fPresetName: UTF8String;
+    fPresetPage: integer;
     fSlotKinds: array[0..FILTER_SLOTS-1] of integer;
     fInputs, fCategories: array[0..FILTER_SLOTS-1] of integer;
     fActions: array[0..3] of integer;
+    procedure OpenPresets;
+    procedure SavePreset;
+    procedure PromptPresetName;
+    procedure ChoosePreset(Index: integer);
     procedure UpdateSuggestions;
     procedure DrawSuggestions;
     procedure AcceptSuggestion;
@@ -97,7 +104,7 @@ implementation
 
 uses Math, UCommon, UDisplay, UFiles, UMusic, UGraphic, ULibraryLockdown, ULockdownUI,
   UHelp, UIni, ULanguage, ULog, UMain, UParty, URenderer, UPlaylist,
-  UScreenSong, UUnicodeUtils, UPath, UMenuInteract, UMenuText, UAge, UFilterTerms, Contnrs, sha1;
+  UScreenSong, UUnicodeUtils, UPath, UMenuInteract, UMenuText, UAge, UFilterTerms, Contnrs, sha1, UPlatform, UPathUtils, UScreenPopup;
 
 const ID = 'ID_016';
 
@@ -197,7 +204,8 @@ begin
     Button[fInputs[S]].Selected := (fFocus = R);
     SelectsS[fCategories[S]].Selected := (fFocus = R);
   end;
-  Button[fActions[0]].Visible := false;
+  Button[fActions[0]].Visible := true;
+  Button[fActions[0]].Text[0].Text := '';
   Button[fActions[1]].Text[0].Text := 'x';
   Button[fActions[2]].Visible := false;
   Button[fActions[3]].Text[0].Text := '';
@@ -207,7 +215,9 @@ begin
     Delta := (FILTER_SLOTS - Min(FILTER_SLOTS, Length(fRows))) * Theme.SongJumpto.RowSpacing;
     Text[0].Y := Theme.SongJumpto.TextFound.Y - Delta;
     for I := 0 to 3 do
-      if I = 0 then Button[fActions[I]].Y := Theme.SongJumpto.FilterActions[I].Y - Delta;
+      if (I = 0) and (Theme.SongJumpto.FilterActions[0].Y >=
+        Theme.SongJumpto.SelectSlideType.Y + FILTER_SLOTS * Theme.SongJumpto.RowSpacing) then
+        Button[fActions[I]].Y := Theme.SongJumpto.FilterActions[I].Y - Delta;
     I := Theme.SongJumpto.AutoHeightStatic - 1;
     if (I <= High(Statics)) and (I <= High(Theme.SongJumpto.Statics)) then
       Statics[I].Texture.H := Theme.SongJumpto.Statics[I].H - Delta;
@@ -266,10 +276,109 @@ begin
   Changed;
 end;
 
+function PresetStore: TFilterPresets;
+var Filename, Legacy: IPath;
+begin
+  ForceDirectories(PlaylistPath.ToNative);
+  Filename := PlaylistPath.Append('filter-presets.json');
+  Legacy := Platform.GetGameUserPath.Append('filter-presets.json');
+  if not Filename.Exists and Legacy.Exists then
+    if not Legacy.Rename(Filename) then
+      raise Exception.Create(Language.Translate('FILTER_PRESET_MOVE_ERROR'));
+  Result := TFilterPresets.Create(Filename);
+end;
+
+procedure PresetSaved(Value: boolean; Data: Pointer);
+begin
+  if Value then ScreenSongJumpto.SavePreset;
+  if ScreenSongJumpto.Visible then StartTextInput;
+end;
+
+procedure PresetNamed(Value: boolean; Data: Pointer);
+var Store: TFilterPresets;
+begin
+  if ScreenSongJumpto.Visible then StartTextInput;
+  if not Value then Exit;
+  ScreenSongJumpto.fPresetName := Trim(ScreenPopupInsertUser.Username);
+  if ScreenSongJumpto.fPresetName = '' then Exit;
+  try
+    Store := PresetStore;
+    try
+      if Store.Contains(ScreenSongJumpto.fPresetName) then
+        ScreenPopupCheck.ShowPopup(Format(Language.Translate('FILTER_PRESET_REPLACE'),
+          [ScreenSongJumpto.fPresetName]), @PresetSaved, nil)
+      else ScreenSongJumpto.SavePreset;
+    finally Store.Free; end;
+  except on E: Exception do ScreenPopupError.ShowPopup(E.Message); end;
+end;
+
+procedure PresetChosen(Value: integer; Data: Pointer);
+begin
+  if ScreenSongJumpto.Visible then StartTextInput;
+  if Value >= 0 then ScreenSongJumpto.ChoosePreset(Value);
+end;
+
+procedure TScreenSongJumpto.OpenPresets;
+var Store: TFilterPresets; Labels: array of UTF8String; I, Count, N: integer;
+begin
+  FlushChanges;
+  try
+    Store := PresetStore;
+    try fPresetNames := Store.Names; finally Store.Free; end;
+    fPresetPage := EnsureRange(fPresetPage, 0, Max(0, (Length(fPresetNames)-1) div 6));
+    Count := Min(6, Length(fPresetNames) - fPresetPage * 6);
+    SetLength(Labels, 1 + Count);
+    Labels[0] := Language.Translate('FILTER_PRESET_SAVE');
+    for I := 0 to Count-1 do Labels[I+1] := fPresetNames[fPresetPage*6+I];
+    if fPresetPage > 0 then
+    begin N := Length(Labels); SetLength(Labels,N+1); Labels[N] := Language.Translate('FILTER_PRESET_PREVIOUS'); end;
+    if (fPresetPage+1)*6 < Length(fPresetNames) then
+    begin N := Length(Labels); SetLength(Labels,N+1); Labels[N] := Language.Translate('FILTER_PRESET_NEXT'); end;
+    ScreenPopupInfo.ShowPopup(Language.Translate('FILTER_PRESET_TITLE'), Labels,
+      @PresetChosen, nil, 0, -1);
+  except on E: Exception do ScreenPopupError.ShowPopup(E.Message); end;
+end;
+
+procedure TScreenSongJumpto.ChoosePreset(Index: integer);
+var Count: integer; Store: TFilterPresets;
+begin
+  if Index = 0 then begin PromptPresetName; Exit; end;
+  Count := Min(6, Length(fPresetNames) - fPresetPage * 6);
+  if Index > Count then
+  begin
+    if (fPresetPage > 0) and (Index = Count+1) then Dec(fPresetPage)
+    else Inc(fPresetPage);
+    OpenPresets;
+    Exit;
+  end;
+  try
+    Store := PresetStore;
+    try fRows := Store.Load(fPresetNames[fPresetPage*6+Index-1]); finally Store.Free; end;
+    fFocus := 0; fFirst := 0;
+    Changed;
+    FlushChanges;
+  except on E: Exception do ScreenPopupError.ShowPopup(E.Message); end;
+end;
+
+procedure TScreenSongJumpto.PromptPresetName;
+begin
+  ScreenPopupInsertUser.ShowTextPrompt(Language.Translate('FILTER_PRESET_TITLE'),
+    'FILTER_PRESET_NAME_HINT', Language.Translate('FILTER_PRESET_SAVE'), @PresetNamed, nil);
+end;
+
+procedure TScreenSongJumpto.SavePreset;
+var Store: TFilterPresets;
+begin
+  try
+    Store := PresetStore;
+    try Store.Save(fPresetName, fRows); finally Store.Free; end;
+  except on E: Exception do ScreenPopupError.ShowPopup(E.Message); end;
+end;
+
 procedure TScreenSongJumpto.ActivateAction(Action: integer);
 begin
   case Action of
-    0: AddRow;
+    0: begin fPresetPage := 0; OpenPresets; end;
     1: begin SetLength(fRows, 1); fRows[0].Query := ''; fRows[0].Kind := fltAll;
          fFocus := 0; fFirst := 0; Changed; end;
     2: Visible := false;
@@ -280,8 +389,8 @@ end;
 procedure TScreenSongJumpto.MoveFocus(Direction: integer);
 begin
   fFocus := (fFocus + Direction + Length(fRows) + 4) mod (Length(fRows) + 4);
-  if (fFocus = Length(fRows)) or (fFocus = Length(fRows) + 2) then Inc(fFocus, Direction);
-  if (fFocus = Length(fRows)) or (fFocus = Length(fRows) + 2) then Inc(fFocus, Direction);
+  if fFocus = Length(fRows) + 2 then Inc(fFocus, Direction);
+  if fFocus = Length(fRows) + 2 then Inc(fFocus, Direction);
   RefreshRows;
 end;
 
@@ -527,6 +636,17 @@ begin
   for I := 0 to 3 do Outline(fActions[I]);
   DrawSuggestions;
   fFooter.DrawFG;
+  // Theme-positioned pushpin opens the saved filter sets.
+  X := Button[fActions[0]].X + Button[fActions[0]].W * 0.2;
+  Y := Button[fActions[0]].Y + Button[fActions[0]].H * 0.15;
+  W := Button[fActions[0]].W * 0.6;
+  H := Button[fActions[0]].H * 0.7;
+  Z := Button[fActions[0]].Z + 0.004;
+  Renderer.DrawQuad(X, Y, Z, W, H * 0.18, 0.9, 0.9, 0.9, 1);
+  Renderer.DrawLine(X+W*0.25, Y+H*0.18, X+W*0.2, Y+H*0.6, Z, 2, 0.9, 0.9, 0.9, 1);
+  Renderer.DrawLine(X+W*0.75, Y+H*0.18, X+W*0.8, Y+H*0.6, Z, 2, 0.9, 0.9, 0.9, 1);
+  Renderer.DrawLine(X, Y+H*0.6, X+W, Y+H*0.6, Z, 2, 0.9, 0.9, 0.9, 1);
+  Renderer.DrawLine(X+W*0.5, Y+H*0.6, X+W*0.5, Y+H, Z, 2, 0.9, 0.9, 0.9, 1);
   if Assigned(fLockIcons) then
   begin
     fLockIcons.Statics[0].Texture.X := Button[fActions[3]].X + Theme.SongJumpto.LockedIcon.X;
