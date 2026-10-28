@@ -790,6 +790,9 @@ type
     FilterActions: array[0..3] of TThemeButton;
     RowSpacing, AutoHeightStatic: integer;
     CenterVertical: boolean;
+    SuggestionWidth, SuggestionRowHeight, SuggestionMargin, SuggestionGap: integer;
+    SuggestionPanel: TThemeStatic;
+    SuggestionButton: TThemeButton;
     FocusColor: TRGB;
     FocusAlpha, FocusWidth: real;
     CustomLockIcons: boolean;
@@ -2988,6 +2991,18 @@ begin
     ThemeLoadStatic(SongJumpto.LockedIcon, 'SongJumptoLockedIcon');
     ThemeLoadStatic(SongJumpto.UnlockedIcon, 'SongJumptoUnlockedIcon');
   end;
+  if Length(SongJumpto.Statics) > 0 then
+    SongJumpto.SuggestionPanel := SongJumpto.Statics[0];
+  if ResolveThemeFile('SongJumptoSuggestionPanel') <> nil then
+    ThemeLoadStatic(SongJumpto.SuggestionPanel, 'SongJumptoSuggestionPanel');
+  SongJumpto.SuggestionButton := SongJumpto.ButtonSearchText;
+  if ResolveThemeFile('SongJumptoSuggestionButton') <> nil then
+    ThemeLoadButton(SongJumpto.SuggestionButton, 'SongJumptoSuggestionButton');
+  Sections := GetSectionList('SongJumptoSuggestions');
+  SongJumpto.SuggestionWidth := Max(80, ReadInteger(Sections, 'Width', 220));
+  SongJumpto.SuggestionRowHeight := Max(20, ReadInteger(Sections, 'RowHeight', 30));
+  SongJumpto.SuggestionMargin := Max(0, ReadInteger(Sections, 'Margin', 16));
+  SongJumpto.SuggestionGap := Max(0, ReadInteger(Sections, 'Gap', 8));
   Sections := GetSectionList('SongJumptoFilters');
   Legacy := Length(Sections) = 0;
   SongJumpto.RowSpacing := Max(1, ReadInteger(Sections, 'RowSpacing', 78));

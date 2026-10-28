@@ -82,6 +82,7 @@ type
     Query: UTF8String;
   end;
   TSongFilterRows = array of TSongFilterRow;
+  TSongFilterMask = array of boolean;
 
   TScore = record
     Name:   UTF8String;
@@ -150,6 +151,7 @@ type
 
     function SetFilter(FilterStr: UTF8String; Filter: TSongFilter): cardinal;
     function SetFilters(const Rows: TSongFilterRows): cardinal;
+    function FilterMask(const Rows: TSongFilterRows; ExceptRow: integer): TSongFilterMask;
   end;
 
 var
@@ -1086,6 +1088,34 @@ begin
     Song[LastVisChecked].VisibleIndex := LastVisIndex;
   end;
   Result := Song[Index].VisibleIndex;
+end;
+
+function TCatSongs.FilterMask(const Rows: TSongFilterRows; ExceptRow: integer): TSongFilterMask;
+var Saved: TSongFilterMask; I, R, Category: integer;
+begin
+  Result := nil;
+  // Nonempty SetFilter calls only change visibility. Never clear a filter here:
+  // that path restores playlist order and rebuilds category objects.
+  SetLength(Result, Length(Song));
+  SetLength(Saved, Length(Song));
+  Category := CatNumShow;
+  for I := 0 to High(Song) do
+  begin
+    Saved[I] := Song[I].Visible;
+    Result[I] := not Song[I].Main;
+  end;
+  try
+    for R := 0 to High(Rows) do
+      if (R <> ExceptRow) and (Trim(Rows[R].Query) <> '') then
+      begin
+        SetFilter(Rows[R].Query, Rows[R].Kind);
+        for I := 0 to High(Song) do Result[I] := Result[I] and Song[I].Visible;
+      end;
+  finally
+    for I := 0 to High(Song) do Song[I].Visible := Saved[I];
+    CatNumShow := Category;
+    ResetVisibleIndexCache;
+  end;
 end;
 
 function TCatSongs.SetFilters(const Rows: TSongFilterRows): cardinal;

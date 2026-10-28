@@ -30,31 +30,47 @@ unit UScreenSongJumpto;
 
 interface
 
-uses UMenu, USongs, USong, UThemes, sdl2, SysUtils;
+uses UMenu, USongs, USong, UThemes, sdl2, SysUtils, Classes, UMenuButton;
 
 const
   FILTER_SLOTS = 3;
   SEARCH_DEBOUNCE_MS = 200;
 
 type
+  TFilterSuggestionMenu = class(TMenu)
+  public
+    function Row(Index: integer): TButton;
+    function RowCount: integer;
+  end;
+
   TScreenSongJumpto = class(TMenu)
   private
     fVisible, fPlaylistSearch, fLockShortcutPending: boolean;
     fFooter, fLockIcons: TMenu;
-    fPending: boolean;
+    fSuggestions: TFilterSuggestionMenu;
+    fValues: TStringList;
+    fMatches: array of integer;
+    fSuggestionContext, fSuggestionQuery: UTF8String;
+    fSuggestionFocus, fPending: boolean;
     fChangedTick: cardinal;
+    fSuggestionIndex, fSuggestionFirst, fSuggestionRows: integer;
+    fSuggestionX, fSuggestionY, fSuggestionW: single;
     fLastPlayed, fVisSongs, fFocus, fFirst, fPlaylist: integer;
     fRows: TSongFilterRows;
     fSlotKinds: array[0..FILTER_SLOTS-1] of integer;
     fInputs, fCategories: array[0..FILTER_SLOTS-1] of integer;
     fActions: array[0..3] of integer;
+    procedure UpdateSuggestions;
+    procedure DrawSuggestions;
+    procedure AcceptSuggestion;
+    procedure FlushChanges;
+    function SuggestionPrefix: UTF8String;
     procedure SetVisible(Value: boolean);
     procedure SetTextFound(Count: cardinal; SelectedSong: TSong);
     function ApplyFilter: cardinal;
     function FilterSummary: UTF8String;
     procedure RefreshRows;
     procedure Changed;
-    procedure FlushChanges;
     procedure AddRow;
     procedure RemoveRow(Index: integer);
     procedure ActivateAction(Action: integer);
@@ -75,9 +91,19 @@ implementation
 
 uses Math, UCommon, UDisplay, UFiles, UMusic, UGraphic, ULibraryLockdown, ULockdownUI,
   UHelp, UIni, ULanguage, ULog, UMain, UParty, URenderer, UPlaylist,
-  UScreenSong, UUnicodeUtils, UPath, UMenuInteract;
+  UScreenSong, UUnicodeUtils, UPath, UMenuInteract, UMenuText, UAge, UFilterTerms;
 
 const ID = 'ID_016';
+
+function TFilterSuggestionMenu.Row(Index: integer): TButton;
+begin
+  Result := Button[Index];
+end;
+
+function TFilterSuggestionMenu.RowCount: integer;
+begin
+  Result := Length(Button);
+end;
 
 constructor TScreenSongJumpto.Create;
 var S, I: integer; Category: TThemeSelectSlide; Input: TThemeButton;
@@ -97,6 +123,12 @@ begin
   end;
   for I := 0 to 3 do
     fActions[I] := AddButton(Theme.SongJumpto.FilterActions[I]);
+  fValues := TStringList.Create;
+  fValues.Sorted := true;
+  fValues.CaseSensitive := true;
+  fSuggestions := TFilterSuggestionMenu.Create;
+  if Length(Theme.SongJumpto.Statics) > 0 then
+    fSuggestions.AddStatic(Theme.SongJumpto.SuggestionPanel);
   fFooter := TMenu.Create;
   fFooter.LoadFromTheme(Theme.SongJumpto.Footer);
   if Theme.SongJumpto.CustomLockIcons then
@@ -111,6 +143,8 @@ end;
 
 destructor TScreenSongJumpto.Destroy;
 begin
+  fValues.Free;
+  fSuggestions.Free;
   fLockIcons.Free;
   fFooter.Free;
   inherited;
@@ -190,6 +224,7 @@ procedure TScreenSongJumpto.Changed;
 begin
   fPending := true;
   fChangedTick := SDL_GetTicks;
+  fSuggestionFocus := false;
   RefreshRows;
 end;
 
@@ -233,7 +268,7 @@ begin
     1: begin SetLength(fRows, 1); fRows[0].Query := ''; fRows[0].Kind := fltAll;
          fFocus := 0; fFirst := 0; Changed; end;
     2: Visible := false;
-    3: begin FlushChanges; ToggleLibraryLockdown; end;
+    3: begin FlushChanges; ToggleLibraryLockdown; fSuggestionContext := #1; end;
   end;
 end;
 
@@ -251,6 +286,20 @@ var S: integer;
 begin
   Result := true;
   if not PressedDown then Exit;
+  if (PressedKey = SDLK_SPACE) and (SDL_GetModState and KMOD_CTRL <> 0) then
+  begin
+    FlushChanges;
+    UpdateSuggestions;
+    fSuggestionFocus := Length(fMatches) > 0;
+    Exit;
+  end;
+  if fSuggestionFocus then
+    case PressedKey of
+      SDLK_UP: begin fSuggestionIndex := Max(0, fSuggestionIndex - 1); Exit; end;
+      SDLK_DOWN: begin fSuggestionIndex := Min(High(fMatches), fSuggestionIndex + 1); Exit; end;
+      SDLK_RETURN: begin AcceptSuggestion; Exit; end;
+      SDLK_ESCAPE: begin fSuggestionFocus := false; SetLength(fMatches, 0); Exit; end;
+    end;
   if SDL_GetModState and KMOD_ALT <> 0 then
   begin
     case PressedKey of
@@ -317,6 +366,21 @@ var S, R, I: integer; LX, LY: real; Area: TMouseOverRect;
 begin
   Result := true;
   if not BtnDown then Exit;
+  if (Length(fMatches) > 0) and (X >= fSuggestionX) and
+    (X <= fSuggestionX + fSuggestionW) and (Y >= fSuggestionY) and
+    (Y < fSuggestionY + fSuggestionRows * Theme.SongJumpto.SuggestionRowHeight) then
+  begin
+    if (MouseButton = SDL_BUTTON_WHEELUP) or (MouseButton = SDL_BUTTON_WHEELDOWN) then fSuggestionFocus := false;
+    if MouseButton = SDL_BUTTON_WHEELUP then fSuggestionFirst := Max(0, fSuggestionFirst - 1)
+    else if MouseButton = SDL_BUTTON_WHEELDOWN then
+      fSuggestionFirst := Min(Max(0, Length(fMatches) - fSuggestionRows), fSuggestionFirst + 1)
+    else if MouseButton = SDL_BUTTON_LEFT then
+    begin
+      fSuggestionIndex := fSuggestionFirst + Trunc((Y - fSuggestionY) / Theme.SongJumpto.SuggestionRowHeight);
+      AcceptSuggestion;
+    end;
+    Exit;
+  end;
   if RightMbESC and (MouseButton = SDL_BUTTON_RIGHT) then begin Visible := false; Exit; end;
   if (MouseButton = SDL_BUTTON_WHEELUP) or (MouseButton = SDL_BUTTON_WHEELDOWN) then
   begin
@@ -395,6 +459,9 @@ procedure TScreenSongJumpto.OnShow;
 var Country: UTF8String;
 begin
   inherited;
+  fSuggestionContext := #1;
+  fSuggestionFocus := false;
+  SetLength(fMatches, 0);
   Help.SetHelpID(ID);
   Country := Ini.AgeCountry;
   if Country = '' then Country := Language.Translate('OPTION_VALUE_AGE_DEFAULT');
@@ -430,11 +497,13 @@ var I: integer; X, Y, W, H, Z: real;
   end;
 begin
   if fPending and (SDL_GetTicks - fChangedTick >= SEARCH_DEBOUNCE_MS) then FlushChanges;
+  if not fPending then UpdateSuggestions;
   if fLockShortcutPending and (SDL_GetModState and KMOD_ALT = 0) then
   begin
     fLockShortcutPending := false;
     FlushChanges;
     ToggleLibraryLockdown;
+    fSuggestionContext := #1;
   end;
   Renderer.ClearFrameBuffer(CLEAR_DEPTH);
   Result := inherited Draw;
@@ -443,6 +512,7 @@ begin
     Outline(fInputs[I]);
   end;
   for I := 0 to 3 do Outline(fActions[I]);
+  DrawSuggestions;
   fFooter.DrawFG;
   if Assigned(fLockIcons) then
   begin
@@ -468,6 +538,196 @@ begin
   Renderer.DrawLine(X+W*0.2, Y-H*0.8, X+W*0.8, Y-H*0.8, Z, 2, 0.9, 0.9, 0.9, 1);
   if LibraryLockdown.Active then
     Renderer.DrawLine(X+W*0.8, Y-H*0.8, X+W*0.8, Y, Z, 2, 0.9, 0.9, 0.9, 1);
+end;
+
+function CompareSuggestionValues(List: TStringList; A, B: integer): integer;
+begin
+  Result := PtrInt(List.Objects[B]) - PtrInt(List.Objects[A]);
+  if Result = 0 then Result := CompareStr(LowerCase(TransliterateToASCII(List[A])),
+    LowerCase(TransliterateToASCII(List[B])));
+  if Result = 0 then Result := CompareStr(List[A], List[B]);
+end;
+
+function TScreenSongJumpto.SuggestionPrefix: UTF8String;
+var Q: UTF8String; I: integer;
+begin
+  Result := '';
+  if (fFocus >= Length(fRows)) or (fRows[fFocus].Kind <> fltAge) then Exit;
+  Q := Trim(fRows[fFocus].Query);
+  I := Pos(':', Q);
+  if I > 0 then begin Result := Copy(Q, 1, I); Delete(Q, 1, I); end;
+  while (Q <> '') and (Q[1] in ['<', '>', '=']) do
+  begin Result := Result + Q[1]; Delete(Q, 1, 1); end;
+end;
+
+procedure TScreenSongJumpto.UpdateSuggestions;
+var Context, Query, Value, Region, Key: UTF8String;
+  I, J, K, Age: integer; Song: TSong;
+  Seen, Parts: TStringList; Mask: TSongFilterMask;
+  Kind: TSongFilter;
+  procedure AddValue(const Raw: UTF8String);
+  var V: UTF8String; N: integer;
+  begin
+    V := Trim(Raw);
+    if (V = '') or (Seen.IndexOf(V) >= 0) then Exit;
+    Seen.Add(V);
+    if not fValues.Find(V, N) then fValues.AddObject(V, TObject(PtrInt(1)))
+    else fValues.Objects[N] := TObject(PtrInt(fValues.Objects[N]) + 1);
+  end;
+begin
+  if (fFocus >= Length(fRows)) or (fRows[fFocus].Kind = fltAll) then
+  begin fSuggestionFocus := false; Exit; end;
+  Kind := fRows[fFocus].Kind;
+  Region := Ini.AgeCountry;
+  Query := fRows[fFocus].Query;
+  if Kind = fltAge then
+  begin
+    I := Pos(':', Query);
+    if I > 0 then Region := UpperCase(Trim(Copy(Query, 1, I - 1)));
+  end;
+  Context := IntToStr(fFocus) + ':' + IntToStr(Ord(Kind)) + ':' + Region;
+  for I := 0 to High(fRows) do
+    if I <> fFocus then Context := Context + '|' + IntToStr(Ord(fRows[I].Kind)) +
+      ':' + IntToStr(Length(fRows[I].Query)) + ':' + fRows[I].Query;
+  if Context <> fSuggestionContext then
+  begin
+    fValues.Clear;
+    fValues.Sorted := true;
+    fSuggestionFocus := false;
+    fSuggestionQuery := #1;
+    Seen := TStringList.Create;
+    Parts := TStringList.Create;
+    try
+      Mask := CatSongs.FilterMask(fRows, fFocus);
+      for I := 0 to High(CatSongs.Song) do
+      begin
+        Song := CatSongs.Song[I];
+        if not Mask[I] then Continue;
+        if fPlaylistSearch and (PlaylistMan.CurPlayList = fPlaylist) and
+          (PlaylistMan.GetIndexbySongID(I) = -1) then Continue;
+        Seen.Clear;
+        Value := '';
+        case Kind of
+          fltTitle: Value := Song.Title;
+          fltArtist: Value := Song.Artist;
+          fltLanguage: Value := Song.Language;
+          fltEdition: Value := Song.Edition;
+          fltGenre: Value := Song.Genre;
+          fltYear: if Song.Year > 0 then Value := IntToStr(Song.Year);
+          fltCreator: Value := Song.Creator;
+          fltTags: Value := Song.Tags;
+          fltAge: begin Age := AgeForRegion(Song.AgeRaw, Region);
+            if Age < 0 then Value := '?' else Value := IntToStr(Age); end;
+        end;
+        if Kind in [fltLanguage, fltEdition, fltGenre, fltTags] then
+        begin
+          Parts.StrictDelimiter := true;
+          Parts.QuoteChar := #0;
+          Parts.Delimiter := ',';
+          Parts.DelimitedText := StringReplace(Value, ';', ',', [rfReplaceAll]);
+          for J := 0 to Parts.Count - 1 do AddValue(Parts[J]);
+        end
+        else AddValue(Value);
+      end;
+    finally
+      Seen.Free;
+      Parts.Free;
+    end;
+    fValues.Sorted := false;
+    fValues.CustomSort(@CompareSuggestionValues);
+    fSuggestionContext := Context;
+    fSuggestionIndex := 0;
+    fSuggestionFirst := 0;
+  end;
+  if fSuggestionQuery = Query then Exit;
+  fSuggestionQuery := Query;
+  SetLength(fMatches, 0);
+  fSuggestionFirst := 0;
+  fSuggestionIndex := 0;
+  if Kind = fltAge then Delete(Query, 1, Length(SuggestionPrefix));
+  Query := LowerCase(TransliterateToASCII(Trim(Query)));
+  for I := 0 to fValues.Count - 1 do
+  begin
+    Key := LowerCase(TransliterateToASCII(fValues[I]));
+    if MatchesFilterTerms(Key, Query, false) then
+    begin
+      K := Length(fMatches);
+      SetLength(fMatches, K + 1);
+      fMatches[K] := I;
+    end;
+  end;
+  fSuggestionIndex := EnsureRange(fSuggestionIndex, 0, Max(0, High(fMatches)));
+  if Length(fMatches) = 0 then fSuggestionFocus := false;
+end;
+
+procedure TScreenSongJumpto.AcceptSuggestion;
+begin
+  if (fFocus >= Length(fRows)) or (fSuggestionIndex < 0) or
+    (fSuggestionIndex >= Length(fMatches)) then Exit;
+  fRows[fFocus].Query := SuggestionPrefix + fValues[fMatches[fSuggestionIndex]];
+  Changed;
+  FlushChanges;
+end;
+
+procedure TScreenSongJumpto.DrawSuggestions;
+var I, N, S, MaxRows: integer; B: TThemeButton; H, Margin: single;
+begin
+  if (Length(fMatches) = 0) or (Length(Statics) = 0) or
+    (Length(fSuggestions.Statics) = 0) then Exit;
+  Margin := Theme.SongJumpto.SuggestionMargin;
+  fSuggestionX := Statics[0].Texture.X + Statics[0].Texture.W + Theme.SongJumpto.SuggestionGap;
+  fSuggestionW := Min(Theme.SongJumpto.SuggestionWidth, RenderW - Margin - fSuggestionX);
+  if fSuggestionW < 80 then begin fSuggestionRows := 0; Exit; end;
+  MaxRows := Max(1, Floor((RenderH - 2 * Margin) / Theme.SongJumpto.SuggestionRowHeight));
+  fSuggestionRows := Min(Length(fMatches), MaxRows);
+  H := fSuggestionRows * Theme.SongJumpto.SuggestionRowHeight;
+  S := EnsureRange(fFocus - fFirst, 0, FILTER_SLOTS - 1);
+  fSuggestionY := EnsureRange(Button[fInputs[S]].Y, Margin, Max(Margin, RenderH - Margin - H));
+  if fSuggestionFocus then
+  begin
+    if fSuggestionIndex < fSuggestionFirst then fSuggestionFirst := fSuggestionIndex;
+    if fSuggestionIndex >= fSuggestionFirst + fSuggestionRows then
+      fSuggestionFirst := fSuggestionIndex - fSuggestionRows + 1;
+  end;
+  fSuggestionFirst := EnsureRange(fSuggestionFirst, 0, Max(0, Length(fMatches) - fSuggestionRows));
+  fSuggestions.Statics[0].Texture.X := fSuggestionX;
+  fSuggestions.Statics[0].Texture.Y := fSuggestionY;
+  fSuggestions.Statics[0].Texture.W := fSuggestionW;
+  fSuggestions.Statics[0].Texture.H := H;
+  while fSuggestions.RowCount < fSuggestionRows do
+  begin
+    B := Theme.SongJumpto.SuggestionButton;
+    B.Fade := false;
+    B.Reflection := false;
+    B.W := Round(fSuggestionW); B.SelectW := B.W;
+    B.H := Theme.SongJumpto.SuggestionRowHeight; B.SelectH := B.H;
+    fSuggestions.AddButton(B);
+  end;
+  for I := 0 to fSuggestions.RowCount - 1 do
+  begin
+    fSuggestions.Row(I).Visible := I < fSuggestionRows;
+    if I >= fSuggestionRows then Continue;
+    N := fMatches[fSuggestionFirst + I];
+    with fSuggestions.Row(I) do
+    begin
+      X := fSuggestionX; Y := fSuggestionY + I * Theme.SongJumpto.SuggestionRowHeight;
+      W := fSuggestionW; SelectW := W;
+      Selected := fSuggestionFocus and (fSuggestionFirst + I = fSuggestionIndex);
+      Text[0].W := W - 8;
+      Text[0].H := Theme.SongJumpto.SuggestionRowHeight;
+      Text[0].Writable := false;
+      Text[0].Text := fValues[N] + ' (' + IntToStr(PtrInt(fValues.Objects[N])) + ')';
+    end;
+  end;
+  fSuggestions.DrawFG;
+  if Length(fMatches) > fSuggestionRows then
+    Renderer.DrawLine(fSuggestionX + fSuggestionW - 3,
+      fSuggestionY + H * fSuggestionFirst / Length(fMatches),
+      fSuggestionX + fSuggestionW - 3,
+      fSuggestionY + H * (fSuggestionFirst + fSuggestionRows) / Length(fMatches),
+      Theme.SongJumpto.SuggestionPanel.Z + 0.004, 2,
+      Theme.SongJumpto.FocusColor.R, Theme.SongJumpto.FocusColor.G,
+      Theme.SongJumpto.FocusColor.B, Theme.SongJumpto.FocusAlpha);
 end;
 
 procedure TScreenSongJumpto.SetTextFound(Count: cardinal; SelectedSong: TSong);
