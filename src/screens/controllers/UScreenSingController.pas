@@ -683,12 +683,16 @@ begin
     ScoringTailActive or not ShowFinish then Exit;
   NewCount := EnsureRange(NewCount,0,UIni.IMaxPlayerCount);
   OldCount := PlayersPlay;
-  if NewCount = OldCount then Exit;
+  // Keep live singer records through input loss; the next song resets the roster.
+  if NewCount <= OldCount then Exit;
   for I := 0 to High(Player) do Levels[I] := Player[I].Level;
   ScreenName.LoadPlayersFromIni(true);
   for I := 0 to Min(OldCount,NewCount)-1 do Player[I].Level := Levels[I];
   for I := OldCount to NewCount-1 do
   begin
+    Player[I].HighNote := -1;
+    Player[I].LengthNote := 0;
+    SetLength(Player[I].Note, 0);
     Player[I].ResetScores;
     Player[I].Track := VoiceAssignments.VoiceForPlayer(I,CurrentSong.VoiceCount);
     Player[I].InputSource := Ord(PlayerInputSource(I));
