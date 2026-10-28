@@ -71,3 +71,21 @@ test('pending assessments pause scanning; incomplete scans never publish', async
   const broken = fixture({failed: true}); await assert.rejects(trackForks(broken), /pagination failed/);
   assert.equal(broken.proposals.length, 0); assert.equal(broken.trees.length, 0);
 });
+
+test('a vanished fork is reported as unavailable without marking it assessed or blocking readable forks', async () => {
+  const x = fixture(), warnings = [];
+  x.core.warning = message => warnings.push(message);
+  x.github.rest.repos.listForks = async () => ({data: [fork(), fork('gone/USDX')]});
+  const original = x.github.rest.repos.listBranches;
+  x.github.rest.repos.listBranches = async args => {
+    if (args.owner !== 'gone') return original(args);
+    const error = Error('unavailable'); error.status = 404; throw error;
+  };
+  await trackForks(x);
+  assert.equal(x.proposals.length, 1);
+  assert.match(warnings[0], /not assessed: gone\/USDX/);
+  const checkpoint = JSON.parse(x.trees[0].tree[0].content);
+  assert.deepEqual(checkpoint.unavailableForks, ['gone/USDX']);
+  assert(!checkpoint.forks.some(f => f.repository === 'gone/USDX'));
+  assert.match(x.proposals[0].body, /Unavailable forks, not assessed/);
+});
