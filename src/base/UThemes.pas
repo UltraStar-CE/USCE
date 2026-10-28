@@ -3049,6 +3049,12 @@ begin
       ThemeLoadButton(SongJumpto.FilterActions[I], 'SongJumptoButton' + ActionNames[I]);
     EnsureText(SongJumpto.FilterActions[I], 20);
   end;
+  SongJumpto.FilterActions[0] := SongJumpto.FilterActions[3];
+  SongJumpto.FilterActions[0].Text := Copy(SongJumpto.FilterActions[3].Text);
+  Dec(SongJumpto.FilterActions[0].X, SongJumpto.FilterActions[3].W + 8);
+  if ResolveThemeFile('SongJumptoButtonPin') <> nil then
+    ThemeLoadButton(SongJumpto.FilterActions[0], 'SongJumptoButtonPin');
+
 end;
 
 procedure TTheme.LoadStatMainRecentPeriods;
