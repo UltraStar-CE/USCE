@@ -1,0 +1,888 @@
+{
+  "repository": "UltraStar-Deluxe/USDX",
+  "forks": [
+    {
+      "repository": "3Ryuusei3/USDX",
+      "branch": "master",
+      "head": "6260736f964df2dd67188d57c82edaab1866186c",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 3,
+      "behind": 0,
+      "compareUrl": "https://github.com/3Ryuusei3/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...6260736f964df2dd67188d57c82edaab1866186c",
+      "commits": [
+        {
+          "sha": "6eaccb302a728bb1454e6e0c9cf582ae364471bb",
+          "title": "Video: decode in a background thread to stop stutter and FPS drops",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "faf40be67126246e4e2cb40849ded9598e4c4ba9",
+          "title": "SuperStar: Karaoke theme redesign and UI/UX engine improvements",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "6260736f964df2dd67188d57c82edaab1866186c",
+          "title": "Sing row with the name pill at the right, instant score bars, party screens",
+          "author": "3Ryuusei3"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "shininchi/USDX",
+      "branch": "master",
+      "head": "c71a87aea972caa5b96c8bae7542bb0bcfa1deaf",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 97,
+      "behind": 10,
+      "compareUrl": "https://github.com/shininchi/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...c71a87aea972caa5b96c8bae7542bb0bcfa1deaf",
+      "commits": [
+        {
+          "sha": "34a5ce3f3c10a5850dbd24b3dbb386fc01337be4",
+          "title": "Add song request web client (phase 1)",
+          "author": "shininchi"
+        },
+        {
+          "sha": "a9fe0c81e51ac6697c8b63d17bb8deb51bf7b3bb",
+          "title": "Show song requests in the game (phase 2)",
+          "author": "shininchi"
+        },
+        {
+          "sha": "712fe2b22e2e5bc7e7cdf960ce61d567480ec6a2",
+          "title": "Move the request badge to the bottom right and explain its key",
+          "author": "shininchi"
+        },
+        {
+          "sha": "b34906aa3f6e3c228083020b98cbb024d0ad3a00",
+          "title": "Show request notices at the bottom center of the song list",
+          "author": "shininchi"
+        },
+        {
+          "sha": "cc33f22a24cec1c4bfafba8979b2508b03168ba2",
+          "title": "Keep the request badge above the help bar",
+          "author": "shininchi"
+        },
+        {
+          "sha": "256e0419f9b68d4290eea5a82b6bbe42a5519740",
+          "title": "Add request keys to the help bar and use the theme color",
+          "author": "shininchi"
+        },
+        {
+          "sha": "946b2f6a17eb43c474371774d9e0c46b8551cdfb",
+          "title": "Fix jumping to artists by letter when songs are sorted by folder",
+          "author": "shininchi"
+        },
+        {
+          "sha": "49cbac9544121e7571f65963a3d912ce34a4905e",
+          "title": "Show an Option key icon instead of Alt on macOS",
+          "author": "shininchi"
+        },
+        {
+          "sha": "46417607343e362032b7fa2b92273fccbc3f1780",
+          "title": "Redraw the Option key icon at 4x resolution",
+          "author": "shininchi"
+        },
+        {
+          "sha": "02620fe441c077166bed5c0a7158acbd32b1b0a8",
+          "title": "Add a 30 second audio preview to the song details",
+          "author": "shininchi"
+        },
+        {
+          "sha": "e8483684cf1871509a397ceb06b2275bb2e25d6c",
+          "title": "Add now playing, activity log, admin extras and video previews",
+          "author": "shininchi"
+        },
+        {
+          "sha": "b74cc655d19b77fe6cef8cf7f9d8e89e16efe91f",
+          "title": "Keep a \"Requests\" playlist in sync with the request queue",
+          "author": "shininchi"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "shininchi/USDX",
+      "branch": "feature/project-improvements",
+      "head": "d4e976c8b0575ffb9037a4d45c51b168bde15c8b",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 53,
+      "behind": 10,
+      "compareUrl": "https://github.com/shininchi/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...d4e976c8b0575ffb9037a4d45c51b168bde15c8b",
+      "commits": [
+        {
+          "sha": "34a5ce3f3c10a5850dbd24b3dbb386fc01337be4",
+          "title": "Add song request web client (phase 1)",
+          "author": "shininchi"
+        },
+        {
+          "sha": "a9fe0c81e51ac6697c8b63d17bb8deb51bf7b3bb",
+          "title": "Show song requests in the game (phase 2)",
+          "author": "shininchi"
+        },
+        {
+          "sha": "712fe2b22e2e5bc7e7cdf960ce61d567480ec6a2",
+          "title": "Move the request badge to the bottom right and explain its key",
+          "author": "shininchi"
+        },
+        {
+          "sha": "b34906aa3f6e3c228083020b98cbb024d0ad3a00",
+          "title": "Show request notices at the bottom center of the song list",
+          "author": "shininchi"
+        },
+        {
+          "sha": "cc33f22a24cec1c4bfafba8979b2508b03168ba2",
+          "title": "Keep the request badge above the help bar",
+          "author": "shininchi"
+        },
+        {
+          "sha": "256e0419f9b68d4290eea5a82b6bbe42a5519740",
+          "title": "Add request keys to the help bar and use the theme color",
+          "author": "shininchi"
+        },
+        {
+          "sha": "946b2f6a17eb43c474371774d9e0c46b8551cdfb",
+          "title": "Fix jumping to artists by letter when songs are sorted by folder",
+          "author": "shininchi"
+        },
+        {
+          "sha": "49cbac9544121e7571f65963a3d912ce34a4905e",
+          "title": "Show an Option key icon instead of Alt on macOS",
+          "author": "shininchi"
+        },
+        {
+          "sha": "46417607343e362032b7fa2b92273fccbc3f1780",
+          "title": "Redraw the Option key icon at 4x resolution",
+          "author": "shininchi"
+        },
+        {
+          "sha": "02620fe441c077166bed5c0a7158acbd32b1b0a8",
+          "title": "Add a 30 second audio preview to the song details",
+          "author": "shininchi"
+        },
+        {
+          "sha": "e8483684cf1871509a397ceb06b2275bb2e25d6c",
+          "title": "Add now playing, activity log, admin extras and video previews",
+          "author": "shininchi"
+        },
+        {
+          "sha": "b74cc655d19b77fe6cef8cf7f9d8e89e16efe91f",
+          "title": "Keep a \"Requests\" playlist in sync with the request queue",
+          "author": "shininchi"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "shininchi/USDX",
+      "branch": "feature/song-requests-options",
+      "head": "2b2eea5fa8cae3da098f02babec4e8dfd8bddc39",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 44,
+      "behind": 10,
+      "compareUrl": "https://github.com/shininchi/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...2b2eea5fa8cae3da098f02babec4e8dfd8bddc39",
+      "commits": [
+        {
+          "sha": "34a5ce3f3c10a5850dbd24b3dbb386fc01337be4",
+          "title": "Add song request web client (phase 1)",
+          "author": "shininchi"
+        },
+        {
+          "sha": "a9fe0c81e51ac6697c8b63d17bb8deb51bf7b3bb",
+          "title": "Show song requests in the game (phase 2)",
+          "author": "shininchi"
+        },
+        {
+          "sha": "712fe2b22e2e5bc7e7cdf960ce61d567480ec6a2",
+          "title": "Move the request badge to the bottom right and explain its key",
+          "author": "shininchi"
+        },
+        {
+          "sha": "b34906aa3f6e3c228083020b98cbb024d0ad3a00",
+          "title": "Show request notices at the bottom center of the song list",
+          "author": "shininchi"
+        },
+        {
+          "sha": "cc33f22a24cec1c4bfafba8979b2508b03168ba2",
+          "title": "Keep the request badge above the help bar",
+          "author": "shininchi"
+        },
+        {
+          "sha": "256e0419f9b68d4290eea5a82b6bbe42a5519740",
+          "title": "Add request keys to the help bar and use the theme color",
+          "author": "shininchi"
+        },
+        {
+          "sha": "946b2f6a17eb43c474371774d9e0c46b8551cdfb",
+          "title": "Fix jumping to artists by letter when songs are sorted by folder",
+          "author": "shininchi"
+        },
+        {
+          "sha": "49cbac9544121e7571f65963a3d912ce34a4905e",
+          "title": "Show an Option key icon instead of Alt on macOS",
+          "author": "shininchi"
+        },
+        {
+          "sha": "46417607343e362032b7fa2b92273fccbc3f1780",
+          "title": "Redraw the Option key icon at 4x resolution",
+          "author": "shininchi"
+        },
+        {
+          "sha": "02620fe441c077166bed5c0a7158acbd32b1b0a8",
+          "title": "Add a 30 second audio preview to the song details",
+          "author": "shininchi"
+        },
+        {
+          "sha": "e8483684cf1871509a397ceb06b2275bb2e25d6c",
+          "title": "Add now playing, activity log, admin extras and video previews",
+          "author": "shininchi"
+        },
+        {
+          "sha": "b74cc655d19b77fe6cef8cf7f9d8e89e16efe91f",
+          "title": "Keep a \"Requests\" playlist in sync with the request queue",
+          "author": "shininchi"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "shininchi/USDX",
+      "branch": "feature/song-requests-web",
+      "head": "96076e055171ccbf289a4b61147732ba7d54991a",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 41,
+      "behind": 10,
+      "compareUrl": "https://github.com/shininchi/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...96076e055171ccbf289a4b61147732ba7d54991a",
+      "commits": [
+        {
+          "sha": "34a5ce3f3c10a5850dbd24b3dbb386fc01337be4",
+          "title": "Add song request web client (phase 1)",
+          "author": "shininchi"
+        },
+        {
+          "sha": "a9fe0c81e51ac6697c8b63d17bb8deb51bf7b3bb",
+          "title": "Show song requests in the game (phase 2)",
+          "author": "shininchi"
+        },
+        {
+          "sha": "712fe2b22e2e5bc7e7cdf960ce61d567480ec6a2",
+          "title": "Move the request badge to the bottom right and explain its key",
+          "author": "shininchi"
+        },
+        {
+          "sha": "b34906aa3f6e3c228083020b98cbb024d0ad3a00",
+          "title": "Show request notices at the bottom center of the song list",
+          "author": "shininchi"
+        },
+        {
+          "sha": "cc33f22a24cec1c4bfafba8979b2508b03168ba2",
+          "title": "Keep the request badge above the help bar",
+          "author": "shininchi"
+        },
+        {
+          "sha": "256e0419f9b68d4290eea5a82b6bbe42a5519740",
+          "title": "Add request keys to the help bar and use the theme color",
+          "author": "shininchi"
+        },
+        {
+          "sha": "946b2f6a17eb43c474371774d9e0c46b8551cdfb",
+          "title": "Fix jumping to artists by letter when songs are sorted by folder",
+          "author": "shininchi"
+        },
+        {
+          "sha": "49cbac9544121e7571f65963a3d912ce34a4905e",
+          "title": "Show an Option key icon instead of Alt on macOS",
+          "author": "shininchi"
+        },
+        {
+          "sha": "46417607343e362032b7fa2b92273fccbc3f1780",
+          "title": "Redraw the Option key icon at 4x resolution",
+          "author": "shininchi"
+        },
+        {
+          "sha": "02620fe441c077166bed5c0a7158acbd32b1b0a8",
+          "title": "Add a 30 second audio preview to the song details",
+          "author": "shininchi"
+        },
+        {
+          "sha": "e8483684cf1871509a397ceb06b2275bb2e25d6c",
+          "title": "Add now playing, activity log, admin extras and video previews",
+          "author": "shininchi"
+        },
+        {
+          "sha": "b74cc655d19b77fe6cef8cf7f9d8e89e16efe91f",
+          "title": "Keep a \"Requests\" playlist in sync with the request queue",
+          "author": "shininchi"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "shininchi/USDX",
+      "branch": "fix/alt-letter-jump-folder-sorting",
+      "head": "d579d9aacd4e7f9d55d0ce428ce7280a334bfa65",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 1,
+      "behind": 10,
+      "compareUrl": "https://github.com/shininchi/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...d579d9aacd4e7f9d55d0ce428ce7280a334bfa65",
+      "commits": [
+        {
+          "sha": "d579d9aacd4e7f9d55d0ce428ce7280a334bfa65",
+          "title": "Fix jumping to artists by letter when songs are sorted by folder",
+          "author": "shininchi"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "master",
+      "head": "1deef85ecc82783a7430d869ffa880e373653a46",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 31,
+      "behind": 2,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...1deef85ecc82783a7430d869ffa880e373653a46",
+      "commits": [
+        {
+          "sha": "d6a550605345211c8c9c80de3328d6ea156b46fb",
+          "title": "Extract shared video presentation from FFmpeg playback",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "05cdbf85bb3ddf89a219b113c4a519cbfc55c333",
+          "title": "Add renderer-owned targets for external video rendering",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "aef92afd8fd342d6bf61f7705b4fedd8cedd3ecf",
+          "title": "Add optional libmpv video playback and integration checks",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "d242574359ed51fe1c1fc2cfa83a037af55ac4d5",
+          "title": "Preserve C numeric locale and console diagnostics across platforms",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "f2bb269968c3cf4fc0fa2b83a2f9277dd915adef",
+          "title": "Prevent stale units in repeated video smoke builds",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "8cc9e2cae34156afcf8673197309d28d97a65402",
+          "title": "Fix paused libmpv startup with bilinear chroma scaling",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "41afcce727c5e512857c0f1563a958c5f7b60ea4",
+          "title": "Fix Windows smoke paths and retain completed dependency builds",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "d6138b6fbba2de2377c6324bf344e19ed356dd39",
+          "title": "Include dav1d in Windows packages and check runtime dependencies",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "c943b9601ce636f2e449527fb928cd72617a9f03",
+          "title": "Normalize MSYS2 Python paths for native FPC",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "d00f5dad4d54c6652e37eda921de5044234d6a37",
+          "title": "Reject incomplete Windows installer downloads",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "b7788ab5cf2f2771cce74fad6e9b405cf5a3fadb",
+          "title": "Merge remote-tracking branch 'upstream/master' into feature/libmpv-video",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "a2f9b4bba491ee5a33521cbeb7feaaa8a1fb0c74",
+          "title": "Hold final video frames without repeated corrective seeks",
+          "author": "Tycorc"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "Fix-Markdown",
+      "head": "e34875975566004d07c35880a1a6d3efa45b4eaf",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 1,
+      "behind": 1606,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...e34875975566004d07c35880a1a6d3efa45b4eaf",
+      "commits": [
+        {
+          "sha": "e34875975566004d07c35880a1a6d3efa45b4eaf",
+          "title": "Fix markdown formatting",
+          "author": "ePirat"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "SdlRendering",
+      "head": "947106ec0d07a67c0d790ede4445f4167e625808",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 1,
+      "behind": 1854,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...947106ec0d07a67c0d790ede4445f4167e625808",
+      "commits": [
+        {
+          "sha": "947106ec0d07a67c0d790ede4445f4167e625808",
+          "title": "initial work done to switch from OGL 1.2 to SDL2Rendering",
+          "author": "basisbit"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "add_audio_header_tag",
+      "head": "630713ce3b484019a8615ddf4c1da1e456de1879",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 1,
+      "behind": 993,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...630713ce3b484019a8615ddf4c1da1e456de1879",
+      "commits": [
+        {
+          "sha": "630713ce3b484019a8615ddf4c1da1e456de1879",
+          "title": "Accept both #AUDIO and #MP3 as header tag for the audio file.",
+          "author": "bohning"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "debug-1134",
+      "head": "649f8a2bd822552412bd089bc1c8a8a4481e342b",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 1,
+      "behind": 480,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...649f8a2bd822552412bd089bc1c8a8a4481e342b",
+      "commits": [
+        {
+          "sha": "649f8a2bd822552412bd089bc1c8a8a4481e342b",
+          "title": "add log statements for issue 1134",
+          "author": "barbeque-squared"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "docs/agents-md",
+      "head": "fa218a9998d0b3f7727c528624d5cf64d85642ca",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 28,
+      "behind": 2,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...fa218a9998d0b3f7727c528624d5cf64d85642ca",
+      "commits": [
+        {
+          "sha": "d6a550605345211c8c9c80de3328d6ea156b46fb",
+          "title": "Extract shared video presentation from FFmpeg playback",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "05cdbf85bb3ddf89a219b113c4a519cbfc55c333",
+          "title": "Add renderer-owned targets for external video rendering",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "aef92afd8fd342d6bf61f7705b4fedd8cedd3ecf",
+          "title": "Add optional libmpv video playback and integration checks",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "d242574359ed51fe1c1fc2cfa83a037af55ac4d5",
+          "title": "Preserve C numeric locale and console diagnostics across platforms",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "f2bb269968c3cf4fc0fa2b83a2f9277dd915adef",
+          "title": "Prevent stale units in repeated video smoke builds",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "8cc9e2cae34156afcf8673197309d28d97a65402",
+          "title": "Fix paused libmpv startup with bilinear chroma scaling",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "41afcce727c5e512857c0f1563a958c5f7b60ea4",
+          "title": "Fix Windows smoke paths and retain completed dependency builds",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "d6138b6fbba2de2377c6324bf344e19ed356dd39",
+          "title": "Include dav1d in Windows packages and check runtime dependencies",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "c943b9601ce636f2e449527fb928cd72617a9f03",
+          "title": "Normalize MSYS2 Python paths for native FPC",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "d00f5dad4d54c6652e37eda921de5044234d6a37",
+          "title": "Reject incomplete Windows installer downloads",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "b7788ab5cf2f2771cce74fad6e9b405cf5a3fadb",
+          "title": "Merge remote-tracking branch 'upstream/master' into feature/libmpv-video",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "a2f9b4bba491ee5a33521cbeb7feaaa8a1fb0c74",
+          "title": "Hold final video frames without repeated corrective seeks",
+          "author": "Tycorc"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "docs/issue-forms",
+      "head": "a7ee0f4f8903c84536b4a715f2391f7520e1a17c",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 1,
+      "behind": 2,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...a7ee0f4f8903c84536b4a715f2391f7520e1a17c",
+      "commits": [
+        {
+          "sha": "a7ee0f4f8903c84536b4a715f2391f7520e1a17c",
+          "title": "Replace the legacy issue template with issue forms",
+          "author": "Tycorc"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "feature/libmpv-video",
+      "head": "d154390bd756c1b2b393529271d846676929d136",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 14,
+      "behind": 2,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...d154390bd756c1b2b393529271d846676929d136",
+      "commits": [
+        {
+          "sha": "d6a550605345211c8c9c80de3328d6ea156b46fb",
+          "title": "Extract shared video presentation from FFmpeg playback",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "05cdbf85bb3ddf89a219b113c4a519cbfc55c333",
+          "title": "Add renderer-owned targets for external video rendering",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "aef92afd8fd342d6bf61f7705b4fedd8cedd3ecf",
+          "title": "Add optional libmpv video playback and integration checks",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "d242574359ed51fe1c1fc2cfa83a037af55ac4d5",
+          "title": "Preserve C numeric locale and console diagnostics across platforms",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "f2bb269968c3cf4fc0fa2b83a2f9277dd915adef",
+          "title": "Prevent stale units in repeated video smoke builds",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "8cc9e2cae34156afcf8673197309d28d97a65402",
+          "title": "Fix paused libmpv startup with bilinear chroma scaling",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "41afcce727c5e512857c0f1563a958c5f7b60ea4",
+          "title": "Fix Windows smoke paths and retain completed dependency builds",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "d6138b6fbba2de2377c6324bf344e19ed356dd39",
+          "title": "Include dav1d in Windows packages and check runtime dependencies",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "c943b9601ce636f2e449527fb928cd72617a9f03",
+          "title": "Normalize MSYS2 Python paths for native FPC",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "d00f5dad4d54c6652e37eda921de5044234d6a37",
+          "title": "Reject incomplete Windows installer downloads",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "b7788ab5cf2f2771cce74fad6e9b405cf5a3fadb",
+          "title": "Merge remote-tracking branch 'upstream/master' into feature/libmpv-video",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "a2f9b4bba491ee5a33521cbeb7feaaa8a1fb0c74",
+          "title": "Hold final video frames without repeated corrective seeks",
+          "author": "Tycorc"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "findingfontsinfo",
+      "head": "8c5e5d874129e34aaad15665f10c995d3ef0c452",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 1,
+      "behind": 1423,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...8c5e5d874129e34aaad15665f10c995d3ef0c452",
+      "commits": [
+        {
+          "sha": "8c5e5d874129e34aaad15665f10c995d3ef0c452",
+          "title": "TextGL: Log info about finding font families",
+          "author": "s09bQ5"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "helpsystem",
+      "head": "b801fd8e5ae4c4a422795dfb2e72eea1a025f245",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 20,
+      "behind": 1721,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...b801fd8e5ae4c4a422795dfb2e72eea1a025f245",
+      "commits": [
+        {
+          "sha": "0971f4f5c36b8b48ffe7dd54542e47cb7a25cea7",
+          "title": "First steps towards integrating a help system (accessible via TAB to toggle visibility). All texts need thorough revision. Currently only uses the English language file.",
+          "author": "Markus Böhning"
+        },
+        {
+          "sha": "7c76afdf85654ba730d433275dfe71a682b6085f",
+          "title": "First steps towards integrating a help system (accessible via TAB to toggle visibility). All texts need thorough revision. Currently only uses the English language file.",
+          "author": "Markus Böhning"
+        },
+        {
+          "sha": "873ee4555184a5db31f97673ebd891ad4e554b52",
+          "title": "Merge branch 'helpsystem' of https://github.com/UltraStar-Deluxe/USDX into helpsystem",
+          "author": "Markus Böhning"
+        },
+        {
+          "sha": "4ecbdeefde2858f1718e646978040b114e3a30f0",
+          "title": "Added missing {$MODE Delphi} to allow compilation on non-Windows machines.",
+          "author": "Markus Böhning"
+        },
+        {
+          "sha": "8ad1fc28d97105905efa02a1b40d2b31b87aa888",
+          "title": "Added missing {$MODE Delphi} to allow compilation on non-Windows machines.",
+          "author": "Markus Böhning"
+        },
+        {
+          "sha": "80e417dc03b6c7a80161647e774b14ffc00dd5a0",
+          "title": "Merge branch 'helpsystem' of https://github.com/UltraStar-Deluxe/USDX into helpsystem",
+          "author": "Markus Böhning"
+        },
+        {
+          "sha": "981bd7a42f7b199bf40fa577c429a9b4fd750186",
+          "title": "Change from SDL to sdl2.",
+          "author": "Markus Böhning"
+        },
+        {
+          "sha": "d6c9ff6bf0d664b91c9477e1aab2aa929d82f291",
+          "title": "Improved Greek translation file.",
+          "author": "Markus Böhning"
+        },
+        {
+          "sha": "bb8be1d259a8a5635a6df9d98e859ae76913630d",
+          "title": "Some minor theme and translation improvements.",
+          "author": "Markus Böhning"
+        },
+        {
+          "sha": "22f6bb42921b0558fbd06b2cffc88f172f243fba",
+          "title": "Fixed help ID for UScreenEditConvert.",
+          "author": "Markus Böhning"
+        },
+        {
+          "sha": "8f3ceb9ea75bf348bf47d2f5329a18657313e14a",
+          "title": "Some minor cleanup and correction of typing errors.",
+          "author": "Markus Böhning"
+        },
+        {
+          "sha": "0346b534bc385add3ac49dda9f489ccf336d7178",
+          "title": "Removed SDLK_SYSREQ input for screenshot creation as this is globally handled in UMain.",
+          "author": "Markus Böhning"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "mac-ci-speedup",
+      "head": "1784c9545fbcf16607659a925e754b4405a6a21f",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 3,
+      "behind": 214,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...1784c9545fbcf16607659a925e754b4405a6a21f",
+      "commits": [
+        {
+          "sha": "96bf6489de71a3fe4ae478406355e63278f1cd56",
+          "title": "Cache homebrew installed packages.",
+          "author": "bohning"
+        },
+        {
+          "sha": "b7c5298ce3dee6e6a0e0bd20b539c8284f9e0d08",
+          "title": "Do not clean up after install.",
+          "author": "bohning"
+        },
+        {
+          "sha": "1784c9545fbcf16607659a925e754b4405a6a21f",
+          "title": "Use gerlero/brew-install action.",
+          "author": "bohning"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "songlist_webserver",
+      "head": "1aac5c557700015054685eec36f727199ba9c06c",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 1,
+      "behind": 904,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...1aac5c557700015054685eec36f727199ba9c06c",
+      "commits": [
+        {
+          "sha": "1aac5c557700015054685eec36f727199ba9c06c",
+          "title": "Add UWebServer which serves the list of available songs on localhost, port 8091.",
+          "author": "bohning"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "sound-fix",
+      "head": "ea2ebca34565f61f9b61d094cb5d7a2c5318c5e3",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 1,
+      "behind": 4,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...ea2ebca34565f61f9b61d094cb5d7a2c5318c5e3",
+      "commits": [
+        {
+          "sha": "ea2ebca34565f61f9b61d094cb5d7a2c5318c5e3",
+          "title": "Revert \"SoftMixer: do nothing when Play is called on playing stream\"",
+          "author": "complexlogic"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "swresample-playback",
+      "head": "054fa4a368c571c9bc56b9abd3ca8950c87e0858",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 1,
+      "behind": 1629,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...054fa4a368c571c9bc56b9abd3ca8950c87e0858",
+      "commits": [
+        {
+          "sha": "054fa4a368c571c9bc56b9abd3ca8950c87e0858",
+          "title": "Start using the swresample converter from UAudioConverter (compiles, but the audio isn't ok yet)",
+          "author": "brianch"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    }
+  ],
+  "unavailableForks": [
+    "danhale93/USDX-DeepStream"
+  ]
+}
