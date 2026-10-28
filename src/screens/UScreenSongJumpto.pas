@@ -227,7 +227,6 @@ end;
 
 procedure TScreenSongJumpto.Changed;
 begin
-  SetLength(fMatches, 0);
   fPending := true;
   fChangedTick := SDL_GetTicks;
   fSuggestionFocus := false;
@@ -511,7 +510,7 @@ var I: integer; X, Y, W, H, Z: real;
   end;
 begin
   if fPending and (SDL_GetTicks - fChangedTick >= SEARCH_DEBOUNCE_MS) then FlushChanges;
-  if not fPending then UpdateSuggestions;
+  UpdateSuggestions;
   if fLockShortcutPending and (SDL_GetModState and KMOD_ALT = 0) then
   begin
     fLockShortcutPending := false;
@@ -539,7 +538,6 @@ begin
     fLockIcons.DrawFG;
     Exit;
   end;
-  if Theme.SongJumpto.FilterActions[3].Tex <> '' then Exit;
   // A simple vector padlock remains crisp at any screen scale.
   X := Button[fActions[3]].X + Button[fActions[3]].W * 0.25;
   Y := Button[fActions[3]].Y + Button[fActions[3]].H * 0.48;
