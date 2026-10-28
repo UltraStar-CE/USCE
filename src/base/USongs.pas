@@ -1152,10 +1152,14 @@ var
   TmpString: UTF8String;
   WordArray: array of UTF8String;
   FilterCopy: UTF8String;
-  AgeFilterActive: boolean;
-  AgeFilterCondition: TAgeCondition;
-  AgeRegion: string;
+  AgeParts: TStringList;
+  AgeQuery, AgeRegion: string;
   RegionSeparator: integer;
+  AgeTerms: array of record
+    Region: string;
+    Unrated, Valid: boolean;
+    Condition: TAgeCondition;
+  end;
 
   function MatchesAgeCondition(SongAge: integer; const Condition: TAgeCondition): boolean;
   begin
@@ -1180,22 +1184,31 @@ begin
 
   FilterStr := Trim(LowerCase(TransliterateToASCII(FilterStr)));
   FilterCopy := FilterStr;
-  AgeRegion := Ini.AgeCountry;
-  if Filter = fltAge then
+  if (Filter = fltAge) and (FilterCopy <> '') then
   begin
-    RegionSeparator := Pos(':', FilterCopy);
-    if RegionSeparator > 0 then
-    begin
-      AgeRegion := UpperCase(Trim(Copy(FilterCopy, 1, RegionSeparator - 1)));
-      Delete(FilterCopy, 1, RegionSeparator);
-    end;
-  end;
-
-  AgeFilterActive := false;
-  if (Filter = fltAge) and (FilterStr <> '') then
-  begin
-    AgeFilterActive := ParseAgeCondition(FilterCopy, AgeFilterCondition);
-    // An invalid nonempty age query must match nothing, not clear the filter.
+    AgeParts := TStringList.Create;
+    try
+      AgeParts.StrictDelimiter := true;
+      AgeParts.QuoteChar := #0;
+      AgeParts.Delimiter := ',';
+      AgeParts.DelimitedText := StringReplace(FilterCopy, ';', ',', [rfReplaceAll]);
+      SetLength(AgeTerms, AgeParts.Count);
+      for I := 0 to AgeParts.Count - 1 do
+      begin
+        AgeQuery := Trim(AgeParts[I]);
+        AgeRegion := Ini.AgeCountry;
+        RegionSeparator := Pos(':', AgeQuery);
+        if RegionSeparator > 0 then
+        begin
+          AgeRegion := UpperCase(Trim(Copy(AgeQuery, 1, RegionSeparator - 1)));
+          Delete(AgeQuery, 1, RegionSeparator);
+          AgeQuery := Trim(AgeQuery);
+        end;
+        AgeTerms[I].Region := AgeRegion;
+        AgeTerms[I].Unrated := AgeQuery = '?';
+        AgeTerms[I].Valid := ParseAgeCondition(AgeQuery, AgeTerms[I].Condition);
+      end;
+    finally AgeParts.Free; end;
   end;
 
   if (FilterStr <> '') then
@@ -1229,10 +1242,16 @@ begin
 
       if Filter = fltAge then
       begin
-        if FilterCopy = '?' then
-          Song[i].Visible := AgeForRegion(Song[i].AgeRaw, AgeRegion) < 0
-        else
-          Song[i].Visible := AgeFilterActive and MatchesAgeCondition(AgeForRegion(Song[i].AgeRaw, AgeRegion), AgeFilterCondition);
+        Song[I].Visible := false;
+        for J := 0 to High(AgeTerms) do
+        begin
+          if AgeTerms[J].Unrated then
+            Song[I].Visible := AgeForRegion(Song[I].AgeRaw, AgeTerms[J].Region) < 0
+          else
+            Song[I].Visible := AgeTerms[J].Valid and MatchesAgeCondition(
+              AgeForRegion(Song[I].AgeRaw, AgeTerms[J].Region), AgeTerms[J].Condition);
+          if Song[I].Visible then Break;
+        end;
         if Song[i].Visible then
           Inc(Result);
         Continue;
@@ -1259,7 +1278,7 @@ begin
           TmpString := Song[i].TagsASCII;
       end;
 
-      if Filter in [fltLanguage, fltEdition, fltGenre, fltYear, fltTags] then
+      if Filter in [fltTitle, fltArtist, fltLanguage, fltEdition, fltGenre, fltYear, fltCreator, fltTags] then
       begin
         Song[I].Visible := MatchesFilterTerms(TmpString, FilterCopy, Filter = fltYear);
         if Song[I].Visible then Inc(Result);
