@@ -298,7 +298,12 @@ begin
       SDLK_UP: begin fSuggestionIndex := Max(0, fSuggestionIndex - 1); Exit; end;
       SDLK_DOWN: begin fSuggestionIndex := Min(High(fMatches), fSuggestionIndex + 1); Exit; end;
       SDLK_RETURN: begin AcceptSuggestion; Exit; end;
-      SDLK_ESCAPE: begin fSuggestionFocus := false; SetLength(fMatches, 0); Exit; end;
+      SDLK_ESCAPE: begin
+    fSuggestionFocus := false;
+    fSuggestionContext := #1;
+    SetLength(fMatches, 0);
+    Exit;
+  end;
     end;
   if SDL_GetModState and KMOD_ALT <> 0 then
   begin
