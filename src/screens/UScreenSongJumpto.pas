@@ -32,13 +32,17 @@ interface
 
 uses UMenu, USongs, USong, UThemes, sdl2, SysUtils;
 
-const FILTER_SLOTS = 3;
+const
+  FILTER_SLOTS = 3;
+  SEARCH_DEBOUNCE_MS = 200;
 
 type
   TScreenSongJumpto = class(TMenu)
   private
     fVisible, fPlaylistSearch, fLockShortcutPending: boolean;
     fFooter, fLockIcons: TMenu;
+    fPending: boolean;
+    fChangedTick: cardinal;
     fLastPlayed, fVisSongs, fFocus, fFirst, fPlaylist: integer;
     fRows: TSongFilterRows;
     fSlotKinds: array[0..FILTER_SLOTS-1] of integer;
@@ -50,6 +54,7 @@ type
     function FilterSummary: UTF8String;
     procedure RefreshRows;
     procedure Changed;
+    procedure FlushChanges;
     procedure AddRow;
     procedure RemoveRow(Index: integer);
     procedure ActivateAction(Action: integer);
@@ -182,12 +187,20 @@ begin
 end;
 
 procedure TScreenSongJumpto.Changed;
+begin
+  fPending := true;
+  fChangedTick := SDL_GetTicks;
+  RefreshRows;
+end;
+
+procedure TScreenSongJumpto.FlushChanges;
 var SelectedSong: TSong;
 begin
+  if not fPending then Exit;
+  fPending := false;
   SelectedSong := nil;
   if (ScreenSong.Interaction >= 0) and (ScreenSong.Interaction < Length(CatSongs.Song)) then
     SelectedSong := CatSongs.Song[ScreenSong.Interaction];
-  RefreshRows;
   SetTextFound(ApplyFilter, SelectedSong);
   ScreenSong.NextRandomSearchIdx := CatSongs.VisibleSongs;
 end;
@@ -220,7 +233,7 @@ begin
     1: begin SetLength(fRows, 1); fRows[0].Query := ''; fRows[0].Kind := fltAll;
          fFocus := 0; fFirst := 0; Changed; end;
     2: Visible := false;
-    3: ToggleLibraryLockdown;
+    3: begin FlushChanges; ToggleLibraryLockdown; end;
   end;
 end;
 
@@ -361,6 +374,7 @@ end;
 
 procedure TScreenSongJumpto.SetVisible(Value: boolean);
 begin
+  if not Value then FlushChanges;
   if not fVisible and Value then OnShow;
   SetTextInput(Value);
   fVisible := Value;
@@ -415,9 +429,11 @@ var I: integer; X, Y, W, H, Z: real;
       Theme.SongJumpto.FocusColor.G, Theme.SongJumpto.FocusColor.B, Theme.SongJumpto.FocusAlpha);
   end;
 begin
+  if fPending and (SDL_GetTicks - fChangedTick >= SEARCH_DEBOUNCE_MS) then FlushChanges;
   if fLockShortcutPending and (SDL_GetModState and KMOD_ALT = 0) then
   begin
     fLockShortcutPending := false;
+    FlushChanges;
     ToggleLibraryLockdown;
   end;
   Renderer.ClearFrameBuffer(CLEAR_DEPTH);
