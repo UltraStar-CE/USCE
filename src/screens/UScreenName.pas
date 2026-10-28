@@ -615,14 +615,11 @@ begin
   GenericNoAvatarFile := Skin.SkinPath.Append(Path('[name]noavatar.png'));
   for I := 1 to UIni.IMaxPlayerCount do
   begin
-    if GenericNoAvatarFile.IsFile() then
-      NoAvatarFile := GenericNoAvatarFile
-    else
-    begin
-      NoAvatarFile := Skin.GetTextureFileName('NoAvatar_P' + IntToStr(I));
-      if not NoAvatarFile.IsSet then
-        NoAvatarFile := Skin.GetTextureFileName('NoAvatar_P1');
-    end;
+    NoAvatarFile := Skin.GetTextureFileName('NoAvatar_P' + IntToStr(I));
+    if not NoAvatarFile.IsFile then
+      NoAvatarFile := Skin.GetTextureFileName('NoAvatar_P1');
+    if not NoAvatarFile.IsFile then
+      NoAvatarFile := GenericNoAvatarFile;
 
     NoAvatarTexture[I] := Renderer.GetTexture(NoAvatarFile, TEXTURE_TYPE_TRANSPARENT, $FFFFFF);
     NoAvatarTexture[I].ScaleMode := lsUniform;
