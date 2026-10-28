@@ -6810,6 +6810,7 @@ end;
 
 procedure TScreenEditSub.OnHide;
 begin
+  inherited;
   CancelPendingNoteClick;
   PressedNoteId := -1;
   StopMidiPlayback;

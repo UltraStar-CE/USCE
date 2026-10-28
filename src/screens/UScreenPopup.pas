@@ -1591,6 +1591,7 @@ end;
 
 procedure TScreenPopup.OnHide;
 begin
+  inherited;
 end;
 
 procedure TScreenPopup.ResetLayout;
