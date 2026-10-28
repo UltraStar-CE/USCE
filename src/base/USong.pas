@@ -128,6 +128,7 @@ type
     function DecodeFilename(Filename: RawByteString): IPath;
     procedure ParseNote(Track: integer; TypeP: char; StartP, DurationP, NoteP: integer; LyricS: UTF8String; Excluded: boolean = false);
     procedure NormalizeUnpitchedNoteTones;
+    procedure UpdateCompletion;
     procedure NewSentence(LineNumberP: integer; Param1, Param2: integer);
     procedure FindRefrain(); // tries to find a refrain for the medley mode and preview start
 
@@ -659,7 +660,6 @@ var
   ParamLyric:   UTF8String;
 
   NotesFound:   boolean;
-  ScoredLine: boolean;
 
   procedure RemoveEmptyLinesFromTrack(const TrackIdx: integer);
   var
@@ -877,26 +877,7 @@ begin
 
   NormalizeUnpitchedNoteTones;
 
-  for TrackIndex := 0 to High(Tracks) do
-  begin
-    if High(Tracks[Trackindex].Lines) < 0 then
-      continue;  // no lines in this track
-    Tracks[TrackIndex].Lines[High(Tracks[TrackIndex].Lines)].LastLine := true;
-    ScoredLine := false;
-    for LinePos := High(Tracks[TrackIndex].Lines) downto Low(Tracks[TrackIndex].Lines) do
-    begin
-      for NoteIndex := High(Tracks[TrackIndex].Lines[LinePos].Notes) downto Low(Tracks[TrackIndex].Lines[LinePos].Notes) do
-      begin
-        if (Tracks[TrackIndex].Lines[LinePos].Notes[NoteIndex].NoteType <> ntFreestyle) then
-        begin
-          Tracks[TrackIndex].HighestScoredBeat := Max(Tracks[TrackIndex].HighestScoredBeat, Tracks[TrackIndex].Lines[LinePos].Notes[NoteIndex].StartBeat + Tracks[TrackIndex].Lines[LinePos].Notes[NoteIndex].Duration);
-          ScoredLine := true;
-        end;
-      end;
-      if (ScoredLine) then
-        break;
-    end;
-  end;
+  UpdateCompletion;
 
   Result := true;
 end;
@@ -1707,6 +1688,27 @@ begin
   end; // with
 end;
 
+// Lyric fading follows the actual final line; completion follows scored notes.
+procedure TSong.UpdateCompletion;
+var
+  TrackIndex, LineIndex, NoteIndex: integer;
+begin
+  for TrackIndex := 0 to High(Tracks) do
+  begin
+    Tracks[TrackIndex].HighestScoredBeat := Low(Integer);
+    for LineIndex := 0 to High(Tracks[TrackIndex].Lines) do
+      with Tracks[TrackIndex].Lines[LineIndex] do
+      begin
+        LastLine := LineIndex = High(Tracks[TrackIndex].Lines);
+        for NoteIndex := 0 to High(Notes) do
+          with Notes[NoteIndex] do
+            if not ScoreExcluded and (Duration > 0) and (ScoreFactor[NoteType] > 0) then
+              Tracks[TrackIndex].HighestScoredBeat := Max(
+                Tracks[TrackIndex].HighestScoredBeat, StartBeat + Duration);
+      end;
+  end;
+end;
+
 procedure TSong.NormalizeUnpitchedNoteTones;
 var
   TrackIndex, LineIndex, NoteIndex, SearchIndex: integer;
@@ -2136,6 +2138,7 @@ begin
       Tracks[LineIndex].Number := Tracks[LineIndex].High+1;
     end;
   end;
+  UpdateCompletion;
 end;
 
 procedure TSong.Clear();
