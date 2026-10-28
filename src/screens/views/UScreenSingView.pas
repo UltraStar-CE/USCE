@@ -561,7 +561,6 @@ var
   DisplayPrefix:          string;
   DisplayMin:             integer;
   DisplaySec:             integer;
-  T:                      integer;
   CurLyricsTime:          real;
   VideoFrameTime:         Extended;
   ScorePlayerIndex:       integer;
@@ -580,22 +579,10 @@ var
   SingPlayer:             TThemeSingPlayer;
   DrawScorePanel:         boolean;
   ScoreMode:              TSingInfoBarMode;
-  function LastScoringLineFinished(TrackIndex: integer): boolean;
-  var
-    LineIndex, NoteIndex: integer;
+  function ScoringFinished(TrackIndex: integer): boolean;
   begin
-    Result := false;
-    for LineIndex := High(CurrentSong.Tracks[TrackIndex].Lines) downto 0 do
-      with CurrentSong.Tracks[TrackIndex].Lines[LineIndex] do
-        if LastLine then
-        begin
-          for NoteIndex := 0 to High(Notes) do
-            with Notes[NoteIndex] do
-              if not ScoreExcluded and (ScoreFactor[NoteType] > 0) and
-                 (CurLyricsTime < GetTimeFromBeat(StartBeat + Duration)) then
-                Exit;
-          Exit(true);
-        end;
+    Result := (CurrentSong.Tracks[TrackIndex].HighestScoredBeat = Low(Integer)) or
+      (CurLyricsTime >= GetTimeFromBeat(CurrentSong.Tracks[TrackIndex].HighestScoredBeat));
   end;
   procedure SetPlayerNameTexts(const Slots: TSlotArray; FirstPlayerIndex: integer; UseDuetNames: boolean);
   var
@@ -740,12 +727,18 @@ begin
   ScreenSing.Text[TextTimeText].Text := Format('%s%.2d:%.2d', [DisplayPrefix, DisplayMin, DisplaySec]);
   ScreenSing.Text[TextTimeText].Visible := ScreenSing.Settings.TimeBarVisible;
 
-  //the song was sung to the end?
-  if (not ScreenSing.SungToEnd) and (not ScreenSong.RapToFreestyle) then
+  // Only voices actually assigned to players determine scoring completion.
+  if not ScreenSing.SungToEnd then
   begin
-    ScreenSing.SungToEnd := true;
-    for T := Low(CurrentSong.Tracks) to Min(PlayersPlay - 1, High(CurrentSong.Tracks)) do
-      ScreenSing.SungToEnd := ScreenSing.SungToEnd and (CurLyricsTime >= GetTimeFromBeat(CurrentSong.Tracks[T].HighestScoredBeat));
+    if not CurrentSong.isDuet then
+      ScreenSing.SungToEnd := ScoringFinished(0)
+    else
+    begin
+      ScreenSing.SungToEnd := true;
+      for ScorePlayerIndex := 0 to PlayersPlay - 1 do
+        if not ScoringFinished(Player[ScorePlayerIndex].Track) then
+          ScreenSing.SungToEnd := false;
+    end;
   end;
 
   // for medley-mode:
