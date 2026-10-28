@@ -50,6 +50,15 @@ begin
   end;
 end;
 
+function RemoteCoverPath(const Item: TSong): UTF8String;
+var CoverPath: IPath;
+begin
+  Result := '';
+  if not Assigned(Item) or not Assigned(Item.Cover) or Item.Cover.IsUnset then Exit;
+  CoverPath := Item.Path.Append(Item.Cover);
+  if CoverPath.IsFile then Result := CoverPath.ToUTF8;
+end;
+
 function RemoteSongToJson(const SongIndex: integer): string;
 var
   Item: TSong;
@@ -98,6 +107,7 @@ begin
     ',"previewStart":' + StringReplace(FloatToStr(Item.PreviewStart), ',', '.', []) +
     ',"audioSource":"' + RemoteJsonEscape(AudioSource) + '"' +
     ',"audioPath":"' + RemoteJsonEscape(UTF8String(AudioPath.ToNative)) + '"' +
+    ',"coverPath":"' + RemoteJsonEscape(RemoteCoverPath(Item)) + '"' +
     '}';
 end;
 function RemoteSongLibraryJson: string;
@@ -173,7 +183,8 @@ begin
         PlaylistItemsJson := PlaylistItemsJson +
           ',"previewStart":' + StringReplace(FloatToStr(CatSongs.Song[PlaylistSongId].PreviewStart), ',', '.', []) +
           ',"audioSource":"' + RemoteJsonEscape(PlaylistAudioSource) + '"' +
-          ',"audioPath":"' + RemoteJsonEscape(UTF8String(PlaylistAudioPath.ToNative)) + '"';
+          ',"audioPath":"' + RemoteJsonEscape(UTF8String(PlaylistAudioPath.ToNative)) + '"' +
+          ',"coverPath":"' + RemoteJsonEscape(RemoteCoverPath(CatSongs.Song[PlaylistSongId])) + '"';
       end;
       PlaylistItemsJson := PlaylistItemsJson + '}';
       Inc(Sent);
