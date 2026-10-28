@@ -3453,7 +3453,8 @@ begin
   //Has Z Position.
   //Draw BG
   Text[TextConfiguration].Visible := (Mode = smNormal) and not CoverFull;
-  Statics[StaticContinuousKey].Visible := Text[TextConfiguration].Visible;
+  Statics[StaticContinuousKey].Visible := Text[TextConfiguration].Visible and
+    not ScreenSongJumpto.Visible;
   Statics[StaticContinuousStatus].Visible := Text[TextConfiguration].Visible and
     (ScreenContinuousPlayback.Enabled = 1);
 
