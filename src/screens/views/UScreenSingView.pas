@@ -740,18 +740,12 @@ begin
   ScreenSing.Text[TextTimeText].Text := Format('%s%.2d:%.2d', [DisplayPrefix, DisplayMin, DisplaySec]);
   ScreenSing.Text[TextTimeText].Visible := ScreenSing.Settings.TimeBarVisible;
 
-  // Completion follows assigned scoring voices, not clipped or zero-weight tails.
-  if not ScreenSing.SungToEnd then
+  //the song was sung to the end?
+  if (not ScreenSing.SungToEnd) and (not ScreenSong.RapToFreestyle) then
   begin
-    if not CurrentSong.isDuet then
-      ScreenSing.SungToEnd := LastScoringLineFinished(0)
-    else
-    begin
-      ScreenSing.SungToEnd := true;
-      for ScorePlayerIndex := 0 to PlayersPlay - 1 do
-        if not LastScoringLineFinished(Player[ScorePlayerIndex].Track) then
-          ScreenSing.SungToEnd := false;
-    end;
+    ScreenSing.SungToEnd := true;
+    for T := Low(CurrentSong.Tracks) to Min(PlayersPlay - 1, High(CurrentSong.Tracks)) do
+      ScreenSing.SungToEnd := ScreenSing.SungToEnd and (CurLyricsTime >= GetTimeFromBeat(CurrentSong.Tracks[T].HighestScoredBeat));
   end;
 
   // for medley-mode:
