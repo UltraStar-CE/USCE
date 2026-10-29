@@ -687,6 +687,7 @@ begin
 end;
 
 function TDisplay.ProblemSong: TSong;
+var SongIndex: integer;
 begin
   Result := nil;
   if NextScreen <> nil then Exit;
@@ -694,8 +695,10 @@ begin
      ((CurrentScreen = @ScreenName) and ScreenName.Goto_SingScreen) then
   begin
     if ScreenSongMenu.Visible or ScreenSongJumpto.Visible then Exit;
-    if (CatSongs.Selected >= 0) and (CatSongs.Selected < Length(CatSongs.Song)) and
-       not CatSongs.Song[CatSongs.Selected].Main then Result := CatSongs.Song[CatSongs.Selected];
+    if CurrentScreen = @ScreenSong then SongIndex := ScreenSong.Interaction
+    else SongIndex := CatSongs.Selected;
+    if (SongIndex >= 0) and (SongIndex < Length(CatSongs.Song)) and
+       not CatSongs.Song[SongIndex].Main then Result := CatSongs.Song[SongIndex];
   end
   else if (CurrentScreen = @ScreenSing) or (CurrentScreen = @ScreenScore) or
           (CurrentScreen = @ScreenHighScores) then Result := CurrentSong;
@@ -714,7 +717,7 @@ begin
         ScreenPopupError.ShowPopup(Language.Translate('SONG_PROBLEM_SAVE_FAILED'));
       end;
     end;
-  Result := ProblemFlags <> nil;
+  Result := (ProblemFlags <> nil) and ProblemFlags.Available;
 end;
 
 procedure TDisplay.DrawSongProblem;
