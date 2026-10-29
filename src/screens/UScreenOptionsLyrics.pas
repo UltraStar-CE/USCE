@@ -168,17 +168,21 @@ const
   LyricsPolish:  array [0..9]  of string = ('“W ', 'ni', 'żach ', 'mógł ', 'zjeść ', 'tru', 'flę ', 'koń ', 'bądź ', 'psy?” ');
 
 var
-  i: Integer;
+  i, PreviewY, PreviewHeight: Integer;
 begin
   inherited Create;
   Description := Language.Translate('SING_OPTIONS_LYRICS_DESC');
   WhereAmI := Language.Translate('SING_OPTIONS_LYRICS_WHEREAMI');
   Load;
 
+  // Keep the samples below the last widget, including the Back button.
+  PreviewY := Max(350, Ceil(Widgets[High(Widgets)].Y + Widgets[High(Widgets)].H + 15));
+  PreviewHeight := Max(1, Min(40, (530 - PreviewY - 20) div 4));
+
   // lyric sample engine 1
   LyricEngine[0] := TLyricEngine.Create(
-      80, 350, 640, 40,
-      80, 390, 640, 40);
+      80, PreviewY, 640, PreviewHeight,
+      80, PreviewY + PreviewHeight, 640, PreviewHeight);
 
   // build German line data
   SetLength(GermanLine.Notes, Length(LyricsGerman));
@@ -205,8 +209,8 @@ begin
 
   // lyric sample engine 2
   LyricEngine[1] := TLyricEngine.Create(
-      80, 450, 640, 40,
-      80, 490, 640, 40);
+      80, PreviewY + 2 * PreviewHeight + 20, 640, PreviewHeight,
+      80, PreviewY + 3 * PreviewHeight + 20, 640, PreviewHeight);
 
   // build Spanish line data
   SetLength(SpanishLine.Notes, Length(LyricsSpanish));
