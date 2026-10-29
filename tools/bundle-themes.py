@@ -6,6 +6,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 REPOSITORY = 'UltraStar-CE/Themes'
@@ -76,19 +77,35 @@ def portable(game, themes, destination, pin):
     shutil.copytree(str(themes), str(destination / 'themes'))
 
 
+def setup(destination, pin):
+    destination = Path(destination).resolve()
+    if destination.exists() and (not destination.is_dir() or any(destination.iterdir())):
+        raise ValueError('Themes destination must be empty; existing local themes are never overwritten')
+    with tempfile.TemporaryDirectory(prefix='usce-themes-') as temporary:
+        source = Path(temporary) / 'source'
+        subprocess.run(['git', 'init', '--quiet', str(source)], check=True)
+        subprocess.run(['git', '-C', str(source), 'fetch', '--depth=1',
+                        'https://github.com/' + REPOSITORY + '.git', pin['sha']], check=True)
+        subprocess.run(['git', '-C', str(source), 'checkout', '--quiet', '--detach', 'FETCH_HEAD'], check=True)
+        return bundle(source, destination, pin)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['pin', 'bundle', 'portable'])
+    parser.add_argument('command', choices=['pin', 'bundle', 'portable', 'setup'])
     parser.add_argument('--pin', default=str(ROOT / 'themes.json'))
     parser.add_argument('--source', default=str(ROOT / '.release-themes/source'))
-    parser.add_argument('--destination', default=str(ROOT / '.release-themes/bundle'))
+    parser.add_argument('--destination')
     parser.add_argument('--themes', default=str(ROOT / '.release-themes/bundle'))
     args = parser.parse_args()
     pin = read_pin(args.pin)
     if args.command == 'pin':
         print('sha=' + pin['sha'])
     elif args.command == 'bundle':
-        manifest = bundle(args.source, args.destination, pin)
+        manifest = bundle(args.source, args.destination or ROOT / '.release-themes/bundle', pin)
         print('Bundled {} themes from {}'.format(len(manifest['themes']), manifest['sha']))
+    elif args.command == 'setup':
+        manifest = setup(args.destination or ROOT / 'game/themes', pin)
+        print('Installed {} themes from {}'.format(len(manifest['themes']), manifest['sha']))
     else:
-        portable(args.source, args.themes, args.destination, pin)
+        portable(args.source, args.themes, args.destination or ROOT / '.release-themes/bundle', pin)

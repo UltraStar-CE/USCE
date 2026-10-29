@@ -82,3 +82,12 @@ class ThemeBundleTests(unittest.TestCase):
             themes.bundle(self.source, self.root / 'bundle', self.pin)
         with self.assertRaisesRegex(ValueError, 'repository root'):
             themes.bundle(self.source / 'Modern', self.root / 'subset', self.pin)
+
+    def test_development_setup_preserves_existing_local_themes(self):
+        destination = self.root / 'local-themes'
+        destination.mkdir()
+        artwork = destination / 'custom.png'
+        artwork.write_bytes(b'local artwork')
+        with self.assertRaisesRegex(ValueError, 'never overwritten'):
+            themes.setup(destination, self.pin)
+        self.assertEqual(artwork.read_bytes(), b'local artwork')
