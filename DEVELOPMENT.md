@@ -170,3 +170,14 @@ each visible player on each screen. `Padding=0..40` adds space around the guides
 scaled with the lane. X/Y/W/H are not used. With no section, nothing is drawn.
 Panels follow note visibility, so hiding notes or using zero-player playback
 also hides them. They do not change note drawing, scoring, voices or lyrics.
+
+
+### Explicit base-section inheritance
+
+A derived theme can set `Inherits=base:DefaultLegendText` inside
+`DefaultLegendText` to keep the nearest base theme's values and override only
+individual keys. `base:` searches after the file defining the current section,
+so chained base themes can extend their own parent sections. It also works for
+`Colors`: inherited names remain available and derived names override them.
+Ordinary `Inherits=OtherSection` and sections without Inherits keep their previous
+lookup behavior. This avoids implicitly changing existing derived-theme layouts.
