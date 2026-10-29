@@ -830,6 +830,7 @@ var
   JumpStart: integer;
   JumpOffset: integer;
   JumpTarget: integer;
+  JumpModifiers: word;
   SDL_ModState:  word;
   UpperLetter: UCS4Char;
   TempStr: UTF8String;
@@ -862,12 +863,18 @@ begin
     SDL_ModState := SDL_GetModState and (KMOD_LSHIFT + KMOD_RSHIFT
     + KMOD_LCTRL + KMOD_RCTRL + KMOD_LALT  + KMOD_RALT);
 
-    if (SDL_ModState <> AltJumpModifiers) or (SDL_ModState and KMOD_LALT = 0) or ((AltJumpPrefix <> '') and (SDL_GetTicks - AltJumpLastTick > 1000)) then
+    // Left/right variants belong to the same prefix sequence.
+    JumpModifiers := SDL_ModState;
+    if JumpModifiers and KMOD_ALT <> 0 then
+      JumpModifiers := (JumpModifiers and not KMOD_ALT) or KMOD_LALT;
+    if JumpModifiers and KMOD_SHIFT <> 0 then
+      JumpModifiers := (JumpModifiers and not KMOD_SHIFT) or KMOD_LSHIFT;
+    if (JumpModifiers <> AltJumpModifiers) or (JumpModifiers and KMOD_LALT = 0) or ((AltJumpPrefix <> '') and (SDL_GetTicks - AltJumpLastTick > 1000)) then
       AltJumpPrefix := '';
-    AltJumpModifiers := SDL_ModState;
+    AltJumpModifiers := JumpModifiers;
 
     //Jump to Artist/Title (either Alt/Option key)
-    if (((SDL_ModState and (KMOD_LALT + KMOD_RALT)) <> 0) and (FreeListMode)) then
+    if (SDL_ModState and KMOD_ALT <> 0) and (SDL_ModState and KMOD_CTRL = 0) and FreeListMode then
     begin
       if(PressedKey > 1114111) then
       begin
