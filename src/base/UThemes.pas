@@ -3531,7 +3531,7 @@ begin
   ThemeButton.ColB := ReadFloat(SectionList, 'ColB', 1);
   ThemeButton.Int :=  ReadFloat(SectionList, 'Int', 1);
   ThemeButton.Alpha := EnsureRange(ReadFloat(SectionList, 'Alpha',
-    ReadFloat(GetSectionList('Theme'), 'ButtonAlpha', 1)), 0.0, 1.0);
+    ReadFloat(GetSectionList('Theme'), 'ButtonAlpha', 0.9)), 0.0, 1.0);
   ThemeButton.DColR := ReadFloat(SectionList, 'DColR', 1);
   ThemeButton.DColG := ReadFloat(SectionList, 'DColG', 1);
   ThemeButton.DColB := ReadFloat(SectionList, 'DColB', 1);
