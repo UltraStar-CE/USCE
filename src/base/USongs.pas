@@ -74,7 +74,8 @@ type
     fltYear,
     fltCreator,
     fltTags,
-    fltAge
+    fltAge,
+    fltProblem
   );
 
   TSongFilterRow = record
@@ -175,7 +176,7 @@ const
 implementation
 
 uses
-  UFilterTerms,
+  UFilterTerms, USongProblems,
   UAge,
   ULibraryLockdown,
   StrUtils,
@@ -1276,9 +1277,14 @@ begin
           TmpString := Song[I].CreatorASCII;
         fltTags:
           TmpString := Song[i].TagsASCII;
+        fltProblem:
+          if GetSongProblems.IsFlagged(Song[I].Path.Append(Song[I].FileName)) then
+            TmpString := 'yes'
+          else
+            TmpString := 'no';
       end;
 
-      if Filter in [fltTitle, fltArtist, fltLanguage, fltEdition, fltGenre, fltYear, fltCreator, fltTags] then
+      if Filter in [fltTitle, fltArtist, fltLanguage, fltEdition, fltGenre, fltYear, fltCreator, fltTags, fltProblem] then
       begin
         Song[I].Visible := MatchesFilterTerms(TmpString, FilterCopy, Filter = fltYear);
         if Song[I].Visible then Inc(Result);

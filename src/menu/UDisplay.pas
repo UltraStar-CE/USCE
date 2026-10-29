@@ -298,7 +298,6 @@ end;
 destructor TDisplay.Destroy;
 begin
   ProblemIndicator.Free;
-  ProblemFlags.Free;
   FadeTex[0].Free;
   FadeTex[1].Free;
   OpaqueFadeTex[0].Free;
@@ -708,7 +707,7 @@ function TDisplay.EnsureProblemFlags: boolean;
 begin
   if (ProblemFlags = nil) and not ProblemFlagsUnavailable then
     try
-      ProblemFlags := TSongProblems.Create(Platform.GetGameUserPath.Append('song-problems.json'));
+      ProblemFlags := GetSongProblems;
     except
       on E: Exception do
       begin
