@@ -168,4 +168,3 @@ begin
  CatSongs.Free;CatSongs:=nil;
  Writeln('PASS: actual Lua modules, cross-plugin handles, unload, stale IDs, missing files, SFX volume, input payload, overlay priority and persistent hooks');
 end.
-
