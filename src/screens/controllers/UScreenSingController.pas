@@ -1296,6 +1296,7 @@ begin
         Inc(NumEmptySentences[PlayerIndex]);
   end;
 
+  screenSingViewRef.PrepareGapCountdown;
   eSongLoaded.CallHookChain(False);
 
   if (ScreenSong.Mode = smMedley) and (PlaylistMedley.CurrentMedleySong>1) then

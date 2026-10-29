@@ -44,6 +44,7 @@ uses
   ULog,
   ULyrics,
   UAvatars,
+  UGapCountdown,
   UMenu,
   UMusic,
   UPlayerLayout,
@@ -57,6 +58,9 @@ uses
 
 type
   TScreenSingView = class
+  private
+    GapCountdown: TGapCountdown;
+    procedure DrawGapCountdown;
   public
 
     //StaticDuet: array of cardinal;
@@ -85,6 +89,7 @@ type
     constructor Create;
     destructor Destroy; override;
 
+    procedure PrepareGapCountdown;
     procedure DrawMedleyCountdown();
     procedure DrawCountIn();
     procedure DrawCountdown(timeDiff: real);
@@ -486,6 +491,7 @@ begin
   ScreenSing.fCurrentVideo := nil;
 
   // create score class
+  GapCountdown := TGapCountdown.Create;
   ScreenSing.Scores := TSingScores.Create;
   ScreenSing.Scores.LoadfromTheme;
 
@@ -551,6 +557,7 @@ end;
 
 destructor TScreenSingView.Destroy;
 begin
+  GapCountdown.Free;
   UnloadSingScreenTextures;
   inherited;
 end;
@@ -822,7 +829,9 @@ begin
   if ScreenSong.Mode = smMedley then
     DrawMedleyCountdown;
   if ScreenSing.CountIn then
-    DrawCountIn;
+    DrawCountIn
+  else
+    DrawGapCountdown;
 
   // check for music finish
   //Log.LogError('Check for music finish: ' + BoolToStr(Music.Finished) + ' ' + FloatToStr(LyricsState.CurrentTime*1000) + ' ' + IntToStr(CurrentSong.Finish));
@@ -913,6 +922,35 @@ begin
   end;
 end;
 
+procedure TScreenSingView.PrepareGapCountdown;
+var Track, Line, Note: integer; StartTime, EndTime: double;
+begin
+  GapCountdown.Clear;
+  for Track := 0 to High(CurrentSong.Tracks) do
+    for Line := 0 to High(CurrentSong.Tracks[Track].Lines) do
+      for Note := 0 to High(CurrentSong.Tracks[Track].Lines[Line].Notes) do
+        with CurrentSong.Tracks[Track].Lines[Line].Notes[Note] do
+        begin
+          StartTime := GetTimeFromBeat(StartBeat);
+          EndTime := GetTimeFromBeat(StartBeat + Duration);
+          if ScreenSong.Mode = smMedley then
+          begin
+            StartTime := Max(StartTime, GetTimeFromBeat(CurrentSong.Medley.StartBeat));
+            EndTime := Min(EndTime, GetTimeFromBeat(CurrentSong.Medley.EndBeat));
+          end;
+          GapCountdown.Add(StartTime, EndTime);
+        end;
+  GapCountdown.Prepare;
+end;
+
+procedure TScreenSingView.DrawGapCountdown;
+var TimeLeft: double;
+begin
+  if (Ini.GapCountdown = 0) or not ScreenSing.Settings.LyricsVisible then Exit;
+  TimeLeft := GapCountdown.Remaining(LyricsState.GetCurrentTime, Ini.GapCountdown * 5);
+  if TimeLeft > 0 then DrawCountdown(TimeLeft);
+end;
+
 procedure TScreenSingView.DrawCountIn;
 var
   Pos: real;
@@ -934,16 +972,18 @@ begin
   if not ScreenSing.Settings.FeedbackVisible then Exit;
   t := frac(timeDiff);
 
-  h := 300*t*ScreenH/RenderH;
-  SetFontFamily(0);
-  SetFontStyle(ftBoldHighRes);
+  h := Theme.Sing.Countdown.Size*t*ScreenH/RenderH;
+  SetFontFamily(Theme.Sing.Countdown.Font);
+  SetFontStyle(Theme.Sing.Countdown.Style);
   SetFontItalic(false);
   SetFontSize(h);
-  SetFontColor(0.15, 0.30, 0.6, t);
+  SetFontColor(Theme.Sing.Countdown.ColR, Theme.Sing.Countdown.ColG,
+    Theme.Sing.Countdown.ColB, t * Theme.Sing.Countdown.Alpha);
   CountDownText := IntToStr(round(timeDiff - t + 1));
   w := TextWidth(PChar(CountDownText));
 
-  SetFontPos (RenderW/2-w/2, RenderH/2-h/2);
+  SetFontPos(Theme.Sing.Countdown.X * RenderW / 800 - w/2,
+    Theme.Sing.Countdown.Y * RenderH / 600 - h/2);
   PrintText(PChar(CountDownText));
 
 end;

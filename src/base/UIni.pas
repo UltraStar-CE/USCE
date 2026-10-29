@@ -208,6 +208,7 @@ type
       LyricsStyle:    integer;
       LyricsEffect:   integer;
       NoteLines:      integer;
+      GapCountdown:   integer;
 
       // Themes
       Theme:          integer;
@@ -384,6 +385,9 @@ const
                                                 '0.55', '0.60', '0.65', '0.70', '0.75', '0.80', '0.85', '0.90', '0.95', '1.00');
   ILyricsAlphaVals: array[0..20] of single = (0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50,
                                               0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95, 1.00);
+
+  IGapCountdown: array[0..12] of UTF8String = ('Off', '5', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55', '60');
+  IGapCountdownTranslated: array[0..12] of UTF8String = ('Off', '5 s', '10 s', '15 s', '20 s', '25 s', '30 s', '35 s', '40 s', '45 s', '50 s', '55 s', '60 s');
 
   INoteLines:     array[0..1] of UTF8String = ('Off', 'On');
 
@@ -904,6 +908,8 @@ begin
   ILyricsEffectTranslated[2]          := ULanguage.Language.Translate('OPTION_VALUE_SLIDE');
   ILyricsEffectTranslated[3]          := ULanguage.Language.Translate('OPTION_VALUE_BALL');
   ILyricsEffectTranslated[4]          := ULanguage.Language.Translate('OPTION_VALUE_SHIFT');
+
+  IGapCountdownTranslated[0] := ULanguage.Language.Translate('OPTION_VALUE_OFF');
 
   INoteLinesTranslated[0]             := ULanguage.Language.Translate('OPTION_VALUE_OFF');
   INoteLinesTranslated[1]             := ULanguage.Language.Translate('OPTION_VALUE_ON');
@@ -1808,6 +1814,8 @@ begin
   // Lyrics Effect
   LyricsEffect := ReadArrayIndex(ILyricsEffect, IniFile, 'Lyrics', 'LyricsEffect', 2);
 
+  GapCountdown := ReadArrayIndex(IGapCountdown, IniFile, 'Lyrics', 'GapCountdown', 0);
+
   // NoteLines
   NoteLines := ReadArrayIndex(INoteLines, IniFile, 'Lyrics', 'NoteLines', 1);
 
@@ -2060,6 +2068,8 @@ begin
 
     // Lyrics Effect
     IniFile.WriteString('Lyrics', 'LyricsEffect', ILyricsEffect[LyricsEffect]);
+
+    IniFile.WriteString('Lyrics', 'GapCountdown', IGapCountdown[GapCountdown]);
 
     // NoteLines
     IniFile.WriteString('Lyrics', 'NoteLines', INoteLines[NoteLines]);

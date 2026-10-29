@@ -60,6 +60,17 @@ A git version of this SVN can be found in the [legacy-sourceforge-svn-mirror](ht
 - Don't let anyone else tell you what to work on. Do what you like and be free!
 Thank you for helping improve the game.
 
+### Singing countdown theme settings
+
+The optional `[SingCountdown]` section styles the shared intro, medley and
+instrumental-gap countdown. `X` and `Y` are its center in the 800x600 reference
+layout (defaults 400 and 300). `Size` defaults to 300; `Font` and `Style` use the
+usual theme font identifiers. `ColR`, `ColG`, `ColB` and `Alpha` control its color
+and opacity. Missing fields retain the existing blue countdown appearance.
+The Lyrics option selects Off or the minimum gap duration, from 5 to 60 seconds.
+All voices contribute to gap detection; the countdown does not hide lyrics or
+change the notes, progress bar or scoring.
+
 ### English fallback coverage
 
 English is the fallback for incomplete translations. New labels need an entry

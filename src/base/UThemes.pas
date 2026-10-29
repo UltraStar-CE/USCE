@@ -537,6 +537,10 @@ type
 
     StaticSongName:   TThemeStatic;
     TextSongName:     TThemeText;
+    Countdown: record
+      X, Y, Size, ColR, ColG, ColB, Alpha: real;
+      Font, Style: integer;
+    end;
 
     //Linebonus Translations
     LineBonusText:    array [0..8] of UTF8String;
@@ -2230,6 +2234,17 @@ begin
 
       ThemeLoadStatic(Sing.StaticSongName, 'SingSongNameStatic');
       ThemeLoadText(Sing.TextSongName, 'SingSongNameText');
+      SectionList := GetSectionList('SingCountdown');
+      // Countdown center uses the standard 800x600 theme reference coordinates.
+      Sing.Countdown.X := ReadFloat(SectionList, 'X', 400);
+      Sing.Countdown.Y := ReadFloat(SectionList, 'Y', 300);
+      Sing.Countdown.Size := Max(1, ReadFloat(SectionList, 'Size', 300));
+      Sing.Countdown.ColR := ReadFloat(SectionList, 'ColR', 0.15);
+      Sing.Countdown.ColG := ReadFloat(SectionList, 'ColG', 0.30);
+      Sing.Countdown.ColB := ReadFloat(SectionList, 'ColB', 0.6);
+      Sing.Countdown.Alpha := EnsureRange(ReadFloat(SectionList, 'Alpha', 1), 0, 1);
+      Sing.Countdown.Font := ReadInteger(SectionList, 'Font', 0);
+      Sing.Countdown.Style := ReadInteger(SectionList, 'Style', ftBoldHighRes);
 
       //Line Bonus Texts
       Sing.LineBonusText[0] := Language.Translate('POPUP_AWFUL');
