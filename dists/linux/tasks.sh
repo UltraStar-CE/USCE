@@ -102,10 +102,6 @@ task_cmake() {
 task_projectm() {
 	start_build projectm projectm || return 0
 
-	# This patch backports GCC 4.9 compatibility so that ProjectM can compile on Debian Jessie
-	# When the AppImage OS is upgraded to a later release, the patch can be deleted
-	patch -p1 < $root/projectM-gcc-4.9.patch
-
 	cmake -DCMAKE_INSTALL_PREFIX="$PREFIX" -DCMAKE_BUILD_TYPE=Release -DENABLE_PLAYLIST=OFF
 	make $makearg
 	make install
@@ -123,13 +119,18 @@ task_desktop_file_utils() {
 task_AppImageKit() {
 	start_build AppImageKit || return 0
 	patch -p1 < $root/appimagekit-deps.patch
+	# Every bundled autotools dependency needs env when flags contain spaces.
+	sed -i 's/COMMAND CC=/COMMAND ${CMAKE_COMMAND} -E env CC=/g' lib/libappimage/cmake/dependencies.cmake
 	! pkg-config --exists libarchive || EXTRA_CMAKE_FLAGS="-DUSE_SYSTEM_LIBARCHIVE=ON"
 	rm -rf build
 	mkdir -p build
 	cd build
+	# Only this old packaging tool and its bundled C dependencies need -fcommon.
 	cmake \
 		-DCMAKE_INSTALL_PREFIX="$PREFIX" \
 		-DCMAKE_BUILD_TYPE="Release" \
+		-DCMAKE_C_FLAGS="$CFLAGS -fcommon" \
+		-DDEPENDENCIES_CFLAGS="$CFLAGS -fcommon" \
 		-DBUILD_TESTING=OFF \
 		-DAPPIMAGEKIT_PACKAGE_DEBS=OFF \
 		$EXTRA_CMAKE_FLAGS \
@@ -517,6 +518,11 @@ task_opencv() {
 task_usce() {
 	start_build ../../.. UltraStar Community Edition
 	local OUTPUT="$root/build/$ARCH"
+	cmake -S native/phone-audio -B build/phone-audio -G Ninja -DCMAKE_BUILD_TYPE=Release -DOPENSSL_ROOT_DIR=/usr -DOPENSSL_USE_STATIC_LIBS=TRUE
+	cmake --build build/phone-audio --parallel 3
+	ctest --test-dir build/phone-audio --output-on-failure
+	python3 tools/test_native_relay.py
+	python3 tools/stage-phone-audio.py --platform linux --openssl-license /usr/share/doc/libssl-dev/copyright --openssl-license /usr/share/common-licenses/Apache-2.0
 	bash ./autogen.sh
 	./configure --prefix=/usr PKG_CONFIG_PATH="$PKG_CONFIG_PATH" CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH" CC="$CC" CXX="$CXX" --enable-debug --without-portaudio --with-libprojectM
 	sleep 1

@@ -127,6 +127,7 @@ uses
   ULanguage,
   UNote,
   URecord,
+  UInputSource,
   USong,
   UDisplay,
   UParty,
@@ -743,6 +744,9 @@ var
       ScreenSing.Statics[AvatarSlots[J]].Visible := AvatarWasVisible[J];
       ScreenSing.Statics[FrameSlots[J]].Draw;
       ScreenSing.Statics[AvatarSlots[J]].Draw;
+      if AvatarWasVisible[J] then
+        with ScreenSing.Statics[AvatarSlots[J]].Texture do
+          DrawInputSourceBadge(PlayerInputSource(LocalStartIndex + J - 1), X, Y, W, H, ibsSing, Alpha, ScaleMode);
     end;
   end;
 begin

@@ -244,6 +244,15 @@ install-all: install-exec install-plugins install-data
 install-exec:
 	$(MKDIR) "$(DESTDIR)$(bindir)"
 	$(INSTALL_PROGRAM) "$(USCE_BIN)" "$(DESTDIR)$(bindir)"
+	@for lib in "$(USCE_GAME_DIR)/usce-phone-audio.dll" "$(USCE_GAME_DIR)/libusce-phone-audio.so" "$(USCE_GAME_DIR)/libusce-phone-audio.dylib"; do \
+	  if test -f "$$lib"; then $(INSTALL_PROGRAM) "$$lib" "$(DESTDIR)$(bindir)"; fi; \
+	done
+	@for file in native-licenses.txt phone-audio.json; do \
+	  if test -f "$(USCE_GAME_DIR)/runtime/$$file"; then \
+	    $(MKDIR) "$(DESTDIR)$(INSTALL_DATADIR)/runtime"; \
+	    $(INSTALL_DATA) "$(USCE_GAME_DIR)/runtime/$$file" "$(DESTDIR)$(INSTALL_DATADIR)/runtime"; \
+	  fi; \
+	done
 
 # FPC target platform and processor
 PPLATFORM  := @FPC_PLATFORM@
@@ -385,6 +394,7 @@ HDIUTIL := /usr/bin/hdiutil
 # pkgingLibDir := path for libraries installed using packaging system
 pkgingLibDir := @MACOS_PACKAGING_LIBDIR@
 EXTRA_DYLIBS := @EXTRA_DYLIBS@
+EXTRA_DYLIBS += $(wildcard $(USCE_GAME_DIR)/libusce-phone-audio.dylib)
 
 #################################################
 # macOS app-bundle
@@ -403,20 +413,20 @@ macos-app: all
 
 # Put the icon file into its particular place. 
 # Must be done BEFORE info.plist is created.
-	$(MKDIR) $(macos_bundle_path)/resources
-	$(INSTALL_DATA) icons/usce.icns $(macos_bundle_path)/resources/
+	$(MKDIR) $(macos_bundle_path)/Resources
+	$(INSTALL_DATA) icons/usce.icns $(macos_bundle_path)/Resources/
 
 # the info.plist file
 	$(INSTALL_DATA) $(USCE_SRC_DIR)/macos/Info.plist $(macos_bundle_path)/
 
 # Copy the resources. 
-	$(MAKE) install-all INSTALL_DATADIR=$(macos_bundle_path) bindir=$(macos_bundle_path)/MacOS
+	$(MAKE) install-all INSTALL_DATADIR=$(macos_bundle_path)/Resources bindir=$(macos_bundle_path)/MacOS
 
 # Copy the lua plugins. 
-	$(MAKE) install-plugins INSTALL_DATADIR=$(macos_bundle_path) bindir=$(macos_bundle_path)/MacOS
+	$(MAKE) install-plugins INSTALL_DATADIR=$(macos_bundle_path)/Resources bindir=$(macos_bundle_path)/MacOS
 
 # Create the song directory. 
-	$(MKDIR) $(macos_bundle_path)/songs
+	$(MKDIR) $(macos_bundle_path)/Resources/songs
 
 # final messages
 	@echo ""
@@ -445,7 +455,7 @@ macos-standalone-app: macos-app
 
 	@rm -f $(macos_bundle_path)/MacOS/$(USCE_BIN_NAME)
 	@$(MAKE) -f Makefile.macos-helper
-	codesign --force --deep --sign "$(MACOS_SIGN_IDENTITY)" "./UltraStar Community Edition.app"
+	python3 tools/sign-macos-bundle.py "./UltraStar Community Edition.app" "$(MACOS_SIGN_IDENTITY)"
 
 
 # final messages
@@ -464,12 +474,14 @@ macos-dmg: macos-standalone-app
 	$(HDIUTIL) create -type SPARSE -size 1g -fs HFS+ -volname "UltraStar Community Edition" -ov "UltraStar Community Edition.sparseimage"
 	$(HDIUTIL) attach "UltraStar Community Edition.sparseimage"
 	/bin/ln -s /Applications "/Volumes/UltraStar Community Edition/Applications"
-	/bin/cp -R "UltraStar Community Edition.app" "/Volumes/UltraStar Community Edition"
+	/usr/bin/ditto --rsrc --extattr "UltraStar Community Edition.app" "/Volumes/UltraStar Community Edition/UltraStar Community Edition.app"
 	$(MKDIR) "/Volumes/UltraStar Community Edition/Licenses"
 	find $(USCE_GAME_DIR) -name 'LICENSE.*' -maxdepth 1 -exec cp {} "/Volumes/UltraStar Community Edition/Licenses" \;
 #	/bin/cp "ultrastardx/icons/UltraStarDeluxeVolumeIcon.icns "/Volumes/UltraStar Community Edition/.VolumeIcon.icns"
 #	/Developer/Tools/SetFile -a C "/Volumes/UltraStar Community Edition/.VolumeIcon.icns" "/Volumes/UltraStar Community Edition"
-	codesign --force --deep --sign "$(MACOS_SIGN_IDENTITY)" "/Volumes/UltraStar Community Edition/UltraStar Community Edition.app"
+# HFS+ normalizes Unicode filenames while copying from the build volume.
+# Seal resource names on the final filesystem, after that normalization.
+	python3 tools/sign-macos-bundle.py "/Volumes/UltraStar Community Edition/UltraStar Community Edition.app" "$(MACOS_SIGN_IDENTITY)"
 	python3 tools/detach_macos_image.py "$(HDIUTIL)" "/Volumes/UltraStar Community Edition" "UltraStar Community Edition.sparseimage"
 	$(HDIUTIL) convert "UltraStar Community Edition.sparseimage" -format UDBZ -o "UltraStar Community Edition.dmg"
 	$(RM) "UltraStar Community Edition.sparseimage"

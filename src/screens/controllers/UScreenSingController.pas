@@ -88,6 +88,16 @@ type
     procedure ClearLyricEngines();
     procedure CalculateStartTime;
     procedure SaveLocalScores;
+    procedure AnnounceRemoteSongStarted;
+    procedure AnnounceRemoteSongPaused;
+    procedure AnnounceRemoteSongResumed;
+    procedure AnnounceRemoteSongEnded;
+    procedure AnnounceRemoteSongPosition(const Reason: UTF8String);
+    procedure SendRemoteLyrics;
+    procedure SendRemoteScoreSheet;
+    procedure SendRemoteScoreSnapshot(Force: boolean);
+    function RemoteMediaStartUs: int64;
+    function RemoteSongDurationUs: int64;
     procedure ResumeAfterScoringTail;
   public
     ScoringTailActive: boolean;
@@ -179,6 +189,7 @@ type
     procedure ApplySettings; //< applies changes of settings record
     procedure EndSong;
 
+    procedure RefreshInputRoster(NewCount: integer);
     constructor Create; override;
     destructor Destroy; override;
     procedure OnShow; override;
@@ -231,6 +242,9 @@ uses
   ULog,
   UNote,
   URecord,
+  URemoteBridgeIPC,
+  URemoteInput,
+  UInputSource,
   UParty,
   UPathUtils,
   USong,
@@ -243,6 +257,13 @@ uses
 const
   MAX_MESSAGE = 3;
   MINIMUM_START_TIME = 3;
+
+var
+  RemoteSongSeq: integer = 0;
+  LastRemoteScoreSnapshotTick: cardinal = 0;
+
+const
+  REMOTE_SCORE_SNAPSHOT_MS = 500;
 
 // method for input parsing. if false is returned, getnextwindow
 // should be checked to know the next window to load;
@@ -284,6 +305,8 @@ begin
         if ScreenSong.Mode = smMedley then Exit;
         SeekTo(fStartTime);
         PlaybackSeeked := false;
+        AnnounceRemoteSongStarted;
+
         Exit;
       end;
 
@@ -565,12 +588,14 @@ begin
           SeekTo(Min(AudioPlayback.Position + 5.0, LyricsState.TotalTime), false);
           PlaybackSeeked := true;
         end;
+
       end;
 
       SDLK_LEFT:
       begin
         if (SDL_ModState = KMOD_LCTRL) and (AudioPlayback.Position >= 20.0) then
           SeekTo(AudioPlayback.Position - 5.0);
+
       end;
 
       SDLK_TAB:
@@ -657,6 +682,50 @@ begin
   fCountIn := Position < CurrentSong.Start;
   if Assigned(fCurrentVideo) then
     fCurrentVideo.Position := CurrentSong.VideoGAP + Position;
+  AnnounceRemoteSongPosition('seek');
+end;
+
+procedure TScreenSingController.RefreshInputRoster(NewCount: integer);
+var I, OldCount: integer; Color: TRGB; Levels: array[0..UIni.IMaxPlayerCount-1] of integer;
+  Names: array[0..UIni.IMaxPlayerCount-1] of UTF8String;
+begin
+  if (ScreenSong.Mode <> smNormal) or Party.bPartyGame or FadeOut or
+    ScoringTailActive or not ShowFinish then Exit;
+  NewCount := EnsureRange(NewCount,0,UIni.IMaxPlayerCount);
+  OldCount := PlayersPlay;
+  // Keep live singer records through input loss; the next song resets the roster.
+  if NewCount <= OldCount then Exit;
+  for I := 0 to High(Player) do
+  begin
+    Levels[I] := Player[I].Level;
+    Names[I] := Player[I].Name;
+  end;
+  ScreenName.LoadPlayersFromIni(true);
+  for I := 0 to Min(OldCount,NewCount)-1 do
+  begin
+    Player[I].Level := Levels[I];
+    Player[I].Name := Names[I];
+  end;
+  for I := OldCount to NewCount-1 do
+  begin
+    Player[I].HighNote := -1;
+    Player[I].LengthNote := 0;
+    SetLength(Player[I].Note, 0);
+    Player[I].ResetScores;
+    Player[I].Track := VoiceAssignments.VoiceForPlayer(I,CurrentSong.VoiceCount);
+    Player[I].InputSource := Ord(PlayerInputSource(I));
+  end;
+  Scores.KillAllPopUps;
+  Scores.ClearPlayers;
+  Color.R:=0; Color.G:=0; Color.B:=0;
+  for I:=0 to NewCount-1 do Scores.AddPlayer(Tex_ScoreBG[I],Color,Player[I].ScoreTotalInt);
+  Scores.Init;
+  if (OldCount=0) and (NewCount>0) then AudioInput.CaptureStart;
+  if NewCount=0 then AudioInput.CaptureStop;
+  if ScreenContinuousPlayback.Session.Active then ScreenContinuousPlayback.Session.Scored:=NewCount>0;
+  SendRemoteScoreSnapshot(true);
+  RemoteBridgeIPC.SendGameState('singing',RemoteSongSeq,0);
+  Log.LogStatus(Format('players %d -> %d',[OldCount,NewCount]),'Input roster');
 end;
 
 procedure TScreenSingController.Pause;
@@ -676,6 +745,7 @@ begin
     if (fCurrentVideo <> nil) then
       fCurrentVideo.Pause;
 
+    AnnounceRemoteSongPaused;
   end
   else              // disable pause
   begin
@@ -690,6 +760,7 @@ begin
       fCurrentVideo.Pause;
 
     Paused := false;
+    AnnounceRemoteSongResumed;
   end;
   if ScreenContinuousPlayback.Session.Active then
     ScreenContinuousPlayback.Session.Paused := Paused;
@@ -725,10 +796,12 @@ procedure TScreenSingController.OnShow;
 var
   BadPlayer, I: integer;
   Col: TRGB;
+
 begin
   inherited;
 
   ScoringTailActive := false;
+  RemoteBridgeIPC.ApplyPendingPlayerCount(true);
   Log.LogStatus('Begin', 'OnShow');
 
   // Drop any pitch history from the previous song, otherwise the trace would
@@ -777,7 +850,9 @@ begin
   Text[screenSingViewRef.SongNameText].Visible := false;
 
   BadPlayer := 0;
-  if PlayersPlay > 0 then BadPlayer := AudioInputProcessor.CheckPlayersConfig(PlayersPlay);
+  if (PlayersPlay > 0) and ((ScreenSong.Mode <> smNormal) or Party.bPartyGame) then
+    BadPlayer := AudioInputProcessor.CheckPlayersConfig(PlayersPlay);
+
   if (BadPlayer <> 0) and CheckPlayerConfigOnNextSong then
   begin
     ScreenPopupError.ShowPopup(
@@ -904,6 +979,7 @@ begin
     AudioPlayback.FadeIn(CurrentSong.Medley.FadeIn_time, 1.0)
   else
     AudioPlayback.Play();
+  AnnounceRemoteSongStarted;
 
   // Send Score
   Act_MD5Song := CurrentSong.MD5;
@@ -1488,6 +1564,253 @@ begin
     fStartTime := CurrentSong.Start;
 end;
 
+procedure TScreenSingController.AnnounceRemoteSongStarted;
+var I: integer;
+begin
+  for I := 0 to High(Player) do Player[I].InputSource := Ord(PlayerInputSource(I));
+  Inc(RemoteSongSeq);
+  LastRemoteScoreSnapshotTick := 0;
+  RemoteBridgeIPC.SendSongStarted(
+    RemoteSongSeq,
+    CatSongs.Selected,
+    RemoteMediaStartUs,
+    RemoteSongDurationUs,
+    CurrentSong.Title,
+    CurrentSong.Artist
+  );
+  RemoteInputProcessor.AcceptingInput := true;
+  RemoteBridgeIPC.SendGameState('singing', RemoteSongSeq, 0);
+  SendRemoteScoreSheet;
+  SendRemoteLyrics;
+  SendRemoteScoreSnapshot(true);
+end;
+
+procedure TScreenSingController.AnnounceRemoteSongPaused;
+begin
+  if (RemoteSongSeq > 0) then
+  begin
+    RemoteInputProcessor.AcceptingInput := false;
+    RemoteBridgeIPC.SendSongPaused(RemoteSongSeq, RemoteMediaStartUs, RemoteSongDurationUs);
+    RemoteBridgeIPC.SendGameState('paused', RemoteSongSeq, 0);
+  end;
+end;
+
+procedure TScreenSingController.AnnounceRemoteSongResumed;
+begin
+  if (RemoteSongSeq > 0) then
+  begin
+    RemoteInputProcessor.AcceptingInput := true;
+    RemoteBridgeIPC.SendSongResumed(RemoteSongSeq, RemoteMediaStartUs, RemoteSongDurationUs);
+    RemoteBridgeIPC.SendGameState('singing', RemoteSongSeq, 0);
+  end;
+end;
+
+procedure TScreenSingController.AnnounceRemoteSongEnded;
+var I: integer; Source: TPlayerInputSource;
+begin
+  for I := 0 to High(Player) do
+  begin
+    Source := PlayerInputSource(I);
+    if Source <> pisNone then Player[I].InputSource := Ord(Source);
+  end;
+  if (RemoteSongSeq > 0) then
+  begin
+    RemoteInputProcessor.AcceptingInput := false;
+    SendRemoteScoreSnapshot(true);
+    RemoteBridgeIPC.SendSongEnded(RemoteSongSeq, RemoteMediaStartUs, RemoteSongDurationUs);
+    RemoteBridgeIPC.SendGameState('song_ended', RemoteSongSeq, 0);
+  end;
+end;
+
+procedure TScreenSingController.AnnounceRemoteSongPosition(const Reason: UTF8String);
+var HostStateUs: int64;
+begin
+  if (RemoteSongSeq <= 0) then
+    Exit;
+
+  HostStateUs := GetTickCount64 * 1000;
+  RemoteBridgeIPC.SendJsonMessage(
+    '{"type":"song.position","protocol":1' +
+    ',"hostStateUs":' + IntToStr(HostStateUs) +
+    ',"songSeq":' + IntToStr(RemoteSongSeq) +
+    ',"mediaStartUs":' + IntToStr(RemoteMediaStartUs) +
+    ',"durationUs":' + IntToStr(RemoteSongDurationUs) +
+    ',"reason":"' + RemoteJsonEscape(Reason) + '"' +
+    '}'
+  );
+end;
+
+procedure TScreenSingController.SendRemoteLyrics;
+var
+  TrackIndex: integer;
+  LineIndex: integer;
+  NoteIndex: integer;
+  TracksJson: string;
+  NotesJson: string;
+  Note: PLineFragment;
+  LyricText: UTF8String;
+begin
+  if (RemoteSongSeq <= 0) or (Length(CurrentSong.Tracks) = 0) then
+    Exit;
+
+  TracksJson := '[';
+  for TrackIndex := 0 to High(CurrentSong.Tracks) do
+  begin
+    if (TrackIndex > 0) then
+      TracksJson := TracksJson + ',';
+
+    LineIndex := CurrentSong.Tracks[TrackIndex].CurrentLine;
+    if (LineIndex >= 0) and (LineIndex <= CurrentSong.Tracks[TrackIndex].High) then
+      LyricText := CurrentSong.Tracks[TrackIndex].Lines[LineIndex].Lyric
+    else
+      LyricText := '';
+
+    NotesJson := '[';
+    if (LineIndex >= 0) and (LineIndex <= CurrentSong.Tracks[TrackIndex].High) then
+      for NoteIndex := 0 to CurrentSong.Tracks[TrackIndex].Lines[LineIndex].HighNote do
+      begin
+        Note := @CurrentSong.Tracks[TrackIndex].Lines[LineIndex].Notes[NoteIndex];
+        if NoteIndex > 0 then NotesJson := NotesJson + ',';
+        NotesJson := NotesJson + '{"text":"' + RemoteJsonEscape(Note.Text) +
+          '","startUs":' + IntToStr(Round(GetTimeFromBeat(Note.StartBeat) * 1000000)) +
+          ',"endUs":' + IntToStr(Round(GetTimeFromBeat(Note.StartBeat + Note.Duration) * 1000000)) + '}';
+      end;
+    NotesJson := NotesJson + ']';
+
+    TracksJson := TracksJson +
+      '{"track":' + IntToStr(TrackIndex) +
+      ',"line":' + IntToStr(LineIndex) +
+      ',"text":"' + RemoteJsonEscape(LyricText) + '","notes":' + NotesJson + '}';
+  end;
+  TracksJson := TracksJson + ']';
+
+  RemoteBridgeIPC.SendJsonMessage(
+    '{"type":"song.lyrics","protocol":1' +
+    ',"songSeq":' + IntToStr(RemoteSongSeq) +
+    ',"mediaStartUs":' + IntToStr(RemoteMediaStartUs) +
+    ',"tracks":' + TracksJson +
+    '}'
+  );
+end;
+
+procedure TScreenSingController.SendRemoteScoreSheet;
+var
+  TrackIndex: integer;
+  LineIndex: integer;
+  NoteIndex: integer;
+  Beat: integer;
+  TracksJson: string;
+  BeatsJson: string;
+  NeedComma: boolean;
+  Note: PLineFragment;
+begin
+  if (RemoteSongSeq <= 0) or (Length(CurrentSong.Tracks) = 0) then
+    Exit;
+
+  TracksJson := '[';
+  for TrackIndex := 0 to High(CurrentSong.Tracks) do
+  begin
+    if (TrackIndex > 0) then
+      TracksJson := TracksJson + ',';
+
+    BeatsJson := '[';
+    NeedComma := false;
+    for LineIndex := 0 to CurrentSong.Tracks[TrackIndex].High do
+    begin
+      for NoteIndex := 0 to CurrentSong.Tracks[TrackIndex].Lines[LineIndex].HighNote do
+      begin
+        Note := @CurrentSong.Tracks[TrackIndex].Lines[LineIndex].Notes[NoteIndex];
+        if (Note.NoteType = ntFreestyle) or (Note.Duration <= 0) then
+          Continue;
+
+        for Beat := Note.StartBeat to Note.StartBeat + Note.Duration - 1 do
+        begin
+          if NeedComma then
+            BeatsJson := BeatsJson + ',';
+          NeedComma := true;
+          BeatsJson := BeatsJson +
+            '[' + IntToStr(Beat) +
+            ',' + IntToStr(Note.Tone) +
+            ',' + IntToStr(Ord(Note.NoteType)) +
+            ']';
+        end;
+      end;
+    end;
+    BeatsJson := BeatsJson + ']';
+
+    TracksJson := TracksJson +
+      '{"track":' + IntToStr(TrackIndex) +
+      ',"beats":' + BeatsJson +
+      '}';
+  end;
+  TracksJson := TracksJson + ']';
+
+  RemoteBridgeIPC.SendJsonMessage(
+    '{"type":"score.sheet"' +
+    ',"tracks":' + TracksJson +
+    '}'
+  );
+end;
+
+procedure TScreenSingController.SendRemoteScoreSnapshot(Force: boolean);
+var
+  Tick: cardinal;
+  I: integer;
+  PlayersJson: string;
+begin
+  if (RemoteSongSeq <= 0) then
+    Exit;
+
+  Tick := SDL_GetTicks;
+  if (not Force) and (Tick - LastRemoteScoreSnapshotTick < REMOTE_SCORE_SNAPSHOT_MS) then
+    Exit;
+
+  LastRemoteScoreSnapshotTick := Tick;
+  PlayersJson := '[';
+  for I := 0 to High(Player) do
+  begin
+    if (I > 0) then
+      PlayersJson := PlayersJson + ',';
+    PlayersJson := PlayersJson +
+      '{"slot":' + IntToStr(I + 1) +
+      ',"score":' + IntToStr(Player[I].ScoreInt) +
+      ',"scoreLine":' + IntToStr(Player[I].ScoreLineInt) +
+      ',"scoreGolden":' + IntToStr(Player[I].ScoreGoldenInt) +
+      ',"scoreTotal":' + IntToStr(Player[I].ScoreTotalInt) +
+      '}';
+  end;
+  PlayersJson := PlayersJson + ']';
+
+  RemoteBridgeIPC.SendJsonMessage(
+    '{"type":"score.snapshot","protocol":1' +
+    RemoteScoringClockFields +
+    ',"songSeq":' + IntToStr(RemoteSongSeq) +
+    ',"mediaStartUs":' + IntToStr(RemoteMediaStartUs) +
+    ',"durationUs":' + IntToStr(RemoteSongDurationUs) +
+    ',"players":' + PlayersJson +
+    '}'
+  );
+end;
+
+function TScreenSingController.RemoteMediaStartUs: int64;
+begin
+  Result := Round(AudioPlayback.Position * 1000000);
+  if (Result < 0) then
+    Result := 0;
+end;
+
+function TScreenSingController.RemoteSongDurationUs: int64;
+var
+  Duration: real;
+begin
+  Duration := LyricsState.TotalTime;
+  if (Duration <= 0) and Assigned(AudioPlayback) then
+    Duration := AudioPlayback.Length;
+  Result := Round(Duration * 1000000);
+  if (Result < 0) then
+    Result := 0;
+end;
+
 procedure TScreenSingController.ClearSettings;
 var DisplayOptions: TContinuousDisplay;
 begin
@@ -1541,6 +1864,11 @@ end;
 procedure TScreenSingController.OnHide;
 begin
   StopSingClicks;
+  RemoteBridgeIPC.SendJsonMessage(
+    '{"type":"audio.stop","protocol":1,"reason":"sing_screen_left"}'
+  );
+
+
   // close video files
   fVideoClip := nil;
   fCurrentVideo := nil;
@@ -1558,11 +1886,13 @@ end;
 
 function TScreenSingController.Draw: boolean;
 begin
+  SendRemoteScoreSnapshot(false);
   Result := true;
   if not ScreenContinuousPlayback.Session.Active or
     (ScreenContinuousPlayback.Session.Stage <> psAdvance) then
     Result := screenSingViewRef.Draw();
   if Display.CurrentScreen = @ScreenSing then ScreenContinuousPlayback.Update;
+
 end;
 
 function TScreenSingController.FinishedMusic: boolean;
@@ -1595,7 +1925,7 @@ begin
   for PlayerIndex := 0 to PlayersPlay - 1 do
   begin
     if not Player[PlayerIndex].DetectionReady or
-      (Player[PlayerIndex].DetectionDelay <= 0) then Continue;
+      (Ini.MicDelay + Player[PlayerIndex].DetectionDelay <= 0) then Continue;
     TrackIndex := 0;
     if CurrentSong.isDuet then
       TrackIndex := Player[PlayerIndex].Track;
@@ -1641,8 +1971,10 @@ begin
   if ScreenContinuousPlayback.Session.Active and
     (ScreenContinuousPlayback.Session.Stage <> psSong) then Exit;
   if FadeOut then Exit;
+  AnnounceRemoteSongEnded;
   Log.LogStatus('TScreenSingController.Finish', 'TScreenSingController.Finish');
   if PlayersPlay > 0 then AudioInput.CaptureStop;
+
   AudioPlayback.SetSyncSource(nil);
 
   if LocalHighscoresAllowed then
@@ -1822,7 +2154,8 @@ begin
       // line bonus
 
       // points for this line
-      LineScore := CurrentScore - CurrentPlayer.ScoreLast;
+      if not GetPlayerSentenceScore(PlayerIndex, Track, SentenceIndex, LineScore) then
+        LineScore := CurrentScore - CurrentPlayer.ScoreLast;
 
       // check for lines with low points
       if MaxLineScore <= 2 then
@@ -1905,6 +2238,7 @@ begin
       tmp_Lyric.AddLine(nil);
   end;
 
+  SendRemoteLyrics;
 end;
 
 function TLyricsSyncSource.GetClock(): real;

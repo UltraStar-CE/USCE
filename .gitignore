@@ -68,6 +68,9 @@ ppaslink.sh
 # Windows build outputs
 /game/*.dll
 /game/*.debug
+/game/*.so
+/game/*.dylib
+/game/runtime/
 
 # Generated build version metadata
 /VERSION.build
