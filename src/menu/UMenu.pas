@@ -975,6 +975,8 @@ function TMenu.AddText(ThemeText: TThemeText): integer;
 begin
   Result := AddText(ThemeText.X, ThemeText.Y, ThemeText.W, ThemeText.H, ThemeText.Font, ThemeText.Style, ThemeText.Size,
     ThemeText.ColR, ThemeText.ColG, ThemeText.ColB, ThemeText.Align, ThemeText.Text, ThemeText.Reflection, ThemeText.ReflectionSpacing, ThemeText.Z, ThemeText.Writable);
+  Text[Result].FontFile := ThemeText.FontFile;
+  if (ThemeText.FontFile <> nil) and ThemeText.FontFile.IsSet then Text[Result].Text := ThemeText.Text;
 end;
 
 function TMenu.AddText(X, Y: real; const Text_: UTF8String): integer;
@@ -1084,6 +1086,9 @@ begin
       ThemeButton.Text[BT].ColR, ThemeButton.Text[BT].ColG, ThemeButton.Text[BT].ColB,
       ThemeButton.Text[BT].Font, ThemeButton.Text[BT].Style, ThemeButton.Text[BT].Size,
       ThemeButton.Text[BT].Align, ThemeButton.Text[BT].Text);
+    Button[Result].Text[BT].FontFile := ThemeButton.Text[BT].FontFile;
+    if (ThemeButton.Text[BT].FontFile <> nil) and ThemeButton.Text[BT].FontFile.IsSet then
+      Button[Result].Text[BT].Text := ThemeButton.Text[BT].Text;
   end;
 
   // button collection mod

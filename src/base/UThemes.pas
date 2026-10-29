@@ -169,6 +169,7 @@ type
     DColG:    real;
     DColB:    real;
     Font:     integer;
+    FontFile: IPath;
     Style:    integer;
     Size:     integer;
     Align:    integer;
@@ -3307,6 +3308,7 @@ begin
   ThemeText.ColB  := ReadFloat(SectionList, 'ColB', 0);
 
   ThemeText.Font  := ReadInteger(SectionList, 'Font', 0);
+  ThemeText.FontFile := ResolveThemeAsset(Path(ReadString(SectionList, 'FontFile', '')));
   ThemeText.Style := ReadInteger(SectionList, 'Style', ftRegular);
   ThemeText.Size  := ReadInteger(SectionList, 'Size', 0);
   ThemeText.Align := ReadInteger(SectionList, 'Align', 0);

@@ -38,6 +38,7 @@ uses
   SysUtils,
   sdl2,
   UText,
+  UPath,
   UMenuInteract;
 
 type
@@ -72,6 +73,7 @@ type
       Alpha:   single;
       Int:     single;
       Font:    integer;
+      FontFile: IPath;
       Style:   integer;
       Visible: boolean;
       InlineMarkup: boolean; // opt in for generated rich text, never song/player metadata
@@ -417,7 +419,7 @@ var
     if (W > 0) then
     begin
       // set font properties
-      SetFontFamily(Font);
+      SetFontFamily(ResolveThemeFont(FontFile, Font));
       SetFontStyle(Style);
       SetFontSize(TextSize);
     end;
@@ -544,7 +546,7 @@ var
 begin
   if Visible then
   begin
-    SetFontFamily(Font);
+    SetFontFamily(ResolveThemeFont(FontFile, Font));
     SetFontStyle(Style);
     SetFontSize(Size);
     SetFontItalic(false);

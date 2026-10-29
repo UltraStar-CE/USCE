@@ -72,6 +72,7 @@ var
 
 procedure LoadFontFamilyNames;
 procedure BuildFonts;                         // builds all fonts
+function ResolveThemeFont(const FileName: IPath; Fallback: integer): integer;
 procedure KillFonts;                          // deletes all font
 function  TextWidth(const text: UTF8String): real; // returns text width
 procedure PrintText(const text: UTF8String);    // custom GL "Print" routine
@@ -105,6 +106,64 @@ const
   FONT_STYLES: array [0..3] of string = (
     'Regular', 'Bold', 'Outline', 'BoldHighRes'
   );
+
+type
+  TThemeFontEntry = record
+    FileName: IPath;
+    Fallback, Family: integer;
+  end;
+var
+  ThemeFonts: array of TThemeFontEntry;
+
+function ResolveThemeFont(const FileName: IPath; Fallback: integer): integer;
+var
+  I, J, Family: integer;
+  Candidate: array[0..3] of TGLFont;
+  Embolden: single;
+begin
+  Result := Fallback;
+  if (Length(Fonts) = 0) or (Fonts[0][0].Font = nil) then Exit;
+  if (Result < 0) or (Result >= Length(FontFamilyNames)) then Result := 0;
+  Fallback := Result;
+  if (FileName = nil) or FileName.IsUnset then Exit;
+  for I := 0 to High(ThemeFonts) do
+    if FileName.Equals(ThemeFonts[I].FileName) and (Fallback = ThemeFonts[I].Fallback) then
+      Exit(ThemeFonts[I].Family);
+  FillChar(Candidate, SizeOf(Candidate), 0);
+  try
+    for J := 0 to High(Candidate) do
+    begin
+      if J = ftOutline then
+        Candidate[J].Font := TFTScalableOutlineFont.Create(FileName, 64, 1, true, false)
+      else
+      begin
+        Embolden := 0;
+        if J in [ftBold, ftBoldHighRes] then Embolden := 0.6;
+        Candidate[J].Font := TFTScalableFont.Create(FileName, 64, Embolden, true, false);
+      end;
+      Candidate[J].Outlined := J = ftOutline;
+      Candidate[J].BaseStretch := 1;
+      if Fonts[Fallback][J].Font <> nil then
+        Candidate[J].Font.AddFallback(Fonts[Fallback][J].Font.Filename);
+    end;
+    Family := Length(Fonts);
+    SetLength(Fonts, Family + 1);
+    SetLength(Fonts[Family], Length(Candidate));
+    for J := 0 to High(Candidate) do Fonts[Family][J] := Candidate[J];
+    Result := Family;
+  except
+    on E: Exception do
+    begin
+      for J := 0 to High(Candidate) do Candidate[J].Font.Free;
+      Log.LogError('Theme font ' + FileName.ToNative + ': ' + E.Message, 'ResolveThemeFont');
+    end;
+  end;
+  I := Length(ThemeFonts);
+  SetLength(ThemeFonts, I + 1);
+  ThemeFonts[I].FileName := FileName;
+  ThemeFonts[I].Fallback := Fallback;
+  ThemeFonts[I].Family := Result;
+end;
 
 function GetLayoutStretchCompensation: single;
 var
@@ -298,7 +357,9 @@ var
 begin
   for I := 0 to High(Fonts) do
     for J := 0 to High(Fonts[I]) do
-      Fonts[I][J].Font.Free;
+      FreeAndNil(Fonts[I][J].Font);
+  SetLength(ThemeFonts, 0);
+  SetLength(Fonts, Length(FontFamilyNames));
 end;
 
 function TextWidth(const text: UTF8String): real;
