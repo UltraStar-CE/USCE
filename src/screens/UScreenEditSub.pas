@@ -6038,6 +6038,7 @@ var
   end;
 begin
   inherited;
+  SoundLib.PauseBgMusic;
   // reset video playback engine
   CurrentTrack := 0;
   fCurrentVideo := nil;

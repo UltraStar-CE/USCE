@@ -2976,7 +2976,9 @@ begin
   TransitionCandidate := nil;
   if (Interaction >= 0) and (Interaction < Length(CatSongs.Song)) then
     TransitionCandidate := CatSongs.Song[Interaction];
-  if not SuppressTransitionPreview(TransitionCandidate) then
+  if SuppressTransitionPreview(TransitionCandidate) and (TransitionAction = 3) then
+    SoundLib.StartBgMusic
+  else
     SoundLib.PauseBgMusic;
 
   if KeepPreviewPositionOnShow then
