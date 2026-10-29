@@ -48,6 +48,10 @@ type
   TScreenHighScores = class(TMenu)
     private
       EntryColumns: array[0..2] of TListColumn;
+      EntryRowsPerColumn: integer;
+      EntryColumnOffset, EntryColumnWidth: real;
+      function ColumnForEntry(Column, Entry: integer): TListColumn;
+      function TryTwoColumns(var Layout: TTextListLayout): boolean;
       procedure AddThemedFrame;
       procedure ApplyEntryStaticLayout(StaticIndex, EntryIndex: integer; const ThemeStatic: TThemeStatic);
       procedure ApplyEntryTextLayout(TextIndex, EntryIndex: integer; const ThemeText: TThemeText);
@@ -88,6 +92,7 @@ type
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
       procedure OnShow; override;
+      procedure OnWindowResized; override;
       procedure ShowScoresForDifficulty(difficulty: integer);
       function Draw: boolean; override;
   end;
@@ -206,7 +211,7 @@ end;
 function TScreenHighScores.EntryY(EntryIndex: integer): integer;
 begin
   Result := Round(Theme.HighScores.RowNameText.Y +
-      (EntryIndex + 1) * EntryRowPitch);
+      (EntryIndex mod EntryRowsPerColumn + 1) * EntryRowPitch);
 end;
 
 function TScreenHighScores.FormatEntryCountText(const TextTemplate: UTF8String): UTF8String;
@@ -260,6 +265,62 @@ begin
   Text[EntryDateText[EntryIndex]].Visible := Visible;
 end;
 
+function TScreenHighScores.ColumnForEntry(Column, Entry: integer): TListColumn;
+begin
+  Result := EntryColumns[Column];
+  if Entry >= EntryRowsPerColumn then
+    Result.Left := Result.Left + EntryColumnOffset;
+end;
+
+function TScreenHighScores.TryTwoColumns(var Layout: TTextListLayout): boolean;
+var
+  Trial: TTextListLayout;
+  I, HalfRows: integer;
+  FullWidth, Width, FontSize, MinimumSize, ScoreWidth, DateWidth, NameWidth, RankWidth: real;
+begin
+  Result := false;
+  if (LayoutEntryCount < Theme.HighScores.List.TwoColumnMinEntries) or
+     (CurrentSong = nil) or (Theme.HighScores.RowNameText.Align <> 0) or
+     (Theme.HighScores.RowScoreText.Align <> 2) or (Theme.HighScores.RowDateText.Align <> 2) then Exit;
+  FullWidth := Theme.HighScores.RowDateText.X - Theme.HighScores.RowNumberStatic.X;
+  Width := (FullWidth - Theme.HighScores.List.ColumnGap) / 2;
+  if Width <= 0 then Exit;
+  HalfRows := (LayoutEntryCount + 1) div 2;
+  Trial := CalculateTextListLayout(Theme.HighScores.RowNameText.Y,
+      Theme.HighScores.List.BottomY, HalfRows + 2, Theme.HighScores.List.MinTextSize,
+      Theme.HighScores.RowNameText.Size,
+      FontSizePerRowPitch(HalfRows, 5, 20, 0.78, 1.10, 2.0), 0.85);
+  MinimumSize := Layout.TextSize * 1.1;
+  FontSize := Trial.TextSize;
+  while FontSize >= MinimumSize do
+  begin
+    ScoreWidth := 0; DateWidth := 0; NameWidth := 0;
+    for I := 0 to Min(LayoutEntryCount, Length(CurrentSong.Score[VisibleDifficulty])) - 1 do
+    begin
+      ScoreWidth := Max(ScoreWidth, MeasureTextMaxLineWidth(
+          IntToStr(CurrentSong.Score[VisibleDifficulty, I].Score),
+          Theme.HighScores.RowScoreText.Font, Theme.HighScores.RowScoreText.Style, FontSize));
+      DateWidth := Max(DateWidth, MeasureTextMaxLineWidth(CurrentSong.Score[VisibleDifficulty, I].Date,
+          Theme.HighScores.RowDateText.Font, Theme.HighScores.RowDateText.Style, FontSize));
+      NameWidth := Max(NameWidth, MeasureTextMaxLineWidth(CurrentSong.Score[VisibleDifficulty, I].Name,
+          Theme.HighScores.RowNameText.Font, Theme.HighScores.RowNameText.Style, FontSize));
+    end;
+    RankWidth := (Theme.HighScores.RowNameText.X - Theme.HighScores.RowNumberStatic.X) *
+        FontSize / Theme.HighScores.RowNameText.Size;
+    if RankWidth + ScoreWidth + DateWidth + Max(80, Min(NameWidth, 120)) + 36 <= Width then
+    begin
+      EntryRowsPerColumn := HalfRows;
+      EntryColumnWidth := Width;
+      EntryColumnOffset := Width + Theme.HighScores.List.ColumnGap;
+      Layout := Trial;
+      Layout.TextSize := FontSize;
+      Result := true;
+      Exit;
+    end;
+    FontSize := FontSize * 0.95;
+  end;
+end;
+
 procedure TScreenHighScores.UpdateEntryLayout;
 var
   I: integer;
@@ -267,11 +328,16 @@ var
   LayoutRows: integer;
   Layout: TTextListLayout;
 begin
+  EntryRowsPerColumn := Max(1, LayoutEntryCount);
+  EntryColumnOffset := 0;
+  EntryColumnWidth := 0;
   LayoutRows := LayoutEntryCount + 2;
   Layout := CalculateTextListLayout(Theme.HighScores.RowNameText.Y,
       Theme.HighScores.List.BottomY, LayoutRows,
       Theme.HighScores.List.MinTextSize, Theme.HighScores.RowNameText.Size,
       FontSizePerRowPitch(LayoutEntryCount, 5, 20, 0.78, 1.10, 2.0), 0.85);
+  TryTwoColumns(Layout);
+  Layout.RowPitch := Min(Layout.RowPitch, Layout.TextSize / 0.78 + 2);
   EntryTextSize := Layout.TextSize;
   EntryRowPitch := Layout.RowPitch;
 
@@ -292,6 +358,14 @@ begin
       Theme.HighScores.RowScoreText);
     ApplyEntryTextLayout(EntryDateText[I], LayoutIndex,
       Theme.HighScores.RowDateText);
+    if EntryColumnOffset > 0 then
+    begin
+      Statics[EntryNumberStatic[I]].Texture.X := Theme.HighScores.RowNumberStatic.X;
+      if I >= EntryRowsPerColumn then
+        Statics[EntryNumberStatic[I]].Texture.X := Statics[EntryNumberStatic[I]].Texture.X + EntryColumnOffset;
+      Text[EntryNumberText[I]].X := Statics[EntryNumberStatic[I]].Texture.X +
+          Statics[EntryNumberStatic[I]].Texture.W / 2;
+    end;
   end;
 end;
 
@@ -314,12 +388,20 @@ begin
     Exit;
   Left := Theme.HighScores.RowNameText.X;
   Width := Theme.HighScores.RowDateText.X - Left;
+  if EntryColumnOffset > 0 then
+  begin
+    Left := Theme.HighScores.RowNumberStatic.X +
+        (Theme.HighScores.RowNameText.X - Theme.HighScores.RowNumberStatic.X) *
+        EntryTextSize / Theme.HighScores.RowNameText.Size;
+    Width := EntryColumnWidth - (Left - Theme.HighScores.RowNumberStatic.X);
+  end;
   Gap := 12 * Min(1.0, EntryTextSize / Theme.HighScores.RowNameText.Size);
   if (Width <= 0) or (Theme.HighScores.RowScoreText.X <= Left) or
       (Theme.HighScores.RowDateText.X <= Theme.HighScores.RowScoreText.X + Gap) then
     Exit;
 
   ScoreDateGap := 48;
+  if EntryColumnOffset > 0 then ScoreDateGap := 12;
   RowCount := Min(EntryCount, Length(CurrentSong.Score[VisibleDifficulty]));
   // Reserve measured score and date widths, leaving at least a quarter for names.
   // On narrow layouts reduce the numeric font sizes together instead of truncating.
@@ -362,9 +444,9 @@ begin
     EntryColumns[0].Width := Min(Theme.HighScores.RowNameText.W, EntryColumns[0].Width);
   for I := 0 to High(EntryNameText) do
   begin
-    PositionListColumnText(Text[EntryNameText[I]], EntryColumns[0]);
-    PositionListColumnText(Text[EntryScoreText[I]], EntryColumns[1]);
-    PositionListColumnText(Text[EntryDateText[I]], EntryColumns[2]);
+    PositionListColumnText(Text[EntryNameText[I]], ColumnForEntry(0, I));
+    PositionListColumnText(Text[EntryScoreText[I]], ColumnForEntry(1, I));
+    PositionListColumnText(Text[EntryDateText[I]], ColumnForEntry(2, I));
     Text[EntryNameText[I]].W := EntryColumns[0].Width;
     Text[EntryScoreText[I]].W := EntryColumns[1].Width;
     Text[EntryDateText[I]].W := EntryColumns[2].Width;
@@ -486,6 +568,12 @@ begin
   UpdateHeaderText;
 end;
 
+procedure TScreenHighScores.OnWindowResized;
+begin
+  inherited;
+  if CurrentSong <> nil then ShowScoresForDifficulty(VisibleDifficulty);
+end;
+
 procedure TScreenHighScores.OnShow;
 begin
   inherited;
@@ -537,10 +625,10 @@ begin
       Track := TrackNumber(CurrentSong.Score[difficulty, I].TrackMask);
       if CurrentSong.IsDuet and (Track > 0) then
         Name := Name + ' (P' + IntToStr(Track) + ')';
-      SetListCellText(Text[EntryNameText[I]], EntryColumns[0], Name);
-      SetListCellText(Text[EntryScoreText[I]], EntryColumns[1],
+      SetListCellText(Text[EntryNameText[I]], ColumnForEntry(0, I), Name);
+      SetListCellText(Text[EntryScoreText[I]], ColumnForEntry(1, I),
           IntToStr(CurrentSong.Score[difficulty, I].Score));
-      SetListCellText(Text[EntryDateText[I]], EntryColumns[2], CurrentSong.Score[difficulty, I].Date);
+      SetListCellText(Text[EntryDateText[I]], ColumnForEntry(2, I), CurrentSong.Score[difficulty, I].Date);
     end
     else
       SetEntryVisible(I, false);
