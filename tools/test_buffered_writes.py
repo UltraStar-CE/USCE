@@ -64,8 +64,19 @@ begin Inc(Writes); inherited end;
 procedure Check(OK: boolean; const Msg: string);
 begin if not OK then raise Exception.Create(Msg) end;
 function Contents(const Name: string): string;
-var S:TStringList;
-begin S:=TStringList.Create; try if FileExists(Name) then S.LoadFromFile(Name); Result:=S.Text finally S.Free end end;
+var S:TStringList; F:TFileStream;
+begin
+ S:=TStringList.Create;
+ try
+   if FileExists(Name) then
+   begin
+     // The production logger intentionally keeps its buffered file open.
+     F:=TFileStream.Create(Name, fmOpenRead or fmShareDenyNone);
+     try S.LoadFromStream(F) finally F.Free end;
+   end;
+   Result:=S.Text;
+ finally S.Free end;
+end;
 var C:TCountIni; I:integer; P,BeforeText:string;
 begin
  LogPath.Value:=GetCurrentDir; Log:=TLog.Create; Log.FileOutputEnabled:=true;
