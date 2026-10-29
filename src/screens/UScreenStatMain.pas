@@ -58,6 +58,9 @@ type
 
   TScreenStatMain = class(TMenu)
     private
+      TextOverviewRight: integer;
+      OverviewText: UTF8String;
+      procedure LayoutOverview(const Overview: UTF8String);
       procedure AppendOverviewLine(var Overview: UTF8String; const Line: UTF8String);
       procedure AppendOverviewSection(var Overview: UTF8String; const Header: RawByteString);
       procedure AppendOverviewSectionText(var Overview: UTF8String; const Header: UTF8String);
@@ -89,6 +92,7 @@ type
       constructor Create; override;
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       procedure OnShow; override;
+      procedure OnWindowResized; override;
 
       procedure SetOverview;
   end;
@@ -108,7 +112,10 @@ uses
   USong,
   USongs,
   Classes,
-  DateUtils;
+  DateUtils,
+  UText,
+  UMenuText,
+  Math;
 
 function TScreenStatMain.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
 begin
@@ -183,6 +190,9 @@ begin
 
   TextOverview := AddText(Theme.StatMain.TextOverview);
   Text[TextOverview].InlineMarkup := true;
+  TextOverviewRight := AddText(Theme.StatMain.TextOverview);
+  Text[TextOverviewRight].InlineMarkup := true;
+  Text[TextOverviewRight].Visible := false;
 
   LoadFromTheme(Theme.StatMain);
 
@@ -533,6 +543,84 @@ begin
   end;
 end;
 
+procedure TScreenStatMain.OnWindowResized;
+begin
+  inherited;
+  LayoutOverview(OverviewText);
+end;
+
+procedure TScreenStatMain.LayoutOverview(const Overview: UTF8String);
+var
+  LeftText, RightText: UMenuText.TText;
+  Panel: TThemeText;
+  Gap, ColumnWidth, LineHeight: single;
+  Split, BestSplit, Lines, BestLines: integer;
+  LeftPart, RightPart: UTF8String;
+begin
+  Panel := Theme.StatMain.TextOverview;
+  LeftText := Text[TextOverview];
+  RightText := Text[TextOverviewRight];
+  RightText.Visible := false;
+  LeftText.X := Panel.X;
+  LeftText.W := Panel.W;
+  LeftText.H := Panel.H;
+  LeftText.Size := Panel.Size;
+  LeftText.Text := Overview;
+
+  Gap := Panel.Size;
+  ColumnWidth := (Panel.W - Gap) / 2;
+  if (Panel.H <= 0) or (ColumnWidth < Panel.Size * 12) then
+    Exit;
+
+  // Measure at the theme's font size without shrinking or clipping. Split at
+  // section boundaries so a heading stays with the text it describes.
+  LeftText.W := ColumnWidth;
+  RightText.W := ColumnWidth;
+  LeftText.H := 0;
+  RightText.H := 0;
+  LeftText.Size := Panel.Size;
+  RightText.Size := Panel.Size;
+  LineHeight := Panel.Size * TextLineSpacingFactor(Panel.Style);
+  BestSplit := 0;
+  BestLines := MaxInt;
+  for Split := 1 to Length(Overview) - 3 do
+    if Copy(Overview, Split, 4) = '\n\n' then
+    begin
+      LeftPart := Copy(Overview, 1, Split - 1);
+      if Copy(LeftPart, Length(LeftPart) - Length(BoldOverviewText(StatPeriodText)) + 1,
+          MaxInt) = BoldOverviewText(StatPeriodText) then
+        Continue;
+      RightPart := Copy(Overview, Split + 4, MaxInt);
+      LeftText.Text := LeftPart;
+      RightText.Text := RightPart;
+      Lines := Max(LeftText.LineCount, RightText.LineCount);
+      if (LeftPart <> '') and (RightPart <> '') and
+          (Lines * LineHeight <= Panel.H) and (Lines < BestLines) then
+      begin
+        BestSplit := Split;
+        BestLines := Lines;
+      end;
+    end;
+
+  if BestSplit > 0 then
+  begin
+    // Preserve the theme's alignment within each half of its original panel.
+    LeftText.X := Panel.X - (Panel.W - ColumnWidth) * Panel.Align / 2;
+    RightText.X := LeftText.X + ColumnWidth + Gap;
+    LeftText.Text := Copy(Overview, 1, BestSplit - 1);
+    RightText.Text := Copy(Overview, BestSplit + 4, MaxInt);
+    RightText.Visible := true;
+  end
+  else
+  begin
+    LeftText.X := Panel.X;
+    LeftText.W := Panel.W;
+    LeftText.Size := Panel.Size;
+    LeftText.H := Panel.H;
+    LeftText.Text := Overview;
+  end;
+end;
+
 procedure TScreenStatMain.SetOverview;
 var
   Overview: UTF8String;
@@ -561,7 +649,8 @@ begin
   end;
   AppendFunFacts(Overview);
 
-  Text[TextOverview].Text := Overview;
+  OverviewText := Overview;
+  LayoutOverview(OverviewText);
 end;
 
 end.
