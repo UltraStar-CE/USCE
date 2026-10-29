@@ -6,17 +6,19 @@ type
   TSongProblems = class
   private
     FFile: IPath;
+    FAvailable: boolean;
     FPaths: TStringList;
     procedure Save(Paths: TStringList);
   public
     constructor Create(const FileName: IPath);
     destructor Destroy; override;
+    property Available: boolean read FAvailable;
     function IsFlagged(const SongFile: IPath): boolean;
     procedure Toggle(const SongFile: IPath);
   end;
 function GetSongProblems: TSongProblems;
 implementation
-uses SysUtils, fpjson, jsonparser, UPlatform;
+uses SysUtils, fpjson, jsonparser, UPlatform, ULog;
 var SharedProblems: TSongProblems;
 function GetSongProblems: TSongProblems;
 begin
@@ -33,6 +35,8 @@ begin
   {$IFDEF MSWINDOWS}FPaths.CaseSensitive := false;{$ELSE}FPaths.CaseSensitive := true;{$ENDIF}
   FPaths.Sorted := true;
   FPaths.Duplicates := dupIgnore;
+  FAvailable := true;
+  try
   if not FFile.Exists then Exit;
   Stream := TBinaryFileStream.Create(FFile, fmOpenRead or fmShareDenyWrite);
   try Data := GetJSON(Stream); finally Stream.Free; end;
@@ -44,6 +48,14 @@ begin
       FPaths.Add(Data.Items[I].AsString);
     end;
   finally Data.Free; end;
+  except
+    on E: Exception do
+    begin
+      FAvailable := false;
+      FPaths.Clear;
+      if Assigned(Log) then Log.LogError(E.Message, 'SongProblems');
+    end;
+  end;
 end;
 destructor TSongProblems.Destroy;
 begin FPaths.Free; inherited; end;
@@ -78,6 +90,7 @@ end;
 procedure TSongProblems.Toggle(const SongFile: IPath);
 var Updated: TStringList; Index: integer;
 begin
+  if not FAvailable then raise Exception.Create('Song problem flags are unavailable');
   if (SongFile = nil) or SongFile.IsUnset then Exit;
   Updated := TStringList.Create;
   try

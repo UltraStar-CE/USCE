@@ -1,7 +1,7 @@
 program SongProblemsTest;
 {$mode Delphi}{$codepage utf8}
 uses SysUtils, Classes, UPath, USongProblems;
-var Store: TSongProblems; FileName, A, B: IPath; Failed: boolean;
+var Stream: TBinaryFileStream; Bad: UTF8String; Store: TSongProblems; FileName, A, B: IPath; Failed: boolean;
 procedure Check(Value: boolean; const Msg: string);
 begin if not Value then raise Exception.Create(Msg); end;
 begin
@@ -21,6 +21,15 @@ begin
  Failed := false;
  try Store.Toggle(A); except Failed := true; end;
  Check(Failed and not Store.IsFlagged(A), 'failed persistence does not change memory state');
+ Store.Free;
+ Bad := '{broken';
+ Stream := TBinaryFileStream.Create(FileName, fmCreate);
+ try Stream.WriteBuffer(Bad[1], Length(Bad)); finally Stream.Free; end;
+ Store := TSongProblems.Create(FileName);
+ Check(not Store.Available and not Store.IsFlagged(A), 'invalid annotations disable flags safely');
+ Failed := false;
+ try Store.Toggle(A); except Failed := true; end;
+ Check(Failed and not Store.IsFlagged(A), 'invalid annotation files cannot be overwritten');
  Store.Free;
  WriteLn('PASS: Unicode paths, persistence, independent songs, unflagging and failed-write rollback');
 end.
