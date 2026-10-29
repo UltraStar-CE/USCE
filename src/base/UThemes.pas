@@ -354,11 +354,12 @@ type
 
   TThemeMain = class(TThemeBasic)
     Buttons: array[0..3] of TThemeButton;
+    ButtonAbout, ButtonExit: TThemeButton;
 
     TextDescription:      TThemeText;
     TextDescriptionLong:  TThemeText;
-    Description:          array[0..3] of UTF8String;
-    DescriptionLong:      array[0..3] of UTF8String;
+    Description:          array[0..5] of UTF8String;
+    DescriptionLong:      array[0..5] of UTF8String;
   end;
 
   TThemeName = class(TThemeBasic)
@@ -2021,6 +2022,10 @@ begin
       Main.DescriptionLong[2] := Language.Translate('SING_STATS_DESC');
       Main.Description[3] := Language.Translate('SING_SETTINGS');
       Main.DescriptionLong[3] := Language.Translate('SING_GAME_OPTIONS_DESC');
+      Main.Description[4] := Language.Translate('SING_ABOUT');
+      Main.DescriptionLong[4] := Language.Translate('SING_ABOUT_DESC');
+      Main.Description[5] := Language.Translate('SING_EXIT');
+      Main.DescriptionLong[5] := Language.Translate('SING_EXIT_DESC');
 
       //Main Desc Text Translation End
 
@@ -3187,6 +3192,8 @@ begin
     end;
     Main.Buttons[I].Parent := 0;
   end;
+  ThemeLoadButton(Main.ButtonAbout, 'MainButtonAbout');
+  ThemeLoadButton(Main.ButtonExit, 'MainButtonExit');
 end;
 
 procedure TTheme.ThemeLoadHighScoreList(var List: TThemeHighScoreList; const Name: string);
