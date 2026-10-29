@@ -674,6 +674,7 @@ begin
   fCountIn := Position < CurrentSong.Start;
   if Assigned(fCurrentVideo) then
     fCurrentVideo.Position := CurrentSong.VideoGAP + Position;
+  AnnounceRemoteSongPosition('seek');
 end;
 
 procedure TScreenSingController.RefreshInputRoster(NewCount: integer);
