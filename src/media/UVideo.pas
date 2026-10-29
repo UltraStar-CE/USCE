@@ -1118,7 +1118,7 @@ begin
   GetVideoRect(ScreenRect, TexRect);
 
   Renderer.SetScissorRect(
-    round(fPosX*VertexW + (ScreenWPerScreen)*(fScreen-1)),
+    round(fPosX*VertexW + Renderer.ViewportX),
     round((RenderH-fPosY-fHeight)*VertexH),
     round(fWidth*VertexW),
     round(fHeight*VertexH)
