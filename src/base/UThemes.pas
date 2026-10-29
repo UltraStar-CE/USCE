@@ -83,7 +83,6 @@ const
   OPTIONS_DESC_INDEX_ADVANCED  = 7;
   OPTIONS_DESC_INDEX_NETWORK   = 8;
   OPTIONS_DESC_INDEX_WEBCAM    = 9;
-  OPTIONS_DESC_INDEX_JUKEBOX   = 10;
   OPTIONS_DESC_INDEX_INPUT     = 11;
 
 
@@ -277,6 +276,14 @@ type
   end;
 
   PThemeBasic = ^TThemeBasic;
+  TThemeDuplicateSongs = record
+    Panel: TThemeStatic;
+    Heading, Hint: TThemeText;
+    Labels, Paths: array[0..1] of TThemeText;
+    Inputs: array[0..3] of TThemeButton;
+    Actions: array[0..1] of TThemeButton;
+  end;
+
   TThemeBasic = class
     Background:       TThemeBackground;
     Text:             AThemeText;
@@ -384,9 +391,12 @@ type
     SelectPlayersCount:  TThemeSelectSlide;
     SelectPlayerColor:   TThemeSelectSlide;
     SelectPlayerLevel:   TThemeSelectSlide;
+    SelectPlayerVoice:   TThemeSelectSlide;
   end;
 
   TThemeSong = class(TThemeBasic)
+    TextConfiguration: TThemeText;
+    StaticContinuousKey, StaticContinuousStatus: TThemeStatic;
     TextArtist:       TThemeText;
     TextTitle:        TThemeText;
     TextNumber:       TThemeText;
@@ -408,6 +418,7 @@ type
     //Show Cat in TopLeft Mod
     TextCat:          TThemeText;
     StaticCat:        TThemeStatic;
+
 
     //Cover Mod
     Cover: record
@@ -497,9 +508,19 @@ type
     Static2PlayersDuetSingerP1: TThemeStatic;
     Text2PlayersDuetSingerP1:   TThemeText;
     DuetSingerArea:             TThemePosition;
+    VoiceTileWidth, VoiceTileHeight, VoiceTileGap: integer;
+    VoiceTextPaddingX, VoiceTextPaddingY: integer;
   end;
 
   TThemeSing = class(TThemeBasic)
+    LyricActive, LyricCurrent, LyricNext: TRGB;
+    LyricOutlineActive, LyricOutlineCurrent, LyricOutlineNext: TRGB;
+    LyricUsePlayerColors: boolean;
+    VoicePreviewAlpha: real;
+    VoiceLabel: TThemeText;
+    VoiceLabelVisible, VoiceLabelUseVoiceColor: boolean;
+    VoiceLabelGutter, VoiceCellPadding: integer;
+    FreestyleNoteAlpha: real;
     StaticLyricsBar:       TThemeStatic;
     StaticLyricsBarDuet:   TThemeStatic;
 
@@ -525,79 +546,6 @@ type
 
     InfoMessageText: TThemeText;
     InfoMessageBG:   TThemeStatic;
-  end;
-
-  TThemeJukebox = class(TThemeBasic)
-    StaticTimeProgress:   TThemeStaticColorRectangle;
-    StaticTimeBackground: TThemeStatic;
-    StaticSongBackground: TThemeStatic;
-    StaticSongListBackground: TThemeStatic;
-    TextTimeText:         TThemeText;
-    TextSongText:         TThemeText;
-    SongDescription:      TThemeButton;
-    FindSong:             TThemeButton;
-    RepeatSongList:       TThemeButton;
-    SongListOrder:        TThemeButton;
-    RandomSongList:       TThemeButton;
-    Lyric:                TThemeButton;
-    Options:              TThemeButton;
-    SongListClose:        TThemeButton;
-    SongListFixPin:       TThemeButton;
-    TextListText:         TThemeText;
-    TextCountText:        TThemeText;
-    SongCover:            TThemePosition;
-    SongListPlayPause:    TThemeButton;
-
-    StaticActualSongStatics:    AThemeStatic;
-    StaticActualSongCover:      TThemePosition;
-    TextActualSongArtist:       TThemeText;
-    TextActualSongTitle:        TThemeText;
-
-    SongListUp:   TThemeButton;
-    SongListDown: TThemeButton;
-
-    //Jukebox SongMenu
-    StaticSongMenuBackground:     TThemeStatic;
-    SongMenuPlayPause:     TThemeButton;
-    StaticSongMenuTimeProgress:   TThemeStaticColorRectangle;
-    StaticSongMenuTimeBackground: TThemeStatic;
-    SongMenuNext:          TThemeButton;
-    SongMenuPrevious:      TThemeButton;
-    SongMenuPlaylist:      TThemeButton;
-    SongMenuTextTime:      TThemeText;
-    SongMenuOptions:       TThemeButton;
-
-    //Jukebox SongOptions
-    SongOptionsTextSaved:        TThemeText;
-    StaticSongOptionsBackground: TThemeStatic;
-    SongOptionsClose:            TThemeButton;
-    SongOptionsSave:             TThemeButton;
-    SongOptionsDefault:          TThemeButton;
-    SongOptionsVideoText:        TThemeText;
-    SongOptionsLyricText:        TThemeText;
-    SongOptionsVideoAspectSlide: TThemeSelectSlide;
-    SongOptionsVideoWidthSlide:  TThemeSelectSlide;
-    SongOptionsVideoHeightSlide: TThemeSelectSlide;
-    SongOptionsLyricSizeSlide:       TThemeSelectSlide;
-    SongOptionsLyricPositionSlide:   TThemeSelectSlide;
-    SongOptionsLyricColorSlide:      TThemeSelectSlide;
-    SongOptionsLyricLineSlide:       TThemeSelectSlide;
-    SongOptionsLyricPropertySlide:   TThemeSelectSlide;
-    SongOptionsLyricAlphaSlide:      TThemeSelectSlide;
-    SelectR:            TThemeSelectSlide;
-    SelectG:            TThemeSelectSlide;
-    SelectB:            TThemeSelectSlide;
-    TexR:               TThemeStatic;
-    TexG:               TThemeStatic;
-    TexB:               TThemeStatic;
-    PointerR:           TThemeStatic;
-    PointerG:           TThemeStatic;
-    PointerB:           TThemeStatic;
-  end;
-
-  TThemeJukeboxPlaylist = class(TThemeBasic)
-    SelectPlayList: TThemeSelectSlide;
-    SelectPlayList2: TThemeSelectSlide;
   end;
 
   TThemeLyricBar = record
@@ -682,7 +630,6 @@ type
     ButtonAdvanced:   TThemeButton;
     ButtonNetwork:    TThemeButton;
     ButtonWebcam:     TThemeButton;
-    ButtonJukebox:    TThemeButton;
     ButtonExit:       TThemeButton;
 
     TextDescription:      TThemeText;
@@ -715,6 +662,10 @@ type
   TThemeEditSub = class(TThemeBasic)
       VocalsContourColor: array[0..1] of TRGB;
       VocalsContourAlpha, VocalsContourWidth: array[0..1] of real;
+      InactiveVoiceColor: TRGB;
+      InactiveVoiceAlpha: real;
+      VoiceFieldPadding: integer;
+
       // statics
       BackgroundImage:              TThemeStatic;
       HeaderBackground:             TThemeStatic;
@@ -837,7 +788,20 @@ type
   end;
 
   TThemeSongJumpTo = class(TThemeBasic)
+    ButtonLock: TThemeButton;
+    Footer: TThemeBasic;
     ButtonSearchText: TThemeButton;
+    ButtonRemove: TThemeButton;
+    FilterActions: array[0..3] of TThemeButton;
+    RowSpacing, AutoHeightStatic: integer;
+    CenterVertical: boolean;
+    SuggestionWidth, SuggestionRowHeight, SuggestionMargin, SuggestionGap: integer;
+    SuggestionPanel: TThemeStatic;
+    SuggestionButton: TThemeButton;
+    FocusColor: TRGB;
+    FocusAlpha, FocusWidth: real;
+    CustomLockIcons: boolean;
+    LockedIcon, UnlockedIcon: TThemeStatic;
     SelectSlideType:  TThemeSelectSlide;
     TextFound:        TThemeText;
 
@@ -845,7 +809,9 @@ type
     Songsfound:       UTF8String;
     NoSongsfound:     UTF8String;
     CatText:          UTF8String;
-    IType:            array [0..8] of UTF8String;
+    IType:            array [0..9] of UTF8String;
+    constructor Create;
+    destructor Destroy; override;
   end;
 
   //Party Screens
@@ -1154,6 +1120,8 @@ type
     function ReadBool(const Sections: TThemeSectionList; const Key: string; DefaultValue: boolean): boolean;
     function ReadFloat(const Sections: TThemeSectionList; const Key: string; DefaultValue: real): real;
     procedure LoadStatMainRecentPeriods;
+    procedure LoadSongFilterLayout;
+    procedure LoadDuplicateSongLayout;
     procedure LoadStatDetailColumn(var Column: TThemeStatDetailColumn; const SectionName: string);
     procedure LoadStatDetailTable(var Table: TThemeStatDetailTable; const SectionName: string);
   public
@@ -1168,9 +1136,6 @@ type
     LyricBar:         TThemeLyricBar;
     LyricBarDuetP1:   TThemeLyricBar;
     LyricBarDuetP2:   TThemeLyricBar;
-    LyricBarJukebox:  TThemeLyricBar;
-    Jukebox:          TThemeJukebox;
-    JukeboxPlaylist:  TThemeJukeboxPlaylist;
     Score:            TThemeScore;
     HighScores:       TThemeHighScores;
     Options:          TThemeOptions;
@@ -1189,6 +1154,8 @@ type
     //ScreenSong extensions
     SongMenu:         TThemeSongMenu;
     SongJumpto:       TThemeSongJumpTo;
+    DuplicateSongs: TThemeDuplicateSongs;
+    BoldSelection: boolean;
     //Party Screens:
     PartyNewRound:    TThemePartyNewRound;
     PartyScore:       TThemePartyScore;
@@ -1270,8 +1237,6 @@ procedure LoadColor(var R, G, B: real; ColorName: string);
 function GetSystemColor(Color: integer): TRGB;
 function ColorSqrt(RGB: TRGB): TRGB;
 
-function GetJukeboxLyricOtherColor(Line: integer): TRGB;
-function GetJukeboxLyricOtherOutlineColor(Line: integer): TRGB;
 function GetLyricColor(Color: integer): TRGB;
 function GetLyricGrayColor(Color: integer): TRGB;
 function GetLyricOutlineColor(Color: integer): TRGB;
@@ -1795,8 +1760,6 @@ begin
   StatMain :=   TThemeStatMain.Create;
   StatDetail := TThemeStatDetail.Create;
 
-  JukeboxPlaylist := TThemeJukeboxPlaylist.Create;
-
   LayoutScreenW := 800;
   LayoutScreenH := 600;
 
@@ -2002,6 +1965,7 @@ begin
   begin
     Result := true;
     OpenFile(ThemeNum);
+    BoldSelection := ReadBool(GetSectionList('Selection'), 'Bold', false);
     if ThemeIni.ReadString('Theme', 'Name', '') <> '' then
     begin
       LayoutScreenW := ThemeIni.ReadInteger('Theme', 'ScreenW', 0);
@@ -2066,8 +2030,8 @@ begin
       Main.DescriptionLong[0] := Language.Translate('SING_SING_DESC');
       Main.Description[1] := Language.Translate('SING_MULTI');
       Main.DescriptionLong[1] := Language.Translate('SING_MULTI_DESC');
-      Main.Description[2] := Language.Translate('SING_JUKEBOX');
-      Main.DescriptionLong[2] := Language.Translate('SING_JUKEBOX_DESC');
+      Main.Description[2] := Language.Translate('CONTINUOUS_TITLE');
+      Main.DescriptionLong[2] := Language.Translate('CONTINUOUS_DESC');
       Main.Description[3] := Language.Translate('SING_STATS');
       Main.DescriptionLong[3] := Language.Translate('SING_STATS_DESC');
       Main.Description[4] := Language.Translate('SING_EDITOR');
@@ -2099,6 +2063,10 @@ begin
       ThemeLoadSelectSlide(Name.SelectPlayersCount, 'NameSelectPlayerCount');
       ThemeLoadSelectSlide(Name.SelectPlayerColor, 'NameSelectPlayerColor');
       ThemeLoadSelectSlide(Name.SelectPlayerLevel, 'NameSelectPlayerLevel');
+      Name.SelectPlayerVoice := Name.SelectPlayerLevel;
+      Name.SelectPlayerVoice.Y := Name.SelectPlayerLevel.Y + Name.SelectPlayerLevel.H + 5;
+      if ThemeIni.SectionExists('NameSelectPlayerVoice') then
+        ThemeLoadSelectSlide(Name.SelectPlayerVoice, 'NameSelectPlayerVoice');
 
       ThemeLoadStatic(NamePlayerSelectTemplate.Frame, 'NamePlayerSelectTemplateFrame');
       ThemeLoadText(NamePlayerSelectTemplate.Text, 'NamePlayerSelectTemplateText');
@@ -2141,111 +2109,55 @@ begin
       ThemeLoadLyricBar(LyricBarDuetP1, 'SingLyricsDuetP1');
       ThemeLoadLyricBar(LyricBarDuetP2, 'SingLyricsDuetP2');
 
-      // Lyric Jukebox
-      { Need to change calculation in SongOptions
-      LyricBarJukebox.UpperX := ThemeIni.ReadInteger('JukeboxLyricsUpperBar', 'X', 0);
-      LyricBarJukebox.UpperW := ThemeIni.ReadInteger('JukeboxLyricsUpperBar', 'W', 0);
-      LyricBarJukebox.UpperY := ThemeIni.ReadInteger('JukeboxLyricsUpperBar', 'Y', 0);
-      LyricBarJukebox.UpperH := ThemeIni.ReadInteger('JukeboxLyricsUpperBar', 'H', 0);
-      LyricBarJukebox.LowerX := ThemeIni.ReadInteger('JukeboxLyricsLowerBar', 'X', 0);
-      LyricBarJukebox.LowerW := ThemeIni.ReadInteger('JukeboxLyricsLowerBar', 'W', 0);
-      LyricBarJukebox.LowerY := ThemeIni.ReadInteger('JukeboxLyricsLowerBar', 'Y', 0);
-      LyricBarJukebox.LowerH := ThemeIni.ReadInteger('JukeboxLyricsLowerBar', 'H', 0);
-      LyricBarJukebox.IndicatorYOffset := ThemeIni.ReadInteger('JukeboxLyricsUpperBar', 'IndicatorYOffset', 0);
-      }
-
-      LyricBarJukebox.UpperX := 40;
-      LyricBarJukebox.UpperW := 720;
-      LyricBarJukebox.UpperY := 490;
-      LyricBarJukebox.UpperH := 52;
-      LyricBarJukebox.LowerX := 40;
-      LyricBarJukebox.LowerW := 720;
-      LyricBarJukebox.LowerY := 540;
-      LyricBarJukebox.LowerH := 52;
-      LyricBarJukebox.IndicatorYOffset := 8;
-
-      // Jukebox
-      ThemeLoadStaticColorRectangle(Jukebox.StaticTimeProgress, 'JukeboxTimeProgress');
-      ThemeLoadStatic(Jukebox.StaticTimeBackground, 'JukeboxTimeBackground');
-      ThemeLoadOptionalStatic(Jukebox.StaticSongBackground, 'JukeboxSongBackground');
-      ThemeLoadStatic(Jukebox.StaticSongListBackground, 'JukeboxSongListBackground');
-      //ThemeLoadText(Jukebox.TextTimeText, 'JukeboxTimeText');
-      //ThemeLoadText(Jukebox.TextTimeDesc, 'JukeboxTimeDesc');
-      //ThemeLoadText(Jukebox.TextSongText, 'JukeboxTextSong');
-      ThemeLoadButton(Jukebox.SongDescription, 'JukeboxSongDescription');
-      ThemeLoadButton(Jukebox.FindSong, 'JukeboxFind');
-      ThemeLoadButton(Jukebox.RepeatSongList, 'JukeboxRepeat');
-      ThemeLoadButton(Jukebox.SongListPlayPause, 'JukeboxPlayPause');
-      ThemeLoadButton(Jukebox.SongListOrder, 'JukeboxSort');
-      ThemeLoadButton(Jukebox.RandomSongList, 'JukeboxRandom');
-      ThemeLoadButton(Jukebox.Lyric, 'JukeboxLyric');
-      ThemeLoadButton(Jukebox.SongListClose, 'JukeboxSongListClose');
-      ThemeLoadButton(Jukebox.Options, 'JukeboxOptions');
-      ThemeLoadText(Jukebox.TextListText, 'JukeboxListText');
-      ThemeLoadText(Jukebox.TextCountText, 'JukeboxCountText');
-      ThemeLoadPosition(Jukebox.SongCover, 'JukeboxSongCover');
-
-      ThemeLoadStatics(Jukebox.StaticActualSongStatics, 'JukeboxStaticActualSong');
-      ThemeLoadPosition(Jukebox.StaticActualSongCover, 'JukeboxStaticActualSongCover');
-      ThemeLoadText(Jukebox.TextActualSongArtist, 'JukeboxTextActualSongArtist');
-      ThemeLoadText(Jukebox.TextActualSongTitle, 'JukeboxTextActualSongTitle');
-
-      ThemeLoadButton(Jukebox.SongListUp, 'JukeboxSongListUp');
-      ThemeLoadButton(Jukebox.SongListDown, 'JukeboxSongListDown');
-
-      // Jukebox SongMenu
-      ThemeLoadStaticColorRectangle(Jukebox.StaticSongMenuTimeProgress, 'JukeboxSongMenuTimeProgress');
-      ThemeLoadStatic(Jukebox.StaticSongMenuTimeBackground, 'JukeboxSongMenuTimeBackground');
-      ThemeLoadText(Jukebox.SongMenuTextTime, 'JukeboxSongMenuTextTime');
-
-      ThemeLoadStatic(Jukebox.StaticSongMenuBackground, 'JukeboxSongMenuBackground');
-      ThemeLoadButton(Jukebox.SongMenuPlayPause, 'JukeboxSongMenuPlayPause');
-
-      ThemeLoadButton(Jukebox.SongMenuNext, 'JukeboxSongMenuNext');
-      ThemeLoadButton(Jukebox.SongMenuPrevious, 'JukeboxSongMenuPrevious');
-      ThemeLoadButton(Jukebox.SongMenuPlaylist, 'JukeboxSongMenuPlaylist');
-      ThemeLoadButton(Jukebox.SongMenuOptions, 'JukeboxSongMenuOptions');
-
-      // Jukebox SongOptions
-      ThemeLoadText(Jukebox.SongOptionsTextSaved, 'JukeboxSongOptionsTextSaved');
-      ThemeLoadStatic(Jukebox.StaticSongOptionsBackground, 'JukeboxSongOptionsBackground');
-      ThemeLoadButton(Jukebox.SongOptionsClose, 'JukeboxSongOptionsClose');
-      ThemeLoadButton(Jukebox.SongOptionsDefault, 'JukeboxSongOptionsDefault');
-      ThemeLoadButton(Jukebox.SongOptionsSave, 'JukeboxSongOptionsSave');
-      ThemeLoadButton(Jukebox.SongListFixPin, 'JukeboxSongListFixPin');
-      ThemeLoadText(Jukebox.SongOptionsVideoText, 'JukeboxSongOptionsVideoText');
-      ThemeLoadText(Jukebox.SongOptionsLyricText, 'JukeboxSongOptionsLyricText');
-      ThemeLoadSelectSlide(Jukebox.SongOptionsVideoAspectSlide, 'JukeboxSongOptionsVideoAspectSlide');
-      ThemeLoadSelectSlide(Jukebox.SongOptionsVideoWidthSlide, 'JukeboxSongOptionsVideoWidthSlide');
-      ThemeLoadSelectSlide(Jukebox.SongOptionsVideoHeightSlide, 'JukeboxSongOptionsVideoHeightSlide');
-      ThemeLoadSelectSlide(Jukebox.SongOptionsLyricSizeSlide, 'JukeboxSongOptionsLyricSizeSlide');
-      ThemeLoadSelectSlide(Jukebox.SongOptionsLyricPositionSlide, 'JukeboxSongOptionsLyricPositionSlide');
-      ThemeLoadSelectSlide(Jukebox.SongOptionsLyricAlphaSlide, 'JukeboxSongOptionsLyricAlphaSlide');
-      ThemeLoadSelectSlide(Jukebox.SongOptionsLyricColorSlide, 'JukeboxSongOptionsLyricColorSlide');
-      ThemeLoadSelectSlide(Jukebox.SongOptionsLyricLineSlide, 'JukeboxSongOptionsLyricLineSlide');
-      ThemeLoadSelectSlide(Jukebox.SongOptionsLyricPropertySlide, 'JukeboxSongOptionsLyricPropertySlide');
-      ThemeLoadSelectSlide(Jukebox.SelectR,    'JukeboxSongOptionsLyricSelectR');
-      ThemeLoadSelectSlide(Jukebox.SelectG,    'JukeboxSongOptionsLyricSelectG');
-      ThemeLoadSelectSlide(Jukebox.SelectB,    'JukeboxSongOptionsLyricSelectB');
-      ThemeLoadStatic(Jukebox.PointerR,        'JukeboxSongOptionsLyricPointerR');
-      ThemeLoadStatic(Jukebox.PointerG,        'JukeboxSongOptionsLyricPointerG');
-      ThemeLoadStatic(Jukebox.PointerB,        'JukeboxSongOptionsLyricPointerB');
-      ThemeLoadStatic(Jukebox.TexR,            'JukeboxSongOptionsLyricRed');
-      ThemeLoadStatic(Jukebox.TexG,            'JukeboxSongOptionsLyricGreen');
-      ThemeLoadStatic(Jukebox.TexB,            'JukeboxSongOptionsLyricBlue');
-
-      // JukeboxPlaylist
-      ThemeLoadBasic(JukeboxPlaylist, 'JukeboxPlaylist');
-      ThemeLoadSelectSlide(JukeboxPlaylist.SelectPlayList, 'JukeboxPlaylistSelectPlayList');
-      ThemeLoadSelectSlide(JukeboxPlaylist.SelectPlayList2, 'JukeboxPlaylistSelectPlayList2');
 
       // Sing
       ThemeLoadBasic(Sing, 'Sing');
+      SectionList := GetSectionList('SingLyricColors');
+      Sing.LyricUsePlayerColors := ReadBool(SectionList, 'UsePlayerColors', true);
+      Sing.LyricActive := GetLyricColor(0);
+      Sing.LyricActive.R := EnsureRange(ReadFloat(SectionList, 'ActiveRed', Sing.LyricActive.R), 0.0, 1.0);
+      Sing.LyricActive.G := EnsureRange(ReadFloat(SectionList, 'ActiveGreen', Sing.LyricActive.G), 0.0, 1.0);
+      Sing.LyricActive.B := EnsureRange(ReadFloat(SectionList, 'ActiveBlue', Sing.LyricActive.B), 0.0, 1.0);
+      Sing.LyricCurrent := GetLyricGrayColor(8);
+      Sing.LyricCurrent.R := EnsureRange(ReadFloat(SectionList, 'CurrentRed', Sing.LyricCurrent.R), 0.0, 1.0);
+      Sing.LyricCurrent.G := EnsureRange(ReadFloat(SectionList, 'CurrentGreen', Sing.LyricCurrent.G), 0.0, 1.0);
+      Sing.LyricCurrent.B := EnsureRange(ReadFloat(SectionList, 'CurrentBlue', Sing.LyricCurrent.B), 0.0, 1.0);
+      Sing.LyricNext := GetLyricGrayColor(6);
+      Sing.LyricNext.R := EnsureRange(ReadFloat(SectionList, 'NextRed', Sing.LyricNext.R), 0.0, 1.0);
+      Sing.LyricNext.G := EnsureRange(ReadFloat(SectionList, 'NextGreen', Sing.LyricNext.G), 0.0, 1.0);
+      Sing.LyricNext.B := EnsureRange(ReadFloat(SectionList, 'NextBlue', Sing.LyricNext.B), 0.0, 1.0);
+      Sing.LyricOutlineActive := GetLyricOutlineColor(0);
+      Sing.LyricOutlineActive.R := EnsureRange(ReadFloat(SectionList, 'OutlineActiveRed', Sing.LyricOutlineActive.R), 0.0, 1.0);
+      Sing.LyricOutlineActive.G := EnsureRange(ReadFloat(SectionList, 'OutlineActiveGreen', Sing.LyricOutlineActive.G), 0.0, 1.0);
+      Sing.LyricOutlineActive.B := EnsureRange(ReadFloat(SectionList, 'OutlineActiveBlue', Sing.LyricOutlineActive.B), 0.0, 1.0);
+      Sing.LyricOutlineCurrent := GetLyricOutlineColor(0);
+      Sing.LyricOutlineCurrent.R := EnsureRange(ReadFloat(SectionList, 'OutlineCurrentRed', Sing.LyricOutlineCurrent.R), 0.0, 1.0);
+      Sing.LyricOutlineCurrent.G := EnsureRange(ReadFloat(SectionList, 'OutlineCurrentGreen', Sing.LyricOutlineCurrent.G), 0.0, 1.0);
+      Sing.LyricOutlineCurrent.B := EnsureRange(ReadFloat(SectionList, 'OutlineCurrentBlue', Sing.LyricOutlineCurrent.B), 0.0, 1.0);
+      Sing.LyricOutlineNext := GetLyricOutlineColor(0);
+      Sing.LyricOutlineNext.R := EnsureRange(ReadFloat(SectionList, 'OutlineNextRed', Sing.LyricOutlineNext.R), 0.0, 1.0);
+      Sing.LyricOutlineNext.G := EnsureRange(ReadFloat(SectionList, 'OutlineNextGreen', Sing.LyricOutlineNext.G), 0.0, 1.0);
+      Sing.LyricOutlineNext.B := EnsureRange(ReadFloat(SectionList, 'OutlineNextBlue', Sing.LyricOutlineNext.B), 0.0, 1.0);
+      Sing.FreestyleNoteAlpha := EnsureRange(ReadFloat(GetSectionList('Sing'), 'FreestyleNoteAlpha', 0.55), 0.0, 1.0);
 
       //ThemeLoadStatics(Sing.StaticDuet, 'SingStaticDuet');
 
       // lyrics bar
-      ThemeLoadStatic(Sing.StaticLyricsBar, 'SingLyricsBar');
+      Sing.VoicePreviewAlpha := EnsureRange(ReadFloat(GetSectionList('Sing'), 'VoicePreviewAlpha', 0.5), 0.0, 1.0);
+      Sing.VoiceLabel := Sing.InfoMessageText;
+      with Sing.VoiceLabel do
+      begin
+        X := 0; Y := 0; W := 24; H := 18; Size := 14;
+        Font := 0; Style := 0; ColR := 1; ColG := 1; ColB := 1;
+      end;
+      if ResolveThemeFile('SingVoiceLabel') <> nil then
+        ThemeLoadText(Sing.VoiceLabel, 'SingVoiceLabel');
+      SectionList := GetSectionList('SingVoiceLabel');
+      Sing.VoiceLabelVisible := ReadBool(SectionList, 'Visible', true);
+      Sing.VoiceLabelUseVoiceColor := ReadBool(SectionList, 'UseVoiceColor', true);
+      Sing.VoiceLabelGutter := Max(0, ReadInteger(SectionList, 'Gutter', Sing.VoiceLabel.W));
+      Sing.VoiceCellPadding := Max(0, ReadInteger(SectionList, 'CellPadding', 8));
+  ThemeLoadStatic(Sing.StaticLyricsBar, 'SingLyricsBar');
       ThemeLoadStatic(Sing.StaticLyricsBarDuet, 'SingLyricsBarDuet');
 
       //TimeBar mod
@@ -2355,9 +2267,7 @@ begin
       ThemeLoadButton(Options.ButtonRecord,   'OptionsButtonRecord');
       ThemeLoadButton(Options.ButtonAdvanced, 'OptionsButtonAdvanced');
       ThemeLoadButton(Options.ButtonNetwork,  'OptionsButtonNetwork');
-      ThemeLoadButton(Options.ButtonWebcam,   'OptionsButtonWebcam');
-      ThemeLoadButton(Options.ButtonJukebox,  'OptionsButtonJukebox');
-      ThemeLoadButton(Options.ButtonExit,     'OptionsButtonExit');
+      ThemeLoadButton(Options.ButtonWebcam,   'OptionsButtonWebcam');      ThemeLoadButton(Options.ButtonExit,     'OptionsButtonExit');
 
       // Note: always update the indexes constant on top of this unit when changing the order (see OPTIONS_DESC_INDEX_*)
       Options.Description[OPTIONS_DESC_INDEX_BACK] := Language.Translate('SING_OPTIONS_EXIT');
@@ -2371,7 +2281,6 @@ begin
       Options.Description[OPTIONS_DESC_INDEX_ADVANCED] := Language.Translate('SING_OPTIONS_ADVANCED_DESC');
       Options.Description[OPTIONS_DESC_INDEX_NETWORK] := Language.Translate('SING_OPTIONS_NETWORK_DESC');
       Options.Description[OPTIONS_DESC_INDEX_WEBCAM] := Language.Translate('SING_OPTIONS_WEBCAM_DESC');
-      Options.Description[OPTIONS_DESC_INDEX_JUKEBOX] := Language.Translate('SING_OPTIONS_JUKEBOX_DESC');
 
       ThemeLoadText(Options.TextDescription, 'OptionsTextDescription');
       Options.TextDescription.Text := Options.Description[OPTIONS_DESC_INDEX_GAME]; // Select default first menu button 'Game'
@@ -2394,6 +2303,13 @@ begin
       EditSub.VocalsContourColor[1].B := EnsureRange(ReadFloat(SectionList, 'Blue', 0), 0.0, 1.0);
       EditSub.VocalsContourAlpha[1] := EnsureRange(ReadFloat(SectionList, 'Alpha', 0.35), 0.0, 1.0);
       EditSub.VocalsContourWidth[1] := Max(0, ReadFloat(SectionList, 'Width', 2.5));
+      SectionList := GetSectionList('EditSubInactiveVoice');
+      EditSub.InactiveVoiceColor.R := EnsureRange(ReadFloat(SectionList, 'Red', 0.45), 0.0, 1.0);
+      EditSub.InactiveVoiceColor.G := EnsureRange(ReadFloat(SectionList, 'Green', 0.45), 0.0, 1.0);
+      EditSub.InactiveVoiceColor.B := EnsureRange(ReadFloat(SectionList, 'Blue', 0.45), 0.0, 1.0);
+      EditSub.InactiveVoiceAlpha := EnsureRange(ReadFloat(SectionList, 'Alpha', 0.4), 0.0, 1.0);
+      EditSub.VoiceFieldPadding := Max(0, ReadInteger(SectionList, 'FieldPadding', 4));
+
       ThemeLoadStatic(EditSub.BackgroundImage, 'EditSubBackgroundImage');
       ThemeLoadStatic(EditSub.HeaderBackground, 'EditSubHeaderBackground');
       ThemeLoadStatic(EditSub.CurrentNoteInfoBackground, 'EditSubCurrentNoteInfoBackground');
@@ -2510,6 +2426,9 @@ begin
 
       ThemeLoadSelectSlide(SongJumpto.SelectSlideType, 'SongJumptoSelectSlideType');
       ThemeLoadText(SongJumpto.TextFound, 'SongJumptoTextFound');
+      LoadSongFilterLayout;
+      LoadDuplicateSongLayout;
+      ThemeLoadBasic(SongJumpto.Footer, 'SongJumptoFooter');
       //Translations
       SongJumpto.IType[0] := Language.Translate('SONG_JUMPTO_TYPE1');
       SongJumpto.IType[1] := Language.Translate('SONG_JUMPTO_TYPE2');
@@ -2520,6 +2439,7 @@ begin
       SongJumpto.IType[6] := Language.Translate('SONG_JUMPTO_TYPE7');
       SongJumpto.IType[7] := Language.Translate('SONG_JUMPTO_TYPE8');
       SongJumpto.IType[8] := Language.Translate('SONG_JUMPTO_TYPE9');
+      SongJumpto.IType[9] := Language.Translate('SONG_JUMPTO_TYPE10');
       SongJumpto.SongsFound := Language.Translate('SONG_JUMPTO_SONGSFOUND');
       SongJumpto.NoSongsFound := Language.Translate('SONG_JUMPTO_NOSONGSFOUND');
       SongJumpto.CatText := Language.Translate('SONG_JUMPTO_CATTEXT');
@@ -2965,6 +2885,198 @@ begin
   Result := DefaultValue;
 end;
 
+constructor TThemeSongJumpTo.Create;
+begin
+  inherited Create;
+  Footer := TThemeBasic.Create;
+end;
+
+destructor TThemeSongJumpTo.Destroy;
+begin
+  Footer.Free;
+  inherited;
+end;
+
+procedure TTheme.LoadDuplicateSongLayout;
+var I: integer; Sections: TThemeSectionList; X, Y, W, H, Gap, RowSpace: integer;
+  LabelStyle: TThemeText;
+begin
+  Sections := GetSectionList('DuplicateSongs');
+  X := ReadInteger(Sections, 'X', 80);
+  Y := ReadInteger(Sections, 'Y', 130);
+  W := ReadInteger(Sections, 'W', 640);
+  H := ReadInteger(Sections, 'H', 360);
+  Gap := ReadInteger(Sections, 'ColumnGap', 24);
+  RowSpace := ReadInteger(Sections, 'RowSpacing', 88);
+  if Length(ErrorPopup.Statics) > 0 then DuplicateSongs.Panel := ErrorPopup.Statics[0]
+  else if Length(SongJumpto.Statics) > 0 then DuplicateSongs.Panel := SongJumpto.Statics[0];
+  DuplicateSongs.Panel.Reflection := false;
+  DuplicateSongs.Panel.X := X; DuplicateSongs.Panel.Y := Y;
+  DuplicateSongs.Panel.W := W; DuplicateSongs.Panel.H := H;
+  DuplicateSongs.Panel.Z := 0.95;
+  DuplicateSongs.Heading := SongJumpto.TextFound;
+  DuplicateSongs.Heading.X := X + 24; DuplicateSongs.Heading.Y := Y + 18;
+  DuplicateSongs.Heading.W := W - 48; DuplicateSongs.Heading.H := 32;
+  DuplicateSongs.Heading.Align := 0; DuplicateSongs.Heading.Size := 34;
+  DuplicateSongs.Heading.Z := 0.97;
+  LabelStyle := DuplicateSongs.Heading; LabelStyle.Size := 24;
+  for I := 0 to 1 do
+  begin
+    DuplicateSongs.Labels[I] := LabelStyle;
+    DuplicateSongs.Labels[I].X := X + 24 + I * ((W - 48 + Gap) div 2);
+    DuplicateSongs.Labels[I].Y := Y + 66;
+    DuplicateSongs.Labels[I].W := (W - 48 - Gap) div 2;
+    DuplicateSongs.Paths[I] := LabelStyle;
+    DuplicateSongs.Paths[I].X := X + 24;
+    DuplicateSongs.Paths[I].Y := Y + 126 + I * RowSpace;
+    DuplicateSongs.Paths[I].W := W - 48;
+    DuplicateSongs.Paths[I].Size := 17;
+  end;
+  for I := 0 to 3 do
+  begin
+    DuplicateSongs.Inputs[I] := ErrorPopup.Button1;
+    DuplicateSongs.Inputs[I].Text := Copy(SongJumpto.ButtonSearchText.Text);
+    DuplicateSongs.Inputs[I].X := DuplicateSongs.Labels[I mod 2].X;
+    DuplicateSongs.Inputs[I].Y := Y + 92 + (I div 2) * RowSpace;
+    DuplicateSongs.Inputs[I].W := (W - 48 - Gap) div 2;
+    DuplicateSongs.Inputs[I].H := 34;
+    DuplicateSongs.Inputs[I].SelectW := DuplicateSongs.Inputs[I].W;
+    DuplicateSongs.Inputs[I].SelectH := 34;
+    DuplicateSongs.Inputs[I].Z := 0.97;
+    DuplicateSongs.Inputs[I].Reflection := false;
+    DuplicateSongs.Inputs[I].Fade := false;
+    DuplicateSongs.Inputs[I].FadeText := false;
+    DuplicateSongs.Inputs[I].Text[0].X := 8;
+    DuplicateSongs.Inputs[I].Text[0].Y := 2;
+    DuplicateSongs.Inputs[I].Text[0].W := DuplicateSongs.Inputs[I].W - 16;
+    DuplicateSongs.Inputs[I].Text[0].Size := 26;
+    DuplicateSongs.Inputs[I].Text[0].Align := 0;
+    DuplicateSongs.Inputs[I].Text[0].Z := 0.98;
+    if Length(GetSectionList('DuplicateSongsInput' + IntToStr(I + 1))) > 0 then
+      ThemeLoadButton(DuplicateSongs.Inputs[I], 'DuplicateSongsInput' + IntToStr(I + 1));
+  end;
+  for I := 0 to 1 do
+  begin
+    DuplicateSongs.Actions[I] := DuplicateSongs.Inputs[I];
+    DuplicateSongs.Actions[I].Text := Copy(DuplicateSongs.Inputs[I].Text);
+    DuplicateSongs.Actions[I].Y := Y + 92 + 2 * RowSpace;
+    DuplicateSongs.Actions[I].Text[0].Align := 1;
+    DuplicateSongs.Actions[I].Text[0].X := DuplicateSongs.Actions[I].W div 2;
+    DuplicateSongs.Actions[I].Text[0].Size := 24;
+    if Length(GetSectionList('DuplicateSongsAction' + IntToStr(I + 1))) > 0 then
+      ThemeLoadButton(DuplicateSongs.Actions[I], 'DuplicateSongsAction' + IntToStr(I + 1));
+  end;
+  DuplicateSongs.Hint := LabelStyle;
+  DuplicateSongs.Hint.X := X + 24; DuplicateSongs.Hint.Y := Y + H - 34;
+  DuplicateSongs.Hint.W := W - 48; DuplicateSongs.Hint.Size := 16;
+  if Length(GetSectionList('DuplicateSongsPanel')) > 0 then ThemeLoadStatic(DuplicateSongs.Panel, 'DuplicateSongsPanel');
+  if Length(GetSectionList('DuplicateSongsHeading')) > 0 then ThemeLoadText(DuplicateSongs.Heading, 'DuplicateSongsHeading');
+  if Length(GetSectionList('DuplicateSongsHint')) > 0 then ThemeLoadText(DuplicateSongs.Hint, 'DuplicateSongsHint');
+  for I := 0 to 1 do
+  begin
+    if Length(GetSectionList('DuplicateSongsLabel' + IntToStr(I + 1))) > 0 then
+      ThemeLoadText(DuplicateSongs.Labels[I], 'DuplicateSongsLabel' + IntToStr(I + 1));
+    if Length(GetSectionList('DuplicateSongsPath' + IntToStr(I + 1))) > 0 then
+      ThemeLoadText(DuplicateSongs.Paths[I], 'DuplicateSongsPath' + IntToStr(I + 1));
+  end;
+end;
+
+procedure TTheme.LoadSongFilterLayout;
+const ActionNames: array[0..3] of string = ('Add', 'Clear', 'Done', 'Lock');
+var Sections: TThemeSectionList; I, BottomY: integer; Legacy: boolean;
+  procedure EnsureText(var B: TThemeButton; Size: integer);
+  begin
+    if Length(B.Text) <> 0 then Exit;
+    SetLength(B.Text, 1);
+    B.Text[0] := SongJumpto.TextFound;
+    B.Text[0].X := 4;
+    B.Text[0].Y := 1;
+    B.Text[0].W := B.W - 8;
+    B.Text[0].H := B.H;
+    B.Text[0].Size := Size;
+    B.Text[0].Align := 0;
+    B.Text[0].Text := '';
+  end;
+begin
+  Sections := GetSectionList('SongJumptoFocusOutline');
+  SongJumpto.FocusColor.R := EnsureRange(ReadFloat(Sections, 'Red', 0.5), 0.0, 1.0);
+  SongJumpto.FocusColor.G := EnsureRange(ReadFloat(Sections, 'Green', 0.85), 0.0, 1.0);
+  SongJumpto.FocusColor.B := EnsureRange(ReadFloat(Sections, 'Blue', 1), 0.0, 1.0);
+  SongJumpto.FocusAlpha := EnsureRange(ReadFloat(Sections, 'Alpha', 1), 0.0, 1.0);
+  SongJumpto.FocusWidth := Max(0, ReadFloat(Sections, 'Width', 1.5));
+  SongJumpto.CustomLockIcons := (ResolveThemeFile('SongJumptoLockedIcon') <> nil) and
+    (ResolveThemeFile('SongJumptoUnlockedIcon') <> nil);
+  if SongJumpto.CustomLockIcons then
+  begin
+    ThemeLoadStatic(SongJumpto.LockedIcon, 'SongJumptoLockedIcon');
+    ThemeLoadStatic(SongJumpto.UnlockedIcon, 'SongJumptoUnlockedIcon');
+  end;
+  if Length(SongJumpto.Statics) > 0 then
+    SongJumpto.SuggestionPanel := SongJumpto.Statics[0];
+  if ResolveThemeFile('SongJumptoSuggestionPanel') <> nil then
+    ThemeLoadStatic(SongJumpto.SuggestionPanel, 'SongJumptoSuggestionPanel');
+  SongJumpto.SuggestionButton := SongJumpto.ButtonSearchText;
+  if ResolveThemeFile('SongJumptoSuggestionButton') <> nil then
+    ThemeLoadButton(SongJumpto.SuggestionButton, 'SongJumptoSuggestionButton');
+  EnsureText(SongJumpto.SuggestionButton, 24);
+  Sections := GetSectionList('SongJumptoSuggestions');
+  SongJumpto.SuggestionWidth := Max(80, ReadInteger(Sections, 'Width', 220));
+  SongJumpto.SuggestionRowHeight := Max(20, ReadInteger(Sections, 'RowHeight', 30));
+  SongJumpto.SuggestionMargin := Max(0, ReadInteger(Sections, 'Margin', 16));
+  SongJumpto.SuggestionGap := Max(0, ReadInteger(Sections, 'Gap', 8));
+  Sections := GetSectionList('SongJumptoFilters');
+  Legacy := Length(Sections) = 0;
+  SongJumpto.RowSpacing := Max(1, ReadInteger(Sections, 'RowSpacing', 78));
+  SongJumpto.AutoHeightStatic := Max(0, ReadInteger(Sections, 'AutoHeightStatic', 0));
+  SongJumpto.CenterVertical := ReadBool(Sections, 'CenterVertical', false);
+  BottomY := SongJumpto.SelectSlideType.Y + 3 * SongJumpto.RowSpacing;
+  // Existing themes remain usable until they define the stacked layout.
+  if Legacy then
+  begin
+    with SongJumpto.ButtonSearchText do
+    begin
+      Y := SongJumpto.SelectSlideType.Y + 28;
+      H := 38; W := W - 30; SelectW := W; SelectH := H; Fade := false;
+    end;
+    SongJumpto.TextFound.Y := BottomY;
+    for I := 0 to High(SongJumpto.Statics) do
+      with SongJumpto.Statics[I] do
+        if (Y <= SongJumpto.SelectSlideType.Y) and
+           (Y + H >= SongJumpto.SelectSlideType.Y) then H := BottomY + 156 - Y;
+  end;
+  EnsureText(SongJumpto.ButtonSearchText, 24);
+  SongJumpto.ButtonRemove := SongJumpto.ButtonSearchText;
+  with SongJumpto.ButtonRemove do
+  begin
+    Text := Copy(Text);
+    X := X + W + 2; W := 28; SelectW := W; Tex := '';
+    Text[0].Text := 'x';
+  end;
+  if ResolveThemeFile('SongJumptoButtonRemove') <> nil then
+    ThemeLoadButton(SongJumpto.ButtonRemove, 'SongJumptoButtonRemove');
+  EnsureText(SongJumpto.ButtonRemove, 24);
+  for I := 0 to 3 do
+  begin
+    SongJumpto.FilterActions[I] := SongJumpto.ButtonSearchText;
+    with SongJumpto.FilterActions[I] do
+    begin
+      Text := Copy(Text);
+      Y := BottomY + 28 + I * 30; H := 28; W := W + 30;
+      SelectW := W; SelectH := H; Tex := ''; Fade := false;
+      Text[0].Size := 20;
+    end;
+    if ResolveThemeFile('SongJumptoButton' + ActionNames[I]) <> nil then
+      ThemeLoadButton(SongJumpto.FilterActions[I], 'SongJumptoButton' + ActionNames[I]);
+    EnsureText(SongJumpto.FilterActions[I], 20);
+  end;
+  SongJumpto.FilterActions[0] := SongJumpto.FilterActions[3];
+  SongJumpto.FilterActions[0].Text := Copy(SongJumpto.FilterActions[3].Text);
+  Dec(SongJumpto.FilterActions[0].X, SongJumpto.FilterActions[3].W + 8);
+  if ResolveThemeFile('SongJumptoButtonPin') <> nil then
+    ThemeLoadButton(SongJumpto.FilterActions[0], 'SongJumptoButtonPin');
+
+end;
+
 procedure TTheme.LoadStatMainRecentPeriods;
 var
   PeriodIndex: integer;
@@ -3090,21 +3202,37 @@ begin
 end;
 
 procedure TTheme.ThemeLoadHighScores;
+  function SectionName(const CurrentName, LegacyName: string): string;
+  begin
+    if ResolveThemeFile(CurrentName) <> nil then
+      Result := CurrentName
+    else
+      Result := LegacyName;
+  end;
 begin
-  ThemeLoadBasic(HighScores, 'HighScores');
-  ThemeLoadText(HighScores.TextTitle,            'HighScoresTextTitle');
-  ThemeLoadText(HighScores.TextWhereAmI,         'HighScoresTextWhereAmI');
-  ThemeLoadText(HighScores.TextArtistTitle,      'HighScoresTextArtistTitle');
-  ThemeLoadText(HighScores.TextDifficultyLabel,  'HighScoresTextDifficultyLabel');
-  ThemeLoadText(HighScores.TextDifficulty,       'HighScoresTextDifficulty');
-  ThemeLoadText(HighScores.TextContinue,         'HighScoresTextContinue');
-  ThemeLoadText(HighScores.TextNavigate,         'HighScoresTextNavigate');
+  ThemeLoadBasic(HighScores, SectionName('HighScores', 'Top5'));
+  ThemeLoadText(HighScores.TextTitle,            SectionName('HighScoresTextTitle', 'Top5Text1'));
+  ThemeLoadText(HighScores.TextWhereAmI,         SectionName('HighScoresTextWhereAmI', 'Top5Text2'));
+  ThemeLoadText(HighScores.TextArtistTitle,      SectionName('HighScoresTextArtistTitle', 'Top5TextArtistTitle'));
+  ThemeLoadText(HighScores.TextDifficultyLabel,  SectionName('HighScoresTextDifficultyLabel', 'Top5Text4'));
+  ThemeLoadText(HighScores.TextDifficulty,       SectionName('HighScoresTextDifficulty', 'Top5TextLevel'));
+  ThemeLoadText(HighScores.TextContinue,         SectionName('HighScoresTextContinue', 'Top5Text3'));
+  ThemeLoadText(HighScores.TextNavigate,         SectionName('HighScoresTextNavigate', 'Top5Text5'));
   ThemeLoadHighScoreList(HighScores.List,        'HighScoresListArea');
-  ThemeLoadStatic(HighScores.RowNumberStatic,    'HighScoresRowNumberStatic');
-  ThemeLoadText(HighScores.RowNumberText,        'HighScoresRowNumberText');
-  ThemeLoadText(HighScores.RowNameText,          'HighScoresRowNameText');
-  ThemeLoadText(HighScores.RowScoreText,         'HighScoresRowScoreText');
-  ThemeLoadText(HighScores.RowDateText,          'HighScoresRowDateText');
+  ThemeLoadStatic(HighScores.RowNumberStatic,    SectionName('HighScoresRowNumberStatic', 'Top5StaticNumber1'));
+  ThemeLoadText(HighScores.RowNumberText,        SectionName('HighScoresRowNumberText', 'Top5TextNumber1'));
+  ThemeLoadText(HighScores.RowNameText,          SectionName('HighScoresRowNameText', 'Top5TextName1'));
+  ThemeLoadText(HighScores.RowScoreText,         SectionName('HighScoresRowScoreText', 'Top5TextScore1'));
+  ThemeLoadText(HighScores.RowDateText,          SectionName('HighScoresRowDateText', 'Top5TextDate1'));
+  // Legacy themes supplied five fixed rows instead of a reusable row template.
+  if (ResolveThemeFile('HighScoresListArea') = nil) and
+     (ResolveThemeFile('Top5TextName5') <> nil) then
+    HighScores.List.BottomY := Max(HighScores.List.BottomY,
+      ReadInteger(GetSectionList('Top5TextName5'), 'Y', 390) + HighScores.RowNameText.Size);
+  // A missing or invalid row template must not cause division by zero at startup.
+  HighScores.RowNameText.Size := Max(1, HighScores.RowNameText.Size);
+  if HighScores.TextTitle.Text = 'SING_TOP_5_CHARTS' then
+    HighScores.TextTitle.Text := Language.Translate('SING_HIGH_SCORES_TITLE');
 end;
 
 procedure TTheme.ThemeLoadText(var ThemeText: TThemeText; const Name: string);
@@ -4139,58 +4267,6 @@ begin
 end;
 
 
-function GetJukeboxLyricOtherColor(Line: integer): TRGB;
-begin
-  case Line of
-    0: begin
-         Result.R := Ini.JukeboxSingLineOtherColorR/255;
-         Result.G := Ini.JukeboxSingLineOtherColorG/255;
-         Result.B := Ini.JukeboxSingLineOtherColorB/255;
-       end;
-    1: begin
-         Result.R := Ini.JukeboxActualLineOtherColorR/255;
-         Result.G := Ini.JukeboxActualLineOtherColorG/255;
-         Result.B := Ini.JukeboxActualLineOtherColorB/255;
-       end;
-    2: begin
-         Result.R := Ini.JukeboxNextLineOtherColorR/255;
-         Result.G := Ini.JukeboxNextLineOtherColorG/255;
-         Result.B := Ini.JukeboxNextLineOtherColorB/255;
-       end;
-    else begin
-         Result.R := Ini.JukeboxSingLineOtherColorR/255;
-         Result.G := Ini.JukeboxSingLineOtherColorG/255;
-         Result.B := Ini.JukeboxSingLineOtherColorB/255;
-       end;
-  end;
-end;
-
-function GetJukeboxLyricOtherOutlineColor(Line: integer): TRGB;
-begin
-  case Line of
-    0: begin
-         Result.R := Ini.JukeboxSingLineOtherOColorR/255;
-         Result.G := Ini.JukeboxSingLineOtherOColorG/255;
-         Result.B := Ini.JukeboxSingLineOtherOColorB/255;
-       end;
-    1: begin
-         Result.R := Ini.JukeboxActualLineOtherOColorR/255;
-         Result.G := Ini.JukeboxActualLineOtherOColorG/255;
-         Result.B := Ini.JukeboxActualLineOtherOColorB/255;
-       end;
-    2: begin
-         Result.R := Ini.JukeboxNextLineOtherOColorR/255;
-         Result.G := Ini.JukeboxNextLineOtherOColorG/255;
-         Result.B := Ini.JukeboxNextLineOtherOColorB/255;
-       end;
-    else begin
-         Result.R := Ini.JukeboxSingLineOtherOColorR/255;
-         Result.G := Ini.JukeboxSingLineOtherOColorG/255;
-         Result.B := Ini.JukeboxSingLineOtherOColorB/255;
-       end;
-  end;
-end;
-
 function GetLyricColor(Color: integer): TRGB;
 begin
   case Color of
@@ -4640,6 +4716,7 @@ procedure TTheme.ThemeSongLoad;
 var
   I, C: integer;
   prefix: string;
+  Enabled: boolean;
   SectionLIst: TThemeSectionList;
 begin
   case (TSongMenuMode(Ini.SongMenu)) of
@@ -4655,6 +4732,41 @@ begin
   ThemeLoadText(Song.TextTitle, 'Song' + prefix + 'TextTitle');
   ThemeLoadText(Song.TextNumber, 'Song' + prefix + 'TextNumber');
   ThemeLoadText(Song.TextYear, 'Song' + prefix + 'TextYear');
+
+  Song.TextConfiguration := Song.TextYear;
+  with Song.TextConfiguration do
+  begin
+    X := 50; Y := 548; W := 195; H := 24; Size := 20; Align := 0;
+    Z := 0.95; ColR := 1; ColG := 1; ColB := 1;
+    Text := Language.Translate('SING_CONFIGURATION');
+    Reflection := true; ReflectionSpacing := 13;
+  end;
+  if SectionExists('Song' + prefix + 'TextConfiguration', Enabled) then
+    ThemeLoadText(Song.TextConfiguration, 'Song' + prefix + 'TextConfiguration');
+  Song.StaticContinuousStatus := Song.VideoIcon;
+  with Song.StaticContinuousStatus do
+  begin
+    X := 210; Y := 545; W := 32; H := 30; Z := 0.96;
+    Tex := 'icon_song_continuous'; Typ := TEXTURE_TYPE_TRANSPARENT;
+    TexX1 := 0; TexY1 := 0; TexX2 := 1; TexY2 := 1;
+    ColR := 1; ColG := 1; ColB := 1; Alpha := 1;
+    Reflection := true; ReflectionSpacing := 2;
+  end;
+  if SectionExists('Song' + prefix + 'StaticContinuousStatus', Enabled) then
+    ThemeLoadStatic(Song.StaticContinuousStatus, 'Song' + prefix + 'StaticContinuousStatus');
+  Song.StaticContinuousKey := Song.VideoIcon;
+  with Song.StaticContinuousKey do
+  begin
+    X := 15; Y := 545; W := 32; H := 30; Z := 0.95;
+    Tex := 'ButtonC'; Typ := TEXTURE_TYPE_TRANSPARENT;
+    ScaleMode := lsUniform;
+    TexX1 := 0; TexY1 := 0; TexX2 := 1; TexY2 := 1;
+    ColR := 1; ColG := 1; ColB := 1; Alpha := 1;
+    Reflection := true; ReflectionSpacing := 2;
+  end;
+  if SectionExists('Song' + prefix + 'StaticContinuousKey', Enabled) then
+    ThemeLoadStatic(Song.StaticContinuousKey, 'Song' + prefix + 'StaticContinuousKey');
+
 
   // medley playlist
   SectionList := GetSectionList('Song' + prefix + 'TextMedleyMax');
@@ -4682,6 +4794,7 @@ begin
   //Show Cat in TopLeft Mod
   ThemeLoadStatic(Song.StaticCat, 'Song' + prefix + 'StaticCat');
   ThemeLoadText(Song.TextCat, 'Song' + prefix + 'TextCat');
+
 
   //Load Cover Pos and Size from Theme Mod
   SectionList := GetSectionList('Song' + prefix + 'Cover');
@@ -4784,6 +4897,11 @@ begin
   Song.DuetSingerArea.Y := ReadInteger(SectionList, 'Y', Song.Static2PlayersDuetSingerP1.Y);
   Song.DuetSingerArea.W := ReadInteger(SectionList, 'W', Song.Static2PlayersDuetSingerP1.W);
   Song.DuetSingerArea.H := ReadInteger(SectionList, 'H', Song.Static2PlayersDuetSingerP1.H);
+  Song.VoiceTileWidth := Max(1, ReadInteger(SectionList, 'TileWidth', Round(Song.Static2PlayersDuetSingerP1.W * 1.36)));
+  Song.VoiceTileHeight := Max(1, ReadInteger(SectionList, 'TileHeight', Song.Static2PlayersDuetSingerP1.H));
+  Song.VoiceTileGap := Max(0, ReadInteger(SectionList, 'TileGap', 4));
+  Song.VoiceTextPaddingX := Max(0, ReadInteger(SectionList, 'TextPaddingX', 3));
+  Song.VoiceTextPaddingY := Max(0, ReadInteger(SectionList, 'TextPaddingY', 2));
 
   //Party Mode
   ThemeLoadStatic(Song.StaticTeam1Joker1, 'Song' + prefix + 'StaticTeam1Joker1');
@@ -4832,12 +4950,6 @@ begin
 
   freeandnil(Sing);
   Sing := TThemeSing.Create;
-
-  freeandnil(Jukebox);
-  Jukebox := TThemeJukebox.Create;
-
-  freeandnil(JukeboxPlaylist);
-  JukeboxPlaylist := TThemeJukeboxPlaylist.Create;
 
   freeandnil(AboutMain);
   AboutMain := TThemeAboutMain.Create;

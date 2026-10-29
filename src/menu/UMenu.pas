@@ -234,6 +234,7 @@ TOptionsMenu = class(TMenu)
     procedure LoadLegend; virtual;
     function AddSelectSlide(const Text: UTF8String; var Data: integer; const Values: array of UTF8String): integer; overload;
     function AddButton(const Text: UTF8String): integer; overload;
+    procedure AddSection(const Text: UTF8String);
 
   public
     destructor Destroy; override;
@@ -263,6 +264,8 @@ implementation
 
 uses
   UCommon,
+  ULibraryLockdown,
+  ULockdownUI,
   UDisplay,
   UGraphic,
   ULanguage,
@@ -1530,6 +1533,11 @@ end;
 
 procedure TMenu.FadeTo(Screen: PMenu);
 begin
+  if LibraryLockdown.Active and ((Screen = nil) or
+    (Screen = @ScreenEditSub) or
+    (((Screen = @ScreenOptions) or (Screen^ is TOptionsMenu)) and
+      not ((Self = ScreenOptions) or (Self is TOptionsMenu)))) then
+    if not RequestLockdownAccess(Screen) then Exit;
   Display.Fade := 0;
   Display.NextScreen := Screen;
 end;
@@ -2286,6 +2294,14 @@ begin
   NumWidgets := Length(Widgets);
   SetLength(Widgets, NumWidgets + 1);
   Widgets[NumWidgets] := Button[Result];
+end;
+
+procedure TOptionsMenu.AddSection(const Text: UTF8String);
+var
+  ButtonIndex: integer;
+begin
+  ButtonIndex := AddButton(Text);
+  Button[ButtonIndex].Selectable := false;
 end;
 
 function TOptionsMenu.DrawFG;

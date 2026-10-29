@@ -45,11 +45,6 @@ uses
   UHookableEvent;
 
 type
-  TCursorScreenHideMode = (
-    cshDefault,
-    cshIgnoreSingScreen
-  );
-
   TDisplay = class
     private
       ePreDraw: THookableEvent;
@@ -122,7 +117,7 @@ type
       function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
 
       { sets SDL_ShowCursor depending on options set in Ini }
-      procedure SetCursor(ScreenHideMode: TCursorScreenHideMode = cshDefault);
+      procedure SetCursor;
 
       { called when cursor moves, positioning of software cursor }
       procedure MoveCursor(X, Y: double);
@@ -160,13 +155,13 @@ const
   FADE_DURATION = 400;
   { constants for software cursor effects
     time in milliseconds }
-  CURSOR_FADE_IN_TIME = 500;      // seconds the fade in effect lasts
-  CURSOR_FADE_OUT_TIME = 2000;    // seconds the fade out effect lasts
-  CURSOR_AUTOHIDE_TIME = 5000;   // seconds until auto fade out starts if there is no mouse movement
+  CURSOR_FADE_IN_TIME = 100;      // milliseconds the fade in effect lasts
+  CURSOR_FADE_OUT_TIME = 150;    // milliseconds the fade out effect lasts
+  CURSOR_AUTOHIDE_TIME = 1000;   // milliseconds until auto fade out starts if there is no mouse movement
 
 implementation
 
-uses
+uses UDuplicateSongUI,
   UText,
   StrUtils,
   UCommandLine,
@@ -281,7 +276,7 @@ begin
   Cursor_X        := -1;
   Cursor_Y        := -1;
   Cursor_Fade     := false;
-  Cursor_HiddenByScreen := true;
+  Cursor_HiddenByScreen := false;
   Cursor_Update   := false;
 
   {$IFDEF MSWINDOWS}
@@ -352,6 +347,8 @@ begin
         ScreenPopupInfo.Draw
       else if (ScreenPopupCheck <> nil) and ScreenPopupCheck.Visible then
         ScreenPopupCheck.Draw
+      else if (DuplicateSongPopup <> nil) and DuplicateSongPopup.Visible then
+        DuplicateSongPopup.Draw
       else if (ScreenPopupInsertUser <> nil) and ScreenPopupInsertUser.Visible then
         ScreenPopupInsertUser.Draw
       else if (ScreenPopupSendScore <> nil) and ScreenPopupSendScore.Visible then
@@ -509,32 +506,10 @@ begin
 end;
 
 { sets SDL_ShowCursor depending on options set in Ini }
-procedure TDisplay.SetCursor(ScreenHideMode: TCursorScreenHideMode);
-var
-  Cursor: Integer;
+procedure TDisplay.SetCursor;
 begin
-  Cursor := 0;
-
-  if (Ini.Mouse = 2) and
-     (Cursor_HiddenByScreen <> ((CurrentScreen = @ScreenSing) and (ScreenHideMode = cshDefault))) then
-  begin
-    Cursor_Visible := false;
-    Cursor_Fade := false;
-  end;
-
-  Cursor_HiddenByScreen := (CurrentScreen = @ScreenSing) and (ScreenHideMode = cshDefault);
-
-  if not Cursor_HiddenByScreen then
-  begin
-    if (Ini.Mouse = 0) and (Ini.FullScreen = 0) then
-      // show sdl (os) cursor in window mode even when mouse support is off
-      Cursor := 1
-    else if (Ini.Mouse = 1) then
-      // show sdl (os) cursor when hardware cursor is selected
-      Cursor := 1;
-  end;
-
-  SDL_ShowCursor(Cursor);
+  Cursor_HiddenByScreen := false;
+  SDL_ShowCursor(0);
 end;
 
 { called by MoveCursor and OnMouseButton to update last move and start fade in }
@@ -544,8 +519,8 @@ var
 begin
   Ticks := SDL_GetTicks;
 
-  { fade in on movement (or button press) if not first movement }
-  if (not Cursor_Visible) and (Cursor_LastMove <> 0) then
+  { fade in on movement or button press, including the first movement }
+  if (not Cursor_Visible) then
   begin
     if Cursor_Fade then // we use a trick here to consider progress of fade out
       Cursor_LastMove := Ticks - round(CURSOR_FADE_IN_TIME * (1 - (Ticks - Cursor_LastMove)/CURSOR_FADE_OUT_TIME))
@@ -564,8 +539,7 @@ end;
 { called when cursor moves, positioning of software cursor }
 procedure TDisplay.MoveCursor(X, Y: double);
 begin
-  if (Ini.Mouse = 2) and
-     ((X <> Cursor_X) or (Y <> Cursor_Y)) then
+  if (X <> Cursor_X) or (Y <> Cursor_Y) then
   begin
     Cursor_X := X;
     Cursor_Y := Y;
@@ -577,12 +551,8 @@ end;
 { called when left or right mousebutton is pressed or released }
 procedure TDisplay.OnMouseButton(Pressed: boolean);
 begin
-  if (Ini.Mouse = 2) then
-  begin
-    Cursor_Pressed := Pressed;
-
-    UpdateCursorFade;
-  end;
+  Cursor_Pressed := Pressed;
+  UpdateCursorFade;
 end;
 
 { draws software cursor }
@@ -594,12 +564,12 @@ var
   CursorW: single;
   Texture: TTexture;
 begin
-  if (Ini.Mouse = 2) and ((Screens = 1) or ((ScreenAct - 1) = (Round(Cursor_X+16) div RenderW))) then
+  if ((Screens = 1) or ((ScreenAct - 1) = (Round(Cursor_X+16) div RenderW))) then
   begin // draw software cursor
     Ticks := SDL_GetTicks;
 
-    if (Cursor_Visible) and (Cursor_LastMove + CURSOR_AUTOHIDE_TIME <= Ticks) then
-    begin // start fade out after 5 secs w/o activity
+    if (Cursor_Visible) and (Ticks - Cursor_LastMove >= CURSOR_AUTOHIDE_TIME) then
+    begin // start fading after one second without activity
       Cursor_Visible := false;
       Cursor_LastMove := Ticks;
       Cursor_Fade := true;
@@ -610,14 +580,14 @@ begin
     begin
       if Cursor_Visible then
       begin // fade in
-        if (Cursor_LastMove + CURSOR_FADE_IN_TIME <= Ticks) then
+        if (Ticks - Cursor_LastMove >= CURSOR_FADE_IN_TIME) then
           Cursor_Fade := false
         else
           Alpha := sin((Ticks - Cursor_LastMove) * 0.5 * pi / CURSOR_FADE_IN_TIME) * 0.7;
       end
       else
       begin //fade out
-        if (Cursor_LastMove + CURSOR_FADE_OUT_TIME <= Ticks) then
+        if (Ticks - Cursor_LastMove >= CURSOR_FADE_OUT_TIME) then
           Cursor_Fade := false
         else
           Alpha := cos((Ticks - Cursor_LastMove) * 0.5 * pi / CURSOR_FADE_OUT_TIME) * 0.7;

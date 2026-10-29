@@ -108,7 +108,13 @@ begin
       end;
 
       SDLK_J: begin
-        FadeTo(@ScreenJukeboxPlaylist, SoundLib.Start);
+        if (Songs.SongList.Count >= 1) then
+        begin
+          ScreenSong.OpenContinuousFromMainMenu;
+          FadeTo(@ScreenSong, SoundLib.Start);
+        end
+        else
+          ScreenPopupError.ShowPopup(Language.Translate('ERROR_NO_SONGS'));
         Exit;
       end;
 
@@ -117,7 +123,7 @@ begin
         Theme.LoadTheme(Ini.Theme, Ini.Color);
         SoundLib.LoadSounds();
         SoundLib.StartBgMusic();
-        UGraphic.LoadScreens(USCEVersionStr);
+        UGraphic.LoadScreens(Log.Title);
       end;
 
       SDLK_T: begin
@@ -197,12 +203,13 @@ begin
             ScreenPopupError.ShowPopup(Language.Translate('ERROR_NO_SONGS'));
         end;
 
-        //Jukebox
+        // Continuous playback entry
         if Interaction = 2 then
         begin
           if (Songs.SongList.Count >= 1) then
           begin
-            FadeTo(@ScreenJukeboxPlaylist, SoundLib.Start);
+            ScreenSong.OpenContinuousFromMainMenu;
+            FadeTo(@ScreenSong, SoundLib.Start);
           end
           else //show error message, No Songs Loaded
             ScreenPopupError.ShowPopup(Language.Translate('ERROR_NO_SONGS'));
@@ -275,7 +282,8 @@ begin
 
   AddButton(Theme.Main.ButtonSolo);
   AddButton(Theme.Main.ButtonMulti);
-  AddButton(Theme.Main.ButtonJukebox);
+  AddButton(Theme.Main.ButtonJukebox); // Preserve the theme slot for compatibility.
+  Button[High(Button)].Text[0].Text := Language.Translate('CONTINUOUS_TITLE');
   AddButton(Theme.Main.ButtonStat);
   AddButton(Theme.Main.ButtonOptions);
   AddButton(Theme.Main.ButtonAbout);

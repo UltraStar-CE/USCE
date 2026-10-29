@@ -50,6 +50,8 @@ type
     Start:      Longint; // start of the word in quarters (beats)
     Length:     Longint; // length of the word in quarters
     Text:       UTF8String; // text
+    ScoreExcluded: boolean;
+    NoteType:   TNoteType; // scoring type of the source note
     Freestyle:  boolean;  // is freestyle?
   end;
   TLyricWordArray = array of TLyricWord;
@@ -93,6 +95,9 @@ type
 
     public
       // positions, line specific settings
+      Compact: boolean;
+      PreviewAlpha: real;
+      DrawAlphaScale: real;
       UpperLineX:     real;       // X start-pos of UpperLine
       UpperLineW:     real;       // Width of UpperLine with icon(s) and text
       UpperLineY:     real;       // Y start-pos of UpperLine
@@ -140,6 +145,7 @@ type
       procedure UpdateLineMetrics() overload;
 
       function GetUpperLineIndex(): integer;
+      function HasVisibleText(Beat: real): boolean;
 
       constructor Create(ULX, ULY, ULW, ULH, LLX, LLY, LLW, LLH: real);
       procedure   LoadTextures;
@@ -198,6 +204,8 @@ constructor TLyricEngine.Create(ULX, ULY, ULW, ULH, LLX, LLY, LLW, LLH: real);
 begin
   inherited Create();
 
+  PreviewAlpha := 0.5;
+  DrawAlphaScale := 1;
   BPM := 0;
   LCounter := 0;
   QueueFull := False;
@@ -322,6 +330,8 @@ begin
       LyricLine.Words[NoteIndex].Start     := Line.Notes[NoteIndex].StartBeat;
       LyricLine.Words[NoteIndex].Length    := Line.Notes[NoteIndex].Duration;
       LyricLine.Words[NoteIndex].Text      := Line.Notes[NoteIndex].Text;
+      LyricLine.Words[NoteIndex].ScoreExcluded := Line.Notes[NoteIndex].ScoreExcluded;
+      LyricLine.Words[NoteIndex].NoteType  := Line.Notes[NoteIndex].NoteType;
       LyricLine.Words[NoteIndex].Freestyle := Line.Notes[NoteIndex].NoteType = ntFreestyle;
 
       LyricLine.Text := LyricLine.Text + LyricLine.Words[NoteIndex].Text;
@@ -339,6 +349,18 @@ end;
  * Draw just manages the Lyrics, drawing is done by a call of DrawLyrics.
  * @param Beat: current Beat in Quarters
  *}
+function TLyricEngine.HasVisibleText(Beat: real): boolean;
+  function LineVisible(Line: TLyricLine): boolean;
+  begin
+    Result := (Length(Line.Words) > 0) and (Trim(Line.Text) <> '');
+    if Result and Line.LastLine then
+      with Line.Words[High(Line.Words)] do
+        Result := Beat < Start + Length + 15;
+  end;
+begin
+  Result := LineVisible(UpperLine) or LineVisible(LowerLine);
+end;
+
 procedure TLyricEngine.Draw(Beat: real);
 begin
   DrawLyrics(Beat);
@@ -349,9 +371,27 @@ end;
  * Main Drawing procedure.
  *}
 procedure TLyricEngine.DrawLyrics(Beat: real);
+var Gap: real;
 begin
-  DrawLyricsLine(UpperLineX, UpperLineW, UpperLineY, UpperLineH, UpperLine, Beat);
-  DrawLyricsLine(LowerLineX, LowerLineW, LowerLineY, LowerLineH, LowerLine, Beat);
+  DrawAlphaScale := 1;
+  if not Compact then
+  begin
+    DrawLyricsLine(UpperLineX, UpperLineW, UpperLineY, UpperLineH, UpperLine, Beat);
+    DrawLyricsLine(LowerLineX, LowerLineW, LowerLineY, LowerLineH, LowerLine, Beat);
+    Exit;
+  end;
+  Gap := UpperLineH * 0.4;
+  if (Length(UpperLine.Words) > 0) and (Length(LowerLine.Words) > 0) and
+    (UpperLine.Width + Gap + LowerLine.Width <= UpperLineW) then
+  begin
+    DrawLyricsLine(UpperLineX, UpperLine.Width, UpperLineY, UpperLineH, UpperLine, Beat);
+    DrawAlphaScale := PreviewAlpha;
+    DrawLyricsLine(UpperLineX + UpperLine.Width + Gap, LowerLine.Width,
+      UpperLineY, UpperLineH, LowerLine, Beat);
+    DrawAlphaScale := 1;
+  end
+  else
+    DrawLyricsLine(UpperLineX, UpperLineW, UpperLineY, UpperLineH, UpperLine, Beat);
 end;
 
 
@@ -496,74 +536,19 @@ begin
   SetFontStyle(FontStyle);
   ResetFont();
 
-  // hack to OptionsJukebox lyrics demo
-  if (Display.CurrentScreen = @ScreenOptionsJukebox) and (FontStyle = 2) then
-    SetFontSize(Line.Height * 0.8)
-  else
-    SetFontSize(Line.Height);
+  SetFontSize(Line.Height);
 
-  // set outline
-  if (Display.CurrentScreen = @ScreenJukebox) or (Display.CurrentScreen = @ScreenOptionsJukebox) then
-  begin
-
-    if (Ini.CurrentJukeboxSingLineOutlineColor <> 2) then
-      OutlineColor_act := GetLyricOutlineColor(Ini.CurrentJukeboxSingLineOutlineColor)
-    else
-    begin
-      if (Display.CurrentScreen = @ScreenJukebox) then
-        OutlineColor_act := ScreenJukeboxOptions.GetJukeboxOptionsLyricOtherOutlineColor(0)
-      else
-        OutlineColor_act := GetJukeboxLyricOtherOutlineColor(0);
-    end;
-
-    if (Ini.CurrentJukeboxActualLineOutlineColor <> 2) then
-      OutlineColor_en := GetLyricOutlineColor(Ini.CurrentJukeboxActualLineOutlineColor)
-    else
-    begin
-      if (Display.CurrentScreen = @ScreenJukebox) then
-        OutlineColor_en := ScreenJukeboxOptions.GetJukeboxOptionsLyricOtherOutlineColor(1)
-      else
-        OutlineColor_en := GetJukeboxLyricOtherOutlineColor(1);
-    end;
-
-    if (Ini.CurrentJukeboxNextLineOutlineColor <> 2) then
-      OutlineColor_dis := GetLyricOutlineColor(Ini.CurrentJukeboxNextLineOutlineColor)
-    else
-    begin
-      if (Display.CurrentScreen = @ScreenJukebox) then
-        OutlineColor_dis := ScreenJukeboxOptions.GetJukeboxOptionsLyricOtherOutlineColor(2)
-      else
-        OutlineColor_dis := GetJukeboxLyricOtherOutlineColor(2);
-    end;
-
-  end
-  else
-  begin
-    OutlineColor_act := GetLyricOutlineColor(0);
-    OutlineColor_en := GetLyricOutlineColor(0);
-    OutlineColor_dis := GetLyricOutlineColor(0);
-  end;
+  OutlineColor_act := Theme.Sing.LyricOutlineActive;
+  OutlineColor_en := Theme.Sing.LyricOutlineCurrent;
+  OutlineColor_dis := Theme.Sing.LyricOutlineNext;
 
   // center lyrics
   LyricX := X + (W - Line.Width) / 2;
   LyricY := Y + (H - Line.Height) / 2;
   // get lyrics effect
 
-  if (Display.CurrentScreen = @ScreenJukebox) or (Display.CurrentScreen = @ScreenOptionsJukebox) then
-    LyricsEffect := TLyricsEffect(Ini.JukeboxEffect)
-  else
-    LyricsEffect := TLyricsEffect(Ini.LyricsEffect);
-
-  if (Display.CurrentScreen <> @ScreenJukebox)
-    and (Display.CurrentScreen <> @ScreenOptionsJukebox) then
-    Alpha := 1
-  else
-  begin
-    if (Display.CurrentScreen = @ScreenOptionsJukebox) then
-      Alpha := ILyricsAlphaVals[Ini.JukeboxAlpha]
-    else
-      Alpha := ScreenJukebox.LyricsAlpha;
-  end;
+  LyricsEffect := TLyricsEffect(Ini.LyricsEffect);
+  Alpha := 1;
 
   // check if this line is active (at least its first note must be active)
   if (Beat >= Line.StartNote) then
@@ -600,57 +585,44 @@ begin
       Progress := 0;
 
     // last word of this line finished, but this line did not hide -> fade out
-    if (Display.CurrentScreen <> @ScreenJukebox)
-      and (Display.CurrentScreen <> @ScreenOptionsJukebox) then
+    if Line.LastLine and
+     (Beat > LastWord.Start + LastWord.Length) then
     begin
-      if Line.LastLine and
-       (Beat > LastWord.Start + LastWord.Length) then
-      begin
-        Alpha := 1 - (Beat - (LastWord.Start + LastWord.Length)) / 15;
-        if (Alpha < 0) then
-          Alpha := 0;
-      end
-    end
-    else
-    begin
-      if (Display.CurrentScreen = @ScreenOptionsJukebox) then
-        Alpha := ILyricsAlphaVals[Ini.JukeboxAlpha]
-      else
-        Alpha := ScreenJukebox.LyricsAlpha;
+      Alpha := 1 - (Beat - (LastWord.Start + LastWord.Length)) / 15;
+      if (Alpha < 0) then
+        Alpha := 0;
     end;
 
     // outline color
-    SetOutlineColor(OutlineColor_act.R, OutlineColor_act.G, OutlineColor_act.B, Alpha);
+    SetOutlineColor(OutlineColor_act.R, OutlineColor_act.G, OutlineColor_act.B, Alpha * DrawAlphaScale);
 
     // draw sentence before current word
     if (LyricsEffect in [lfxSimple, lfxBall, lfxShift]) then
       // only highlight current word and not that ones before in this line
-      SetFontColor(LineColor_en.R, LineColor_en.G ,LineColor_en.B, Alpha)
+      SetFontColor(LineColor_en.R, LineColor_en.G ,LineColor_en.B, Alpha * DrawAlphaScale)
     else
-      SetFontColor(LineColor_act.R, LineColor_act.G ,LineColor_act.B, Alpha);
+      SetFontColor(LineColor_act.R, LineColor_act.G ,LineColor_act.B, Alpha * DrawAlphaScale);
 
     DrawLyricsWords(Line, LyricX, LyricY, 0, Line.CurWord-1);
 
     // draw rest of sentence (without current word)
-    SetFontColor(LineColor_en.R, LineColor_en.G ,LineColor_en.B, Alpha);
+    SetFontColor(LineColor_en.R, LineColor_en.G ,LineColor_en.B, Alpha * DrawAlphaScale);
 
     if (NextWord <> nil) then
     begin
 
       // outline color
-      SetOutlineColor(OutlineColor_en.R, OutlineColor_en.G, OutlineColor_en.B, Alpha);
+      SetOutlineColor(OutlineColor_en.R, OutlineColor_en.G, OutlineColor_en.B, Alpha * DrawAlphaScale);
 
       DrawLyricsWords(Line, LyricX + NextWord.X, LyricY,
                       Line.CurWord+1, High(Line.Words));
     end;
 
     // outline color
-    SetOutlineColor(OutlineColor_act.R, OutlineColor_act.G, OutlineColor_act.B, Alpha);
+    SetOutlineColor(OutlineColor_act.R, OutlineColor_act.G, OutlineColor_act.B, Alpha * DrawAlphaScale);
 
     // draw current word
-    if ((LyricsEffect in [lfxSimple, lfxBall, lfxShift])
-      // hack to OptionsJukebox lyrics demo
-      or ((LyricsEffect = lfxSlide) and (Display.CurrentScreen = @ScreenOptionsJukebox))) then
+    if (LyricsEffect in [lfxSimple, lfxBall, lfxShift]) then
     begin
       if (LyricsEffect = lfxShift) then
         WordY := LyricY - 8 * (1-Progress)
@@ -658,7 +630,7 @@ begin
         WordY := LyricY;
 
       // change the color of the current word
-      SetFontColor(LineColor_act.R, LineColor_act.G ,LineColor_act.B, Alpha);
+      SetFontColor(LineColor_act.R, LineColor_act.G ,LineColor_act.B, Alpha * DrawAlphaScale);
 
       DrawLyricsWords(Line, LyricX + CurWord.X, WordY, Line.CurWord, Line.CurWord);
     end
@@ -670,7 +642,7 @@ begin
       FontSize := GetFontSize();
       FontScale := 1.0 + ((1 - Progress) * 0.5);
       SetFontSize(FontSize * FontScale);
-      SetFontColor(LineColor_act.R, LineColor_act.G ,LineColor_act.B, Alpha);
+      SetFontColor(LineColor_act.R, LineColor_act.G ,LineColor_act.B, Alpha * DrawAlphaScale);
       DrawLyricsWords(Line,
         LyricX + CurWord.X + ((1 - FontScale) * (CurWord.Width / 2)),
         LyricY + ((1 - FontScale) * (Line.Height / 2)),
@@ -690,14 +662,14 @@ begin
       Renderer.SetTextClipBoundary((LyricX + CurWord.X + (CurWord.Width * Progress)), cdRight);
 
       // and draw active left part
-      SetFontColor(LineColor_act.R, LineColor_act.G ,LineColor_act.B, Alpha);
+      SetFontColor(LineColor_act.R, LineColor_act.G ,LineColor_act.B, Alpha * DrawAlphaScale);
       DrawLyricsWords(Line, LyricX + CurWord.X, LyricY, Line.CurWord, Line.CurWord);
 
       // clip active left part of the current word
       Renderer.SetTextClipBoundary((LyricX + CurWord.X + (CurWord.Width * Progress)), cdLeft);
 
       // and draw non-active right part
-      SetFontColor(LineColor_en.R, LineColor_en.G ,LineColor_en.B, Alpha);
+      SetFontColor(LineColor_en.R, LineColor_en.G ,LineColor_en.B, Alpha * DrawAlphaScale);
       DrawLyricsWords(Line, LyricX + CurWord.X, LyricY, Line.CurWord, Line.CurWord);
 
       Renderer.ClipText := false;
@@ -707,7 +679,7 @@ begin
     if (LyricsEffect = lfxBall) then
     begin
       DrawBall(LyricX + CurWord.X + CurWord.Width * Progress,
-               LyricY - 15 - 15*sin(Progress * Pi), Alpha);
+               LyricY - 15 - 15*sin(Progress * Pi), Alpha * DrawAlphaScale);
     end;
 
   end
@@ -720,16 +692,16 @@ begin
     if (Line = UpperLine) then
     begin
       // outline color
-      SetOutlineColor(OutlineColor_en.R, OutlineColor_en.G, OutlineColor_en.B, Alpha);
+      SetOutlineColor(OutlineColor_en.R, OutlineColor_en.G, OutlineColor_en.B, Alpha * DrawAlphaScale);
 
-      SetFontColor(LineColor_en.R, LineColor_en.G ,LineColor_en.B, Alpha);
+      SetFontColor(LineColor_en.R, LineColor_en.G ,LineColor_en.B, Alpha * DrawAlphaScale);
     end
     else
     begin
       // outline color
-      SetOutlineColor(OutlineColor_dis.R, OutlineColor_dis.G, OutlineColor_dis.B, Alpha);
+      SetOutlineColor(OutlineColor_dis.R, OutlineColor_dis.G, OutlineColor_dis.B, Alpha * DrawAlphaScale);
 
-      SetFontColor(LineColor_dis.R, LineColor_dis.G ,LineColor_dis.B, Alpha);
+      SetFontColor(LineColor_dis.R, LineColor_dis.G ,LineColor_dis.B, Alpha * DrawAlphaScale);
     end;
 
     DrawLyricsWords(Line, LyricX, LyricY, 0, High(Line.Words));

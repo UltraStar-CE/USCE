@@ -33,6 +33,7 @@ interface
 {$I switches.inc}
 
 uses
+  UVoiceParts,
   {$IFDEF MSWINDOWS}
     Windows,
   {$ELSE}
@@ -70,7 +71,8 @@ const
   MIN_BPM = 1.0; // minimum allowed BPM to avoid divide-by-zero
 type
 
-  TSingMode = ( smNormal, smPartyClassic, smPartyFree, smPartyTournament, smJukebox, smPlaylistRandom , smMedley );
+  // Keep the deprecated slot for compatibility with persisted mode values.
+  TSingMode = ( smNormal, smPartyClassic, smPartyFree, smPartyTournament, smLegacyLoopMode, smPlaylistRandom, smMedley );
   TSongMode = ( smAll, smCategory, smPlaylist);
 
   TMedleySource = ( msNone, msCalculated, msTag );
@@ -89,6 +91,13 @@ type
     TrackMask:  integer;
     Score:      integer;
     Date:       UTF8String;
+  end;
+
+  TAgeComparator = (acEqual, acLess, acLessOrEqual, acGreater, acGreaterOrEqual);
+
+  TAgeCondition = record
+    Comparator: TAgeComparator;
+    Value: integer;
   end;
 
   { used to hold header tags that are not supported by this version of
@@ -117,7 +126,9 @@ type
     FMD5Cached  : boolean;
 
     function DecodeFilename(Filename: RawByteString): IPath;
-    procedure ParseNote(Track: integer; TypeP: char; StartP, DurationP, NoteP: integer; LyricS: UTF8String; RapToFreestyle: boolean);
+    procedure ParseNote(Track: integer; TypeP: char; StartP, DurationP, NoteP: integer; LyricS: UTF8String; Excluded: boolean = false);
+    procedure NormalizeUnpitchedNoteTones;
+    procedure UpdateCompletion;
     procedure NewSentence(LineNumberP: integer; Param1, Param2: integer);
     procedure FindRefrain(); // tries to find a refrain for the medley mode and preview start
 
@@ -130,7 +141,7 @@ type
     function ReadTXTHeader(SongFile: TTextFileStream; ReadCustomTags: Boolean): boolean;
 
     function GetFolderCategory(const aFileName: IPath): UTF8String;
-    function LoadOpenedSong(SongFile: TTextFileStream; FileNamePath: IPath; DuetChange: boolean; RapToFreestyle: boolean; OutOfBoundsToFreestyle: boolean; AudioLength: real): boolean;
+    function LoadOpenedSong(SongFile: TTextFileStream; FileNamePath: IPath; DuetChange: boolean; OutOfBoundsToFreestyle: boolean; AudioLength: real): boolean;
     function GetMD5: string;
     procedure SetMD5(const Value: string);
   public
@@ -170,6 +181,8 @@ type
     CreatorASCII:  UTF8String;
 
     Creator:    UTF8String;
+    Age:        Integer;
+    AgeRaw:     UTF8String;
 
     CoverTex:   TTexture;
 
@@ -187,6 +200,7 @@ type
     Medley:     TMedley;  // medley params
 
     isDuet: boolean;
+    VoiceCount: integer;
     DuetNames:  array of UTF8String; // duet singers name
 
     hasRap: boolean;
@@ -204,7 +218,7 @@ type
     VisibleIndex: integer;
 
     Base:       array[0..1] of integer;
-    Rel:        array[0..1] of integer;
+    Rel:        array of integer;
     Mult:       integer;
 
     LastError:  AnsiString;
@@ -217,7 +231,7 @@ type
     constructor Create(const aFileName : IPath); overload;
     destructor  Destroy; override;
     function    LoadSong(DuetChange: boolean): boolean;
-    function    Analyse(const ReadCustomTags: Boolean = false; DuetChange: boolean = false; RapToFreestyle: boolean = false; OutOfBoundsToFreestyle: boolean = false; AudioLength: real = 0; ForceLoadNotes: boolean = false): boolean;
+    function    Analyse(const ReadCustomTags: Boolean = false; DuetChange: boolean = false; OutOfBoundsToFreestyle: boolean = false; AudioLength: real = 0; ForceLoadNotes: boolean = false): boolean;
     procedure   GetPreviewRange(AudioLength: real; out PreviewStartPos, PreviewEndPos: real);
     procedure   SetMedleyMode();
     procedure   Clear();
@@ -242,9 +256,14 @@ type
                 SingFillColor, ActualFillColor, NextFillColor, SingOutlineColor, ActualOutlineColor, NextOutlineColor: string);
   end;
 
+function ParseAgeCondition(const Input: UTF8String; out Condition: TAgeCondition): boolean;
+
+
+
 implementation
 
 uses
+  UAge,
   StrUtils,
   UText,
   UIni,
@@ -623,16 +642,15 @@ begin
   end;
 
   CurrentSong := self;
-  Result := LoadOpenedSong(SongFile, FileNamePath, DuetChange, false, false, 0);
+  Result := LoadOpenedSong(SongFile, FileNamePath, DuetChange, false, 0);
   SongFile.Free;
 end;
 
-function TSong.LoadOpenedSong(SongFile: TTextFileStream; FileNamePath: IPath; DuetChange: boolean; RapToFreestyle: boolean; OutOfBoundsToFreestyle: boolean; AudioLength: real): boolean;
+function TSong.LoadOpenedSong(SongFile: TTextFileStream; FileNamePath: IPath; DuetChange: boolean; OutOfBoundsToFreestyle: boolean; AudioLength: real): boolean;
 var
   CurLine:      RawByteString;
   LinePos:      integer;
   TrackIndex:   integer;
-  NoteIndex:    integer;
   CurrentTrack: integer; // P1: 0, P2: 1
 
   Param0:       AnsiChar;
@@ -642,6 +660,8 @@ var
   ParamLyric:   UTF8String;
 
   NotesFound:   boolean;
+  NoteStart, NoteEnd: real;
+  NoteExcluded: boolean;
 
   procedure RemoveEmptyLinesFromTrack(const TrackIdx: integer);
   var
@@ -665,16 +685,14 @@ var
     if (Tracks[TrackIdx].High >= 0) and (Tracks[TrackIdx].CurrentLine > Tracks[TrackIdx].High) then
       Tracks[TrackIdx].CurrentLine := Tracks[TrackIdx].High;
   end;
-label
-  NextTrack;
 begin
   Result := false;
   LastError := '';
   CurrentTrack := 0;
 
   Mult              := 1; // accuracy of measurement of note
-  Rel[0]            := 0;
-  Rel[1]            := 0;
+  SetLength(Rel, VoiceCount);
+  for TrackIndex := 0 to High(Rel) do Rel[TrackIndex] := 0;
 
   try
     SongFile.Position := 0;
@@ -703,7 +721,7 @@ begin
       if (CurLine[1] = 'P') then
       begin
         Self.isDuet := true;
-        SetLength(Tracks, 2);
+        SetLength(Tracks, VoiceCount);
         CurrentTrack := -1;
       end
       else
@@ -716,6 +734,7 @@ begin
         Tracks[TrackIndex].CurrentLine := 0;
         Tracks[TrackIndex].NotesGAP   := self.NotesGAP;
         Tracks[TrackIndex].ScoreValue := 0;
+        Tracks[TrackIndex].HighestScoredBeat := 0;
 
         //Add first line and set some standard values to fields
         //see procedure NewSentence for further explantation
@@ -747,34 +766,14 @@ begin
             Exit;
           end;
 
-          if (CurLine[2] = ' ') then
-            Param1 := StrToInt(CurLine[3])
-          else
-            Param1 := StrToInt(CurLine[2]);
-
-          if (Param1 = 1) then
+          if not TryParseVoiceMarker(Trim(CurLine), Param1) or
+            (Param1 > VoiceCount) then
           begin
-            if not(DuetChange) then
-              CurrentTrack := 0
-            else
-              CurrentTrack := 1
-          end
-          else
-          begin
-            if (Param1 = 2) then
-            begin
-              if not(DuetChange) then
-                CurrentTrack := 1
-              else
-                CurrentTrack := 0;
-            end
-            else
-            begin
-              Log.LogSongError('Wrong P-Number in file: "' + FileName.ToNative + '"; Line '+IntToStr(FileLineNo)+' (LoadSong)');
-              Result := False;
-              Exit;
-            end;
+            LastError := 'ERROR_CORRUPT_SONG_VOICE';
+            Exit;
           end;
+          CurrentTrack := Param1 - 1;
+
         end;
 
         if (Param0 = 'E') then
@@ -805,13 +804,18 @@ begin
             Param0 := 'F';
           end;
 
-          if (OutOfBoundsToFreestyle and (((Self.Start > 0) and (GetTimeFromBeat(Param1, Self) < Self.Start)) or ((AudioLength > 0) and (GetTimeFromBeat(Param1 + Param3, Self) >= AudioLength)))) then
+          NoteStart := GetTimeFromBeat((Param1 + Rel[CurrentTrack]) * Mult, Self);
+          NoteEnd := GetTimeFromBeat((Param1 + Rel[CurrentTrack] + Param2) * Mult, Self);
+          NoteExcluded := OutOfBoundsToFreestyle and
+            (((Self.Start > 0) and (NoteStart < Self.Start)) or
+             ((AudioLength > 0) and (NoteEnd >= AudioLength)));
+          if NoteExcluded then
           begin
             // convert to freestyle note
             Param0 := 'F';
             Log.LogSongError(
               Format('Note at "%s %d %d %d %s" is before audio start (%.2f < %.2f) or after audio end (%.2f >= %.2f) -> converted to freestyle note',
-              [Param0, Param1, Param2, Param3, ParamLyric, GetTimeFromBeat(Param1, Self), Self.Start, GetTimeFromBeat(Param1 + Param3, Self), AudioLength]),
+              [Param0, Param1, Param2, Param3, ParamLyric, NoteStart, Self.Start, NoteEnd, AudioLength]),
               'TSong.LoadSong'
             );
           end;
@@ -824,7 +828,8 @@ begin
             FileNamePath.ToNative+' Line:'+IntToStr(FileLineNo));
             Break;
           end;
-          ParseNote(CurrentTrack, Param0, (Param1+Rel[CurrentTrack]) * Mult, Param2 * Mult, Param3, ParamLyric, RapToFreestyle);
+          ParseNote(CurrentTrack, Param0, (Param1+Rel[CurrentTrack]) * Mult, Param2 * Mult, Param3, ParamLyric,
+            NoteExcluded);
         end // if
 
         else
@@ -876,25 +881,9 @@ begin
     end;
   end;
 
-  for TrackIndex := 0 to High(Tracks) do
-  begin
-    if High(Tracks[Trackindex].Lines) < 0 then
-      continue;  // no lines in this track
+  NormalizeUnpitchedNoteTones;
 
-    Tracks[Trackindex].Lines[0].LastLine := True; // fallback to make sure at least one line is marked last line
-
-    // search backwards until we find the last line with a non-freestyle note
-    for LinePos := System.High(Tracks[Trackindex].Lines) downto 0 do
-      for NoteIndex := System.High(Tracks[Trackindex].Lines[LinePos].Notes) downto 0 do
-        if Tracks[Trackindex].Lines[LinePos].Notes[NoteIndex].NoteType <> ntFreestyle then
-        begin
-          Tracks[Trackindex].Lines[0].LastLine := False; // reset the fallback as we found the last line with a non-freestyle note
-          Tracks[Trackindex].Lines[LinePos].LastLine := True;
-          goto NextTrack;
-        end;
-
-    NextTrack: ;
-  end;
+  UpdateCompletion;
 
   Result := true;
 end;
@@ -911,6 +900,58 @@ begin
   if (Pos(',', TempValue) <> 0) then
     TempValue[Pos(',', TempValue)] := '.';
   Result := StrToFloatDef(TempValue, 0);
+end;
+
+function ParseAgeCondition(const Input: UTF8String; out Condition: TAgeCondition): boolean;
+var
+  Normalized: UTF8String;
+  OperatorPart: UTF8String;
+  ValuePart: UTF8String;
+  Value: integer;
+begin
+  Result := false;
+
+  Normalized := Trim(Input);
+  if Normalized = '' then
+    Exit;
+
+  OperatorPart := '';
+  if (Length(Normalized) > 0) and (Normalized[1] in ['<', '>']) then
+  begin
+    OperatorPart := Normalized[1];
+    Delete(Normalized, 1, 1);
+    if (Length(Normalized) > 0) and (Normalized[1] = '=') then
+    begin
+      OperatorPart := OperatorPart + '=';
+      Delete(Normalized, 1, 1);
+    end;
+  end;
+
+  if OperatorPart = '' then
+    OperatorPart := '=';
+
+  ValuePart := Trim(Normalized);
+  if (ValuePart = '') or (not TryStrToInt(string(ValuePart), Value)) then
+    Exit;
+
+  if Value < 0 then
+    Exit;
+
+  if OperatorPart = '=' then
+    Condition.Comparator := acEqual
+  else if OperatorPart = '<' then
+    Condition.Comparator := acLess
+  else if OperatorPart = '<=' then
+    Condition.Comparator := acLessOrEqual
+  else if OperatorPart = '>' then
+    Condition.Comparator := acGreater
+  else if OperatorPart = '>=' then
+    Condition.Comparator := acGreaterOrEqual
+  else
+    Exit;
+
+  Condition.Value := Value;
+  Result := true;
 end;
 
 function TSong.ReadTXTHeader(SongFile: TTextFileStream; ReadCustomTags: Boolean): boolean;
@@ -1106,10 +1147,41 @@ begin
       end;
     end; // while
 
+    // Match the note loader: a blank separator before P1 is not a solo song.
+    while Trim(Line) = '' do
+    begin
+      if not SongFile.ReadLine(Line) then Break;
+      Inc(FileLineNo);
+    end;
+
     // Lightweight duet detection for song list: if the first non-header
     // note-section line starts with a P-track marker, this is a duet.
+    VoiceCount := 1;
     if GetFirstNonWhitespaceChar(Line) = 'P' then
+    begin
       Self.isDuet := true;
+      VoiceCount := 2;
+      repeat
+        if (GetFirstNonWhitespaceChar(Line) = 'P') then
+        begin
+          if not TryParseVoiceMarker(Trim(Line), I) then
+          begin
+            LastError := 'ERROR_CORRUPT_SONG_VOICE';
+            Result := false;
+            Exit;
+          end;
+          if I > SupportedSongVoices then
+          begin
+            LastError := 'ERROR_SONG_VOICE_LIMIT';
+            Result := false;
+            Exit;
+          end;
+          VoiceCount := Max(VoiceCount, I);
+        end;
+      until not SongFile.ReadLine(Line);
+    end;
+    SetLength(DuetNames, Max(2, VoiceCount));
+    for I := 0 to High(DuetNames) do DuetNames[I] := 'P' + IntToStr(I + 1);
 
     //Read the songs attributes stored in the TagMap
 
@@ -1302,6 +1374,15 @@ begin
     //Language Sorting
     ParseMultivaluedFilterHeaders('LANGUAGE', self.Language, self.LanguageASCII);
 
+    //Age metadata
+    AgeRaw := '';
+    if TagMap.TryGetData('AGE', Value) then
+    begin
+      AgeRaw := Value;
+      RemoveTagsFromTagMap('AGE');
+    end;
+    Age := AgeForRegion(AgeRaw, Ini.AgeCountry);
+
     //Tags Sorting
     if FormatVersion.MinVersion(1,0,0) then
     begin
@@ -1399,48 +1480,21 @@ begin
     if TagMapTryGetData('CALCMEDLEY', Value) then
       RemoveTagsFromTagMap('CALCMEDLEY', false);
 
-    // Duet Singer Name P1
-    if (TagMapTryGetData('DUETSINGERP1', Value)) then
+    for I := 0 to High(DuetNames) do
     begin
-      if FormatVersion.MaxVersion(1,0,0,false) then
+      Identifier := 'DUETSINGERP' + IntToStr(I + 1);
+      if TagMapTryGetData(Identifier, Value) then
       begin
-        RemoveTagsFromTagMap('DUETSINGERP1');
-        DecodeStringUTF8(Value, DuetNames[0], Encoding);
-      end
-      else
-      begin
-        Log.LogSongError('Ignoring DUETSINGERP1 header in file "' + FullFileName + '" (deprecated in Format 1.0.0)', 'TSong.ReadTXTHeader');
-        RemoveTagsFromTagMap('DUETSINGERP1', false);
+        RemoveTagsFromTagMap(Identifier);
+        if FormatVersion.MaxVersion(1,0,0,false) then
+          DecodeStringUTF8(Value, DuetNames[I], Encoding);
       end;
-    end;
-
-    // Duet Singer Name P2
-    if (TagMapTryGetData('DUETSINGERP2', Value)) then
-    begin
-      if FormatVersion.MaxVersion(1,0,0,false) then
+      Identifier := 'P' + IntToStr(I + 1);
+      if TagMapTryGetData(Identifier, Value) then
       begin
-        RemoveTagsFromTagMap('DUETSINGERP2');
-        DecodeStringUTF8(Value, DuetNames[1], Encoding);
-      end
-      else
-      begin
-        Log.LogSongError('Ignoring DUETSINGERP2 header in file "' + FullFileName + '" (deprecated in Format 1.0.0)', 'TSong.ReadTXTHeader');
-        RemoveTagsFromTagMap('DUETSINGERP2', false);
+        RemoveTagsFromTagMap(Identifier);
+        DecodeStringUTF8(Value, DuetNames[I], Encoding);
       end;
-    end;
-
-    // Duet Singer Name P1
-    if (TagMapTryGetData('P1', Value)) then
-    begin
-      RemoveTagsFromTagMap('P1');
-      DecodeStringUTF8(Value, DuetNames[0], Encoding);
-    end;
-
-    // Duet Singer Name P2
-    if (TagMapTryGetData('P2', Value)) then
-    begin
-      RemoveTagsFromTagMap('P2');
-      DecodeStringUTF8(Value, DuetNames[1], Encoding);
     end;
 
     // Unsupported Tags
@@ -1589,7 +1643,7 @@ begin
   FMD5Cached := Value <> '';
 end;
 
-procedure TSong.ParseNote(Track: integer; TypeP: char; StartP, DurationP, NoteP: integer; LyricS: UTF8String; RapToFreestyle: boolean);
+procedure TSong.ParseNote(Track: integer; TypeP: char; StartP, DurationP, NoteP: integer; LyricS: UTF8String; Excluded: boolean = false);
 begin
 
   with Tracks[Track].Lines[Tracks[Track].High] do
@@ -1606,29 +1660,27 @@ begin
     end;
 
     Notes[HighNote].Duration := DurationP;
+    Notes[HighNote].ScoreExcluded := Excluded;
 
     // back to the normal system with normal, golden and now freestyle notes
     case TypeP of
       'F':  Notes[HighNote].NoteType := ntFreestyle;
       ':':  Notes[HighNote].NoteType := ntNormal;
       '*':  Notes[HighNote].NoteType := ntGolden;
-      'R':
-        begin
-          if RapToFreestyle then
-            Notes[HighNote].NoteType := ntFreestyle
-          else
-            Notes[HighNote].NoteType := ntRap;
-        end;
+      'R':  Notes[HighNote].NoteType := ntRap;
       'G':  Notes[HighNote].NoteType := ntRapGolden;
     end;
 
     //add this notes value ("notes length" * "notes scorefactor") to the current songs entire value
-    Inc(Tracks[Track].ScoreValue, Notes[HighNote].Duration * ScoreFactor[Notes[HighNote].NoteType]);
+    if not Excluded then
+      Inc(Tracks[Track].ScoreValue, Notes[HighNote].Duration * ScoreFactor[Notes[HighNote].NoteType]);
 
     //and to the current lines entire value
-    Inc(ScoreValue, Notes[HighNote].Duration * ScoreFactor[Notes[HighNote].NoteType]);
+    if not Excluded then
+      Inc(ScoreValue, Notes[HighNote].Duration * ScoreFactor[Notes[HighNote].NoteType]);
 
     Notes[HighNote].Tone := NoteP;
+    Notes[HighNote].DisplayTone := NoteP;
 
     //if a note w/ a lower pitch then the current basenote is found
     //we replace the basenote w/ the current notes pitch
@@ -1642,6 +1694,85 @@ begin
 
     EndBeat := Notes[HighNote].StartBeat + Notes[HighNote].Duration;
   end; // with
+end;
+
+// Lyric fading follows the actual final line; completion follows scored notes.
+procedure TSong.UpdateCompletion;
+var
+  TrackIndex, LineIndex, NoteIndex: integer;
+begin
+  for TrackIndex := 0 to High(Tracks) do
+  begin
+    Tracks[TrackIndex].HighestScoredBeat := Low(Integer);
+    for LineIndex := 0 to High(Tracks[TrackIndex].Lines) do
+      with Tracks[TrackIndex].Lines[LineIndex] do
+      begin
+        LastLine := LineIndex = High(Tracks[TrackIndex].Lines);
+        for NoteIndex := 0 to High(Notes) do
+          with Notes[NoteIndex] do
+            if not ScoreExcluded and (Duration > 0) and (ScoreFactor[NoteType] > 0) then
+              Tracks[TrackIndex].HighestScoredBeat := Max(
+                Tracks[TrackIndex].HighestScoredBeat, StartBeat + Duration);
+      end;
+  end;
+end;
+
+procedure TSong.NormalizeUnpitchedNoteTones;
+var
+  TrackIndex, LineIndex, NoteIndex, SearchIndex: integer;
+  PreviousPitched, NextPitched: integer;
+  NoteCenter, PreviousCenter, NextCenter: double;
+  Line: PLine;
+begin
+  for TrackIndex := 0 to High(Tracks) do
+    for LineIndex := 0 to High(Tracks[TrackIndex].Lines) do
+    begin
+      Line := @Tracks[TrackIndex].Lines[LineIndex];
+      PreviousPitched := -1;
+      Line.BaseNote := High(Integer);
+
+      for NoteIndex := 0 to Line.HighNote do
+        with Line.Notes[NoteIndex] do
+        begin
+          if IsUnpitchedNote(NoteType) then
+          begin
+            NextPitched := -1;
+            for SearchIndex := NoteIndex + 1 to Line.HighNote do
+              if not IsUnpitchedNote(Line.Notes[SearchIndex].NoteType) then
+              begin
+                NextPitched := SearchIndex;
+                Break;
+              end;
+
+            if (PreviousPitched >= 0) and (NextPitched >= 0) then
+            begin
+              PreviousCenter := Line.Notes[PreviousPitched].StartBeat +
+                Line.Notes[PreviousPitched].Duration / 2;
+              NextCenter := Line.Notes[NextPitched].StartBeat +
+                Line.Notes[NextPitched].Duration / 2;
+              NoteCenter := StartBeat + Duration / 2;
+              if NextCenter > PreviousCenter then
+                DisplayTone := Round(Line.Notes[PreviousPitched].Tone +
+                  (Line.Notes[NextPitched].Tone - Line.Notes[PreviousPitched].Tone) *
+                  (NoteCenter - PreviousCenter) / (NextCenter - PreviousCenter))
+              else
+                DisplayTone := Round((Line.Notes[PreviousPitched].Tone +
+                  Line.Notes[NextPitched].Tone) / 2);
+            end
+            else if PreviousPitched >= 0 then
+              DisplayTone := Line.Notes[PreviousPitched].Tone
+            else if NextPitched >= 0 then
+              DisplayTone := Line.Notes[NextPitched].Tone
+            else
+              DisplayTone := 0;
+          end
+          else
+            PreviousPitched := NoteIndex;
+
+          if DisplayTone < Line.BaseNote then
+            Line.BaseNote := DisplayTone;
+        end;
+    end;
 end;
 
 procedure TSong.NewSentence(LineNumberP: integer; Param1, Param2: integer);
@@ -1980,9 +2111,11 @@ begin
       begin
         if Tracks[TrackIndex].Lines[LineIndex].Notes[NoteIndex].StartBeat < start then      //check start
         begin
+          Tracks[TrackIndex].Lines[LineIndex].Notes[NoteIndex].ScoreExcluded := true;
           Tracks[TrackIndex].Lines[LineIndex].Notes[NoteIndex].NoteType := ntFreeStyle;
         end else if Tracks[TrackIndex].Lines[LineIndex].Notes[NoteIndex].StartBeat >= end_ then  //check end
         begin
+          Tracks[TrackIndex].Lines[LineIndex].Notes[NoteIndex].ScoreExcluded := true;
           Tracks[TrackIndex].Lines[LineIndex].Notes[NoteIndex].NoteType := ntFreeStyle;
           if not foundcut[TrackIndex] then
           begin
@@ -1993,7 +2126,7 @@ begin
           end;
           foundcut[TrackIndex] := true;
         end
-	else
+        else if not Tracks[TrackIndex].Lines[LineIndex].Notes[NoteIndex].ScoreExcluded then
         begin
           //add this notes value ("notes length" * "notes scorefactor") to the current songs entire value
           Inc(Tracks[TrackIndex].ScoreValue, Tracks[TrackIndex].Lines[LineIndex].Notes[NoteIndex].Duration * ScoreFactor[Tracks[TrackIndex].Lines[LineIndex].Notes[NoteIndex].NoteType]);
@@ -2013,6 +2146,7 @@ begin
       Tracks[LineIndex].Number := Tracks[LineIndex].High+1;
     end;
   end;
+  UpdateCompletion;
 end;
 
 procedure TSong.Clear();
@@ -2030,6 +2164,8 @@ begin
   Language := 'Unknown';
   Year := 0;
   Tags := '';
+  Age := -1;
+  AgeRaw := '';
 
   // set to default encoding
   Encoding := Ini.DefaultEncoding;
@@ -2057,6 +2193,7 @@ begin
   Medley.Source := msNone;
 
   isDuet := false;
+  VoiceCount := 1;
 
   SetLength(DuetNames, 2);
   DuetNames[0] := 'P1';
@@ -2065,7 +2202,7 @@ begin
   Relative := false;
 end;
 
-function TSong.Analyse(const ReadCustomTags: Boolean; DuetChange: boolean; RapToFreestyle: boolean; OutOfBoundsToFreestyle: boolean; AudioLength: real; ForceLoadNotes: boolean): boolean;
+function TSong.Analyse(const ReadCustomTags: Boolean; DuetChange: boolean; OutOfBoundsToFreestyle: boolean; AudioLength: real; ForceLoadNotes: boolean): boolean;
 var
   SongFile: TTextFileStream;
   FileNamePath: IPath;
@@ -2098,7 +2235,7 @@ begin
     begin
       //Load Song for Medley Tags
       CurrentSong := Self;
-      NotesLoaded := LoadOpenedSong(SongFile, FileNamePath, DuetChange, RapToFreestyle, OutOfBoundsToFreestyle, AudioLength);
+      NotesLoaded := LoadOpenedSong(SongFile, FileNamePath, DuetChange, OutOfBoundsToFreestyle, AudioLength);
       Result := Result and NotesLoaded;
     end;
 

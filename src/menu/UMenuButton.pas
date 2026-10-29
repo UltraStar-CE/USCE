@@ -134,7 +134,7 @@ implementation
 uses
   SysUtils,
   UDisplay,
-  UScale;
+  UScale, UThemes;
 
 function TButton.GetX(): single;
 begin
@@ -474,7 +474,7 @@ begin
     for T := 0 to High(Text) do
     begin
       Text[T].NameSuggestionWidth := W - 8;
-    Text[T].Draw;
+      Text[T].DrawEmphasized(SelectBool and Theme.BoldSelection);
     end;
   end;
 end;

@@ -793,6 +793,7 @@ end;
 
 procedure TScreenOptionsRecord.OnHide;
 begin
+  inherited;
   StopPreview();
 
   // free preview buffer

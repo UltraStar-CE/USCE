@@ -129,6 +129,9 @@ function ParseResolutionString(const ResolutionString: string; out x, y: integer
 function BuildResolutionString(x,y: integer): string;
 function RandomPermute(Num: integer): CardinalArray;
 
+// Return one eligible ID per shuffle cycle, or -1 for an empty pool.
+function NextShuffled(const Candidates: CardinalArray; var Pool, Order: CardinalArray; var NextIndex: cardinal): integer;
+
 implementation
 
 uses
@@ -803,6 +806,41 @@ begin
     Delete(Ordered, Idx, 1);
     Dec(Num);
   end;
+end;
+
+
+function NextShuffled(const Candidates: CardinalArray; var Pool, Order: CardinalArray; var NextIndex: cardinal): integer;
+var
+  I: integer;
+  Changed: boolean;
+begin
+  Changed := Length(Pool) <> Length(Candidates);
+  if not Changed then
+    for I := 0 to High(Candidates) do
+      if Pool[I] <> Candidates[I] then
+      begin
+        Changed := true;
+        Break;
+      end;
+  if Changed then
+  begin
+    Pool := Copy(Candidates, 0, Length(Candidates));
+    NextIndex := Length(Pool);
+  end;
+  Result := -1;
+  if Length(Pool) = 0 then
+  begin
+    Order := nil;
+    NextIndex := 0;
+    Exit;
+  end;
+  if (Length(Order) <> Length(Pool)) or (NextIndex >= cardinal(Length(Pool))) then
+  begin
+    Order := RandomPermute(Length(Pool));
+    NextIndex := 0;
+  end;
+  Result := Pool[Order[NextIndex]];
+  Inc(NextIndex);
 end;
 
 

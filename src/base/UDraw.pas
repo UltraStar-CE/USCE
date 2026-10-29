@@ -47,22 +47,17 @@ procedure SingDrawBackground;
 procedure SingDrawOscilloscopes;
 procedure SingDrawOscilloscope(Position: TThemePosition; NrSound: integer);
 procedure SingDrawNoteLines(Left, Top, Right: real; LineSpacing: integer = 15; LineThickness: single = 1);
-procedure SingDrawLyricHelper(CP: integer; Left, LyricsMid: real);
+procedure SingDrawLyricHelper(CP: integer; Left, LyricsMid, IndicatorOffset: real);
 procedure SingDrawLine(Left, Top, Right: real; Track, PlayerIndex: integer; LineSpacing: integer = 15);
-procedure SingDrawPlayerLine(Left, Top, W: real; Track, PlayerIndex: integer; LineSpacing: integer = 15);
+procedure SingDrawPlayerLine(Left, Top, W: real; Track, PlayerIndex: integer; LineSpacing: integer = 15; OnlyGaps: boolean = false);
 procedure SingDrawPlayerBGLine(Left, Top, Right: real; Track, PlayerIndex: integer; LineSpacing: integer = 15);
 
 //Draw Editor NoteLines
+procedure EditDrawBackgroundVoices(X, YBaseNote, W, H: real; SelectedTrack, VoiceCount: integer);
 procedure EditDrawLine(X, YBaseNote, W, H: real; Track: integer; NumLines: integer = 10);
 procedure EditDrawBorderedBox(X, Y, W, H: integer; FillR: real = 0.9; FillG: real = 0.9; FillB: real = 0.9; FillAlpha: real = 0.5);
 procedure EditDrawBeatDelimiters(X, Y, W, H: real; Track: integer);
 
-// Draw Jukebox
-procedure SingDrawJukebox;
-procedure SingDrawJukeboxBackground;
-procedure SingDrawJukeboxBlackBackground;
-procedure SingDrawJukeboxTimeBar();
-procedure SingDrawLyricHelperJukebox(Left, LyricsMid: real);
 
 // Draw Webcam
 procedure SingDrawWebCamFrame;
@@ -112,9 +107,16 @@ uses
   URecord,
   URenderer,
   UScreenSingController,
-  UScreenJukebox,
   USong,
   UWebcam;
+
+function NoteAlpha(NoteType: TNoteType; Alpha: real): real; inline;
+begin
+  if NoteType = ntFreestyle then
+    Result := Alpha * Theme.Sing.FreestyleNoteAlpha
+  else
+    Result := Alpha;
+end;
 
 
 procedure SingDrawWebCamFrame;
@@ -286,103 +288,6 @@ begin
   end;
 end;
 
-procedure SingDrawJukeboxBackground;
-var
-  Rec:    TRecR;
-  TexRec: TRecR;
-begin
-  if (ScreenJukebox.Tex_Background <> nil) then
-  begin
-    if (Ini.MovieSize <= 1) then  //HalfSize BG
-    begin
-      (* half screen + gradient *)
-      Rec.Top := 110; // 80
-      Rec.Bottom := Rec.Top + 20;
-      Rec.Left  := 0;
-      Rec.Right := RenderW;
-
-      TexRec.Top := (Rec.Top / RenderH);
-      TexRec.Bottom := (Rec.Bottom / RenderH);
-      TexRec.Left := 0;
-      TexRec.Right := 1;
-
-      (* gradient draw *)
-      (* top *)
-      with ScreenJukebox.Tex_Background do
-      begin
-        X := Rec.Left;
-        Y := Rec.Top;
-        W := Rec.Right - Rec.Left;
-        H := Rec.Bottom - Rec.Top;
-        TexX1 := TexRec.Left;
-        TexX2 := TexRec.Right;
-        TexY1 := TexRec.Top;
-        TexY2 := TexRec.Bottom;
-        AlphaGradient := gdVertical;
-        Alpha := 0; // Top alpha
-        Alpha2 := 1; // Bottom alpha
-      end;
-      Renderer.DrawTexture(ScreenJukebox.Tex_Background);
-
-      (* mid *)
-      Rec.Top := Rec.Bottom;
-      Rec.Bottom := 490 - 20; // 490 - 20
-      TexRec.Top := TexRec.Bottom;
-      TexRec.Bottom := (Rec.Bottom / RenderH);
-      with ScreenJukebox.Tex_Background do
-      begin
-        Y := Rec.Top;
-        H := Rec.Bottom - Rec.Top;
-        TexY1 := TexRec.Top;
-        TexY2 := TexRec.Bottom;
-        AlphaGradient := gdNone;
-        Alpha := 1;
-      end;
-      Renderer.DrawTexture(ScreenJukebox.Tex_Background);
-
-      (* bottom *)
-      Rec.Top := Rec.Bottom;
-      Rec.Bottom := 490; // 490
-      TexRec.Top := TexRec.Bottom;
-      TexRec.Bottom := (Rec.Bottom / RenderH);
-      with ScreenJukebox.Tex_Background do
-      begin
-        Y := Rec.Top;
-        H := Rec.Bottom - Rec.Top;
-        TexY1 := TexRec.Top;
-        TexY2 := TexRec.Bottom;
-        AlphaGradient := gdVertical;
-        Alpha := 1; // Top alpha
-        Alpha2 := 0; // Bottom alpha
-      end;
-      Renderer.DrawTexture(ScreenJukebox.Tex_Background);
-    end
-    else //Full Size BG
-    begin
-      with ScreenJukebox.Tex_Background do
-      begin
-        X := 0;
-        Y := 0;
-        W := RenderW;
-        H := RenderH;
-        TexX1 := 0;
-        TexX2 := 1;
-        TexY1 := 0;
-        TexY2 := 1;
-        AlphaGradient := gdNone;
-        Alpha := 1;
-      end;
-      Renderer.DrawTexture(ScreenJukebox.Tex_Background);
-    end;
-  end
-  else
-    SingDrawJukeboxBlackBackground;
-end;
-
-procedure SingDrawJukeboxBlackBackground;
-begin
-  Renderer.DrawQuad(0, 0, 0, RenderW, RenderH, 0, 0, 0, 1);
-end;
 
 procedure SingDrawOscilloscopes;
   function GetBaseOscilloscopePosition: TThemePosition;
@@ -395,7 +300,7 @@ procedure SingDrawOscilloscopes;
     Layout: TSingLaneLayout;
   begin
     Layout := GetSingLaneLayout(PlayerCountOnScreen, PlayerIndexOnScreen, Theme.Sing.PlayerLayout,
-      CurrentSong.isDuet and (PlayersPlay <> 1));
+      CurrentSong.isDuet);
     LaneLeft := Layout.ColumnLeft;
     LaneTop := Layout.RowAnchorY;
     LaneWidth := Layout.ColumnWidth;
@@ -425,7 +330,7 @@ procedure SingDrawOscilloscopes;
 
     BasePosition := GetBaseOscilloscopePosition;
     Layout := GetSingLaneLayout(LocalPlayerCount, LocalIndex, Theme.Sing.PlayerLayout,
-      CurrentSong.isDuet and (PlayersPlay <> 1));
+      CurrentSong.isDuet);
     GetLaneLayout(LocalPlayerCount, LocalIndex, LaneLeft, LaneTop, LaneWidth);
     Scale := Layout.WidgetScale;
 
@@ -519,9 +424,7 @@ begin
       begin
         with Notes[Count] do
         begin
-          if NoteType <> ntFreestyle then
-          begin
-            If (NoteType = ntRap) or (NoteType = ntRapGolden) then
+          If IsUnpitchedNote(NoteType) then
               Texture := Tex_plain_Left_Rap[PlayerNumber]
             else
               Texture := Tex_plain_Left[PlayerNumber];
@@ -543,7 +446,7 @@ begin
                   ColorB := 0.3;
                   A := 1; // no stars, paint yellow -> glColor4f(1, 1, 0.3, 0.85); - we could
                 end;
-                ntRap:
+                ntFreestyle, ntRap:
                 begin
                   ColorR := 1;
                   ColorG := 1;
@@ -567,10 +470,12 @@ begin
               A := 1;
             end;
 
+            A := NoteAlpha(NoteType, A);
+
             // left part
             Rec.Left  := (StartBeat - CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine].Notes[0].StartBeat) * TempR + Left + 0.5;
             Rec.Right := Rec.Left + NotesW[PlayerIndex];
-            Rec.Top := Top - (Tone-BaseNote)*LineSpacing/2 - NotesH[PlayerIndex];
+            Rec.Top := Top - (DisplayTone-BaseNote)*LineSpacing/2 - NotesH[PlayerIndex];
             Rec.Bottom := Rec.Top + 2 * NotesH[PlayerIndex];
             with Texture do
             begin
@@ -597,7 +502,7 @@ begin
             if Rec.Right <= Rec.Left then
               Rec.Right := Rec.Left;
 
-            If (NoteType = ntRap) or (NoteType = ntRapGolden) then
+            If IsUnpitchedNote(NoteType) then
               Texture := Tex_plain_Mid_Rap[PlayerNumber]
             else
               Texture := Tex_plain_Mid[PlayerNumber];
@@ -624,7 +529,7 @@ begin
             Rec.Right := Rec.Right + NotesW[PlayerIndex];
 
 
-            if (NoteType = ntRap) or (NoteType = ntRapGolden) then
+            if IsUnpitchedNote(NoteType) then
               Texture := Tex_plain_Right_Rap[PlayerNumber]
             else
               Texture := Tex_plain_Right[PlayerNumber];
@@ -642,11 +547,10 @@ begin
             Renderer.DrawTexture(Texture);
 
             // Golden Star Patch
-            if ((NoteType = ntGolden) or (NoteType = ntRapGolden)) and (Ini.EffectSing=1) then
+            if ((NoteType = ntGolden) or (NoteType = ntRapGolden)) and (Ini.EffectSing=1) and ScreenSing.Settings.FeedbackVisible then
             begin
               GoldenRec.SaveGoldenStarsRec(GoldenStarPos, Rec.Top, Rec.Right, Rec.Bottom);
             end;
-          end; // if not FreeStyle
         end; // with
       end; // for
     end; // with
@@ -654,14 +558,26 @@ begin
 end;
 
 // draw sung notes
-procedure SingDrawPlayerLine(Left, Top, W: real; Track, PlayerIndex: integer; LineSpacing: integer);
+procedure SingDrawPlayerLine(Left, Top, W: real; Track, PlayerIndex: integer; LineSpacing: integer; OnlyGaps: boolean);
 var
   TempR:      real;
   Rec:        TRecR;
   N: integer;
+  FirstBeat, WindowStart, BaseTone: real;
+  DrawingGap: boolean;
   Texture: TTexture;
 //  R, G, B, A: real;
   NotesH2:    real;
+  procedure DrawSungTexture;
+  begin
+    if DrawingGap then
+    begin
+      if Texture.X < Left then begin Texture.W := Texture.W-(Left-Texture.X); Texture.X := Left; end;
+      Texture.W := Min(Texture.W,Left+W-Texture.X);
+      if Texture.W <= 0 then Exit;
+    end;
+    Renderer.DrawTexture(Texture);
+  end;
 begin
   if (ScreenSing.Settings.InputVisible) then
   begin
@@ -674,14 +590,29 @@ begin
 
       for N := 0 to Player[PlayerIndex].HighNote do
       begin
+        DrawingGap := Player[PlayerIndex].Note[N].IsGap;
+        if DrawingGap and (Ini.PitchTrace=0) then Continue;
+        if OnlyGaps and not DrawingGap then Continue;
+        with CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine] do
+          if Length(Notes)>0 then begin FirstBeat:=Notes[0].StartBeat;BaseTone:=BaseNote;end
+          else begin FirstBeat:=Player[PlayerIndex].DetectionBeat-15;BaseTone:=Player[PlayerIndex].LastSungTone;TempR:=W/16;end;
+        WindowStart := FirstBeat;
+        if DrawingGap and (TempR > 0) and
+          ((Player[PlayerIndex].DetectionBeat < FirstBeat) or
+           (Player[PlayerIndex].DetectionBeat >= FirstBeat+W/TempR)) then
+          WindowStart := Player[PlayerIndex].DetectionBeat+1-W/TempR;
         with Player[PlayerIndex].Note[N] do
         begin
           // Left part of note
-          Rec.Left  := Left + (Start - CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine].Notes[0].StartBeat) * TempR + 0.5;
+          Rec.Left  := Left + (Start - WindowStart) * TempR + 0.5;
           Rec.Right := Rec.Left + NotesW[PlayerIndex];
 
           // Draw it in half size, if not hit
-          if Hit then
+          if DrawingGap then
+          begin
+            NotesH2 := Max(0.5, NotesH[PlayerIndex] * 0.5);
+          end
+          else if Hit then
           begin
             NotesH2 := NotesH[PlayerIndex]
           end
@@ -690,11 +621,11 @@ begin
             NotesH2 := int(NotesH[PlayerIndex] * 0.65);
           end;
 
-          Rec.Top    := Top - (Tone-CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine].BaseNote)*LineSpacing/2 - NotesH2;
+          Rec.Top    := Top - (Tone-BaseTone)*LineSpacing/2 - NotesH2;
           Rec.Bottom := Rec.Top + 2 * NotesH2;
 
           // draw the left part
-          If (NoteType = ntRap) or (NoteType = ntRapGolden) then
+          If IsUnpitchedNote(NoteType) then
             Texture := Tex_Left_Rap[PlayerIndex+1]
           else
             Texture := Tex_Left[PlayerIndex+1];
@@ -707,13 +638,13 @@ begin
             ColR := 1;
             ColG := 1;
             ColB := 1;
-            Alpha := 1;
+            Alpha := NoteAlpha(NoteType, 1);
           end;
-          Renderer.DrawTexture(Texture);
+          DrawSungTexture;
 
           // Middle part of the note
           Rec.Left  := Rec.Right;
-          Rec.Right := Left + (Start + Duration - CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine].Notes[0].StartBeat) * TempR - NotesW[PlayerIndex] - 0.5;
+          Rec.Right := Left + (Start + Duration - WindowStart) * TempR - NotesW[PlayerIndex] - 0.5;
 
           // new
           if (Start + Duration - 1 = LyricsState.CurrentBeatD) then
@@ -724,7 +655,7 @@ begin
             Rec.Right := Rec.Left;
 
           // draw the middle part
-          If (NoteType = ntRap) or (NoteType = ntRapGolden) then
+          If IsUnpitchedNote(NoteType) then
             Texture := Tex_Mid_Rap[PlayerIndex+1]
           else
             Texture := Tex_Mid[PlayerIndex+1];
@@ -743,14 +674,15 @@ begin
             TexY1 := 0;
             TexX2 := round((Rec.Right-Rec.Left)/32);
             TexY2 := 1;
+            Alpha := NoteAlpha(NoteType, 1);
           end;
-          Renderer.DrawTexture(Texture);
+          DrawSungTexture;
 
           // the right part of the note
           Rec.Left  := Rec.Right;
           Rec.Right := Rec.Right + NotesW[PlayerIndex];
 
-          If (NoteType = ntRap) or (NoteType = ntRapGolden) then
+          If IsUnpitchedNote(NoteType) then
             Texture := Tex_Right_Rap[PlayerIndex+1]
           else
             Texture := Tex_Right[PlayerIndex+1];
@@ -763,12 +695,12 @@ begin
             ColR := 1;
             ColG := 1;
             ColB := 1;
-            Alpha := 1;
+            Alpha := NoteAlpha(NoteType, 1);
           end;
-          Renderer.DrawTexture(Texture);
+          DrawSungTexture;
 
           // Perfect note is stored
-          if Perfect and (Ini.EffectSing=1) then
+          if Perfect and (Ini.EffectSing=1) and ScreenSing.Settings.FeedbackVisible then
           begin
             //A := 1 - 2*(LyricsState.GetCurrentTime() - GetTimeFromBeat(Start + Duration));
             if not (Start + Duration - 1 = LyricsState.CurrentBeatD) then
@@ -786,7 +718,8 @@ begin
       // actually we need a comparison here, to determine if the singing process
       // is ahead Rec.Right even if there is no singing
 
-      if (Ini.EffectSing = 1) then
+      if not OnlyGaps and (Ini.EffectSing = 1) and ScreenSing.Settings.FeedbackVisible and
+         (Player[PlayerIndex].HighNote >= 0) and not Player[PlayerIndex].Note[Player[PlayerIndex].HighNote].IsGap then
         GoldenRec.GoldenNoteTwinkle(Rec.Top,Rec.Bottom,Rec.Right, PlayerIndex);
     end; // if
   end; // if
@@ -818,7 +751,7 @@ begin
       begin
         with Notes[Count] do
         begin
-          if NoteType <> ntFreestyle then
+          if ScoreFactor[NoteType] > 0 then
           begin
             GlowPadX := Max(1.0, NotesW[PlayerIndex] * 0.65);
             GlowExtraW := Max(1.0, NotesW[PlayerIndex] * 0.35);
@@ -829,10 +762,10 @@ begin
             // left
             Rec.Right := (StartBeat - CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine].Notes[0].StartBeat) * TempR + Left + 0.5 + GlowPadX;
             Rec.Left  := Rec.Right - W;
-            Rec.Top := Top - (Tone-BaseNote)*LineSpacing/2 - H;
+            Rec.Top := Top - (DisplayTone-BaseNote)*LineSpacing/2 - H;
             Rec.Bottom := Rec.Top + 2 * H;
 
-            If (NoteType = ntRap) or (NoteType = ntRapGolden) then
+            If IsUnpitchedNote(NoteType) then
               Texture := Tex_BG_Left_Rap[PlayerIndex+1]
             else
               Texture := Tex_BG_Left[PlayerIndex+1];
@@ -842,7 +775,7 @@ begin
               Y := Rec.Top;
               W := Rec.Right - Rec.Left;
               H := Rec.Bottom - Rec.Top;
-              Alpha := A;
+              Alpha := NoteAlpha(NoteType, A);
             end;
             Renderer.DrawTexture(Texture);
 
@@ -854,7 +787,7 @@ begin
             if Rec.Right <= Rec.Left then
               Rec.Right := Rec.Left;
 
-            If (NoteType = ntRap) or (NoteType = ntRapGolden) then
+            If IsUnpitchedNote(NoteType) then
               Texture := Tex_BG_Mid_Rap[PlayerIndex+1]
             else
               Texture := Tex_BG_Mid[PlayerIndex+1];
@@ -864,7 +797,7 @@ begin
               Y := Rec.Top;
               W := Rec.Right - Rec.Left;
               H := Rec.Bottom - Rec.Top;
-              Alpha := A;
+              Alpha := NoteAlpha(NoteType, A);
             end;
             Renderer.DrawTexture(Texture);
 
@@ -872,7 +805,7 @@ begin
             Rec.Left  := Rec.Right;
             Rec.Right := Rec.Left + W;
 
-            If (NoteType = ntRap) or (NoteType = ntRapGolden) then
+            If IsUnpitchedNote(NoteType) then
               Texture := Tex_BG_Right_Rap[PlayerIndex+1]
             else
               Texture := Tex_BG_Right[PlayerIndex+1];
@@ -882,11 +815,11 @@ begin
               Y := Rec.Top;
               W := Rec.Right - Rec.Left;
               H := Rec.Bottom - Rec.Top;
-              Alpha := A;
+              Alpha := NoteAlpha(NoteType, A);
             end;
             Renderer.DrawTexture(Texture);
 
-          end; // if not FreeStyle
+          end;
         end; // with
       end; // for
     end; // with
@@ -899,7 +832,7 @@ end;
  * Left: position the bar starts at
  * LyricsMid: the middle of the lyrics relative to the position Left 
  *)
-procedure SingDrawLyricHelper(CP: integer; Left, LyricsMid: real);
+procedure SingDrawLyricHelper(CP: integer; Left, LyricsMid, IndicatorOffset: real);
 var
   Bounds: TRecR;           // bounds of the lyric help bar
   BarProgress: real;       // progress of the lyrics helper
@@ -911,27 +844,27 @@ var
   FirstNoteDelta: integer; // time in beats between the start of the current line and its first note
   MoveStartX: real;        // x-pos. the bar starts to move from
   MoveDist: real;          // number of pixels the bar will move
+  BarWidth, BarHeight: real;
   LyricEngine: TLyricEngine;
   Col: TRGB;
 const
-  BarWidth  = 50; // width  of the lyric helper bar
-  BarHeight = 30; // height of the lyric helper bar
+  DefaultBarWidth  = 50; // width  of the lyric helper bar
+  DefaultBarHeight = 30; // height of the lyric helper bar
   BarMoveLimit = 40; // max. number of beats remaining before the bar starts to move
 begin
   // get current lyrics line and the time in beats of its first note
   CurLine := @CurrentSong.Tracks[CP].Lines[CurrentSong.Tracks[CP].CurrentLine];
 
   // FIXME: accessing ScreenSing is not that generic
-  if (CurrentSong.isDuet) and (PlayersPlay <> 1) then
+  if (CurrentSong.isDuet) then
   begin
-    if (CP = 1) then
-      LyricEngine := ScreenSing.LyricsDuetP2
-    else
-      LyricEngine := ScreenSing.LyricsDuetP1;
+    LyricEngine := ScreenSing.VoiceLyrics[CP];
   end
   else
     LyricEngine := ScreenSing.Lyrics;
 
+  BarHeight := Min(DefaultBarHeight, LyricEngine.UpperLineH * 0.85);
+  BarWidth := DefaultBarWidth * BarHeight / DefaultBarHeight;
   LyricEngine.FontFamily := Ini.LyricsFont;
   LyricEngine.FontStyle  := Ini.LyricsStyle;
 
@@ -982,28 +915,12 @@ begin
       // determine lyric help bar position and size
       Bounds.Left := MoveStartX + BarProgress * MoveDist;
       Bounds.Right := Bounds.Left + BarWidth;
-      if (CurrentSong.isDuet) and (PlayersPlay <> 1) then
-      begin
-        if (CP = 0) then
-          Bounds.Top := Theme.LyricBarDuetP1.IndicatorYOffset + Theme.LyricBarDuetP1.UpperY
-        else
-          Bounds.Top := Theme.LyricBarDuetP2.IndicatorYOffset + Theme.LyricBarDuetP2.UpperY ;
-      end
-      else
-        Bounds.Top := Theme.LyricBar.IndicatorYOffset + Theme.LyricBar.UpperY ;
+      Bounds.Top := LyricEngine.UpperLineY + IndicatorOffset;
 
       Bounds.Bottom := Bounds.Top + BarHeight + 3;
 
       // draw lyric help bar
-      if (CurrentSong.isDuet) then
-      begin
-        if (Screens > 1) and (GetScreenPlayerCount(PlayersPlay, Screens, ScreenAct) = 2) then
-          Col := GetLyricBarColor(Ini.SingColor[GetFirstPlayerIndexForScreen(PlayersPlay, Screens, ScreenAct) + CP])
-        else
-          Col := GetLyricBarColor(Ini.SingColor[CP]);
-      end
-      else
-        Col := GetLyricBarColor(1);
+      Col := GetLyricBarColor(Ini.SingColor[CP mod UIni.IMaxPlayerCount]);
 
       with Tex_Lyric_Help_Bar do
       begin
@@ -1014,110 +931,6 @@ begin
         ColR := Col.R;
         ColG := Col.G;
         ColB := Col.B;
-        Alpha := BarAlpha;
-      end;
-      Renderer.DrawTexture(Tex_Lyric_Help_Bar);
-    end;
-  end;
-end;
-
-(**
- * Draws the lyrics helper bar jukebox.
- * Left: position the bar starts at
- * LyricsMid: the middle of the lyrics relative to the position Left
- *)
-procedure SingDrawLyricHelperJukebox(Left, LyricsMid: real);
-var
-  Bounds: TRecR;           // bounds of the lyric help bar
-  BarProgress: real;       // progress of the lyrics helper
-  BarMoveDelta: real;      // current beat relative to the beat the bar starts to move at
-  BarAlpha: real;          // transparency
-  CurLine:  PLine;         // current lyric line (beat specific)
-  LineWidth: real;         // lyric line width
-  FirstNoteBeat: integer;  // beat of the first note in the current line
-  FirstNoteDelta: integer; // time in beats between the start of the current line and its first note
-  MoveStartX: real;        // x-pos. the bar starts to move from
-  MoveDist: real;          // number of pixels the bar will move
-  LyricEngine: TLyricEngine;
-const
-  BarWidth  = 50; // width  of the lyric helper bar
-  BarHeight = 30; // height of the lyric helper bar
-  BarMoveLimit = 40; // max. number of beats remaining before the bar starts to move
-begin
-
-  // get current lyrics line and the time in beats of its first note
-  CurLine := @CurrentSong.Tracks[0].Lines[CurrentSong.Tracks[0].CurrentLine];
-
-  // FIXME: accessing ScreenSing is not that generic
-  LyricEngine := ScreenJukebox.Lyrics;
-
-  // do not draw the lyrics helper if the current line does not contain any note
-  if (Length(CurLine.Notes) > 0) then
-  begin
-    // start beat of the first note of this line
-    FirstNoteBeat := CurLine.Notes[0].StartBeat;
-    // time in beats between the start of the current line and its first note
-    FirstNoteDelta := FirstNoteBeat - CurLine.StartBeat;
-
-    // beats from current beat to the first note of the line
-    BarMoveDelta := FirstNoteBeat - LyricsState.MidBeat;
-
-    if (FirstNoteDelta > 8) and  // if the wait-time is large enough
-       (BarMoveDelta > 0) then   // and the first note of the line is not reached
-    begin
-      // let the bar blink to the beat
-      BarAlpha := 0.75 + cos(BarMoveDelta/2) * 0.25;
-
-      // if the number of beats to the first note is too big,
-      // the bar stays on the left side.
-      if (BarMoveDelta > BarMoveLimit) then
-        BarMoveDelta := BarMoveLimit;
-
-      // limit number of beats the bar moves
-      if (FirstNoteDelta > BarMoveLimit) then
-        FirstNoteDelta := BarMoveLimit;
-
-      // calc bar progress
-      BarProgress := 1 - BarMoveDelta / FirstNoteDelta;
-
-      // retrieve the width of the upper lyrics line on the display
-      if (LyricEngine.GetUpperLine() <> nil) then
-        LineWidth := LyricEngine.GetUpperLine().Width
-      else
-        LineWidth := 0;
-
-      // distance the bar will move (LyricRec.Left to beginning of text)
-      MoveDist := LyricsMid - LineWidth/2 - BarWidth;
-
-      if (LineWidth/2 + (BarWidth - Left) * 2 >= 400) then
-        Bounds.Left := - BarProgress * MoveDist + Left - BarWidth
-      else
-      begin
-        // if the line is too long the helper might move from right to left
-        // so we have to assure the start position is left of the text.
-        if (MoveDist >= 0) then
-          MoveStartX := Left
-        else
-          MoveStartX := Left + MoveDist;
-
-        // determine lyric help bar position and size
-        Bounds.Left := MoveStartX + BarProgress * MoveDist;
-      end;
-
-      Bounds.Right := Bounds.Left + BarWidth;
-      Bounds.Top := Theme.LyricBarJukebox.IndicatorYOffset + ScreenJukeBox.Lyrics.UpperLineY;
-      Bounds.Bottom := Bounds.Top + BarHeight + 3;
-
-      // draw lyric help bar
-      with Tex_Lyric_Help_Bar do
-      begin
-        X := Bounds.Left;
-        Y := Bounds.Top;
-        W := Bounds.Right - Bounds.Left;
-        H := Bounds.Bottom - Bounds.Top;
-        ColR := ScreenJukebox.LyricHelper.R;
-        ColG := ScreenJukebox.LyricHelper.G;
-        ColB := ScreenJukebox.LyricHelper.B;
         Alpha := BarAlpha;
       end;
       Renderer.DrawTexture(Tex_Lyric_Help_Bar);
@@ -1151,7 +964,7 @@ var
     end;
 
     Layout := GetSingLaneLayout(PlayerCountOnScreen, LocalIndex, Theme.Sing.PlayerLayout,
-      CurrentSong.isDuet and (PlayersPlay <> 1));
+      CurrentSong.isDuet);
     Left := Layout.GridLeft;
     Right := Layout.GridRight;
     Top := Layout.GuideTopY;
@@ -1186,8 +999,6 @@ procedure SingDraw;
 var
   NR: TRecR;         // lyrics area bounds (NR = NoteRec?)
   LyricEngine: TLyricEngine;
-  LyricEngineDuetP1: TLyricEngine;
-  LyricEngineDuetP2: TLyricEngine;
   I: integer;
   Difficulty: integer;
   PlayerCountOnScreen: integer;
@@ -1217,7 +1028,7 @@ var
     end;
 
     Layout := GetSingLaneLayout(PlayerCountOnScreen, LocalIndex, Theme.Sing.PlayerLayout,
-      CurrentSong.isDuet and (PlayersPlay <> 1));
+      CurrentSong.isDuet);
     Left := Layout.GridLeft;
     Right := Layout.GridRight;
     Width := Right - Left;
@@ -1231,30 +1042,41 @@ begin
   NR.Width := 760; //NR.Right - NR.Left;
   NR.WMid  := 380; //NR.Width / 2;
   NR.Mid   := 400; //NR.Left + NR.WMid;
-  // FIXME: accessing ScreenSing is not that generic
-  if (CurrentSong.isDuet) and (PlayersPlay <> 1) then
+  if ScreenSing.Settings.LyricsVisible then
   begin
-    LyricEngineDuetP1 := ScreenSing.LyricsDuetP1;
-    LyricEngineDuetP2 := ScreenSing.LyricsDuetP2;
-  end
-  else
-    LyricEngine := ScreenSing.Lyrics;
-
-  // draw lyrics
-  if (ScreenSing.Settings.LyricsVisible) then
-  begin
-    if (CurrentSong.isDuet) and (PlayersPlay <> 1) then
+    if CurrentSong.isDuet then
     begin
-      LyricEngineDuetP1.Draw(LyricsState.MidBeat);
-      SingDrawLyricHelper(0, NR.Left, NR.WMid);
-
-      LyricEngineDuetP2.Draw(LyricsState.MidBeat);
-      SingDrawLyricHelper(1, NR.Left, NR.WMid);
+      ScreenSing.LayoutVoiceLyrics;
+      for I := 0 to High(ScreenSing.DisplayedVoices) do
+      begin
+        ScreenSing.PositionVoiceLyrics(I);
+        TrackIndex := ScreenSing.DisplayedVoices[I];
+        LyricEngine := ScreenSing.VoiceLyrics[TrackIndex];
+        LyricEngine.Draw(LyricsState.MidBeat);
+        if ScreenSing.DisplayedVoiceBanks[I] = 0 then
+          SingDrawLyricHelper(TrackIndex, LyricEngine.UpperLineX, LyricEngine.UpperLineW / 2,
+            Theme.LyricBarDuetP1.IndicatorYOffset)
+        else
+          SingDrawLyricHelper(TrackIndex, LyricEngine.UpperLineX, LyricEngine.UpperLineW / 2,
+            Theme.LyricBarDuetP2.IndicatorYOffset);
+        if Theme.Sing.VoiceLabelVisible then
+          with Theme.Sing.VoiceLabel do
+          begin
+            SetFont(Font, Style);
+            SetFontSize(Size);
+            if Theme.Sing.VoiceLabelUseVoiceColor then
+              SetFontColor(LyricEngine.LineColor_act.R, LyricEngine.LineColor_act.G, LyricEngine.LineColor_act.B, 1)
+            else SetFontColor(ColR, ColG, ColB, 1);
+            SetFontPos(LyricEngine.UpperLineX - Theme.Sing.VoiceLabelGutter + X,
+              LyricEngine.UpperLineY + Y);
+            PrintText('P' + IntToStr(TrackIndex + 1));
+          end;
+      end;
     end
     else
     begin
-      LyricEngine.Draw(LyricsState.MidBeat);
-      SingDrawLyricHelper(0, NR.Left, NR.WMid);
+      ScreenSing.Lyrics.Draw(LyricsState.MidBeat);
+      SingDrawLyricHelper(0, NR.Left, NR.WMid, Theme.LyricBar.IndicatorYOffset);
     end;
   end;
 
@@ -1306,7 +1128,7 @@ begin
     end;
 
     Layout := GetSingLaneLayout(PlayerCountOnScreen, LocalIndex, Theme.Sing.PlayerLayout,
-      CurrentSong.isDuet and (PlayersPlay <> 1));
+      CurrentSong.isDuet);
     ContentScale := Layout.ContentScale;
     NotesH[I - 1] := Max(2.0, BaseNoteH * ContentScale);
     NotesW[I - 1] := Max(1.0, BaseNoteW * ContentScale);
@@ -1323,40 +1145,24 @@ begin
 
     GetLaneLayout(PlayerIndex, LaneLeft, LaneRight, LaneWidth, LineTop, LineSpacing);
 
-    TrackIndex := 0;
-    if (CurrentSong.isDuet) and (PlayersPlay <> 1) and Odd(PlayerIndex) then
-      TrackIndex := 1;
+    TrackIndex := Player[PlayerIndex].Track;
+    if CurrentSong.isDuet then
+      LyricEngine := ScreenSing.VoiceLyrics[TrackIndex]
+    else
+      LyricEngine := ScreenSing.Lyrics;
+    // Clear the final target notes and sung trace when their lyrics fade out.
+    // Each duet voice finishes independently; scoring is unaffected.
+    if LyricEngine.GetUpperLine.LastLine and
+      not LyricEngine.HasVisibleText(LyricsState.MidBeat) then
+    begin
+      if Ini.PitchTrace <> 0 then
+        SingDrawPlayerLine(LaneLeft, LineTop, LaneWidth, TrackIndex, PlayerIndex, LineSpacing, true);
+      Continue;
+    end;
 
     SingDrawPlayerBGLine(LaneLeft, LineTop, LaneRight, TrackIndex, PlayerIndex, LineSpacing);
     SingDrawLine(LaneLeft, LineTop, LaneRight, TrackIndex, PlayerIndex, LineSpacing);
     SingDrawPlayerLine(LaneLeft, LineTop, LaneWidth, TrackIndex, PlayerIndex, LineSpacing);
-  end;
-end;
-
-procedure SingDrawJukebox;
-var
-  NR: TRecR;         // lyrics area bounds (NR = NoteRec?)
-  LyricEngine: TLyricEngine;
-begin
-  // positions
-  NR.Left := 20;
-  NR.Right := 780;
-  NR.Width := 760; //NR.Right - NR.Left;
-  NR.WMid  := 380; //NR.Width / 2;
-  NR.Mid   := 400; //NR.Left + NR.WMid;
-
-  // FIXME: accessing ScreenJukebox is not that generic
-  LyricEngine := ScreenJukebox.Lyrics;
-
-  // draw Lyrics
-  if (ScreenJukebox.ShowLyrics) then
-  begin
-    if (ScreenJukebox.LyricsStart) or ((not(ScreenJukebox.LyricsStart) and (LyricsState.GetCurrentTime() * 1000 >= LyricsState.StartTime - 3000))) then
-    begin
-        LyricEngine.Draw(LyricsState.MidBeat);
-        SingDrawLyricHelperJukebox(NR.Left, NR.WMid);
-        ScreenJukebox.LyricsStart := true;
-    end;
   end;
 end;
 
@@ -1365,6 +1171,39 @@ end;
 // 1. It does not look good when you draw the golden note star effect in the editor
 // 2. You can see the freestyle notes in the editor semitransparent
 // 3. It is easier and faster then changing the old procedure
+procedure EditDrawBackgroundVoices(X, YBaseNote, W, H: real; SelectedTrack, VoiceCount: integer);
+var
+  Track, Line, Note, ViewStart, ViewEnd, Base: integer;
+  Scale, Left, Right, Top: real;
+begin
+  with CurrentSong.Tracks[SelectedTrack].Lines[CurrentSong.Tracks[SelectedTrack].CurrentLine] do
+  begin
+    if not HasLength(Scale) or (Scale <= 0) then Exit;
+    Scale := W / Scale;
+    ViewStart := Notes[0].StartBeat;
+    ViewEnd := EndBeat;
+    Base := BaseNote;
+  end;
+  for Track := 0 to VoiceCount - 1 do
+    if Track <> SelectedTrack then
+      for Line := 0 to High(CurrentSong.Tracks[Track].Lines) do
+        with CurrentSong.Tracks[Track].Lines[Line] do
+          if (Length(Notes) > 0) and (Notes[0].StartBeat < ViewEnd) and
+            (Notes[HighNote].EndBeat > ViewStart) then
+            for Note := 0 to HighNote do
+              with Notes[Note] do
+              begin
+                Left := Max(X, X + (StartBeat - ViewStart) * Scale);
+                Right := Min(X + W, X + (EndBeat - ViewStart) * Scale);
+                Top := YBaseNote - (Tone - Base) * H / 18 - NotesH[0];
+                if (Right > Left) and (Top >= YBaseNote - 7 * H / 9) and
+                  (Top + 2 * NotesH[0] <= YBaseNote + 2 * H / 9) then
+                  Renderer.DrawQuad(Left, Top, 0, Right - Left, 2 * NotesH[0], Theme.EditSub.InactiveVoiceColor.R,
+                    Theme.EditSub.InactiveVoiceColor.G, Theme.EditSub.InactiveVoiceColor.B,
+                    Theme.EditSub.InactiveVoiceAlpha);
+              end;
+end;
+
 procedure EditDrawLine(X, YBaseNote, W, H: real; Track: integer; NumLines: integer);
 var
   Rec:   TRecR;
@@ -1451,7 +1290,7 @@ begin
         Rec.Right := Rec.Left + NotesW[0];
         Rec.Top := YBaseNote - (Tone-BaseNote)*Space/2 - NotesH[0];
         Rec.Bottom := Rec.Top + 2 * NotesH[0];
-        If (NoteType = ntRap) or (NoteType = ntRapGolden) then
+        If IsUnpitchedNote(NoteType) then
         begin
           If Color = P1_INVERTED then
             Texture := Tex_Left_Rap_Inv
@@ -1487,7 +1326,7 @@ begin
         Rec.Left  := Rec.Right;
         Rec.Right := (StartBeat + Duration - CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine].Notes[0].StartBeat) * TempR + X - NotesW[0] - 0.5;
 
-        If (NoteType = ntRap) or (NoteType = ntRapGolden) then
+        If IsUnpitchedNote(NoteType) then
         begin
           If Color = P1_INVERTED then
             Texture := Tex_Mid_Rap_Inv
@@ -1522,7 +1361,7 @@ begin
         Rec.Left  := Rec.Right;
         Rec.Right := Rec.Right + NotesW[0];
 
-        If (NoteType = ntRap) or (NoteType = ntRapGolden) then
+        If IsUnpitchedNote(NoteType) then
         begin
           If Color = P1_INVERTED then
             Texture := Tex_Right_Rap_Inv
@@ -1612,54 +1451,5 @@ begin
   Renderer.DrawLines(LineList);
 end;
 
-procedure SingDrawJukeboxTimeBar();
-var
-  x, y:           real;
-  width, height:  real;
-  LyricsProgress: real;
-  CurLyricsTime:  real;
-begin
-
-  if (ScreenJukebox.SongListVisible) then
-  begin
-    x := Theme.Jukebox.StaticTimeProgress.x;
-    y := Theme.Jukebox.StaticTimeProgress.y;
-
-    width  := Theme.Jukebox.StaticTimeProgress.w;
-    height := Theme.Jukebox.StaticTimeProgress.h;
-  end;
-
-  if (ScreenJukebox.SongMenuVisible) then
-  begin
-    x := Theme.Jukebox.StaticSongMenuTimeProgress.x;
-    y := Theme.Jukebox.StaticSongMenuTimeProgress.y;
-
-    width  := Theme.Jukebox.StaticSongMenuTimeProgress.w;
-    height := Theme.Jukebox.StaticSongMenuTimeProgress.h;
-  end;
-
-  CurLyricsTime := LyricsState.GetCurrentTime();
-  if (CurLyricsTime > 0) and
-      (LyricsState.TotalTime > 0) then
-  begin
-    LyricsProgress := CurLyricsTime / LyricsState.TotalTime;
-    // avoid that the bar "overflows" for inaccurate song lengths
-    if (LyricsProgress > 1.0) then
-      LyricsProgress := 1.0;
-    Tex_JukeboxTimeProgress.X := x;
-    Tex_JukeboxTimeProgress.Y := y;
-    Tex_JukeboxTimeProgress.W := width * LyricsProgress;
-    Tex_JukeboxTimeProgress.H := height;
-    Tex_JukeboxTimeProgress.ColR := Theme.Jukebox.StaticSongMenuTimeProgress.ColR;
-    Tex_JukeboxTimeProgress.ColG := Theme.Jukebox.StaticSongMenuTimeProgress.ColG;
-    Tex_JukeboxTimeProgress.ColB := Theme.Jukebox.StaticSongMenuTimeProgress.ColB;
-    Tex_JukeboxTimeProgress.Alpha := 1;
-    Tex_JukeboxTimeProgress.TexX1 := 0;
-    Tex_JukeboxTimeProgress.TexY1 := 0;
-    Tex_JukeboxTimeProgress.TexX2 := (width * LyricsProgress) / 8;
-    Tex_JukeboxTimeProgress.TexY2 := 1;
-    Renderer.DrawTexture(Tex_JukeboxTimeProgress);
-  end;
-end;
 
 end.

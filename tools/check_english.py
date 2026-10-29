@@ -101,6 +101,12 @@ def audit(root, extra_themes=(), english_path=None):
                 if not match or not KEY.fullmatch(match[1]):
                     continue
                 key = match[1]
+                # External themes can retain sections for the removed Jukebox
+                # screens. Those sections are never loaded by USCE and their
+                # former captions are no longer part of the English fallback.
+                if key.startswith('JUKEBOX_') or key in (
+                        'SING_OPTIONS_JUKEBOX', 'SING_OPTIONS_JUKEBOX_DESC'):
+                    continue
                 # UScreenPartyRounds replaces these seven captions before display
                 # with Format(Translate('PARTY_SELECTMODE'), [round]).
                 slot = re.fullmatch(r'PartyRoundsSelectRound([1-7])', section, re.I)

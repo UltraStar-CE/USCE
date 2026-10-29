@@ -76,6 +76,10 @@ type
       Song:       IPath;
 
       Renderer: string;
+      Lockdown: boolean;
+      PlaylistName: UTF8String;
+      PlaybackResults, PlaybackHighScores, PlaybackSongDisplay, PlaybackSingingDisplay: integer;
+      LockdownPassword, StartupError: UTF8String;
 
       // pseudo integer values
       property Language:      integer read GetLanguage;
@@ -136,6 +140,11 @@ begin
   writeln('  '+ Fmt(cDebug) +' : Display Debugging info');
   writeln('  '+ Fmt(cCheckSongs) +' : Fully validate song files during startup');
   writeln('  '+ Fmt(cSong + ' <file>') +' : Sing only the given song file, then exit');
+  writeln('  -lockdown -playlist <name> -password <password> (always repeats)');
+  writeln('  -results / -highscores <manual|skip|5|10|20|30|40|50|60>');
+  writeln('  -song-display <lyrics-progress|lyrics|progress|none>');
+  writeln('  -singing-display <full|notes-info|notes|info|none>');
+  writeln('    Start locked playback; -playlist can be repeated.');
   writeln;
 
   platform.halt;
@@ -146,6 +155,14 @@ end;
  *}
 procedure TCMDParams.ResetVariables;
 begin
+  Lockdown := false;
+  PlaylistName := '';
+  PlaybackResults := -1;
+  PlaybackHighScores := -1;
+  PlaybackSongDisplay := -1;
+  PlaybackSingingDisplay := -1;
+  LockdownPassword := '';
+  StartupError := '';
   Debug       := false;
   Benchmark   := False;
   NoLog       := false;
@@ -175,13 +192,17 @@ var
   I:        integer;
   PCount:   integer;
   Command:  string;
+  SkipThrough, Setting: integer;
+  Value: UTF8String;
 begin
+  SkipThrough := 0;
   PCount := ParamCount;
   //Log.LogError('ParamCount: ' + Inttostr(PCount));
 
   // check all parameters
   for I := 1 to PCount do
   begin
+    if I <= SkipThrough then Continue;
     Command := ParamStr(I);
     // check if the string is a parameter
     if (Length(Command) > 1) and (Command[1] = '-') then
@@ -193,7 +214,64 @@ begin
       // check command
 
       // boolean triggers
-      if (Command = 'debug') then
+      if Command = 'lockdown' then
+        Lockdown := true
+      else if (Command = 'playlist') or (Command = 'password') or
+        (Command = 'results') or (Command = 'highscores') or
+        (Command = 'song-display') or (Command = 'singing-display') then
+      begin
+        if (I = PCount) or (ParamStr(I + 1) = '') or (ParamStr(I + 1)[1] = '-') then
+        begin
+          StartupError := 'Missing value for -' + Command;
+          Continue;
+        end;
+        SkipThrough := I + 1;
+        Value := UTF8Encode(UnicodeString(ParamStr(I + 1)));
+        if Command = 'password' then LockdownPassword := Value
+        else if Command = 'playlist' then
+        begin
+          if PlaylistName <> '' then StartupError := 'Only one -playlist is supported'
+          else PlaylistName := Value;
+        end
+        else
+        begin
+          Value := LowerCase(Value);
+          Setting := -1;
+          if (Command = 'results') or (Command = 'highscores') then
+          begin
+            if Value = 'manual' then Setting := 0
+            else if Value = 'skip' then Setting := 1
+            else if Value = '5' then Setting := 2
+            else if Value = '10' then Setting := 3
+            else if Value = '20' then Setting := 4
+            else if Value = '30' then Setting := 5
+            else if Value = '40' then Setting := 6
+            else if Value = '50' then Setting := 7
+            else if Value = '60' then Setting := 8;
+            if Command = 'results' then PlaybackResults := Setting
+            else PlaybackHighScores := Setting;
+          end
+          else if Command = 'song-display' then
+          begin
+            if Value = 'lyrics-progress' then Setting := 0
+            else if Value = 'lyrics' then Setting := 1
+            else if Value = 'progress' then Setting := 2
+            else if Value = 'none' then Setting := 3;
+            PlaybackSongDisplay := Setting;
+          end
+          else
+          begin
+            if Value = 'full' then Setting := 0
+            else if Value = 'notes-info' then Setting := 1
+            else if Value = 'notes' then Setting := 2
+            else if Value = 'info' then Setting := 3
+            else if Value = 'none' then Setting := 4;
+            PlaybackSingingDisplay := Setting;
+          end;
+          if Setting < 0 then StartupError := 'Invalid value for -' + Command;
+        end;
+      end
+      else if (Command = 'debug') then
         Debug       := True
       else if (Command = cCheckSongs) then
         CheckSongs  := True
@@ -338,6 +416,17 @@ begin
   Log.LogInfo('SongPath: ' + SongPath);
   Log.LogInfo('ScoreFile: ' + ScoreFile);
 }
+
+  if Lockdown then
+  begin
+    if LockdownPassword = '' then StartupError := '-lockdown requires -password';
+    if PlaylistName = '' then StartupError := '-lockdown requires -playlist';
+    if Song.IsSet then StartupError := '-lockdown cannot be combined with -song';
+  end
+  else if (PlaylistName <> '') or (LockdownPassword <> '') or
+    (PlaybackResults >= 0) or (PlaybackHighScores >= 0) or
+    (PlaybackSongDisplay >= 0) or (PlaybackSingingDisplay >= 0) then
+    StartupError := 'Playback launch options require -lockdown';
 
 end;
 

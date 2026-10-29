@@ -252,7 +252,7 @@ begin
   Line := BoldOverviewText(Language.Translate('STAT_OVERVIEW_LIBRARY')) + ': ' +
       FormatOverviewText('STAT_OVERVIEW_LIBRARY_TOTAL',
       [LibraryOverview.SongCount, LibraryOverview.ArtistCount]);
-  if (Ini.StatisticsView = 1) and (SongsWithoutVideo > 0) then
+  if (SongsWithoutVideo > 0) then
     Line := Line + ' - ' + FormatOverviewText('STAT_OVERVIEW_LIBRARY_VIDEO',
         [LibraryOverview.SongsWithVideo, SongsWithoutVideo]);
   AppendOverviewLine(Overview, Line);
@@ -275,13 +275,11 @@ begin
   begin
     Activity := FormatOverviewText('STAT_OVERVIEW_SCORE_ACTIVITY',
         [ScoreOverview.ScoreCount, ScoreOverview.SingerCount, ScoreOverview.ScoredSongCount]);
-    if Ini.StatisticsView = 1 then
-      Activity := Activity + ', ' + FormatOverviewText('STAT_OVERVIEW_SCORE_DENSITY',
+    Activity := Activity + ', ' + FormatOverviewText('STAT_OVERVIEW_SCORE_DENSITY',
         [FormatAverage(ScoreOverview.ScoreCount, ScoreOverview.SingerCount),
         FormatAverage(ScoreOverview.ScoreCount, ScoreOverview.ScoredSongCount)]);
     AppendOverviewLine(Overview, Activity);
-    if Ini.StatisticsView = 1 then
-      AppendOverviewLine(Overview, FormatOverviewText('STAT_OVERVIEW_COVERAGE',
+    AppendOverviewLine(Overview, FormatOverviewText('STAT_OVERVIEW_COVERAGE',
         [FormatPercent(Database.GetLibraryScoredSongCount(StatSinceDate), LibraryOverview.SongCount)]) +
         ' - ' + FormatOverviewText('STAT_OVERVIEW_AVERAGE_SCORE',
         [ScoreOverview.AverageScore]));
@@ -402,7 +400,7 @@ end;
 
 function TScreenStatMain.BoldOverviewText(const Text: UTF8String): UTF8String;
 begin
-  if (Ini.StatisticsView <> 1) or (Text = '') then
+  if (Text = '') then
     Result := Text
   else
     Result := '**' + Text + '**';
@@ -555,14 +553,13 @@ begin
   ScoreOverview := LoadScoreOverview(StatSinceDate);
   AppendOverallScoreOverview(Overview, ScoreOverview, LibraryOverview);
 
-  if (Ini.StatisticsView = 1) and (StatSinceDate = 0) then
+  if (StatSinceDate = 0) then
   begin
     RecentScoreOverview := LoadRecentScoreOverview(RecentPeriod);
     AppendRecentScoreOverview(Overview, ScoreOverview, RecentScoreOverview,
         RecentPeriod);
   end;
-  if Ini.StatisticsView = 1 then
-    AppendFunFacts(Overview);
+  AppendFunFacts(Overview);
 
   Text[TextOverview].Text := Overview;
 end;

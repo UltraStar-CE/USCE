@@ -34,6 +34,9 @@ interface
 {$I switches.inc}
 
 uses
+  UVoiceParts,
+  UPlayerLayout,
+  UVoiceAssignments,
   UAvatars,
   UCommon,
   UFiles,
@@ -75,8 +78,10 @@ type
   private
     StartNote, EndNote:     TPos;
     fCountIn: boolean;
+    PlaybackSeeked: boolean;
     fStartTime, fFirstNote: real;
 
+    procedure SeekTo(Position: real; ResetScoring: boolean = true);
     procedure LoadNextSong();
     procedure SongError();
     procedure ResetLinesAndLyrics();
@@ -90,7 +95,7 @@ type
     CheckPlayerConfigOnNextSong: boolean;
     eSongLoaded: THookableEvent; //< event is called after lyrics of a song are loaded on OnShow
     Paused:     boolean; //pause Mod
-    NumEmptySentences: array [0..1] of integer;
+    NumEmptySentences: array of integer;
     // views
     fShowVisualization: boolean;
     fShowBackground: boolean;
@@ -112,8 +117,10 @@ type
     MedleyStart, MedleyEnd: real;
 
     Lyrics: TLyricEngine;
-    LyricsDuetP1: TLyricEngine;
-    LyricsDuetP2: TLyricEngine;
+    VoiceLyrics: array of TLyricEngine;
+    DisplayedVoices: array of integer;
+    DisplayedVoiceBanks: array of integer;
+    VoiceBankCounts: array[0..1] of integer;
 
     // score manager:
     Scores: TSingScores;
@@ -128,6 +135,7 @@ type
       OscilloscopeVisible: Boolean; //< shows or hides oscilloscope
       LyricsVisible:       Boolean; //< shows or hides lyrics
       NotesVisible:        array [0..IMaxPlayerCount-1] of Boolean; //< if NotesVisible[playerIndex] is set the notes for the specified player are visible. By default all players notes are visible
+      FeedbackVisible:     Boolean; //< rating popups and singing effects
       ScoresVisible:       Boolean; //< shows or hides scores
       AvatarsVisible:      Boolean; //< shows or hides avatars
       TimeBarVisible:      Boolean; //< shows or hides timebar
@@ -180,6 +188,8 @@ type
     function ParseInput(PressedKey: cardinal; CharCode: UCS4Char;
       PressedDown: boolean; Repeated: boolean = false): boolean; override;
 
+    function ParseMouse(MouseButton: integer; BtnDown: boolean; MouseX, MouseY: integer): boolean; override;
+
     function FinishedMusic: boolean;
     function ContinueDelayedScoring: boolean;
 
@@ -190,6 +200,10 @@ type
     procedure Pause; // toggle pause
     procedure UpdateMedleyStats(medley_end: boolean);
     procedure OnSentenceEnd(Track: integer; SentenceIndex: cardinal; OnlyPlayer: integer = -1);     // for linebonus + singbar
+    procedure ClearVoiceLyrics;
+    procedure ConfigureVoiceLyrics;
+    procedure LayoutVoiceLyrics;
+    procedure PositionVoiceLyrics(DisplayIndex: integer);
     procedure OnSentenceChange(Track: integer; SentenceIndex: cardinal);  // for golden notes
     property CountIn: boolean read fCountIn write fCountIn;
     property FirstNote: real read fFirstNote;
@@ -205,6 +219,7 @@ implementation
 
 uses
   UCommandLine,
+  UContinuousPlayback,
   UDatabase,
   UDisplay,
   UDLLManager,
@@ -235,12 +250,12 @@ function TScreenSingController.ParseInput(PressedKey: Cardinal; CharCode: UCS4Ch
   PressedDown: boolean; Repeated: boolean = false): boolean;
 var
   SDL_ModState: word;
-  i1:           integer;
-  Color:        TRGB;
   ResumeAfterHelp: boolean;
-  NewPosition:  real;
+  VoiceIndex: integer;
+  IntroPosition: real;
 begin
   Result := true;
+  if ScreenContinuousPlayback.HandlePlaybackKey(PressedKey, PressedDown, Repeated) then Exit;
   if (PressedDown) then
   begin // key down
 
@@ -266,40 +281,8 @@ begin
       SDLK_R:
       begin
         if ScreenSong.Mode = smMedley then Exit;
-        for i1 := 0 to High(Player) do
-        with Player[i1] do
-        begin
-          ResetScores;
-
-          ScoreLast      := 0;
-
-          LastSentencePerfect := false;
-        end;
-        AudioPlayback.SetPosition(fStartTime);
-        if (fStartTime < CurrentSong.Start) then
-          fCountIn := true;
-        if (Assigned(fCurrentVideo)) then
-           fCurrentVideo.Position := CurrentSong.VideoGAP + CurrentSong.Start;// + (CurrentSong.gap / 1000.0 - 5.0);
-        Scores.KillAllPopUps;
-        // setup score manager
-        Scores.ClearPlayers; // clear old player values
-        Color.R := 0;
-        Color.G := 0;
-        Color.B := 0;
-
-        // add new players
-        for i1 := 0 to PlayersPlay - 1 do
-        begin
-          Scores.AddPlayer(Tex_ScoreBG[i1], Color);
-        end;
-
-        LyricsState.SetCurrentTime(fStartTime);
-        ResumeAfterScoringTail;
-        LyricsState.UpdateBeats();
-        ClearLyricEngines;
-        ResetLinesAndLyrics;
-
-        Scores.Init;
+        SeekTo(fStartTime);
+        PlaybackSeeked := false;
         Exit;
       end;
 
@@ -424,11 +407,17 @@ begin
         begin
           if (not CurrentSong.isDuet and (GetTimeFromBeat(Lyrics.GetUpperLine().StartNote) - AudioPlayback.Position > 6)) then
           begin
-            AudioPlayback.SetPosition(GetTimeFromBeat(Lyrics.GetUpperLine().StartNote) - 5);
+            SeekTo(GetTimeFromBeat(Lyrics.GetUpperLine().StartNote) - 5, false);
           end
-          else if (CurrentSong.isDuet and (GetTimeFromBeat(min(LyricsDuetP1.GetUpperLine().StartNote, LyricsDuetP2.GetUpperLine().StartNote)) - AudioPlayback.Position > 6)) then
+          else if CurrentSong.isDuet then
           begin
-            AudioPlayback.SetPosition(GetTimeFromBeat(min(LyricsDuetP1.GetUpperLine().StartNote, LyricsDuetP2.GetUpperLine().StartNote)) - 5);
+            IntroPosition := 1.0E20;
+            for VoiceIndex := 0 to High(VoiceLyrics) do
+              if VoiceLyrics[VoiceIndex].GetUpperLine <> nil then
+                IntroPosition := Min(IntroPosition,
+                  GetTimeFromBeat(VoiceLyrics[VoiceIndex].GetUpperLine.StartNote));
+            if (IntroPosition < 1.0E20) and (IntroPosition - AudioPlayback.Position > 6) then
+              SeekTo(IntroPosition - 5, false);
           end;
           Exit;
         end;
@@ -572,47 +561,15 @@ begin
       begin
         if ((SDL_ModState and KMOD_LCTRL) <> 0) then
         begin
-          NewPosition := AudioPlayback.Position + 5.0;
-          AudioPlayback.SetPosition(NewPosition);
-          if (Assigned(fCurrentVideo)) then
-            fCurrentVideo.Position := CurrentSong.VideoGAP + NewPosition;
+          SeekTo(Min(AudioPlayback.Position + 5.0, LyricsState.TotalTime), false);
+          PlaybackSeeked := true;
         end;
       end;
 
       SDLK_LEFT:
       begin
-        if (SDL_ModState = KMOD_LCTRL) then // seek 5 seconds backward and reset scores to avoid cheating
-        begin
-          if (AudioPlayback.Position < 20.0) then
-          exit;
-        for i1 := 0 to High(Player) do
-        with Player[i1] do
-        begin
-          ResetScores;
-
-          ScoreLast      := 0;
-
-          LastSentencePerfect := false;
-        end;
-        Scores.KillAllPopUps;
-        // setup score manager
-        Scores.ClearPlayers; // clear old player values
-        // add new players
-        for i1 := 0 to PlayersPlay - 1 do
-        begin
-          Scores.AddPlayer(Tex_ScoreBG[i1], Color);
-        end;
-        Scores.Init;
-
-        NewPosition := AudioPlayback.Position - 5.0;
-        AudioPlayback.SetPosition(NewPosition);
-        LyricsState.SetCurrentTime(NewPosition);
-        ResumeAfterScoringTail;
-        ClearLyricEngines;
-        LyricsState.UpdateBeats();
-        if (Assigned(fCurrentVideo)) then
-          fCurrentVideo.Position := CurrentSong.VideoGAP + NewPosition;
-        end;
+        if (SDL_ModState = KMOD_LCTRL) and (AudioPlayback.Position >= 20.0) then
+          SeekTo(AudioPlayback.Position - 5.0);
       end;
 
       SDLK_TAB:
@@ -642,6 +599,65 @@ begin
   end;
 end;
 
+function TScreenSingController.ParseMouse(MouseButton: integer; BtnDown: boolean;
+  MouseX, MouseY: integer): boolean;
+var LocalX, LocalY, StartTime, EndTime: real;
+begin
+  if (MouseButton = SDL_BUTTON_LEFT) and BtnDown and ShowFinish and
+     not FadeOut and Settings.TimeBarVisible and (ScreenWPerScreen > 0) then
+  begin
+    LocalX := (MouseX mod ScreenWPerScreen) * RenderW / ScreenWPerScreen;
+    LocalY := MouseY * RenderH / ScreenH;
+    with Theme.Sing.StaticTimeProgress do
+      if (W > 0) and (LocalX >= X) and (LocalX <= X + W) and
+         (LocalY >= Y - 4) and (LocalY <= Y + H + 4) then
+      begin
+        StartTime := CurrentSong.Start;
+        EndTime := LyricsState.TotalTime;
+        if ScreenSong.Mode = smMedley then StartTime := MedleyStart;
+        if EndTime > StartTime then
+          SeekTo(StartTime + (EndTime - StartTime) * (LocalX - X) / W);
+        Exit(true);
+      end;
+  end;
+  Result := inherited ParseMouse(MouseButton, BtnDown, MouseX, MouseY);
+end;
+
+procedure TScreenSingController.SeekTo(Position: real; ResetScoring: boolean);
+var I: integer; Color: TRGB;
+begin
+  ResetSungPitchReference;
+  if ResetScoring then
+  begin
+    PlaybackSeeked := true;
+    for I := 0 to High(Player) do
+    begin
+      Player[I].ResetScores;
+      Player[I].ScoreLast := 0;
+      Player[I].LastSentencePerfect := false;
+    end;
+    Scores.KillAllPopUps;
+    Scores.ClearPlayers;
+    Color.R := 0; Color.G := 0; Color.B := 0;
+    for I := 0 to PlayersPlay - 1 do Scores.AddPlayer(Tex_ScoreBG[I], Color);
+    Scores.Init;
+    GoldenRec.KillAll;
+  end;
+  // Resume detection at the destination without scoring the skipped beats.
+  for I := 0 to High(Player) do
+    Player[I].DetectionReady := false;
+  StopSingClicks;
+  AudioPlayback.SetPosition(Position);
+  LyricsState.SetCurrentTime(Position);
+  ResumeAfterScoringTail;
+  LyricsState.UpdateBeats;
+  ClearLyricEngines;
+  ResetLinesAndLyrics;
+  fCountIn := Position < CurrentSong.Start;
+  if Assigned(fCurrentVideo) then
+    fCurrentVideo.Position := CurrentSong.VideoGAP + Position;
+end;
+
 procedure TScreenSingController.Pause;
 begin
   if (not Paused) then  // enable pause
@@ -650,6 +666,7 @@ begin
     Paused := true;
 
     LyricsState.Pause();
+    StopSingClicks;
 
     // pause music
       AudioPlayback.Pause;
@@ -664,7 +681,8 @@ begin
     LyricsState.Start();
 
     // play music
-      if not ScoringTailActive then AudioPlayback.Play;
+      if not ScoringTailActive or not AudioPlayback.Finished then
+        AudioPlayback.Play;
 
     // video
     if (fCurrentVideo <> nil) then
@@ -672,6 +690,8 @@ begin
 
     Paused := false;
   end;
+  if ScreenContinuousPlayback.Session.Active then
+    ScreenContinuousPlayback.Session.Paused := Paused;
 end;
 
 constructor TScreenSingController.Create;
@@ -691,8 +711,7 @@ destructor TScreenSingController.Destroy;
 begin
   FreeAndNil(screenSingViewRef);
   Lyrics.Free;
-  LyricsDuetP1.Free;
-  LyricsDuetP2.Free;
+  ClearVoiceLyrics;
   fLyricsSync.Free;
   fMusicSync.Free;
   eSongLoaded.Free;
@@ -704,12 +723,16 @@ end;
 procedure TScreenSingController.OnShow;
 var
   BadPlayer, I: integer;
-  Col, ColP1, ColP2: TRGB;
+  Col: TRGB;
 begin
   inherited;
 
   ScoringTailActive := false;
   Log.LogStatus('Begin', 'OnShow');
+
+  // Drop any pitch history from the previous song, otherwise the trace would
+  // briefly show the last song's notes before it scrolls away.
+  ResetSungPitchReference;
 
   if not Help.SetHelpID(ID) then
     Log.LogWarn('No Entry for Help-ID ' + ID, 'ScreenSingController');
@@ -720,6 +743,7 @@ begin
 
   //the song was sung to the end
   SungToEnd := false;
+  PlaybackSeeked := false;
 
   ClearSettings;
   Party.CallBeforeSing;
@@ -745,13 +769,14 @@ begin
   CurrentSong := CatSongs.Song[CatSongs.Selected];
 
   {for I := 0 to High(screenSingViewRef.StaticDuet) do
-    Statics[screenSingViewRef.StaticDuet[I]].Visible := CurrentSong.isDuet and (PlayersPlay > 1);}
-  Statics[screenSingViewRef.StaticLyricsBarDuet].Visible := CurrentSong.isDuet and (PlayersPlay > 1);
+    Statics[screenSingViewRef.StaticDuet[I]].Visible := CurrentSong.isDuet;}
+  Statics[screenSingViewRef.StaticLyricsBarDuet].Visible := CurrentSong.isDuet;
 
   Statics[screenSingViewRef.SongNameStatic].Visible := false;
   Text[screenSingViewRef.SongNameText].Visible := false;
 
-  BadPlayer := AudioInputProcessor.CheckPlayersConfig(PlayersPlay);
+  BadPlayer := 0;
+  if PlayersPlay > 0 then BadPlayer := AudioInputProcessor.CheckPlayersConfig(PlayersPlay);
   if (BadPlayer <> 0) and CheckPlayerConfigOnNextSong then
   begin
     ScreenPopupError.ShowPopup(
@@ -761,86 +786,27 @@ begin
     CheckPlayerConfigOnNextSong := false;
   end;
 
-  // set custom options
-  if (CurrentSong.isDuet) and (PlayersPlay <> 1) then
-  begin
-    ColP1 := GetPlayerColor(Ini.PlayerColor[0]);
-    ColP2 := GetPlayerColor(Ini.PlayerColor[1]);
-
-    LyricsDuetP1.FontFamily := Ini.LyricsFont;
-    LyricsDuetP2.FontFamily := Ini.LyricsFont;
-
-    LyricsDuetP1.FontStyle := Ini.LyricsStyle;
-    LyricsDuetP2.FontStyle := Ini.LyricsStyle;
-
-    // set custom options
-    LyricsDuetP1.LineColor_act.R := ColP1.R;
-    LyricsDuetP1.LineColor_act.G := ColP1.G;
-    LyricsDuetP1.LineColor_act.B := ColP1.B;
-    LyricsDuetP1.LineColor_act.A := 1;
-
-    LyricsDuetP2.LineColor_act.R := ColP2.R;
-    LyricsDuetP2.LineColor_act.G := ColP2.G;
-    LyricsDuetP2.LineColor_act.B := ColP2.B;
-    LyricsDuetP2.LineColor_act.A := 1;
-
-    if (Ini.JukeboxActualLineColor = High(UIni.IActualLineColor)) then
-      Col := GetJukeboxLyricOtherColor(1)
-    else
-      Col := GetLyricGrayColor(Ini.JukeboxActualLineColor);
-    LyricsDuetP1.LineColor_en.R := Col.R;
-    LyricsDuetP1.LineColor_en.G := Col.G;
-    LyricsDuetP1.LineColor_en.B := Col.B;
-    LyricsDuetP1.LineColor_en.A := 1;
-
-    LyricsDuetP2.LineColor_en.R := Col.R;
-    LyricsDuetP2.LineColor_en.G := Col.G;
-    LyricsDuetP2.LineColor_en.B := Col.B;
-    LyricsDuetP2.LineColor_en.A := 1;
-
-    if (Ini.JukeboxNextLineColor = High(UIni.INextLineColor)) then
-      Col := GetJukeboxLyricOtherColor(2)
-    else
-      Col := GetLyricGrayColor(Ini.JukeboxNextLineColor);
-    LyricsDuetP1.LineColor_dis.R := Col.R;
-    LyricsDuetP1.LineColor_dis.G := Col.G;
-    LyricsDuetP1.LineColor_dis.B := Col.B;
-    LyricsDuetP1.LineColor_dis.A := 1;
-
-    LyricsDuetP2.LineColor_dis.R := Col.R;
-    LyricsDuetP2.LineColor_dis.G := Col.G;
-    LyricsDuetP2.LineColor_dis.B := Col.B;
-    LyricsDuetP2.LineColor_dis.A := 1;
-
-  end
+  if CurrentSong.isDuet then
+    ConfigureVoiceLyrics
   else
   begin
 
     Lyrics.FontFamily := Ini.LyricsFont;
     Lyrics.FontStyle := Ini.LyricsStyle;
 
-    if (Ini.JukeboxSingLineColor = High(UIni.ISingLineColor)) then
-      Col := GetJukeboxLyricOtherColor(0)
-    else
-      Col := GetLyricColor(Ini.JukeboxSingLineColor);
+    Col := Theme.Sing.LyricActive;
     Lyrics.LineColor_act.R := Col.R;
     Lyrics.LineColor_act.G := Col.G;
     Lyrics.LineColor_act.B := Col.B;
     Lyrics.LineColor_act.A := 1;
 
-    if (Ini.JukeboxActualLineColor = High(UIni.IActualLineColor)) then
-      Col := GetJukeboxLyricOtherColor(1)
-    else
-      Col := GetLyricGrayColor(Ini.JukeboxActualLineColor);
+    Col := Theme.Sing.LyricCurrent;
     Lyrics.LineColor_en.R := Col.R;
     Lyrics.LineColor_en.G := Col.G;
     Lyrics.LineColor_en.B := Col.B;
     Lyrics.LineColor_en.A := 1;
 
-    if (Ini.JukeboxNextLineColor = High(UIni.INextLineColor)) then
-      Col := GetJukeboxLyricOtherColor(2)
-    else
-      Col := GetLyricGrayColor(Ini.JukeboxNextLineColor);
+    Col := Theme.Sing.LyricNext;
     Lyrics.LineColor_dis.R := Col.R;
     Lyrics.LineColor_dis.G := Col.G;
     Lyrics.LineColor_dis.B := Col.B;
@@ -859,8 +825,12 @@ procedure TScreenSingController.onShowFinish;
 var
   PlayerIndex: integer;
 begin
+  if ScreenContinuousPlayback.Session.Active and
+    (ScreenContinuousPlayback.Session.Stage = psAdvance) then Exit;
   // hide cursor on singscreen show
   Display.SetCursor;
+
+  VoiceAssignments.SelectSong(CurrentSong);
 
   // clear the scores of all players
   for PlayerIndex := 0 to High(Player) do
@@ -872,16 +842,10 @@ begin
 
       LastSentencePerfect := false;
 
-      Track          := 0;
-      if CurrentSong.isDuet then
-      begin
-        if ScreenSong.DuetChange then
-          Track := (PlayerIndex + 1) mod 2
-        else
-          Track := PlayerIndex mod 2;
-      end;
+      Track := VoiceAssignments.VoiceForPlayer(PlayerIndex, CurrentSong.VoiceCount);
     end;
 
+  StopSingClicks;
   // prepare music
   // Important: AudioPlayback must not be initialized in onShow() as TScreenSong
   // uses stops AudioPlayback in onHide() which interferes with TScreenSings onShow.
@@ -892,6 +856,12 @@ begin
     AudioPlayback.Open(CurrentSong.Path.Append(CurrentSong.Audio), nil)
   else
     AudioPlayback.Open(CurrentSong.Path.Append(CurrentSong.Audio), CurrentSong.Path.Append(CurrentSong.Karaoke));
+
+  if ScreenContinuousPlayback.Session.Active and (AudioPlayback.Length <= 0) then
+  begin
+    SongError;
+    Exit;
+  end;
 
   if ScreenSong.Mode = smMedley then
     AudioPlayback.SetVolume(0.1)
@@ -947,6 +917,11 @@ var
   I, len:  integer;
 
 begin
+  if ScreenContinuousPlayback.Session.Active then
+  begin
+    ScreenContinuousPlayback.SongFailed;
+    Exit;
+  end;
   if ScreenSong.Mode <> smMedley then
   begin
     // error loading song -> go back to previous screen and show some error message
@@ -1052,6 +1027,7 @@ var
   end;
 
 begin
+  ResetSungPitchReference;
   // background texture (garbage disposal)
   FreeAndNil(Tex_Background);
 
@@ -1109,7 +1085,7 @@ begin
   success := false;
   // FIXME: bad style, put the try-except into loadsong() and not here
   try
-    success := CurrentSong.Analyse(false, ScreenSong.DuetChange, ScreenSong.RapToFreestyle, true, AudioEnd, true); // and CurrentSong.LoadSong();
+    success := CurrentSong.Analyse(false, false, true, AudioEnd, true); // and CurrentSong.LoadSong();
   except
     on E: EInOutError do Log.LogWarn(E.Message, 'TScreenSing.LoadNextSong');
   end;
@@ -1135,6 +1111,14 @@ begin
     end;
   end;
 
+  if ScreenContinuousPlayback.Session.Active and
+    ((AudioEnd <= 0) or not CurrentSongHasNotes) then
+  begin
+    SongError;
+    Exit;
+  end;
+
+  ConfigureVoiceLyrics;
   CalculateStartTime;
   if (fStartTime < CurrentSong.Start) then
   begin
@@ -1287,62 +1271,29 @@ begin
     Player[PlayerIndex].DetectionReady := false;
 
   // prepare and start voice-capture
-  AudioInput.CaptureStart;
+  if PlayersPlay > 0 then AudioInput.CaptureStart;
 
   // main text
   ClearLyricEngines;
 
-  if (CurrentSong.isDuet) and (PlayersPlay <> 1) then
+  SetLength(NumEmptySentences, Length(CurrentSong.Tracks));
+  for PlayerIndex := 0 to High(CurrentSong.Tracks) do
   begin
-    // initialize lyrics by filling its queue
-    while (not LyricsDuetP1.IsQueueFull) and
-          (LyricsDuetP1.LineCounter <= High(CurrentSong.Tracks[0].Lines)) do
+    if CurrentSong.isDuet then
     begin
-      LyricsDuetP1.AddLine(@CurrentSong.Tracks[0].Lines[LyricsDuetP1.LineCounter]);
-    end;
-
-    // initialize lyrics by filling its queue
-    while (not LyricsDuetP2.IsQueueFull) and
-          (LyricsDuetP2.LineCounter <= High(CurrentSong.Tracks[1].Lines)) do
-    begin
-      LyricsDuetP2.AddLine(@CurrentSong.Tracks[1].Lines[LyricsDuetP2.LineCounter]);
-    end;
-  end
-  else
-  begin
-    // initialize lyrics by filling its queue
-    while (not Lyrics.IsQueueFull) and
-          (Lyrics.LineCounter <= High(CurrentSong.Tracks[0].Lines)) do
-    begin
-      Lyrics.AddLine(@CurrentSong.Tracks[0].Lines[Lyrics.LineCounter]);
-    end;
-  end;
-
-  // kill all stars not killed yet (goldenstarstwinkle mod)
-  GoldenRec.SentenceChange(0);
-  if (CurrentSong.isDuet) and (PlayersPlay <> 1) then
-    GoldenRec.SentenceChange(1);
-
-  // set position of line bonus - line bonus end
-  // set number of empty sentences for line bonus
-  NumEmptySentences[0] := 0;
-  NumEmptySentences[1] := 0;
-
-  if (CurrentSong.isDuet) and (PlayersPlay <> 1) then
-  begin
-    for Index := Low(CurrentSong.Tracks[1].Lines) to High(CurrentSong.Tracks[1].Lines) do
-      if CurrentSong.Tracks[1].Lines[Index].ScoreValue = 0 then
-        Inc(NumEmptySentences[1]);
-
-    for Index := Low(CurrentSong.Tracks[0].Lines) to High(CurrentSong.Tracks[0].Lines) do
-      if CurrentSong.Tracks[0].Lines[Index].ScoreValue = 0 then
-        Inc(NumEmptySentences[0]);
-  end
-  else
-  begin
-    for Index := Low(CurrentSong.Tracks[0].Lines) to High(CurrentSong.Tracks[0].Lines) do
-      if CurrentSong.Tracks[0].Lines[Index].ScoreValue = 0 then
-        Inc(NumEmptySentences[0]);
+      while not VoiceLyrics[PlayerIndex].IsQueueFull and
+        (VoiceLyrics[PlayerIndex].LineCounter <= High(CurrentSong.Tracks[PlayerIndex].Lines)) do
+        VoiceLyrics[PlayerIndex].AddLine(@CurrentSong.Tracks[PlayerIndex].Lines[
+          VoiceLyrics[PlayerIndex].LineCounter]);
+    end
+    else
+      while not Lyrics.IsQueueFull and (Lyrics.LineCounter <= High(CurrentSong.Tracks[0].Lines)) do
+        Lyrics.AddLine(@CurrentSong.Tracks[0].Lines[Lyrics.LineCounter]);
+    GoldenRec.SentenceChange(PlayerIndex);
+    NumEmptySentences[PlayerIndex] := 0;
+    for Index := 0 to High(CurrentSong.Tracks[PlayerIndex].Lines) do
+      if CurrentSong.Tracks[PlayerIndex].Lines[Index].ScoreValue = 0 then
+        Inc(NumEmptySentences[PlayerIndex]);
   end;
 
   eSongLoaded.CallHookChain(False);
@@ -1365,19 +1316,169 @@ begin
 end;
 
 procedure TScreenSingController.ClearLyricEngines();
+var I: integer;
 begin
   Lyrics.Clear(CurrentSong.BPM);
-  LyricsDuetP1.Clear(CurrentSong.BPM);
-  LyricsDuetP2.Clear(CurrentSong.BPM);
+  for I := 0 to High(VoiceLyrics) do VoiceLyrics[I].Clear(CurrentSong.BPM);
+end;
+
+procedure TScreenSingController.ClearVoiceLyrics;
+var I: integer;
+begin
+  for I := 0 to High(VoiceLyrics) do VoiceLyrics[I].Free;
+  SetLength(VoiceLyrics, 0);
+end;
+
+procedure TScreenSingController.ConfigureVoiceLyrics;
+var I: integer;
+  Col: TRGB;
+begin
+  ClearVoiceLyrics;
+  SetLength(VoiceLyrics, CurrentSong.VoiceCount);
+  for I := 0 to High(VoiceLyrics) do
+  begin
+    VoiceLyrics[I] := TLyricEngine.Create(0, 0, 1, 1, 0, 0, 1, 1);
+    VoiceLyrics[I].FontFamily := Ini.LyricsFont;
+    VoiceLyrics[I].FontStyle := Ini.LyricsStyle;
+    Col := GetPlayerColor(Ini.PlayerColor[I mod UIni.IMaxPlayerCount]);
+    if not Theme.Sing.LyricUsePlayerColors then Col := Theme.Sing.LyricActive;
+    VoiceLyrics[I].LineColor_act.R := Col.R;
+    VoiceLyrics[I].LineColor_act.G := Col.G;
+    VoiceLyrics[I].LineColor_act.B := Col.B;
+    VoiceLyrics[I].LineColor_act.A := 1;
+    Col := Theme.Sing.LyricCurrent;
+    VoiceLyrics[I].LineColor_en.R := Col.R;
+    VoiceLyrics[I].LineColor_en.G := Col.G;
+    VoiceLyrics[I].LineColor_en.B := Col.B;
+    VoiceLyrics[I].LineColor_en.A := 1;
+    Col := Theme.Sing.LyricNext;
+    VoiceLyrics[I].LineColor_dis.R := Col.R;
+    VoiceLyrics[I].LineColor_dis.G := Col.G;
+    VoiceLyrics[I].LineColor_dis.B := Col.B;
+    VoiceLyrics[I].LineColor_dis.A := 1;
+    VoiceLyrics[I].PreviewAlpha := Theme.Sing.VoicePreviewAlpha;
+  end;
+end;
+
+procedure TScreenSingController.LayoutVoiceLyrics;
+var
+  I, J, FirstPlayer, LocalPlayers, Count, Bank, CenterBank: integer;
+  PlayerBanks: array of integer;
+  Used: array[0..1] of boolean;
+  AssignedElsewhere: boolean;
+  CenterY: real;
+begin
+  FirstPlayer := GetFirstPlayerIndexForScreen(PlayersPlay, Screens, ScreenAct);
+  LocalPlayers := GetScreenPlayerCount(PlayersPlay, Screens, ScreenAct);
+  SetLength(PlayerBanks, LocalPlayers);
+  CenterBank := 0;
+  for J := 0 to LocalPlayers - 1 do
+  begin
+    with Statics[screenSingViewRef.PlayerFrameSlots[LocalPlayers, J]].Texture do
+      CenterY := Y + H / 2;
+    if CenterY < RenderH / 2 - 0.01 then PlayerBanks[J] := 0
+    else if CenterY > RenderH / 2 + 0.01 then PlayerBanks[J] := 1
+    else
+    begin
+      PlayerBanks[J] := CenterBank;
+      CenterBank := 1 - CenterBank;
+    end;
+  end;
+  SetLength(DisplayedVoices, 0);
+  SetLength(DisplayedVoiceBanks, 0);
+  VoiceBankCounts[0] := 0;
+  VoiceBankCounts[1] := 0;
+  for I := 0 to High(VoiceLyrics) do
+  begin
+    Used[0] := false;
+    Used[1] := false;
+    AssignedElsewhere := false;
+    for J := 0 to PlayersPlay - 1 do
+      if Player[J].Track = I then
+      begin
+        if (J >= FirstPlayer) and (J < FirstPlayer + LocalPlayers) then
+          Used[PlayerBanks[J - FirstPlayer]] := true
+        else AssignedElsewhere := true;
+      end;
+    // An unassigned song part must not disappear. Shared voices can appear in both halves.
+    if not (Used[0] or Used[1] or AssignedElsewhere) then
+    begin
+      if VoiceBankCounts[0] <= VoiceBankCounts[1] then Used[0] := true
+      else Used[1] := true;
+    end;
+    for Bank := 0 to 1 do
+      if Used[Bank] then
+      begin
+        Inc(VoiceBankCounts[Bank]);
+        Count := Length(DisplayedVoices);
+        SetLength(DisplayedVoices, Count + 1);
+        SetLength(DisplayedVoiceBanks, Count + 1);
+        DisplayedVoices[Count] := I;
+        DisplayedVoiceBanks[Count] := Bank;
+      end;
+  end;
+end;
+
+procedure TScreenSingController.PositionVoiceLyrics(DisplayIndex: integer);
+var
+  I, Count, Columns, Rows, Bank, Cell: integer;
+  X, Y, W, H, Gutter: real;
+  Engine: TLyricEngine;
+begin
+  Engine := VoiceLyrics[DisplayedVoices[DisplayIndex]];
+  Bank := DisplayedVoiceBanks[DisplayIndex];
+  Count := VoiceBankCounts[Bank];
+  GetVoiceGrid(Count * 2, Columns, Rows);
+  Cell := 0;
+  for I := 0 to DisplayIndex - 1 do
+    if DisplayedVoiceBanks[I] = Bank then Inc(Cell);
+  Engine.Compact := Count > 1;
+  if Bank = 0 then
+  begin
+    X := Theme.LyricBarDuetP1.UpperX;
+    Y := Theme.LyricBarDuetP1.UpperY;
+    W := Theme.LyricBarDuetP1.UpperW;
+    H := Theme.LyricBarDuetP1.LowerY + Theme.LyricBarDuetP1.LowerH - Y;
+  end
+  else
+  begin
+    X := Theme.LyricBarDuetP2.UpperX;
+    Y := Theme.LyricBarDuetP2.UpperY;
+    W := Theme.LyricBarDuetP2.UpperW;
+    H := Theme.LyricBarDuetP2.LowerY + Theme.LyricBarDuetP2.LowerH - Y;
+  end;
+  Gutter := 0;
+  if Theme.Sing.VoiceLabelVisible then Gutter := Theme.Sing.VoiceLabelGutter;
+  Engine.UpperLineX := X + (Cell mod Columns) * W / Columns + Gutter;
+  Engine.UpperLineY := Y + (Cell div Columns) * H / Rows;
+  Engine.UpperLineW := Max(1, W / Columns - Gutter - Theme.Sing.VoiceCellPadding);
+  Engine.UpperLineH := H / Rows;
+  Engine.LowerLineX := Engine.UpperLineX;
+  Engine.LowerLineW := Engine.UpperLineW;
+  Engine.LowerLineY := Engine.UpperLineY;
+  Engine.LowerLineH := Engine.UpperLineH;
+  if not Engine.Compact then
+  begin
+    Engine.UpperLineH := H / 2;
+    Engine.LowerLineY := Y + H / 2;
+    Engine.LowerLineH := H / 2;
+  end;
+  Engine.UpdateLineMetrics;
 end;
 
 procedure TScreenSingController.CalculateStartTime;
 var
-  I, StartBeat: integer;
+  I, J, StartBeat: integer;
 begin
   StartBeat := MaxInt;
   for I := Low(CurrentSong.Tracks) to High(CurrentSong.Tracks) do
-    StartBeat := Min(StartBeat, CurrentSong.Tracks[I].Lines[0].Notes[0].StartBeat);
+    for J := 0 to High(CurrentSong.Tracks[I].Lines) do
+      if Length(CurrentSong.Tracks[I].Lines[J].Notes) > 0 then
+      begin
+        StartBeat := Min(StartBeat, CurrentSong.Tracks[I].Lines[J].Notes[0].StartBeat);
+        Break;
+      end;
+  if StartBeat = MaxInt then StartBeat := 0;
   fFirstNote := (CurrentSong.GAP / 1000) + ((StartBeat * 60) / CurrentSong.BPM);
   if ((fFirstNote - CurrentSong.Start) < MINIMUM_START_TIME) then
     fStartTime := fFirstNote - MINIMUM_START_TIME
@@ -1386,17 +1487,33 @@ begin
 end;
 
 procedure TScreenSingController.ClearSettings;
+var DisplayOptions: TContinuousDisplay;
 begin
   Settings.Finish := False;
   Settings.OscilloscopeVisible := Boolean(Ini.Oscilloscope);
   Settings.LyricsVisible := True;
-  AllNotesVisible(true);
-  Settings.ScoresVisible := True;
-  Settings.AvatarsVisible := True;
+  AllNotesVisible(PlayersPlay > 0);
+  Settings.ScoresVisible := PlayersPlay > 0;
+  Settings.AvatarsVisible := PlayersPlay > 0;
   Settings.TimeBarVisible := True;
-  Settings.InputVisible := True;
+  Settings.InputVisible := PlayersPlay > 0;
+  if PlayersPlay = 0 then Settings.OscilloscopeVisible := false;
   Settings.PlayerEnabled := high(Integer);
   Settings.SoundEnabled := True;
+  Settings.FeedbackVisible := PlayersPlay > 0;
+  if Assigned(ScreenContinuousPlayback) and (ScreenSong.Mode = smNormal) then
+  begin
+    DisplayOptions := ContinuousDisplay(PlayersPlay > 0,
+      ScreenContinuousPlayback.SongDisplay, ScreenContinuousPlayback.SingingDisplay);
+    Settings.LyricsVisible := DisplayOptions.Lyrics;
+    Settings.TimeBarVisible := DisplayOptions.Progress;
+    AllNotesVisible(DisplayOptions.Notes);
+    Settings.InputVisible := DisplayOptions.Notes;
+    Settings.OscilloscopeVisible := Settings.OscilloscopeVisible and DisplayOptions.Notes;
+    Settings.ScoresVisible := DisplayOptions.PlayerInfo;
+    Settings.AvatarsVisible := DisplayOptions.PlayerInfo;
+    Settings.FeedbackVisible := DisplayOptions.Feedback;
+  end;
 end;
 
 procedure TScreenSingController.AllNotesVisible(visible: boolean);
@@ -1421,6 +1538,7 @@ end;
 
 procedure TScreenSingController.OnHide;
 begin
+  StopSingClicks;
   // close video files
   fVideoClip := nil;
   fCurrentVideo := nil;
@@ -1433,12 +1551,16 @@ begin
           fShowWebCam:=false;
         end;
   Background.OnFinish;
-  Display.SetCursor(cshIgnoreSingScreen);
+  Display.SetCursor;
 end;
 
 function TScreenSingController.Draw: boolean;
 begin
-  Result := screenSingViewRef.Draw();
+  Result := true;
+  if not ScreenContinuousPlayback.Session.Active or
+    (ScreenContinuousPlayback.Session.Stage <> psAdvance) then
+    Result := screenSingViewRef.Draw();
+  if Display.CurrentScreen = @ScreenSing then ScreenContinuousPlayback.Update;
 end;
 
 function TScreenSingController.FinishedMusic: boolean;
@@ -1473,8 +1595,8 @@ begin
     if not Player[PlayerIndex].DetectionReady or
       (Player[PlayerIndex].DetectionDelay <= 0) then Continue;
     TrackIndex := 0;
-    if CurrentSong.isDuet and (PlayersPlay > 1) then
-      TrackIndex := PlayerIndex mod 2;
+    if CurrentSong.isDuet then
+      TrackIndex := Player[PlayerIndex].Track;
     LastBeat := Low(integer);
     for LineIndex := 0 to CurrentSong.Tracks[TrackIndex].High do
       with CurrentSong.Tracks[TrackIndex].Lines[LineIndex] do
@@ -1489,10 +1611,10 @@ begin
   if not ScoringTailActive then
   begin
     ScoringTailActive := true;
-    // The audio clock has stopped. Let the lyrics timer run independently
-    // while microphone input catches up, without extending the scoring range.
+    // Let scoring catch up independently of playback. A song with an explicit
+    // finish point can still have audio to carry into the results screens.
+    // ScoringTailEndBeat keeps that audio from extending the scoring range.
     AudioPlayback.SetSyncSource(nil);
-    AudioPlayback.Stop;
     LyricsState.SetSyncSource(nil);
     LyricsState.SetCurrentTime(EndTime);
     LyricsState.Start;
@@ -1506,11 +1628,15 @@ var
   len, num: integer;
 
 begin
+  if ScreenContinuousPlayback.Session.Active and
+    (ScreenContinuousPlayback.Session.Stage <> psSong) then Exit;
+  if FadeOut then Exit;
   Log.LogStatus('TScreenSingController.Finish', 'TScreenSingController.Finish');
-  AudioInput.CaptureStop;
+  if PlayersPlay > 0 then AudioInput.CaptureStop;
   AudioPlayback.SetSyncSource(nil);
 
-  if (ScreenSong.Mode = smNormal) and SungToEnd then
+  if (PlayersPlay > 0) and (ScreenSong.Mode = smNormal) and SungToEnd and
+     not PlaybackSeeked then
   begin
     SaveLocalScores;
 
@@ -1527,7 +1653,7 @@ begin
   // kill all stars and effects
   GoldenRec.KillAll;
 
-  if (Ini.SavePlayback = 1) then
+  if (PlayersPlay > 0) and (Ini.SavePlayback = 1) then
   begin
     Log.BenchmarkStart(0);
     Log.LogVoice(0);
@@ -1631,6 +1757,14 @@ begin
         Display.NextScreenWithCheck := nil;
         Display.CheckOK := true;
       end
+      else if ScreenContinuousPlayback.Session.Active then
+        ScreenContinuousPlayback.SongFinished
+      else if PlayersPlay = 0 then
+        FadeTo(@ScreenSong)
+      else if (ScreenSong.Mode = smNormal) and ScreenContinuousPlayback.BeginNormalResults then
+      begin
+        // The configured result policy owns the transition.
+      end
       else
         Party.CallAfterSing;
     end;
@@ -1642,7 +1776,7 @@ end;
 
 procedure TScreenSingController.OnSentenceEnd(Track: integer; SentenceIndex: cardinal; OnlyPlayer: integer); //ToDo: split and redo
 var
-  PlayerIndex: byte;
+  PlayerIndex: integer;
   CurrentPlayer: PPLayer;
   CurrentScore: real;
   Line:      PLine;
@@ -1671,7 +1805,7 @@ begin
   for PlayerIndex := 0 to High(Player) do
   begin
     if ((OnlyPlayer < 0) or (OnlyPlayer = PlayerIndex)) and
-       ((not CurrentSong.isDuet) or (PlayerIndex mod 2 = Track) or (PlayersPlay = 1)) then
+       ((not CurrentSong.isDuet) or (Player[PlayerIndex].Track = Track)) then
     begin
       CurrentPlayer := @Player[PlayerIndex];
       CurrentScore  := CurrentPlayer.Score + CurrentPlayer.ScoreGolden;
@@ -1744,13 +1878,8 @@ begin
   // goldenstarstwinkle
   GoldenRec.SentenceChange(Track);
 
-  if (CurrentSong.isDuet) and (PlayersPlay <> 1) then
-  begin
-    if (Track = 1) then
-      tmp_Lyric := LyricsDuetP2
-    else
-      tmp_Lyric := LyricsDuetP1;
-  end
+  if CurrentSong.isDuet then
+    tmp_Lyric := VoiceLyrics[Track]
   else
     tmp_Lyric := Lyrics;
 
@@ -1843,7 +1972,8 @@ begin
       I := 0;
       while I < PlayersPlay - 1 do
       begin
-        if Player[I].Level = Player[I + 1].Level then
+        if (Player[I].Level = Player[I + 1].Level) and
+          (Player[I].Track <> Player[I + 1].Track) then
         begin
           Name1 := Player[I].Name;
           Name2 := Player[I + 1].Name;
@@ -1935,6 +2065,8 @@ begin
             4: ScreenPopupError.ShowPopup(Language.Translate('WEBSITE_ERROR_SCORE'));
             5: ScreenPopupError.ShowPopup(Language.Translate('WEBSITE_ERROR_SCORE_DUPLICATED'));
             7: ScreenPopupError.ShowPopup(Language.Translate('WEBSITE_ERROR_SONG'));
+            WEBSITE_STATUS_NONSTANDARD_SCORE_FACTORS:
+              ScreenPopupError.ShowPopup(Language.Translate('WEBSITE_ERROR_NONSTANDARD_SCORE_FACTORS'));
           end;
 
        end;
@@ -1984,6 +2116,12 @@ begin
 
         if (Save) then
         begin
+
+          if not HasStandardScoreFactors then
+          begin
+            ScreenPopupError.ShowPopup(Language.Translate('WEBSITE_ERROR_NONSTANDARD_SCORE_FACTORS'));
+            Exit;
+          end;
 
           DllMan.LoadWebsite(IndexWeb);
 

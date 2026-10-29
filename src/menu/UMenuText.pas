@@ -102,6 +102,7 @@ type
       procedure DeleteLastLetter; //< Deletes the rightmost letter
 
       procedure Draw;
+      procedure DrawEmphasized(Emphasized: boolean);
       constructor Create; overload;
       constructor Create(X, Y: single; const Text: UTF8String); overload;
       constructor Create(ParX, ParY, ParW, ParH: single; ParFont, ParStyle: integer; ParSize, ParColR, ParColG, ParColB: single; ParAlign: integer; const ParText: UTF8String; ParReflection: boolean; ParReflectionSpacing: single; ParZ: single; Writable: boolean); overload;
@@ -520,6 +521,15 @@ end;
 function TText.GetLineCount: integer;
 begin
   Result := Length(TextTiles);
+end;
+
+procedure TText.DrawEmphasized(Emphasized: boolean);
+var OriginalStyle: integer;
+begin
+  OriginalStyle := Style;
+  if Emphasized and (Style = ftRegular) then Style := ftBold;
+  try Draw;
+  finally Style := OriginalStyle; end;
 end;
 
 procedure TText.Draw;

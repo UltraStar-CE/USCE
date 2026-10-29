@@ -439,6 +439,7 @@ end;
  ** 5: ERROR_SCORE_DUPLICATED
  ** 6: OK_SONG
  ** 7: ERROR_SONG
+ ** 8: ERROR_NONSTANDARD_SCORE_FACTORS
  *****************************
 }
 
@@ -470,6 +471,8 @@ begin
     4: ScreenPopupError.ShowPopup(Language.Translate('WEBSITE_ERROR_SCORE'));
     5: ScreenPopupError.ShowPopup(Language.Translate('WEBSITE_ERROR_SCORE_DUPLICATED'));
     7: ScreenPopupError.ShowPopup(Language.Translate('WEBSITE_ERROR_SONG'));
+    WEBSITE_STATUS_NONSTANDARD_SCORE_FACTORS:
+      ScreenPopupError.ShowPopup(Language.Translate('WEBSITE_ERROR_NONSTANDARD_SCORE_FACTORS'));
   end;
 
   ScreenScore.Interaction := -1;
@@ -550,13 +553,17 @@ begin
       SendScore(SendInfo, Website);
 
     if (Value = 2) then
-      SaveScore(SendInfo, Website);
+      if HasStandardScoreFactors then
+        SaveScore(SendInfo, Website)
+      else
+        ScreenPopupError.ShowPopup(Language.Translate('WEBSITE_ERROR_NONSTANDARD_SCORE_FACTORS'));
   end;
 end;
 
 function TScreenScore.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
 begin
   Result := true;
+  if ScreenContinuousPlayback.HandlePlaybackKey(PressedKey, PressedDown, Repeated) then Exit;
   if (PressedDown) then
   begin
     // check normal keys
@@ -575,7 +582,7 @@ begin
         begin
           if (FinishScreenDraw = true) then
           begin
-            if (CurrentSong.isDuet and (Ini.DuetScores = 0)) or (ScreenSong.RapToFreestyle) or (ScreenSong.Mode = smMedley) then
+            if (CurrentSong.isDuet and (Ini.DuetScores = 0)) or (ScreenSong.Mode = smMedley) then
             begin
               ScreenSong.PreservePreviewForReturn;
               FadeTo(@ScreenSong)
@@ -602,7 +609,7 @@ begin
            if (FinishScreenDraw = true) then
            begin
 
-             if (CurrentSong.isDuet and (Ini.DuetScores = 0)) or (ScreenSong.RapToFreestyle) or (ScreenSong.Mode = smMedley) then
+             if (CurrentSong.isDuet and (Ini.DuetScores = 0)) or (ScreenSong.Mode = smMedley) then
              begin
                ScreenSong.PreservePreviewForReturn;
                FadeTo(@ScreenSong)
@@ -1311,6 +1318,7 @@ begin
   end;
    //Draw Theme Objects
   DrawFG;
+  ScreenContinuousPlayback.Update;
   Result := true;
 end;
 

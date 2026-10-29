@@ -379,6 +379,7 @@ end;
 
 function TScreenHighScores.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
 begin
+  if ScreenContinuousPlayback.HandlePlaybackKey(PressedKey, PressedDown, Repeated) then Exit(true);
   Result := true;
   if PressedDown then
   begin
@@ -502,11 +503,16 @@ begin
 
   Text[TextArtistTitle].Text := CurrentSong.Artist + ' - ' + CurrentSong.Title;
 
-  if Length(CurrentSong.Score[Player[0].Level]) = 0 then
+  // An explicitly timed continuous-mode screen also stays visible when this
+  // difficulty has no saved scores yet.
+  if (Length(CurrentSong.Score[Player[0].Level]) = 0) and
+     not ScreenContinuousPlayback.Session.Active then
   begin
+    // Redirecting from OnShow replaces the pending screen before OnHide runs.
+    Background.OnFinish;
     ScreenSong.PreservePreviewForReturn;
     FadeTo(@ScreenSong);
-  end; //if there are no scores to show, go to next screen
+  end;
 
   ShowScoresForDifficulty(Player[0].Level);
 end;
@@ -546,6 +552,7 @@ end;
 function TScreenHighScores.Draw: boolean;
 begin
   Result := inherited Draw;
+  ScreenContinuousPlayback.Update;
 end;
 
 end.

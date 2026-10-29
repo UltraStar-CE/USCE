@@ -73,8 +73,16 @@ type
     fltGenre,
     fltYear,
     fltCreator,
-    fltTags
+    fltTags,
+    fltAge
   );
+
+  TSongFilterRow = record
+    Kind: TSongFilter;
+    Query: UTF8String;
+  end;
+  TSongFilterRows = array of TSongFilterRow;
+  TSongFilterMask = array of boolean;
 
   TScore = record
     Name:   UTF8String;
@@ -95,6 +103,7 @@ type
     fDiscoveryDirsScanned: integer;
     fTotalSongsToLoad:   integer;
     fSongsLoaded:        integer;
+    fReloadAfterLockdown: boolean;
     function CollectSongFiles: TPathDynArray;
     procedure int_LoadSongList;
     procedure DoDirChanged(Sender: TObject);
@@ -111,6 +120,7 @@ type
     destructor  Destroy(); override;
 
     procedure LoadSongList;     // load all songs
+    procedure ReplayDeferredReload;
   procedure FindFilesByExtension(const Dir: IPath; const Ext: IPath; Recursive: Boolean; var Files: TPathDynArray);
     procedure Sort(Order: TSortingType);
     property  Processing: boolean read fProcessing;
@@ -140,6 +150,8 @@ type
     function VisibleIndex(Index: integer): integer;         // returns visible song index (skips invisible)
 
     function SetFilter(FilterStr: UTF8String; Filter: TSongFilter): cardinal;
+    function SetFilters(const Rows: TSongFilterRows): cardinal;
+    function FilterMask(const Rows: TSongFilterRows; ExceptRow: integer): TSongFilterMask;
   end;
 
 var
@@ -163,6 +175,9 @@ const
 implementation
 
 uses
+  UFilterTerms,
+  UAge,
+  ULibraryLockdown,
   StrUtils,
   SDL2,
   UCommandLine,
@@ -286,6 +301,11 @@ var
   I: integer;
   SongFiles: TPathDynArray;
 begin
+  if LibraryLockdown.Active then
+  begin
+    fReloadAfterLockdown := true;
+    Exit;
+  end;
   SetLength(SongFiles, 0);
   try
     fProcessing := true;
@@ -345,8 +365,22 @@ end;
 
 procedure TSongs.LoadSongList;
 begin
+  if LibraryLockdown.Active then
+  begin
+    fReloadAfterLockdown := true;
+    Exit;
+  end;
   fParseSongDirectory := true;
   Resume();
+end;
+
+procedure TSongs.ReplayDeferredReload;
+begin
+  if not fReloadAfterLockdown then
+    Exit;
+
+  fReloadAfterLockdown := false;
+  LoadSongList;
 end;
 
 procedure TSongs.FindFilesByExtension(const Dir: IPath; const Ext: IPath; Recursive: Boolean; var Files: TPathDynArray);
@@ -356,6 +390,7 @@ var
   Iter: IFileIterator;
   FileInfo: TFileInfo;
   FileName: IPath;
+  FileCount: Integer;
 begin
   if Recursive then
     DirList := CollectDirectories(Dir, true, Self)
@@ -365,6 +400,8 @@ begin
     DirList[0] := Dir;
   end;
 
+  FileCount := 0;
+  SetLength(Files, 128);
   for DirIndex := 0 to High(DirList) do
   begin
     Iter := FileSystem.FileFind(DirList[DirIndex].Append('*.txt'), 0);
@@ -375,12 +412,17 @@ begin
       if ((FileInfo.Attr and faDirectory) = 0) and Ext.Equals(FileName.GetExtension(), true) then
       begin
         Log.LogDebug('Found file ' + DirList[DirIndex].Append(FileName).ToWide, 'TSongs.FindFilesByExtension');
-        SetLength(Files, Length(Files) + 1);
-        Files[High(Files)] := DirList[DirIndex].Append(FileName);
+        if (Length(Files) <= FileCount) then
+        begin
+          SetLength(Files, Length(Files)*2);
+        end;
+        Files[FileCount] := DirList[DirIndex].Append(FileName);
+        FileCount := FileCount + 1;
         PumpLoadingEvents;
       end;
     end;
   end;
+  SetLength(Files, FileCount);
 end;
 
 function TSongs.CollectSongFiles: TPathDynArray;
@@ -456,7 +498,7 @@ var
 begin
   Song := TSong.Create(FilePath);
 
-  if Song.Analyse(false, false, false, false, 0, Params.CheckSongs) then
+  if Song.Analyse(false, false, false, 0, Params.CheckSongs) then
     SongList.Add(Song)
   else
   begin
@@ -1048,11 +1090,91 @@ begin
   Result := Song[Index].VisibleIndex;
 end;
 
+function TCatSongs.FilterMask(const Rows: TSongFilterRows; ExceptRow: integer): TSongFilterMask;
+var Saved: TSongFilterMask; I, R, Category: integer;
+begin
+  Result := nil;
+  // Nonempty SetFilter calls only change visibility. Never clear a filter here:
+  // that path restores playlist order and rebuilds category objects.
+  SetLength(Result, Length(Song));
+  SetLength(Saved, Length(Song));
+  Category := CatNumShow;
+  for I := 0 to High(Song) do
+  begin
+    Saved[I] := Song[I].Visible;
+    Result[I] := not Song[I].Main;
+  end;
+  try
+    for R := 0 to High(Rows) do
+      if (R <> ExceptRow) and (Trim(Rows[R].Query) <> '') then
+      begin
+        SetFilter(Rows[R].Query, Rows[R].Kind);
+        for I := 0 to High(Song) do Result[I] := Result[I] and Song[I].Visible;
+      end;
+  finally
+    for I := 0 to High(Song) do Song[I].Visible := Saved[I];
+    CatNumShow := Category;
+    ResetVisibleIndexCache;
+  end;
+end;
+
+function TCatSongs.SetFilters(const Rows: TSongFilterRows): cardinal;
+var I, R: integer; Mask: array of boolean; Active: boolean;
+begin
+  SetLength(Mask, Length(Song));
+  for I := 0 to High(Mask) do Mask[I] := not Song[I].Main;
+  Active := false;
+  for R := 0 to High(Rows) do
+    if Trim(Rows[R].Query) <> '' then
+    begin
+      Active := true;
+      SetFilter(Rows[R].Query, Rows[R].Kind);
+      for I := 0 to High(Mask) do Mask[I] := Mask[I] and Song[I].Visible;
+    end;
+  if not Active then
+  begin
+    SetFilter('', fltAll);
+    Exit(VisibleSongs);
+  end;
+  Result := 0;
+  for I := 0 to High(Mask) do
+  begin
+    Song[I].Visible := Mask[I];
+    if Mask[I] then Inc(Result);
+  end;
+  CatNumShow := -2;
+  ResetVisibleIndexCache;
+end;
+
 function TCatSongs.SetFilter(FilterStr: UTF8String; Filter: TSongFilter): cardinal;
 var
   I, J:      integer;
   TmpString: UTF8String;
   WordArray: array of UTF8String;
+  FilterCopy: UTF8String;
+  AgeParts: TStringList;
+  AgeQuery, AgeRegion: string;
+  RegionSeparator: integer;
+  AgeTerms: array of record
+    Region: string;
+    Unrated, Valid: boolean;
+    Condition: TAgeCondition;
+  end;
+
+  function MatchesAgeCondition(SongAge: integer; const Condition: TAgeCondition): boolean;
+  begin
+    if SongAge < 0 then Exit(false);
+
+    case Condition.Comparator of
+      acEqual:           Result := SongAge = Condition.Value;
+      acLess:            Result := SongAge < Condition.Value;
+      acLessOrEqual:     Result := SongAge <= Condition.Value;
+      acGreater:         Result := SongAge > Condition.Value;
+      acGreaterOrEqual:  Result := SongAge >= Condition.Value;
+    else
+      Result := false;
+    end;
+  end;
 begin
     if Assigned(PlayListMan) then
     begin
@@ -1061,6 +1183,33 @@ begin
     end;
 
   FilterStr := Trim(LowerCase(TransliterateToASCII(FilterStr)));
+  FilterCopy := FilterStr;
+  if (Filter = fltAge) and (FilterCopy <> '') then
+  begin
+    AgeParts := TStringList.Create;
+    try
+      AgeParts.StrictDelimiter := true;
+      AgeParts.QuoteChar := #0;
+      AgeParts.Delimiter := ',';
+      AgeParts.DelimitedText := StringReplace(FilterCopy, ';', ',', [rfReplaceAll]);
+      SetLength(AgeTerms, AgeParts.Count);
+      for I := 0 to AgeParts.Count - 1 do
+      begin
+        AgeQuery := Trim(AgeParts[I]);
+        AgeRegion := Ini.AgeCountry;
+        RegionSeparator := Pos(':', AgeQuery);
+        if RegionSeparator > 0 then
+        begin
+          AgeRegion := UpperCase(Trim(Copy(AgeQuery, 1, RegionSeparator - 1)));
+          Delete(AgeQuery, 1, RegionSeparator);
+          AgeQuery := Trim(AgeQuery);
+        end;
+        AgeTerms[I].Region := AgeRegion;
+        AgeTerms[I].Unrated := AgeQuery = '?';
+        AgeTerms[I].Valid := ParseAgeCondition(AgeQuery, AgeTerms[I].Condition);
+      end;
+    finally AgeParts.Free; end;
+  end;
 
   if (FilterStr <> '') then
   begin
@@ -1085,40 +1234,65 @@ begin
 
     for I := 0 to High(Song) do
     begin
-      if not Song[i].Main then
+      if Song[i].Main then
       begin
-        case Filter of
-          fltAll:
-            TmpString := Song[I].ArtistASCII + ' ' + Song[i].TitleASCII + ' ' + Song[i].LanguageASCII + ' ' + Song[i].EditionASCII + ' ' + Song[i].GenreASCII + ' ' + IntToStr(Song[i].Year) + ' ' + Song[i].CreatorASCII + ' ' + Song[i].TagsASCII; //+ ' ' + Song[i].Folder;
-          fltTitle:
-            TmpString := Song[I].TitleASCII;
-          fltArtist:
-            TmpString := Song[I].ArtistASCII;
-          fltLanguage:
-            TmpString := Song[I].LanguageASCII;
-          fltEdition:
-            TmpString := Song[I].EditionASCII;
-          fltGenre:
-            TmpString := Song[I].GenreASCII;
-          fltYear:
-            TmpString := IntToStr(Song[I].Year);
-          fltCreator:
-            TmpString := Song[I].CreatorASCII;
-          fltTags:
-            TmpString := Song[i].TagsASCII;
-        end;
-        Song[i].Visible := true;
-        // Look for every searched word
-        for J := 0 to High(WordArray) do
+        Song[i].Visible := false;
+        Continue;
+      end;
+
+      if Filter = fltAge then
+      begin
+        Song[I].Visible := false;
+        for J := 0 to High(AgeTerms) do
         begin
-          Song[i].Visible := Song[i].Visible and
-                             UTF8ContainsStr(TmpString, WordArray[J])
+          if AgeTerms[J].Unrated then
+            Song[I].Visible := AgeForRegion(Song[I].AgeRaw, AgeTerms[J].Region) < 0
+          else
+            Song[I].Visible := AgeTerms[J].Valid and MatchesAgeCondition(
+              AgeForRegion(Song[I].AgeRaw, AgeTerms[J].Region), AgeTerms[J].Condition);
+          if Song[I].Visible then Break;
         end;
         if Song[i].Visible then
           Inc(Result);
-      end
-      else
-        Song[i].Visible := false;
+        Continue;
+      end;
+
+      case Filter of
+        fltAll:
+          TmpString := Song[I].ArtistASCII + ' ' + Song[i].TitleASCII + ' ' + Song[i].LanguageASCII + ' ' + Song[i].EditionASCII + ' ' + Song[i].GenreASCII + ' ' + IntToStr(Song[i].Year) + ' ' + Song[i].CreatorASCII + ' ' + Song[i].TagsASCII; //+ ' ' + Song[i].Folder;
+        fltTitle:
+          TmpString := Song[I].TitleASCII;
+        fltArtist:
+          TmpString := Song[I].ArtistASCII;
+        fltLanguage:
+          TmpString := Song[I].LanguageASCII;
+        fltEdition:
+          TmpString := Song[I].EditionASCII;
+        fltGenre:
+          TmpString := Song[I].GenreASCII;
+        fltYear:
+          TmpString := IntToStr(Song[I].Year);
+        fltCreator:
+          TmpString := Song[I].CreatorASCII;
+        fltTags:
+          TmpString := Song[i].TagsASCII;
+      end;
+
+      if Filter in [fltTitle, fltArtist, fltLanguage, fltEdition, fltGenre, fltYear, fltCreator, fltTags] then
+      begin
+        Song[I].Visible := MatchesFilterTerms(TmpString, FilterCopy, Filter = fltYear);
+        if Song[I].Visible then Inc(Result);
+        Continue;
+      end;
+      Song[i].Visible := true;
+      // Look for every searched word
+      for J := 0 to High(WordArray) do
+      begin
+        Song[i].Visible := Song[i].Visible and
+                           UTF8ContainsStr(TmpString, WordArray[J])
+      end;
+      if Song[i].Visible then
+        Inc(Result);
     end;
     CatNumShow := -2;
   end

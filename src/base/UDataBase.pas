@@ -358,10 +358,10 @@ begin
                       '[AutoScoreHard] INTEGER NOT NULL' +
                     ');');
 
-    //add column for options jukebox
+    // add column for legacy per-song display options
     if not ScoreDB.ContainsColumn(cUS_Songs, 'VideoRatioAspect') then
     begin
-      Log.LogInfo('adding columns to "' + cUS_Songs + ' for jukebox options"', 'TDataBaseSystem.Init');
+      Log.LogInfo('adding columns to "' + cUS_Songs + ' for legacy song display options"', 'TDataBaseSystem.Init');
 
       ScoreDB.ExecSQL('ALTER TABLE ' + cUS_Songs + ' ADD COLUMN [VideoRatioAspect] INTEGER NULL');
       ScoreDB.ExecSQL('ALTER TABLE ' + cUS_Songs + ' ADD COLUMN [VideoWidth] INTEGER NULL');
@@ -621,7 +621,7 @@ begin
   // Song selection normally loads only headers, without the note tracks.
   if Result = 0 then
     if Song.isDuet then
-      Result := 2
+      Result := Song.VoiceCount
     else
       Result := 1;
 end;

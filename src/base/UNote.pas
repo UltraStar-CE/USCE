@@ -44,7 +44,6 @@ uses
   UMusic,
   URecord,
   UScreenSingController,
-  UScreenJukebox,
   USong,
   UTime;
 
@@ -55,6 +54,7 @@ type
     Duration: integer;
     Detect:   real;    // accurate place, detected in the note
     Tone:     real;
+    IsGap:    boolean; // display-only pitch between chart notes
     Perfect:  boolean; // true if the note matches the original one, light the star
     Hit:      boolean; // true if the note hits the line
     NoteType: TNoteType;
@@ -98,6 +98,8 @@ type
     HighNote:       integer; // index of last note (= High(Note)?)
     LengthNote:     integer; // number of notes (= Length(Note)?).
     Note:           array of TPlayerNote;
+    LastSungTone: integer;
+    HasLastSungTone: boolean;
 
     // Scores
     property Score:       real read _Score write SetScore;
@@ -154,12 +156,13 @@ const
 procedure Sing(Screen: TScreenSingController);
 procedure NewSentence(CP: integer; Screen: TScreenSingController);
 procedure NewBeatClick(Screen: TScreenSingController);  // executed when on then new beat for click
+procedure StopSingClicks;
 procedure NewBeatDetect(Screen: TScreenSingController); // executed when on then new beat for detection
 procedure NewNote(CP: integer; Screen: TScreenSingController);       // detect note
+procedure ResetSungPitchReference;
+procedure AddGapSungNote(PlayerIndex, Beat, Tone: integer);
 function  GetMidBeat(Time: real): real;
 function  GetTimeFromBeat(Beat: integer; SelfSong: TSong = nil): real;
-
-procedure SingJukebox(Screen: TScreenJukebox);
 
 implementation
 
@@ -184,23 +187,26 @@ uses
   USongs,
   UThemes;
 
-var
-  BeatClickOutput: TMidiOutput = nil;
-
-procedure PlaySyntheticBeatClick;
-begin
-  if not Assigned(BeatClickOutput) then
-  begin
-    BeatClickOutput := TMidiOutput.Create(nil);
-    if not BeatClickOutput.Open then
-    begin
-      FreeAndNil(BeatClickOutput);
-      Exit;
-    end;
+type
+  TSingClickClock = class(TSyncSource)
+    Origin: real;
+    function GetClock: real; override;
   end;
 
-  BeatClickOutput.SetVolume(EnsureRange(Ini.SfxVolume, 0, 100) / 100);
-  BeatClickOutput.Click(127);
+var
+  BeatClickOutput: TMidiOutput = nil;
+  BeatClickClock: TSingClickClock = nil;
+  BeatClickScheduled: boolean = false;
+
+function TSingClickClock.GetClock: real;
+begin
+  Result := AudioPlayback.Position - Origin;
+end;
+
+procedure StopSingClicks;
+begin
+  if Assigned(BeatClickOutput) then BeatClickOutput.Stop;
+  BeatClickScheduled := false;
 end;
 
 procedure TPlayer.SetScore(newScore: real);
@@ -271,6 +277,29 @@ begin
   Result := BPM * msTime / 60;
 end;
 
+function ShouldRunNoteDetection: boolean;
+var
+  PlayerIndex: integer;
+  DelayBeats: real;
+begin
+  Result := LyricsState.CurrentBeatD >= 0;
+  if Result then
+    Exit;
+
+  // A negative correction moves a player's scoring clock ahead of playback.
+  // Start detection during the song pre-roll so every leading beat receives
+  // the microphone sample captured at its shifted time.
+  for PlayerIndex := 0 to PlayersPlay - 1 do
+  begin
+    DelayBeats := GetBeats(CurrentSong.BPM, Ini.PlayerDelay[PlayerIndex] / 1000);
+    if Floor(LyricsState.MidBeatD - DelayBeats) >= 0 then
+    begin
+      Result := true;
+      Exit;
+    end;
+  end;
+end;
+
 function GetMidBeat(Time: real): real;
 begin
   try
@@ -308,9 +337,7 @@ var
 begin
   LyricsState.UpdateBeats();
 
-  PetGr := 0;
-  if (CurrentSong.isDuet) and (PlayersPlay <> 1) then
-    PetGr := 1;
+  PetGr := High(CurrentSong.Tracks);
 
   // sentences routines
   for CountGr := 0 to PetGr do //High(Tracks)
@@ -334,39 +361,12 @@ begin
   end; // for CountGr
 
   // make some operations on clicks
-  if {(LyricsState.CurrentBeatC >= 0) and }(LyricsState.OldBeatC <> LyricsState.CurrentBeatC) then
+  if PlayersPlay > 0 then
     NewBeatClick(Screen);
 
   // make some operations when detecting new voice pitch
-  if LyricsState.CurrentBeatD >= 0 then
+  if (PlayersPlay > 0) and ShouldRunNoteDetection then
     NewBeatDetect(Screen);
-end;
-
-procedure SingJukebox(Screen: TScreenJukebox);
-var
-  Count:   integer;
-  CountGr: integer;
-  CP:      integer;
-begin
-  LyricsState.UpdateBeats();
-
-  // sentences routines
-  for CountGr := 0 to 0 do //High(Tracks)
-  begin;
-    CP := CountGr;
-    // old parts
-    LyricsState.OldLine := CurrentSong.Tracks[CP].CurrentLine;
-
-    // choose current parts
-    for Count := 0 to CurrentSong.Tracks[CP].High do
-    begin
-      if LyricsState.CurrentBeat >= CurrentSong.Tracks[CP].Lines[Count].StartBeat then
-        CurrentSong.Tracks[CP].CurrentLine := Count;
-    end;
-  end; // for CountGr
-
-  // on sentence change...
-  Screen.onSentenceChange(CurrentSong.Tracks[0].CurrentLine);
 end;
 
 procedure NewSentence(CP: integer; Screen: TScreenSingController);
@@ -376,7 +376,7 @@ begin
   // clean note of player
   for I := 0 to High(Player) do
   begin
-    if (not CurrentSong.isDuet) or (I mod 2 = CP) then
+    if (not CurrentSong.isDuet) or (Player[I].Track = CP) then
     begin
       Player[I].LengthNote := 0;
       Player[I].HighNote := -1;
@@ -389,38 +389,94 @@ end;
 
 procedure NewBeatClick;
 var
-  Count: integer;
+  LineIndex, NoteIndex, Track, PlayerIndex, ClickTrack, MinTone, MaxTone, PitchOffset: integer;
+  Origin, EndTime, ClickTime, NoteEnd: real;
+  ActiveTracks: array of boolean;
+  ClickBeats: TStringList;
 begin
-  // beat click
-
-  if not (CurrentSong.isDuet) or (PlayersPlay = 1) then
+  if BeatClickScheduled or (Ini.ClickAssist = 0) or (PlayersPlay <= 0) or (Length(Player) = 0) then Exit;
+  if not Assigned(BeatClickOutput) then
   begin
-  if ((Ini.BeatClick = 1) and
-    ((LyricsState.CurrentBeatC + USong.DEFAULT_RESOLUTION + CurrentSong.Tracks[0].NotesGAP) mod USong.DEFAULT_RESOLUTION = 0)) then
+    BeatClickOutput := TMidiOutput.Create(nil);
+    if not BeatClickOutput.Open then
     begin
-      PlaySyntheticBeatClick;
+      FreeAndNil(BeatClickOutput);
+      Exit;
     end;
-
-    for Count := 0 to CurrentSong.Tracks[0].Lines[CurrentSong.Tracks[0].CurrentLine].HighNote do
-    begin
-      //basisbit todo
-      if (CurrentSong.Tracks[0].Lines[CurrentSong.Tracks[0].CurrentLine].Notes[Count].StartBeat = LyricsState.CurrentBeatC) then
+    BeatClickClock := TSingClickClock.Create;
+  end;
+  Track := Player[0].Track;
+  if (Track < 0) or (Track > High(CurrentSong.Tracks)) or
+     (CurrentSong.BPM < MIN_BPM) then Exit;
+  // Queue against the music timeline, including its silent roll-in. Playback
+  // consumes the events sample by sample, independently of the video frames.
+  Origin := AudioPlayback.Position;
+  EndTime := LyricsState.TotalTime;
+  BeatClickOutput.Stop;
+  BeatClickOutput.SetPosition(0);
+  BeatClickClock.Origin := Origin;
+  BeatClickOutput.SetSyncSource(BeatClickClock);
+  BeatClickOutput.SetVolume(EnsureRange(Ini.SfxVolume, 0, 100) / 100);
+  MinTone := High(Integer);
+  MaxTone := Low(Integer);
+  for LineIndex := 0 to CurrentSong.Tracks[Track].High do
+    for NoteIndex := 0 to CurrentSong.Tracks[Track].Lines[LineIndex].HighNote do
+      with CurrentSong.Tracks[Track].Lines[LineIndex].Notes[NoteIndex] do
+      if NoteType in [ntNormal, ntGolden] then
       begin
-        // click assist
-        if Ini.ClickAssist = 1 then
-          PlaySyntheticBeatClick;
-
-        // drum machine
-        (*
-        TempBeat := LyricsState.CurrentBeat; // + 2;
-        if (TempBeat mod 8 = 0) then Music.PlayDrum;
-        if (TempBeat mod 8 = 4) then Music.PlayClap;
-        //if (TempBeat mod 4 = 2) then Music.PlayHihat;
-        if (TempBeat mod 4 <> 0) then Music.PlayHihat;
-        *)
+        MinTone := Min(MinTone, Tone);
+        MaxTone := Max(MaxTone, Tone);
       end;
+  // Match the editor's relative-tone and already-absolute-MIDI handling.
+  PitchOffset := 60;
+  if (MinTone >= 0) and (MaxTone <= 127) and
+     ((MaxTone + 60 > 127) or ((MinTone >= 36) and (MaxTone <= 96) and
+      (MaxTone + 60 > 96))) then PitchOffset := 0;
+  for LineIndex := 0 to CurrentSong.Tracks[Track].High do
+    for NoteIndex := 0 to CurrentSong.Tracks[Track].Lines[LineIndex].HighNote do
+      with CurrentSong.Tracks[Track].Lines[LineIndex].Notes[NoteIndex] do
+      begin
+        ClickTime := GetTimeFromBeat(StartBeat);
+        NoteEnd := Min(EndTime, GetTimeFromBeat(StartBeat + Duration));
+        if (Ini.ClickAssist in [2, 3]) and (NoteEnd > Origin) and
+           (ClickTime < EndTime) and (NoteType in [ntNormal, ntGolden]) then
+        begin
+          BeatClickOutput.QueueNoteOn(EnsureRange(Tone + PitchOffset, 0, 127),
+            127, Max(0, ClickTime - Origin));
+          BeatClickOutput.QueueNoteOff(EnsureRange(Tone + PitchOffset, 0, 127),
+            NoteEnd - Origin);
+        end;
+      end;
+  if Ini.ClickAssist in [1, 3] then
+  begin
+    SetLength(ActiveTracks, Length(CurrentSong.Tracks));
+    for PlayerIndex := 0 to Min(PlayersPlay, Length(Player)) - 1 do
+      if (Player[PlayerIndex].Track >= 0) and
+        (Player[PlayerIndex].Track < Length(ActiveTracks)) then
+        ActiveTracks[Player[PlayerIndex].Track] := true;
+    ClickBeats := TStringList.Create;
+    try
+      ClickBeats.Sorted := true;
+      for ClickTrack := 0 to High(ActiveTracks) do
+        if ActiveTracks[ClickTrack] then
+          for LineIndex := 0 to CurrentSong.Tracks[ClickTrack].High do
+            for NoteIndex := 0 to CurrentSong.Tracks[ClickTrack].Lines[LineIndex].HighNote do
+              with CurrentSong.Tracks[ClickTrack].Lines[LineIndex].Notes[NoteIndex] do
+              begin
+                ClickTime := GetTimeFromBeat(StartBeat);
+                if (ClickTime >= Origin) and (ClickTime < EndTime) and
+                  (ClickBeats.IndexOf(IntToStr(StartBeat)) < 0) then
+                begin
+                  ClickBeats.Add(IntToStr(StartBeat));
+                  BeatClickOutput.QueueClick(127, ClickTime - Origin);
+                end;
+              end;
+    finally
+      ClickBeats.Free;
     end;
   end;
+  BeatClickOutput.Play;
+  BeatClickScheduled := true;
 end;
 
 procedure ConsumePerfectScorePotential(CP, OldBeat, CurrentBeat: integer; Screen: TScreenSingController; TargetPlayer: integer);
@@ -472,7 +528,7 @@ begin
       for NoteIndex := 0 to Line.HighNote do
       begin
         Note := @Line.Notes[NoteIndex];
-        if (Note.Duration <= 0) or (Note.NoteType = ntFreestyle) then
+        if (Note.Duration <= 0) or Note.ScoreExcluded or (ScoreFactor[Note.NoteType] <= 0) then
           Continue;
 
         NoteFirstBeat := Note.StartBeat;
@@ -527,7 +583,7 @@ begin
   for PlayerIndex := 0 to PlayersPlay - 1 do
   begin
     if (PlayerIndex = TargetPlayer) and
-      ((not CurrentSong.isDuet) or (PlayerIndex mod 2 = CP) or (PlayersPlay = 1)) then
+      ((not CurrentSong.isDuet) or (Player[PlayerIndex].Track = CP)) then
     begin
       Player[PlayerIndex].ScorePerfectRemaining :=
         Player[PlayerIndex].ScorePerfectRemaining - PotentialPassed;
@@ -546,7 +602,7 @@ begin
 
   for PlayerIndex := 0 to High(Player) do
   begin
-    if (not CurrentSong.isDuet) or (PlayerIndex mod 2 = CP) or (PlayersPlay = 1) then
+    if (not CurrentSong.isDuet) or (Player[PlayerIndex].Track = CP) then
     begin
       Screen.Scores.SetRemainingScore(
         byte(PlayerIndex),
@@ -561,13 +617,37 @@ procedure NewBeatDetect(Screen: TScreenSingController);
 var CP, MaxCP: integer;
 begin
   if not Assigned(Screen) then Exit;
-  MaxCP := 0;
-  if CurrentSong.isDuet and (PlayersPlay <> 1) then MaxCP := 1;
+  MaxCP := High(CurrentSong.Tracks);
   for CP := 0 to MaxCP do
   begin
     NewNote(CP, Screen);
     UpdateRemainingScoreBar(CP, Screen);
   end;
+end;
+
+procedure ResetSungPitchReference;
+var I: integer;
+begin
+  for I := 0 to High(Player) do Player[I].HasLastSungTone := false;
+end;
+
+procedure AddGapSungNote(PlayerIndex, Beat, Tone: integer);
+var P: PPlayer; N: PPlayerNote;
+begin
+  P := @Player[PlayerIndex];
+  if not P.HasLastSungTone then Exit;
+  while Tone-P.LastSungTone > 6 do Dec(Tone,12);
+  while Tone-P.LastSungTone < -6 do Inc(Tone,12);
+  if P.HighNote >= 0 then
+  begin
+    N := @P.Note[P.HighNote];
+    if N.IsGap and (N.Tone=Tone) and (N.Start+N.Duration=Beat) then
+    begin Inc(N.Duration); Exit; end;
+  end;
+  Inc(P.LengthNote); Inc(P.HighNote); SetLength(P.Note,P.LengthNote);
+  N := @P.Note[P.HighNote];
+  N.Start:=Beat; N.Duration:=1; N.Tone:=Tone;
+  N.IsGap:=true; N.Hit:=false; N.Perfect:=false; N.NoteType:=ntNormal;
 end;
 
 procedure NewNote(CP: integer; Screen: TScreenSingController);
@@ -611,7 +691,7 @@ begin
   // analyze player signals
   for PlayerIndex := 0 to PlayersPlay-1 do
   begin
-    if (not CurrentSong.isDuet) or (PlayerIndex mod 2 = CP) then
+    if (not CurrentSong.isDuet) or (Player[PlayerIndex].Track = CP) then
     begin
 
       // delay in beats (Ini.PlayerDelay is ms)
@@ -620,13 +700,23 @@ begin
         Player[PlayerIndex].DetectionDelay := Ini.PlayerDelay[PlayerIndex];
         Player[PlayerIndex].DetectionReady := true;
         DelayBeats := GetBeats(CurrentSong.BPM, Player[PlayerIndex].DetectionDelay / 1000);
-        Player[PlayerIndex].DetectionBeat := Floor(LyricsState.MidBeatD - DelayBeats) - 1;
+        Player[PlayerIndex].DetectionBeat :=
+          Floor(LyricsState.MidBeatD - DelayBeats) - 1;
       end;
       DelayBeats := GetBeats(CurrentSong.BPM, Player[PlayerIndex].DetectionDelay / 1000);
       PlayerOldBeat := Player[PlayerIndex].DetectionBeat;
       PlayerCurBeat := Floor(LyricsState.MidBeatD - DelayBeats);
       if Screen.ScoringTailActive then
         PlayerCurBeat := Min(PlayerCurBeat, Screen.ScoringTailEndBeat);
+
+      // Other players can still be before their shifted scoring start when a
+      // negative-delay player begins during pre-roll. Move their cursor only;
+      // do not analyze or consume score potential before beat zero.
+      if PlayerCurBeat < 0 then
+      begin
+        Player[PlayerIndex].DetectionBeat := PlayerCurBeat;
+        Continue;
+      end;
 
       for ActualBeat := PlayerOldBeat+1 to PlayerCurBeat do
       begin
@@ -652,8 +742,12 @@ begin
             // check if line is active
             if ((CurrentLineFragment.StartBeat <= ActualBeat) and
               (CurrentLineFragment.StartBeat + CurrentLineFragment.Duration-1 >= ActualBeat)) and
-              (CurrentLineFragment.NoteType <> ntFreestyle) and       // but ignore FreeStyle notes
-              (CurrentLineFragment.Duration > 0) then                   // and make sure the note length is at least 1
+              not CurrentLineFragment.ScoreExcluded and
+              (ScoreFactor[CurrentLineFragment.NoteType] > 0) and
+              ((ScreenSong.Mode <> smMedley) or
+               ((CurrentLineFragment.StartBeat >= CurrentSong.Medley.StartBeat) and
+                (CurrentLineFragment.StartBeat < CurrentSong.Medley.EndBeat))) and
+              (CurrentLineFragment.Duration > 0) then
             begin
               SentenceDetected := SentenceIndex;
               NoteAvailable := true;
@@ -711,6 +805,8 @@ begin
 
         // analyze buffer
         CurrentSound.AnalyzeBuffer;
+        if (Ini.PitchTrace <> 0) and not NoteAvailable and CurrentSound.ToneValid then
+          AddGapSungNote(PlayerIndex, ActualBeat, CurrentSound.Tone);
 
         // add some noise
         // TODO: do we need this?
@@ -735,25 +831,29 @@ begin
             Range := 2 - Ini.Difficulty;
 
           // check if the player hit the correct tone within the tolerated range
-          if (Abs(CurrentLineFragment.Tone - CurrentSound.Tone) <= Range) or (CurrentLineFragment.NoteType = ntRap) or (CurrentLineFragment.NoteType = ntRapGolden) then
+          if (ScoreFactor[CurrentLineFragment.NoteType] > 0) and
+            ((Abs(CurrentLineFragment.Tone - CurrentSound.Tone) <= Range) or IsUnpitchedNote(CurrentLineFragment.NoteType)) then
           begin
             // adjust the players tone to the correct one
             // TODO: do we need to do this?
             // Philipp: I think we do, at least when we draw the notes.
             //          Otherwise the notehit thing would be shifted to the
             //          correct unhit note. I think this will look kind of strange.
-            ActualTone := CurrentLineFragment.Tone;
+            ActualTone := CurrentLineFragment.DisplayTone;
 
             // half size notes patch
             NoteHit := true;
 
             case CurrentLineFragment.NoteType of
-              ntNormal:    CurrentPlayer.Score       := CurrentPlayer.Score       + CurNotePoints;
+              ntFreestyle, ntNormal:    CurrentPlayer.Score       := CurrentPlayer.Score       + CurNotePoints;
               ntGolden:    CurrentPlayer.ScoreGolden := CurrentPlayer.ScoreGolden + CurNotePoints;
               ntRap:       CurrentPlayer.Score       := CurrentPlayer.Score       + CurNotePoints;
               ntRapGolden: CurrentPlayer.ScoreGolden := CurrentPlayer.ScoreGolden + CurNotePoints;
             end;
           end; // operation
+
+          CurrentPlayer.LastSungTone := ActualTone;
+          CurrentPlayer.HasLastSungTone := true;
 
           // check if we have to add a new note or extend the note's length
           if (SentenceDetected = CurrentSong.Tracks[CP].CurrentLine) then
@@ -764,6 +864,7 @@ begin
             // if previous note (if any) was the same, extend previous note
             if ((CurrentPlayer.LengthNote > 0) and
                 (LastPlayerNote <> nil) and
+                not LastPlayerNote.IsGap and
                 (LastPlayerNote.Tone = ActualTone) and
                 ((LastPlayerNote.Start + LastPlayerNote.Duration) = ActualBeat)) then
             begin
@@ -793,6 +894,8 @@ begin
                 Duration := 1;
                 Tone     := ActualTone; // Tone || ToneAbs
                 //Detect := LyricsState.MidBeat; // Not used!
+                IsGap    := false;
+                Perfect  := false;
                 Hit      := NoteHit; // half note patch
                 NoteType := CurrentNoteType;
               end;
@@ -810,7 +913,7 @@ begin
               CurrentLineFragment := @Line.Notes[LineFragmentIndex];
               if (CurrentLineFragment.StartBeat  = LastPlayerNote.Start) and
                 (CurrentLineFragment.Duration = LastPlayerNote.Duration) and
-                (CurrentLineFragment.Tone   = LastPlayerNote.Tone) then
+                (CurrentLineFragment.DisplayTone = LastPlayerNote.Tone) then
               begin
                 LastPlayerNote.Perfect := true;
               end;
@@ -828,5 +931,6 @@ end;
 
 finalization
   FreeAndNil(BeatClickOutput);
+  FreeAndNil(BeatClickClock);
 
 end.

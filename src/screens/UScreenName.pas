@@ -34,6 +34,7 @@ interface
 {$I switches.inc}
 
 uses
+  UVoiceAssignments,
   UAvatars,
   UDisplay,
   UFiles,
@@ -64,8 +65,12 @@ type
       PlayerSelectIID: integer;
       PlayerSelectLevel: cardinal;
       PlayerSelectLevelIID: integer;
+      PlayerSelectVoice: cardinal;
+      PlayerSelectVoiceIID: integer;
+      VoiceIndex: integer;
 
       CountIndex:   integer;
+      PlayerCountOffset: integer;
       PlayerIndex:  integer;
       ColorIndex:   integer;
       LevelIndex:   integer;
@@ -91,8 +96,11 @@ type
       APlayerColor: array of integer;
 
       PlayerAvatarButton: array of integer;
+      function SelectedPlayerCount: integer;
 
+      procedure RefreshVoice;
     public
+      LyricsOnly: boolean;
       Goto_SingScreen: boolean; //If true then next Screen in SingScreen
 
       constructor Create; override;
@@ -134,6 +142,7 @@ implementation
 uses
 
   UCommon,
+  UParty,
   UGraphic,
   UHelp,
   ULanguage,
@@ -423,9 +432,10 @@ begin
       SDLK_RETURN:
         begin
           StopTextInput;
-          Ini.Players := CountIndex;
+          LyricsOnly := (PlayerCountOffset = 1) and (SelectedPlayerCount = 0);
+          if not LyricsOnly then Ini.Players := CountIndex - PlayerCountOffset;
 
-          for I := 1 to UIni.IPlayersVals[CountIndex] do
+          for I := 1 to SelectedPlayerCount do
           begin
             // TODO: is it really necessary for this screen to duplicate all these Ini. arrays?
             Ini.Name[I-1] := PlayerNames[I-1];
@@ -438,7 +448,7 @@ begin
 
           LoadPlayersFromIni;
 
-          for I := UIni.IPlayersVals[CountIndex] - 1 downto 0 do
+          for I := SelectedPlayerCount - 1 downto 0 do
             Ini.RememberUsedNames([PlayerNames[I]]);
           Ini.SaveNumberOfPlayers;
           Ini.SaveNames;
@@ -467,7 +477,7 @@ begin
             AudioPlayback.SetVolume(1.0);
             ScreenSong.StopMusicPreview();
             ScreenSong.StopVideoPreview();
-            FadeTo(@ScreenSing);
+            ScreenSong.StartSong;
             GoTo_SingScreen := false;
           end
           else
@@ -496,7 +506,7 @@ begin
         begin
           AudioPlayback.PlaySound(SoundLib.Change);
 
-          if (Interaction in [PlayersCountIID, PlayerColorIID, PlayerSelectLevelIID]) then
+          if (Interaction in [PlayersCountIID, PlayerColorIID, PlayerSelectLevelIID, PlayerSelectVoiceIID]) then
             InteractInc;
 
           if (Interaction = PlayersCountIID) then
@@ -504,7 +514,7 @@ begin
 
           if (Interaction = PlayerSelectIID) then
           begin //TODO: adapt this to new playersize
-              if (PlayerIndex < UIni.IPlayersVals[CountIndex]-1) then
+              if (PlayerIndex < SelectedPlayerCount-1) then
             begin
               PlayerIndex := PlayerIndex + 1;
 
@@ -529,6 +539,9 @@ begin
             SelectsS[PlayerColor].SetSelect(true);
           end;
 
+          if Interaction = PlayerSelectVoiceIID then
+            VoiceAssignments.SetVoice(PlayerIndex, VoiceIndex, CatSongs.Song[CatSongs.Selected].VoiceCount);
+
           if (Interaction = PlayerSelectLevelIID) then
           begin
             PlayerLevel[PlayerIndex] := LevelIndex;
@@ -539,7 +552,7 @@ begin
         begin
           AudioPlayback.PlaySound(SoundLib.Change);
 
-          if (Interaction in [PlayersCountIID, PlayerColorIID, PlayerSelectLevelIID]) then
+          if (Interaction in [PlayersCountIID, PlayerColorIID, PlayerSelectLevelIID, PlayerSelectVoiceIID]) then
             InteractDec;
 
           if (Interaction = PlayersCountIID) then
@@ -572,6 +585,9 @@ begin
             SelectsS[PlayerColor].SetSelect(true);
           end;
 
+          if Interaction = PlayerSelectVoiceIID then
+            VoiceAssignments.SetVoice(PlayerIndex, VoiceIndex, CatSongs.Song[CatSongs.Selected].VoiceCount);
+
           if (Interaction = PlayerSelectLevelIID) then
           begin
             PlayerLevel[PlayerIndex] := LevelIndex;
@@ -589,24 +605,19 @@ var
   Avatar: TAvatar;
   AvatarFile: IPath;
   Hash: string;
-  GenericNoAvatarFile: IPath;
   NoAvatarFile: IPath;
 begin
 
   SetLength(PlayerAvatarButton, Length(AvatarsList) + 1);
 
   // 1st no-avatar dummy
-  GenericNoAvatarFile := Skin.SkinPath.Append(Path('[name]noavatar.png'));
   for I := 1 to UIni.IMaxPlayerCount do
   begin
-    if GenericNoAvatarFile.IsFile() then
-      NoAvatarFile := GenericNoAvatarFile
-    else
-    begin
-      NoAvatarFile := Skin.GetTextureFileName('NoAvatar_P' + IntToStr(I));
-      if not NoAvatarFile.IsSet then
-        NoAvatarFile := Skin.GetTextureFileName('NoAvatar_P1');
-    end;
+    NoAvatarFile := Skin.GetTextureFileName('NoAvatar_P' + IntToStr(I));
+    if not NoAvatarFile.IsFile then
+      NoAvatarFile := Skin.GetTextureFileName('NoAvatar_P1');
+    if not NoAvatarFile.IsFile then
+      NoAvatarFile := Skin.GetTextureFileName('NoAvatar');
 
     NoAvatarTexture[I] := Renderer.GetTexture(NoAvatarFile, TEXTURE_TYPE_TRANSPARENT, $FFFFFF);
     NoAvatarTexture[I].ScaleMode := lsUniform;
@@ -650,7 +661,7 @@ var
   FittedRect: TPlayerSlotRect;
   SelectButton: integer;
 begin
-  Count := UIni.IPlayersVals[CountIndex];
+  Count := SelectedPlayerCount;
   BaseBounds := GetNamePlayerSelectBaseBounds;
   FittedRect := GetNamePlayerSelectFittedRect(Player, Count);
 
@@ -718,15 +729,21 @@ begin
   end;
 end;
 
+function TScreenName.SelectedPlayerCount: integer;
+begin
+  if CountIndex < PlayerCountOffset then Result := 0
+  else Result := UIni.IPlayersVals[CountIndex - PlayerCountOffset];
+end;
+
 procedure TScreenName.RefreshPlayers();
 var
   Count, I: integer;
   DesCol: TRGB;
 begin
 
-  Count := UIni.IPlayersVals[CountIndex];
+  Count := SelectedPlayerCount;
 
-  while (PlayerIndex > Count-1) do
+  while (PlayerIndex > Max(0, Count-1)) do
     PlayerIndex := PlayerIndex - 1;
 
   // Player Colors
@@ -760,11 +777,42 @@ begin
     SetPlayerAvatar(I);
   end;
 
+  Button[PlayerName].Visible := Count > 0;
+  Button[PlayerName].Selectable := Count > 0;
+  Button[PlayerSelect].Visible := Count > 0;
+  Button[PlayerSelect].Selectable := false;
+  Button[PlayerAvatar].Visible := Count > 0;
+  Button[PlayerAvatar].Selectable := Count > 0;
+  Button[Interactions[PlayerSelectIID].Num].Visible := Count > 0;
+  Button[Interactions[PlayerSelectIID].Num].Selectable := Count > 0;
+  SelectsS[PlayerColor].Visible := Count > 0;
+  SelectsS[PlayerSelectLevel].Visible := Count > 0;
+  for I := 0 to High(PlayerAvatarButton) do Button[PlayerAvatarButton[I]].Visible := false;
+  if Count = 0 then Exit;
   RefreshProfile();
 
   AvatarTarget := PlayerAvatars[PlayerIndex];
   AvatarCurrent := AvatarTarget;
 
+end;
+
+procedure TScreenName.RefreshVoice;
+var
+  Options: array of UTF8String;
+  I: integer;
+begin
+  SelectsS[PlayerSelectVoice].Visible := Goto_SingScreen and
+    (CatSongs.Selected >= 0) and (CatSongs.Selected < Length(CatSongs.Song)) and
+    CatSongs.Song[CatSongs.Selected].isDuet;
+  if not SelectsS[PlayerSelectVoice].Visible then Exit;
+  VoiceAssignments.SelectSong(CatSongs.Song[CatSongs.Selected]);
+  SetLength(Options, CatSongs.Song[CatSongs.Selected].VoiceCount);
+  for I := 0 to High(Options) do
+    Options[I] := Format(Language.Translate('SING_VOICE_NUMBER'), [I + 1]) +
+      ': ' + CatSongs.Song[CatSongs.Selected].DuetNames[I];
+  VoiceIndex := VoiceAssignments.VoiceForPlayer(PlayerIndex, Length(Options));
+  UpdateSelectSlideOptions(PlayerSelectVoice, Options, VoiceIndex);
+  SelectsS[PlayerSelectVoice].SetSelectOpt(VoiceIndex);
 end;
 
 procedure TScreenName.RefreshProfile();
@@ -773,6 +821,7 @@ var
   Count, Max, I, J, Index: integer;
   Used: boolean;
 begin
+  if SelectedPlayerCount = 0 then Exit;
   // no-avatar for current player
   Button[PlayerAvatarButton[0]].Texture.Free;
   Button[PlayerAvatarButton[0]].Texture := NoAvatarTexture[PlayerIndex + 1].Clone();
@@ -780,8 +829,9 @@ begin
   Button[PlayerName].Text[0].Text := PlayerNames[PlayerIndex];
 
   SelectsS[PlayerSelectLevel].SetSelectOpt(PlayerLevel[PlayerIndex]);
+  RefreshVoice;
 
-  Count := UIni.IPlayersVals[CountIndex];
+  Count := SelectedPlayerCount;
 
   ChangeSelectPlayerPosition(PlayerIndex);
 
@@ -839,7 +889,7 @@ function TScreenName.NoRepeatColors(ColorP:integer; Interaction:integer; Pos:int
 var
   Z, Count:integer;
 begin
-  Count := UIni.IPlayersVals[CountIndex];
+  Count := SelectedPlayerCount;
 
   if (ColorP > Length(IPlayerColorTranslated)) then
     ColorP := NoRepeatColors(1, Interaction, Pos);
@@ -861,6 +911,7 @@ procedure TScreenName.PlayerColorButton(K: integer);
 var
   Col, DesCol: TRGB;
 begin
+  if SelectedPlayerCount = 0 then Exit;
 
   Col := GetPlayerLightColor(K);
 
@@ -879,6 +930,9 @@ begin
   SelectsS[PlayerSelectLevel].SBGColR:= Col.R;
   SelectsS[PlayerSelectLevel].SBGColG:= Col.G;
   SelectsS[PlayerSelectLevel].SBGColB:= Col.B;
+  SelectsS[PlayerSelectVoice].SBGColR := Col.R;
+  SelectsS[PlayerSelectVoice].SBGColG := Col.G;
+  SelectsS[PlayerSelectVoice].SBGColB := Col.B;
 
   DesCol := GetPlayerColor(K);
 
@@ -901,12 +955,18 @@ begin
   SelectsS[PlayerSelectLevel].SBGDColR := DesCol.R;
   SelectsS[PlayerSelectLevel].SBGDColG:= DesCol.G;
   SelectsS[PlayerSelectLevel].SBGDColB:= DesCol.B;
+  SelectsS[PlayerSelectVoice].SBGDColR := DesCol.R;
+  SelectsS[PlayerSelectVoice].SBGDColG := DesCol.G;
+  SelectsS[PlayerSelectVoice].SBGDColB := DesCol.B;
 
-  Button[PlayerAvatarButton[0]].Texture.ColR := DesCol.R;
-  Button[PlayerAvatarButton[0]].Texture.ColG := DesCol.G;
-  Button[PlayerAvatarButton[0]].Texture.ColB := DesCol.B;
+  if Skin.ColorizeDefaultAvatars then
+  begin
+    Button[PlayerAvatarButton[0]].Texture.ColR := DesCol.R;
+    Button[PlayerAvatarButton[0]].Texture.ColG := DesCol.G;
+    Button[PlayerAvatarButton[0]].Texture.ColB := DesCol.B;
+  end;
 
-  if (PlayerAvatars[PlayerIndex] = 0) then
+  if (PlayerAvatars[PlayerIndex] = 0) and Skin.ColorizeDefaultAvatars then
   begin
     Statics[PlayerCurrentAvatar[PlayerIndex]].Texture.ColR := DesCol.R;
     Statics[PlayerCurrentAvatar[PlayerIndex]].Texture.ColG := DesCol.G;
@@ -915,6 +975,7 @@ begin
 
   SelectsS[PlayerColor].SetSelect(false);
   SelectsS[PlayerSelectLevel].SetSelect(false);
+  SelectsS[PlayerSelectVoice].SetSelect(false);
   Button[PlayerName].SetSelect(false);
   Button[PlayerAvatar].SetSelect(false);
 
@@ -971,6 +1032,12 @@ begin
   PlayerSelectLevel := AddSelectSlide(Theme.Name.SelectPlayerLevel, LevelIndex, IDifficultyTranslated);
   PlayerSelectLevelIID := High(Interactions);
 
+  Theme.Name.SelectPlayerVoice.oneItemOnly := true;
+  Theme.Name.SelectPlayerVoice.showArrows := true;
+  PlayerSelectVoice := AddSelectSlide(Theme.Name.SelectPlayerVoice, VoiceIndex, ['']);
+  PlayerSelectVoiceIID := High(Interactions);
+  SelectsS[PlayerSelectVoice].Visible := false;
+
   isScrolling := false;
 
   GenerateAvatars();
@@ -1003,9 +1070,12 @@ begin
 
     Col := GetPlayerColor(Num[Player]);
 
-    Statics[PlayerCurrentAvatar[Player]].Texture.ColR := Col.R;
-    Statics[PlayerCurrentAvatar[Player]].Texture.ColG := Col.G;
-    Statics[PlayerCurrentAvatar[Player]].Texture.ColB := Col.B;
+    if Skin.ColorizeDefaultAvatars then
+    begin
+      Statics[PlayerCurrentAvatar[Player]].Texture.ColR := Col.R;
+      Statics[PlayerCurrentAvatar[Player]].Texture.ColG := Col.G;
+      Statics[PlayerCurrentAvatar[Player]].Texture.ColB := Col.B;
+    end;
   end
   else
   begin
@@ -1053,9 +1123,12 @@ begin
 
       Col := GetPlayerColor(Ini.PlayerColor[I]);
 
-      AvatarPlayerTextures[I+1].ColR := Col.R;
-      AvatarPlayerTextures[I+1].ColG := Col.G;
-      AvatarPlayerTextures[I+1].ColB := Col.B;
+      if Skin.ColorizeDefaultAvatars then
+      begin
+        AvatarPlayerTextures[I+1].ColR := Col.R;
+        AvatarPlayerTextures[I+1].ColG := Col.G;
+        AvatarPlayerTextures[I+1].ColB := Col.B;
+      end;
     end;
   end;
 end;
@@ -1069,12 +1142,19 @@ end;
 procedure TScreenName.OnShow;
 var
   I: integer;
+  Counts: array of UTF8String;
 begin
   inherited;
   AudioPlayback.SetVolume(EnsureRange(Ini.PreviewVolume, 0, 100) / 100);
 
   Ini.ReloadNames;
-  CountIndex := Ini.Players;
+  PlayerCountOffset := Ord(not Party.bPartyGame);
+  SetLength(Counts, Length(IPlayers) + PlayerCountOffset);
+  if PlayerCountOffset = 1 then Counts[0] := Language.Translate('CONTINUOUS_ZERO_PLAYERS');
+  for I := 0 to High(IPlayers) do Counts[I + PlayerCountOffset] := IPlayers[I];
+  CountIndex := Ini.Players + PlayerCountOffset;
+  if LyricsOnly and (PlayerCountOffset = 1) then CountIndex := 0;
+  UpdateSelectSlideOptions(PlayersCount, Counts, CountIndex);
 
   for I := 0 to UIni.IMaxPlayerCount-1 do
   begin
@@ -1093,6 +1173,7 @@ begin
   AvatarCurrent := AvatarTarget;
 
   RefreshPlayers;
+  RefreshVoice;
 
   PlayerColorButton(Num[PlayerIndex]);
 
@@ -1287,7 +1368,7 @@ begin
     end;
   end;
 
-  SetAvatarScroll;
+  if SelectedPlayerCount > 0 then SetAvatarScroll;
 
   // set current name = name in list
   Text[PlayerCurrentText[PlayerIndex]].Text := Button[PlayerName].Text[0].Text;

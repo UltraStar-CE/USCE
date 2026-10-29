@@ -27,8 +27,7 @@ function gitChanges(ref, sha, repositoryUrl) {
   const commits = execFileSync('git', ['log', '--first-parent', '--format=%H%x09%s', range], {encoding: 'utf8'});
   const notes = commits.trim().split('\n').filter(Boolean).map(line => {
     const [hash, ...subject] = line.split('\t');
-    const title = subject.join('\t').replace(/https?:\/\/github\.com\/[^\s)]+/g, '[source reference omitted]')
-      .replace(/#/g, ' PR ').replace(/@([A-Za-z0-9_-]+)/g, '$1').replace(/[\[\]]/g, '');
+    const title = subject.join('\t').replace(/[\[\]]/g, '\\$&');
     return '- ' + title + ' ([`' + hash.slice(0, 7) + '`](' + repositoryUrl + '/commit/' + hash + '))';
   }).join('\n');
   const count = Number(execFileSync('git', ['rev-list', '--count', range], {encoding: 'utf8'}).trim());
@@ -109,6 +108,8 @@ async function publishDraft({github, context, core}, version) {
     const curated = fs.existsSync(notesPath) ? fs.readFileSync(notesPath, 'utf8').trim() : '';
     if (fs.existsSync(notesPath) && !curated) throw Error('Release notes are empty');
     const plan = JSON.parse(fs.readFileSync('release-plan.json', 'utf8'));
+    if (plan.upstream && !/^v[0-9]{4}\.(?:[1-9]|1[0-2])\.[0-9]+$/.test(plan.upstream.tag)) throw Error('Invalid upstream release tag');
+    const upstreamMarker = plan.upstream ? '<!-- usce-upstream-release:' + plan.upstream.tag + ' -->\n' : '';
     let notes = curated;
     if (!notes) {
       const generated = releaseNoteFiles({releases, version, upstream: plan.comparisons?.upstream || plan.upstream,
@@ -126,7 +127,7 @@ async function publishDraft({github, context, core}, version) {
     const themes = readThemePin();
     release = (await github.rest.repos.createRelease({...context.repo, tag_name: tag, target_commitish: context.sha,
       name: 'USCE ' + version, draft: true, prerelease: false,
-      body: marker + '\n\n' + notes +
+      body: marker + '\n' + upstreamMarker + '\n' + notes +
         '\n\n<details>\n<summary>Build information</summary>\n\nSource revision: `' + context.sha +
         '`.\nThemes revision: `' + themes.sha + '`.\n\n</details>\n'})).data;
   }

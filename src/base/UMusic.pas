@@ -74,12 +74,20 @@ type
   end;
 
 const
-  // ScoreFactor defines how a notehit of a specified notetype is
-  // measured in comparison to the other types
-  // 0 means this notetype is not rated at all
-  // 2 means a hit of this notetype will be rated w/ twice as much
-  // points as a hit of a notetype w/ ScoreFactor 1
-  ScoreFactor:         array[TNoteType] of integer = (0, 1, 2, 1, 2);
+  MaxScoreFactor = 200;
+  ScoreFactorName: array[TNoteType] of string =
+    ('Freestyle', 'Normal', 'Golden', 'Rap', 'RapGolden');
+
+type
+  TScoreFactor = array[TNoteType] of integer;
+
+const
+  // The scoring weights used by unmodified USDX master and expected by
+  // existing online highscore services.
+  StandardScoreFactor: TScoreFactor = (0, 100, 200, 100, 200);
+
+var
+  ScoreFactor: TScoreFactor;
 
 type
   (**
@@ -93,8 +101,10 @@ type
     StartBeat:      integer;    // beat the fragment starts at
     Duration:       integer;    // duration in beats
     Tone:           integer;    // full range tone
+    DisplayTone:    integer;    // normalized tone used by the sing screen
     Text:           UTF8String; // text assigned to this fragment (a syllable, word, etc.)
     NoteType:       TNoteType;  // note-type: golden-note/freestyle etc.
+    ScoreExcluded:  boolean;    // clipped outside the playable audio range
 
     IsMedley:       boolean; // just for editor
     IsStartPreview: boolean; // just for editor
@@ -154,6 +164,7 @@ type
     Number:      integer;
     NotesGAP:    integer;
     ScoreValue:  integer;
+    HighestScoredBeat: integer; // End of scored notes; Low(Integer) when none can score.
     Lines:       array of TLine;
   end;
 
@@ -604,11 +615,11 @@ const
   LAST_SOUNDID = SOUNDID_OPTION;
 
   BaseSoundFilenames: array[0..LAST_SOUNDID] of IPath = (
-    '%SOUNDPATH%/Common start.mp3',                 // Start
-    '%SOUNDPATH%/Common back.mp3',                  // Back
-    '%SOUNDPATH%/menu swoosh.mp3',                  // Swoosh
-    '%SOUNDPATH%/select music change music 50.mp3', // Change
-    '%SOUNDPATH%/option change col.mp3'             // Option
+    '%SOUNDPATH%/Common start.ogg',                 // Start
+    '%SOUNDPATH%/Common back.ogg',                  // Back
+    '%SOUNDPATH%/menu swoosh.ogg',                  // Swoosh
+    '%SOUNDPATH%/select music change music 50.ogg', // Change
+    '%SOUNDPATH%/option change col.ogg'             // Option
     {
     '%SOUNDPATH%/bassdrumhard076b.mp3',             // Drum (unused)
     '%SOUNDPATH%/hihatclosed068b.mp3',              // Hihat (unused)
@@ -679,6 +690,8 @@ procedure DumpMediaInterfaces();
 procedure ForcePlaySound(Stream: TAudioPlaybackStream);
 
 function FindNote(beat: integer): TPos;
+function IsUnpitchedNote(NoteType: TNoteType): boolean;
+function HasStandardScoreFactors: boolean;
 
 implementation
 
@@ -712,6 +725,21 @@ begin
     Exit;
 
   Result := SoundPath.Append(Filename);
+end;
+
+function IsUnpitchedNote(NoteType: TNoteType): boolean;
+begin
+  Result := NoteType in [ntFreestyle, ntRap, ntRapGolden];
+end;
+
+function HasStandardScoreFactors: boolean;
+var
+  NoteType: TNoteType;
+begin
+  for NoteType := Low(TNoteType) to High(TNoteType) do
+    if ScoreFactor[NoteType] <> StandardScoreFactor[NoteType] then
+      Exit(false);
+  Result := true;
 end;
 
 
@@ -1158,14 +1186,14 @@ procedure TSoundLibrary.LoadSounds();
 begin
   UnloadSounds();
 
-  Start   := AudioPlayback.OpenSound(ResolveSoundAsset('Common start.mp3'));
-  Back    := AudioPlayback.OpenSound(ResolveSoundAsset('Common back.mp3'));
-  Swoosh  := AudioPlayback.OpenSound(ResolveSoundAsset('menu swoosh.mp3'));
-  Change  := AudioPlayback.OpenSound(ResolveSoundAsset('select music change music 50.mp3'));
-  Option  := AudioPlayback.OpenSound(ResolveSoundAsset('option change col.mp3'));
-  Applause:= AudioPlayback.OpenSound(ResolveSoundAsset('Applause.mp3'));
+  Start   := AudioPlayback.OpenSound(ResolveSoundAsset('Common start.ogg'));
+  Back    := AudioPlayback.OpenSound(ResolveSoundAsset('Common back.ogg'));
+  Swoosh  := AudioPlayback.OpenSound(ResolveSoundAsset('menu swoosh.ogg'));
+  Change  := AudioPlayback.OpenSound(ResolveSoundAsset('select music change music 50.ogg'));
+  Option  := AudioPlayback.OpenSound(ResolveSoundAsset('option change col.ogg'));
+  Applause:= AudioPlayback.OpenSound(ResolveSoundAsset('Applause.ogg'));
 
-  BGMusic := AudioPlayback.OpenSound(ResolveSoundAsset('background track.mp3'));
+  BGMusic := AudioPlayback.OpenSound(ResolveSoundAsset('background track.ogg'));
 
   if (BGMusic <> nil) then
   begin
@@ -1721,5 +1749,8 @@ begin
     end;
   end;
 end;
+
+initialization
+  ScoreFactor := StandardScoreFactor;
 
 end.

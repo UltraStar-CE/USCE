@@ -9,7 +9,7 @@ English values below even when menus are translated.
 **Jump to:** [Song folders](#add-song-folders) · [Game](#game) ·
 [Graphics](#graphics) · [Sound](#sound-and-volume) · [Microphones](#microphones) ·
 [Controls](#controls) · [Themes and lyrics](#themes-and-lyrics) ·
-[Advanced](#advanced-behavior) · [Jukebox](#jukebox) · [Webcam](#webcam) ·
+[Advanced](#advanced-behavior) · [Webcam](#webcam) ·
 [Players and teams](#saved-players-and-teams) · [Piano keys](#piano-key-bindings)
 
 ## Find and edit your configuration
@@ -131,8 +131,7 @@ File section: `[Sound]`. Most settings are under **Options → Sound**.
 | `PreviewFading` | `Off`, `1 Sec`, `2 Secs`, `3 Secs`, `4 Secs`, `5 Secs`; `3 Secs` | Fade duration for song previews. |
 | `ReplayGain` | `Off`, `On`; `Off` | Uses available ReplayGain information to reduce loudness differences. |
 | `VoicePassthrough` | `Off`, `On`; `Off` | Plays microphone input through speakers. This can cause feedback; use suitable volume or headphones. |
-| `ClickAssist` | `Off`, `On`; `Off` | Plays a click at the start of each note. |
-| `BeatClick` | `Off`, `On`; `Off` | Plays a beat click during singing. |
+| `ClickAssist` | `Off`, `On`, `Synth`, `SynthAndClicks`; `Off` | Note assistance during singing: clicks at note starts, synth notes, or both. `On` retains click assistance. |
 | `AudioOutputBufferSize` | `Auto`, `256`, `512`, `1024`, `2048`, `4096`, `8192`, `16384`, `32768`, `65536`; `Auto` | Output buffer size in samples. Larger buffers can reduce dropouts but add delay. Prefer Auto. |
 | `SavePlayback` | `Off`, `On`; `Off` | Saves captured microphone audio during singing. Keep off unless you want recordings. |
 
@@ -164,10 +163,9 @@ File section: `[Controller]`. Available under **Options → Input**.
 | Key | Values; default | What it does |
 | --- | --- | --- |
 | `Joypad` | `Off`, `On`; `Off` | Enables controller input. |
-| `Mouse` | `Off`, `System`, `Game`; `Game` | Disables mouse input, uses the system pointer or the game's pointer. |
 
-Legacy `Mouse` values `Hardware Cursor` and `Software Cursor` correspond to
-`System` and `Game`.
+Mouse input is always available. The pointer appears when moved or clicked and
+starts fading after one second without activity. Older `Mouse` settings are ignored.
 
 ## Themes and lyrics
 
@@ -197,7 +195,7 @@ score and time-bar choices are also saved from their respective screens.
 | `LoadAnimation` | `Off`, `On`; `On` | Loading animation. |
 | `ScreenFade` | `Off`, `On`; `On` | Fades between screens. |
 | `EffectSing` | `Off`, `On`; `On` | Singing effects. |
-| `AskbeforeDel` | `Off`, `On`; `On` | Asks for confirmation before quitting, including with Q during singing or jukebox playback. Despite its name, this setting does not control song deletion. |
+| `AskbeforeDel` | `Off`, `On`; `On` | Asks for confirmation before quitting, including with Q during singing playback. Despite its name, this setting does not control song deletion. |
 | `OnSongClick` | `Sing`, `Select Players`, `Open Menu`; `Sing` | Action after selecting a song. |
 | `PartyPopup` | `Off`, `On`; `On` | Automatically opens the party menu where applicable. |
 | `SingScores` | `Off`, `On`, `Bar Rating`, `Remaining Score`; `On` | Chooses the in-song score display: `Off` hides it, `On` shows both bars, `Bar Rating` shows the line-rating bar, and `Remaining Score` shows the remaining-score bar. Numeric scores accompany each enabled mode; party mode keeps scores visible. |
@@ -206,28 +204,6 @@ score and time-bar choices are also saved from their respective screens.
 | `HighScoreScreenEntries` | Integer `5`–`20`; `5` | Number of high-score entries shown. Values outside the range are limited to it. |
 | `SyncTo` | `Music`, `Lyrics`, `Off`; `Music` | Synchronization mode. Keep Music for normal playback. |
 | `SingTimebarMode` | `Current`, `Remaining`, `Total`; `Remaining` | Elapsed, remaining or total song time during singing. |
-| `JukeboxTimebarMode` | `Current`, `Remaining`, `Total`; `Current` | Jukebox time display. |
-
-## Jukebox
-
-File section: `[Jukebox]`. Jukebox plays songs without a scored singing game.
-These appearance settings are independent of the singing lyric settings.
-
-| Key | Values; default | What it does |
-| --- | --- | --- |
-| `LyricsFont` | Installed font family; first available | Jukebox lyric font. |
-| `LyricsStyle` | `Regular`, `Bold`, `Outline`; `Outline` | Text styling. |
-| `LyricsEffect` | `Simple`, `Zoom`, `Slide`, `Ball`, `Shift`; `Slide` | Current-syllable animation. |
-| `LyricsAlpha` | `0.00` to `1.00` in steps of `0.05`; `1.00` | Lyric opacity, from transparent to opaque. |
-| `SongMenu` | `Off`, `On`; `On` | Shows the jukebox song menu. |
-| `SingLineColor` | Six hexadecimal RGB digits; `47B3FF` | Highlighted syllable color. |
-| `ActualLineColor` | Six hexadecimal RGB digits; `FFFFFF` | Current lyric line color. |
-| `NextLineColor` | Six hexadecimal RGB digits; `C0C0C0` | Next lyric line color. |
-| `SingLineOColor` | Six hexadecimal RGB digits; `000000` | Highlighted syllable outline. |
-| `ActualLineOColor` | Six hexadecimal RGB digits; `000000` | Current line outline. |
-| `NextLineOColor` | Six hexadecimal RGB digits; `000000` | Next line outline. |
-
-Write colors without a leading `#`, for example `FF9000` for orange.
 
 ## Webcam
 
@@ -285,6 +261,27 @@ a different length falls back to its built-in mapping.
 | `PianoKeysLow` | `60,97,121,115,120,100,99,118,103,98,104,110,109,107,44,108,46,246,45` |
 | `PianoKeysHigh` | `49,113,50,119,51,101,114,53,116,54,122,117,56,105,57,111,48,112,252,96,43` |
 
+## Note scoring weights
+
+File section: `[Scoring]`. These settings are also available in **Advanced Options**
+under **Scoring**. Values are integer percentages from `0` to `200`.
+
+| Key | Standard value | Effect |
+| --- | ---: | --- |
+| `Freestyle` | `0` | Weight for freestyle notes; detected vocals count without pitch matching. |
+| `Normal` | `100` | Weight for normal pitched notes. |
+| `Golden` | `200` | Weight for golden pitched notes. |
+| `Rap` | `100` | Weight for rap notes; detected vocals count without pitch matching. |
+| `RapGolden` | `200` | Weight for golden rap notes. |
+
+Missing or nonnumeric values use the standard value. Numeric values outside the
+range are limited to `0` or `200`. Custom weights change the relative contribution
+of each note type; `0` disables scoring for that type. The former rap-to-freestyle
+T toggle is replaced by these settings. Notes retain their original types.
+
+Online score submission is available only when all five weights have their
+standard values, so custom scoring does not affect online leaderboards.
+
 ## Compatibility and related files
 
 This reference follows the current [configuration reader](../src/base/UIni.pas).
@@ -295,5 +292,21 @@ INI key. Adding these keys does not enable those features.
 Theme definitions, song TXT files, plugin settings and projectM's own
 configuration are separate files. Do not paste their sections into `config.ini`.
 
-`[Game] StatisticsView=Reduced` selects compact statistics; `Full` includes
-averages, recent activity and performance facts. Also available in Options → Game.
+### Age rating country
+
+`[Game] AgeCountry=DE` selects Germany for AGE searches. An empty value uses
+the unprefixed local/default entry. Choose it in Options → Game; the initial
+default comes from the OS country/region, not timezone.
+
+### Song-screen configuration
+
+Press C in song selection to edit these settings. `[Playback] Continuous=0` or
+`1` chooses which saved configuration is active. `[Playback0]` holds ordinary
+singing settings; `[Playback1]` holds continuous settings. Both contain `Repeat`,
+`Results`, `HighScores`, `SongDisplay` and `SingingDisplay`.
+
+`Results` and `HighScores` use 0 for Manual, 1 for Skip, then 2 through 8 for
+5, 10, 20, 30, 40, 50 and 60 seconds. `Repeat` affects continuous playback only.
+Display values follow the order shown in Configuration. Missing settings retain
+the full display, manual results for ordinary singing and skipped results for
+continuous playback.

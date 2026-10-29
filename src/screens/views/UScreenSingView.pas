@@ -185,7 +185,7 @@ var
 begin
   BaseTemplate := Theme.Sing.PlayerTemplate;
   Layout := GetSingLaneLayout(PlayerCountOnScreen, PlayerIndexOnScreen, Theme.Sing.PlayerLayout,
-    IsCurrentSongDuet and (PlayersPlay <> 1));
+    IsCurrentSongDuet);
   LaneLeft := Layout.ColumnLeft;
   LaneTop := Layout.RowAnchorY;
   LaneWidth := Layout.ColumnWidth;
@@ -534,14 +534,6 @@ begin
       Theme.LyricBar.UpperX, Theme.LyricBar.UpperY, Theme.LyricBar.UpperW, Theme.LyricBar.UpperH,
       Theme.LyricBar.LowerX, Theme.LyricBar.LowerY, Theme.LyricBar.LowerW, Theme.LyricBar.LowerH);
 
-  ScreenSing.LyricsDuetP1 := TLyricEngine.Create(
-      Theme.LyricBarDuetP1.UpperX, Theme.LyricBarDuetP1.UpperY, Theme.LyricBarDuetP1.UpperW, Theme.LyricBarDuetP1.UpperH,
-      Theme.LyricBarDuetP1.LowerX, Theme.LyricBarDuetP1.LowerY, Theme.LyricBarDuetP1.LowerW, Theme.LyricBarDuetP1.LowerH);
-
-  ScreenSing.LyricsDuetP2 := TLyricEngine.Create(
-      Theme.LyricBarDuetP2.UpperX, Theme.LyricBarDuetP2.UpperY, Theme.LyricBarDuetP2.UpperW, Theme.LyricBarDuetP2.UpperH,
-      Theme.LyricBarDuetP2.LowerX, Theme.LyricBarDuetP2.LowerY, Theme.LyricBarDuetP2.LowerW, Theme.LyricBarDuetP2.LowerH);
-
   ScreenSing.fLyricsSync := TLyricsSyncSource.Create();
   ScreenSing.fMusicSync := TMusicSyncSource.Create();
 
@@ -569,14 +561,12 @@ var
   DisplayPrefix:          string;
   DisplayMin:             integer;
   DisplaySec:             integer;
-  T:                      integer;
   CurLyricsTime:          real;
   VideoFrameTime:         Extended;
-  Line:                   TLyricLine;
-  LineDuet:               TLyricLine;
+  ScorePlayerIndex:       integer;
+  VoiceIndex:             integer;
   medley_end:             boolean;
   medley_start_applause:  boolean;
-  LastLineSungToEnd:      boolean;
   LocalPlayerCount:       integer;
   LocalStartIndex:        integer;
   FrameSlots:             TSlotArray;
@@ -589,6 +579,11 @@ var
   SingPlayer:             TThemeSingPlayer;
   DrawScorePanel:         boolean;
   ScoreMode:              TSingInfoBarMode;
+  function ScoringFinished(TrackIndex: integer): boolean;
+  begin
+    Result := (CurrentSong.Tracks[TrackIndex].HighestScoredBeat = Low(Integer)) or
+      (CurLyricsTime >= GetTimeFromBeat(CurrentSong.Tracks[TrackIndex].HighestScoredBeat));
+  end;
   procedure SetPlayerNameTexts(const Slots: TSlotArray; FirstPlayerIndex: integer; UseDuetNames: boolean);
   var
     J: integer;
@@ -617,20 +612,6 @@ var
     for J := 0 to High(Slots) do
       ScreenSing.Text[Slots[J]].Visible := Visible and (J < VisibleCount) and
         ScreenSing.Settings.AvatarsVisible and Theme.Sing.PlayerTemplate.NameEnabled;
-  end;
-  procedure SetLyricsDuetColors(FirstPlayerIndex: integer);
-  var
-    PlayerColor: TRGB;
-  begin
-    PlayerColor := GetSingPlayerColor(FirstPlayerIndex - 1);
-    ScreenSing.LyricsDuetP1.LineColor_act.R := PlayerColor.R;
-    ScreenSing.LyricsDuetP1.LineColor_act.G := PlayerColor.G;
-    ScreenSing.LyricsDuetP1.LineColor_act.B := PlayerColor.B;
-
-    PlayerColor := GetSingPlayerColor(FirstPlayerIndex);
-    ScreenSing.LyricsDuetP2.LineColor_act.R := PlayerColor.R;
-    ScreenSing.LyricsDuetP2.LineColor_act.G := PlayerColor.G;
-    ScreenSing.LyricsDuetP2.LineColor_act.B := PlayerColor.B;
   end;
   procedure HidePlayerAvatarsForScorePanel;
   var
@@ -708,8 +689,7 @@ begin
   SetPlayerNameTexts(TextSlots, LocalStartIndex, IsCurrentSongDuet and (LocalPlayerCount >= 3));
   SetTextVisibility(TextSlots, LocalPlayerCount, true);
 
-  if IsCurrentSongDuet and (LocalPlayerCount = 2) then
-    SetLyricsDuetColors(LocalStartIndex);
+  // Voice colors remain stable when players choose or share voices.
 
   // retrieve current lyrics time, we have to store the value to avoid
   // that min- and sec-values do not match
@@ -747,38 +727,18 @@ begin
   ScreenSing.Text[TextTimeText].Text := Format('%s%.2d:%.2d', [DisplayPrefix, DisplayMin, DisplaySec]);
   ScreenSing.Text[TextTimeText].Visible := ScreenSing.Settings.TimeBarVisible;
 
-  LastLineSungToEnd := false;
-  //the song was sung to the end?
-  if not ScreenSing.SungToEnd and ((not CurrentSong.isDuet) or (PlayersPlay = 1)) and
-      not ScreenSong.RapToFreestyle then
+  // Only voices actually assigned to players determine scoring completion.
+  if not ScreenSing.SungToEnd then
   begin
-    Line := ScreenSing.Lyrics.GetUpperLine();
-    if Line.LastLine then
+    if not CurrentSong.isDuet then
+      ScreenSing.SungToEnd := ScoringFinished(0)
+    else
     begin
-      LastLineSungToEnd := true;
-      for T := 0 to High(Line.Words) do
-      begin
-        if (CurLyricsTime < GetTimeFromBeat(Line.Words[T].Start + Line.Words[T].Length)) and
-           (not Line.Words[T].Freestyle) then
-          LastLineSungToEnd := false;
-      end;
+      ScreenSing.SungToEnd := true;
+      for ScorePlayerIndex := 0 to PlayersPlay - 1 do
+        if not ScoringFinished(Player[ScorePlayerIndex].Track) then
+          ScreenSing.SungToEnd := false;
     end;
-    if LastLineSungToEnd then
-      ScreenSing.SungToEnd := true;
-  end;
-
-  if not ScreenSing.SungToEnd and CurrentSong.isDuet and (PlayersPlay <> 1) and
-      not ScreenSong.RapToFreestyle then
-  begin
-    Line := ScreenSing.LyricsDuetP1.GetUpperLine();
-    LineDuet := ScreenSing.LyricsDuetP2.GetUpperLine();
-    if Line.LastLine and LineDuet.LastLine and
-        (Length(Line.Words) > 0) and (Length(LineDuet.Words) > 0) and
-        (CurLyricsTime >= GetTimeFromBeat(Line.Words[High(Line.Words)].Start +
-            Line.Words[High(Line.Words)].Length)) and
-        (CurLyricsTime >= GetTimeFromBeat(LineDuet.Words[High(LineDuet.Words)].Start +
-            LineDuet.Words[High(LineDuet.Words)].Length)) then
-      ScreenSing.SungToEnd := true;
   end;
 
   // for medley-mode:
@@ -831,6 +791,30 @@ begin
   if DrawScorePanel then
     HidePlayerAvatarsForScorePanel;
 
+  // Match both themed lyric banks to every visible voice, including last-line fades.
+  if IsCurrentSongDuet then
+  begin
+    ScreenSing.LayoutVoiceLyrics;
+    ScreenSing.Statics[StaticLyricsBar].Visible := false;
+    ScreenSing.Statics[StaticLyricsBarDuet].Visible := false;
+    if ScreenSing.Settings.LyricsVisible then
+      for VoiceIndex := 0 to High(ScreenSing.DisplayedVoices) do
+        if ScreenSing.VoiceLyrics[ScreenSing.DisplayedVoices[VoiceIndex]].HasVisibleText(LyricsState.MidBeat) then
+        begin
+          if ScreenSing.DisplayedVoiceBanks[VoiceIndex] = 0 then
+            ScreenSing.Statics[StaticLyricsBar].Visible := true
+          else ScreenSing.Statics[StaticLyricsBarDuet].Visible := true;
+        end;
+  end
+  else
+  begin
+    ScreenSing.Statics[StaticLyricsBar].Visible := ScreenSing.Settings.LyricsVisible and
+      ScreenSing.Lyrics.HasVisibleText(LyricsState.MidBeat);
+    ScreenSing.Statics[StaticLyricsBarDuet].Visible := false;
+  end;
+  ScreenSing.Statics[StaticTimeBar].Visible := ScreenSing.Settings.TimeBarVisible;
+  ScreenSing.Statics[StaticTimeProgress].Visible := ScreenSing.Settings.TimeBarVisible;
+
   // draw static menu (FG)
   ScreenSing.DrawFG;
 
@@ -876,20 +860,17 @@ begin
     DrawInfoLyricBar;
 
   // draw scores
-  if DrawScorePanel then
+  if DrawScorePanel or ScreenSing.Settings.FeedbackVisible then
   begin
-    ScreenSing.Scores.Draw;
-    DrawPlayerAvatarsAfterScorePanel;
+    // Keep popup/score animation state advancing even when its rendering is hidden.
+    ScreenSing.Scores.Draw(DrawScorePanel, ScreenSing.Settings.FeedbackVisible);
+    if DrawScorePanel then DrawPlayerAvatarsAfterScorePanel;
   end;
 
-  // always draw custom items
-  ScreenSing.Statics[StaticLyricsBar].Visible := ScreenSing.Settings.LyricsVisible;
-  ScreenSing.Statics[StaticLyricsBarDuet].Visible := ScreenSing.Settings.LyricsVisible and IsCurrentSongDuet and (PlayersPlay <> 1);
-  ScreenSing.Statics[StaticTimeBar].Visible := ScreenSing.Settings.TimeBarVisible;
   SingDraw;
 
   // goldennotestarstwinkle
-  GoldenRec.SpawnRec;
+  if (PlayersPlay > 0) and ScreenSing.Settings.FeedbackVisible then GoldenRec.SpawnRec;
 
   FadeMessage();
 
@@ -950,6 +931,7 @@ var
   w, h: real;
   CountDownText:  UTF8String;
 begin
+  if not ScreenSing.Settings.FeedbackVisible then Exit;
   t := frac(timeDiff);
 
   h := 300*t*ScreenH/RenderH;

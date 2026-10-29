@@ -62,12 +62,9 @@ uses
   UScreenOptionsAdvanced,
   UScreenOptionsNetwork,
   UScreenOptionsWebcam,
-  UScreenOptionsJukebox,
   UScreenSong,
+  UScreenContinuousPlayback,
   UScreenSingController,
-  UScreenJukebox,
-  UScreenJukeboxOptions,
-  UScreenJukeboxPlaylist,
   UScreenScore,
   UScreenHighScores,
   UScreenEditSub,
@@ -137,11 +134,8 @@ var
   ScreenMain:         TScreenMain;
   ScreenName:         TScreenName;
   ScreenSong:         TScreenSong;
+  ScreenContinuousPlayback: TScreenContinuousPlayback;
   ScreenSing:         TScreenSingController;
-
-  ScreenJukebox:         TScreenJukebox;
-  ScreenJukeboxOptions:  TScreenJukeboxOptions;
-  ScreenJukeboxPlaylist: TScreenJukeboxPlaylist;
 
   ScreenScore:        TScreenScore;
   ScreenHighScores:   TScreenHighScores;
@@ -156,7 +150,6 @@ var
   ScreenOptionsAdvanced:  TScreenOptionsAdvanced;
   ScreenOptionsNetwork:   TScreenOptionsNetwork;
   ScreenOptionsWebcam:    TScreenOptionsWebcam;
-  ScreenOptionsJukebox:   TScreenOptionsJukebox;
   ScreenEditSub:      TScreenEditSub;
   ScreenAbout:        TScreenAbout;
 
@@ -235,7 +228,6 @@ var
   FullScreen:     boolean;
 
   Tex_TimeProgress: TTexture;
-  Tex_JukeboxTimeProgress: TTexture;
   
   //Sing Bar Mod
   Tex_SingBar_Back:  TTexture;
@@ -321,6 +313,7 @@ uses
   UDisplay,
   UCommandLine,
   UPathUtils,
+  UMenuBackgroundVideo,
   UThemes;
 
 var
@@ -366,7 +359,6 @@ begin
 
   //TimeBar mod
   Tex_TimeProgress := Renderer.LoadTexture(Skin.GetTextureFileName('TimeBar'));
-  Tex_JukeboxTimeProgress := Renderer.LoadTexture(Skin.GetTextureFileName('JukeboxTimeBar'));
   //eoa TimeBar mod
 
   //SingBar Mod
@@ -1015,19 +1007,17 @@ procedure LoadScreens(Title: string);
   end;
 
 begin
+  // Theme/language reloads must retain the executable-aware startup title.
+  if Log.Title <> '' then Title := Log.Title;
   SetLoadingTitle('Loading ScreenMain & ScreenName');
   ScreenMain :=             TScreenMain.Create;
   ScreenName :=             TScreenName.Create;
   SetLoadingTitle('Loading ScreenSong');
   ScreenSong :=             TScreenSong.Create;
-  SetLoadingTitle('Loading ScreenSongMenu & ScreenJukebox');
+  ScreenContinuousPlayback := TScreenContinuousPlayback.Create;
+  SetLoadingTitle('Loading ScreenSongMenu');
+
   ScreenSongMenu :=             TScreenSongMenu.Create;
-  ScreenJukebox :=             TScreenJukebox.Create;
-  Log.BenchmarkEnd(3); Log.LogBenchmark('====> Screen Jukebox', 3); Log.BenchmarkStart(3);
-  ScreenJukeboxOptions :=   TScreenJukeboxOptions.Create;
-  Log.BenchmarkEnd(3); Log.LogBenchmark('====> Screen Jukebox Options', 3); Log.BenchmarkStart(3);
-  ScreenJukeboxPlaylist :=   TScreenJukeboxPlaylist.Create;
-  Log.BenchmarkEnd(3); Log.LogBenchmark('====> Screen Jukebox Playlist', 3); Log.BenchmarkStart(3);
   ScreenHighScores :=       TScreenHighScores.Create;
   SetLoadingTitle('Loading ScreenOptions & ScreenOptionsGame');
   ScreenOptions :=          TScreenOptions.Create;
@@ -1047,8 +1037,6 @@ begin
   ScreenOptionsNetwork :=    TScreenOptionsNetwork.Create;
   SetLoadingTitle('Loading ScreenOptionsWebCam');
   ScreenOptionsWebcam  :=    TScreenOptionsWebcam.Create;
-  SetLoadingTitle('Loading ScreenOptionsJukebox');
-  ScreenOptionsJukebox :=    TScreenOptionsJukebox.Create;
   SetLoadingTitle('Loading ScreenEditSub');
   ScreenEditSub :=          TScreenEditSub.Create;
   SetLoadingTitle('Loading ScreenAbout');
@@ -1087,14 +1075,17 @@ end;
 
 function LoadingThreadFunction: integer;
 begin
-  LoadScreens(USCEVersionStr);
+  LoadScreens(Log.Title);
   Result:= 1;
 end;
 
 procedure UnloadScreens;
 begin
+  // Release cached video textures while the renderer and GL context still exist.
+  ClearMenuVideoCache(true);
   FreeAndNil(ScreenMain);
   FreeAndNil(ScreenName);
+  FreeAndNil(ScreenContinuousPlayback);
   FreeAndNil(ScreenSong);
   //ScreenSing.Free;
   FreeAndNil(ScreenScore);
@@ -1109,11 +1100,7 @@ begin
   FreeAndNil(ScreenOptionsAdvanced);
   FreeAndNil(ScreenOptionsNetwork);
   FreeAndNil(ScreenOptionsWebcam);
-  FreeAndNil(ScreenOptionsJukebox);
   FreeAndNil(ScreenEditSub);
-  FreeAndNil(ScreenJukebox);
-  FreeAndNil(ScreenJukeboxOptions);
-  FreeAndNil(ScreenJukeboxPlaylist);
   FreeAndNil(ScreenHighScores);
   FreeAndNil(ScreenAbout);
   //ScreenSingModi.Free;
