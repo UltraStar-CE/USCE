@@ -197,6 +197,10 @@ begin
 
         if Interaction = 3 then
           FadeTo(@ScreenOptions, SoundLib.Start);
+        if Interaction = 4 then
+          FadeTo(@ScreenAbout, SoundLib.Start);
+        if Interaction = 5 then
+          Result := false;
       end;
       {**
        * Up and Down could be done at the same time,
@@ -247,6 +251,9 @@ begin
     if Length(Button[High(Button)].Text) > 0 then
       Button[High(Button)].Text[0].Text := Theme.Main.Description[I];
   end;
+
+  AddButton(Theme.Main.ButtonAbout);
+  AddButton(Theme.Main.ButtonExit);
 
   Interaction := 0;
 
