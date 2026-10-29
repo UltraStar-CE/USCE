@@ -79,3 +79,8 @@ __pycache__/
 
 # Separate theme checkout and package staging
 /.release-themes/
+
+# Local song annotations
+/game/song-problems.json
+/game/song-problems.json.tmp
+/game/song-problems.json.bak
