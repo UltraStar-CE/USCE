@@ -1146,6 +1146,7 @@ var
   PreviewEnd: real;
 begin
   inherited;
+  PreviewEnd := 0;
   if Goto_SingScreen and (CatSongs.Selected >= 0) and
      (CatSongs.Selected < Length(CatSongs.Song)) then
     ScreenSong.StartFinishedSong(CatSongs.Song[CatSongs.Selected], PreviewEnd);
