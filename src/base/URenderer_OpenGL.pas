@@ -81,6 +81,8 @@ type
       CaptureWidth, CaptureHeight: integer;
       CapturePreviousFBO: GLint;
       CaptureViewport: TViewPortArray;
+      CaptureActive, CaptureBlend, CapturePreviousBlend: boolean;
+      CaptureBlendFactors: array[0..3] of GLint;
       SupportsMappedBuffer: boolean;
       SupportsMipMap: boolean;
       GlyphTextureFormat: GLint;
@@ -1669,16 +1671,24 @@ begin
 end;
 
 function TRenderer_OpenGLBase.BeginTextureCapture(Texture: TTexture; Width, Height: integer): boolean;
+var PreviousRenderbuffer: GLint;
 begin
   Result := false;
   if not SupportsFBO then Exit;
   glGetIntegerv(GL_FRAMEBUFFER_BINDING, @CapturePreviousFBO);
   CaptureViewport := ViewPortArray;
+  CapturePreviousBlend := GetBlend;
+  CaptureBlend := CapturePreviousBlend;
+  glGetIntegerv(GL_BLEND_SRC_RGB, @CaptureBlendFactors[0]);
+  glGetIntegerv(GL_BLEND_DST_RGB, @CaptureBlendFactors[1]);
+  glGetIntegerv(GL_BLEND_SRC_ALPHA, @CaptureBlendFactors[2]);
+  glGetIntegerv(GL_BLEND_DST_ALPHA, @CaptureBlendFactors[3]);
   if CaptureFBO = 0 then glGenFramebuffers(1, @CaptureFBO);
   if CaptureDepth = 0 then glGenRenderbuffers(1, @CaptureDepth);
   glBindFramebuffer(GL_FRAMEBUFFER, CaptureFBO);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
     TTexture_OpenGL(Texture).TexID, 0);
+  glGetIntegerv(GL_RENDERBUFFER_BINDING, @PreviousRenderbuffer);
   glBindRenderbuffer(GL_RENDERBUFFER, CaptureDepth);
   if (Width <> CaptureWidth) or (Height <> CaptureHeight) then
   begin
@@ -1687,21 +1697,25 @@ begin
     CaptureHeight := Height;
   end;
   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, CaptureDepth);
+  glBindRenderbuffer(GL_RENDERBUFFER, PreviousRenderbuffer);
   if glCheckFramebufferStatus(GL_FRAMEBUFFER) <> GL_FRAMEBUFFER_COMPLETE then
   begin
     glBindFramebuffer(GL_FRAMEBUFFER, CapturePreviousFBO);
     Exit;
   end;
-  // Drawing over transparent black produces premultiplied RGB and coverage alpha.
-  glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+  CaptureActive := true;
+  SetBlend(CaptureBlend);
   Result := true;
 end;
 
 procedure TRenderer_OpenGLBase.EndTextureCapture;
 begin
+  CaptureActive := false;
   glBindFramebuffer(GL_FRAMEBUFFER, CapturePreviousFBO);
   SetViewPort(CaptureViewport[0], CaptureViewport[1], CaptureViewport[2], CaptureViewport[3]);
-  SetPremultipliedAlpha(false);
+  SetBlend(CapturePreviousBlend);
+  glBlendFuncSeparate(CaptureBlendFactors[0], CaptureBlendFactors[1],
+      CaptureBlendFactors[2], CaptureBlendFactors[3]);
 end;
 
 procedure TRenderer_OpenGLBase.SetPremultipliedAlpha(Enabled: boolean);
@@ -1712,6 +1726,17 @@ end;
 
 procedure TRenderer_OpenGLBase.SetBlend(Enabled: boolean);
 begin
+  if CaptureActive then
+  begin
+    CaptureBlend := Enabled;
+    glEnable(GL_BLEND);
+    if Enabled then
+      glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA)
+    else
+      // Unblended draws replace the pixel, but still store premultiplied RGB.
+      glBlendFuncSeparate(GL_SRC_ALPHA, GL_ZERO, GL_ONE, GL_ZERO);
+    Exit;
+  end;
   if (Enabled) then
     glEnable(GL_BLEND)
   else
@@ -1723,7 +1748,8 @@ end;
 
 function TRenderer_OpenGLBase.GetBlend(): boolean;
 begin
-  Result := glIsEnabled(GL_BLEND) = GL_TRUE;
+  if CaptureActive then Result := CaptureBlend
+  else Result := glIsEnabled(GL_BLEND) = GL_TRUE;
 end;
 
 function TRenderer_OpenGLBase.LoadTexture(Data: PByte; W, H: integer; const Identifier: IPath; Typ: TTextureType; UseMipmaps: boolean): TTexture;
@@ -1814,6 +1840,7 @@ end;
 
 procedure TRenderer_OpenGLBase.SetViewPort(x, y: integer; width, height: cardinal);
 begin
+  fViewportX := x;
   glViewPort(x, y, width, height);
   ViewPortArray[0] := x;
   ViewPortArray[1] := y;
@@ -1895,8 +1922,7 @@ var
 begin
   WindowBoundary := Round(X * VertexW);
   NewX := (WindowBoundary * PixelW);
-  if (ScreenAct = 2) then
-    WindowBoundary := WindowBoundary + ScreenWPerScreen;
+  WindowBoundary := WindowBoundary + ViewPortArray[0];
 
   // Partial update of the projection matrix based on the values that are actually changing
   // see SetOrthographicProjection() function for equations
@@ -1904,13 +1930,13 @@ begin
   begin
     ProjectionMatrix.data[0,0] := 2 / (RenderW - NewX);
     ProjectionMatrix.data[0,3] := -1 * ((RenderW + NewX) / (RenderW - NewX));
-    glViewport(WindowBoundary, ViewPortArray[1], (ScreenAct * ScreenWPerScreen) - WindowBoundary, ViewPortArray[3]);
+    glViewport(WindowBoundary, ViewPortArray[1], ViewPortArray[0] + ViewPortArray[2] - WindowBoundary, ViewPortArray[3]);
   end
   else
   begin
     ProjectionMatrix.data[0,0] := 2 / NewX;
     ProjectionMatrix.data[0,3] := -1;
-    glViewPort((ScreenAct - 1) * ScreenWPerScreen, ViewPortArray[1], WindowBoundary - (ScreenAct - 1) * ScreenWPerScreen, ViewPortArray[3]);
+    glViewPort(ViewPortArray[0], ViewPortArray[1], WindowBoundary - ViewPortArray[0], ViewPortArray[3]);
   end;
   UpdateTransformText := true;
   {$IFDEF DEBUG_MODE}
