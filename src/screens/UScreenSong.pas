@@ -3337,6 +3337,7 @@ var
   end;
 
 begin
+  UpdateTransitionPreview;
 
   FadeMessage();
   ReloadCurrentPlaylist(false);
