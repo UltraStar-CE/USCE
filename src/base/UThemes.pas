@@ -3160,21 +3160,37 @@ begin
 end;
 
 procedure TTheme.ThemeLoadHighScores;
+  function SectionName(const CurrentName, LegacyName: string): string;
+  begin
+    if ResolveThemeFile(CurrentName) <> nil then
+      Result := CurrentName
+    else
+      Result := LegacyName;
+  end;
 begin
-  ThemeLoadBasic(HighScores, 'HighScores');
-  ThemeLoadText(HighScores.TextTitle,            'HighScoresTextTitle');
-  ThemeLoadText(HighScores.TextWhereAmI,         'HighScoresTextWhereAmI');
-  ThemeLoadText(HighScores.TextArtistTitle,      'HighScoresTextArtistTitle');
-  ThemeLoadText(HighScores.TextDifficultyLabel,  'HighScoresTextDifficultyLabel');
-  ThemeLoadText(HighScores.TextDifficulty,       'HighScoresTextDifficulty');
-  ThemeLoadText(HighScores.TextContinue,         'HighScoresTextContinue');
-  ThemeLoadText(HighScores.TextNavigate,         'HighScoresTextNavigate');
+  ThemeLoadBasic(HighScores, SectionName('HighScores', 'Top5'));
+  ThemeLoadText(HighScores.TextTitle,            SectionName('HighScoresTextTitle', 'Top5Text1'));
+  ThemeLoadText(HighScores.TextWhereAmI,         SectionName('HighScoresTextWhereAmI', 'Top5Text2'));
+  ThemeLoadText(HighScores.TextArtistTitle,      SectionName('HighScoresTextArtistTitle', 'Top5TextArtistTitle'));
+  ThemeLoadText(HighScores.TextDifficultyLabel,  SectionName('HighScoresTextDifficultyLabel', 'Top5Text4'));
+  ThemeLoadText(HighScores.TextDifficulty,       SectionName('HighScoresTextDifficulty', 'Top5TextLevel'));
+  ThemeLoadText(HighScores.TextContinue,         SectionName('HighScoresTextContinue', 'Top5Text3'));
+  ThemeLoadText(HighScores.TextNavigate,         SectionName('HighScoresTextNavigate', 'Top5Text5'));
   ThemeLoadHighScoreList(HighScores.List,        'HighScoresListArea');
-  ThemeLoadStatic(HighScores.RowNumberStatic,    'HighScoresRowNumberStatic');
-  ThemeLoadText(HighScores.RowNumberText,        'HighScoresRowNumberText');
-  ThemeLoadText(HighScores.RowNameText,          'HighScoresRowNameText');
-  ThemeLoadText(HighScores.RowScoreText,         'HighScoresRowScoreText');
-  ThemeLoadText(HighScores.RowDateText,          'HighScoresRowDateText');
+  ThemeLoadStatic(HighScores.RowNumberStatic,    SectionName('HighScoresRowNumberStatic', 'Top5StaticNumber1'));
+  ThemeLoadText(HighScores.RowNumberText,        SectionName('HighScoresRowNumberText', 'Top5TextNumber1'));
+  ThemeLoadText(HighScores.RowNameText,          SectionName('HighScoresRowNameText', 'Top5TextName1'));
+  ThemeLoadText(HighScores.RowScoreText,         SectionName('HighScoresRowScoreText', 'Top5TextScore1'));
+  ThemeLoadText(HighScores.RowDateText,          SectionName('HighScoresRowDateText', 'Top5TextDate1'));
+  // Legacy themes supplied five fixed rows instead of a reusable row template.
+  if (ResolveThemeFile('HighScoresListArea') = nil) and
+     (ResolveThemeFile('Top5TextName5') <> nil) then
+    HighScores.List.BottomY := Max(HighScores.List.BottomY,
+      ReadInteger(GetSectionList('Top5TextName5'), 'Y', 390) + HighScores.RowNameText.Size);
+  // A missing or invalid row template must not cause division by zero at startup.
+  HighScores.RowNameText.Size := Max(1, HighScores.RowNameText.Size);
+  if HighScores.TextTitle.Text = 'SING_TOP_5_CHARTS' then
+    HighScores.TextTitle.Text := Language.Translate('SING_HIGH_SCORES_TITLE');
 end;
 
 procedure TTheme.ThemeLoadText(var ThemeText: TThemeText; const Name: string);
