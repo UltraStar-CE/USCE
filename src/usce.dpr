@@ -170,6 +170,7 @@ uses
   URecord           in 'base\URecord.pas',
   UTime             in 'base\UTime.pas',
   USong             in 'base\USong.pas',
+  USongProblems     in 'base\USongProblems.pas',
   USongs            in 'base\USongs.pas',
   UAge              in 'base\UAge.pas',
   UFilterTerms      in 'base\UFilterTerms.pas',

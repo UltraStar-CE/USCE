@@ -1154,6 +1154,7 @@ type
     SongJumpto:       TThemeSongJumpTo;
     DuplicateSongs: TThemeDuplicateSongs;
     BoldSelection: boolean;
+    SongProblemIndicator: TThemeText;
     //Party Screens:
     PartyNewRound:    TThemePartyNewRound;
     PartyScore:       TThemePartyScore;
@@ -1971,6 +1972,14 @@ begin
           BaseThemeInis[I].ReadString('Theme', 'ButtonAlpha', ''), DefaultButtonAlpha);
     DefaultButtonAlpha := EnsureRange(ReadFloat(GetSectionList('Theme'),
         'ButtonAlpha', DefaultButtonAlpha), 0.0, 1.0);
+    ThemeLoadText(SongProblemIndicator, 'SongProblemIndicator');
+    if ResolveThemeFile('SongProblemIndicator') = nil then
+    begin
+      SongProblemIndicator.X := 790; SongProblemIndicator.Y := 8;
+      SongProblemIndicator.Align := 2; SongProblemIndicator.Size := 22;
+      SongProblemIndicator.ColR := 1; SongProblemIndicator.ColG := 0.7;
+      SongProblemIndicator.Text := Language.Translate('SONG_PROBLEM_FLAGGED');
+    end;
     if ThemeIni.ReadString('Theme', 'Name', '') <> '' then
     begin
       LayoutScreenW := ThemeIni.ReadInteger('Theme', 'ScreenW', 0);

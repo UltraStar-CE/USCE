@@ -42,7 +42,8 @@ uses
   UPath,
   UMusic,
   URenderer,
-  UHookableEvent;
+  UHookableEvent,
+  UMenuText, USong, USongProblems;
 
 type
   TDisplay = class
@@ -67,6 +68,13 @@ type
       NextFPSSwap:   cardinal;
 
       OSD_LastError: string;
+      ProblemFlags: TSongProblems;
+      ProblemIndicator: TText;
+      ProblemFlagsUnavailable: boolean;
+      function ProblemSong: TSong;
+      function EnsureProblemFlags: boolean;
+      procedure DrawSongProblem;
+    private
 
       { software cursor data }
       Cursor_X:              double;
@@ -164,6 +172,7 @@ const
 implementation
 
 uses UDuplicateSongUI, UMenuBackground,
+  UPlatform, USongs, UThemes, UNote,
   UText,
   StrUtils,
   UCommandLine,
@@ -288,6 +297,8 @@ end;
 
 destructor TDisplay.Destroy;
 begin
+  ProblemIndicator.Free;
+  ProblemFlags.Free;
   FadeTex[0].Free;
   FadeTex[1].Free;
   OpaqueFadeTex[0].Free;
@@ -535,7 +546,10 @@ begin
     end;
 
     if not BlackScreen then
+    begin
+      DrawSongProblem;
       DrawCursor;
+    end;
   end; // for
 end;
 
@@ -675,8 +689,74 @@ begin
     Result := True;
 end;
 
-function TDisplay.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown : boolean; Repeated : boolean = false): boolean;
+function TDisplay.ProblemSong: TSong;
 begin
+  Result := nil;
+  if NextScreen <> nil then Exit;
+  if (CurrentScreen = @ScreenSong) or
+     ((CurrentScreen = @ScreenName) and ScreenName.Goto_SingScreen) then
+  begin
+    if ScreenSongMenu.Visible or ScreenSongJumpto.Visible then Exit;
+    if (CatSongs.Selected >= 0) and (CatSongs.Selected < Length(CatSongs.Song)) and
+       not CatSongs.Song[CatSongs.Selected].Main then Result := CatSongs.Song[CatSongs.Selected];
+  end
+  else if (CurrentScreen = @ScreenSing) or (CurrentScreen = @ScreenScore) or
+          (CurrentScreen = @ScreenHighScores) then Result := CurrentSong;
+end;
+
+function TDisplay.EnsureProblemFlags: boolean;
+begin
+  if (ProblemFlags = nil) and not ProblemFlagsUnavailable then
+    try
+      ProblemFlags := TSongProblems.Create(Platform.GetGameUserPath.Append('song-problems.json'));
+    except
+      on E: Exception do
+      begin
+        ProblemFlagsUnavailable := true;
+        Log.LogError(E.Message, 'SongProblems');
+        ScreenPopupError.ShowPopup(Language.Translate('SONG_PROBLEM_SAVE_FAILED'));
+      end;
+    end;
+  Result := ProblemFlags <> nil;
+end;
+
+procedure TDisplay.DrawSongProblem;
+var Song: TSong; Style: TThemeText;
+begin
+  Song := ProblemSong;
+  if (Song = nil) or not EnsureProblemFlags then Exit;
+  if not ProblemFlags.IsFlagged(Song.Path.Append(Song.FileName)) then Exit;
+  Style := Theme.SongProblemIndicator;
+  if ProblemIndicator = nil then
+    ProblemIndicator := TText.Create(Style.X, Style.Y, Style.W, Style.H, Style.Font,
+      Style.Style, Style.Size, Style.ColR, Style.ColG, Style.ColB, Style.Align,
+      Style.Text, false, 0, Style.Z, false);
+  ProblemIndicator.X := Style.X; ProblemIndicator.Y := Style.Y;
+  ProblemIndicator.Size := Style.Size; ProblemIndicator.Align := Style.Align;
+  ProblemIndicator.ColR := Style.ColR; ProblemIndicator.ColG := Style.ColG;
+  ProblemIndicator.ColB := Style.ColB; ProblemIndicator.Text := Style.Text;
+  ProblemIndicator.Draw;
+end;
+
+function TDisplay.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown : boolean; Repeated : boolean = false): boolean;
+var Song: TSong;
+begin
+  if (PressedKey = SDLK_INSERT) and (SDL_GetModState and (KMOD_CTRL or KMOD_ALT or KMOD_SHIFT) = 0) then
+  begin
+    Song := ProblemSong;
+    if Song <> nil then
+    begin
+      if PressedDown and not Repeated and EnsureProblemFlags then
+        try ProblemFlags.Toggle(Song.Path.Append(Song.FileName));
+        except on E: Exception do
+          begin
+            Log.LogError(E.Message, 'SongProblems');
+            ScreenPopupError.ShowPopup(Language.Translate('SONG_PROBLEM_SAVE_FAILED'));
+          end;
+        end;
+      Exit(true);
+    end;
+  end;
   if (assigned(NextScreen)) then
     Result := NextScreen^.ParseInput(PressedKey, CharCode, PressedDown, Repeated)
   else if (assigned(CurrentScreen)) then
