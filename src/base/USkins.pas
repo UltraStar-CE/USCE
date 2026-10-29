@@ -281,10 +281,10 @@ var
 begin
   {$IFDEF DARWIN}
   // Mac keyboards label the Alt key Option
-  if (TextureName = 'ButtonAlt') then
+  if SameText(Trim(TextureName), 'ButtonAlt') then
   begin
     Result := GetTextureFileName('ButtonAltMac');
-    if (Result.IsSet) then
+    if Result.IsSet and Result.Exists then
       Exit;
   end;
   {$ENDIF}
