@@ -320,7 +320,7 @@ type
       procedure ResetScrollList;
 
       procedure PreservePreviewForReturn;
-      procedure StartFinishedSong(Song: TSong; out EndPosition: real);
+      procedure StartFinishedSong(Song: TSong; var EndPosition: real);
       procedure OpenContinuousFromMainMenu;
   end;
 
@@ -4050,14 +4050,14 @@ begin
     (TransitionAction in [2, 3]);
 end;
 
-procedure TScreenSong.StartFinishedSong(Song: TSong; out EndPosition: real);
+procedure TScreenSong.StartFinishedSong(Song: TSong; var EndPosition: real);
 var PreviewPos: real; Volume: single;
 begin
-  EndPosition := 0;
   if (Song = nil) or Song.Main or not AudioPlayback.Finished or
      SuppressTransitionPreview(Song) then Exit;
   // No opened song means there was no ended stream to resume.
   if AudioPlayback.Length <= 0 then Exit;
+  EndPosition := 0;
   TransitionSong := Song;
   TransitionAction := Ini.EndedSongAction;
   AudioPlayback.Close;
@@ -4458,6 +4458,7 @@ end;
 
 procedure TScreenSong.MarkSongStarted;
 begin
+  SoundLib.PauseBgMusic;
   TransitionSong := nil;
   SongReturnPending := (Mode = smNormal) and not ScreenContinuousPlayback.Session.Active; // only normal mode returns to song selection
 end;
