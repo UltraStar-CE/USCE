@@ -191,6 +191,8 @@ procedure TScreenHighScores.ChangeEntryCount(Delta: integer);
 var
   NewEntryCount: integer;
 begin
+  if EntryColumnOffset > 0 then
+    Delta := Delta * 2;
   NewEntryCount := EntryCount + Delta;
   if (NewEntryCount < 5) then
     NewEntryCount := 5
