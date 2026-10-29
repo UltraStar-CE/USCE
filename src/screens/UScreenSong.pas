@@ -2100,7 +2100,7 @@ begin
   SearchOverlay := TMenu.Create;
   SearchOverlay.AddText(Theme.Song.SearchText);
   ModernFooter := TMenu.Create;
-  for I := 0 to High(Theme.Song.ModernFooter) do ModernFooter.AddText(Theme.Song.ModernFooter[I]);
+  for I := 0 to High(Theme.Song.ModernFooter) do ModernFooter.AddKeyHint(Theme.Song.ModernFooter[I]);
 
   TextArtist := AddText(Theme.Song.TextArtist);
   TextTitle  := AddText(Theme.Song.TextTitle);

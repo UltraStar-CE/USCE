@@ -151,6 +151,7 @@ type
 
       // text
       function AddText(ThemeText: TThemeText): integer; overload;
+      function AddKeyHint(ThemeText: TThemeText): integer;
       function AddText(X, Y: real; const Text_: UTF8String): integer; overload;
       function AddText(X, Y: real; Font, Style: integer; Size, ColR, ColG, ColB: real; const Text: UTF8String): integer; overload;
       function AddText(X, Y, W, H: real; Font, Style: integer; Size, ColR, ColG, ColB: real; Align: integer; const Text_: UTF8String; Reflection_: boolean; ReflectionSpacing_: real; Z : real; Writable: boolean): integer; overload;
@@ -975,6 +976,14 @@ begin
   StaticsList[StatNum].ReflectionSpacing := ReflectionSpacing;
 
   Result := StatNum;
+end;
+
+function TMenu.AddKeyHint(ThemeText: TThemeText): integer;
+begin
+  Result := AddText(ThemeText);
+  // Rich text is opt-in for trusted theme/language hints, not song metadata.
+  Text[Result].InlineMarkup := true;
+  Text[Result].Text := ThemeText.Text;
 end;
 
 function TMenu.AddText(ThemeText: TThemeText): integer;

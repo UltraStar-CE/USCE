@@ -85,6 +85,8 @@ Themes can override `[SongSearchPanel]`, `[SongSearchText]` and
 `[SongModernFooterText1]` onwards using the normal static/text fields. Search
 panel coordinates and hit testing share the same scale mode. The Modern legend
 replaces key hints while retaining the theme's existing footer bars.
+`TMenu.AddKeyHint` enables the existing `**bold**` text markup for trusted footer
+hints, so keys can be bold and action labels regular. Other text stays literal.
 
 ### English fallback coverage
 
