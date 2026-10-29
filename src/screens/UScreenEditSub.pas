@@ -366,10 +366,10 @@ type
       FVocalsPitchStepSec:     Single;
       FVocalsPitchStartSec:    Single;
       FPreviewScoreTrack:      Integer;
-      FPreviewLineNormalScoreByTrack: array[0..1] of array of Double;
-      FPreviewLineGoldenScoreByTrack: array[0..1] of array of Double;
-      FPreviewLineBonusScoreByTrack:  array[0..1] of array of Double;
-      FPreviewLineScoreReadyByTrack:  array[0..1] of array of Boolean;
+      FPreviewLineNormalScoreByTrack: array[0..SupportedSongVoices - 1] of array of Double;
+      FPreviewLineGoldenScoreByTrack: array[0..SupportedSongVoices - 1] of array of Double;
+      FPreviewLineBonusScoreByTrack:  array[0..SupportedSongVoices - 1] of array of Double;
+      FPreviewLineScoreReadyByTrack:  array[0..SupportedSongVoices - 1] of array of Boolean;
       FPreviewLineNormalScore: array of Double;
       FPreviewLineGoldenScore: array of Double;
       FPreviewLineBonusScore:  array of Double;
@@ -3352,6 +3352,7 @@ begin
   TargetLine := 0;
   for Line := 0 to High(CurrentSong.Tracks[Voice].Lines) do
     if CurrentSong.Tracks[Voice].Lines[Line].StartBeat <= Beat then TargetLine := Line;
+  RestoreStandardPlayback(false);
   GoToLineAndBeat(Voice, TargetLine, Beat);
   EnsurePreviewScoreCache(CurrentTrack);
   if FPreviewBuildComplete and not FAnalysisThreadRunning and HasVocalsPreviewPlayback then
@@ -5432,6 +5433,7 @@ begin
 end;
 
 procedure TScreenEditSub.ClearVocalsWaveformCache(const ClearPreview: Boolean = true);
+var TrackIndex: integer;
 begin
   if Assigned(FVocalsPreviewPlaybackStream) then
   begin
@@ -5451,14 +5453,13 @@ begin
   if ClearPreview then
   begin
     FPreviewScoreTrack := -1;
-    SetLength(FPreviewLineNormalScoreByTrack[0], 0);
-    SetLength(FPreviewLineNormalScoreByTrack[1], 0);
-    SetLength(FPreviewLineGoldenScoreByTrack[0], 0);
-    SetLength(FPreviewLineGoldenScoreByTrack[1], 0);
-    SetLength(FPreviewLineBonusScoreByTrack[0], 0);
-    SetLength(FPreviewLineBonusScoreByTrack[1], 0);
-    SetLength(FPreviewLineScoreReadyByTrack[0], 0);
-    SetLength(FPreviewLineScoreReadyByTrack[1], 0);
+    for TrackIndex := 0 to High(FPreviewLineScoreReadyByTrack) do
+    begin
+      SetLength(FPreviewLineNormalScoreByTrack[TrackIndex], 0);
+      SetLength(FPreviewLineGoldenScoreByTrack[TrackIndex], 0);
+      SetLength(FPreviewLineBonusScoreByTrack[TrackIndex], 0);
+      SetLength(FPreviewLineScoreReadyByTrack[TrackIndex], 0);
+    end;
     SetLength(FPreviewLineNormalScore, 0);
     SetLength(FPreviewLineGoldenScore, 0);
     SetLength(FPreviewLineBonusScore, 0);
@@ -6408,7 +6409,7 @@ begin
     begin
       KaraokeStream := OpenDecodeStream(CurrentSong.Path.Append(CurrentSong.Vocals));
       if not Assigned(KaraokeStream) then
-        Exit;
+        raise Exception.Create('Could not decode the declared vocals stem');
     end
     else
     begin
