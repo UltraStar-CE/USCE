@@ -1,5 +1,6 @@
 'use strict';
 const crypto = require('node:crypto');
+const {forkReport} = require('./assessment-report.cjs');
 const {openDraft} = require('./usce-automation.cjs');
 const source = {owner: 'UltraStar-Deluxe', repo: 'USDX'};
 const prefix = 'automation/upstream-forks-';
@@ -99,11 +100,7 @@ async function trackForks({github, context, core, now = new Date()}) {
   const pr = await openDraft(github, context, {branch, sha, tree: commit.tree.sha}, prefix + identity,
     [{path, content: JSON.stringify(changes.checkpoint, null, 2) + '\n'}],
     'Assess active USDX fork changes',
-    'New fork work for assessment:\n\n' + changes.batch.map(f =>
-      '- [' + f.repository + '](' + f.compareUrl + '): ' + f.ahead + ' commits ahead of USDX').join('\n') +
-    '\n\nThese comparisons identify commits outside upstream history, not necessarily features missing from USCE. ' +
-    'The assessment records applicability, existing ports and related USCE issues or PRs. ' +
-    'This proposal contains metadata only and does not import code or post to other repositories.' +
+    forkReport(changes) +
     (unavailableForks.length ? '\n\nUnavailable forks, not assessed: ' + unavailableForks.join(', ') : ''), {reopenClosed: true});
   core.notice('Fork assessment: ' + pr.html_url);
 }

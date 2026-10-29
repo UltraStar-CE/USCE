@@ -1,5 +1,6 @@
 'use strict';
 const crypto = require('node:crypto');
+const {issueReport} = require('./assessment-report.cjs');
 const {TRACKS, openDraft} = require('./usce-automation.cjs');
 const {createdSince} = require('../doc/upstream/issues-watch.json');
 const digest = value => crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -86,12 +87,7 @@ async function trackIssues({github, context, core, now = new Date()}) {
     const pr = await openDraft(github, context, base, prefix + identity,
       [{path, content: JSON.stringify(changes.checkpoint, null, 2) + '\n'}],
       'Assess upstream ' + track.id + ' issue updates',
-      'Upstream reports for assessment:\n\n' + changes.batch.map(issue => '- ' + issue.source).join('\n') +
-      '\n\nThe assessment file contains source titles, description excerpts, labels, comment counts and prior decisions. ' +
-      'Assess applicability to current USCE, reproduction steps, workarounds and existing local reports. ' +
-      'Record a decision, links to related USCE issues or PRs, and the reason before merging. ' +
-      'An upstream report is not a verified USCE bug. This proposal does not change the game or post upstream.' +
-      (changes.remaining ? '\n\nAdditional changed reports remain for the next assessment.' : ''), {reopenClosed: true});
+      issueReport(changes, previous), {reopenClosed: true});
     core.notice('Upstream issue assessment: ' + pr.html_url);
   }
 }

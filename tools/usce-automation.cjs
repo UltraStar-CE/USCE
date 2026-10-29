@@ -1,6 +1,7 @@
 'use strict';
 
 // This module runs only from the trusted default branch, never a PR checkout.
+const {upstreamReport} = require('./assessment-report.cjs');
 const TRACKS = [
   {id: 'usdx', repo: 'UltraStar-Deluxe/USDX', ref: 'master', baseline: '05a3cb37c63361695b16e777f5b5678ebd873198'},
   {id: 'themes', repo: 'UltraStar-Deluxe/Themes', ref: 'main', baseline: 'f21d921f43e6cd430435a2cb5423f2bf5243f6c9'},
@@ -149,7 +150,7 @@ async function trackUpstream({github, context, core}) {
     const pr = await openDraft(github, context, base, name,
       [{path: 'doc/upstream/' + track.id + '-checkpoint.json', content: JSON.stringify(content, null, 2) + '\n'}],
       'Assess upstream ' + track.id + ' changes through ' + delta.to.slice(0, 12),
-      'Upstream changes: ' + delta.url + '\n\nThis assessment lists the upstream commits for review. It does not change the game. Each commit needs a linked adaptation PR or a reason for deferral before we advance the checkpoint. Original authorship and license notices stay with adapted changes.');
+      upstreamReport(delta));
     core.notice('Upstream assessment: ' + pr.html_url);
   }
 }
