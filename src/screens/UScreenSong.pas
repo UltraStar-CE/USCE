@@ -4585,7 +4585,8 @@ begin
   If (Button[NumberOfButtonInArray].Texture.IsEmpty) and Assigned(Button[NumberOfButtonInArray].Texture.Name) then
   begin
     Tex := Renderer.LoadTexture(Button[NumberOfButtonInArray].Texture.Name);
-    Tex.ScaleMode := lsCrop;
+    Tex.ScaleMode := Theme.Song.Cover.ScaleMode;
+    Tex.CornerRadius := Theme.Song.Cover.CornerRadius;
     Button[NumberOfButtonInArray].Texture.Free;
     Button[NumberOfButtonInArray].Texture := Tex;
   end;
