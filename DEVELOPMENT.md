@@ -60,6 +60,23 @@ A git version of this SVN can be found in the [legacy-sourceforge-svn-mirror](ht
 - Don't let anyone else tell you what to work on. Do what you like and be free!
 Thank you for helping improve the game.
 
+### Song selection keyboard and search layout
+
+Input options selects Modern (default) or Classic, stored as
+`Controller/SongKeyboard=Modern` or `Classic`. Modern typing adds an All row
+within the current filters or playlist. Ctrl+F opens the full filter dialog;
+that typed row becomes an ordinary editable filter. Esc clears the current
+typed query first. Commands use Ctrl, with Ctrl+Shift+F for custom medley.
+Classic keeps bare-letter commands and Alt artist/title jumps.
+
+Themes can override `[SongSearchPanel]`, `[SongSearchText]` and
+`[SongModernFooterText1]` onwards using the normal static/text fields. Search
+panel coordinates and hit testing share the same scale mode. The Blue skin uses
+a widescreen song background with the USCE logo at the right of the header. The Modern legend
+replaces key hints while retaining the theme's existing footer bars.
+`TMenu.AddKeyHint` enables the existing `**bold**` text markup for trusted footer
+hints, so keys can be bold and action labels regular. Other text stays literal.
+
 ### English fallback coverage
 
 English is the fallback for incomplete translations. New labels need an entry

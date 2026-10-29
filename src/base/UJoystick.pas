@@ -279,6 +279,7 @@ type
 
 var
   Joy:        TJoy;
+  ControllerKeyInput: boolean = false;
 
 procedure InitializeJoystick;
 procedure FinalizeJoyStick;

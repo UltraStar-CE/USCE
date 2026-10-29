@@ -235,6 +235,7 @@ type
 
       // Controller
       Joypad:         integer;
+      SongKeyboard:   integer;
 
       // WebCam
       WebCamID:         integer;
@@ -419,6 +420,9 @@ const
   sOpenMenu = 2;
 
   IPartyPopup:    array[0..1] of UTF8String = ('Off', 'On');
+
+  ISongKeyboard: array[0..1] of UTF8String = ('Modern', 'Classic');
+  ISongKeyboardTranslated: array[0..1] of UTF8String = ('Modern', 'Classic');
 
   IJoypad:        array[0..1] of UTF8String = ('Off', 'On');
 
@@ -1031,6 +1035,9 @@ begin
   IDuetScoresTranslated[3]          := ULanguage.Language.Translate('OPTION_VALUE_BOTH');
   ITopScoresTranslated[0]          := ULanguage.Language.Translate('OPTION_VALUE_ALL');
   ITopScoresTranslated[1]          := ULanguage.Language.Translate('OPTION_VALUE_PLAYER');
+
+  ISongKeyboardTranslated[0] := ULanguage.Language.Translate('OPTION_VALUE_MODERN');
+  ISongKeyboardTranslated[1] := ULanguage.Language.Translate('OPTION_VALUE_CLASSIC');
 
   IJoypadTranslated[0]                := ULanguage.Language.Translate('OPTION_VALUE_OFF');
   IJoypadTranslated[1]                := ULanguage.Language.Translate('OPTION_VALUE_ON');
@@ -1883,6 +1890,8 @@ begin
   // SyncTo
   SyncTo := ReadArrayIndex(ISyncTo, IniFile, 'Advanced', 'SyncTo', Ord(stMusic));
 
+  SongKeyboard := ReadArrayIndex(ISongKeyboard, IniFile, 'Controller', 'SongKeyboard', 0);
+
   // Joypad
   Joypad := ReadArrayIndex(IJoypad, IniFile, 'Controller', 'Joypad', 0);
 
@@ -2119,6 +2128,8 @@ begin
 
     //SyncTo
     IniFile.WriteString('Advanced', 'SyncTo', ISyncTo[SyncTo]);
+
+    IniFile.WriteString('Controller', 'SongKeyboard', ISongKeyboard[SongKeyboard]);
 
     // Joypad
     IniFile.WriteString('Controller', 'Joypad', IJoypad[Joypad]);
