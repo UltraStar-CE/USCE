@@ -212,6 +212,8 @@ type
     FadeTex:    string;
     FadeTexPos: integer;
 
+    Alpha: real;
+
     //Button Collection Mod
     Parent: byte; //Number of the Button Collection this Button is assigned to. IF 0: No Assignement
     ScaleMode: TLayoutScaleMode;
@@ -3528,6 +3530,8 @@ begin
   ThemeButton.ColG := ReadFloat(SectionList, 'ColG', 1);
   ThemeButton.ColB := ReadFloat(SectionList, 'ColB', 1);
   ThemeButton.Int :=  ReadFloat(SectionList, 'Int', 1);
+  ThemeButton.Alpha := EnsureRange(ReadFloat(SectionList, 'Alpha',
+    ReadFloat(GetSectionList('Theme'), 'ButtonAlpha', 1)), 0.0, 1.0);
   ThemeButton.DColR := ReadFloat(SectionList, 'DColR', 1);
   ThemeButton.DColG := ReadFloat(SectionList, 'DColG', 1);
   ThemeButton.DColB := ReadFloat(SectionList, 'DColB', 1);
