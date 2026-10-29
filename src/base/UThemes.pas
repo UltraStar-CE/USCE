@@ -539,6 +539,9 @@ type
 
     PlayerTemplate:          TThemeSingPlayer;
     PlayerLayout:            TSingPlayerLayoutConfig;
+    LanePanel: TThemeStatic;
+    HasLanePanel: boolean;
+    LanePanelPadding: integer;
     PlayerWidgetLayout:      TThemeSingPlayerWidgetLayout;
 
     StaticSongName:   TThemeStatic;
@@ -2190,6 +2193,9 @@ begin
       ThemeLoadStatic (Sing.InfoMessageBG, 'SingInfoMessageBG');
 
       ThemeLoadSingPlayerStatics(Sing.PlayerTemplate, 'PlayerTemplate');
+      Sing.HasLanePanel := ResolveThemeFile('SingLanePanel') <> nil;
+      if Sing.HasLanePanel then ThemeLoadStatic(Sing.LanePanel, 'SingLanePanel');
+      Sing.LanePanelPadding := EnsureRange(ReadInteger(GetSectionList('SingLanePanel'), 'Padding', 0), 0, 40);
       SectionList := GetSectionList('SingPlayerGrid');
       Sing.PlayerLayout.ColumnContainerLeft := ReadInteger(SectionList, 'LaneAreaX', 40);
       Sing.PlayerLayout.ColumnContainerTopReserved := ReadInteger(SectionList, 'LaneAreaY', 120);

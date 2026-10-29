@@ -160,3 +160,13 @@ is loaded lazily once per file/fallback, with regular, synthetic bold and outlin
 styles. A missing or unreadable face falls back to the existing family. Loaded
 families live until graphics/font teardown so outgoing screens remain valid
 through a theme transition. Font licenses must accompany theme font files.
+
+
+### Optional singing lane backplates
+
+`SingLanePanel` is an optional ordinary image-style section (Tex, Type, color,
+Alpha, CornerRadius and Z). Its bounds follow the existing note-guide layout for
+each visible player on each screen. `Padding=0..40` adds space around the guides,
+scaled with the lane. X/Y/W/H are not used. With no section, nothing is drawn.
+Panels follow note visibility, so hiding notes or using zero-player playback
+also hides them. They do not change note drawing, scoring, voices or lyrics.
