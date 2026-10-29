@@ -45,6 +45,7 @@ uses
 type
   EMenuBackgroundError = class(Exception);
   TMenuBackground = class
+    class var SuppressDrawing: boolean;
     constructor Create(const ThemedSettings: TThemeBackground); virtual;
     procedure   OnShow; virtual;
     procedure   Draw; virtual;

@@ -77,6 +77,10 @@ type
       ErrorCode: GLenum;
       SupportsVAO: boolean;
       SupportsFBO: boolean;
+      CaptureFBO, CaptureDepth: GLuint;
+      CaptureWidth, CaptureHeight: integer;
+      CapturePreviousFBO: GLint;
+      CaptureViewport: TViewPortArray;
       SupportsMappedBuffer: boolean;
       SupportsMipMap: boolean;
       GlyphTextureFormat: GLint;
@@ -112,6 +116,9 @@ type
       procedure DrawLines(LineList: TLineList); override;
       procedure DrawParticles(Texture: TTexture; ParticleList: TParticleList); override;
       procedure DrawLineStrip(PointList: TPointList; ScaleX, ScaleY, TranslateX, TranslateY, ColR, ColG, ColB, Alpha: single); override;
+      function BeginTextureCapture(Texture: TTexture; Width, Height: integer): boolean; override;
+      procedure EndTextureCapture; override;
+      procedure SetPremultipliedAlpha(Enabled: boolean); override;
       procedure SetBlend(Enabled: boolean); override;
       function GetBlend(): boolean; override;
       procedure SetDepthTest(Enabled: boolean); override;
@@ -480,6 +487,8 @@ end;
 
 destructor TRenderer_OpenGLBase.Destroy();
 begin
+  if CaptureDepth <> 0 then glDeleteRenderbuffers(1, @CaptureDepth);
+  if CaptureFBO <> 0 then glDeleteFramebuffers(1, @CaptureFBO);
   glDeleteProgram(MainProgram);
   glDeleteProgram(TextProgram);
   glDeleteProgram(LineStripProgram);
@@ -1657,6 +1666,48 @@ begin
   {$IFDEF DEBUG_MODE}
   RaiseExceptionIfError;
   {$ENDIF};
+end;
+
+function TRenderer_OpenGLBase.BeginTextureCapture(Texture: TTexture; Width, Height: integer): boolean;
+begin
+  Result := false;
+  if not SupportsFBO then Exit;
+  glGetIntegerv(GL_FRAMEBUFFER_BINDING, @CapturePreviousFBO);
+  CaptureViewport := ViewPortArray;
+  if CaptureFBO = 0 then glGenFramebuffers(1, @CaptureFBO);
+  if CaptureDepth = 0 then glGenRenderbuffers(1, @CaptureDepth);
+  glBindFramebuffer(GL_FRAMEBUFFER, CaptureFBO);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+    TTexture_OpenGL(Texture).TexID, 0);
+  glBindRenderbuffer(GL_RENDERBUFFER, CaptureDepth);
+  if (Width <> CaptureWidth) or (Height <> CaptureHeight) then
+  begin
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, Width, Height);
+    CaptureWidth := Width;
+    CaptureHeight := Height;
+  end;
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, CaptureDepth);
+  if glCheckFramebufferStatus(GL_FRAMEBUFFER) <> GL_FRAMEBUFFER_COMPLETE then
+  begin
+    glBindFramebuffer(GL_FRAMEBUFFER, CapturePreviousFBO);
+    Exit;
+  end;
+  // Drawing over transparent black produces premultiplied RGB and coverage alpha.
+  glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+  Result := true;
+end;
+
+procedure TRenderer_OpenGLBase.EndTextureCapture;
+begin
+  glBindFramebuffer(GL_FRAMEBUFFER, CapturePreviousFBO);
+  SetViewPort(CaptureViewport[0], CaptureViewport[1], CaptureViewport[2], CaptureViewport[3]);
+  SetPremultipliedAlpha(false);
+end;
+
+procedure TRenderer_OpenGLBase.SetPremultipliedAlpha(Enabled: boolean);
+begin
+  if Enabled then glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA)
+  else glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 end;
 
 procedure TRenderer_OpenGLBase.SetBlend(Enabled: boolean);

@@ -59,6 +59,7 @@ type
       DoneOnShow:    boolean;  // true if passed onShow after fading
 
       FadeTex:       array[0..1] of TTexture;
+      FadeForeground: array[0..1] of boolean;
       TexW, TexH:    Cardinal;
  
       FPSCounter:    cardinal;
@@ -161,7 +162,7 @@ const
 
 implementation
 
-uses UDuplicateSongUI,
+uses UDuplicateSongUI, UMenuBackground,
   UText,
   StrUtils,
   UCommandLine,
@@ -301,13 +302,13 @@ begin
   TexW := ScreenWPerScreen;
   TexH := ScreenH;
   for i := 0 to 1 do
-    FadeTex[i] := Renderer.CreateTexture(nil, PATH_NONE, TexW, TexH, TEXTURE_TYPE_PLAIN);
+    FadeTex[i] := Renderer.CreateTexture(nil, PATH_NONE, TexW, TexH, TEXTURE_TYPE_TRANSPARENT, false);
 end;
 
 function TDisplay.Draw: boolean;
 var
   S:               integer;
-  FadeStateSquare: real;
+  FadeStateSquare, FadeZoom: real;
   FadeW, FadeH:    real;
   FadeCopyW, FadeCopyH: integer;
 
@@ -380,20 +381,8 @@ begin
         // create fading texture if we're just starting
         if FadeStartTime = 0 then
         begin
-          // draw screen that will be faded
-          ePreDraw.CallHookChain(false);
-          CurrentScreen.Draw;
-          eDraw.CallHookChain(false);
-
-          // clear OpenGL errors, otherwise fading might be disabled due to some
-          // older errors in previous OpenGL calls.
-          Renderer.GetError();
-
           FadeCopyW := ScreenWPerScreen;
           FadeCopyH := ScreenH;
-
-          // it is possible that our fade textures are too small after a window
-          // resize. In that case resize the fade texture to fit the requirements.
           if (TexW < FadeCopyW) or (TexH < FadeCopyH) then
           begin
             FreeAndNil(FadeTex[0]);
@@ -401,8 +390,26 @@ begin
             InitFadeTextures();
           end;
 
-          // copy screen to texture
-          FadeTex[S-1].CopyFrameBuffer((S-1) * ScreenWPerScreen, 0, FadeCopyW, FadeCopyH);
+          Renderer.GetError();
+          FadeForeground[S-1] := not BlackScreen and
+            Renderer.BeginTextureCapture(FadeTex[S-1], TexW, TexH);
+          if FadeForeground[S-1] then
+          begin
+            Renderer.SetViewPort(0, 0, FadeCopyW, FadeCopyH);
+            Renderer.SetClearColor(0, 0, 0, 0);
+            Renderer.ClearFrameBuffer(CLEAR_COLOR or CLEAR_DEPTH);
+            TMenuBackground.SuppressDrawing := true;
+          end;
+          try
+            ePreDraw.CallHookChain(false);
+            CurrentScreen.Draw;
+            eDraw.CallHookChain(false);
+          finally
+            TMenuBackground.SuppressDrawing := false;
+            if FadeForeground[S-1] then Renderer.EndTextureCapture;
+          end;
+          if not FadeForeground[S-1] then
+            FadeTex[S-1].CopyFrameBuffer((S-1) * ScreenWPerScreen, 0, FadeCopyW, FadeCopyH);
 
           if (Renderer.Error) then
           begin
@@ -445,6 +452,8 @@ begin
         begin
           FadeW := (ScreenWPerScreen)/TexW;
           FadeH := ScreenH/TexH;
+          if FadeForeground[S-1] then FadeZoom := FadeStateSquare
+          else FadeZoom := 0; // Older renderers still crossfade, without zooming the background.
           with FadeTex[S-1] do
           begin
             X := 0;
@@ -452,13 +461,23 @@ begin
             W := RenderW;
             H := RenderH;
             Alpha := 1 - FadeStateSquare;
-            TexX1 := (0+FadeStateSquare/2)*FadeW;
-            TexY1 := (1-FadeStateSquare/2)*FadeH;
-            TexX2 := (1-FadeStateSquare/2)*FadeW;
-            TexY2 := (0+FadeStateSquare/2)*FadeH;
+            if FadeForeground[S-1] then
+            begin
+              ColR := Alpha; ColG := Alpha; ColB := Alpha;
+            end
+            else begin ColR := 1; ColG := 1; ColB := 1; end;
+            TexX1 := (0+FadeZoom/2)*FadeW;
+            TexY1 := (1-FadeZoom/2)*FadeH;
+            TexX2 := (1-FadeZoom/2)*FadeW;
+            TexY2 := (0+FadeZoom/2)*FadeH;
           end;
           Renderer.DepthTest := false;
-          Renderer.DrawTexture(FadeTex[S-1]);
+          Renderer.SetPremultipliedAlpha(FadeForeground[S-1]);
+          try
+            Renderer.DrawTexture(FadeTex[S-1]);
+          finally
+            Renderer.SetPremultipliedAlpha(false);
+          end;
           Renderer.DepthTest := true;
         end;
       end

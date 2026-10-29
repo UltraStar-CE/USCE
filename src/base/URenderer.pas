@@ -255,6 +255,11 @@ type
       procedure DrawBoundedBox(X1, Y1, X2, Y2, Z, LineThickness, ColR, ColG, ColB, Alpha: single); virtual;
       procedure DrawLineStrip(PointList: TPointList; ScaleX, ScaleY, TranslateX, TranslateY, ColR, ColG, ColB, Alpha: single); virtual; abstract;
 
+      // Transparent foreground capture for menu transitions.
+      function BeginTextureCapture(Texture: TTexture; Width, Height: integer): boolean; virtual; abstract;
+      procedure EndTextureCapture; virtual; abstract;
+      procedure SetPremultipliedAlpha(Enabled: boolean); virtual; abstract;
+
       // State changes
       procedure SetOrthographicProjection(Left, Right, Bottom, Top, NearVal, FarVal: single); virtual; abstract;
       procedure SetViewPort(x, y: integer; width, height: cardinal); virtual; abstract;

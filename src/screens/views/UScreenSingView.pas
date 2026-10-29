@@ -129,7 +129,7 @@ uses
   UUnicodeUtils,
   UScreenSingController,
   UWebcam,
-  UWebSDK;
+  UWebSDK, UMenuBackground;
 
 const
   MAX_MESSAGE = 3;
@@ -763,7 +763,7 @@ begin
 
   // update and draw movie
   // USE FFMPEG
-  if Assigned(ScreenSing.fCurrentVideo) and (not ScreenSing.fShowWebcam) then
+  if not TMenuBackground.SuppressDrawing and Assigned(ScreenSing.fCurrentVideo) and (not ScreenSing.fShowWebcam) then
   begin
     // Just call this once
     // when Screens = 2
