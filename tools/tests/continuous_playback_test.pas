@@ -27,6 +27,11 @@ begin
     Session.Start([11, 22, 33], 11, true, true, false); Next(11);
     Expect(Session.PreviousSong(Song) and (Song = 33), 'Previous did not wrap repeating selection');
     Session.Start([11, 22, 33], 11, true, false, false); Next(11);
+    Session.ReplaceUpcoming([33, 33, 11, 44]);
+    Expect(Session.Stage = psSong, 'Queue update interrupted the current song');
+    Next(33); Next(44);
+    Expect(not Session.NextSong(Song), 'Queue update retained removed or duplicate songs');
+    Session.Start([11, 22, 33], 11, true, false, false); Next(11);
     Session.RejectCurrentSong; Next(22); Next(33);
     Expect(Session.PreviousSong(Song) and (Song = 22), 'Previous did not find valid entry');
     Expect(Session.PreviousSong(Song) and (Song = 22), 'Previous replayed rejected entry');
@@ -110,6 +115,20 @@ begin
     Expect(Session.Stage = psAdvance, 'Manual results did not skip highscores');
     Session.Stop;
     Expect(not Session.Active and (Session.Skipped = 0), 'Stop retained session state');
+    Session.PlayerSeconds := 5;
+    Session.Start([1], 1, true, false, true); Next(1);
+    Session.PreparePlayers;
+    Expect(Session.Stage = psPlayers, 'Player setup was not part of playback');
+    Expect(not Session.Tick(0, false), 'Player setup expired immediately');
+    Expect(not Session.Tick(10000, true), 'Popup consumed player setup duration');
+    Expect(not Session.Tick(14999, false), 'Player setup expired early');
+    Expect(Session.Tick(15000, false) and (Session.Stage = psSong), 'Player setup did not start the selected song');
+    Session.PlayerSeconds := -1; Session.PreparePlayers;
+    Expect(not Session.Tick(High(cardinal), false), 'Manual player setup timed out');
+    Session.NextStage;
+    Expect(Session.Stage = psSong, 'Manual player setup did not continue');
+    Session.PlayerSeconds := 0; Session.PreparePlayers;
+    Expect(Session.Stage = psSong, 'Skipped player setup changed the song stage');
     Writeln('Continuous playback tests passed');
   finally Session.Free; end;
 end.

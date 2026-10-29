@@ -64,10 +64,7 @@ type
 
     public
       {**
-       * Init simply calls @link(CreateUserFolders), which in turn scans the
-       * folder UltraStar Community Edition.app/Contents for all files and
-       * folders. $HOME/Library/Application Support/UltraStar Community Edition
-       * is then checked for their presence and missing ones are copied.
+       * Init detects whether this is a portable directory or an app bundle.
        *}
       procedure Init; override;
 
@@ -84,9 +81,8 @@ type
       function  GetMusicPath:      IPath; override;
 
       {**
-       * GetGameSharedPath returns the path for shared resources. Currently it
-       * is also set to $HOME/Library/Application Support/UltraStar Community Edition.
-       * However it is not used.
+       * GetGameSharedPath returns Contents/Resources inside an app bundle,
+       * the executable directory for a portable build, or INSTALL_DATADIR.
        *}
       function  GetGameSharedPath: IPath; override;
 
@@ -178,7 +174,7 @@ end;
 function TPlatformMacOS.GetGameSharedPath: IPath;
 begin
   if (IsBundle) then
-    Result := BundleDir.Append('Contents')
+    Result := BundleDir.Append('Contents/Resources')
   else if (IsLocal) then
     Result := Path(ExecutionDir.ToNative())
   else
@@ -201,6 +197,8 @@ begin
   else if (IsBundle) then
   begin
     Result.Add(GetApplicationSupportPath());
+    Result.Add(BundleDir.Append('Contents/Resources'));
+    // Retain discovery of user-added assets in older app layouts.
     Result.Add(BundleDir.Append('Contents'));
   end
   else

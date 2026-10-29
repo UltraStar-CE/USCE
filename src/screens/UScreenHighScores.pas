@@ -106,10 +106,12 @@ implementation
 uses
   USong,
   UDataBase,
+  UInputSource,
   UGraphic,
   UHelp,
   ULog,
   UMain,
+  URemoteBridgeIPC,
   UIni,
   UNote,
   UUnicodeUtils;
@@ -589,7 +591,7 @@ begin
 end;
 
 procedure TScreenHighScores.OnShow;
-var PreviewEnd: real;
+var PreviewEnd: real; I: integer;
 begin
   inherited;
   ScreenSong.StartFinishedSong(CurrentSong, PreviewEnd);
@@ -599,8 +601,16 @@ begin
     Log.LogWarn('No Entry for Help-ID ' + HighScoresHelpID, 'ScreenHighScores');
 
   IsFadingOut := false;
-  VisibleDifficulty := Player[0].Level;
-  if ScreenSong.Mode in [smPartyClassic, smPartyFree] then VisibleDifficulty := Ini.Difficulty;
+  VisibleDifficulty := EnsureRange(Ini.Difficulty, 0, 2);
+  // Sparse mic assignments leave earlier player cards unassigned. Use the
+  // first singer's captured input, including when the phone has since left.
+  for I := 0 to Min(PlayersPlay, Length(Player)) - 1 do
+    if Player[I].InputSource <> Ord(pisNone) then
+    begin
+      VisibleDifficulty := EnsureRange(Player[I].Level, 0, 2);
+      Break;
+    end;
+  if ScreenSong.Mode in [smPartyClassic, smPartyFree] then VisibleDifficulty := EnsureRange(Ini.Difficulty, 0, 2);
 
   UpdateEntryLayout;
   UpdateHeaderText;
@@ -626,6 +636,7 @@ var
   I:    integer;
   Track: integer;
   Name: UTF8String;
+  EntriesJson: string;
 begin
   VisibleDifficulty := difficulty;
   LayoutEntryCount := EnsureRange(Length(CurrentSong.Score[difficulty]), 5, EntryCount);
@@ -651,6 +662,21 @@ begin
   end;
 
   Text[TextDifficulty].Text := IDifficultyTranslated[difficulty];
+  EntriesJson := '[';
+  for I := 0 to Min(EntryCount, Length(CurrentSong.Score[difficulty])) - 1 do
+  begin
+    if I > 0 then EntriesJson := EntriesJson + ',';
+    EntriesJson := EntriesJson + '{"name":"' +
+      RemoteJsonEscape(CurrentSong.Score[difficulty, I].Name) + '","score":' +
+      IntToStr(CurrentSong.Score[difficulty, I].Score) + ',"date":"' +
+      RemoteJsonEscape(CurrentSong.Score[difficulty, I].Date) + '"}';
+  end;
+  EntriesJson := EntriesJson + ']';
+  RemoteBridgeIPC.SendGameState('high_scores', 0, 0);
+  RemoteBridgeIPC.SendJsonMessage('{"type":"screen.info","protocol":1,"screen":"high_scores"' +
+    ',"title":"' + RemoteJsonEscape(CurrentSong.Title) + '","artist":"' +
+    RemoteJsonEscape(CurrentSong.Artist) + '","difficulty":"' +
+    RemoteJsonEscape(IDifficultyTranslated[difficulty]) + '","entries":' + EntriesJson + '}');
 end;
 
 function TScreenHighScores.Draw: boolean;

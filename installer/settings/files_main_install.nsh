@@ -204,7 +204,10 @@ File /r /x .git /x .gitignore ..\game\sounds
 File /r /x .git /x .gitignore ..\game\fonts
 File /r /x .git /x .gitignore ..\game\resources
 File /r /x .git /x .gitignore ..\game\visuals
-File /r /x .git /x .gitignore ..\game\webs
+SetOutPath "$INSTDIR\runtime"
+File ..\game\runtime\native-licenses.txt
+File ..\game\runtime\phone-audio.json
+SetOutPath "$INSTDIR"
 File /r /x .git /x .gitignore ..\game\avatars
 
 ; Root dir:

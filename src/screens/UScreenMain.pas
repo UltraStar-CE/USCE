@@ -81,6 +81,7 @@ implementation
 uses
   UGraphic,
   Math,
+  URemoteBridgeIPC,
   UHelp,
   UIni,
   ULanguage,
@@ -292,6 +293,7 @@ begin
   PreviewTick := SDL_GetTicks;
   for I := 0 to High(Preview) do
     Preview[I].Alpha := Ord(I = Interaction);
+  RemoteBridgeIPC.SendGameState('main_menu', 0, 0);
 
   SoundLib.StartBgMusic;
 
