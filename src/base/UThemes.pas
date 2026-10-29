@@ -4923,7 +4923,7 @@ begin
   SectionList := GetSectionList('Song' + prefix + 'Cover');
   Song.Cover.Reflections := ReadBool(SectionList, 'Reflections', false);
   Song.Cover.CornerRadius := EnsureRange(ReadFloat(SectionList, 'CornerRadius', 0), 0.0, 0.5);
-  Song.Cover.ScaleMode := ParseScaleMode(ReadString(SectionList, 'ScaleMode', ''), lsStretch);
+  Song.Cover.ScaleMode := ParseScaleMode(ReadString(SectionList, 'ScaleMode', ''), lsCrop);
   //Load Cover Pos and Size from Theme Mod End
 
   ThemeLoadEqualizer(Song.Equalizer, 'Song' + prefix + 'Equalizer');
