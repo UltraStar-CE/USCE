@@ -237,6 +237,7 @@ uses
   //Includes - Media
   //------------------------------
 
+  UGapCountdown             in 'base\UGapCountdown.pas',
   UMusic                    in 'base\UMusic.pas',
   UAudioPlaybackBase        in 'media\UAudioPlaybackBase.pas',
 {$IF Defined(UsePortaudioPlayback) or Defined(UseSDLPlayback)}
