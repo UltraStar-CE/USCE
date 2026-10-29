@@ -81,11 +81,11 @@
     {
       "repository": "shininchi/USDX",
       "branch": "master",
-      "head": "c71a87aea972caa5b96c8bae7542bb0bcfa1deaf",
-      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
-      "ahead": 97,
-      "behind": 10,
-      "compareUrl": "https://github.com/shininchi/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...c71a87aea972caa5b96c8bae7542bb0bcfa1deaf",
+      "head": "c3efe4c57914f54cc481acf555afde2e858d98e0",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 104,
+      "behind": 16,
+      "compareUrl": "https://github.com/shininchi/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...c3efe4c57914f54cc481acf555afde2e858d98e0",
       "commits": [
         {
           "sha": "34a5ce3f3c10a5850dbd24b3dbb386fc01337be4",
@@ -149,6 +149,11 @@
         }
       ],
       "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      },
+      "previousAssessment": {
         "decision": "assessed",
         "usceReferences": [
           "https://github.com/UltraStar-CE/USCE/issues/168",
@@ -687,11 +692,11 @@
     {
       "repository": "Tycorc/USDX",
       "branch": "master",
-      "head": "1deef85ecc82783a7430d869ffa880e373653a46",
-      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
-      "ahead": 31,
-      "behind": 2,
-      "compareUrl": "https://github.com/Tycorc/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...1deef85ecc82783a7430d869ffa880e373653a46",
+      "head": "250c47a576ec6dbb6513ebdb5ea8a66302e700a2",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 34,
+      "behind": 3,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...250c47a576ec6dbb6513ebdb5ea8a66302e700a2",
       "commits": [
         {
           "sha": "d6a550605345211c8c9c80de3328d6ea156b46fb",
@@ -755,6 +760,11 @@
         }
       ],
       "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      },
+      "previousAssessment": {
         "decision": "assessed",
         "usceReferences": [
           "https://github.com/UltraStar-CE/USCE/issues/173",
@@ -1468,21 +1478,892 @@
           }
         ]
       }
+    },
+    {
+      "repository": "3Ryuusei3/USDX",
+      "branch": "thread-robustness",
+      "head": "2a9a7a4299988aa068ce4cb9b76043cb71f3e1c3",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 4,
+      "behind": 6,
+      "compareUrl": "https://github.com/3Ryuusei3/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...2a9a7a4299988aa068ce4cb9b76043cb71f3e1c3",
+      "commits": [
+        {
+          "sha": "6eaccb302a728bb1454e6e0c9cf582ae364471bb",
+          "title": "Video: decode in a background thread to stop stutter and FPS drops",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "faf40be67126246e4e2cb40849ded9598e4c4ba9",
+          "title": "SuperStar: Karaoke theme redesign and UI/UX engine improvements",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "6260736f964df2dd67188d57c82edaab1866186c",
+          "title": "Sing row with the name pill at the right, instant score bars, party screens",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "2a9a7a4299988aa068ce4cb9b76043cb71f3e1c3",
+          "title": "Keep background threads from dying or looping on errors",
+          "author": "3Ryuusei3"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "MDDD87/USDX",
+      "branch": "master",
+      "head": "8d73d69ee08385e5f270399ed0019eddd4d0cb2d",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 45,
+      "behind": 10,
+      "compareUrl": "https://github.com/MDDD87/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...8d73d69ee08385e5f270399ed0019eddd4d0cb2d",
+      "commits": [
+        {
+          "sha": "7a1358e51a06bd1228b520c144a86994a87a9c8b",
+          "title": "Party mode: show custom team names on the sing screen",
+          "author": "claude"
+        },
+        {
+          "sha": "5787e9b70c272fdc4abf18516afc702bc5879e92",
+          "title": "Windows build: fix typo so libdav1d.dll is packaged",
+          "author": "claude"
+        },
+        {
+          "sha": "f5e48e0f61a0d6fb501da09ceadfc37d7df65db7",
+          "title": "Party mode: save comparable party rounds to the local highscores",
+          "author": "claude"
+        },
+        {
+          "sha": "3457a28887fc6845d75518d54f6cf8dd7bf4a53a",
+          "title": "Merge Feature 1 + 2 (Teamnamen, Party-Highscores) und Build-Fix",
+          "author": "MDDD87"
+        },
+        {
+          "sha": "9c01ea5bdcc89098d6ec1d6a43c244cfa9360651",
+          "title": "Party mode: score screen before party results (1b) and medley round (3)",
+          "author": "claude"
+        },
+        {
+          "sha": "a60e21000dd8d642ddd266845c8ebc22966d172a",
+          "title": "Party mode: create the score screen during party setup",
+          "author": "claude"
+        },
+        {
+          "sha": "f4d72f30acc444fba104a7cd77994b5fb2d1f197",
+          "title": "Trigger build",
+          "author": "claude"
+        },
+        {
+          "sha": "53ad9a2e4e19e6bfa3617665c0a5d84ed9397373",
+          "title": "CI (fork): build only the Windows portable version, no scheduled build",
+          "author": "claude"
+        },
+        {
+          "sha": "9ddddfc04ff560b297816d2dd8fb153949d383e5",
+          "title": "Merge master (CI changes) into feature-1b-3-medley",
+          "author": "claude"
+        },
+        {
+          "sha": "738010d3a6044f77f449615797dba7dd242f34f6",
+          "title": "CI (fork): cache Free Pascal and harden its download",
+          "author": "claude"
+        },
+        {
+          "sha": "4611992b2180dc9ca8145690ab7582ba4cd144d8",
+          "title": "Merge remote-tracking branch 'origin/master' into feature-1b-3-medley",
+          "author": "claude"
+        },
+        {
+          "sha": "cabdd347d1e52d102b0ae82b7b6794da6e61282b",
+          "title": "Merge Feature 1b + 3 (Punkte-Bildschirm im Party-Modus, Medley-Runde)",
+          "author": "MDDD87"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "MDDD87/USDX",
+      "branch": "feature-1-teamnamen",
+      "head": "f5e48e0f61a0d6fb501da09ceadfc37d7df65db7",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 3,
+      "behind": 10,
+      "compareUrl": "https://github.com/MDDD87/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...f5e48e0f61a0d6fb501da09ceadfc37d7df65db7",
+      "commits": [
+        {
+          "sha": "7a1358e51a06bd1228b520c144a86994a87a9c8b",
+          "title": "Party mode: show custom team names on the sing screen",
+          "author": "claude"
+        },
+        {
+          "sha": "5787e9b70c272fdc4abf18516afc702bc5879e92",
+          "title": "Windows build: fix typo so libdav1d.dll is packaged",
+          "author": "claude"
+        },
+        {
+          "sha": "f5e48e0f61a0d6fb501da09ceadfc37d7df65db7",
+          "title": "Party mode: save comparable party rounds to the local highscores",
+          "author": "claude"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "MDDD87/USDX",
+      "branch": "feature-1b-3-medley",
+      "head": "4611992b2180dc9ca8145690ab7582ba4cd144d8",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 11,
+      "behind": 10,
+      "compareUrl": "https://github.com/MDDD87/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...4611992b2180dc9ca8145690ab7582ba4cd144d8",
+      "commits": [
+        {
+          "sha": "7a1358e51a06bd1228b520c144a86994a87a9c8b",
+          "title": "Party mode: show custom team names on the sing screen",
+          "author": "claude"
+        },
+        {
+          "sha": "5787e9b70c272fdc4abf18516afc702bc5879e92",
+          "title": "Windows build: fix typo so libdav1d.dll is packaged",
+          "author": "claude"
+        },
+        {
+          "sha": "f5e48e0f61a0d6fb501da09ceadfc37d7df65db7",
+          "title": "Party mode: save comparable party rounds to the local highscores",
+          "author": "claude"
+        },
+        {
+          "sha": "3457a28887fc6845d75518d54f6cf8dd7bf4a53a",
+          "title": "Merge Feature 1 + 2 (Teamnamen, Party-Highscores) und Build-Fix",
+          "author": "MDDD87"
+        },
+        {
+          "sha": "9c01ea5bdcc89098d6ec1d6a43c244cfa9360651",
+          "title": "Party mode: score screen before party results (1b) and medley round (3)",
+          "author": "claude"
+        },
+        {
+          "sha": "a60e21000dd8d642ddd266845c8ebc22966d172a",
+          "title": "Party mode: create the score screen during party setup",
+          "author": "claude"
+        },
+        {
+          "sha": "f4d72f30acc444fba104a7cd77994b5fb2d1f197",
+          "title": "Trigger build",
+          "author": "claude"
+        },
+        {
+          "sha": "53ad9a2e4e19e6bfa3617665c0a5d84ed9397373",
+          "title": "CI (fork): build only the Windows portable version, no scheduled build",
+          "author": "claude"
+        },
+        {
+          "sha": "9ddddfc04ff560b297816d2dd8fb153949d383e5",
+          "title": "Merge master (CI changes) into feature-1b-3-medley",
+          "author": "claude"
+        },
+        {
+          "sha": "738010d3a6044f77f449615797dba7dd242f34f6",
+          "title": "CI (fork): cache Free Pascal and harden its download",
+          "author": "claude"
+        },
+        {
+          "sha": "4611992b2180dc9ca8145690ab7582ba4cd144d8",
+          "title": "Merge remote-tracking branch 'origin/master' into feature-1b-3-medley",
+          "author": "claude"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "MDDD87/USDX",
+      "branch": "feature-4-duette",
+      "head": "d4b75ada9afcb18927a1974e5d67df6c41528d06",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 44,
+      "behind": 10,
+      "compareUrl": "https://github.com/MDDD87/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...d4b75ada9afcb18927a1974e5d67df6c41528d06",
+      "commits": [
+        {
+          "sha": "7a1358e51a06bd1228b520c144a86994a87a9c8b",
+          "title": "Party mode: show custom team names on the sing screen",
+          "author": "claude"
+        },
+        {
+          "sha": "5787e9b70c272fdc4abf18516afc702bc5879e92",
+          "title": "Windows build: fix typo so libdav1d.dll is packaged",
+          "author": "claude"
+        },
+        {
+          "sha": "f5e48e0f61a0d6fb501da09ceadfc37d7df65db7",
+          "title": "Party mode: save comparable party rounds to the local highscores",
+          "author": "claude"
+        },
+        {
+          "sha": "3457a28887fc6845d75518d54f6cf8dd7bf4a53a",
+          "title": "Merge Feature 1 + 2 (Teamnamen, Party-Highscores) und Build-Fix",
+          "author": "MDDD87"
+        },
+        {
+          "sha": "9c01ea5bdcc89098d6ec1d6a43c244cfa9360651",
+          "title": "Party mode: score screen before party results (1b) and medley round (3)",
+          "author": "claude"
+        },
+        {
+          "sha": "a60e21000dd8d642ddd266845c8ebc22966d172a",
+          "title": "Party mode: create the score screen during party setup",
+          "author": "claude"
+        },
+        {
+          "sha": "f4d72f30acc444fba104a7cd77994b5fb2d1f197",
+          "title": "Trigger build",
+          "author": "claude"
+        },
+        {
+          "sha": "53ad9a2e4e19e6bfa3617665c0a5d84ed9397373",
+          "title": "CI (fork): build only the Windows portable version, no scheduled build",
+          "author": "claude"
+        },
+        {
+          "sha": "9ddddfc04ff560b297816d2dd8fb153949d383e5",
+          "title": "Merge master (CI changes) into feature-1b-3-medley",
+          "author": "claude"
+        },
+        {
+          "sha": "738010d3a6044f77f449615797dba7dd242f34f6",
+          "title": "CI (fork): cache Free Pascal and harden its download",
+          "author": "claude"
+        },
+        {
+          "sha": "4611992b2180dc9ca8145690ab7582ba4cd144d8",
+          "title": "Merge remote-tracking branch 'origin/master' into feature-1b-3-medley",
+          "author": "claude"
+        },
+        {
+          "sha": "cabdd347d1e52d102b0ae82b7b6794da6e61282b",
+          "title": "Merge Feature 1b + 3 (Punkte-Bildschirm im Party-Modus, Medley-Runde)",
+          "author": "MDDD87"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "MDDD87/USDX",
+      "branch": "feature-medley-tuning",
+      "head": "28909a579d0e358e0e38c971503d0b370cb8a0c3",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 15,
+      "behind": 10,
+      "compareUrl": "https://github.com/MDDD87/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...28909a579d0e358e0e38c971503d0b370cb8a0c3",
+      "commits": [
+        {
+          "sha": "7a1358e51a06bd1228b520c144a86994a87a9c8b",
+          "title": "Party mode: show custom team names on the sing screen",
+          "author": "claude"
+        },
+        {
+          "sha": "5787e9b70c272fdc4abf18516afc702bc5879e92",
+          "title": "Windows build: fix typo so libdav1d.dll is packaged",
+          "author": "claude"
+        },
+        {
+          "sha": "f5e48e0f61a0d6fb501da09ceadfc37d7df65db7",
+          "title": "Party mode: save comparable party rounds to the local highscores",
+          "author": "claude"
+        },
+        {
+          "sha": "3457a28887fc6845d75518d54f6cf8dd7bf4a53a",
+          "title": "Merge Feature 1 + 2 (Teamnamen, Party-Highscores) und Build-Fix",
+          "author": "MDDD87"
+        },
+        {
+          "sha": "9c01ea5bdcc89098d6ec1d6a43c244cfa9360651",
+          "title": "Party mode: score screen before party results (1b) and medley round (3)",
+          "author": "claude"
+        },
+        {
+          "sha": "a60e21000dd8d642ddd266845c8ebc22966d172a",
+          "title": "Party mode: create the score screen during party setup",
+          "author": "claude"
+        },
+        {
+          "sha": "f4d72f30acc444fba104a7cd77994b5fb2d1f197",
+          "title": "Trigger build",
+          "author": "claude"
+        },
+        {
+          "sha": "53ad9a2e4e19e6bfa3617665c0a5d84ed9397373",
+          "title": "CI (fork): build only the Windows portable version, no scheduled build",
+          "author": "claude"
+        },
+        {
+          "sha": "9ddddfc04ff560b297816d2dd8fb153949d383e5",
+          "title": "Merge master (CI changes) into feature-1b-3-medley",
+          "author": "claude"
+        },
+        {
+          "sha": "738010d3a6044f77f449615797dba7dd242f34f6",
+          "title": "CI (fork): cache Free Pascal and harden its download",
+          "author": "claude"
+        },
+        {
+          "sha": "4611992b2180dc9ca8145690ab7582ba4cd144d8",
+          "title": "Merge remote-tracking branch 'origin/master' into feature-1b-3-medley",
+          "author": "claude"
+        },
+        {
+          "sha": "cabdd347d1e52d102b0ae82b7b6794da6e61282b",
+          "title": "Merge Feature 1b + 3 (Punkte-Bildschirm im Party-Modus, Medley-Runde)",
+          "author": "MDDD87"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "MDDD87/USDX",
+      "branch": "feature-party-polish",
+      "head": "1051f9b02e65036276d7e006ac69c54c65dfdf2c",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 25,
+      "behind": 10,
+      "compareUrl": "https://github.com/MDDD87/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...1051f9b02e65036276d7e006ac69c54c65dfdf2c",
+      "commits": [
+        {
+          "sha": "7a1358e51a06bd1228b520c144a86994a87a9c8b",
+          "title": "Party mode: show custom team names on the sing screen",
+          "author": "claude"
+        },
+        {
+          "sha": "5787e9b70c272fdc4abf18516afc702bc5879e92",
+          "title": "Windows build: fix typo so libdav1d.dll is packaged",
+          "author": "claude"
+        },
+        {
+          "sha": "f5e48e0f61a0d6fb501da09ceadfc37d7df65db7",
+          "title": "Party mode: save comparable party rounds to the local highscores",
+          "author": "claude"
+        },
+        {
+          "sha": "3457a28887fc6845d75518d54f6cf8dd7bf4a53a",
+          "title": "Merge Feature 1 + 2 (Teamnamen, Party-Highscores) und Build-Fix",
+          "author": "MDDD87"
+        },
+        {
+          "sha": "9c01ea5bdcc89098d6ec1d6a43c244cfa9360651",
+          "title": "Party mode: score screen before party results (1b) and medley round (3)",
+          "author": "claude"
+        },
+        {
+          "sha": "a60e21000dd8d642ddd266845c8ebc22966d172a",
+          "title": "Party mode: create the score screen during party setup",
+          "author": "claude"
+        },
+        {
+          "sha": "f4d72f30acc444fba104a7cd77994b5fb2d1f197",
+          "title": "Trigger build",
+          "author": "claude"
+        },
+        {
+          "sha": "53ad9a2e4e19e6bfa3617665c0a5d84ed9397373",
+          "title": "CI (fork): build only the Windows portable version, no scheduled build",
+          "author": "claude"
+        },
+        {
+          "sha": "9ddddfc04ff560b297816d2dd8fb153949d383e5",
+          "title": "Merge master (CI changes) into feature-1b-3-medley",
+          "author": "claude"
+        },
+        {
+          "sha": "738010d3a6044f77f449615797dba7dd242f34f6",
+          "title": "CI (fork): cache Free Pascal and harden its download",
+          "author": "claude"
+        },
+        {
+          "sha": "4611992b2180dc9ca8145690ab7582ba4cd144d8",
+          "title": "Merge remote-tracking branch 'origin/master' into feature-1b-3-medley",
+          "author": "claude"
+        },
+        {
+          "sha": "cabdd347d1e52d102b0ae82b7b6794da6e61282b",
+          "title": "Merge Feature 1b + 3 (Punkte-Bildschirm im Party-Modus, Medley-Runde)",
+          "author": "MDDD87"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "MDDD87/USDX",
+      "branch": "feature-playlist-karussell",
+      "head": "c179de14998d0d1f85f7b1c57badaa7199cfd2e5",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 53,
+      "behind": 10,
+      "compareUrl": "https://github.com/MDDD87/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...c179de14998d0d1f85f7b1c57badaa7199cfd2e5",
+      "commits": [
+        {
+          "sha": "7a1358e51a06bd1228b520c144a86994a87a9c8b",
+          "title": "Party mode: show custom team names on the sing screen",
+          "author": "claude"
+        },
+        {
+          "sha": "5787e9b70c272fdc4abf18516afc702bc5879e92",
+          "title": "Windows build: fix typo so libdav1d.dll is packaged",
+          "author": "claude"
+        },
+        {
+          "sha": "f5e48e0f61a0d6fb501da09ceadfc37d7df65db7",
+          "title": "Party mode: save comparable party rounds to the local highscores",
+          "author": "claude"
+        },
+        {
+          "sha": "3457a28887fc6845d75518d54f6cf8dd7bf4a53a",
+          "title": "Merge Feature 1 + 2 (Teamnamen, Party-Highscores) und Build-Fix",
+          "author": "MDDD87"
+        },
+        {
+          "sha": "9c01ea5bdcc89098d6ec1d6a43c244cfa9360651",
+          "title": "Party mode: score screen before party results (1b) and medley round (3)",
+          "author": "claude"
+        },
+        {
+          "sha": "a60e21000dd8d642ddd266845c8ebc22966d172a",
+          "title": "Party mode: create the score screen during party setup",
+          "author": "claude"
+        },
+        {
+          "sha": "f4d72f30acc444fba104a7cd77994b5fb2d1f197",
+          "title": "Trigger build",
+          "author": "claude"
+        },
+        {
+          "sha": "53ad9a2e4e19e6bfa3617665c0a5d84ed9397373",
+          "title": "CI (fork): build only the Windows portable version, no scheduled build",
+          "author": "claude"
+        },
+        {
+          "sha": "9ddddfc04ff560b297816d2dd8fb153949d383e5",
+          "title": "Merge master (CI changes) into feature-1b-3-medley",
+          "author": "claude"
+        },
+        {
+          "sha": "738010d3a6044f77f449615797dba7dd242f34f6",
+          "title": "CI (fork): cache Free Pascal and harden its download",
+          "author": "claude"
+        },
+        {
+          "sha": "4611992b2180dc9ca8145690ab7582ba4cd144d8",
+          "title": "Merge remote-tracking branch 'origin/master' into feature-1b-3-medley",
+          "author": "claude"
+        },
+        {
+          "sha": "cabdd347d1e52d102b0ae82b7b6794da6e61282b",
+          "title": "Merge Feature 1b + 3 (Punkte-Bildschirm im Party-Modus, Medley-Runde)",
+          "author": "MDDD87"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "MDDD87/USDX",
+      "branch": "feature-scorescreen-singstar",
+      "head": "764fbf06e518c7be7325baf23043fc2506a3f70e",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 17,
+      "behind": 10,
+      "compareUrl": "https://github.com/MDDD87/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...764fbf06e518c7be7325baf23043fc2506a3f70e",
+      "commits": [
+        {
+          "sha": "7a1358e51a06bd1228b520c144a86994a87a9c8b",
+          "title": "Party mode: show custom team names on the sing screen",
+          "author": "claude"
+        },
+        {
+          "sha": "5787e9b70c272fdc4abf18516afc702bc5879e92",
+          "title": "Windows build: fix typo so libdav1d.dll is packaged",
+          "author": "claude"
+        },
+        {
+          "sha": "f5e48e0f61a0d6fb501da09ceadfc37d7df65db7",
+          "title": "Party mode: save comparable party rounds to the local highscores",
+          "author": "claude"
+        },
+        {
+          "sha": "3457a28887fc6845d75518d54f6cf8dd7bf4a53a",
+          "title": "Merge Feature 1 + 2 (Teamnamen, Party-Highscores) und Build-Fix",
+          "author": "MDDD87"
+        },
+        {
+          "sha": "9c01ea5bdcc89098d6ec1d6a43c244cfa9360651",
+          "title": "Party mode: score screen before party results (1b) and medley round (3)",
+          "author": "claude"
+        },
+        {
+          "sha": "a60e21000dd8d642ddd266845c8ebc22966d172a",
+          "title": "Party mode: create the score screen during party setup",
+          "author": "claude"
+        },
+        {
+          "sha": "f4d72f30acc444fba104a7cd77994b5fb2d1f197",
+          "title": "Trigger build",
+          "author": "claude"
+        },
+        {
+          "sha": "53ad9a2e4e19e6bfa3617665c0a5d84ed9397373",
+          "title": "CI (fork): build only the Windows portable version, no scheduled build",
+          "author": "claude"
+        },
+        {
+          "sha": "9ddddfc04ff560b297816d2dd8fb153949d383e5",
+          "title": "Merge master (CI changes) into feature-1b-3-medley",
+          "author": "claude"
+        },
+        {
+          "sha": "738010d3a6044f77f449615797dba7dd242f34f6",
+          "title": "CI (fork): cache Free Pascal and harden its download",
+          "author": "claude"
+        },
+        {
+          "sha": "4611992b2180dc9ca8145690ab7582ba4cd144d8",
+          "title": "Merge remote-tracking branch 'origin/master' into feature-1b-3-medley",
+          "author": "claude"
+        },
+        {
+          "sha": "cabdd347d1e52d102b0ae82b7b6794da6e61282b",
+          "title": "Merge Feature 1b + 3 (Punkte-Bildschirm im Party-Modus, Medley-Runde)",
+          "author": "MDDD87"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "texture-fail-debug",
+      "head": "e4c0826cd946d231476846000af5746b31be7d5e",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 1,
+      "behind": 1859,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...e4c0826cd946d231476846000af5746b31be7d5e",
+      "commits": [
+        {
+          "sha": "e4c0826cd946d231476846000af5746b31be7d5e",
+          "title": "Try to get a better error on SDL IMG_Load failure",
+          "author": "ePirat"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "uc-normalize-search",
+      "head": "1c4e701de7074572367b54602c2b9eb35e8abc39",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 2,
+      "behind": 990,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...1c4e701de7074572367b54602c2b9eb35e8abc39",
+      "commits": [
+        {
+          "sha": "6e405fc20e914a36b7b9323eed5af9611aa11294",
+          "title": "Implement iconvenc for Windows",
+          "author": "DeinAlptraum"
+        },
+        {
+          "sha": "1c4e701de7074572367b54602c2b9eb35e8abc39",
+          "title": "Transliterate search queries, remove GetStringWithNoAccents",
+          "author": "DeinAlptraum"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "vscode",
+      "head": "3c3722aa0aec1c03c50a677f93d41992f04f179a",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 5,
+      "behind": 425,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...3c3722aa0aec1c03c50a677f93d41992f04f179a",
+      "commits": [
+        {
+          "sha": "e5b68f0cdcfd4eb1c1cb3f9680f42c7b6f26db85",
+          "title": "Add .vscode configs.",
+          "author": "bohning"
+        },
+        {
+          "sha": "0ff4ee0e4917644b4ec002f15605298ff9da332c",
+          "title": "Fix fpcsrc path.",
+          "author": "bohning"
+        },
+        {
+          "sha": "a443d516fca22c7487973e7c802459210025ac0d",
+          "title": "Move to .vscode-dist directory",
+          "author": "bohning"
+        },
+        {
+          "sha": "81a9a322156f87a0b91dd4dcf251e2006df93c95",
+          "title": "Remove .vscode from being tracked.",
+          "author": "bohning"
+        },
+        {
+          "sha": "3c3722aa0aec1c03c50a677f93d41992f04f179a",
+          "title": "Improve cross-platform behavior.",
+          "author": "bohning"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "agetag",
+      "head": "1eeb054825891145f3771c1bcf42dfb05501ab6a",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 1,
+      "behind": 280,
+      "compareUrl": "https://github.com/dgruss/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...1eeb054825891145f3771c1bcf42dfb05501ab6a",
+      "commits": [
+        {
+          "sha": "1eeb054825891145f3771c1bcf42dfb05501ab6a",
+          "title": "introduce #AGE tag",
+          "author": "dgruss"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "ai-upscale-theme-textures",
+      "head": "5ba770ccb3f2f70047147164dbc34663eb7e6ca0",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 1,
+      "behind": 127,
+      "compareUrl": "https://github.com/dgruss/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...5ba770ccb3f2f70047147164dbc34663eb7e6ca0",
+      "commits": [
+        {
+          "sha": "5ba770ccb3f2f70047147164dbc34663eb7e6ca0",
+          "title": "Scale up theme textures",
+          "author": "dgruss"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "altkeys2",
+      "head": "f522e727363a32b1bf8b00fab3a98105c18ed7ef",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 2,
+      "behind": 127,
+      "compareUrl": "https://github.com/dgruss/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...f522e727363a32b1bf8b00fab3a98105c18ed7ef",
+      "commits": [
+        {
+          "sha": "e1158f8b75cd8fb978fe6e828bef0265c8a6ecae",
+          "title": "let alt keys search more than 1 char",
+          "author": "dgruss"
+        },
+        {
+          "sha": "f522e727363a32b1bf8b00fab3a98105c18ed7ef",
+          "title": "allow alt+key to escape from current folder if no match is found",
+          "author": "dgruss"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "always-score-rap-and-freestyle",
+      "head": "4612f96ebdbb51ba8627eab4c27d481c25d06828",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 1,
+      "behind": 90,
+      "compareUrl": "https://github.com/dgruss/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...4612f96ebdbb51ba8627eab4c27d481c25d06828",
+      "commits": [
+        {
+          "sha": "4612f96ebdbb51ba8627eab4c27d481c25d06828",
+          "title": "Make freestyle and rap scoring configurable",
+          "author": "dgruss"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "api",
+      "head": "0203e0363285c2dc177725ca24e91396a7a83545",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 111,
+      "behind": 246,
+      "compareUrl": "https://github.com/dgruss/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...0203e0363285c2dc177725ca24e91396a7a83545",
+      "commits": [
+        {
+          "sha": "a1403cc62071035423c988a0bc4f1e0da101af7c",
+          "title": "fix Alt+Key search",
+          "author": "dgruss"
+        },
+        {
+          "sha": "6acbf4f846490f85ca3b6431bd85876733eaefa5",
+          "title": "let alt keys search more than 1 char",
+          "author": "dgruss"
+        },
+        {
+          "sha": "bbcdac000324b4dcb6660e4b6f6aedcac6450361",
+          "title": "allow alt+key to escape from current folder if no match is found",
+          "author": "dgruss"
+        },
+        {
+          "sha": "b17c1aa8a0631a1281d482e7a105007f39f2d5ca",
+          "title": "Fix editor mouse action collisions and smaller editor bugs",
+          "author": "dgruss"
+        },
+        {
+          "sha": "098b644afb282549b687dcd97dc2304a77707ba8",
+          "title": "improve readability",
+          "author": "dgruss"
+        },
+        {
+          "sha": "c4e004cfcb1a14e5b4b11c6af5c4756bb2f0520e",
+          "title": "derive hitbox from theme",
+          "author": "dgruss"
+        },
+        {
+          "sha": "568e22817d43dbe86ff55a9dae13e11f7269716c",
+          "title": "Fix editor toolbar button theme mapping",
+          "author": "dgruss"
+        },
+        {
+          "sha": "550b400ff90d949e7e65191c3424229b461ac980",
+          "title": "Fix editor mouse click and drag collisions",
+          "author": "dgruss"
+        },
+        {
+          "sha": "9c61b1de2163cfcd7ab4d2355c80a25d694e2712",
+          "title": "handle selecting a different note while in text edit mode",
+          "author": "dgruss"
+        },
+        {
+          "sha": "3eaa855c0be7d0249219e17170b83872dc50494f",
+          "title": "avoid 0 length notes from accidental double double click",
+          "author": "dgruss"
+        },
+        {
+          "sha": "3bc6ed0647e2231cc13acdcb9c26fb315cce788e",
+          "title": "editor save error button: fix scaling, allow saving anyways, go to error, and fix",
+          "author": "dgruss"
+        },
+        {
+          "sha": "21532929fa2842c332c01b7d607e8d168e5900ac",
+          "title": "Normalize editor MIDI preview octave",
+          "author": "dgruss"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "beta",
+      "head": "f5f13cf4bdcda3dc9f3b58a6e18acae9772c5278",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 4,
+      "behind": 811,
+      "compareUrl": "https://github.com/dgruss/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...f5f13cf4bdcda3dc9f3b58a6e18acae9772c5278",
+      "commits": [
+        {
+          "sha": "96b84f5d673f1e2f9c90f5a199bedbe02bb4ca3b",
+          "title": "add piano mode (F6)",
+          "author": "dgruss"
+        },
+        {
+          "sha": "85ade6450a38e5856d4e1f696a4fb33074d0abb6",
+          "title": "add karaoke mode via #INSTRUMENTALS tag, key to toggle karaoke mode is K while playing.",
+          "author": "dgruss"
+        },
+        {
+          "sha": "59c45dedfad7895380fa62cd7b6f0274988fdabd",
+          "title": "Merge branch 'karaokefilemode' into beta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "f5f13cf4bdcda3dc9f3b58a6e18acae9772c5278",
+          "title": "usdxbox adaptations",
+          "author": "dgruss"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
     }
   ],
   "unavailableForks": [
     "danhale93/USDX-DeepStream"
-  ],
-  "assessment": {
-    "date": "2026-10-28",
-    "usceHead": "347e3eb6978a787994179195ee3a6d0bc0b8039d",
-    "mpvPr": 173,
-    "mpvHead": "d759794b8b52b1e624b659bd42a31bac8db2ea75",
-    "nativeApiPr": 168,
-    "nativeApiHead": "1ffc7aaeb94c6ef9c32e506a25d637ffa20871f2",
-    "reviewedSnapshots": 20,
-    "complete": true,
-    "scope": "All 20 pinned snapshots have a recorded triage decision. Open implementation/acceptance work remains in the referenced issues and PRs. No fork code was executed or imported.",
-    "unavailableForks": "danhale93/USDX-DeepStream remains unavailable and was not assessed."
-  }
+  ]
 }
