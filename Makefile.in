@@ -29,6 +29,8 @@ EXEEXT ?= @EXEEXT@
 
 #################################################
 # Tools
+# Local macOS builds may select a signing identity; CI remains ad-hoc.
+MACOS_SIGN_IDENTITY ?= -
 #################################################
 
 # recursive dir creation tool (mkdir -p)
@@ -459,7 +461,7 @@ macos-standalone-app: macos-app
 
 	@rm -f $(macos_bundle_path)/MacOS/$(USCE_BIN_NAME)
 	@$(MAKE) -f Makefile.macos-helper
-	codesign --force --deep --sign - "./UltraStar Community Edition.app"
+	codesign --force --deep --sign "$(MACOS_SIGN_IDENTITY)" "./UltraStar Community Edition.app"
 
 
 # final messages
@@ -483,7 +485,7 @@ macos-dmg: macos-standalone-app
 	find $(USCE_GAME_DIR) -name 'LICENSE.*' -maxdepth 1 -exec cp {} "/Volumes/UltraStar Community Edition/Licenses" \;
 #	/bin/cp "ultrastardx/icons/UltraStarDeluxeVolumeIcon.icns "/Volumes/UltraStar Community Edition/.VolumeIcon.icns"
 #	/Developer/Tools/SetFile -a C "/Volumes/UltraStar Community Edition/.VolumeIcon.icns" "/Volumes/UltraStar Community Edition"
-	codesign --force --deep --sign - "/Volumes/UltraStar Community Edition/UltraStar Community Edition.app"
+	codesign --force --deep --sign "$(MACOS_SIGN_IDENTITY)" "/Volumes/UltraStar Community Edition/UltraStar Community Edition.app"
 	python3 tools/detach_macos_image.py "$(HDIUTIL)" "/Volumes/UltraStar Community Edition" "UltraStar Community Edition.sparseimage"
 	$(HDIUTIL) convert "UltraStar Community Edition.sparseimage" -format UDBZ -o "UltraStar Community Edition.dmg"
 	$(RM) "UltraStar Community Edition.sparseimage"
