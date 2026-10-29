@@ -60,6 +60,8 @@ type
   TScreenSingView = class
   private
     GapCountdown: TGapCountdown;
+    LanePanelTexture: TTexture;
+    procedure DrawLanePanels;
     procedure DrawGapCountdown;
   public
 
@@ -554,14 +556,51 @@ begin
   ScreenSing.InfoMessageBG := ScreenSing.AddStatic(Theme.Sing.InfoMessageBG);
   ScreenSing.InfoMessageText := ScreenSing.AddText(Theme.Sing.InfoMessageText);
 
+  if Theme.Sing.HasLanePanel then
+  begin
+    LanePanelTexture := Renderer.GetTexture(Skin.GetTextureFileName(Theme.Sing.LanePanel.Tex),
+      Theme.Sing.LanePanel.Typ);
+    LanePanelTexture.ColR := Theme.Sing.LanePanel.ColR;
+    LanePanelTexture.ColG := Theme.Sing.LanePanel.ColG;
+    LanePanelTexture.ColB := Theme.Sing.LanePanel.ColB;
+    LanePanelTexture.Alpha := Theme.Sing.LanePanel.Alpha;
+    LanePanelTexture.CornerRadius := Theme.Sing.LanePanel.CornerRadius;
+    LanePanelTexture.ScaleMode := lsStretch;
+  end;
+
   InitAvatarSlots(UIni.IMaxPlayerCount);
 end;
 
 destructor TScreenSingView.Destroy;
 begin
+  LanePanelTexture.Free;
   GapCountdown.Free;
   UnloadSingScreenTextures;
   inherited;
+end;
+
+procedure TScreenSingView.DrawLanePanels;
+var
+  PlayerIndex, Count, LocalIndex: integer;
+  Layout: TSingLaneLayout;
+  Padding: single;
+begin
+  if LanePanelTexture = nil then Exit;
+  Count := GetScreenPlayerCount(PlayersPlay, Screens, ScreenAct);
+  for PlayerIndex := 0 to PlayersPlay - 1 do
+  begin
+    if GetPlayerScreen(PlayerIndex, PlayersPlay, Screens) <> ScreenAct then Continue;
+    if not ScreenSing.Settings.NotesVisible[PlayerIndex] then Continue;
+    LocalIndex := GetPlayerIndexOnScreen(PlayerIndex, PlayersPlay, Screens);
+    Layout := GetSingLaneLayout(Count, LocalIndex, Theme.Sing.PlayerLayout, CurrentSong.isDuet);
+    Padding := Theme.Sing.LanePanelPadding * Layout.ContentScale;
+    LanePanelTexture.X := Layout.GridLeft - Padding;
+    LanePanelTexture.Y := Layout.GuideTopY - Padding;
+    LanePanelTexture.W := Layout.GridWidth + 2 * Padding;
+    LanePanelTexture.H := 9 * Layout.NoteLineSpacing + 2 * Padding;
+    LanePanelTexture.Z := Theme.Sing.LanePanel.Z;
+    Renderer.DrawTexture(LanePanelTexture);
+  end;
 end;
 
 function TScreenSingView.Draw: boolean;
@@ -823,6 +862,9 @@ begin
   end;
   ScreenSing.Statics[StaticTimeBar].Visible := ScreenSing.Settings.TimeBarVisible;
   ScreenSing.Statics[StaticTimeProgress].Visible := ScreenSing.Settings.TimeBarVisible;
+
+  // Optional panels use the same lanes and visibility as normal note drawing.
+  DrawLanePanels;
 
   // draw static menu (FG)
   ScreenSing.DrawFG;
