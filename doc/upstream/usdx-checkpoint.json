@@ -38,8 +38,7 @@
       ],
       "disposition": "Equivalent sound-effect restart behavior is already provided by USCE PlaySound explicitly stopping and restarting effects. Preserve idempotent generic Play for active synth streams. Original upstream ancestry recorded without reverting USCE behavior.",
       "usce_prs": [
-        155,
-        161
+        155
       ]
     },
     {
