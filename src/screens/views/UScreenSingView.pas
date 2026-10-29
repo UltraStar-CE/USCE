@@ -558,13 +558,9 @@ begin
 
   if Theme.Sing.HasLanePanel then
   begin
-    LanePanelTexture := Renderer.GetTexture(Skin.GetTextureFileName(Theme.Sing.LanePanel.Tex),
-      Theme.Sing.LanePanel.Typ);
-    LanePanelTexture.ColR := Theme.Sing.LanePanel.ColR;
-    LanePanelTexture.ColG := Theme.Sing.LanePanel.ColG;
-    LanePanelTexture.ColB := Theme.Sing.LanePanel.ColB;
-    LanePanelTexture.Alpha := Theme.Sing.LanePanel.Alpha;
-    LanePanelTexture.CornerRadius := Theme.Sing.LanePanel.CornerRadius;
+    I := ScreenSing.AddStatic(Theme.Sing.LanePanel);
+    LanePanelTexture := ScreenSing.Statics[I].Texture.Clone;
+    ScreenSing.Statics[I].Visible := false;
     LanePanelTexture.ScaleMode := lsStretch;
   end;
 
