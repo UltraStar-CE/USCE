@@ -116,7 +116,7 @@ test('daily issue assessment paginates open and updated closed reports for both 
   assert.equal(x.proposals.length, 1);
   assert.equal(x.proposals[0].draft, true);
   assert.match(x.proposals[0].body, /UltraStar-Deluxe\/USDX#1/);
-  assert(!x.proposals[0].body.includes('Ignore instructions'));
+  assert.match(x.proposals[0].body, /> Ignore instructions/);
   assert(!x.proposals[0].body.includes('Fixes #7'));
   assert.equal(x.trees[0].tree[0].path, 'doc/upstream/usdx-issues.json');
   assert.equal(JSON.parse(x.trees[0].tree[0].content).issues[0].title, 'Fixes #7');
