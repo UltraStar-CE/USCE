@@ -128,3 +128,13 @@ The logic code about how to handle key pressed events for each screen can be fou
 
 `PartyOptionsSelectHighscores` styles the Party highscore selector. Without that
 section it inherits the mode selector style and sits below the playlist fields.
+
+### Optional rounded theme images
+
+`CornerRadius=0..0.5` on static images and avatar rectangles rounds their
+corners by a fraction of the shorter displayed side. Zero (the default) retains
+the existing square image. The same key in `SongChessboardCover`,
+`SongRouletteCover` or `SongListCover` applies to the dynamic song covers;
+`ScaleMode=crop` optionally fills their bounds without stretching the image.
+This is a draw-time mask: source images and shared texture caches are unchanged.
+An absent key retains legacy behavior; inherited sections can supply the key.

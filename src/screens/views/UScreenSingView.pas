@@ -262,6 +262,7 @@ begin
   ScreenSing.Statics[AvatarSlot].Texture.H := SingPlayer.Avatar.H;
   ScreenSing.Statics[AvatarSlot].Texture.Z := SingPlayer.Avatar.Z;
   ScreenSing.Statics[AvatarSlot].Texture.Alpha := SingPlayer.Avatar.Alpha;
+  ScreenSing.Statics[AvatarSlot].Texture.CornerRadius := SingPlayer.Avatar.CornerRadius;
   with ScreenSing.Statics[AvatarSlot].Texture do
   begin
     FitLayoutChild(X, Y, W, H,
@@ -430,6 +431,7 @@ var
     ScreenSing.Statics[avatarStatic].Texture.W := singPlayer.Avatar.W;
     ScreenSing.Statics[avatarStatic].Texture.Z := singPlayer.Avatar.Z;
     ScreenSing.Statics[avatarStatic].Texture.Alpha := singPlayer.Avatar.Alpha;
+    ScreenSing.Statics[avatarStatic].Texture.CornerRadius := singPlayer.Avatar.CornerRadius;
     ScreenSing.Statics[avatarStatic].Texture.ScaleMode := singPlayer.Avatar.ScaleMode;
   end;
   procedure assignAvatarStaticForSlot(const PlayerCountOnScreen, PlayerIndexOnScreen: integer; var avatarStatic: integer; var texture: TTexture);

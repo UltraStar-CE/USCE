@@ -102,6 +102,7 @@ type
     W:      integer;
     H:      integer;
     ScaleMode: TLayoutScaleMode;
+    CornerRadius: real;
   end;
 
   TThemeStaticAlphaRectangle = record
@@ -112,6 +113,7 @@ type
     H:      integer;
     Alpha:  real;
     ScaleMode: TLayoutScaleMode;
+    CornerRadius: real;
   end;
 
   TThemeStaticColorRectangle = record
@@ -144,6 +146,7 @@ type
     TexX2:  real;
     TexY2:  real;
     Alpha:  real;
+    CornerRadius: real;
     //Reflection
     Reflection:           boolean;
     Reflectionspacing:    real;
@@ -419,6 +422,8 @@ type
     //Cover Mod
     Cover: record
       Reflections: boolean;
+      CornerRadius: real;
+      ScaleMode: TLayoutScaleMode;
       X: integer;
       Y: integer;
       Z: integer;
@@ -3375,6 +3380,7 @@ begin
   ThemeStatic.W := ReadInteger(SectionList, 'W', 0);
   ThemeStatic.H := ReadInteger(SectionList, 'H', 0);
   ThemeStatic.Alpha := ReadFloat(SectionList, 'Alpha', 1);
+  ThemeStatic.CornerRadius := EnsureRange(ReadFloat(SectionList, 'CornerRadius', 0), 0.0, 0.5);
   ThemeStatic.Typ   := ParseTextureType(ReadString(SectionList, 'Type', ''), TEXTURE_TYPE_PLAIN);
   ThemeStatic.Color := ReadString(SectionList, 'Color', '');
   ThemeStatic.TexX1 := ReadFloat(SectionList, 'TexX1', 0);
@@ -3426,6 +3432,7 @@ begin
   ThemeStaticRectangle.Z := ReadFloat  (SectionList, 'Z', 0);
   ThemeStaticRectangle.W := ReadInteger(SectionList, 'W', 0);
   ThemeStaticRectangle.H := ReadInteger(SectionList, 'H', 0);
+  ThemeStaticRectangle.CornerRadius := EnsureRange(ReadFloat(SectionList, 'CornerRadius', 0), 0.0, 0.5);
   ThemeStaticRectangle.ScaleMode := ParseScaleMode(ReadString(SectionList, 'ScaleMode', ''), lsUniform);
 end;
 
@@ -3443,6 +3450,7 @@ begin
   static.W := ReadInteger(SectionList, 'W', 0);
   static.H := ReadInteger(SectionList, 'H', 0);
   static.Alpha := ReadFloat(SectionList, 'Alpha', 1);
+  static.CornerRadius := EnsureRange(ReadFloat(SectionList, 'CornerRadius', 0), 0.0, 0.5);
   static.ScaleMode := ParseScaleMode(ReadString(SectionList, 'ScaleMode', ''), lsUniform);
 end;
 
@@ -4914,6 +4922,8 @@ begin
   //  Song.Cover.Style := ThemeIni.ReadInteger('SongCover', 'Style', 4);
   SectionList := GetSectionList('Song' + prefix + 'Cover');
   Song.Cover.Reflections := ReadBool(SectionList, 'Reflections', false);
+  Song.Cover.CornerRadius := EnsureRange(ReadFloat(SectionList, 'CornerRadius', 0), 0.0, 0.5);
+  Song.Cover.ScaleMode := ParseScaleMode(ReadString(SectionList, 'ScaleMode', ''), lsStretch);
   //Load Cover Pos and Size from Theme Mod End
 
   ThemeLoadEqualizer(Song.Equalizer, 'Song' + prefix + 'Equalizer');
