@@ -1065,6 +1065,8 @@ type
     LineHeight:       real;
     MinColumnGap:     real;
     PageTextMargin:   real;
+    TwoColumnMinEntries: integer;
+    TableColumnGap: real;
     ColumnPadding:    real;
     FallbackRowPitch: real;
     MinEntries:       integer;
@@ -2647,7 +2649,7 @@ begin
       FillChar(StatDetail.BestSingersTable, SizeOf(StatDetail.BestSingersTable), 0);
       StatDetail.BestSingersTable.ColumnCount := 4;
       StatDetail.BestSingersTable.UsePageRightBound := true;
-      StatDetail.BestSingersTable.RightInset := 36;
+      StatDetail.BestSingersTable.RightInset := 0;
       StatDetail.BestSingersTable.Column[0].AutoWidth := true;
       StatDetail.BestSingersTable.Column[0].GapBefore := 0.00;
       StatDetail.BestSingersTable.Column[0].Align := 2;
@@ -2667,7 +2669,7 @@ begin
       FillChar(StatDetail.PopularTable, SizeOf(StatDetail.PopularTable), 0);
       StatDetail.PopularTable.ColumnCount := 4;
       StatDetail.PopularTable.UsePageRightBound := true;
-      StatDetail.PopularTable.RightInset := 36;
+      StatDetail.PopularTable.RightInset := 0;
       StatDetail.PopularTable.Column[0].AutoWidth := true;
       StatDetail.PopularTable.Column[0].GapBefore := 0.00;
       StatDetail.PopularTable.Column[0].Align := 2;
@@ -2699,6 +2701,13 @@ begin
       StatDetail.MinColumnGap := ReadFloat(SectionList, 'MinColumnGap', StatDetail.MinColumnGap);
       StatDetail.PageTextMargin := ReadFloat(SectionList, 'PageTextMargin', StatDetail.PageTextMargin);
       StatDetail.ColumnPadding := ReadFloat(SectionList, 'ColumnPadding', StatDetail.ColumnPadding);
+      StatDetail.TwoColumnMinEntries := Max(2, ReadInteger(SectionList, 'TwoColumnMinEntries', 20));
+      StatDetail.TableColumnGap := Max(0, ReadFloat(SectionList, 'TableColumnGap', 64));
+      // Pagination belongs below the table, rather than reserving its right side.
+      StatDetail.TextPage.X := ReadInteger(SectionList, 'PageX', StatDetail.ListX + StatDetail.ListW);
+      StatDetail.TextPage.Y := ReadInteger(SectionList, 'PageY', StatDetail.ListBottomY + 2);
+      StatDetail.TextPage.Size := ReadInteger(SectionList, 'PageSize', 12);
+      StatDetail.TextPage.Align := 2;
       StatDetail.FallbackRowPitch := ReadFloat(SectionList, 'FallbackRowPitch', StatDetail.FallbackRowPitch);
       StatDetail.MinEntries := ReadInteger(SectionList, 'MinEntries', StatDetail.MinEntries);
       StatDetail.DefaultEntries := ReadInteger(SectionList, 'DefaultEntries', StatDetail.DefaultEntries);
