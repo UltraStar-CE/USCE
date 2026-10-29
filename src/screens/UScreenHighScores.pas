@@ -577,8 +577,10 @@ begin
 end;
 
 procedure TScreenHighScores.OnShow;
+var PreviewEnd: real;
 begin
   inherited;
+  ScreenSong.StartFinishedSong(CurrentSong, PreviewEnd);
   AudioPlayback.SetVolume(EnsureRange(Ini.PreviewVolume, 0, 100) / 100);
 
   if not Help.SetHelpID(HighScoresHelpID) then

@@ -1681,13 +1681,11 @@ procedure TScreenSCore.StartPreview;
 var
   select:   integer;
   changed:  boolean;
-  PreviewPos: real;
-  PreviewVolume: single;
 begin
   if (not AudioPlayback.Finished) then
     Exit;
-  //When Music Preview is activated -> then change music
-  if (Ini.PreviewVolume <> 0) then
+  // Main-menu music is independent of the song preview volume.
+  if (Ini.PreviewVolume <> 0) or (Ini.EndedSongAction = 3) then
   begin
     changed := false;
     if (ScreenSong.Mode = smMedley) then
@@ -1712,31 +1710,7 @@ begin
     end;
 
     if changed then
-    begin
-      AudioPlayback.Close;
-      PreviewEnd := 0;
-
-      if AudioPlayback.Open(CatSongs.Song[select].Path.Append(CatSongs.Song[select].Audio),nil) then
-      begin
-        CatSongs.Song[select].GetPreviewRange(AudioPlayback.Length, PreviewPos, PreviewEnd);
-        AudioPlayback.Position := PreviewPos;
-
-        // set preview volume
-        PreviewVolume := EnsureRange(Ini.PreviewVolume, 0, 100) / 100;
-        if (Ini.PreviewFading = 0) then
-        begin
-          // music fade disabled: start with full volume
-          AudioPlayback.SetVolume(PreviewVolume);
-          AudioPlayback.Play()
-        end
-        else
-        begin
-          // music fade enabled: start muted and fade-in
-          AudioPlayback.SetVolume(0);
-          AudioPlayback.FadeIn(Ini.PreviewFading, PreviewVolume);
-        end;
-      end;
-    end;
+      ScreenSong.StartFinishedSong(CatSongs.Song[select], PreviewEnd);
   end;
 end;
 
