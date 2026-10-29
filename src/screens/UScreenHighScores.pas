@@ -643,6 +643,7 @@ end;
 
 function TScreenHighScores.Draw: boolean;
 begin
+  ScreenSong.UpdateTransitionPreview;
   Result := inherited Draw;
   ScreenContinuousPlayback.Update;
 end;
