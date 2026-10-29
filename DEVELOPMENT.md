@@ -149,3 +149,14 @@ list layout is retained. Existing list-row selection and hit testing still apply
 `SongListSelectedTitle`, `SongListSelectedArtist` and `SongListSelectedYear` are
 optional ordinary text sections for an independent selected-song detail panel.
 They use the highlighted song, including when browsing a filtered playlist.
+
+
+### Optional theme-local text font
+
+Ordinary text and button-text sections may set `FontFile=fonts/Inter-Regular.ttf`.
+The path uses the active theme/base-theme asset lookup. The numeric `Font` remains
+the fallback; no new family is added to the user's lyric-font choices. The face
+is loaded lazily once per file/fallback, with regular, synthetic bold and outline
+styles. A missing or unreadable face falls back to the existing family. Loaded
+families live until graphics/font teardown so outgoing screens remain valid
+through a theme transition. Font licenses must accompany theme font files.
