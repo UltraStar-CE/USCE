@@ -5480,6 +5480,15 @@ var
   LineIndex: Integer;
   RestartPreviewBuild: Boolean;
 begin
+  if KeepPreview and (FAnalysisSourceIdentity <> GetAnalysisSourceIdentity) then
+  begin
+    StopAnalysisThread;
+    RestoreStandardPlayback(false);
+    ClearVocalsWaveformCache(true);
+    FAnalysisSourceIdentity := GetAnalysisSourceIdentity;
+    if HasVocalsPreviewSource then StartAnalysisThread(true, CurrentTrack);
+    Exit;
+  end;
   if not KeepPreview then
     ClearVocalsWaveformCache(true);
   if KeepPreview and HasVocalsPreviewPlayback then
