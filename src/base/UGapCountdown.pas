@@ -24,6 +24,8 @@ implementation
 
 uses Math;
 
+const CountdownWindowSeconds = 10;
+
 procedure TGapCountdown.Clear;
 begin
   SetLength(Intervals, 0);
@@ -91,6 +93,7 @@ begin
   // Intros use the existing count-in; there is no countdown after the last note.
   if (Left = 0) or (Left = Length(Intervals)) then Exit;
   if (Now < Intervals[Left].StartTime) and
+     (Intervals[Left].StartTime - Now <= CountdownWindowSeconds) and
      (Intervals[Left].StartTime - Intervals[Left-1].EndTime >= MinimumGap - 0.000001) then
     Result := Intervals[Left].StartTime - Now;
 end;
