@@ -50,11 +50,17 @@ builds, run `python3 tools/generate-version.py` before compiling.
 
 - `git clone https://github.com/UltraStar-CE/USCE`
 - `cd USCE`
+- `python3 tools/bundle-themes.py setup` (Windows: `python`)
 - Windows only: compile the DLLs with `make -C dists/windows install`
 - `./autogen.sh`
 - `./configure` (see optional flags below)
 - `make` (on macOS: `make macos-standalone-app`)
 - `./game/usce[.exe]` (on MacOS: `open "UltraStar Community Edition.app"`)
+
+Themes live in the separate Themes repository. Setup downloads the exact revision
+in `themes.json` into `game/themes`; existing local themes are never overwritten.
+Release packages include that same pinned snapshot. To update a development
+installation, move the existing themes directory aside before running setup again.
 
 On Windows, `make` builds the game and its enabled wrappers; the separate
 dependency step supplies the runtime DLLs. If launching reports a missing DLL,
