@@ -537,16 +537,21 @@ var
           Theme.StatDetail.MaxEntries, Theme.StatDetail.FontSizeRelaxed,
           Theme.StatDetail.FontSizeDense, Theme.StatDetail.FontSizeCurve),
           Theme.StatDetail.LineHeight);
-      RequiredWidth := 0;
-      for Column := 0 to ColumnCount - 1 do
-        RequiredWidth := RequiredWidth + Table.Column[Column].GapBefore +
-            Max(Table.Column[Column].Width,
-            ValueColumnWidth(Definitions[Column].Header, Definitions[Column].Value));
-      if RequiredWidth <= 1 then
+      while ListLayout.TextSize >= SingleLayout.TextSize * 1.1 do
       begin
-        RowsPerColumn := TrialRows;
-        ColumnOffset := ThemeText.W + Gap;
-        RightBound := 1;
+        RequiredWidth := 0;
+        for Column := 0 to ColumnCount - 1 do
+          RequiredWidth := RequiredWidth + Table.Column[Column].GapBefore +
+              Max(Table.Column[Column].Width,
+              ValueColumnWidth(Definitions[Column].Header, Definitions[Column].Value));
+        if RequiredWidth <= 1 then
+        begin
+          RowsPerColumn := TrialRows;
+          ColumnOffset := ThemeText.W + Gap;
+          RightBound := 1;
+          Break;
+        end;
+        ListLayout.TextSize := ListLayout.TextSize * 0.95;
       end;
     end;
     if ColumnOffset = 0 then
