@@ -6424,7 +6424,7 @@ begin
     begin
       OriginalStream := OpenDecodeStream(CurrentSong.Path.Append(CurrentSong.Audio));
       if not Assigned(OriginalStream) then
-        Exit;
+        raise Exception.Create('Could not decode the backing track');
       if HasVocalsPreviewSource then
       begin
         KaraokeStream := OpenDecodeStream(CurrentSong.Path.Append(GetVocalsPreviewSourcePath));
@@ -8449,7 +8449,7 @@ begin
   SyncVolumeSlidersFromIni;
   PlayPendingNoteClick;
 
-  if FPreviewRescorePending and HasVocalsPreviewPlayback and not FAnalysisThreadRunning then
+  if FPreviewRescorePending and not FAnalysisThreadRunning then
   begin
     FPreviewRescorePending := false;
     InvalidateVocalsAnalysis(true);
