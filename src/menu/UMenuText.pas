@@ -110,6 +110,8 @@ type
       function GetMouseOverArea: TMouseOverRect;
   end;
 
+function TextLineSpacingFactor(Style: integer): real;
+
 implementation
 
 uses
