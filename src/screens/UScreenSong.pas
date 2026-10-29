@@ -96,6 +96,7 @@ type
       KeepPreviewMusicOnHide: boolean;
       TransitionSong: TSong;
       TransitionAction: integer;
+      TransitionPreviewEnd: real;
       function SuppressTransitionPreview(Song: TSong): boolean;
 
       procedure SchedulePreview(SelectionSettled: boolean = false);
@@ -321,6 +322,7 @@ type
 
       procedure PreservePreviewForReturn;
       procedure StartFinishedSong(Song: TSong; var EndPosition: real);
+      procedure UpdateTransitionPreview;
       procedure OpenContinuousFromMainMenu;
   end;
 
@@ -4058,6 +4060,7 @@ begin
   // No opened song means there was no ended stream to resume.
   if AudioPlayback.Length <= 0 then Exit;
   EndPosition := 0;
+  TransitionPreviewEnd := 0;
   TransitionSong := Song;
   TransitionAction := Ini.EndedSongAction;
   AudioPlayback.Close;
@@ -4072,6 +4075,7 @@ begin
   PreviewPos := 0;
   if TransitionAction = 0 then
     Song.GetPreviewRange(AudioPlayback.Length, PreviewPos, EndPosition);
+  TransitionPreviewEnd := EndPosition;
   AudioPlayback.Position := PreviewPos;
   Volume := EnsureRange(Ini.PreviewVolume, 0, 100) / 100;
   if Ini.PreviewFading = 0 then
@@ -4083,6 +4087,16 @@ begin
   begin
     AudioPlayback.SetVolume(0);
     AudioPlayback.FadeIn(Ini.PreviewFading, Volume);
+  end;
+end;
+
+procedure TScreenSong.UpdateTransitionPreview;
+begin
+  if (TransitionSong <> nil) and (TransitionPreviewEnd > 0) and
+     (AudioPlayback.Position >= TransitionPreviewEnd) then
+  begin
+    AudioPlayback.Stop;
+    TransitionPreviewEnd := 0;
   end;
 end;
 

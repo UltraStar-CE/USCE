@@ -1343,6 +1343,7 @@ var
   dt: real;
   I: integer;
 begin
+  ScreenSong.UpdateTransitionPreview;
   //inherited Draw;
   //heres a little Hack, that causes the Statics
   //are Drawn after the Buttons because of some Blending Problems.
