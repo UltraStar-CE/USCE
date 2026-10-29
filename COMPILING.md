@@ -75,6 +75,11 @@ check that `make -C dists/windows install` completed successfully, then rerun
   auto-detects OpenCV 3+ and disables webcam support if OpenCV is not found.
 * `--without-opencv`: Build without webcam support even if OpenCV is installed.
 
+For local macOS builds, use `make macos-standalone-app MACOS_SIGN_IDENTITY="Your certificate name"`
+or the same variable with `macos-dmg`. Both signing steps use that identity.
+The default remains ad-hoc signing (`-`); CI needs no certificate. Selecting an
+identity alone does not guarantee that macOS will retain microphone permission.
+
 ## Flatpak packaging
 
 USCE does not yet have a published Flathub package. The upstream USDX manifest
