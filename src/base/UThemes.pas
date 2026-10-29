@@ -3194,11 +3194,11 @@ var
 begin
   SectionList := GetSectionList(Name);
   List.ColumnGap := Max(0, ReadFloat(SectionList, 'ColumnGap', 64));
-  List.TwoColumnMinEntries := Max(2, ReadInteger(SectionList, 'TwoColumnMinEntries', 20));
+  List.TwoColumnMinEntries := Max(2, ReadInteger(SectionList, 'TwoColumnMinEntries', 14));
   List.BottomY := ReadInteger(SectionList, 'BottomY', 390);
   List.MinTextSize := ReadInteger(SectionList, 'MinTextSize', 18);
-  List.DefaultEntries := EnsureRange(ReadInteger(SectionList, 'DefaultEntries', 5), 5, 20);
-  List.MaxEntries := EnsureRange(ReadInteger(SectionList, 'MaxEntries', 20), List.DefaultEntries, 20);
+  List.DefaultEntries := EnsureRange(ReadInteger(SectionList, 'DefaultEntries', 5), 5, 30);
+  List.MaxEntries := EnsureRange(ReadInteger(SectionList, 'MaxEntries', 30), List.DefaultEntries, 30);
 end;
 
 procedure TTheme.ThemeLoadHighScores;
