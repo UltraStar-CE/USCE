@@ -82,6 +82,7 @@ type
     Query: UTF8String;
   end;
   TSongFilterRows = array of TSongFilterRow;
+  TSongFilterMask = array of boolean;
 
   TScore = record
     Name:   UTF8String;
@@ -150,6 +151,7 @@ type
 
     function SetFilter(FilterStr: UTF8String; Filter: TSongFilter): cardinal;
     function SetFilters(const Rows: TSongFilterRows): cardinal;
+    function FilterMask(const Rows: TSongFilterRows; ExceptRow: integer): TSongFilterMask;
   end;
 
 var
@@ -388,6 +390,7 @@ var
   Iter: IFileIterator;
   FileInfo: TFileInfo;
   FileName: IPath;
+  FileCount: Integer;
 begin
   if Recursive then
     DirList := CollectDirectories(Dir, true, Self)
@@ -397,6 +400,8 @@ begin
     DirList[0] := Dir;
   end;
 
+  FileCount := 0;
+  SetLength(Files, 128);
   for DirIndex := 0 to High(DirList) do
   begin
     Iter := FileSystem.FileFind(DirList[DirIndex].Append('*.txt'), 0);
@@ -407,12 +412,17 @@ begin
       if ((FileInfo.Attr and faDirectory) = 0) and Ext.Equals(FileName.GetExtension(), true) then
       begin
         Log.LogDebug('Found file ' + DirList[DirIndex].Append(FileName).ToWide, 'TSongs.FindFilesByExtension');
-        SetLength(Files, Length(Files) + 1);
-        Files[High(Files)] := DirList[DirIndex].Append(FileName);
+        if (Length(Files) <= FileCount) then
+        begin
+          SetLength(Files, Length(Files)*2);
+        end;
+        Files[FileCount] := DirList[DirIndex].Append(FileName);
+        FileCount := FileCount + 1;
         PumpLoadingEvents;
       end;
     end;
   end;
+  SetLength(Files, FileCount);
 end;
 
 function TSongs.CollectSongFiles: TPathDynArray;
@@ -1080,6 +1090,34 @@ begin
   Result := Song[Index].VisibleIndex;
 end;
 
+function TCatSongs.FilterMask(const Rows: TSongFilterRows; ExceptRow: integer): TSongFilterMask;
+var Saved: TSongFilterMask; I, R, Category: integer;
+begin
+  Result := nil;
+  // Nonempty SetFilter calls only change visibility. Never clear a filter here:
+  // that path restores playlist order and rebuilds category objects.
+  SetLength(Result, Length(Song));
+  SetLength(Saved, Length(Song));
+  Category := CatNumShow;
+  for I := 0 to High(Song) do
+  begin
+    Saved[I] := Song[I].Visible;
+    Result[I] := not Song[I].Main;
+  end;
+  try
+    for R := 0 to High(Rows) do
+      if (R <> ExceptRow) and (Trim(Rows[R].Query) <> '') then
+      begin
+        SetFilter(Rows[R].Query, Rows[R].Kind);
+        for I := 0 to High(Song) do Result[I] := Result[I] and Song[I].Visible;
+      end;
+  finally
+    for I := 0 to High(Song) do Song[I].Visible := Saved[I];
+    CatNumShow := Category;
+    ResetVisibleIndexCache;
+  end;
+end;
+
 function TCatSongs.SetFilters(const Rows: TSongFilterRows): cardinal;
 var I, R: integer; Mask: array of boolean; Active: boolean;
 begin
@@ -1114,10 +1152,14 @@ var
   TmpString: UTF8String;
   WordArray: array of UTF8String;
   FilterCopy: UTF8String;
-  AgeFilterActive: boolean;
-  AgeFilterCondition: TAgeCondition;
-  AgeRegion: string;
+  AgeParts: TStringList;
+  AgeQuery, AgeRegion: string;
   RegionSeparator: integer;
+  AgeTerms: array of record
+    Region: string;
+    Unrated, Valid: boolean;
+    Condition: TAgeCondition;
+  end;
 
   function MatchesAgeCondition(SongAge: integer; const Condition: TAgeCondition): boolean;
   begin
@@ -1142,22 +1184,31 @@ begin
 
   FilterStr := Trim(LowerCase(TransliterateToASCII(FilterStr)));
   FilterCopy := FilterStr;
-  AgeRegion := Ini.AgeCountry;
-  if Filter = fltAge then
+  if (Filter = fltAge) and (FilterCopy <> '') then
   begin
-    RegionSeparator := Pos(':', FilterCopy);
-    if RegionSeparator > 0 then
-    begin
-      AgeRegion := UpperCase(Trim(Copy(FilterCopy, 1, RegionSeparator - 1)));
-      Delete(FilterCopy, 1, RegionSeparator);
-    end;
-  end;
-
-  AgeFilterActive := false;
-  if (Filter = fltAge) and (FilterStr <> '') then
-  begin
-    AgeFilterActive := ParseAgeCondition(FilterCopy, AgeFilterCondition);
-    // An invalid nonempty age query must match nothing, not clear the filter.
+    AgeParts := TStringList.Create;
+    try
+      AgeParts.StrictDelimiter := true;
+      AgeParts.QuoteChar := #0;
+      AgeParts.Delimiter := ',';
+      AgeParts.DelimitedText := StringReplace(FilterCopy, ';', ',', [rfReplaceAll]);
+      SetLength(AgeTerms, AgeParts.Count);
+      for I := 0 to AgeParts.Count - 1 do
+      begin
+        AgeQuery := Trim(AgeParts[I]);
+        AgeRegion := Ini.AgeCountry;
+        RegionSeparator := Pos(':', AgeQuery);
+        if RegionSeparator > 0 then
+        begin
+          AgeRegion := UpperCase(Trim(Copy(AgeQuery, 1, RegionSeparator - 1)));
+          Delete(AgeQuery, 1, RegionSeparator);
+          AgeQuery := Trim(AgeQuery);
+        end;
+        AgeTerms[I].Region := AgeRegion;
+        AgeTerms[I].Unrated := AgeQuery = '?';
+        AgeTerms[I].Valid := ParseAgeCondition(AgeQuery, AgeTerms[I].Condition);
+      end;
+    finally AgeParts.Free; end;
   end;
 
   if (FilterStr <> '') then
@@ -1191,10 +1242,16 @@ begin
 
       if Filter = fltAge then
       begin
-        if FilterCopy = '?' then
-          Song[i].Visible := AgeForRegion(Song[i].AgeRaw, AgeRegion) < 0
-        else
-          Song[i].Visible := AgeFilterActive and MatchesAgeCondition(AgeForRegion(Song[i].AgeRaw, AgeRegion), AgeFilterCondition);
+        Song[I].Visible := false;
+        for J := 0 to High(AgeTerms) do
+        begin
+          if AgeTerms[J].Unrated then
+            Song[I].Visible := AgeForRegion(Song[I].AgeRaw, AgeTerms[J].Region) < 0
+          else
+            Song[I].Visible := AgeTerms[J].Valid and MatchesAgeCondition(
+              AgeForRegion(Song[I].AgeRaw, AgeTerms[J].Region), AgeTerms[J].Condition);
+          if Song[I].Visible then Break;
+        end;
         if Song[i].Visible then
           Inc(Result);
         Continue;
@@ -1221,7 +1278,7 @@ begin
           TmpString := Song[i].TagsASCII;
       end;
 
-      if Filter in [fltLanguage, fltEdition, fltGenre, fltYear, fltTags] then
+      if Filter in [fltTitle, fltArtist, fltLanguage, fltEdition, fltGenre, fltYear, fltCreator, fltTags] then
       begin
         Song[I].Visible := MatchesFilterTerms(TmpString, FilterCopy, Filter = fltYear);
         if Song[I].Visible then Inc(Result);

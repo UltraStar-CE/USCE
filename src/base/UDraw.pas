@@ -49,7 +49,7 @@ procedure SingDrawOscilloscope(Position: TThemePosition; NrSound: integer);
 procedure SingDrawNoteLines(Left, Top, Right: real; LineSpacing: integer = 15; LineThickness: single = 1);
 procedure SingDrawLyricHelper(CP: integer; Left, LyricsMid, IndicatorOffset: real);
 procedure SingDrawLine(Left, Top, Right: real; Track, PlayerIndex: integer; LineSpacing: integer = 15);
-procedure SingDrawPlayerLine(Left, Top, W: real; Track, PlayerIndex: integer; LineSpacing: integer = 15);
+procedure SingDrawPlayerLine(Left, Top, W: real; Track, PlayerIndex: integer; LineSpacing: integer = 15; OnlyGaps: boolean = false);
 procedure SingDrawPlayerBGLine(Left, Top, Right: real; Track, PlayerIndex: integer; LineSpacing: integer = 15);
 
 //Draw Editor NoteLines
@@ -558,14 +558,26 @@ begin
 end;
 
 // draw sung notes
-procedure SingDrawPlayerLine(Left, Top, W: real; Track, PlayerIndex: integer; LineSpacing: integer);
+procedure SingDrawPlayerLine(Left, Top, W: real; Track, PlayerIndex: integer; LineSpacing: integer; OnlyGaps: boolean);
 var
   TempR:      real;
   Rec:        TRecR;
   N: integer;
+  FirstBeat, WindowStart, BaseTone: real;
+  DrawingGap: boolean;
   Texture: TTexture;
 //  R, G, B, A: real;
   NotesH2:    real;
+  procedure DrawSungTexture;
+  begin
+    if DrawingGap then
+    begin
+      if Texture.X < Left then begin Texture.W := Texture.W-(Left-Texture.X); Texture.X := Left; end;
+      Texture.W := Min(Texture.W,Left+W-Texture.X);
+      if Texture.W <= 0 then Exit;
+    end;
+    Renderer.DrawTexture(Texture);
+  end;
 begin
   if (ScreenSing.Settings.InputVisible) then
   begin
@@ -578,14 +590,29 @@ begin
 
       for N := 0 to Player[PlayerIndex].HighNote do
       begin
+        DrawingGap := Player[PlayerIndex].Note[N].IsGap;
+        if DrawingGap and (Ini.PitchTrace=0) then Continue;
+        if OnlyGaps and not DrawingGap then Continue;
+        with CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine] do
+          if Length(Notes)>0 then begin FirstBeat:=Notes[0].StartBeat;BaseTone:=BaseNote;end
+          else begin FirstBeat:=Player[PlayerIndex].DetectionBeat-15;BaseTone:=Player[PlayerIndex].LastSungTone;TempR:=W/16;end;
+        WindowStart := FirstBeat;
+        if DrawingGap and (TempR > 0) and
+          ((Player[PlayerIndex].DetectionBeat < FirstBeat) or
+           (Player[PlayerIndex].DetectionBeat >= FirstBeat+W/TempR)) then
+          WindowStart := Player[PlayerIndex].DetectionBeat+1-W/TempR;
         with Player[PlayerIndex].Note[N] do
         begin
           // Left part of note
-          Rec.Left  := Left + (Start - CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine].Notes[0].StartBeat) * TempR + 0.5;
+          Rec.Left  := Left + (Start - WindowStart) * TempR + 0.5;
           Rec.Right := Rec.Left + NotesW[PlayerIndex];
 
           // Draw it in half size, if not hit
-          if Hit then
+          if DrawingGap then
+          begin
+            NotesH2 := Max(0.5, NotesH[PlayerIndex] * 0.5);
+          end
+          else if Hit then
           begin
             NotesH2 := NotesH[PlayerIndex]
           end
@@ -594,7 +621,7 @@ begin
             NotesH2 := int(NotesH[PlayerIndex] * 0.65);
           end;
 
-          Rec.Top    := Top - (Tone-CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine].BaseNote)*LineSpacing/2 - NotesH2;
+          Rec.Top    := Top - (Tone-BaseTone)*LineSpacing/2 - NotesH2;
           Rec.Bottom := Rec.Top + 2 * NotesH2;
 
           // draw the left part
@@ -613,11 +640,11 @@ begin
             ColB := 1;
             Alpha := NoteAlpha(NoteType, 1);
           end;
-          Renderer.DrawTexture(Texture);
+          DrawSungTexture;
 
           // Middle part of the note
           Rec.Left  := Rec.Right;
-          Rec.Right := Left + (Start + Duration - CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine].Notes[0].StartBeat) * TempR - NotesW[PlayerIndex] - 0.5;
+          Rec.Right := Left + (Start + Duration - WindowStart) * TempR - NotesW[PlayerIndex] - 0.5;
 
           // new
           if (Start + Duration - 1 = LyricsState.CurrentBeatD) then
@@ -649,7 +676,7 @@ begin
             TexY2 := 1;
             Alpha := NoteAlpha(NoteType, 1);
           end;
-          Renderer.DrawTexture(Texture);
+          DrawSungTexture;
 
           // the right part of the note
           Rec.Left  := Rec.Right;
@@ -670,7 +697,7 @@ begin
             ColB := 1;
             Alpha := NoteAlpha(NoteType, 1);
           end;
-          Renderer.DrawTexture(Texture);
+          DrawSungTexture;
 
           // Perfect note is stored
           if Perfect and (Ini.EffectSing=1) and ScreenSing.Settings.FeedbackVisible then
@@ -691,7 +718,8 @@ begin
       // actually we need a comparison here, to determine if the singing process
       // is ahead Rec.Right even if there is no singing
 
-      if (Ini.EffectSing = 1) and ScreenSing.Settings.FeedbackVisible then
+      if not OnlyGaps and (Ini.EffectSing = 1) and ScreenSing.Settings.FeedbackVisible and
+         (Player[PlayerIndex].HighNote >= 0) and not Player[PlayerIndex].Note[Player[PlayerIndex].HighNote].IsGap then
         GoldenRec.GoldenNoteTwinkle(Rec.Top,Rec.Bottom,Rec.Right, PlayerIndex);
     end; // if
   end; // if
@@ -1125,7 +1153,12 @@ begin
     // Clear the final target notes and sung trace when their lyrics fade out.
     // Each duet voice finishes independently; scoring is unaffected.
     if LyricEngine.GetUpperLine.LastLine and
-      not LyricEngine.HasVisibleText(LyricsState.MidBeat) then Continue;
+      not LyricEngine.HasVisibleText(LyricsState.MidBeat) then
+    begin
+      if Ini.PitchTrace <> 0 then
+        SingDrawPlayerLine(LaneLeft, LineTop, LaneWidth, TrackIndex, PlayerIndex, LineSpacing, true);
+      Continue;
+    end;
 
     SingDrawPlayerBGLine(LaneLeft, LineTop, LaneRight, TrackIndex, PlayerIndex, LineSpacing);
     SingDrawLine(LaneLeft, LineTop, LaneRight, TrackIndex, PlayerIndex, LineSpacing);

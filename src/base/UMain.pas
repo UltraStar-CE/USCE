@@ -100,6 +100,7 @@ uses
   UPlatform,
   URenderer,
   UScreenSingController,
+  UScreenScore,
   USkins,
   USongs,
   UThemes,
@@ -115,7 +116,7 @@ uses
   UTime,
   UWebcam,
   ULibraryLockdown,
-  ULockdownUI;
+  ULockdownUI, UDuplicateSongUI, ULockdownLaunch, USong, UScreenContinuousPlayback;
   //UVideoAcinerella;
 
 type
@@ -173,6 +174,63 @@ begin
   ScreenName.LoadPlayersFromIni;
   ScreenSing := TScreenSingController.Create;
   Display.CurrentScreen^.FadeTo(@ScreenSing);
+end;
+
+procedure StartLockedPlayback;
+var Selected: TList; FirstSong: TSong; I, PlaylistIndex: integer; Error: UTF8String;
+begin
+  Error := Params.StartupError;
+  Selected := TList.Create;
+  try
+    if Error = '' then
+      CollectLaunchSongs(Params.PlaylistName, PlaylistMan.Playlists,
+        CatSongs.Song, Selected, PlaylistIndex, Error);
+    if Error = '' then
+    begin
+      FirstSong := TSong(Selected[0]);
+      if not ActivateLibraryLockdown(Selected, Params.LockdownPassword) then
+        Error := 'Could not activate library lockdown'
+      else
+      begin
+        PlaylistMan.ApplyPlayList(PlaylistIndex);
+        for I := 0 to High(CatSongs.Song) do
+          if CatSongs.Song[I] = FirstSong then
+          begin
+            CatSongs.Selected := I;
+            ScreenSong.Interaction := I;
+            Break;
+          end;
+        ScreenName.LoadPlayersFromIni;
+        LoadPlayersColors;
+        Theme.ThemeScoreLoad;
+        ScreenScore.Free;
+        ScreenScore := TScreenScore.Create;
+        ScreenSing.Free;
+        ScreenSing := TScreenSingController.Create;
+        Display.CurrentScreen := @ScreenSong;
+        ScreenContinuousPlayback.BeginSession;
+      end;
+    end;
+    if Error <> '' then
+    begin
+      Log.LogError(Error, 'Startup');
+      SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, 'USCE', PChar(Error), nil);
+      ExitCode := 1;
+      Display.Fade := 0;
+      Display.NextScreenWithCheck := nil;
+      Display.CheckOK := true;
+    end;
+  finally
+    Params.LockdownPassword := '';
+    Selected.Free;
+  end;
+end;
+
+procedure ContinueStartup;
+begin
+  if Params.Lockdown or (Params.StartupError <> '') then StartLockedPlayback
+  else if Params.Song.IsSet then StartSingleSong
+  else SoundLib.StartBgMusic;
 end;
 
 procedure Main;
@@ -350,10 +408,7 @@ begin
     {**
       * Start background music
       *}
-    if Params.Song.IsSet then
-      StartSingleSong
-    else
-      SoundLib.StartBgMusic;
+    CheckStartupSongIdentities(@ContinueStartup);
 
     //------------------------------
     // Start Mainloop
@@ -391,6 +446,7 @@ begin
     FinalizeJoyStick;
 
     Log.LogStatus('Uninitialize 3D', 'Finalization');
+    FreeAndNil(DuplicateSongPopup);
     Finalize3D();
 
     Log.LogStatus('Finalize SDL', 'Finalization');
@@ -905,7 +961,7 @@ var
 begin
   Max_FPS := Ini.MaxFramerateGet;
   // need to explicitly stop this because it appears to be started by default
-  SDL_StopTextInput;
+  if (DuplicateSongPopup = nil) or not DuplicateSongPopup.Visible then SDL_StopTextInput;
   Done := false;
   J := 1;
   CountSkipTime();
@@ -1069,6 +1125,8 @@ begin
               KeepGoing := ScreenPopupInfo.ParseMouse(mouseBtn, mouseDown, Event.button.x, Event.button.y)
             else if (ScreenPopupCheck <> nil) and (ScreenPopupCheck.Visible) then
               KeepGoing := ScreenPopupCheck.ParseMouse(mouseBtn, mouseDown, Event.button.x, Event.button.y)
+            else if (DuplicateSongPopup <> nil) and DuplicateSongPopup.Visible then
+              KeepGoing := DuplicateSongPopup.ParseMouse(mouseBtn, mouseDown, Event.button.x, Event.button.y)
             else if (ScreenPopupInsertUser <> nil) and (ScreenPopupInsertUser.Visible) then
               KeepGoing := ScreenPopupInsertUser.ParseMouse(mouseBtn, mouseDown, Event.button.x, Event.button.y)
             else if (ScreenPopupSendScore <> nil) and (ScreenPopupSendScore.Visible) then
@@ -1165,6 +1223,8 @@ begin
               KeepGoing := ScreenPopupInfo.ParseInput(SimKey, KeyCharUnicode, true)
             else if (ScreenPopupCheck <> nil) and (ScreenPopupCheck.Visible) then
               KeepGoing := ScreenPopupCheck.ParseInput(SimKey, KeyCharUnicode, true)
+            else if (DuplicateSongPopup <> nil) and DuplicateSongPopup.Visible then
+              KeepGoing := DuplicateSongPopup.ParseInput(SimKey, KeyCharUnicode, true)
             else if (ScreenPopupInsertUser <> nil) and (ScreenPopupInsertUser.Visible) then
               KeepGoing := ScreenPopupInsertUser.ParseInput(SimKey, KeyCharUnicode, true)
             else if (ScreenPopupSendScore <> nil) and (ScreenPopupSendScore.Visible) then

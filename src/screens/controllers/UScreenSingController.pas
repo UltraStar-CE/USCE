@@ -583,7 +583,10 @@ begin
       SDLK_RIGHT:
       begin
         if ((SDL_ModState and KMOD_LCTRL) <> 0) then
-          SeekTo(Min(AudioPlayback.Position + 5.0, LyricsState.TotalTime));
+        begin
+          SeekTo(Min(AudioPlayback.Position + 5.0, LyricsState.TotalTime), false);
+          PlaybackSeeked := true;
+        end;
 
       end;
 
@@ -648,6 +651,7 @@ end;
 procedure TScreenSingController.SeekTo(Position: real; ResetScoring: boolean);
 var I: integer; Color: TRGB;
 begin
+  ResetSungPitchReference;
   if ResetScoring then
   begin
     PlaybackSeeked := true;
@@ -664,6 +668,9 @@ begin
     Scores.Init;
     GoldenRec.KillAll;
   end;
+  // Resume detection at the destination without scoring the skipped beats.
+  for I := 0 to High(Player) do
+    Player[I].DetectionReady := false;
   StopSingClicks;
   AudioPlayback.SetPosition(Position);
   LyricsState.SetCurrentTime(Position);
@@ -786,6 +793,10 @@ begin
   ScoringTailActive := false;
   RemoteBridgeIPC.ApplyPendingPlayerCount(true);
   Log.LogStatus('Begin', 'OnShow');
+
+  // Drop any pitch history from the previous song, otherwise the trace would
+  // briefly show the last song's notes before it scrolls away.
+  ResetSungPitchReference;
 
   if not Help.SetHelpID(ID) then
     Log.LogWarn('No Entry for Help-ID ' + ID, 'ScreenSingController');
@@ -1083,6 +1094,7 @@ var
   end;
 
 begin
+  ResetSungPitchReference;
   // background texture (garbage disposal)
   FreeAndNil(Tex_Background);
 

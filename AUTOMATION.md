@@ -43,6 +43,40 @@ deferral. An assessment checkpoint records what was reviewed; it does not imply
 that every change was adopted. Changes that depend on earlier work are reviewed
 in order, with compatibility adjustments recorded in the PR.
 
+Automated proposals retain upstream links and contributor mentions, including
+maintainers. Upstream issues and PRs use fully qualified references such as
+`UltraStar-Deluxe/USDX#1460` so they point to the correct repository. The tracker
+links both the source proposal and its USCE counterpart. Release notes retain
+relevant source references and attribution alongside links to the USCE changes.
+
+The same daily assessment also monitors the upstream USDX and Themes issue
+trackers, even when there are no new commits. Only reports created on or after
+the fixed cutoff in `doc/upstream/issues-watch.json` are included. Older issues
+stay excluded even when updated or reopened. Later activity on the new reports,
+including comments and changes of state, prompts reassessment. Titles, source
+links, description excerpts, labels and comment counts provide context for
+assessing bugs, regressions, feature requests and workarounds against current
+USCE. An upstream report is not automatically a confirmed USCE bug.
+
+Issue assessments contain up to 20 reports, with one outstanding assessment per
+source repository. Decisions and related USCE issue or PR links are recorded in
+`doc/upstream/usdx-issues.json` or `doc/upstream/themes-issues.json` before merge.
+Unchanged reports are not proposed again; new activity prompts reassessment and
+retains the prior decision. Closing an assessment without merging does not mark
+its reports as assessed. The workflow neither posts upstream nor generates or
+merges game changes from issue text, and requires no additional paid AI service.
+
+The daily assessment also discovers USDX forks pushed within the last two years,
+including forks listed in GitHub's active-forks view. Archived and disabled
+repositories and USCE itself are excluded. All branch tips are checked, including feature branches. New tips with commits ahead of
+USDX produce a draft assessment with immutable comparisons and commit excerpts.
+These commits may already have equivalent ports in USCE; they are discovery
+candidates, not automatic imports. Assessments contain up to 20 branch tips, with one
+outstanding fork assessment at a time. Decisions and existing USCE references
+are recorded in `doc/upstream/usdx-forks.json`. Unchanged assessed heads do not
+produce duplicate proposals. Closing an unmerged assessment leaves it eligible
+for reassessment. The scan reads metadata only and does not execute fork code.
+
 ## Validation and merge decisions
 
 Automated proposals follow our [contribution policy](CONTRIBUTING.md), including

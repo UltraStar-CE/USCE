@@ -164,6 +164,7 @@ type
     Number:      integer;
     NotesGAP:    integer;
     ScoreValue:  integer;
+    HighestScoredBeat: integer; // End of scored notes; Low(Integer) when none can score.
     Lines:       array of TLine;
   end;
 

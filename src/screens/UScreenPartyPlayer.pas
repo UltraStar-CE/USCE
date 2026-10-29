@@ -112,6 +112,7 @@ uses
   ULog,
   UMain,
   UScreenPartyOptions,
+  USkins,
   UUnicodeUtils;
 
 var
@@ -278,9 +279,12 @@ begin
 
     Col := GetPlayerColor(Num[I]);
 
-    AvatarPlayerTextures[I + 1].ColR := Col.R;
-    AvatarPlayerTextures[I + 1].ColG := Col.G;
-    AvatarPlayerTextures[I + 1].ColB := Col.B;
+    if Skin.ColorizeDefaultAvatars then
+    begin
+      AvatarPlayerTextures[I + 1].ColR := Col.R;
+      AvatarPlayerTextures[I + 1].ColG := Col.G;
+      AvatarPlayerTextures[I + 1].ColB := Col.B;
+    end;
   end;
 
 

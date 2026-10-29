@@ -1,0 +1,1488 @@
+{
+  "repository": "UltraStar-Deluxe/USDX",
+  "forks": [
+    {
+      "repository": "3Ryuusei3/USDX",
+      "branch": "master",
+      "head": "6260736f964df2dd67188d57c82edaab1866186c",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 3,
+      "behind": 0,
+      "compareUrl": "https://github.com/3Ryuusei3/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...6260736f964df2dd67188d57c82edaab1866186c",
+      "commits": [
+        {
+          "sha": "6eaccb302a728bb1454e6e0c9cf582ae364471bb",
+          "title": "Video: decode in a background thread to stop stutter and FPS drops",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "faf40be67126246e4e2cb40849ded9598e4c4ba9",
+          "title": "SuperStar: Karaoke theme redesign and UI/UX engine improvements",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "6260736f964df2dd67188d57c82edaab1866186c",
+          "title": "Sing row with the name pill at the right, instant score bars, party screens",
+          "author": "3Ryuusei3"
+        }
+      ],
+      "assessment": {
+        "decision": "assessed",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/210",
+          "https://github.com/UltraStar-CE/USCE/issues/173",
+          "https://github.com/UltraStar-CE/USCE/issues/164",
+          "https://github.com/UltraStar-CE/Themes/issues/16",
+          "https://github.com/UltraStar-CE/USCE/issues/211",
+          "https://github.com/UltraStar-CE/USCE/issues/142",
+          "https://github.com/UltraStar-CE/USCE/issues/143",
+          "https://github.com/UltraStar-CE/USCE/issues/190",
+          "https://github.com/UltraStar-CE/USCE/issues/187",
+          "https://github.com/UltraStar-CE/USCE/issues/191"
+        ],
+        "reason": "Background FFmpeg decoding: The maintainer elected to proceed with the optional MPV path rather than a parallel decoder-queue port. No FFmpeg queue is imported. Karaoke theme, name pills, instant score presentation, preview and animation primitives: The inspected snapshot contains theme and engine changes. The optional theme and reusable primitives remain separate proposals; fixed player layouts do not replace USCE's generic N-player layouts. Cover loading and startup progress: Startup progress is already present. Independent cover-loading work is assessed through the shared library-refresh and local-media proposals.",
+        "reviewedCommitCount": 3,
+        "scope": "Static assessment of the full pinned branch comparison; feature grouping and existing USCE decisions, not runtime acceptance.",
+        "items": [
+          {
+            "area": "Background FFmpeg decoding",
+            "decision": "deferred",
+            "reason": "The maintainer elected to proceed with the optional MPV path rather than a parallel decoder-queue port. No FFmpeg queue is imported.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/210",
+              "https://github.com/UltraStar-CE/USCE/issues/173",
+              "https://github.com/UltraStar-CE/USCE/issues/164"
+            ]
+          },
+          {
+            "area": "Karaoke theme, name pills, instant score presentation, preview and animation primitives",
+            "decision": "tracked",
+            "reason": "The inspected snapshot contains theme and engine changes. The optional theme and reusable primitives remain separate proposals; fixed player layouts do not replace USCE's generic N-player layouts.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/Themes/issues/16",
+              "https://github.com/UltraStar-CE/USCE/issues/211",
+              "https://github.com/UltraStar-CE/USCE/issues/142",
+              "https://github.com/UltraStar-CE/USCE/issues/143"
+            ]
+          },
+          {
+            "area": "Cover loading and startup progress",
+            "decision": "tracked",
+            "reason": "Startup progress is already present. Independent cover-loading work is assessed through the shared library-refresh and local-media proposals.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/190",
+              "https://github.com/UltraStar-CE/USCE/issues/187",
+              "https://github.com/UltraStar-CE/USCE/issues/191"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "repository": "shininchi/USDX",
+      "branch": "master",
+      "head": "c71a87aea972caa5b96c8bae7542bb0bcfa1deaf",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 97,
+      "behind": 10,
+      "compareUrl": "https://github.com/shininchi/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...c71a87aea972caa5b96c8bae7542bb0bcfa1deaf",
+      "commits": [
+        {
+          "sha": "34a5ce3f3c10a5850dbd24b3dbb386fc01337be4",
+          "title": "Add song request web client (phase 1)",
+          "author": "shininchi"
+        },
+        {
+          "sha": "a9fe0c81e51ac6697c8b63d17bb8deb51bf7b3bb",
+          "title": "Show song requests in the game (phase 2)",
+          "author": "shininchi"
+        },
+        {
+          "sha": "712fe2b22e2e5bc7e7cdf960ce61d567480ec6a2",
+          "title": "Move the request badge to the bottom right and explain its key",
+          "author": "shininchi"
+        },
+        {
+          "sha": "b34906aa3f6e3c228083020b98cbb024d0ad3a00",
+          "title": "Show request notices at the bottom center of the song list",
+          "author": "shininchi"
+        },
+        {
+          "sha": "cc33f22a24cec1c4bfafba8979b2508b03168ba2",
+          "title": "Keep the request badge above the help bar",
+          "author": "shininchi"
+        },
+        {
+          "sha": "256e0419f9b68d4290eea5a82b6bbe42a5519740",
+          "title": "Add request keys to the help bar and use the theme color",
+          "author": "shininchi"
+        },
+        {
+          "sha": "946b2f6a17eb43c474371774d9e0c46b8551cdfb",
+          "title": "Fix jumping to artists by letter when songs are sorted by folder",
+          "author": "shininchi"
+        },
+        {
+          "sha": "49cbac9544121e7571f65963a3d912ce34a4905e",
+          "title": "Show an Option key icon instead of Alt on macOS",
+          "author": "shininchi"
+        },
+        {
+          "sha": "46417607343e362032b7fa2b92273fccbc3f1780",
+          "title": "Redraw the Option key icon at 4x resolution",
+          "author": "shininchi"
+        },
+        {
+          "sha": "02620fe441c077166bed5c0a7158acbd32b1b0a8",
+          "title": "Add a 30 second audio preview to the song details",
+          "author": "shininchi"
+        },
+        {
+          "sha": "e8483684cf1871509a397ceb06b2275bb2e25d6c",
+          "title": "Add now playing, activity log, admin extras and video previews",
+          "author": "shininchi"
+        },
+        {
+          "sha": "b74cc655d19b77fe6cef8cf7f9d8e89e16efe91f",
+          "title": "Keep a \"Requests\" playlist in sync with the request queue",
+          "author": "shininchi"
+        }
+      ],
+      "assessment": {
+        "decision": "assessed",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/168",
+          "https://github.com/UltraStar-CE/usrelay/issues/16",
+          "https://github.com/UltraStar-CE/USCE/issues/236",
+          "https://github.com/UltraStar-CE/USCE/issues/241",
+          "https://github.com/UltraStar-CE/USCE/issues/242",
+          "https://github.com/UltraStar-CE/usrelay/issues/8",
+          "https://github.com/UltraStar-CE/usrelay/issues/9",
+          "https://github.com/UltraStar-CE/usrelay/issues/10",
+          "https://github.com/UltraStar-CE/USCE/issues/202",
+          "https://github.com/UltraStar-CE/USCE/issues/203",
+          "https://github.com/UltraStar-CE/USCE/issues/183",
+          "https://github.com/UltraStar-CE/USCE/issues/88",
+          "https://github.com/UltraStar-CE/USCE/issues/201",
+          "https://github.com/UltraStar-CE/USCE/issues/237",
+          "https://github.com/UltraStar-CE/USCE/issues/238",
+          "https://github.com/UltraStar-CE/USCE/issues/105",
+          "https://github.com/UltraStar-CE/USCE/issues/239",
+          "https://github.com/UltraStar-CE/USCE/issues/240"
+        ],
+        "reason": "Mobile songbook, request queue, previews, PWA and guest controls: The native capability API and usrelay cover the chosen architecture; no parallel HTTP/UI server is imported into the game. Artist jumps in folder sorting and modifier keys: Current artist-jump matching still uses Folder in folder sorting and exact left-modifier checks; the focused adaptation is tracked separately. macOS Option artwork and local signing identity: These independent UI/build changes are absent from the current skin resolver and packaging targets. Mic tap/voice ownership, achievements and winning streaks: Follow-ups belong to the existing native API/usrelay work. The UPlayerSlots five-second rescan fix is specific to the fork's capture loop, which USCE does not contain. Chart generation: Local automatic chart/stem generation and music acquisition were explicitly ruled out. Generator fixes and LRCLIB/download integration do not change that decision. Editor voice pitch display and controls: Vocals pitch preview remains in the existing editor proposal. Fork-specific generator UI, octave policy and hard-coded shortcuts are not imported. Editor microphone capture: The current editor still starts capture unconditionally; Bluetooth profile changes require verification while preserving optional live pitch feedback. Rapid-seek planar-audio crash report: USCE still uses swr_convert. Reproduction and decoder/frame-lifetime analysis are required before adopting a custom planar converter. Fatal exception reports: Main-loop persistence is already covered by #105 and macOS already resolves modules/symbols. Fatal worker-thread coverage is a separate follow-up. Long instrumental-gap countdown: An optional, themeable, per-voice version is proposed without changing current singing-display settings.",
+        "reviewedCommitCount": 97,
+        "scope": "Static assessment of the full pinned branch comparison; feature grouping and existing USCE decisions, not runtime acceptance.",
+        "items": [
+          {
+            "area": "Mobile songbook, request queue, previews, PWA and guest controls",
+            "decision": "tracked",
+            "reason": "The native capability API and usrelay cover the chosen architecture; no parallel HTTP/UI server is imported into the game.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/168",
+              "https://github.com/UltraStar-CE/usrelay/issues/16"
+            ]
+          },
+          {
+            "area": "Artist jumps in folder sorting and modifier keys",
+            "decision": "tracked",
+            "reason": "Current artist-jump matching still uses Folder in folder sorting and exact left-modifier checks; the focused adaptation is tracked separately.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/236"
+            ]
+          },
+          {
+            "area": "macOS Option artwork and local signing identity",
+            "decision": "tracked",
+            "reason": "These independent UI/build changes are absent from the current skin resolver and packaging targets.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/241",
+              "https://github.com/UltraStar-CE/USCE/issues/242"
+            ]
+          },
+          {
+            "area": "Mic tap/voice ownership, achievements and winning streaks",
+            "decision": "tracked",
+            "reason": "Follow-ups belong to the existing native API/usrelay work. The UPlayerSlots five-second rescan fix is specific to the fork's capture loop, which USCE does not contain.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/168",
+              "https://github.com/UltraStar-CE/usrelay/issues/8",
+              "https://github.com/UltraStar-CE/usrelay/issues/9",
+              "https://github.com/UltraStar-CE/usrelay/issues/10"
+            ]
+          },
+          {
+            "area": "Chart generation",
+            "decision": "not-adopted",
+            "reason": "Local automatic chart/stem generation and music acquisition were explicitly ruled out. Generator fixes and LRCLIB/download integration do not change that decision.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/202",
+              "https://github.com/UltraStar-CE/USCE/issues/203",
+              "https://github.com/UltraStar-CE/USCE/issues/183"
+            ]
+          },
+          {
+            "area": "Editor voice pitch display and controls",
+            "decision": "tracked",
+            "reason": "Vocals pitch preview remains in the existing editor proposal. Fork-specific generator UI, octave policy and hard-coded shortcuts are not imported.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/88",
+              "https://github.com/UltraStar-CE/USCE/issues/201"
+            ]
+          },
+          {
+            "area": "Editor microphone capture",
+            "decision": "tracked",
+            "reason": "The current editor still starts capture unconditionally; Bluetooth profile changes require verification while preserving optional live pitch feedback.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/237"
+            ]
+          },
+          {
+            "area": "Rapid-seek planar-audio crash report",
+            "decision": "tracked",
+            "reason": "USCE still uses swr_convert. Reproduction and decoder/frame-lifetime analysis are required before adopting a custom planar converter.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/238"
+            ]
+          },
+          {
+            "area": "Fatal exception reports",
+            "decision": "tracked",
+            "reason": "Main-loop persistence is already covered by #105 and macOS already resolves modules/symbols. Fatal worker-thread coverage is a separate follow-up.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/105",
+              "https://github.com/UltraStar-CE/USCE/issues/239"
+            ]
+          },
+          {
+            "area": "Long instrumental-gap countdown",
+            "decision": "tracked",
+            "reason": "An optional, themeable, per-voice version is proposed without changing current singing-display settings.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/240"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "repository": "shininchi/USDX",
+      "branch": "feature/project-improvements",
+      "head": "d4e976c8b0575ffb9037a4d45c51b168bde15c8b",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 53,
+      "behind": 10,
+      "compareUrl": "https://github.com/shininchi/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...d4e976c8b0575ffb9037a4d45c51b168bde15c8b",
+      "commits": [
+        {
+          "sha": "34a5ce3f3c10a5850dbd24b3dbb386fc01337be4",
+          "title": "Add song request web client (phase 1)",
+          "author": "shininchi"
+        },
+        {
+          "sha": "a9fe0c81e51ac6697c8b63d17bb8deb51bf7b3bb",
+          "title": "Show song requests in the game (phase 2)",
+          "author": "shininchi"
+        },
+        {
+          "sha": "712fe2b22e2e5bc7e7cdf960ce61d567480ec6a2",
+          "title": "Move the request badge to the bottom right and explain its key",
+          "author": "shininchi"
+        },
+        {
+          "sha": "b34906aa3f6e3c228083020b98cbb024d0ad3a00",
+          "title": "Show request notices at the bottom center of the song list",
+          "author": "shininchi"
+        },
+        {
+          "sha": "cc33f22a24cec1c4bfafba8979b2508b03168ba2",
+          "title": "Keep the request badge above the help bar",
+          "author": "shininchi"
+        },
+        {
+          "sha": "256e0419f9b68d4290eea5a82b6bbe42a5519740",
+          "title": "Add request keys to the help bar and use the theme color",
+          "author": "shininchi"
+        },
+        {
+          "sha": "946b2f6a17eb43c474371774d9e0c46b8551cdfb",
+          "title": "Fix jumping to artists by letter when songs are sorted by folder",
+          "author": "shininchi"
+        },
+        {
+          "sha": "49cbac9544121e7571f65963a3d912ce34a4905e",
+          "title": "Show an Option key icon instead of Alt on macOS",
+          "author": "shininchi"
+        },
+        {
+          "sha": "46417607343e362032b7fa2b92273fccbc3f1780",
+          "title": "Redraw the Option key icon at 4x resolution",
+          "author": "shininchi"
+        },
+        {
+          "sha": "02620fe441c077166bed5c0a7158acbd32b1b0a8",
+          "title": "Add a 30 second audio preview to the song details",
+          "author": "shininchi"
+        },
+        {
+          "sha": "e8483684cf1871509a397ceb06b2275bb2e25d6c",
+          "title": "Add now playing, activity log, admin extras and video previews",
+          "author": "shininchi"
+        },
+        {
+          "sha": "b74cc655d19b77fe6cef8cf7f9d8e89e16efe91f",
+          "title": "Keep a \"Requests\" playlist in sync with the request queue",
+          "author": "shininchi"
+        }
+      ],
+      "assessment": {
+        "decision": "assessed",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/168",
+          "https://github.com/UltraStar-CE/usrelay/issues/16",
+          "https://github.com/UltraStar-CE/USCE/issues/236",
+          "https://github.com/UltraStar-CE/USCE/issues/241",
+          "https://github.com/UltraStar-CE/USCE/issues/242",
+          "https://github.com/UltraStar-CE/usrelay/issues/8",
+          "https://github.com/UltraStar-CE/usrelay/issues/9",
+          "https://github.com/UltraStar-CE/usrelay/issues/10",
+          "https://github.com/UltraStar-CE/USCE/issues/202",
+          "https://github.com/UltraStar-CE/USCE/issues/203",
+          "https://github.com/UltraStar-CE/USCE/issues/183"
+        ],
+        "reason": "Mobile songbook, request queue, previews, PWA and guest controls: The native capability API and usrelay cover the chosen architecture; no parallel HTTP/UI server is imported into the game. Artist jumps in folder sorting and modifier keys: Current artist-jump matching still uses Folder in folder sorting and exact left-modifier checks; the focused adaptation is tracked separately. macOS Option artwork and local signing identity: These independent UI/build changes are absent from the current skin resolver and packaging targets. Mic tap/voice ownership, achievements and winning streaks: Follow-ups belong to the existing native API/usrelay work. The UPlayerSlots five-second rescan fix is specific to the fork's capture loop, which USCE does not contain. Chart generation: Local automatic chart/stem generation and music acquisition were explicitly ruled out. Generator fixes and LRCLIB/download integration do not change that decision.",
+        "reviewedCommitCount": 53,
+        "scope": "Static assessment of the full pinned branch comparison; feature grouping and existing USCE decisions, not runtime acceptance.",
+        "items": [
+          {
+            "area": "Mobile songbook, request queue, previews, PWA and guest controls",
+            "decision": "tracked",
+            "reason": "The native capability API and usrelay cover the chosen architecture; no parallel HTTP/UI server is imported into the game.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/168",
+              "https://github.com/UltraStar-CE/usrelay/issues/16"
+            ]
+          },
+          {
+            "area": "Artist jumps in folder sorting and modifier keys",
+            "decision": "tracked",
+            "reason": "Current artist-jump matching still uses Folder in folder sorting and exact left-modifier checks; the focused adaptation is tracked separately.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/236"
+            ]
+          },
+          {
+            "area": "macOS Option artwork and local signing identity",
+            "decision": "tracked",
+            "reason": "These independent UI/build changes are absent from the current skin resolver and packaging targets.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/241",
+              "https://github.com/UltraStar-CE/USCE/issues/242"
+            ]
+          },
+          {
+            "area": "Mic tap/voice ownership, achievements and winning streaks",
+            "decision": "tracked",
+            "reason": "Follow-ups belong to the existing native API/usrelay work. The UPlayerSlots five-second rescan fix is specific to the fork's capture loop, which USCE does not contain.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/168",
+              "https://github.com/UltraStar-CE/usrelay/issues/8",
+              "https://github.com/UltraStar-CE/usrelay/issues/9",
+              "https://github.com/UltraStar-CE/usrelay/issues/10"
+            ]
+          },
+          {
+            "area": "Chart generation",
+            "decision": "not-adopted",
+            "reason": "Local automatic chart/stem generation and music acquisition were explicitly ruled out. Generator fixes and LRCLIB/download integration do not change that decision.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/202",
+              "https://github.com/UltraStar-CE/USCE/issues/203",
+              "https://github.com/UltraStar-CE/USCE/issues/183"
+            ]
+          }
+        ],
+        "coveredBy": {
+          "repository": "shininchi/USDX",
+          "branch": "master",
+          "head": "c71a87aea972caa5b96c8bae7542bb0bcfa1deaf"
+        }
+      }
+    },
+    {
+      "repository": "shininchi/USDX",
+      "branch": "feature/song-requests-options",
+      "head": "2b2eea5fa8cae3da098f02babec4e8dfd8bddc39",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 44,
+      "behind": 10,
+      "compareUrl": "https://github.com/shininchi/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...2b2eea5fa8cae3da098f02babec4e8dfd8bddc39",
+      "commits": [
+        {
+          "sha": "34a5ce3f3c10a5850dbd24b3dbb386fc01337be4",
+          "title": "Add song request web client (phase 1)",
+          "author": "shininchi"
+        },
+        {
+          "sha": "a9fe0c81e51ac6697c8b63d17bb8deb51bf7b3bb",
+          "title": "Show song requests in the game (phase 2)",
+          "author": "shininchi"
+        },
+        {
+          "sha": "712fe2b22e2e5bc7e7cdf960ce61d567480ec6a2",
+          "title": "Move the request badge to the bottom right and explain its key",
+          "author": "shininchi"
+        },
+        {
+          "sha": "b34906aa3f6e3c228083020b98cbb024d0ad3a00",
+          "title": "Show request notices at the bottom center of the song list",
+          "author": "shininchi"
+        },
+        {
+          "sha": "cc33f22a24cec1c4bfafba8979b2508b03168ba2",
+          "title": "Keep the request badge above the help bar",
+          "author": "shininchi"
+        },
+        {
+          "sha": "256e0419f9b68d4290eea5a82b6bbe42a5519740",
+          "title": "Add request keys to the help bar and use the theme color",
+          "author": "shininchi"
+        },
+        {
+          "sha": "946b2f6a17eb43c474371774d9e0c46b8551cdfb",
+          "title": "Fix jumping to artists by letter when songs are sorted by folder",
+          "author": "shininchi"
+        },
+        {
+          "sha": "49cbac9544121e7571f65963a3d912ce34a4905e",
+          "title": "Show an Option key icon instead of Alt on macOS",
+          "author": "shininchi"
+        },
+        {
+          "sha": "46417607343e362032b7fa2b92273fccbc3f1780",
+          "title": "Redraw the Option key icon at 4x resolution",
+          "author": "shininchi"
+        },
+        {
+          "sha": "02620fe441c077166bed5c0a7158acbd32b1b0a8",
+          "title": "Add a 30 second audio preview to the song details",
+          "author": "shininchi"
+        },
+        {
+          "sha": "e8483684cf1871509a397ceb06b2275bb2e25d6c",
+          "title": "Add now playing, activity log, admin extras and video previews",
+          "author": "shininchi"
+        },
+        {
+          "sha": "b74cc655d19b77fe6cef8cf7f9d8e89e16efe91f",
+          "title": "Keep a \"Requests\" playlist in sync with the request queue",
+          "author": "shininchi"
+        }
+      ],
+      "assessment": {
+        "decision": "assessed",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/168",
+          "https://github.com/UltraStar-CE/usrelay/issues/16",
+          "https://github.com/UltraStar-CE/USCE/issues/236",
+          "https://github.com/UltraStar-CE/USCE/issues/241",
+          "https://github.com/UltraStar-CE/USCE/issues/242"
+        ],
+        "reason": "Mobile songbook, request queue, previews, PWA and guest controls: The native capability API and usrelay cover the chosen architecture; no parallel HTTP/UI server is imported into the game. Artist jumps in folder sorting and modifier keys: Current artist-jump matching still uses Folder in folder sorting and exact left-modifier checks; the focused adaptation is tracked separately. macOS Option artwork and local signing identity: These independent UI/build changes are absent from the current skin resolver and packaging targets.",
+        "reviewedCommitCount": 44,
+        "scope": "Static assessment of the full pinned branch comparison; feature grouping and existing USCE decisions, not runtime acceptance.",
+        "items": [
+          {
+            "area": "Mobile songbook, request queue, previews, PWA and guest controls",
+            "decision": "tracked",
+            "reason": "The native capability API and usrelay cover the chosen architecture; no parallel HTTP/UI server is imported into the game.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/168",
+              "https://github.com/UltraStar-CE/usrelay/issues/16"
+            ]
+          },
+          {
+            "area": "Artist jumps in folder sorting and modifier keys",
+            "decision": "tracked",
+            "reason": "Current artist-jump matching still uses Folder in folder sorting and exact left-modifier checks; the focused adaptation is tracked separately.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/236"
+            ]
+          },
+          {
+            "area": "macOS Option artwork and local signing identity",
+            "decision": "tracked",
+            "reason": "These independent UI/build changes are absent from the current skin resolver and packaging targets.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/241",
+              "https://github.com/UltraStar-CE/USCE/issues/242"
+            ]
+          }
+        ],
+        "coveredBy": {
+          "repository": "shininchi/USDX",
+          "branch": "master",
+          "head": "c71a87aea972caa5b96c8bae7542bb0bcfa1deaf"
+        }
+      }
+    },
+    {
+      "repository": "shininchi/USDX",
+      "branch": "feature/song-requests-web",
+      "head": "96076e055171ccbf289a4b61147732ba7d54991a",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 41,
+      "behind": 10,
+      "compareUrl": "https://github.com/shininchi/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...96076e055171ccbf289a4b61147732ba7d54991a",
+      "commits": [
+        {
+          "sha": "34a5ce3f3c10a5850dbd24b3dbb386fc01337be4",
+          "title": "Add song request web client (phase 1)",
+          "author": "shininchi"
+        },
+        {
+          "sha": "a9fe0c81e51ac6697c8b63d17bb8deb51bf7b3bb",
+          "title": "Show song requests in the game (phase 2)",
+          "author": "shininchi"
+        },
+        {
+          "sha": "712fe2b22e2e5bc7e7cdf960ce61d567480ec6a2",
+          "title": "Move the request badge to the bottom right and explain its key",
+          "author": "shininchi"
+        },
+        {
+          "sha": "b34906aa3f6e3c228083020b98cbb024d0ad3a00",
+          "title": "Show request notices at the bottom center of the song list",
+          "author": "shininchi"
+        },
+        {
+          "sha": "cc33f22a24cec1c4bfafba8979b2508b03168ba2",
+          "title": "Keep the request badge above the help bar",
+          "author": "shininchi"
+        },
+        {
+          "sha": "256e0419f9b68d4290eea5a82b6bbe42a5519740",
+          "title": "Add request keys to the help bar and use the theme color",
+          "author": "shininchi"
+        },
+        {
+          "sha": "946b2f6a17eb43c474371774d9e0c46b8551cdfb",
+          "title": "Fix jumping to artists by letter when songs are sorted by folder",
+          "author": "shininchi"
+        },
+        {
+          "sha": "49cbac9544121e7571f65963a3d912ce34a4905e",
+          "title": "Show an Option key icon instead of Alt on macOS",
+          "author": "shininchi"
+        },
+        {
+          "sha": "46417607343e362032b7fa2b92273fccbc3f1780",
+          "title": "Redraw the Option key icon at 4x resolution",
+          "author": "shininchi"
+        },
+        {
+          "sha": "02620fe441c077166bed5c0a7158acbd32b1b0a8",
+          "title": "Add a 30 second audio preview to the song details",
+          "author": "shininchi"
+        },
+        {
+          "sha": "e8483684cf1871509a397ceb06b2275bb2e25d6c",
+          "title": "Add now playing, activity log, admin extras and video previews",
+          "author": "shininchi"
+        },
+        {
+          "sha": "b74cc655d19b77fe6cef8cf7f9d8e89e16efe91f",
+          "title": "Keep a \"Requests\" playlist in sync with the request queue",
+          "author": "shininchi"
+        }
+      ],
+      "assessment": {
+        "decision": "assessed",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/168",
+          "https://github.com/UltraStar-CE/usrelay/issues/16",
+          "https://github.com/UltraStar-CE/USCE/issues/236",
+          "https://github.com/UltraStar-CE/USCE/issues/241",
+          "https://github.com/UltraStar-CE/USCE/issues/242"
+        ],
+        "reason": "Mobile songbook, request queue, previews, PWA and guest controls: The native capability API and usrelay cover the chosen architecture; no parallel HTTP/UI server is imported into the game. Artist jumps in folder sorting and modifier keys: Current artist-jump matching still uses Folder in folder sorting and exact left-modifier checks; the focused adaptation is tracked separately. macOS Option artwork and local signing identity: These independent UI/build changes are absent from the current skin resolver and packaging targets.",
+        "reviewedCommitCount": 41,
+        "scope": "Static assessment of the full pinned branch comparison; feature grouping and existing USCE decisions, not runtime acceptance.",
+        "items": [
+          {
+            "area": "Mobile songbook, request queue, previews, PWA and guest controls",
+            "decision": "tracked",
+            "reason": "The native capability API and usrelay cover the chosen architecture; no parallel HTTP/UI server is imported into the game.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/168",
+              "https://github.com/UltraStar-CE/usrelay/issues/16"
+            ]
+          },
+          {
+            "area": "Artist jumps in folder sorting and modifier keys",
+            "decision": "tracked",
+            "reason": "Current artist-jump matching still uses Folder in folder sorting and exact left-modifier checks; the focused adaptation is tracked separately.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/236"
+            ]
+          },
+          {
+            "area": "macOS Option artwork and local signing identity",
+            "decision": "tracked",
+            "reason": "These independent UI/build changes are absent from the current skin resolver and packaging targets.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/241",
+              "https://github.com/UltraStar-CE/USCE/issues/242"
+            ]
+          }
+        ],
+        "coveredBy": {
+          "repository": "shininchi/USDX",
+          "branch": "master",
+          "head": "c71a87aea972caa5b96c8bae7542bb0bcfa1deaf"
+        }
+      }
+    },
+    {
+      "repository": "shininchi/USDX",
+      "branch": "fix/alt-letter-jump-folder-sorting",
+      "head": "d579d9aacd4e7f9d55d0ce428ce7280a334bfa65",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 1,
+      "behind": 10,
+      "compareUrl": "https://github.com/shininchi/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...d579d9aacd4e7f9d55d0ce428ce7280a334bfa65",
+      "commits": [
+        {
+          "sha": "d579d9aacd4e7f9d55d0ce428ce7280a334bfa65",
+          "title": "Fix jumping to artists by letter when songs are sorted by folder",
+          "author": "shininchi"
+        }
+      ],
+      "assessment": {
+        "decision": "assessed",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/236"
+        ],
+        "reason": "Artist jumps in folder sorting and modifier keys: Current artist-jump matching still uses Folder in folder sorting and exact left-modifier checks; the focused adaptation is tracked separately.",
+        "reviewedCommitCount": 1,
+        "scope": "Static assessment of the full pinned branch comparison; feature grouping and existing USCE decisions, not runtime acceptance.",
+        "items": [
+          {
+            "area": "Artist jumps in folder sorting and modifier keys",
+            "decision": "tracked",
+            "reason": "Current artist-jump matching still uses Folder in folder sorting and exact left-modifier checks; the focused adaptation is tracked separately.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/236"
+            ]
+          }
+        ],
+        "coveredBy": {
+          "repository": "shininchi/USDX",
+          "branch": "master",
+          "head": "c71a87aea972caa5b96c8bae7542bb0bcfa1deaf"
+        }
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "master",
+      "head": "1deef85ecc82783a7430d869ffa880e373653a46",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 31,
+      "behind": 2,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...1deef85ecc82783a7430d869ffa880e373653a46",
+      "commits": [
+        {
+          "sha": "d6a550605345211c8c9c80de3328d6ea156b46fb",
+          "title": "Extract shared video presentation from FFmpeg playback",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "05cdbf85bb3ddf89a219b113c4a519cbfc55c333",
+          "title": "Add renderer-owned targets for external video rendering",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "aef92afd8fd342d6bf61f7705b4fedd8cedd3ecf",
+          "title": "Add optional libmpv video playback and integration checks",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "d242574359ed51fe1c1fc2cfa83a037af55ac4d5",
+          "title": "Preserve C numeric locale and console diagnostics across platforms",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "f2bb269968c3cf4fc0fa2b83a2f9277dd915adef",
+          "title": "Prevent stale units in repeated video smoke builds",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "8cc9e2cae34156afcf8673197309d28d97a65402",
+          "title": "Fix paused libmpv startup with bilinear chroma scaling",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "41afcce727c5e512857c0f1563a958c5f7b60ea4",
+          "title": "Fix Windows smoke paths and retain completed dependency builds",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "d6138b6fbba2de2377c6324bf344e19ed356dd39",
+          "title": "Include dav1d in Windows packages and check runtime dependencies",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "c943b9601ce636f2e449527fb928cd72617a9f03",
+          "title": "Normalize MSYS2 Python paths for native FPC",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "d00f5dad4d54c6652e37eda921de5044234d6a37",
+          "title": "Reject incomplete Windows installer downloads",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "b7788ab5cf2f2771cce74fad6e9b405cf5a3fadb",
+          "title": "Merge remote-tracking branch 'upstream/master' into feature/libmpv-video",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "a2f9b4bba491ee5a33521cbeb7feaaa8a1fb0c74",
+          "title": "Hold final video frames without repeated corrective seeks",
+          "author": "Tycorc"
+        }
+      ],
+      "assessment": {
+        "decision": "assessed",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/173",
+          "https://github.com/UltraStar-CE/USCE/issues/164",
+          "https://github.com/UltraStar-CE/USCE/issues/166",
+          "https://github.com/UltraStar-CE/USCE/issues/183"
+        ],
+        "reason": "Optional MPV backend, hardware probing, player reuse and startup/sync tests: The existing port includes the main backend plus hardware-probe and smoke-mode fixes. Target-hardware acceptance remains open. EOF without a decoded frame: Commit a0904322 adds an early EOF/open failure that is absent from the inspected #173 head d759794b; it is recorded as an explicit remaining port delta. Windows playback benchmark and small build/runtime fixes: The benchmark and Windows dependency/path/download checks remain in the existing portability assessment, without claiming they have shipped. Issue forms: USCE still has its Markdown bug-report template. Structured forms are an existing proposal in #166. Fork-specific agent guidance: USCE already has its own contribution, AI review and agent guidance. Fork-local task instructions are not imported.",
+        "reviewedCommitCount": 31,
+        "scope": "Static assessment of the full pinned branch comparison; feature grouping and existing USCE decisions, not runtime acceptance.",
+        "items": [
+          {
+            "area": "Optional MPV backend, hardware probing, player reuse and startup/sync tests",
+            "decision": "tracked",
+            "reason": "The existing port includes the main backend plus hardware-probe and smoke-mode fixes. Target-hardware acceptance remains open.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/173",
+              "https://github.com/UltraStar-CE/USCE/issues/164"
+            ]
+          },
+          {
+            "area": "EOF without a decoded frame",
+            "decision": "tracked",
+            "reason": "Commit a0904322 adds an early EOF/open failure that is absent from the inspected #173 head d759794b; it is recorded as an explicit remaining port delta.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/173",
+              "https://github.com/UltraStar-CE/USCE/issues/166"
+            ]
+          },
+          {
+            "area": "Windows playback benchmark and small build/runtime fixes",
+            "decision": "tracked",
+            "reason": "The benchmark and Windows dependency/path/download checks remain in the existing portability assessment, without claiming they have shipped.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/166",
+              "https://github.com/UltraStar-CE/USCE/issues/164"
+            ]
+          },
+          {
+            "area": "Issue forms",
+            "decision": "tracked",
+            "reason": "USCE still has its Markdown bug-report template. Structured forms are an existing proposal in #166.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/166"
+            ]
+          },
+          {
+            "area": "Fork-specific agent guidance",
+            "decision": "not-adopted",
+            "reason": "USCE already has its own contribution, AI review and agent guidance. Fork-local task instructions are not imported.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/183"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "Fix-Markdown",
+      "head": "e34875975566004d07c35880a1a6d3efa45b4eaf",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 1,
+      "behind": 1606,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...e34875975566004d07c35880a1a6d3efa45b4eaf",
+      "commits": [
+        {
+          "sha": "e34875975566004d07c35880a1a6d3efa45b4eaf",
+          "title": "Fix markdown formatting",
+          "author": "ePirat"
+        }
+      ],
+      "assessment": {
+        "decision": "not-adopted",
+        "usceReferences": [],
+        "reason": "2019 DEVELOPMENT.md formatting: This patch formats an older developer guide. USCE's current development guide is substantially rewritten; the historical formatting patch is not imported.",
+        "reviewedCommitCount": 1,
+        "scope": "Static assessment of the full pinned branch comparison; feature grouping and existing USCE decisions, not runtime acceptance.",
+        "items": [
+          {
+            "area": "2019 DEVELOPMENT.md formatting",
+            "decision": "not-adopted",
+            "reason": "This patch formats an older developer guide. USCE's current development guide is substantially rewritten; the historical formatting patch is not imported.",
+            "usceReferences": []
+          }
+        ]
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "SdlRendering",
+      "head": "947106ec0d07a67c0d790ede4445f4167e625808",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 1,
+      "behind": 1854,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...947106ec0d07a67c0d790ede4445f4167e625808",
+      "commits": [
+        {
+          "sha": "947106ec0d07a67c0d790ede4445f4167e625808",
+          "title": "initial work done to switch from OGL 1.2 to SDL2Rendering",
+          "author": "basisbit"
+        }
+      ],
+      "assessment": {
+        "decision": "assessed",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/165"
+        ],
+        "reason": "2017 SDL renderer experiment: The branch is a partial historical rewrite, not a measured speed improvement. Profiling and reusable ideas remain tracked; no wholesale port.",
+        "reviewedCommitCount": 1,
+        "scope": "Static assessment of the full pinned branch comparison; feature grouping and existing USCE decisions, not runtime acceptance.",
+        "items": [
+          {
+            "area": "2017 SDL renderer experiment",
+            "decision": "deferred",
+            "reason": "The branch is a partial historical rewrite, not a measured speed improvement. Profiling and reusable ideas remain tracked; no wholesale port.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/165"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "add_audio_header_tag",
+      "head": "630713ce3b484019a8615ddf4c1da1e456de1879",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 1,
+      "behind": 993,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...630713ce3b484019a8615ddf4c1da1e456de1879",
+      "commits": [
+        {
+          "sha": "630713ce3b484019a8615ddf4c1da1e456de1879",
+          "title": "Accept both #AUDIO and #MP3 as header tag for the audio file.",
+          "author": "bohning"
+        }
+      ],
+      "assessment": {
+        "decision": "covered",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/183"
+        ],
+        "reason": "AUDIO metadata alias: Current USong accepts both AUDIO and MP3. The historical patch would duplicate existing parsing.",
+        "reviewedCommitCount": 1,
+        "scope": "Static assessment of the full pinned branch comparison; feature grouping and existing USCE decisions, not runtime acceptance.",
+        "items": [
+          {
+            "area": "AUDIO metadata alias",
+            "decision": "covered",
+            "reason": "Current USong accepts both AUDIO and MP3. The historical patch would duplicate existing parsing.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/183"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "debug-1134",
+      "head": "649f8a2bd822552412bd089bc1c8a8a4481e342b",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 1,
+      "behind": 480,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...649f8a2bd822552412bd089bc1c8a8a4481e342b",
+      "commits": [
+        {
+          "sha": "649f8a2bd822552412bd089bc1c8a8a4481e342b",
+          "title": "add log statements for issue 1134",
+          "author": "barbeque-squared"
+        }
+      ],
+      "assessment": {
+        "decision": "not-adopted",
+        "usceReferences": [],
+        "reason": "Temporary song-loader trace logging: The commit adds temporary progress printouts for a historical debugging session, without a functional fix. No permanent verbose trace logging is added.",
+        "reviewedCommitCount": 1,
+        "scope": "Static assessment of the full pinned branch comparison; feature grouping and existing USCE decisions, not runtime acceptance.",
+        "items": [
+          {
+            "area": "Temporary song-loader trace logging",
+            "decision": "not-adopted",
+            "reason": "The commit adds temporary progress printouts for a historical debugging session, without a functional fix. No permanent verbose trace logging is added.",
+            "usceReferences": []
+          }
+        ]
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "docs/agents-md",
+      "head": "fa218a9998d0b3f7727c528624d5cf64d85642ca",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 28,
+      "behind": 2,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...fa218a9998d0b3f7727c528624d5cf64d85642ca",
+      "commits": [
+        {
+          "sha": "d6a550605345211c8c9c80de3328d6ea156b46fb",
+          "title": "Extract shared video presentation from FFmpeg playback",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "05cdbf85bb3ddf89a219b113c4a519cbfc55c333",
+          "title": "Add renderer-owned targets for external video rendering",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "aef92afd8fd342d6bf61f7705b4fedd8cedd3ecf",
+          "title": "Add optional libmpv video playback and integration checks",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "d242574359ed51fe1c1fc2cfa83a037af55ac4d5",
+          "title": "Preserve C numeric locale and console diagnostics across platforms",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "f2bb269968c3cf4fc0fa2b83a2f9277dd915adef",
+          "title": "Prevent stale units in repeated video smoke builds",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "8cc9e2cae34156afcf8673197309d28d97a65402",
+          "title": "Fix paused libmpv startup with bilinear chroma scaling",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "41afcce727c5e512857c0f1563a958c5f7b60ea4",
+          "title": "Fix Windows smoke paths and retain completed dependency builds",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "d6138b6fbba2de2377c6324bf344e19ed356dd39",
+          "title": "Include dav1d in Windows packages and check runtime dependencies",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "c943b9601ce636f2e449527fb928cd72617a9f03",
+          "title": "Normalize MSYS2 Python paths for native FPC",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "d00f5dad4d54c6652e37eda921de5044234d6a37",
+          "title": "Reject incomplete Windows installer downloads",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "b7788ab5cf2f2771cce74fad6e9b405cf5a3fadb",
+          "title": "Merge remote-tracking branch 'upstream/master' into feature/libmpv-video",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "a2f9b4bba491ee5a33521cbeb7feaaa8a1fb0c74",
+          "title": "Hold final video frames without repeated corrective seeks",
+          "author": "Tycorc"
+        }
+      ],
+      "assessment": {
+        "decision": "assessed",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/173",
+          "https://github.com/UltraStar-CE/USCE/issues/164",
+          "https://github.com/UltraStar-CE/USCE/issues/166"
+        ],
+        "reason": "Inherited MPV, benchmark and build history: This branch is contained in the assessed Tycorc master snapshot; shared changes use the same existing follow-ups. Fork-specific agent guidance: The fork's local agent/task instructions do not replace USCE's existing policy.",
+        "reviewedCommitCount": 28,
+        "scope": "Static assessment of the full pinned branch comparison; feature grouping and existing USCE decisions, not runtime acceptance.",
+        "items": [
+          {
+            "area": "Inherited MPV, benchmark and build history",
+            "decision": "tracked",
+            "reason": "This branch is contained in the assessed Tycorc master snapshot; shared changes use the same existing follow-ups.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/173",
+              "https://github.com/UltraStar-CE/USCE/issues/164",
+              "https://github.com/UltraStar-CE/USCE/issues/166"
+            ]
+          },
+          {
+            "area": "Fork-specific agent guidance",
+            "decision": "not-adopted",
+            "reason": "The fork's local agent/task instructions do not replace USCE's existing policy.",
+            "usceReferences": []
+          }
+        ],
+        "coveredBy": {
+          "repository": "Tycorc/USDX",
+          "branch": "master",
+          "head": "1deef85ecc82783a7430d869ffa880e373653a46"
+        }
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "docs/issue-forms",
+      "head": "a7ee0f4f8903c84536b4a715f2391f7520e1a17c",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 1,
+      "behind": 2,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...a7ee0f4f8903c84536b4a715f2391f7520e1a17c",
+      "commits": [
+        {
+          "sha": "a7ee0f4f8903c84536b4a715f2391f7520e1a17c",
+          "title": "Replace the legacy issue template with issue forms",
+          "author": "Tycorc"
+        }
+      ],
+      "assessment": {
+        "decision": "assessed",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/166"
+        ],
+        "reason": "Structured bug reports: The exact source commit is already listed in the existing issue-forms/portability assessment.",
+        "reviewedCommitCount": 1,
+        "scope": "Static assessment of the full pinned branch comparison; feature grouping and existing USCE decisions, not runtime acceptance.",
+        "items": [
+          {
+            "area": "Structured bug reports",
+            "decision": "tracked",
+            "reason": "The exact source commit is already listed in the existing issue-forms/portability assessment.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/166"
+            ]
+          }
+        ],
+        "coveredBy": {
+          "repository": "Tycorc/USDX",
+          "branch": "master",
+          "head": "1deef85ecc82783a7430d869ffa880e373653a46"
+        }
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "feature/libmpv-video",
+      "head": "d154390bd756c1b2b393529271d846676929d136",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 14,
+      "behind": 2,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...d154390bd756c1b2b393529271d846676929d136",
+      "commits": [
+        {
+          "sha": "d6a550605345211c8c9c80de3328d6ea156b46fb",
+          "title": "Extract shared video presentation from FFmpeg playback",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "05cdbf85bb3ddf89a219b113c4a519cbfc55c333",
+          "title": "Add renderer-owned targets for external video rendering",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "aef92afd8fd342d6bf61f7705b4fedd8cedd3ecf",
+          "title": "Add optional libmpv video playback and integration checks",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "d242574359ed51fe1c1fc2cfa83a037af55ac4d5",
+          "title": "Preserve C numeric locale and console diagnostics across platforms",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "f2bb269968c3cf4fc0fa2b83a2f9277dd915adef",
+          "title": "Prevent stale units in repeated video smoke builds",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "8cc9e2cae34156afcf8673197309d28d97a65402",
+          "title": "Fix paused libmpv startup with bilinear chroma scaling",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "41afcce727c5e512857c0f1563a958c5f7b60ea4",
+          "title": "Fix Windows smoke paths and retain completed dependency builds",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "d6138b6fbba2de2377c6324bf344e19ed356dd39",
+          "title": "Include dav1d in Windows packages and check runtime dependencies",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "c943b9601ce636f2e449527fb928cd72617a9f03",
+          "title": "Normalize MSYS2 Python paths for native FPC",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "d00f5dad4d54c6652e37eda921de5044234d6a37",
+          "title": "Reject incomplete Windows installer downloads",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "b7788ab5cf2f2771cce74fad6e9b405cf5a3fadb",
+          "title": "Merge remote-tracking branch 'upstream/master' into feature/libmpv-video",
+          "author": "Tycorc"
+        },
+        {
+          "sha": "a2f9b4bba491ee5a33521cbeb7feaaa8a1fb0c74",
+          "title": "Hold final video frames without repeated corrective seeks",
+          "author": "Tycorc"
+        }
+      ],
+      "assessment": {
+        "decision": "assessed",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/173",
+          "https://github.com/UltraStar-CE/USCE/issues/164"
+        ],
+        "reason": "Optional MPV backend: The port already preserves the original backend and synchronization work; it remains open for platform acceptance.",
+        "reviewedCommitCount": 14,
+        "scope": "Static assessment of the full pinned branch comparison; feature grouping and existing USCE decisions, not runtime acceptance.",
+        "items": [
+          {
+            "area": "Optional MPV backend",
+            "decision": "tracked",
+            "reason": "The port already preserves the original backend and synchronization work; it remains open for platform acceptance.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/173",
+              "https://github.com/UltraStar-CE/USCE/issues/164"
+            ]
+          }
+        ],
+        "coveredBy": {
+          "repository": "Tycorc/USDX",
+          "branch": "master",
+          "head": "1deef85ecc82783a7430d869ffa880e373653a46"
+        }
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "findingfontsinfo",
+      "head": "8c5e5d874129e34aaad15665f10c995d3ef0c452",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 1,
+      "behind": 1423,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...8c5e5d874129e34aaad15665f10c995d3ef0c452",
+      "commits": [
+        {
+          "sha": "8c5e5d874129e34aaad15665f10c995d3ef0c452",
+          "title": "TextGL: Log info about finding font families",
+          "author": "s09bQ5"
+        }
+      ],
+      "assessment": {
+        "decision": "not-adopted",
+        "usceReferences": [],
+        "reason": "2020 font-family diagnostics: The patch targets the legacy TextGL font loader. USCE's current font/renderer path differs; no corresponding unresolved failure is established.",
+        "reviewedCommitCount": 1,
+        "scope": "Static assessment of the full pinned branch comparison; feature grouping and existing USCE decisions, not runtime acceptance.",
+        "items": [
+          {
+            "area": "2020 font-family diagnostics",
+            "decision": "not-adopted",
+            "reason": "The patch targets the legacy TextGL font loader. USCE's current font/renderer path differs; no corresponding unresolved failure is established.",
+            "usceReferences": []
+          }
+        ]
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "helpsystem",
+      "head": "b801fd8e5ae4c4a422795dfb2e72eea1a025f245",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 20,
+      "behind": 1721,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...b801fd8e5ae4c4a422795dfb2e72eea1a025f245",
+      "commits": [
+        {
+          "sha": "0971f4f5c36b8b48ffe7dd54542e47cb7a25cea7",
+          "title": "First steps towards integrating a help system (accessible via TAB to toggle visibility). All texts need thorough revision. Currently only uses the English language file.",
+          "author": "Markus Böhning"
+        },
+        {
+          "sha": "7c76afdf85654ba730d433275dfe71a682b6085f",
+          "title": "First steps towards integrating a help system (accessible via TAB to toggle visibility). All texts need thorough revision. Currently only uses the English language file.",
+          "author": "Markus Böhning"
+        },
+        {
+          "sha": "873ee4555184a5db31f97673ebd891ad4e554b52",
+          "title": "Merge branch 'helpsystem' of https://github.com/UltraStar-Deluxe/USDX into helpsystem",
+          "author": "Markus Böhning"
+        },
+        {
+          "sha": "4ecbdeefde2858f1718e646978040b114e3a30f0",
+          "title": "Added missing {$MODE Delphi} to allow compilation on non-Windows machines.",
+          "author": "Markus Böhning"
+        },
+        {
+          "sha": "8ad1fc28d97105905efa02a1b40d2b31b87aa888",
+          "title": "Added missing {$MODE Delphi} to allow compilation on non-Windows machines.",
+          "author": "Markus Böhning"
+        },
+        {
+          "sha": "80e417dc03b6c7a80161647e774b14ffc00dd5a0",
+          "title": "Merge branch 'helpsystem' of https://github.com/UltraStar-Deluxe/USDX into helpsystem",
+          "author": "Markus Böhning"
+        },
+        {
+          "sha": "981bd7a42f7b199bf40fa577c429a9b4fd750186",
+          "title": "Change from SDL to sdl2.",
+          "author": "Markus Böhning"
+        },
+        {
+          "sha": "d6c9ff6bf0d664b91c9477e1aab2aa929d82f291",
+          "title": "Improved Greek translation file.",
+          "author": "Markus Böhning"
+        },
+        {
+          "sha": "bb8be1d259a8a5635a6df9d98e859ae76913630d",
+          "title": "Some minor theme and translation improvements.",
+          "author": "Markus Böhning"
+        },
+        {
+          "sha": "22f6bb42921b0558fbd06b2cffc88f172f243fba",
+          "title": "Fixed help ID for UScreenEditConvert.",
+          "author": "Markus Böhning"
+        },
+        {
+          "sha": "8f3ceb9ea75bf348bf47d2f5329a18657313e14a",
+          "title": "Some minor cleanup and correction of typing errors.",
+          "author": "Markus Böhning"
+        },
+        {
+          "sha": "0346b534bc385add3ac49dda9f489ccf336d7178",
+          "title": "Removed SDLK_SYSREQ input for screenshot creation as this is globally handled in UMain.",
+          "author": "Markus Böhning"
+        }
+      ],
+      "assessment": {
+        "decision": "covered",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/183"
+        ],
+        "reason": "Legacy help system and MIDI-importer/theme changes: USCE already has in-game help; the old MIDI importer has been removed. Historical two-voice theme/editor changes do not replace current generic layouts.",
+        "reviewedCommitCount": 20,
+        "scope": "Static assessment of the full pinned branch comparison; feature grouping and existing USCE decisions, not runtime acceptance.",
+        "items": [
+          {
+            "area": "Legacy help system and MIDI-importer/theme changes",
+            "decision": "covered",
+            "reason": "USCE already has in-game help; the old MIDI importer has been removed. Historical two-voice theme/editor changes do not replace current generic layouts.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/183"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "mac-ci-speedup",
+      "head": "1784c9545fbcf16607659a925e754b4405a6a21f",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 3,
+      "behind": 214,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...1784c9545fbcf16607659a925e754b4405a6a21f",
+      "commits": [
+        {
+          "sha": "96bf6489de71a3fe4ae478406355e63278f1cd56",
+          "title": "Cache homebrew installed packages.",
+          "author": "bohning"
+        },
+        {
+          "sha": "b7c5298ce3dee6e6a0e0bd20b539c8284f9e0d08",
+          "title": "Do not clean up after install.",
+          "author": "bohning"
+        },
+        {
+          "sha": "1784c9545fbcf16607659a925e754b4405a6a21f",
+          "title": "Use gerlero/brew-install action.",
+          "author": "bohning"
+        }
+      ],
+      "assessment": {
+        "decision": "covered",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/224",
+          "https://github.com/UltraStar-CE/USCE/issues/213"
+        ],
+        "reason": "Homebrew caching: The merged #224 caches Homebrew downloads separately by architecture. The older installed-prefix cache/action experiment is not imported.",
+        "reviewedCommitCount": 3,
+        "scope": "Static assessment of the full pinned branch comparison; feature grouping and existing USCE decisions, not runtime acceptance.",
+        "items": [
+          {
+            "area": "Homebrew caching",
+            "decision": "covered",
+            "reason": "The merged #224 caches Homebrew downloads separately by architecture. The older installed-prefix cache/action experiment is not imported.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/224",
+              "https://github.com/UltraStar-CE/USCE/issues/213"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "songlist_webserver",
+      "head": "1aac5c557700015054685eec36f727199ba9c06c",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 1,
+      "behind": 904,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...1aac5c557700015054685eec36f727199ba9c06c",
+      "commits": [
+        {
+          "sha": "1aac5c557700015054685eec36f727199ba9c06c",
+          "title": "Add UWebServer which serves the list of available songs on localhost, port 8091.",
+          "author": "bohning"
+        }
+      ],
+      "assessment": {
+        "decision": "not-adopted",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/168",
+          "https://github.com/UltraStar-CE/usrelay/issues/16",
+          "https://github.com/UltraStar-CE/USCE/issues/183"
+        ],
+        "reason": "Embedded localhost song-list server: The native game API and usrelay already own the songbook/companion route. No additional game-hosted web server is introduced.",
+        "reviewedCommitCount": 1,
+        "scope": "Static assessment of the full pinned branch comparison; feature grouping and existing USCE decisions, not runtime acceptance.",
+        "items": [
+          {
+            "area": "Embedded localhost song-list server",
+            "decision": "not-adopted",
+            "reason": "The native game API and usrelay already own the songbook/companion route. No additional game-hosted web server is introduced.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/168",
+              "https://github.com/UltraStar-CE/usrelay/issues/16",
+              "https://github.com/UltraStar-CE/USCE/issues/183"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "sound-fix",
+      "head": "ea2ebca34565f61f9b61d094cb5d7a2c5318c5e3",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 1,
+      "behind": 4,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...ea2ebca34565f61f9b61d094cb5d7a2c5318c5e3",
+      "commits": [
+        {
+          "sha": "ea2ebca34565f61f9b61d094cb5d7a2c5318c5e3",
+          "title": "Revert \"SoftMixer: do nothing when Play is called on playing stream\"",
+          "author": "complexlogic"
+        }
+      ],
+      "assessment": {
+        "decision": "superseded",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/154",
+          "https://github.com/UltraStar-CE/USCE/issues/155",
+          "https://github.com/UltraStar-CE/USCE/issues/160",
+          "https://github.com/UltraStar-CE/USCE/issues/161"
+        ],
+        "reason": "Historical SoftMixer Play revert: #154 was retired. The tested USCE restart behavior and trimmed Ogg assets were merged separately, preserving synth continuity.",
+        "reviewedCommitCount": 1,
+        "scope": "Static assessment of the full pinned branch comparison; feature grouping and existing USCE decisions, not runtime acceptance.",
+        "items": [
+          {
+            "area": "Historical SoftMixer Play revert",
+            "decision": "superseded",
+            "reason": "#154 was retired. The tested USCE restart behavior and trimmed Ogg assets were merged separately, preserving synth continuity.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/154",
+              "https://github.com/UltraStar-CE/USCE/issues/155",
+              "https://github.com/UltraStar-CE/USCE/issues/160",
+              "https://github.com/UltraStar-CE/USCE/issues/161"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "swresample-playback",
+      "head": "054fa4a368c571c9bc56b9abd3ca8950c87e0858",
+      "upstreamHead": "824dc7e5f80d8a1cd4045dac0180c213f0401f79",
+      "ahead": 1,
+      "behind": 1629,
+      "compareUrl": "https://github.com/Tycorc/USDX/compare/824dc7e5f80d8a1cd4045dac0180c213f0401f79...054fa4a368c571c9bc56b9abd3ca8950c87e0858",
+      "commits": [
+        {
+          "sha": "054fa4a368c571c9bc56b9abd3ca8950c87e0858",
+          "title": "Start using the swresample converter from UAudioConverter (compiles, but the audio isn't ok yet)",
+          "author": "brianch"
+        }
+      ],
+      "assessment": {
+        "decision": "superseded",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/183"
+        ],
+        "reason": "2018 incomplete converter experiment: The source explicitly reports broken audio. Current USCE already has swresample-based conversion and newer FFmpeg bindings; no incomplete historical implementation is imported.",
+        "reviewedCommitCount": 1,
+        "scope": "Static assessment of the full pinned branch comparison; feature grouping and existing USCE decisions, not runtime acceptance.",
+        "items": [
+          {
+            "area": "2018 incomplete converter experiment",
+            "decision": "superseded",
+            "reason": "The source explicitly reports broken audio. Current USCE already has swresample-based conversion and newer FFmpeg bindings; no incomplete historical implementation is imported.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/183"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "unavailableForks": [
+    "danhale93/USDX-DeepStream"
+  ],
+  "assessment": {
+    "date": "2026-10-28",
+    "usceHead": "347e3eb6978a787994179195ee3a6d0bc0b8039d",
+    "mpvPr": 173,
+    "mpvHead": "d759794b8b52b1e624b659bd42a31bac8db2ea75",
+    "nativeApiPr": 168,
+    "nativeApiHead": "1ffc7aaeb94c6ef9c32e506a25d637ffa20871f2",
+    "reviewedSnapshots": 20,
+    "complete": true,
+    "scope": "All 20 pinned snapshots have a recorded triage decision. Open implementation/acceptance work remains in the referenced issues and PRs. No fork code was executed or imported.",
+    "unavailableForks": "danhale93/USDX-DeepStream remains unavailable and was not assessed."
+  }
+}

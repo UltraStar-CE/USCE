@@ -314,6 +314,7 @@ uses
   UDisplay,
   UCommandLine,
   UPathUtils,
+  UMenuBackgroundVideo,
   UThemes;
 
 var
@@ -1082,6 +1083,8 @@ end;
 
 procedure UnloadScreens;
 begin
+  // Release cached video textures while the renderer and GL context still exist.
+  ClearMenuVideoCache(true);
   FreeAndNil(ScreenMain);
   FreeAndNil(ScreenName);
   FreeAndNil(ScreenContinuousPlayback);

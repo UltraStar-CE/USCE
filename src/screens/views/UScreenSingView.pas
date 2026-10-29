@@ -562,7 +562,6 @@ var
   DisplayPrefix:          string;
   DisplayMin:             integer;
   DisplaySec:             integer;
-  T:                      integer;
   CurLyricsTime:          real;
   VideoFrameTime:         Extended;
   ScorePlayerIndex:       integer;
@@ -581,16 +580,10 @@ var
   SingPlayer:             TThemeSingPlayer;
   DrawScorePanel:         boolean;
   ScoreMode:              TSingInfoBarMode;
-  function LastScoringLineFinished(const LyricLine: TLyricLine): boolean;
-  var WordIndex: integer;
+  function ScoringFinished(TrackIndex: integer): boolean;
   begin
-    Result := Assigned(LyricLine) and LyricLine.LastLine;
-    if not Result then Exit;
-    for WordIndex := 0 to High(LyricLine.Words) do
-      with LyricLine.Words[WordIndex] do
-        if not ScoreExcluded and (ScoreFactor[NoteType] > 0) and
-           (CurLyricsTime < GetTimeFromBeat(Start + Length)) then
-          Exit(false);
+    Result := (CurrentSong.Tracks[TrackIndex].HighestScoredBeat = Low(Integer)) or
+      (CurLyricsTime >= GetTimeFromBeat(CurrentSong.Tracks[TrackIndex].HighestScoredBeat));
   end;
   procedure SetPlayerNameTexts(const Slots: TSlotArray; FirstPlayerIndex: integer; UseDuetNames: boolean);
   var
@@ -738,17 +731,16 @@ begin
   ScreenSing.Text[TextTimeText].Text := Format('%s%.2d:%.2d', [DisplayPrefix, DisplayMin, DisplaySec]);
   ScreenSing.Text[TextTimeText].Visible := ScreenSing.Settings.TimeBarVisible;
 
-  // Completion follows assigned scoring voices, not clipped or zero-weight tails.
+  // Only voices actually assigned to players determine scoring completion.
   if not ScreenSing.SungToEnd then
   begin
     if not CurrentSong.isDuet then
-      ScreenSing.SungToEnd := LastScoringLineFinished(ScreenSing.Lyrics.GetUpperLine())
+      ScreenSing.SungToEnd := ScoringFinished(0)
     else
     begin
       ScreenSing.SungToEnd := true;
       for ScorePlayerIndex := 0 to PlayersPlay - 1 do
-        if not LastScoringLineFinished(ScreenSing.VoiceLyrics[
-          Player[ScorePlayerIndex].Track].GetUpperLine()) then
+        if not ScoringFinished(Player[ScorePlayerIndex].Track) then
           ScreenSing.SungToEnd := false;
     end;
   end;

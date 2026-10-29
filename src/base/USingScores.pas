@@ -984,7 +984,7 @@ begin
     Renderer.DrawTexture(Players[Index].ScoreBG);
 
     // draw score text
-    ScoreStr := InttoStr(Players[Index].ScoreDisplayed div 10) + '0';
+    ScoreStr := IntToStr(Players[Index].ScoreDisplayed);
     while (Length(ScoreStr) < 5) do
       ScoreStr := '0' + ScoreStr;
 

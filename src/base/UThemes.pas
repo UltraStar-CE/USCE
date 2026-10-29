@@ -276,6 +276,14 @@ type
   end;
 
   PThemeBasic = ^TThemeBasic;
+  TThemeDuplicateSongs = record
+    Panel: TThemeStatic;
+    Heading, Hint: TThemeText;
+    Labels, Paths: array[0..1] of TThemeText;
+    Inputs: array[0..3] of TThemeButton;
+    Actions: array[0..1] of TThemeButton;
+  end;
+
   TThemeBasic = class
     Background:       TThemeBackground;
     Text:             AThemeText;
@@ -782,6 +790,9 @@ type
     FilterActions: array[0..3] of TThemeButton;
     RowSpacing, AutoHeightStatic: integer;
     CenterVertical: boolean;
+    SuggestionWidth, SuggestionRowHeight, SuggestionMargin, SuggestionGap: integer;
+    SuggestionPanel: TThemeStatic;
+    SuggestionButton: TThemeButton;
     FocusColor: TRGB;
     FocusAlpha, FocusWidth: real;
     CustomLockIcons: boolean;
@@ -1114,6 +1125,8 @@ type
     procedure LoadStatMainRecentPeriods;
     procedure LoadSongFilterLayout;
     procedure LoadInputSourceBadges;
+    procedure LoadDuplicateSongLayout;
+
     procedure LoadStatDetailColumn(var Column: TThemeStatDetailColumn; const SectionName: string);
     procedure LoadStatDetailTable(var Table: TThemeStatDetailTable; const SectionName: string);
   public
@@ -1150,6 +1163,8 @@ type
     //ScreenSong extensions
     SongMenu:         TThemeSongMenu;
     SongJumpto:       TThemeSongJumpTo;
+    DuplicateSongs: TThemeDuplicateSongs;
+    BoldSelection: boolean;
     //Party Screens:
     PartyNewRound:    TThemePartyNewRound;
     PartyScore:       TThemePartyScore;
@@ -1959,6 +1974,7 @@ begin
   begin
     Result := true;
     OpenFile(ThemeNum);
+    BoldSelection := ReadBool(GetSectionList('Selection'), 'Bold', false);
     if ThemeIni.ReadString('Theme', 'Name', '') <> '' then
     begin
       LayoutScreenW := ThemeIni.ReadInteger('Theme', 'ScreenW', 0);
@@ -2420,6 +2436,7 @@ begin
       ThemeLoadSelectSlide(SongJumpto.SelectSlideType, 'SongJumptoSelectSlideType');
       ThemeLoadText(SongJumpto.TextFound, 'SongJumptoTextFound');
       LoadSongFilterLayout;
+      LoadDuplicateSongLayout;
       ThemeLoadBasic(SongJumpto.Footer, 'SongJumptoFooter');
       //Translations
       SongJumpto.IType[0] := Language.Translate('SONG_JUMPTO_TYPE1');
@@ -2926,6 +2943,91 @@ begin
   InputSourceBadges[2] := Defaults; Load(InputSourceBadges[2], 'ScoreInputSourceBadge');
 end;
 
+procedure TTheme.LoadDuplicateSongLayout;
+var I: integer; Sections: TThemeSectionList; X, Y, W, H, Gap, RowSpace: integer;
+  LabelStyle: TThemeText;
+begin
+  Sections := GetSectionList('DuplicateSongs');
+  X := ReadInteger(Sections, 'X', 80);
+  Y := ReadInteger(Sections, 'Y', 130);
+  W := ReadInteger(Sections, 'W', 640);
+  H := ReadInteger(Sections, 'H', 360);
+  Gap := ReadInteger(Sections, 'ColumnGap', 24);
+  RowSpace := ReadInteger(Sections, 'RowSpacing', 88);
+  if Length(ErrorPopup.Statics) > 0 then DuplicateSongs.Panel := ErrorPopup.Statics[0]
+  else if Length(SongJumpto.Statics) > 0 then DuplicateSongs.Panel := SongJumpto.Statics[0];
+  DuplicateSongs.Panel.Reflection := false;
+  DuplicateSongs.Panel.X := X; DuplicateSongs.Panel.Y := Y;
+  DuplicateSongs.Panel.W := W; DuplicateSongs.Panel.H := H;
+  DuplicateSongs.Panel.Z := 0.95;
+  DuplicateSongs.Heading := SongJumpto.TextFound;
+  DuplicateSongs.Heading.X := X + 24; DuplicateSongs.Heading.Y := Y + 18;
+  DuplicateSongs.Heading.W := W - 48; DuplicateSongs.Heading.H := 32;
+  DuplicateSongs.Heading.Align := 0; DuplicateSongs.Heading.Size := 34;
+  DuplicateSongs.Heading.Z := 0.97;
+  LabelStyle := DuplicateSongs.Heading; LabelStyle.Size := 24;
+  for I := 0 to 1 do
+  begin
+    DuplicateSongs.Labels[I] := LabelStyle;
+    DuplicateSongs.Labels[I].X := X + 24 + I * ((W - 48 + Gap) div 2);
+    DuplicateSongs.Labels[I].Y := Y + 66;
+    DuplicateSongs.Labels[I].W := (W - 48 - Gap) div 2;
+    DuplicateSongs.Paths[I] := LabelStyle;
+    DuplicateSongs.Paths[I].X := X + 24;
+    DuplicateSongs.Paths[I].Y := Y + 126 + I * RowSpace;
+    DuplicateSongs.Paths[I].W := W - 48;
+    DuplicateSongs.Paths[I].Size := 17;
+  end;
+  for I := 0 to 3 do
+  begin
+    DuplicateSongs.Inputs[I] := ErrorPopup.Button1;
+    DuplicateSongs.Inputs[I].Text := Copy(SongJumpto.ButtonSearchText.Text);
+    DuplicateSongs.Inputs[I].X := DuplicateSongs.Labels[I mod 2].X;
+    DuplicateSongs.Inputs[I].Y := Y + 92 + (I div 2) * RowSpace;
+    DuplicateSongs.Inputs[I].W := (W - 48 - Gap) div 2;
+    DuplicateSongs.Inputs[I].H := 34;
+    DuplicateSongs.Inputs[I].SelectW := DuplicateSongs.Inputs[I].W;
+    DuplicateSongs.Inputs[I].SelectH := 34;
+    DuplicateSongs.Inputs[I].Z := 0.97;
+    DuplicateSongs.Inputs[I].Reflection := false;
+    DuplicateSongs.Inputs[I].Fade := false;
+    DuplicateSongs.Inputs[I].FadeText := false;
+    DuplicateSongs.Inputs[I].Text[0].X := 8;
+    DuplicateSongs.Inputs[I].Text[0].Y := 2;
+    DuplicateSongs.Inputs[I].Text[0].W := DuplicateSongs.Inputs[I].W - 16;
+    DuplicateSongs.Inputs[I].Text[0].Size := 26;
+    DuplicateSongs.Inputs[I].Text[0].Align := 0;
+    DuplicateSongs.Inputs[I].Text[0].Z := 0.98;
+    if Length(GetSectionList('DuplicateSongsInput' + IntToStr(I + 1))) > 0 then
+      ThemeLoadButton(DuplicateSongs.Inputs[I], 'DuplicateSongsInput' + IntToStr(I + 1));
+  end;
+  for I := 0 to 1 do
+  begin
+    DuplicateSongs.Actions[I] := DuplicateSongs.Inputs[I];
+    DuplicateSongs.Actions[I].Text := Copy(DuplicateSongs.Inputs[I].Text);
+    DuplicateSongs.Actions[I].Y := Y + 92 + 2 * RowSpace;
+    DuplicateSongs.Actions[I].Text[0].Align := 1;
+    DuplicateSongs.Actions[I].Text[0].X := DuplicateSongs.Actions[I].W div 2;
+    DuplicateSongs.Actions[I].Text[0].Size := 24;
+    if Length(GetSectionList('DuplicateSongsAction' + IntToStr(I + 1))) > 0 then
+      ThemeLoadButton(DuplicateSongs.Actions[I], 'DuplicateSongsAction' + IntToStr(I + 1));
+  end;
+  DuplicateSongs.Hint := LabelStyle;
+  DuplicateSongs.Hint.X := X + 24; DuplicateSongs.Hint.Y := Y + H - 34;
+  DuplicateSongs.Hint.W := W - 48; DuplicateSongs.Hint.Size := 16;
+  if Length(GetSectionList('DuplicateSongsPanel')) > 0 then ThemeLoadStatic(DuplicateSongs.Panel, 'DuplicateSongsPanel');
+  if Length(GetSectionList('DuplicateSongsHeading')) > 0 then ThemeLoadText(DuplicateSongs.Heading, 'DuplicateSongsHeading');
+  if Length(GetSectionList('DuplicateSongsHint')) > 0 then ThemeLoadText(DuplicateSongs.Hint, 'DuplicateSongsHint');
+  for I := 0 to 1 do
+  begin
+    if Length(GetSectionList('DuplicateSongsLabel' + IntToStr(I + 1))) > 0 then
+      ThemeLoadText(DuplicateSongs.Labels[I], 'DuplicateSongsLabel' + IntToStr(I + 1));
+    if Length(GetSectionList('DuplicateSongsPath' + IntToStr(I + 1))) > 0 then
+      ThemeLoadText(DuplicateSongs.Paths[I], 'DuplicateSongsPath' + IntToStr(I + 1));
+  end;
+
+end;
+
 procedure TTheme.LoadSongFilterLayout;
 const ActionNames: array[0..3] of string = ('Add', 'Clear', 'Done', 'Lock');
 var Sections: TThemeSectionList; I, BottomY: integer; Legacy: boolean;
@@ -2956,6 +3058,19 @@ begin
     ThemeLoadStatic(SongJumpto.LockedIcon, 'SongJumptoLockedIcon');
     ThemeLoadStatic(SongJumpto.UnlockedIcon, 'SongJumptoUnlockedIcon');
   end;
+  if Length(SongJumpto.Statics) > 0 then
+    SongJumpto.SuggestionPanel := SongJumpto.Statics[0];
+  if ResolveThemeFile('SongJumptoSuggestionPanel') <> nil then
+    ThemeLoadStatic(SongJumpto.SuggestionPanel, 'SongJumptoSuggestionPanel');
+  SongJumpto.SuggestionButton := SongJumpto.ButtonSearchText;
+  if ResolveThemeFile('SongJumptoSuggestionButton') <> nil then
+    ThemeLoadButton(SongJumpto.SuggestionButton, 'SongJumptoSuggestionButton');
+  EnsureText(SongJumpto.SuggestionButton, 24);
+  Sections := GetSectionList('SongJumptoSuggestions');
+  SongJumpto.SuggestionWidth := Max(80, ReadInteger(Sections, 'Width', 220));
+  SongJumpto.SuggestionRowHeight := Max(20, ReadInteger(Sections, 'RowHeight', 30));
+  SongJumpto.SuggestionMargin := Max(0, ReadInteger(Sections, 'Margin', 16));
+  SongJumpto.SuggestionGap := Max(0, ReadInteger(Sections, 'Gap', 8));
   Sections := GetSectionList('SongJumptoFilters');
   Legacy := Length(Sections) = 0;
   SongJumpto.RowSpacing := Max(1, ReadInteger(Sections, 'RowSpacing', 78));
@@ -3001,6 +3116,12 @@ begin
       ThemeLoadButton(SongJumpto.FilterActions[I], 'SongJumptoButton' + ActionNames[I]);
     EnsureText(SongJumpto.FilterActions[I], 20);
   end;
+  SongJumpto.FilterActions[0] := SongJumpto.FilterActions[3];
+  SongJumpto.FilterActions[0].Text := Copy(SongJumpto.FilterActions[3].Text);
+  Dec(SongJumpto.FilterActions[0].X, SongJumpto.FilterActions[3].W + 8);
+  if ResolveThemeFile('SongJumptoButtonPin') <> nil then
+    ThemeLoadButton(SongJumpto.FilterActions[0], 'SongJumptoButtonPin');
+
 end;
 
 procedure TTheme.LoadStatMainRecentPeriods;
@@ -3128,21 +3249,37 @@ begin
 end;
 
 procedure TTheme.ThemeLoadHighScores;
+  function SectionName(const CurrentName, LegacyName: string): string;
+  begin
+    if ResolveThemeFile(CurrentName) <> nil then
+      Result := CurrentName
+    else
+      Result := LegacyName;
+  end;
 begin
-  ThemeLoadBasic(HighScores, 'HighScores');
-  ThemeLoadText(HighScores.TextTitle,            'HighScoresTextTitle');
-  ThemeLoadText(HighScores.TextWhereAmI,         'HighScoresTextWhereAmI');
-  ThemeLoadText(HighScores.TextArtistTitle,      'HighScoresTextArtistTitle');
-  ThemeLoadText(HighScores.TextDifficultyLabel,  'HighScoresTextDifficultyLabel');
-  ThemeLoadText(HighScores.TextDifficulty,       'HighScoresTextDifficulty');
-  ThemeLoadText(HighScores.TextContinue,         'HighScoresTextContinue');
-  ThemeLoadText(HighScores.TextNavigate,         'HighScoresTextNavigate');
+  ThemeLoadBasic(HighScores, SectionName('HighScores', 'Top5'));
+  ThemeLoadText(HighScores.TextTitle,            SectionName('HighScoresTextTitle', 'Top5Text1'));
+  ThemeLoadText(HighScores.TextWhereAmI,         SectionName('HighScoresTextWhereAmI', 'Top5Text2'));
+  ThemeLoadText(HighScores.TextArtistTitle,      SectionName('HighScoresTextArtistTitle', 'Top5TextArtistTitle'));
+  ThemeLoadText(HighScores.TextDifficultyLabel,  SectionName('HighScoresTextDifficultyLabel', 'Top5Text4'));
+  ThemeLoadText(HighScores.TextDifficulty,       SectionName('HighScoresTextDifficulty', 'Top5TextLevel'));
+  ThemeLoadText(HighScores.TextContinue,         SectionName('HighScoresTextContinue', 'Top5Text3'));
+  ThemeLoadText(HighScores.TextNavigate,         SectionName('HighScoresTextNavigate', 'Top5Text5'));
   ThemeLoadHighScoreList(HighScores.List,        'HighScoresListArea');
-  ThemeLoadStatic(HighScores.RowNumberStatic,    'HighScoresRowNumberStatic');
-  ThemeLoadText(HighScores.RowNumberText,        'HighScoresRowNumberText');
-  ThemeLoadText(HighScores.RowNameText,          'HighScoresRowNameText');
-  ThemeLoadText(HighScores.RowScoreText,         'HighScoresRowScoreText');
-  ThemeLoadText(HighScores.RowDateText,          'HighScoresRowDateText');
+  ThemeLoadStatic(HighScores.RowNumberStatic,    SectionName('HighScoresRowNumberStatic', 'Top5StaticNumber1'));
+  ThemeLoadText(HighScores.RowNumberText,        SectionName('HighScoresRowNumberText', 'Top5TextNumber1'));
+  ThemeLoadText(HighScores.RowNameText,          SectionName('HighScoresRowNameText', 'Top5TextName1'));
+  ThemeLoadText(HighScores.RowScoreText,         SectionName('HighScoresRowScoreText', 'Top5TextScore1'));
+  ThemeLoadText(HighScores.RowDateText,          SectionName('HighScoresRowDateText', 'Top5TextDate1'));
+  // Legacy themes supplied five fixed rows instead of a reusable row template.
+  if (ResolveThemeFile('HighScoresListArea') = nil) and
+     (ResolveThemeFile('Top5TextName5') <> nil) then
+    HighScores.List.BottomY := Max(HighScores.List.BottomY,
+      ReadInteger(GetSectionList('Top5TextName5'), 'Y', 390) + HighScores.RowNameText.Size);
+  // A missing or invalid row template must not cause division by zero at startup.
+  HighScores.RowNameText.Size := Max(1, HighScores.RowNameText.Size);
+  if HighScores.TextTitle.Text = 'SING_TOP_5_CHARTS' then
+    HighScores.TextTitle.Text := Language.Translate('SING_HIGH_SCORES_TITLE');
 end;
 
 procedure TTheme.ThemeLoadText(var ThemeText: TThemeText; const Name: string);

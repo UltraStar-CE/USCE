@@ -91,3 +91,21 @@ The CI does this for you, but if you need to do it manually:
   * Copy the DLLs from `game` to `installer/dependencies/dll`
   * `C:\...\makensis "installer/UltraStar Community Edition.nsi"` (this will take a while)
   * The .exe will be placed in `installer/dist`
+
+## Locked playlist playback
+
+Create a playlist in song selection, using the playlist menu to add the current
+selection if needed. Launch it with:
+
+```
+usce -lockdown -playlist "Karaoke" -password "pw" -results 10 -highscores 10
+```
+
+One playlist is accepted. Lockdown always enables continuous playback and repeat;
+unlocking requires the password. The remaining singing configuration options are:
+
+- `-results` and `-highscores`: `manual`, `skip`, `5`, `10`, `20`, `30`, `40`, `50`, `60` (seconds).
+- `-song-display`: `lyrics-progress`, `lyrics`, `progress`, `none`.
+- `-singing-display`: `full`, `notes-info`, `notes`, `info`, `none`.
+
+Omitted options use the saved continuous-playback profile.

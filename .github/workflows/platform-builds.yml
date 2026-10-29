@@ -225,6 +225,20 @@ jobs:
           else
             echo "arch=ARM" >> $GITHUB_ENV
           fi
+      - name: Locate Homebrew downloads
+        if: inputs.use-caches
+        id: homebrew-downloads
+        run: |
+          echo "path=$(brew --cache)/downloads" >> "$GITHUB_OUTPUT"
+          echo "week=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
+      - name: Cache Homebrew downloads
+        if: inputs.use-caches
+        uses: actions/cache@v6
+        with:
+          path: ${{ steps.homebrew-downloads.outputs.path }}
+          key: homebrew-downloads-v1-${{ matrix.os }}-${{ runner.arch }}-${{ steps.homebrew-downloads.outputs.week }}
+          restore-keys: |
+            homebrew-downloads-v1-${{ matrix.os }}-${{ runner.arch }}-
       - name: Install Homebrew Dependencies
         run: |
           brew install fpc sdl2-compat sdl2_image automake portaudio lua ffmpeg opencv cmake ninja openssl@3

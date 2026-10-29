@@ -128,6 +128,7 @@ type
     function DecodeFilename(Filename: RawByteString): IPath;
     procedure ParseNote(Track: integer; TypeP: char; StartP, DurationP, NoteP: integer; LyricS: UTF8String; Excluded: boolean = false);
     procedure NormalizeUnpitchedNoteTones;
+    procedure UpdateCompletion;
     procedure NewSentence(LineNumberP: integer; Param1, Param2: integer);
     procedure FindRefrain(); // tries to find a refrain for the medley mode and preview start
 
@@ -659,6 +660,8 @@ var
   ParamLyric:   UTF8String;
 
   NotesFound:   boolean;
+  NoteStart, NoteEnd: real;
+  NoteExcluded: boolean;
 
   procedure RemoveEmptyLinesFromTrack(const TrackIdx: integer);
   var
@@ -682,8 +685,6 @@ var
     if (Tracks[TrackIdx].High >= 0) and (Tracks[TrackIdx].CurrentLine > Tracks[TrackIdx].High) then
       Tracks[TrackIdx].CurrentLine := Tracks[TrackIdx].High;
   end;
-label
-  NextTrack;
 begin
   Result := false;
   LastError := '';
@@ -733,6 +734,7 @@ begin
         Tracks[TrackIndex].CurrentLine := 0;
         Tracks[TrackIndex].NotesGAP   := self.NotesGAP;
         Tracks[TrackIndex].ScoreValue := 0;
+        Tracks[TrackIndex].HighestScoredBeat := 0;
 
         //Add first line and set some standard values to fields
         //see procedure NewSentence for further explantation
@@ -802,13 +804,18 @@ begin
             Param0 := 'F';
           end;
 
-          if (OutOfBoundsToFreestyle and (((Self.Start > 0) and (GetTimeFromBeat(Param1, Self) < Self.Start)) or ((AudioLength > 0) and (GetTimeFromBeat(Param1 + Param3, Self) >= AudioLength)))) then
+          NoteStart := GetTimeFromBeat((Param1 + Rel[CurrentTrack]) * Mult, Self);
+          NoteEnd := GetTimeFromBeat((Param1 + Rel[CurrentTrack] + Param2) * Mult, Self);
+          NoteExcluded := OutOfBoundsToFreestyle and
+            (((Self.Start > 0) and (NoteStart < Self.Start)) or
+             ((AudioLength > 0) and (NoteEnd >= AudioLength)));
+          if NoteExcluded then
           begin
             // convert to freestyle note
             Param0 := 'F';
             Log.LogSongError(
               Format('Note at "%s %d %d %d %s" is before audio start (%.2f < %.2f) or after audio end (%.2f >= %.2f) -> converted to freestyle note',
-              [Param0, Param1, Param2, Param3, ParamLyric, GetTimeFromBeat(Param1, Self), Self.Start, GetTimeFromBeat(Param1 + Param3, Self), AudioLength]),
+              [Param0, Param1, Param2, Param3, ParamLyric, NoteStart, Self.Start, NoteEnd, AudioLength]),
               'TSong.LoadSong'
             );
           end;
@@ -822,8 +829,7 @@ begin
             Break;
           end;
           ParseNote(CurrentTrack, Param0, (Param1+Rel[CurrentTrack]) * Mult, Param2 * Mult, Param3, ParamLyric,
-            OutOfBoundsToFreestyle and (((Self.Start > 0) and (GetTimeFromBeat(Param1, Self) < Self.Start)) or
-            ((AudioLength > 0) and (GetTimeFromBeat(Param1 + Param3, Self) >= AudioLength))));
+            NoteExcluded);
         end // if
 
         else
@@ -877,24 +883,7 @@ begin
 
   NormalizeUnpitchedNoteTones;
 
-  for TrackIndex := 0 to High(Tracks) do
-  begin
-    if High(Tracks[Trackindex].Lines) < 0 then
-      continue;  // no lines in this track
-
-    Tracks[Trackindex].Lines[0].LastLine := True; // fallback to make sure at least one line is marked last line
-
-    // search backwards until we find the last line with a scorable note
-    for LinePos := System.High(Tracks[Trackindex].Lines) downto 0 do
-      if Tracks[Trackindex].Lines[LinePos].ScoreValue > 0 then
-      begin
-        Tracks[Trackindex].Lines[0].LastLine := False;
-        Tracks[Trackindex].Lines[LinePos].LastLine := True;
-        goto NextTrack;
-      end;
-
-    NextTrack: ;
-  end;
+  UpdateCompletion;
 
   Result := true;
 end;
@@ -1705,6 +1694,27 @@ begin
   end; // with
 end;
 
+// Lyric fading follows the actual final line; completion follows scored notes.
+procedure TSong.UpdateCompletion;
+var
+  TrackIndex, LineIndex, NoteIndex: integer;
+begin
+  for TrackIndex := 0 to High(Tracks) do
+  begin
+    Tracks[TrackIndex].HighestScoredBeat := Low(Integer);
+    for LineIndex := 0 to High(Tracks[TrackIndex].Lines) do
+      with Tracks[TrackIndex].Lines[LineIndex] do
+      begin
+        LastLine := LineIndex = High(Tracks[TrackIndex].Lines);
+        for NoteIndex := 0 to High(Notes) do
+          with Notes[NoteIndex] do
+            if not ScoreExcluded and (Duration > 0) and (ScoreFactor[NoteType] > 0) then
+              Tracks[TrackIndex].HighestScoredBeat := Max(
+                Tracks[TrackIndex].HighestScoredBeat, StartBeat + Duration);
+      end;
+  end;
+end;
+
 procedure TSong.NormalizeUnpitchedNoteTones;
 var
   TrackIndex, LineIndex, NoteIndex, SearchIndex: integer;
@@ -2134,6 +2144,7 @@ begin
       Tracks[LineIndex].Number := Tracks[LineIndex].High+1;
     end;
   end;
+  UpdateCompletion;
 end;
 
 procedure TSong.Clear();

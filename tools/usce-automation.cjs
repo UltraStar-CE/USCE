@@ -7,6 +7,10 @@ const TRACKS = [
 ];
 const SHA = /^[a-f0-9]{40}$/;
 const bounded = (x, max = 24000) => String(x || '').slice(0, max);
+function upstreamAuthorCredit(input) {
+  return typeof input.authorLogin === 'string' && /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/.test(input.authorLogin)
+    ? '@' + input.authorLogin : bounded(input.author?.name || 'see the linked source commit', 200);
+}
 const repoParts = repo => { const [owner, name] = repo.split('/'); return {owner, repo: name}; };
 
 function validateFiles(files) {
@@ -34,10 +38,16 @@ async function baseInfo(github, context) {
   return {branch, sha: commit.data.sha, tree: commit.data.tree.sha};
 }
 
-async function openDraft(github, context, base, branch, files, title, body) {
+async function openDraft(github, context, base, branch, files, title, body, {reopenClosed = false} = {}) {
   const repo = context.repo;
   const existing = await github.rest.pulls.list({...repo, state: 'all', head: repo.owner + ':' + branch, per_page: 100});
-  if (existing.data.length) return existing.data[0];
+  if (existing.data.length) {
+    const prior = existing.data[0];
+    if (reopenClosed && prior.state === 'closed' && !prior.merged_at) {
+      return (await github.rest.pulls.update({...repo, pull_number: prior.number, state: 'open'})).data;
+    }
+    return prior;
+  }
   validateCandidateProse(title + '\n' + body);
   const now = await github.rest.git.getRef({...repo, ref: 'heads/' + base.branch});
   if (now.data.object.sha !== base.sha) throw Error('Default branch changed; rerun against its new head');
@@ -208,6 +218,7 @@ async function prepare({github, context, core}) {
           reason: 'Source patch is missing, oversized, or outside the 30-file limit. Assess this commit manually before processing dependent changes.'}};
       } else task = {kind, number: 0, base, input: {source: source.data.html_url, sha,
         author: source.data.commit.author,
+        authorLogin: source.data.author?.login || null,
         message: bounded(source.data.commit.message), files: files.map(f => ({path: f.filename, status: f.status, patch: f.patch}))}};
     } else throw Error('Unsupported task');
   }
@@ -277,7 +288,7 @@ async function publish({github, context, core}, taskText, resultText) {
   const branch = 'automation/candidate-' + identity + (task.kind === 'issue' ? '-' + task.base.sha.slice(0, 8) : '');
   const body = 'AI-generated proposal for human review.\n\n' + result.summary + validation +
     (task.kind === 'issue' ? '\n\nRelated issue #' + task.number + '. Reporter confirmation is pending a test build or testing instructions.' :
-      '\n\nAdapted from ' + task.input.source + '. Upstream author: ' + bounded(task.input.author?.name || 'see the linked source commit', 200) + '. We retain original authorship and credit in adaptation commits; omitted changes and compatibility adjustments are recorded during review.') +
+      '\n\nAdapted from ' + task.input.source + '. Upstream author: ' + upstreamAuthorCredit(task.input) + '. We retain original authorship and credit in adaptation commits; omitted changes and compatibility adjustments are recorded during review.') +
     '\n\nThe agent has not executed this candidate. Tests and provenance still need human verification.';
   const pr = await openDraft(github, context, task.base, branch, result.files, 'Candidate for ' + identity, body);
   core.notice('Candidate PR: ' + pr.html_url);
@@ -291,4 +302,4 @@ async function publish({github, context, core}, taskText, resultText) {
   }
 }
 
-module.exports = {TRACKS, validateFiles, validateResult, openDraft, upstreamDelta, unrecordedDelta, prepare, publish, trackUpstream};
+module.exports = {TRACKS, validateFiles, validateResult, openDraft, upstreamDelta, unrecordedDelta, prepare, publish, trackUpstream, upstreamAuthorCredit};

@@ -57,7 +57,8 @@ implementation
 
 uses SysUtils, Classes, fpjson, jsonparser, Math, UNote, UGraphic, ULanguage, UHelp, ULog, UMusic, UPlaylist,
   USongs, USong, UIni, UThemes, ULyrics, UDisplay, URecord, URemoteBridgeIPC,
-  UScreenScore, UScreenSingController;
+  UScreenScore, UScreenSingController, UCommandLine, ULibraryLockdown;
+
 
 const
   DisplaySeconds: array[0..8] of integer = (-1, 0, 5, 10, 20, 30, 40, 50, 60);
@@ -69,6 +70,17 @@ begin
   Enabled := Ini.ContinuousMode;
   ActiveProfile := Enabled;
   LoadProfile;
+  if Params.Lockdown then
+  begin
+    Enabled := 1;
+    ActiveProfile := 1;
+    LoadProfile;
+    if Params.PlaybackResults >= 0 then ResultTime := Params.PlaybackResults;
+    if Params.PlaybackHighScores >= 0 then HighScoreTime := Params.PlaybackHighScores;
+    if Params.PlaybackSongDisplay >= 0 then SongDisplay := Params.PlaybackSongDisplay;
+    if Params.PlaybackSingingDisplay >= 0 then SingingDisplay := Params.PlaybackSingingDisplay;
+    RepeatSelection := 1;
+  end;
   Description := Language.Translate('SING_CONFIGURATION');
   WhereAmI := Description;
   Load;
@@ -140,6 +152,16 @@ end;
 
 procedure TScreenContinuousPlayback.SyncProfile;
 begin
+  if Params.Lockdown and LibraryLockdown.Active then
+  begin
+    Enabled := 1;
+    RepeatSelection := 1;
+    if Length(SelectsS) >= 2 then
+    begin
+      SelectsS[0].SelectedOption := Enabled;
+      SelectsS[1].SelectedOption := RepeatSelection;
+    end;
+  end;
   Ini.ContinuousMode := Enabled;
   if ActiveProfile = Enabled then Exit;
   SaveProfile;

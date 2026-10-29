@@ -54,6 +54,7 @@ type
     Duration: integer;
     Detect:   real;    // accurate place, detected in the note
     Tone:     real;
+    IsGap:    boolean; // display-only pitch between chart notes
     Perfect:  boolean; // true if the note matches the original one, light the star
     Hit:      boolean; // true if the note hits the line
     NoteType: TNoteType;
@@ -99,6 +100,9 @@ type
     Note:           array of TPlayerNote;
     SentenceScore:  array of array of real;
     InputSource: integer;
+    LastSungTone: integer;
+    HasLastSungTone: boolean;
+
 
     // Scores
     property Score:       real read _Score write SetScore;
@@ -159,6 +163,8 @@ procedure NewBeatClick(Screen: TScreenSingController);  // executed when on then
 procedure StopSingClicks;
 procedure NewBeatDetect(Screen: TScreenSingController); // executed when on then new beat for detection
 procedure NewNote(CP: integer; Screen: TScreenSingController);       // detect note
+procedure ResetSungPitchReference;
+procedure AddGapSungNote(PlayerIndex, Beat, Tone: integer);
 function  GetMidBeat(Time: real): real;
 function  GetTimeFromBeat(Beat: integer; SelfSong: TSong = nil): real;
 function  GetPlayerSentenceScore(PlayerIndex, Track, SentenceIndex: integer; out Points: real): boolean;
@@ -758,6 +764,7 @@ begin
   CurrentPlayer.Note[InsertAt].Perfect := false;
   CurrentPlayer.Note[InsertAt].Hit := Hit;
   CurrentPlayer.Note[InsertAt].NoteType := NoteType;
+  CurrentPlayer.Note[InsertAt].IsGap := false;
   Result := InsertAt;
 end;
 
@@ -821,6 +828,32 @@ begin
   InsertedIndex := InsertPlayerBeatNote(CurrentPlayer, Beat, Tone, Hit, NoteType);
   MergeAdjacentPlayerNotes(CurrentPlayer);
   RecomputePlayerNotePerfects(CurrentPlayer, Line);
+end;
+
+procedure ResetSungPitchReference;
+var I: integer;
+begin
+  for I := 0 to High(Player) do Player[I].HasLastSungTone := false;
+end;
+
+procedure AddGapSungNote(PlayerIndex, Beat, Tone: integer);
+var P: PPlayer; N: PPlayerNote;
+begin
+  P := @Player[PlayerIndex];
+  if not P.HasLastSungTone then Exit;
+  while Tone-P.LastSungTone > 6 do Dec(Tone,12);
+  while Tone-P.LastSungTone < -6 do Inc(Tone,12);
+  if P.HighNote >= 0 then
+  begin
+    N := @P.Note[P.HighNote];
+    if N.IsGap and (N.Tone=Tone) and (N.Start+N.Duration=Beat) then
+    begin Inc(N.Duration); Exit; end;
+  end;
+  Inc(P.LengthNote); Inc(P.HighNote); SetLength(P.Note,P.LengthNote);
+  N := @P.Note[P.HighNote];
+  N.Start:=Beat; N.Duration:=1; N.Tone:=Tone;
+  N.IsGap:=true; N.Hit:=false; N.Perfect:=false; N.NoteType:=ntNormal;
+
 end;
 
 procedure NewNote(CP: integer; Screen: TScreenSingController);
@@ -1063,6 +1096,8 @@ begin
         else
         begin
           CurrentSound.AnalyzeBuffer;
+          if (Ini.PitchTrace <> 0) and not NoteAvailable and CurrentSound.ToneValid then
+            AddGapSungNote(PlayerIndex, ActualBeat, CurrentSound.Tone);
           if PhoneAudio.Enabled and RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) and
             (GetEnvironmentVariable('USCE_AUDIO_ALIGNMENT_TRACE') = '1') then
           begin
@@ -1081,6 +1116,7 @@ begin
               ',"native":' + string(PhoneAudio.Status(PlayerIndex)) + '}', 'Audio alignment');
           end;
         end;
+
 
         // add some noise
         // TODO: do we need this?
@@ -1127,6 +1163,9 @@ begin
             AddPlayerSentenceScore(PlayerIndex, CP, SentenceDetected, CurNotePoints);
           end; // operation
 
+          CurrentPlayer.LastSungTone := ActualTone;
+          CurrentPlayer.HasLastSungTone := true;
+
           // check if we have to add a new note or extend the note's length
           if (SentenceDetected = CurrentSong.Tracks[CP].CurrentLine) then
           begin
@@ -1134,6 +1173,7 @@ begin
               UpsertRemotePlayerBeatNote(CurrentPlayer, Line, ActualBeat,
                 ActualTone, NoteHit, CurrentNoteType)
             else if CanUpdatePlayerNote then
+
             begin
               // we will add a new note
               NewNote := true;
@@ -1141,10 +1181,12 @@ begin
               // if previous note (if any) was the same, extend previous note
               if ((CurrentPlayer.LengthNote > 0) and
                   (LastPlayerNote <> nil) and
+                  not LastPlayerNote.IsGap and
                   (LastPlayerNote.Tone = ActualTone) and
                   ((LastPlayerNote.Start + LastPlayerNote.Duration) = ActualBeat)) then
               begin
                 NewNote := false;
+
               end;
 
               // if is not as new note to control

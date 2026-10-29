@@ -38,6 +38,7 @@ uses
   UMenuBackground,
   UMusic,
   UVideo,
+  UTime,
   UPath;
 
 //TMenuBackgroundColor - Background Color
@@ -82,10 +83,19 @@ type
   end;
 
 type }
+  TMenuVideoState = class
+    FileName: IPath;
+    Video: IVideo;
+    Timer: TRelativeTimer;
+    Users: integer;
+    constructor Create(const AFileName: IPath);
+    destructor Destroy; override;
+  end;
+
   TMenuBackgroundVideo = class (TMenuBackground)
     private
       fFilename: IPath;
-      fBgVideo: IVideo;
+      fState: TMenuVideoState;
     public
       constructor Create(const ThemedSettings: TThemeBackground); override;
       procedure   OnShow; override;
@@ -99,15 +109,73 @@ type }
 const
   SUPPORTED_EXTS_BACKGROUNDVIDEO: array[0..7] of string = ('.avi', '.mov', '.divx', '.mpg', '.mp4', '.mpeg', '.m2v', '.webm');
 
+procedure ClearMenuVideoCache(ReleaseTextures: boolean = false);
+
 implementation
 
 uses
   SysUtils,
-  UTime,
   USkins,
   UCommon,
   UGraphic,
   URenderer;
+
+var CachedMenuVideo: TMenuVideoState;
+
+constructor TMenuVideoState.Create(const AFileName: IPath);
+begin
+  inherited Create;
+  FileName := AFileName;
+  Timer := TRelativeTimer.Create;
+  Video := VideoPlayback.Open(FileName);
+  if Video <> nil then
+  begin
+    Video.Loop := true;
+    Video.Play;
+  end;
+end;
+
+destructor TMenuVideoState.Destroy;
+begin
+  Video := nil;
+  Timer.Free;
+  inherited;
+end;
+
+procedure ClearMenuVideoCache(ReleaseTextures: boolean = false);
+var Old: TMenuVideoState;
+begin
+  Old := CachedMenuVideo;
+  CachedMenuVideo := nil;
+  if (Old <> nil) and ReleaseTextures then Old.Video := nil;
+  if (Old <> nil) and (Old.Users = 0) then Old.Free;
+end;
+
+function AcquireMenuVideo(const FileName: IPath): TMenuVideoState;
+begin
+  if (CachedMenuVideo = nil) or not CachedMenuVideo.FileName.Equals(FileName) then
+  begin
+    ClearMenuVideoCache;
+    CachedMenuVideo := TMenuVideoState.Create(FileName);
+  end;
+  Result := CachedMenuVideo;
+  Inc(Result.Users);
+  Result.Timer.Start;
+end;
+
+procedure ReleaseMenuVideo(var State: TMenuVideoState);
+var Old: TMenuVideoState;
+begin
+  Old := State;
+  State := nil;
+  if Old = nil then Exit;
+  Dec(Old.Users);
+  if Old.Users = 0 then
+  begin
+    Old.Timer.Pause;
+    if Old <> CachedMenuVideo then Old.Free;
+  end;
+end;
 
 constructor TMenuBackgroundVideo.Create(const ThemedSettings: TThemeBackground);
 begin
@@ -122,24 +190,18 @@ end;
 
 destructor  TMenuBackgroundVideo.Destroy;
 begin
+  OnFinish;
+  inherited;
 end;
 
 procedure TMenuBackgroundVideo.OnShow;
 begin
-  fBgVideo := VideoPlayback.Open(fFileName);
-  if (fBgVideo <> nil) then
-  begin
-    VideoBGTimer.SetTime(0);
-    VideoBGTimer.Start();
-    fBgVideo.Loop := true;
-    fBgVideo.Play;
-  end;
+  if fState = nil then fState := AcquireMenuVideo(fFileName);
 end;
 
 procedure   TMenuBackgroundVideo.OnFinish;
 begin
-  // unload video
-  fBgVideo := nil;
+  ReleaseMenuVideo(fState);
 end;
 
 procedure TMenuBackgroundVideo.Draw;
@@ -149,15 +211,15 @@ begin
   begin
     Renderer.ClearFrameBuffer(CLEAR_DEPTH);
     // video failure -> draw blank background
-    if (fBgVideo = nil) then
+    if (fState = nil) or (fState.Video = nil) then
       Renderer.ClearFrameBuffer(CLEAR_COLOR);
   end;
 
-  if (fBgVideo <> nil) then
+  if (fState <> nil) and (fState.Video <> nil) then
   begin
-    fBgVideo.GetFrame(VideoBGTimer.GetTime());
-    fBgVideo.SetScreen(ScreenAct);
-    fBgVideo.Draw();
+    fState.Video.GetFrame(fState.Timer.GetTime());
+    fState.Video.SetScreen(ScreenAct);
+    fState.Video.Draw();
   end;
 end;
 

@@ -51,6 +51,7 @@ type
     FileName: IPath;
 
     DefaultColor: integer;
+    ColorizeDefaultAvatars: boolean;
     Creator:  string; // not used yet
   end;
 
@@ -63,6 +64,7 @@ type
     SkinTexture: array of TSkinTexture;
     SkinPath:    IPath;
     Color:       integer;
+    ColorizeDefaultAvatars: boolean;
     procedure LoadDefaultSkinForTheme(const ThemeName: string; Depth: integer);
     procedure LoadSkinTextures(const SkinEntry: TSkinEntry; UseAsBasePath: boolean);
     procedure SetTextureEntry(const TextureName: string; const FileName: IPath; const TexturePath: IPath);
@@ -160,6 +162,7 @@ begin
     Skin[S].Theme    := Theme;
     Skin[S].Name     := Name;
     Skin[S].Creator  := SkinIni.ReadString('Skin', 'Creator', '');
+    Skin[S].ColorizeDefaultAvatars := SkinIni.ReadBool('Skin', 'ColorizeDefaultAvatars', true);
     Skin[S].DefaultColor := Max(0, GetArrayIndex(IColor, SkinIni.ReadString('Skin', 'Color', ''), true));
   end;
   SkinIni.Free;
@@ -259,6 +262,7 @@ var
   SelectedSkinIndex: integer;
 begin
   SelectedSkinIndex := GetSkinNumber(Name, Theme);
+  ColorizeDefaultAvatars := Skin[SelectedSkinIndex].ColorizeDefaultAvatars;
   SetLength(SkinTexture, 0);
   SetLength(LoadedSkinPaths, 0);
   RequestedSkinName := Name;

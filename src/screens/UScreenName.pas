@@ -614,24 +614,19 @@ var
   Avatar: TAvatar;
   AvatarFile: IPath;
   Hash: string;
-  GenericNoAvatarFile: IPath;
   NoAvatarFile: IPath;
 begin
 
   SetLength(PlayerAvatarButton, Length(AvatarsList) + 1);
 
   // 1st no-avatar dummy
-  GenericNoAvatarFile := Skin.SkinPath.Append(Path('[name]noavatar.png'));
   for I := 1 to UIni.IMaxPlayerCount do
   begin
-    if GenericNoAvatarFile.IsFile() then
-      NoAvatarFile := GenericNoAvatarFile
-    else
-    begin
-      NoAvatarFile := Skin.GetTextureFileName('NoAvatar_P' + IntToStr(I));
-      if not NoAvatarFile.IsSet then
-        NoAvatarFile := Skin.GetTextureFileName('NoAvatar_P1');
-    end;
+    NoAvatarFile := Skin.GetTextureFileName('NoAvatar_P' + IntToStr(I));
+    if not NoAvatarFile.IsFile then
+      NoAvatarFile := Skin.GetTextureFileName('NoAvatar_P1');
+    if not NoAvatarFile.IsFile then
+      NoAvatarFile := Skin.GetTextureFileName('NoAvatar');
 
     NoAvatarTexture[I] := Renderer.GetTexture(NoAvatarFile, TEXTURE_TYPE_TRANSPARENT, $FFFFFF);
     NoAvatarTexture[I].ScaleMode := lsUniform;
@@ -978,11 +973,14 @@ begin
   SelectsS[PlayerSelectVoice].SBGDColG := DesCol.G;
   SelectsS[PlayerSelectVoice].SBGDColB := DesCol.B;
 
-  Button[PlayerAvatarButton[0]].Texture.ColR := DesCol.R;
-  Button[PlayerAvatarButton[0]].Texture.ColG := DesCol.G;
-  Button[PlayerAvatarButton[0]].Texture.ColB := DesCol.B;
+  if Skin.ColorizeDefaultAvatars then
+  begin
+    Button[PlayerAvatarButton[0]].Texture.ColR := DesCol.R;
+    Button[PlayerAvatarButton[0]].Texture.ColG := DesCol.G;
+    Button[PlayerAvatarButton[0]].Texture.ColB := DesCol.B;
+  end;
 
-  if (PlayerAvatars[PlayerIndex] = 0) then
+  if (PlayerAvatars[PlayerIndex] = 0) and Skin.ColorizeDefaultAvatars then
   begin
     Statics[PlayerCurrentAvatar[PlayerIndex]].Texture.ColR := DesCol.R;
     Statics[PlayerCurrentAvatar[PlayerIndex]].Texture.ColG := DesCol.G;
@@ -1086,9 +1084,12 @@ begin
 
     Col := GetPlayerColor(Num[Player]);
 
-    Statics[PlayerCurrentAvatar[Player]].Texture.ColR := Col.R;
-    Statics[PlayerCurrentAvatar[Player]].Texture.ColG := Col.G;
-    Statics[PlayerCurrentAvatar[Player]].Texture.ColB := Col.B;
+    if Skin.ColorizeDefaultAvatars then
+    begin
+      Statics[PlayerCurrentAvatar[Player]].Texture.ColR := Col.R;
+      Statics[PlayerCurrentAvatar[Player]].Texture.ColG := Col.G;
+      Statics[PlayerCurrentAvatar[Player]].Texture.ColB := Col.B;
+    end;
   end
   else
   begin
@@ -1146,9 +1147,12 @@ begin
 
       Col := GetPlayerColor(Ini.PlayerColor[I]);
 
-      AvatarPlayerTextures[I+1].ColR := Col.R;
-      AvatarPlayerTextures[I+1].ColG := Col.G;
-      AvatarPlayerTextures[I+1].ColB := Col.B;
+      if Skin.ColorizeDefaultAvatars then
+      begin
+        AvatarPlayerTextures[I+1].ColR := Col.R;
+        AvatarPlayerTextures[I+1].ColG := Col.G;
+        AvatarPlayerTextures[I+1].ColB := Col.B;
+      end;
     end;
   end;
   if Display.CurrentScreen = @ScreenName then
