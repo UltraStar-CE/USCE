@@ -733,7 +733,7 @@ var
     Lines[Count].Y1 := Style.Y + AY1 * Style.H;
     Lines[Count].X2 := Style.X + AX2 * Style.W;
     Lines[Count].Y2 := Style.Y + AY2 * Style.H;
-    Lines[Count].Thickness := Max(1, Round(Min(Style.W, Style.H) / 20.0));
+    Lines[Count].Thickness := 1.25;
     Lines[Count].ColR := Style.ColR;
     Lines[Count].ColG := Style.ColG;
     Lines[Count].ColB := Style.ColB;
@@ -748,21 +748,21 @@ begin
   if (Style.W = 0) or (Style.H = 0) or (Style.Alpha = 0) then Exit;
   SetLength(Lines, 14);
   Count := 0;
-  // Document with a folded corner; a small warning triangle overlaps its lower corner.
-  Line(0.08, 0.90, 0.08, 0.05);
-  Line(0.08, 0.05, 0.48, 0.05);
-  Line(0.48, 0.05, 0.68, 0.24);
-  Line(0.68, 0.24, 0.68, 0.45);
-  Line(0.08, 0.90, 0.28, 0.90);
-  Line(0.48, 0.05, 0.48, 0.24);
-  Line(0.48, 0.24, 0.68, 0.24);
-  Line(0.20, 0.38, 0.53, 0.38);
-  Line(0.20, 0.50, 0.40, 0.50);
-  Line(0.62, 0.49, 0.96, 0.94);
-  Line(0.96, 0.94, 0.28, 0.94);
-  Line(0.28, 0.94, 0.62, 0.49);
-  Line(0.62, 0.67, 0.62, 0.78);
-  Line(0.62, 0.85, 0.62, 0.86);
+  // Keep the warning large and legible; the document is a secondary detail.
+  Line(0.46, 0.40, 0.46, 0.03);
+  Line(0.46, 0.03, 0.78, 0.03);
+  Line(0.78, 0.03, 0.96, 0.20);
+  Line(0.96, 0.20, 0.96, 0.61);
+  Line(0.78, 0.03, 0.78, 0.20);
+  Line(0.78, 0.20, 0.96, 0.20);
+  Line(0.78, 0.61, 0.96, 0.61);
+  Line(0.59, 0.28, 0.85, 0.28);
+  Line(0.69, 0.39, 0.85, 0.39);
+  Line(0.45, 0.25, 0.89, 0.95);
+  Line(0.89, 0.95, 0.02, 0.95);
+  Line(0.02, 0.95, 0.45, 0.25);
+  Line(0.45, 0.51, 0.45, 0.73);
+  Line(0.45, 0.83, 0.45, 0.86);
   Renderer.DrawLines(Lines);
 end;
 

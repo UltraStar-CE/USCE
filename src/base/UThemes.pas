@@ -1975,10 +1975,10 @@ begin
     SectionList := GetSectionList('SongProblemIndicator');
     with SongProblemIndicator do
     begin
-      X := ReadInteger(SectionList, 'X', 760);
+      X := ReadInteger(SectionList, 'X', 748);
       Y := ReadInteger(SectionList, 'Y', 10);
-      W := Max(0, ReadInteger(SectionList, 'W', 30));
-      H := Max(0, ReadInteger(SectionList, 'H', 32));
+      W := Max(0, ReadInteger(SectionList, 'W', 42));
+      H := Max(0, ReadInteger(SectionList, 'H', 44));
       ColR := EnsureRange(ReadFloat(SectionList, 'ColR', 1), 0.0, 1.0);
       ColG := EnsureRange(ReadFloat(SectionList, 'ColG', 1), 0.0, 1.0);
       ColB := EnsureRange(ReadFloat(SectionList, 'ColB', 1), 0.0, 1.0);
