@@ -34,7 +34,7 @@ interface
 {$I switches.inc}
 
 uses
-  UMenuButton;
+  UMenuButton, Math;
 
 type
   //----------------
@@ -72,6 +72,7 @@ end;
 procedure TButtonCollection.Draw;
 var
   I, J: integer;
+  Alpha: single;
 begin
   inherited;
   //If fading is activated, Fade Child Buttons
@@ -89,10 +90,12 @@ begin
         end
         else
         begin
-          ScreenButton^[I].Texture.Alpha := (FadeProgress-0.666)*3;
+          Alpha := EnsureRange((FadeProgress-0.666)*3, 0.0, 1.0);
+          ScreenButton^[I].Texture.Alpha := Alpha * ScreenButton^[I].BackgroundAlpha;
+          ScreenButton^[I].DeSelectTexture.Alpha := Alpha * ScreenButton^[I].BackgroundAlpha;
           
           for J := 0 to High(ScreenButton^[I].Text) do
-            ScreenButton^[I].Text[J].Alpha := (FadeProgress-0.666)*3;
+            ScreenButton^[I].Text[J].Alpha := Alpha;
         end;
       end;
   end;

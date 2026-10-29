@@ -1103,6 +1103,7 @@ type
     BaseThemeInis:    array of TMemIniFile;
 
     LastThemeBasic:   TThemeBasic;
+    DefaultButtonAlpha: real;
     procedure CreateThemeObjects();
     procedure OpenFile(ThemeNum: integer);
     procedure CloseFile;
@@ -1964,6 +1965,12 @@ begin
     Result := true;
     OpenFile(ThemeNum);
     BoldSelection := ReadBool(GetSectionList('Selection'), 'Bold', false);
+    DefaultButtonAlpha := 0.9;
+    for I := High(BaseThemeInis) downto Low(BaseThemeInis) do
+      DefaultButtonAlpha := StrToFloatDef(
+          BaseThemeInis[I].ReadString('Theme', 'ButtonAlpha', ''), DefaultButtonAlpha);
+    DefaultButtonAlpha := EnsureRange(ReadFloat(GetSectionList('Theme'),
+        'ButtonAlpha', DefaultButtonAlpha), 0.0, 1.0);
     if ThemeIni.ReadString('Theme', 'Name', '') <> '' then
     begin
       LayoutScreenW := ThemeIni.ReadInteger('Theme', 'ScreenW', 0);
@@ -3531,7 +3538,7 @@ begin
   ThemeButton.ColB := ReadFloat(SectionList, 'ColB', 1);
   ThemeButton.Int :=  ReadFloat(SectionList, 'Int', 1);
   ThemeButton.Alpha := EnsureRange(ReadFloat(SectionList, 'Alpha',
-    ReadFloat(GetSectionList('Theme'), 'ButtonAlpha', 0.9)), 0.0, 1.0);
+    DefaultButtonAlpha), 0.0, 1.0);
   ThemeButton.DColR := ReadFloat(SectionList, 'DColR', 1);
   ThemeButton.DColG := ReadFloat(SectionList, 'DColG', 1);
   ThemeButton.DColB := ReadFloat(SectionList, 'DColB', 1);

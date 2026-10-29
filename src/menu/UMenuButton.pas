@@ -66,6 +66,7 @@ type
       TextOffset:                array of TTextOffset;
       Texture:                   TTexture; // Button Screen position and size
 
+      BackgroundAlpha:           single;
       Colorized:                 boolean;
       DeSelectTexture:           TTexture; // texture for colorized hack
 
@@ -553,6 +554,7 @@ begin
   inherited Create;
   // We initialize all to 0, nil or false
   Visible        := true;
+  BackgroundAlpha := 1;
   SelectBool     := false;
   DeselectType   := 0;
   Selectable     := true;
