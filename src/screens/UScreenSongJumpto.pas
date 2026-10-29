@@ -319,41 +319,46 @@ begin
 end;
 
 procedure TScreenSongJumpto.OpenPresets;
-var Store: TFilterPresets; Labels: array of UTF8String; I, Count, N: integer;
+var Store: TFilterPresets; Labels: array of UTF8String; Title: UTF8String;
 begin
   FlushChanges;
   try
     Store := PresetStore;
     try fPresetNames := Store.Names; finally Store.Free; end;
-    fPresetPage := EnsureRange(fPresetPage, 0, Max(0, (Length(fPresetNames)-1) div 6));
-    Count := Min(6, Length(fPresetNames) - fPresetPage * 6);
-    SetLength(Labels, 1 + Count);
+    fPresetPage := EnsureRange(fPresetPage, 0, Max(0, Length(fPresetNames)-1));
+    SetLength(Labels, 1);
     Labels[0] := Language.Translate('FILTER_PRESET_SAVE');
-    for I := 0 to Count-1 do Labels[I+1] := fPresetNames[fPresetPage*6+I];
-    if fPresetPage > 0 then
-    begin N := Length(Labels); SetLength(Labels,N+1); Labels[N] := Language.Translate('FILTER_PRESET_PREVIOUS'); end;
-    if (fPresetPage+1)*6 < Length(fPresetNames) then
-    begin N := Length(Labels); SetLength(Labels,N+1); Labels[N] := Language.Translate('FILTER_PRESET_NEXT'); end;
-    ScreenPopupInfo.ShowPopup(Language.Translate('FILTER_PRESET_TITLE'), Labels,
-      @PresetChosen, nil, 0, -1);
+    Title := Language.Translate('FILTER_PRESET_TITLE');
+    // The shared popup has three buttons: save, one preset, and next.
+    if Length(fPresetNames) > 0 then
+    begin
+      SetLength(Labels, 2);
+      Labels[1] := fPresetNames[fPresetPage];
+      Title := Format('%s (%d/%d)', [Title, fPresetPage+1, Length(fPresetNames)]);
+    end;
+    if Length(fPresetNames) > 1 then
+    begin
+      SetLength(Labels, 3);
+      Labels[2] := Language.Translate('FILTER_PRESET_NEXT');
+    end;
+    ScreenPopupInfo.ShowPopup(Title, Labels, @PresetChosen, nil, 0, -1);
   except on E: Exception do ScreenPopupError.ShowPopup(E.Message); end;
 end;
 
 procedure TScreenSongJumpto.ChoosePreset(Index: integer);
-var Count: integer; Store: TFilterPresets;
+var Store: TFilterPresets;
 begin
   if Index = 0 then begin PromptPresetName; Exit; end;
-  Count := Min(6, Length(fPresetNames) - fPresetPage * 6);
-  if Index > Count then
+  if (Index = 2) and (Length(fPresetNames) > 1) then
   begin
-    if (fPresetPage > 0) and (Index = Count+1) then Dec(fPresetPage)
-    else Inc(fPresetPage);
+    fPresetPage := (fPresetPage+1) mod Length(fPresetNames);
     OpenPresets;
     Exit;
   end;
+  if (Index <> 1) or (Length(fPresetNames) = 0) then Exit;
   try
     Store := PresetStore;
-    try fRows := Store.Load(fPresetNames[fPresetPage*6+Index-1]); finally Store.Free; end;
+    try fRows := Store.Load(fPresetNames[fPresetPage]); finally Store.Free; end;
     fFocus := 0; fFirst := 0;
     Changed;
     FlushChanges;
