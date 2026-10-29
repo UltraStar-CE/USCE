@@ -63,12 +63,14 @@ type
     fSuggestionX, fSuggestionY, fSuggestionW: single;
     fLastPlayed, fVisSongs, fFocus, fFirst, fPlaylist: integer;
     fRows: TSongFilterRows;
+    fTypingRow: integer;
     fPresetNames: TFilterPresetNames;
     fPresetName: UTF8String;
     fPresetPage: integer;
     fSlotKinds: array[0..FILTER_SLOTS-1] of integer;
     fInputs, fCategories: array[0..FILTER_SLOTS-1] of integer;
     fActions: array[0..3] of integer;
+    function GetTypingQuery: UTF8String;
     procedure OpenPresets;
     procedure SavePreset;
     procedure PromptPresetName;
@@ -96,6 +98,9 @@ type
     function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
     procedure OnShow; override;
     procedure ResetFilters;
+    procedure SetTypingQuery(const Query: UTF8String);
+    function SearchSummary: UTF8String;
+    property TypingQuery: UTF8String read GetTypingQuery;
     function Draw: boolean; override;
     property Visible: boolean read fVisible write SetVisible;
   end;
@@ -122,6 +127,7 @@ constructor TScreenSongJumpto.Create;
 var S, I: integer; Category: TThemeSelectSlide; Input: TThemeButton;
 begin
   inherited Create;
+  fTypingRow := -1;
   AddText(Theme.SongJumpto.TextFound);
   LoadFromTheme(Theme.SongJumpto);
   for S := 0 to FILTER_SLOTS - 1 do
@@ -160,6 +166,55 @@ begin
   fLockIcons.Free;
   fFooter.Free;
   inherited;
+end;
+
+function TScreenSongJumpto.GetTypingQuery: UTF8String;
+begin
+  Result := '';
+  if (CatSongs.CatNumShow = -2) and (fTypingRow >= 0) and (fTypingRow < Length(fRows)) then
+    Result := fRows[fTypingRow].Query;
+end;
+
+function TScreenSongJumpto.SearchSummary: UTF8String;
+begin
+  Result := FilterSummary;
+end;
+
+procedure TScreenSongJumpto.SetTypingQuery(const Query: UTF8String);
+var I: integer;
+begin
+  if CatSongs.CatNumShow <> -2 then
+  begin
+    ResetFilters;
+    fPlaylistSearch := (CatSongs.CatNumShow = -3) and (PlaylistMan.CurPlayList <> -1);
+    fPlaylist := PlaylistMan.CurPlayList;
+  end;
+  if fTypingRow < 0 then
+  begin
+    if Query = '' then Exit;
+    fTypingRow := High(fRows);
+    if (fTypingRow < 0) or (Trim(fRows[fTypingRow].Query) <> '') then
+    begin
+      fTypingRow := Length(fRows);
+      SetLength(fRows, fTypingRow + 1);
+    end;
+    fRows[fTypingRow].Kind := fltAll;
+  end;
+  fRows[fTypingRow].Query := Query;
+  if Query = '' then
+  begin
+    for I := fTypingRow to High(fRows)-1 do fRows[I] := fRows[I+1];
+    SetLength(fRows, Length(fRows)-1);
+    if Length(fRows) = 0 then
+    begin
+      SetLength(fRows, 1);
+      fRows[0].Kind := fltAll;
+    end;
+    fTypingRow := -1;
+  end;
+  fLastPlayed := ScreenSong.Interaction;
+  fPending := true;
+  FlushChanges;
 end;
 
 function TScreenSongJumpto.FilterSummary: UTF8String;
@@ -565,12 +620,13 @@ procedure TScreenSongJumpto.SetVisible(Value: boolean);
 begin
   if not Value then FlushChanges;
   if not fVisible and Value then OnShow;
-  SetTextInput(Value);
+  SetTextInput(Value or ((Ini.SongKeyboard = 0) and ScreenSong.FreeListMode));
   fVisible := Value;
 end;
 
 procedure TScreenSongJumpto.ResetFilters;
 begin
+  fTypingRow := -1;
   // Search rows are temporary. Lockdown freezes the library, not these queries.
   SetLength(fRows, 1);
   fRows[0].Query := '';
@@ -581,9 +637,12 @@ begin
 end;
 
 procedure TScreenSongJumpto.OnShow;
-var Country: UTF8String; Kind: TSongFilter;
+var Country: UTF8String; Kind: TSongFilter; TypingFocus: integer;
 begin
   inherited;
+  TypingFocus := fTypingRow;
+  // The typed query is now an ordinary, editable All row in the full dialog.
+  fTypingRow := -1;
   for Kind := Low(TSongFilter) to High(TSongFilter) do
   begin FreeAndNil(fValueCache[Kind].Values); FreeAndNil(fValueCache[Kind].Keys); end;
   fSuggestionContext := #1;
@@ -600,7 +659,7 @@ begin
     fPlaylist := PlaylistMan.CurPlayList;
     Text[0].Text := Format(Theme.SongJumpto.SongsFound, [CatSongs.VisibleSongs]);
   end;
-  fFocus := 0; fFirst := 0;
+  fFocus := EnsureRange(TypingFocus, 0, High(fRows)); fFirst := 0;
   fLastPlayed := ScreenSong.Interaction;
   RefreshRows;
 end;

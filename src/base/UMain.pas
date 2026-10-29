@@ -489,6 +489,9 @@ var
   Event:     TSDL_event;
   SimEvent:  TSDL_event;
   KeyCharUnicode: UCS4Char;
+  KeyTextUnicode: UCS4String;
+  KeyTextIndex: integer;
+  ContinueSearchText: boolean;
   SimKey: LongWord;
   mouseDown: boolean;
   mouseBtn:  integer;
@@ -628,9 +631,11 @@ begin
           if not Assigned(Display.NextScreen) then
           begin //drop input when changing screens
             KeyCharUnicode:=0;
+            KeyTextUnicode:=nil;
             if (Event.type_ = SDL_TEXTINPUT) and (Event.text.text <> '') then
             try
-              KeyCharUnicode:=UnicodeStringToUCS4String(UnicodeString(UTF8String(Event.text.text)))[0];
+              KeyTextUnicode:=UnicodeStringToUCS4String(UnicodeString(UTF8String(Event.text.text)));
+              if Length(KeyTextUnicode)>1 then KeyCharUnicode:=KeyTextUnicode[0];
               //KeyCharUnicode:=UnicodeStringToUCS4String(UnicodeString(Event.key.keysym.unicode))[1];//Event.text.text)[0];
             except
             end
@@ -651,7 +656,8 @@ begin
             end;
 
             SimKey :=0;
-            if((Event.key.keysym.sym > Low(LongWord)) and (Event.key.keysym.sym < High(LongWord))) then
+            if (Event.type_ = SDL_KEYDOWN) and
+               ((Event.key.keysym.sym > Low(LongWord)) and (Event.key.keysym.sym < High(LongWord))) then
             begin
               SimKey := Event.key.keysym.sym;
             end;
@@ -680,7 +686,18 @@ begin
             else if (Display.ShouldHandleInput(LongWord(SimKey), KeyCharUnicode, true, SuppressKey)) then
             begin
               // check if screen wants to exit
+              ContinueSearchText := (Event.type_ = SDL_TEXTINPUT) and
+                (Display.CurrentScreen = @ScreenSong) and (Ini.SongKeyboard = 0) and
+                not ScreenSongMenu.Visible and not ScreenSongJumpto.Visible;
               KeepGoing := Display.ParseInput(SimKey, KeyCharUnicode, true, Event.key._repeat > 0);
+              // SDL can deliver several composed Unicode characters in one event.
+              if ContinueSearchText and KeepGoing then
+                for KeyTextIndex := 1 to High(KeyTextUnicode)-1 do
+                  if Display.ShouldHandleInput(0, KeyTextUnicode[KeyTextIndex], true, SuppressKey) then
+                  begin
+                    KeepGoing := Display.ParseInput(0, KeyTextUnicode[KeyTextIndex], true);
+                    if not KeepGoing then Break;
+                  end;
 
               // if screen wants to exit
               if not KeepGoing then

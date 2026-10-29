@@ -94,6 +94,9 @@ type
       RandomSearchOrder, RandomSearchPool: CardinalArray;
       MarkedPlaylistSong: integer;
       KeepPreviewMusicOnHide: boolean;
+      SearchOverlay, ModernFooter: TMenu;
+      function ModernKeyboard: boolean;
+      procedure DrawSearchField;
 
       procedure SchedulePreview(SelectionSettled: boolean = false);
       procedure StartMusicPreview();
@@ -248,6 +251,7 @@ type
       procedure GenerateThumbnails();
       procedure SyncCoversToSongs();
       procedure OnShow; override;
+      destructor Destroy; override;
       procedure OnShowFinish; override;
       procedure OnHide; override;
       procedure SelectNext(onlyFix: boolean = true);
@@ -711,6 +715,7 @@ var
   VS: integer;
   NeedPlayersScreen: boolean;
   Candidates: CardinalArray;
+  Query: UTF8String;
 
 begin
   Result := true;
@@ -721,6 +726,7 @@ begin
   if (ScreenSongMenu.Visible) then
   begin
     Result := ScreenSongMenu.ParseInput(PressedKey, CharCode, PressedDown);
+    if not ScreenSongMenu.Visible then SetTextInput(ModernKeyboard);
     Exit;
   end
   else if (ScreenSongJumpto.Visible) then
@@ -735,6 +741,48 @@ begin
     SDL_ModState := SDL_GetModState and (KMOD_LSHIFT + KMOD_RSHIFT
     + KMOD_LCTRL + KMOD_RCTRL + KMOD_LALT  + KMOD_RALT);
 
+    // Ctrl+F is shared by both modes; Ctrl+Shift+F retains custom medley.
+    if (SDL_ModState and KMOD_CTRL <> 0) and (SDL_ModState and KMOD_ALT = 0) and
+       (PressedKey = SDLK_f) and (SDL_ModState and KMOD_SHIFT = 0) then
+    begin
+      if (Songs.SongList.Count > 0) and FreeListMode then ScreenSongJumpto.Visible := true;
+      Exit;
+    end;
+    if ModernKeyboard then
+    begin
+      // SDL text events carry layout-aware Unicode. AltGr text is text, not a command.
+      if (CharCode >= 32) and (CharCode <> 127) and
+         ((SDL_ModState and (KMOD_CTRL or KMOD_ALT) = 0) or
+          ((SDL_ModState and KMOD_CTRL <> 0) and (SDL_ModState and KMOD_ALT <> 0))) then
+      begin
+        if Songs.SongList.Count > 0 then
+          ScreenSongJumpto.SetTypingQuery(ScreenSongJumpto.TypingQuery + UCS4ToUTF8String(CharCode));
+        Exit;
+      end;
+      if SDL_ModState and KMOD_ALT <> 0 then Exit;
+      Query := ScreenSongJumpto.TypingQuery;
+      if PressedKey = SDLK_BACKSPACE then
+      begin
+        if Query <> '' then
+          ScreenSongJumpto.SetTypingQuery(UTF8Copy(Query, 1, LengthUTF8(Query)-1));
+        Exit;
+      end;
+      if (PressedKey = SDLK_ESCAPE) and Repeated then Exit;
+      if SDL_ModState and KMOD_CTRL = 0 then
+      begin
+        if (PressedKey = SDLK_ESCAPE) and (Query <> '') then
+        begin
+          ScreenSongJumpto.SetTypingQuery('');
+          Exit;
+        end;
+        // Printable keydowns wait for SDL_TEXTINPUT rather than invoking commands.
+        if (PressedKey >= 32) and (PressedKey <= 126) then Exit;
+      end
+      else
+        // Existing command logic sees only its original Shift modifier.
+        SDL_ModState := SDL_ModState and not KMOD_CTRL;
+    end;
+
     // Left/right variants belong to the same prefix sequence.
     JumpModifiers := SDL_ModState;
     if JumpModifiers and KMOD_ALT <> 0 then
@@ -746,7 +794,7 @@ begin
     AltJumpModifiers := JumpModifiers;
 
     //Jump to Artist/Title (either Alt/Option key)
-    if (SDL_ModState and KMOD_ALT <> 0) and (SDL_ModState and KMOD_CTRL = 0) and FreeListMode then
+    if not ModernKeyboard and (SDL_ModState and KMOD_ALT <> 0) and (SDL_ModState and KMOD_CTRL = 0) and FreeListMode then
     begin
       if(PressedKey > 1114111) then
       begin
@@ -912,6 +960,7 @@ begin
     // **********************
 
     // check normal keys
+    if (not ModernKeyboard) or (SDL_GetModState and KMOD_CTRL <> 0) then
     case PressedKey of
       SDLK_Q:
         begin
@@ -1542,6 +1591,7 @@ end;
 function TScreenSong.ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
 var
   PointerScreen, FirstPlayer, PlayerCount, I, Voice: integer;
+  FieldX, FieldY, FieldW, FieldH: real;
 begin
   PointerScreen := EnsureRange(Trunc(X / (ScreenW / Screens)) + 1, 1, Screens);
   // Convert mouse coordinates to the virtual render coordinate space.
@@ -1550,9 +1600,21 @@ begin
     X := X - RenderW;
   Y := Round((Y / ScreenH) * RenderH);
 
+  if ModernKeyboard and not CoverFull and not ScreenSongMenu.Visible and
+     not ScreenSongJumpto.Visible and BtnDown and (MouseButton = SDL_BUTTON_LEFT) then
+  begin
+    FieldX := Theme.Song.SearchPanel.X; FieldY := Theme.Song.SearchPanel.Y;
+    FieldW := Theme.Song.SearchPanel.W; FieldH := Theme.Song.SearchPanel.H;
+    ResolveLayoutRect(FieldX, FieldY, FieldW, FieldH, Theme.Song.SearchPanel.ScaleMode);
+    if (X >= FieldX) and (X <= FieldX + FieldW) and
+       (Y >= FieldY) and (Y <= FieldY + FieldH) then
+    begin ScreenSongJumpto.Visible := true; Exit(true); end;
+  end;
+
   if (ScreenSongMenu.Visible) then
   begin
     Result := ScreenSongMenu.ParseMouse(MouseButton, BtnDown, X, Y);
+    if not ScreenSongMenu.Visible then SetTextInput(ModernKeyboard);
     exit;
   end
   else if (ScreenSongJumpTo.Visible) then
@@ -1889,6 +1951,10 @@ begin
   MarkedPlaylistSong := -1;
 
   LoadFromTheme(Theme.Song);
+  SearchOverlay := TMenu.Create;
+  SearchOverlay.AddText(Theme.Song.SearchText);
+  ModernFooter := TMenu.Create;
+  for I := 0 to High(Theme.Song.ModernFooter) do ModernFooter.AddText(Theme.Song.ModernFooter[I]);
 
   TextArtist := AddText(Theme.Song.TextArtist);
   TextTitle  := AddText(Theme.Song.TextTitle);
@@ -2898,6 +2964,7 @@ var
 begin
   inherited;
   SyncDuetSingerTheme;
+  SetTextInput(ModernKeyboard);
   AltJumpPrefix := '';
   AltJumpLastTick := 0;
 
@@ -3016,7 +3083,7 @@ begin
   case Mode of
     smNormal:
       begin
-        ID := 'ID_012';
+        if ModernKeyboard then ID := 'ID_083' else ID := 'ID_012';
         if not Help.SetHelpID(ID) then
           Log.LogWarn('No Entry for Help-ID ' + ID, 'ScreenSong, smNormal');
       end;
@@ -3028,13 +3095,13 @@ begin
       end;
     smPartyFree:
       begin
-        ID := 'ID_014';
+        if ModernKeyboard then ID := 'ID_084' else ID := 'ID_014';
         if not Help.SetHelpID(ID) then
           Log.LogWarn('No Entry for Help-ID ' + ID, 'ScreenSong, smPartyFree');
       end;
     smPartyTournament:
       begin
-        ID := 'ID_015';
+        if ModernKeyboard then ID := 'ID_085' else ID := 'ID_015';
         if not Help.SetHelpID(ID) then
           Log.LogWarn('No Entry for Help-ID ' + ID, 'ScreenSong, smPartyTournament');
       end;
@@ -3123,6 +3190,7 @@ end;
 
 procedure TScreenSong.OnHide;
 begin
+  StopTextInput;
   inherited;
   if not KeepPreviewMusicOnHide then
   begin
@@ -3142,8 +3210,38 @@ begin
   CoverFull := false;
 end;
 
+destructor TScreenSong.Destroy;
+begin
+  SearchOverlay.Free;
+  ModernFooter.Free;
+  inherited;
+end;
+
+function TScreenSong.ModernKeyboard: boolean;
+begin
+  Result := (Ini.SongKeyboard = 0) and FreeListMode;
+end;
+
+procedure TScreenSong.DrawSearchField;
+var X, Y, W, H: real; Query: UTF8String; Panel: TThemeStatic;
+begin
+  if not ModernKeyboard or CoverFull or ScreenSongJumpto.Visible or ScreenSongMenu.Visible then Exit;
+  Panel := Theme.Song.SearchPanel;
+  X := Panel.X; Y := Panel.Y; W := Panel.W; H := Panel.H;
+  ResolveLayoutRect(X, Y, W, H, Panel.ScaleMode);
+  Renderer.DrawQuad(X, Y, Panel.Z, W, H, Panel.ColR, Panel.ColG, Panel.ColB, Panel.Alpha);
+  Renderer.DrawLine(X, Y+H, X+W, Y+H, Panel.Z+0.001, 1, 1, 1, 1, 0.5);
+  Query := ScreenSongJumpto.TypingQuery;
+  if Query <> '' then Query := Language.Translate('SONG_TYPING_SEARCH') + ': ' + Query
+  else if CatSongs.CatNumShow = -2 then Query := ScreenSongJumpto.SearchSummary;
+  if Query = '' then Query := Language.Translate('SONG_TYPING_SEARCH_HINT');
+  SearchOverlay.Text[0].Text := Query;
+  SearchOverlay.DrawFG;
+end;
+
 procedure TScreenSong.DrawExtensions;
 begin
+  DrawSearchField;
   //Draw Song Menu
   if (ScreenSongMenu.Visible) then
   begin
@@ -3453,10 +3551,10 @@ begin
   //This should cause no Problems because all Buttons on this screen
   //Has Z Position.
   //Draw BG
-  Text[TextConfiguration].Visible := (Mode = smNormal) and not CoverFull;
+  Text[TextConfiguration].Visible := (Mode = smNormal) and not CoverFull and not ModernKeyboard;
   Statics[StaticContinuousKey].Visible := Text[TextConfiguration].Visible and
     not ScreenSongJumpto.Visible;
-  Statics[StaticContinuousStatus].Visible := Text[TextConfiguration].Visible and
+  Statics[StaticContinuousStatus].Visible := (Mode = smNormal) and not CoverFull and
     (ScreenContinuousPlayback.Enabled = 1);
 
   DrawBG;
@@ -3578,7 +3676,7 @@ begin
   // Filter hints replace legend items only; the existing footer bars stay intact.
   for I := 0 to High(Statics) do
   begin
-    if ScreenSongJumpto.Visible and (Length(Theme.SongJumpto.Footer.Text) > 0) then
+    if (ModernKeyboard or ScreenSongJumpto.Visible) and (Length(Theme.SongJumpto.Footer.Text) > 0) then
     begin
       J := 0;
       while (J <= High(StaticNonParty)) and (StaticNonParty[J] <> cardinal(I)) do Inc(J);
@@ -3593,7 +3691,7 @@ begin
   end;
   for I := 0 to High(Text) do
   begin
-    if ScreenSongJumpto.Visible and (Length(Theme.SongJumpto.Footer.Text) > 0) and
+    if (ModernKeyboard or ScreenSongJumpto.Visible) and (Length(Theme.SongJumpto.Footer.Text) > 0) and
        (Text[I].Y >= Theme.SongJumpto.Footer.Text[0].Y - 8) then Continue;
     Text[I].Draw;
   end;
@@ -3611,6 +3709,7 @@ begin
 
   Equalizer.Draw;
 
+  if ModernKeyboard and not ScreenSongJumpto.Visible and not CoverFull then ModernFooter.DrawFG;
   DrawExtensions;
 
   // Keep fullscreen preview video above all song-selection overlays/text.
