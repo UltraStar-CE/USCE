@@ -2823,7 +2823,7 @@ end;
 function TTheme.GetSectionList(const Name: string): TThemeSectionList;
 var
   IniFile: TMemIniFile;
-  I: integer;
+  I, J, StartBase: integer;
   NextSection: string;
 begin
   Result := nil;
@@ -2841,7 +2841,22 @@ begin
     NextSection := Result[I].IniFile.ReadString(Result[I].Name, 'Inherits', '');
     if (NextSection = '') then
       Break;
-    IniFile := ResolveThemeFile(NextSection);
+    if Pos('base:', LowerCase(NextSection)) = 1 then
+    begin
+      Delete(NextSection, 1, 5);
+      StartBase := 0;
+      for J := Low(BaseThemeInis) to High(BaseThemeInis) do
+        if BaseThemeInis[J] = Result[I].IniFile then StartBase := J + 1;
+      IniFile := nil;
+      for J := StartBase to High(BaseThemeInis) do
+        if BaseThemeInis[J].SectionExists(NextSection) then
+        begin
+          IniFile := BaseThemeInis[J];
+          Break;
+        end;
+    end
+    else
+      IniFile := ResolveThemeFile(NextSection);
     if IniFile = nil then
     begin
       Log.LogError('Inherited section "' + NextSection + '" not found (from section "' + Result[I].Name + '")', 'TTheme.GetSectionList');
@@ -3799,14 +3814,27 @@ end;
 
 procedure TTheme.LoadColors;
 var
-  SL:     TStringList;
+  SL, Names: TStringList;
+  I, J: integer;
+  Sections: TThemeSectionList;
   C:      integer;
   S:      string;
-  IniFile: TMemIniFile;
 begin
   SL := TStringList.Create;
-  IniFile := ResolveThemeFile('Colors');
-  IniFile.ReadSection('Colors', SL);
+  Sections := GetSectionList('Colors');
+  Names := TStringList.Create;
+  try
+    for I := Low(Sections) to High(Sections) do
+    begin
+      Names.Clear;
+      Sections[I].IniFile.ReadSection(Sections[I].Name, Names);
+      for J := 0 to Names.Count - 1 do
+        if not SameText(Names[J], 'Inherits') and (SL.IndexOf(Names[J]) < 0) then
+          SL.Add(Names[J]);
+    end;
+  finally
+    Names.Free;
+  end;
 
   // normal colors
   SetLength(Color, SL.Count);
@@ -3814,7 +3842,7 @@ begin
   begin
     Color[C].Name := SL.Strings[C];
 
-    S := IniFile.ReadString('Colors', SL.Strings[C], '');
+    S := ReadString(Sections, SL.Strings[C], '');
 
     Color[C].RGB.R := StrToInt(Copy(S, 1, Pos(' ' , S)-1))/255;
     Delete(S, 1, Pos(' ', S));
