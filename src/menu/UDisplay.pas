@@ -58,6 +58,7 @@ type
       FadeStartTime: cardinal; // time when fading starts, 0 means that the fade texture must be initialized
       DoneOnShow:    boolean;  // true if passed onShow after fading
 
+      OpaqueFadeTex: array[0..1] of TTexture;
       FadeTex:       array[0..1] of TTexture;
       FadeForeground: array[0..1] of boolean;
       TexW, TexH:    Cardinal;
@@ -289,6 +290,8 @@ destructor TDisplay.Destroy;
 begin
   FadeTex[0].Free;
   FadeTex[1].Free;
+  OpaqueFadeTex[0].Free;
+  OpaqueFadeTex[1].Free;
   {$IFDEF MSWINDOWS}
   UnregisterPrintScreenHotKey;
   {$ENDIF}
@@ -302,12 +305,16 @@ begin
   TexW := ScreenWPerScreen;
   TexH := ScreenH;
   for i := 0 to 1 do
+  begin
+    FreeAndNil(OpaqueFadeTex[i]);
     FadeTex[i] := Renderer.CreateTexture(nil, PATH_NONE, TexW, TexH, TEXTURE_TYPE_TRANSPARENT, false);
+  end;
 end;
 
 function TDisplay.Draw: boolean;
 var
   S:               integer;
+  Snapshot: TTexture;
   FadeStateSquare, FadeZoom: real;
   FadeW, FadeH:    real;
   FadeCopyW, FadeCopyH: integer;
@@ -409,7 +416,13 @@ begin
             if FadeForeground[S-1] then Renderer.EndTextureCapture;
           end;
           if not FadeForeground[S-1] then
-            FadeTex[S-1].CopyFrameBuffer((S-1) * ScreenWPerScreen, 0, FadeCopyW, FadeCopyH);
+          begin
+            // Composited framebuffer snapshots must have opaque alpha.
+            if OpaqueFadeTex[S-1] = nil then
+              OpaqueFadeTex[S-1] := Renderer.CreateTexture(nil, PATH_NONE,
+                  TexW, TexH, TEXTURE_TYPE_PLAIN, false);
+            OpaqueFadeTex[S-1].CopyFrameBuffer((S-1) * ScreenWPerScreen, 0, FadeCopyW, FadeCopyH);
+          end;
 
           if (Renderer.Error) then
           begin
@@ -454,7 +467,9 @@ begin
           FadeH := ScreenH/TexH;
           if FadeForeground[S-1] then FadeZoom := FadeStateSquare
           else FadeZoom := 0; // Older renderers still crossfade, without zooming the background.
-          with FadeTex[S-1] do
+          if FadeForeground[S-1] then Snapshot := FadeTex[S-1]
+          else Snapshot := OpaqueFadeTex[S-1];
+          with Snapshot do
           begin
             X := 0;
             Y := 0;
@@ -474,7 +489,7 @@ begin
           Renderer.DepthTest := false;
           Renderer.SetPremultipliedAlpha(FadeForeground[S-1]);
           try
-            Renderer.DrawTexture(FadeTex[S-1]);
+            Renderer.DrawTexture(Snapshot);
           finally
             Renderer.SetPremultipliedAlpha(false);
           end;

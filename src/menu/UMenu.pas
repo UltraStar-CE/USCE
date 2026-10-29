@@ -2325,7 +2325,7 @@ begin
   end;
 
   Renderer.SetScissorRect(
-    Round(ScrollArea.X * ((ScreenW/RenderW) / Screens) + ((ScreenAct - 1) * (ScreenW / 2))),
+    Round(ScrollArea.X * ((ScreenW/RenderW) / Screens) + Renderer.ViewportX),
     Round((RenderH - (ScrollArea.Y + ScrollArea.H))*(ScreenH/RenderH)),
     Round(ScrollArea.W*ScreenW/RenderW),
     Round(ScrollArea.H*ScreenH/RenderH)

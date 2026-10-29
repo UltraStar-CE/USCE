@@ -234,6 +234,7 @@ type
   TRenderer = class
     protected
       TextureDatabase: TTextureDatabase;
+      fViewportX: integer;
       SWRendering: boolean;
       fSupportsProjectM: boolean;
       Limit: integer;
@@ -303,6 +304,7 @@ type
       constructor Create;
       destructor Destroy; override;
 
+      property ViewportX: integer read fViewportX;
       property Blend: boolean read GetBlend write SetBlend;
       property DepthTest: boolean read GetDepthTest write SetDepthTest;
       property ScissorTest: boolean read GetScissorTest write SetScissorTest;
