@@ -638,6 +638,8 @@ begin
   ButtonCollection[Num].Texture.TexY1 := 0;
   ButtonCollection[Num].Texture.TexX2 := 1;
   ButtonCollection[Num].Texture.TexY2 := 1;
+  ButtonCollection[Num].Texture.Alpha := ThemeCollection.Style.Alpha;
+  ButtonCollection[Num].DeSelectTexture.Alpha := ThemeCollection.Style.Alpha;
   ButtonCollection[Num].Texture.ScaleMode := ThemeCollection.Style.ScaleMode;
   ButtonCollection[Num].DeSelectTexture.ScaleMode := ThemeCollection.Style.ScaleMode;
   ButtonCollection[Num].SetSelect(false);
@@ -1032,6 +1034,8 @@ begin
     Skin.GetTextureFileName(ThemeButton.Tex), ThemeButton.Typ,
     ThemeButton.Reflection, ThemeButton.Reflectionspacing, ThemeButton.DeSelectReflectionspacing);
 
+  Button[Result].Texture.Alpha := ThemeButton.Alpha;
+  Button[Result].DeSelectTexture.Alpha := ThemeButton.Alpha;
   Button[Result].Texture.ScaleMode := ThemeButton.ScaleMode;
   Button[Result].DeSelectTexture.ScaleMode := ThemeButton.ScaleMode;
 
