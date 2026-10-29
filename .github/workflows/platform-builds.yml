@@ -127,17 +127,24 @@ jobs:
           set -eo pipefail
           package_key=$(pacman -Q | LC_ALL=C sort | sha256sum)
           echo "key=${package_key%% *}" >> "$GITHUB_OUTPUT"
-      - name: Cache Windows DLL dependencies
+      - name: Restore Windows DLL dependencies
         if: inputs.use-caches
         id: cache-windows-dlls
-        uses: actions/cache@v6
+        uses: actions/cache/restore@v6
         with:
           path: dists/windows/prefix
           key: windows-2022-ucrt64-native-v2-${{ runner.arch }}-${{ steps.windows-toolchain.outputs.key }}-${{ hashFiles('dists/windows/tasks.sh', 'dists/windows/Makefile', 'dists/windows/*.patch') }}
       - name: Build Windows DLL dependencies
+        id: build-windows-dlls
         if: steps.cache-windows-dlls.outputs.cache-hit != 'true'
         shell: msys2 {0}
         run: make -C dists/windows
+      - name: Save completed Windows DLL dependencies
+        if: inputs.use-caches && steps.cache-windows-dlls.outputs.cache-hit != 'true' && steps.build-windows-dlls.outcome == 'success'
+        uses: actions/cache/save@v6
+        with:
+          path: dists/windows/prefix
+          key: ${{ steps.cache-windows-dlls.outputs.cache-primary-key }}
       - name: Install Windows DLL dependencies
         shell: msys2 {0}
         run: |
