@@ -308,6 +308,7 @@ implementation
 
 
 uses
+  UInputSource,
   Classes,
   Math,
   UDisplay,
@@ -636,6 +637,7 @@ procedure Finalize3D;
 begin
   UnloadScreens;
   UnloadFontTextures;
+  ReleaseInputSourceBadges;
   Renderer.Free;
   SDL_QuitSubSystem(SDL_INIT_VIDEO);
 end;

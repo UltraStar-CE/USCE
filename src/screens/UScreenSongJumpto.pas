@@ -96,8 +96,10 @@ type
     function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
     procedure OnShow; override;
     procedure ResetFilters;
+    procedure SetSearchText(const Query: UTF8String);
     function Draw: boolean; override;
     property Visible: boolean read fVisible write SetVisible;
+
   end;
 
 implementation
@@ -603,6 +605,17 @@ begin
   fFocus := 0; fFirst := 0;
   fLastPlayed := ScreenSong.Interaction;
   RefreshRows;
+end;
+
+procedure TScreenSongJumpto.SetSearchText(const Query: UTF8String);
+begin
+  Visible := true;
+  SetLength(fRows, 1);
+  fRows[0].Kind := fltAll;
+  fRows[0].Query := Query;
+  fFocus := 0;
+  fFirst := 0;
+  Changed;
 end;
 
 function TScreenSongJumpto.Draw: boolean;

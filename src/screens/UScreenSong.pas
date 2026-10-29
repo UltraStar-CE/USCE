@@ -1,4 +1,4 @@
-{* UltraStar Deluxe - Karaoke Game
+﻿{* UltraStar Deluxe - Karaoke Game
  *
  * UltraStar Deluxe is the legal property of its developers, whose names
  * are too numerous to list here. Please refer to the COPYRIGHT
@@ -35,6 +35,8 @@ interface
 
 uses
   UVoiceAssignments,
+  Classes,
+
   UCatCovers,
   UCommon,
   UDataBase,
@@ -94,6 +96,9 @@ type
       RandomSearchOrder, RandomSearchPool: CardinalArray;
       MarkedPlaylistSong: integer;
       KeepPreviewMusicOnHide: boolean;
+      LastRemoteStateInteraction: integer;
+      LastRemoteStateVisibleSongs: integer;
+      LastRemoteStateTick: cardinal;
 
       procedure SchedulePreview(SelectionSettled: boolean = false);
       procedure StartMusicPreview();
@@ -218,6 +223,7 @@ type
 
       NextRandomSearchIdx: cardinal;
 
+      procedure SendRemoteSongSelectState(Force: boolean);
       constructor Create; override;
       procedure SetScroll;
       procedure SetScrollRefresh;
@@ -264,6 +270,8 @@ type
       procedure HideCatTL;// Show Cat in Tob left
       procedure Refresh;//(GiveStats: boolean); //Refresh Song Sorting
       procedure ChangeMusic;
+      procedure StartPreview;
+      procedure StopPreview;
 
       function FreeListMode: boolean;
 
@@ -322,7 +330,11 @@ type
 
 implementation
 
+
 uses
+  URemoteSongLibrary,
+  URecord,
+  UInputSource,
   UAudioPlaybackBase,
   UGraphic,
   UHelp,
@@ -333,6 +345,7 @@ uses
   UNote,
   UParty,
   UPlaylist,
+  URemoteBridgeIPC,
   UScreenSongMenu,
   USkins,
   UUnicodeUtils,
@@ -356,6 +369,7 @@ const
   CHANGE_SOUND_THROTTLE_MS = 200;
   PREVIEW_DEBOUNCE_MS = 150;
   PLAYLIST_RELOAD_INTERVAL_MS = 10000;
+  REMOTE_STATE_THROTTLE_MS = 100;
 
 var
   AltJumpPrefix: UTF8String = '';
@@ -396,6 +410,107 @@ begin
     Result := false;
 end;
 
+
+procedure TScreenSong.SendRemoteSongSelectState(Force: boolean);
+var
+  Tick: cardinal;
+  I: integer;
+  Sent: integer;
+  SongId: integer;
+  SongJson: string;
+  ResultsJson: string;
+  LibraryJson: string;
+  Song: TSong;
+  PreviewSongId: integer;
+  PreviewActive: boolean;
+  PreviewPosition: real;
+  StateChanged: boolean;
+  IncludeFullState: boolean;
+  BaseJson: string;
+
+  function BoolJson(Value: boolean): string;
+  begin
+    if Value then
+      Result := 'true'
+    else
+      Result := 'false';
+  end;
+
+
+begin
+  Tick := SDL_GetTicks();
+
+  StateChanged := (LastRemoteStateInteraction <> Interaction) or
+                  (LastRemoteStateVisibleSongs <> CatSongs.VisibleSongs);
+  if (not Force) and (not StateChanged) and
+     (Tick - LastRemoteStateTick < REMOTE_STATE_THROTTLE_MS) then
+    Exit;
+
+  IncludeFullState := Force or (LastRemoteStateVisibleSongs <> CatSongs.VisibleSongs);
+  LastRemoteStateTick := Tick;
+  LastRemoteStateInteraction := Interaction;
+  LastRemoteStateVisibleSongs := CatSongs.VisibleSongs;
+
+  SongId := Interaction;
+  if (SongId < 0) or (SongId > High(CatSongs.Song)) then
+    SongId := -1;
+
+  PreviewSongId := PreviewOpened;
+  if (PreviewSongId < 0) or (PreviewSongId > High(CatSongs.Song)) then
+    PreviewSongId := -1;
+  PreviewActive := (PreviewSongId >= 0) and (not AudioPlayback.Finished);
+  if PreviewActive then
+    PreviewPosition := AudioPlayback.Position
+  else
+    PreviewPosition := 0;
+
+  SongJson := RemoteSongToJson(Interaction);
+  BaseJson :=
+    '{"type":"song.select.state","protocol":1' +
+    ',"selectedSongId":' + IntToStr(SongId) +
+    ',"previewSongId":' + IntToStr(PreviewSongId) +
+    ',"previewActive":' + BoolJson(PreviewActive) +
+    ',"previewPositionSec":' + StringReplace(FloatToStr(PreviewPosition), ',', '.', []) +
+    ',"currentSong":' + SongJson;
+
+  if not IncludeFullState then
+  begin
+    RemoteBridgeIPC.SendJsonMessage(BaseJson + '}');
+    Exit;
+  end;
+
+  ResultsJson := '[';
+  Sent := 0;
+  for I := 0 to High(CatSongs.Song) do
+  begin
+    Song := CatSongs.Song[I];
+    if Assigned(Song) and Song.Visible and (not Song.Main) then
+    begin
+      if Sent > 0 then
+        ResultsJson := ResultsJson + ',';
+      ResultsJson := ResultsJson + RemoteSongToJson(I);
+      Inc(Sent);
+      if Sent >= 30 then
+        Break;
+    end;
+  end;
+  ResultsJson := ResultsJson + ']';
+
+  LibraryJson := RemoteSongLibraryJson;
+
+
+  RemoteBridgeIPC.SendJsonMessage(
+    BaseJson +
+    ',"visibleSongs":' + IntToStr(CatSongs.VisibleSongs) +
+    ',"totalSongs":' + IntToStr(Length(CatSongs.Song)) +
+    ',"searchActive":' + BoolJson(CatSongs.CatNumShow = -2) +
+    ',"playlistActive":' + BoolJson(CatSongs.CatNumShow = -3) +
+    ',"results":' + ResultsJson +
+    ',"library":' + LibraryJson +
+    RemotePlaylistFieldsJson +
+    '}'
+  );
+end;
 
 //Show Wrong Song when Tabs on Fix
 procedure TScreenSong.OpenContinuousFromMainMenu;
@@ -1350,9 +1465,9 @@ begin
 
                   //Do the Action that is specified in Ini
                   case Ini.OnSongClick of
-                    0: FadeTo(@ScreenSing);
+                    0: StartSong;
                     1: SelectPlayers;
-                    2: FadeTo(@ScreenSing);
+                    2: StartSong;
                   end;
                 end
                 else
@@ -1881,8 +1996,21 @@ end;
 constructor TScreenSong.Create;
 var
   I, Num, Padding: integer;
-  TextArtistY, TextTitleY, TextYearY, StaticVideoY, StaticDuetY: integer;
+  ListStaticTheme: TThemeStatic;
+  ArtistBottom, RowBottom: integer;
   StaticY: real;
+
+  function AddListText(const Template: TThemeText; RowPadding, Bottom: integer): integer;
+  var Item: TThemeText;
+  begin
+    Item := Template;
+    // Older themes omit H. Keep long list text inside its own row, while
+    // respecting any explicit height supplied by the theme.
+    if (Item.H <= 0) and (Bottom > Item.Y) then
+      Item.H := Bottom - Item.Y;
+    Inc(Item.Y, RowPadding);
+    Result := AddText(Item);
+  end;
 begin
   inherited Create;
 
@@ -2036,33 +2164,25 @@ begin
   SetLength(ListVideoIcon, Num);
   SetLength(ListDuetIcon, Num);
 
-  TextArtistY := Theme.Song.TextArtist.Y;
-  TextTitleY := Theme.Song.TextTitle.Y;
-  TextYearY := Theme.Song.TextYear.Y;
-
-  StaticVideoY := Theme.Song.VideoIcon.Y;
-  StaticDuetY := Theme.Song.DuetIcon.Y;
+  RowBottom := Theme.Song.ListCover.Y + Theme.Song.ListCover.H;
+  ArtistBottom := RowBottom;
+  if (Theme.Song.TextTitle.Y > Theme.Song.TextArtist.Y) and
+     (Theme.Song.TextTitle.Y < ArtistBottom) then
+    ArtistBottom := Theme.Song.TextTitle.Y;
 
   for I := 0 to Num - 1 do
   begin
     Padding := I * (Theme.Song.ListCover.H + Theme.Song.ListCover.Padding);
+    ListTextArtist[I] := AddListText(Theme.Song.TextArtist, Padding, ArtistBottom);
+    ListTextTitle[I] := AddListText(Theme.Song.TextTitle, Padding, RowBottom);
+    ListTextYear[I] := AddListText(Theme.Song.TextYear, Padding, 0);
 
-    Theme.Song.TextArtist.Y  := TextArtistY + Padding;
-
-    ListTextArtist[I] := AddText(Theme.Song.TextArtist);
-
-    Theme.Song.TextTitle.Y  := TextTitleY + Padding;
-    ListTextTitle[I]  := AddText(Theme.Song.TextTitle);
-
-    Theme.Song.TextYear.Y  := TextYearY + Padding;
-    ListTextYear[I]   := AddText(Theme.Song.TextYear);
-
-    Theme.Song.VideoIcon.Y  := StaticVideoY + Padding;
-    ListVideoIcon[I]  := AddStatic(Theme.Song.VideoIcon);
-
-    Theme.Song.DuetIcon.Y  := StaticDuetY + Padding;
-    ListDuetIcon[I] := AddStatic(Theme.Song.DuetIcon);
-
+    ListStaticTheme := Theme.Song.VideoIcon;
+    Inc(ListStaticTheme.Y, Padding);
+    ListVideoIcon[I] := AddStatic(ListStaticTheme);
+    ListStaticTheme := Theme.Song.DuetIcon;
+    Inc(ListStaticTheme.Y, Padding);
+    ListDuetIcon[I] := AddStatic(ListStaticTheme);
   end;
 
   MainChessboardMinLine := 0;
@@ -2315,6 +2435,8 @@ begin
     smChessboard: SetChessboardScrollRefresh;
     else SetListScrollRefresh;
   end;
+  if (CatSongs.CatNumShow = -3) and (CatSongs.VisibleSongs = 0) then
+    WriteMessage(Language.Translate('LOCKDOWN_NO_SONGS'));
   {if Button[Interaction].Texture.TexNum > 0 then
   begin
     glDeleteTextures(1, PGLuint(@Button[Interaction].Texture.TexNum));
@@ -2996,7 +3118,18 @@ begin
   if Mode = smMedley then
     Mode := smNormal;
 
-  PlayersPlay := UIni.IPlayersVals[Ini.Players];
+  Ini.ReloadNames;
+  RemoteBridgeIPC.ApplyPendingPlayerCount(true);
+  PlayersPlay := AudioInputProcessor.ConfiguredPlayerCount;
+  SetLength(Player, PlayersPlay);
+  for I := 0 to PlayersPlay - 1 do
+  begin
+    if PlayerInputSource(I) = pisNone then
+      Player[I].Name := Language.Translate('SING_OPTIONS_RECORD_NOONE')
+    else
+      Player[I].Name := Ini.Name[I];
+    Player[I].Level := Ini.PlayerLevel[I];
+  end;
 
   // The player-selection screen normally initializes Player. When players are
   // selected after the song, however, the song screen is shown first.
@@ -3057,6 +3190,9 @@ begin
     SetScroll;
     SetScrollRefresh;
   end;
+
+  RemoteBridgeIPC.SendGameState('song_select', 0, 0);
+  SendRemoteSongSelectState(true);
 end;
 
 procedure TScreenSong.OnShowFinish;
@@ -3132,6 +3268,9 @@ begin
     // stop preview
     StopMusicPreview();
     StopVideoPreview();
+    RemoteBridgeIPC.SendJsonMessage(
+      '{"type":"audio.stop","protocol":1,"reason":"song_select_left"}'
+    );
   end
   else
   begin
@@ -3337,6 +3476,8 @@ begin
 
   if (PreviewEnd > 0) and (AudioPlayback.Position >= PreviewEnd) then
     StopMusicPreview;
+  ReloadCurrentPlaylist(false);
+  SendRemoteSongSelectState(false);
 
   if isScrolling then
   begin
@@ -3957,6 +4098,7 @@ begin
       AudioPlayback.SetVolume(0);
       AudioPlayback.FadeIn(Ini.PreviewFading, PreviewVolume);
     end;
+    SendRemoteSongSelectState(false);
   end;
 end;
 
@@ -3965,6 +4107,20 @@ begin
   // Stop preview of previous song
   AudioPlayback.Stop;
   PreviewEnd := 0;
+end;
+
+procedure TScreenSong.StartPreview;
+begin
+  StopMusicPreview;
+  StopVideoPreview;
+  StartMusicPreview;
+  StartVideoPreview;
+end;
+
+procedure TScreenSong.StopPreview;
+begin
+  StopMusicPreview;
+  StopVideoPreview;
 end;
 
 procedure TScreenSong.StartVideoPreview();
@@ -4369,6 +4525,8 @@ begin
 end;
 
 procedure TScreenSong.StartSong;
+var
+  I: integer;
 begin
   // The sing and score screens are created by player setup.
   if not Assigned(ScreenSing) then
@@ -4388,10 +4546,31 @@ begin
 
   StopMusicPreview();
 
+  if (not Party.bPartyGame) and (Mode <> smPartyTournament) then
+  begin
+    Ini.ReloadNames;
+    RemoteBridgeIPC.ApplyPendingPlayerCount(true);
+    PlayersPlay := AudioInputProcessor.ConfiguredPlayerCount;
+    ScreenName.LyricsOnly := PlayersPlay = 0;
+    SetLength(Player, PlayersPlay);
+
+    for I := 0 to PlayersPlay - 1 do
+    begin
+      if PlayerInputSource(I) = pisNone then
+        Player[I].Name := Language.Translate('SING_OPTIONS_RECORD_NOONE')
+      else
+        Player[I].Name := Ini.Name[I];
+      Player[I].Level := Ini.PlayerLevel[I];
+      ScreenSing.PlayerNames[I + 1] := Player[I].Name;
+      ScreenSing.PlayerDuetNames[I + 1] := Player[I].Name;
+    end;
+  end;
+
   if (Mode = smNormal) and (ScreenContinuousPlayback.Enabled = 1) then
     ScreenContinuousPlayback.BeginSession
   else
     FadeTo(@ScreenSing);
+
 end;
 
 procedure TScreenSong.MarkSongStarted;
@@ -4589,9 +4768,9 @@ begin
 
     //TODO: how about case 2? menu for medley mode?
     case Ini.OnSongClick of
-      0: FadeTo(@ScreenSing);
+      0: StartSong;
       1: SelectPlayers;
-      2: FadeTo(@ScreenSing);
+      2: StartSong;
       {2: begin
          if (CatSongs.CatNumShow = -3) then
            ScreenSongMenu.MenuShow(SM_Playlist)
@@ -4610,9 +4789,9 @@ begin
 
       //TODO: how about case 2? menu for medley mode?
       case Ini.OnSongClick of
-        0: FadeTo(@ScreenSing);
+        0: StartSong;
         1: SelectPlayers;
-        2: FadeTo(@ScreenSing);
+        2: StartSong;
         {2: begin
           if (CatSongs.CatNumShow = -3) then
             ScreenSongMenu.MenuShow(SM_Playlist)
@@ -4625,6 +4804,7 @@ begin
 end;
 
 procedure TScreenSong.SongScore;
+var Difficulty: integer;
   procedure setVisible(elements: array of integer; visible: boolean);
   var
     J: integer;
@@ -4641,7 +4821,8 @@ procedure TScreenSong.SongScore;
     setVisible(elements, true);
   end;
 begin
-
+  Difficulty := EnsureRange(Ini.Difficulty, 0, 2);
+  if Length(Player) > 0 then Difficulty := Player[0].Level;
   if ((Mode <> smNormal) or (Ini.ShowScores = 0) or (CatSongs.Song[Interaction].Edition = '') or ((Ini.ShowScores = 1) and ((Text[TextMaxScore2].Text = '0') and (Text[TextMaxScoreLocal].Text = '0')))) then
   begin
     hide([
@@ -4686,14 +4867,14 @@ begin
   if (High(DLLMan.Websites) >= 0) then
   begin
     Text[TextScore].Text       := UTF8Encode(DLLMan.Websites[Ini.ShowWebScore].Name);
-    Text[TextMaxScore2].Text   := IntToStr(DataBase.ReadMax_Score(CatSongs.Song[Interaction].Artist, CatSongs.Song[Interaction].Title, DllMan.Websites[Ini.ShowWebScore].ID, Player[0].Level));
-    Text[TextMediaScore2].Text := IntToStr(DataBase.ReadMedia_Score(CatSongs.Song[Interaction].Artist, CatSongs.Song[Interaction].Title, DllMan.Websites[Ini.ShowWebScore].ID, Player[0].Level));
-    Text[TextScoreUser].Text   := DataBase.ReadUser_Score(CatSongs.Song[Interaction].Artist, CatSongs.Song[Interaction].Title, DllMan.Websites[Ini.ShowWebScore].ID, Player[0].Level);
+    Text[TextMaxScore2].Text   := IntToStr(DataBase.ReadMax_Score(CatSongs.Song[Interaction].Artist, CatSongs.Song[Interaction].Title, DllMan.Websites[Ini.ShowWebScore].ID, Difficulty));
+    Text[TextMediaScore2].Text := IntToStr(DataBase.ReadMedia_Score(CatSongs.Song[Interaction].Artist, CatSongs.Song[Interaction].Title, DllMan.Websites[Ini.ShowWebScore].ID, Difficulty));
+    Text[TextScoreUser].Text   := DataBase.ReadUser_Score(CatSongs.Song[Interaction].Artist, CatSongs.Song[Interaction].Title, DllMan.Websites[Ini.ShowWebScore].ID, Difficulty);
   end;
 
-  Text[TextMaxScoreLocal].Text   := IntToStr(DataBase.ReadMax_ScoreLocal(CatSongs.Song[Interaction], Player[0].Level));
-  Text[TextMediaScoreLocal].Text := IntToStr(DataBase.ReadMedia_ScoreLocal(CatSongs.Song[Interaction], Player[0].Level));
-  Text[TextScoreUserLocal].Text  := DataBase.ReadUser_ScoreLocal(CatSongs.Song[Interaction], Player[0].Level);
+  Text[TextMaxScoreLocal].Text   := IntToStr(DataBase.ReadMax_ScoreLocal(CatSongs.Song[Interaction], Difficulty));
+  Text[TextMediaScoreLocal].Text := IntToStr(DataBase.ReadMedia_ScoreLocal(CatSongs.Song[Interaction], Difficulty));
+  Text[TextScoreUserLocal].Text  := DataBase.ReadUser_ScoreLocal(CatSongs.Song[Interaction], Difficulty);
 
 end;
 

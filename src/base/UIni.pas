@@ -50,6 +50,7 @@ uses
   UPath;
 
 type
+  TUTF8StringArray = array of UTF8String;
   {**
    * TInputDeviceConfig stores the configuration for an input device.
    * Configurations will be stored in the InputDeviceConfig array.
@@ -86,13 +87,18 @@ const
   IMaxPlayerCount = 24;
 
 type
-  TUTF8StringArray = array of UTF8String;
   TIntegerArray = array of integer;
 
 function GetNameTemplateIndexFromKey(const Key: cardinal): integer;
 function CreateNumericOptionArray(const FirstValue, LastValue: integer): TUTF8StringArray;
 function GetPlayerColorOptionCount: integer;
 function TryGetMixedPlayerColorPair(ColorIndex: integer; out LeftColor, RightColor: integer): boolean;
+
+const
+  DEFAULT_REMOTE_BRIDGE_ENABLED = 0;
+  DEFAULT_REMOTE_BRIDGE_IPC_HOST = '127.0.0.1';
+  DEFAULT_REMOTE_BRIDGE_IPC_PORT = 8765;
+  DEFAULT_REMOTE_BRIDGE_SERVER_URL = 'wss://usdx.at/ws/host';
 
 type
 
@@ -253,6 +259,11 @@ type
       DefaultEncoding: TEncoding;
       LastReadNames: LongInt;
       LastReadDelays: LongInt;
+
+      // Remote bridge
+      RemoteBridgeEnabled: integer;
+      RemoteBridgeServerUrl: string;
+      RemoteBridgeWebApp: UTF8String;
 
       procedure Load();
       procedure Save();
@@ -1633,6 +1644,8 @@ var
     else if Result > 100 then
       Result := 100;
   end;
+
+
 begin
   InitializePlayerOptionArrays;
   LoadFontFamilyNames;
@@ -1699,6 +1712,13 @@ begin
   AVDelay := IniFile.ReadInteger('Game', 'AVDelay', 0);
 
   MicDelay := IniFile.ReadInteger('Game', 'MicDelay', 140);
+  RemoteBridgeEnabled := ReadArrayIndex(ITabs, IniFile, 'RemoteBridge', 'Enabled', DEFAULT_REMOTE_BRIDGE_ENABLED);
+  if (RemoteBridgeEnabled < 0) then
+    RemoteBridgeEnabled := DEFAULT_REMOTE_BRIDGE_ENABLED;
+  RemoteBridgeServerUrl := Trim(IniFile.ReadString('RemoteBridge', 'ServerUrl', DEFAULT_REMOTE_BRIDGE_SERVER_URL));
+  if (RemoteBridgeServerUrl = '') then
+    RemoteBridgeServerUrl := DEFAULT_REMOTE_BRIDGE_SERVER_URL;
+  RemoteBridgeWebApp := Trim(IniFile.ReadString('RemoteBridge', 'WebApp', ''));
 
   // Read Users Info (Network)
   DataBase.ReadUsers;
@@ -1731,6 +1751,7 @@ begin
     with PlaybackProfiles[I] do
     begin
       RepeatSelection := EnsureRange(IniFile.ReadInteger('Playback' + IntToStr(I), 'Repeat', 0), 0, 1);
+      PlayerTime := EnsureRange(IniFile.ReadInteger('Playback' + IntToStr(I), 'PlayerSetup', 1), 0, 8);
       ResultTime := EnsureRange(IniFile.ReadInteger('Playback' + IntToStr(I), 'Results', I), 0, 8);
       HighScoreTime := EnsureRange(IniFile.ReadInteger('Playback' + IntToStr(I), 'HighScores', I), 0, 8);
       SongDisplay := EnsureRange(IniFile.ReadInteger('Playback' + IntToStr(I), 'SongDisplay', 0), 0, 3);
@@ -1960,6 +1981,7 @@ begin
       with PlaybackProfiles[I] do
       begin
         IniFile.WriteInteger('Playback' + IntToStr(I), 'Repeat', RepeatSelection);
+        IniFile.WriteInteger('Playback' + IntToStr(I), 'PlayerSetup', PlayerTime);
         IniFile.WriteInteger('Playback' + IntToStr(I), 'Results', ResultTime);
         IniFile.WriteInteger('Playback' + IntToStr(I), 'HighScores', HighScoreTime);
         IniFile.WriteInteger('Playback' + IntToStr(I), 'SongDisplay', SongDisplay);
@@ -1970,6 +1992,9 @@ begin
 
     IniFile.WriteInteger('Game', 'AVDelay', AVDelay);
     IniFile.WriteInteger('Game', 'MicDelay', MicDelay);
+    IniFile.WriteString('RemoteBridge', 'Enabled', ITabs[RemoteBridgeEnabled]);
+    IniFile.WriteString('RemoteBridge', 'ServerUrl', RemoteBridgeServerUrl);
+    IniFile.WriteString('RemoteBridge', 'WebApp', RemoteBridgeWebApp);
 
     // MaxFramerate
     IniFile.WriteString('Graphics', 'MaxFramerate', IMaxFramerate[MaxFramerate]);

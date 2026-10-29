@@ -80,7 +80,8 @@ type
       function GetToneCandidate(Index: integer): TToneCandidate;
 
       procedure BoostBuffer(Buffer: PByteArray; Size: integer);
-      procedure ProcessNewBuffer(Buffer: PByteArray; BufferSize: integer);
+      procedure ProcessNewBuffer(Buffer: PByteArray; BufferSize: integer; AllowRecording: boolean = true;
+        AllowBoost: boolean = true);
 
       procedure StartCapture(Format: TAudioFormatInfo);
       procedure StopCapture();
@@ -108,6 +109,10 @@ type
       RawToneValid: boolean;
       RawTone:      integer;
       RawToneAbs:   integer;
+      LastInputTicks: QWord;
+      LastInputBlockMs: double;
+      LastAnalysisMicroseconds: double;
+      PitchAlgorithm: TPDAType;
 
       // methods
       constructor Create;
@@ -117,6 +122,8 @@ type
 
       // use to analyze sound from buffers to get new pitch
       procedure AnalyzeBuffer;
+      // Experimental native phone input, mono S16 at 48 kHz. Main thread only.
+      procedure SubmitPhonePcm(Samples: pointer; Count: integer);
       procedure LockAnalysisBuffer();
       procedure UnlockAnalysisBuffer();
 
@@ -198,6 +205,7 @@ type
        * Same as the array version but it does not output a state for each player.
        *}
       function CheckPlayersConfig(PlayerCount: cardinal): integer; overload;
+      function ConfiguredPlayerCount: integer;
 
       {**
        * Handle microphone input
@@ -231,15 +239,91 @@ type
 
   function AudioInputProcessor(): TAudioInputProcessor;
   function ToneAbsToString(const ToneAbs: integer): string;
+  procedure UpdatePhoneAudio(CalibrationAllowed: boolean = false);
+  procedure LogAudioInputDiagnostics;
 
 implementation
 
 uses
   ULog,
+  UPhoneAudio,
+  URemoteBridgeIPC,
+  URemoteInput,
   UNote;
 
 var
   singleton_AudioInputProcessor : TAudioInputProcessor = nil;
+  PhoneInputWasLive: array[0..UIni.IMaxPlayerCount-1] of boolean;
+  PhoneInputLastSamples: array[0..UIni.IMaxPlayerCount-1] of QWord;
+  PhoneCalibrationBuffers: array[0..UIni.IMaxPlayerCount-1] of TCaptureBuffer;
+  LastAudioDiagnostics: QWord = 0;
+
+procedure LogAudioInputDiagnostics;
+var I: integer;
+    Capture: TCaptureBuffer;
+    WindowMs: double;
+begin
+  if GetEnvironmentVariable('USCE_AUDIO_DIAGNOSTICS') <> '1' then Exit;
+  if GetTickCount64 - LastAudioDiagnostics < 1000 then Exit;
+  LastAudioDiagnostics := GetTickCount64;
+  for I := 0 to High(AudioInputProcessor.Sound) do
+  begin
+    Capture := AudioInputProcessor.Sound[I];
+    if (Capture.AudioFormat = nil) or (Capture.LastInputTicks = 0) then Continue;
+    WindowMs := Capture.AnalysisBufferSize * 1000 / Capture.AudioFormat.SampleRate;
+    Log.LogStatus(Format('player=%d rate=%.0f blockMs=%.2f windowMs=%.2f inputAgeMs=%d analysisUs=%.1f tone=%s',
+      [I + 1, Capture.AudioFormat.SampleRate, Capture.LastInputBlockMs, WindowMs,
+      GetTickCount64 - Capture.LastInputTicks, Capture.LastAnalysisMicroseconds, Capture.ToneString]), 'Audio timing');
+  end;
+  if PhoneAudio.Enabled then
+    for I := 0 to Min(11, High(AudioInputProcessor.Sound)) do
+      if RemoteInputProcessor.HasAssignedPlayer(I) then
+        Log.LogStatus('slot=' + IntToStr(I+1) + ' ' + string(PhoneAudio.Status(I)), 'Native audio timing');
+end;
+
+procedure UpdatePhoneAudio(CalibrationAllowed: boolean);
+var Samples: array[0..9599] of smallint;
+    Count, I: integer;
+    Message, Owner: UTF8String;
+    NowUs: int64;
+    NeedsAnalysis: boolean;
+begin
+  if not PhoneAudio.Enabled then Exit;
+  for I := 0 to High(AudioInputProcessor.Sound) do
+  begin
+    Count := PhoneAudio.Poll(@Samples[0], Length(Samples), I);
+    if RemoteInputProcessor.HasAssignedPlayer(I) or (Count > 0) then
+      AudioInputProcessor.Sound[I].SubmitPhonePcm(nil, 0);
+    if Count > 0 then
+    begin
+      AudioInputProcessor.Sound[I].SubmitPhonePcm(@Samples[0], Count);
+      PhoneInputLastSamples[I] := GetTickCount64;
+      PhoneInputWasLive[I] := true;
+    end
+    else if PhoneInputWasLive[I] and (GetTickCount64 - PhoneInputLastSamples[I] > 250) then
+    begin
+      AudioInputProcessor.Sound[I].Clear;
+      PhoneInputWasLive[I] := false;
+    end;
+    Owner := RemoteInputProcessor.AssignedPlayerId(I);
+    NowUs := int64(GetTickCount64) * 1000;
+    NeedsAnalysis := PhoneAudio.Calibration.Tick(I, Owner, CalibrationAllowed,
+      PhoneInputWasLive[I], NowUs, Message);
+    if Message <> '' then RemoteBridgeIPC.SendJsonMessage(string(Message));
+    Count := PhoneAudio.PollCalibration(@Samples[0], Length(Samples), I);
+    if not NeedsAnalysis then FreeAndNil(PhoneCalibrationBuffers[I]);
+    if NeedsAnalysis and (Count > 0) then
+    begin
+      if PhoneCalibrationBuffers[I] = nil then PhoneCalibrationBuffers[I] := TCaptureBuffer.Create;
+      PhoneCalibrationBuffers[I].AnalysisBufferSize := AudioInputProcessor.Sound[I].AnalysisBufferSize;
+      PhoneCalibrationBuffers[I].PitchAlgorithm := AudioInputProcessor.Sound[I].PitchAlgorithm;
+      PhoneCalibrationBuffers[I].SubmitPhonePcm(@Samples[0], Count);
+      PhoneCalibrationBuffers[I].AnalyzeBuffer;
+      PhoneAudio.Calibration.Observe(I, int64(GetTickCount64) * 1000,
+        PhoneCalibrationBuffers[I].ToneAbs, PhoneCalibrationBuffers[I].ToneValid);
+    end;
+  end;
+end;
 
 { Global }
 
@@ -295,6 +379,13 @@ begin
   LogBuffer := TMemoryStream.Create;
   fAnalysisBufferLock := SDL_CreateMutex();
   AnalysisBufferSize := Length(AnalysisBuffer);
+  PitchAlgorithm := PDA_CAMDF;
+  if GetEnvironmentVariable('USCE_AUDIO_DETECTOR') = 'amdf' then PitchAlgorithm := PDA_AMDF;
+  // Experimental comparison for physical and phone microphones alike.
+  case StrToIntDef(GetEnvironmentVariable('USCE_AUDIO_WINDOW'), 4096) of
+    1024: AnalysisBufferSize := 1024;
+    2048: AnalysisBufferSize := 2048;
+  end;
   ResetToneDiagnostics;
 end;
 
@@ -351,14 +442,18 @@ begin
   ResetToneDiagnostics;
 end;
 
-procedure TCaptureBuffer.ProcessNewBuffer(Buffer: PByteArray; BufferSize: integer);
+procedure TCaptureBuffer.ProcessNewBuffer(Buffer: PByteArray; BufferSize: integer; AllowRecording: boolean;
+  AllowBoost: boolean);
 var
   BufferOffset: integer;
   SampleCount:  integer;
   i:            integer;
 begin
+  LastInputTicks := GetTickCount64;
+  if (AudioFormat <> nil) and (AudioFormat.SampleRate > 0) then
+    LastInputBlockMs := BufferSize * 1000 / (SizeOf(smallint) * AudioFormat.SampleRate);
   // apply software boost
-  BoostBuffer(Buffer, BufferSize);
+  if AllowBoost then BoostBuffer(Buffer, BufferSize);
 
   // voice passthrough (send data to playback-device)
   if (assigned(fVoiceStream)) then
@@ -398,7 +493,7 @@ begin
   end;
 
   // save capture-data to BufferLong if enabled
-  if (Ini.SavePlayback = 1) then
+  if AllowRecording and (Ini.SavePlayback = 1) then
   begin
     // this is just for debugging (approx 15MB per player for a 3min song!!!)
     // For an in-game replay-mode we need to compress data so we do not
@@ -410,11 +505,16 @@ end;
 
 procedure TCaptureBuffer.AnalyzeBuffer;
 var
+  StartedCounter: UInt64;
   Volume:      single;
   MaxVolume:   single;
   SampleIndex: integer;
   Threshold:   single;
 begin
+  StartedCounter := SDL_GetPerformanceCounter;
+  if (AnalysisBufferSize <> 512) and (AnalysisBufferSize <> 1024) and (AnalysisBufferSize <> 2048) and
+    (AnalysisBufferSize <> 4096) then
+    AnalysisBufferSize := Length(AnalysisBuffer);
   ToneValid := false;
   ToneAbs := -1;
   Tone    := -1;
@@ -427,7 +527,7 @@ begin
     MaxVolume := 0;
     for SampleIndex := 0 to AnalysisBufferSize - 1 do
     begin
-      Volume := Abs(AnalysisBuffer[SampleIndex]) / -Low(Smallint);
+      Volume := Abs(AnalysisBuffer[Length(AnalysisBuffer)-AnalysisBufferSize+SampleIndex]) / -Low(Smallint);
       if Volume > MaxVolume then
          MaxVolume := Volume;
     end;
@@ -441,14 +541,33 @@ begin
       //ToneValid := AnalyzePitch(PDA_AMDF);
       //Write('AMDF: ',ToneAbs:2,' (f: ',Frequencies[ToneAbs]:7:2,' Hz)');
       //Write(Tone:2);
-      ToneValid := AnalyzePitch(PDA_CAMDF);
+      ToneValid := AnalyzePitch(PitchAlgorithm);
       //Writeln('   /   CAMDF: ',ToneAbs:2,' (f: ',Frequencies[ToneAbs]:7:2,' Hz)');
       //Writeln(' ',Tone:2);
     end;
 
   finally
     UnlockAnalysisBuffer();
+    LastAnalysisMicroseconds := (SDL_GetPerformanceCounter - StartedCounter) * 1000000.0 / SDL_GetPerformanceFrequency;
   end;
+end;
+
+procedure TCaptureBuffer.SubmitPhonePcm(Samples: pointer; Count: integer);
+begin
+  if (Count < 0) or (Count > 9600) or ((Count > 0) and (Samples = nil)) then Exit;
+  if (fAudioFormat = nil) or (fAudioFormat.SampleRate <> 48000) or
+    (fAudioFormat.Format <> asfS16) then
+  begin
+    StopCapture;
+    FreeAndNil(fAudioFormat);
+    fAudioFormat := TAudioFormatInfo.Create(1, 48000, asfS16);
+    Clear;
+  end;
+  // Browser input already has its own gain controls. Do not inherit the global
+  // physical-microphone boost, which can severely clip phone PCM.
+  // No voice passthrough: avoid playing a delayed phone mic through speakers.
+  FreeAndNil(fVoiceStream);
+  if Count > 0 then ProcessNewBuffer(PByteArray(Samples), Count * SizeOf(smallint), false, false);
 end;
 
 function TCaptureBuffer.ArrayIndexOfMinimum(const AValues: array of real): Integer;
@@ -596,9 +715,14 @@ begin
       Correlation[ToneIndex] := 0;
       for SampleIndex := 0 to (AnalysisBufferSize-Delays[ToneIndex]-1) do
       begin
-        Correlation[ToneIndex] := Correlation[ToneIndex] + Abs(AnalysisBuffer[SampleIndex] - AnalysisBuffer[SampleIndex+Delays[ToneIndex]]);
+        Correlation[ToneIndex] := Correlation[ToneIndex] + Abs(
+          AnalysisBuffer[Length(AnalysisBuffer)-AnalysisBufferSize+SampleIndex] -
+          AnalysisBuffer[Length(AnalysisBuffer)-AnalysisBufferSize+SampleIndex+Delays[ToneIndex]]);
       end;
-      Correlation[ToneIndex] := Correlation[ToneIndex] / (AnalysisBufferSize-Delays[ToneIndex]-1);
+      if AnalysisBufferSize > Delays[ToneIndex] then
+        Correlation[ToneIndex] := Correlation[ToneIndex] / (AnalysisBufferSize-Delays[ToneIndex])
+      else
+        Correlation[ToneIndex] := MaxDouble;
     end;
 
   // return average magnitude difference
@@ -625,7 +749,9 @@ begin
       // Suggestion for calculation efficiency improvement from deuteragenie:
       // Replacing 'i mod buffersize' by 'i & (buffersize-1)' when i is positive and buffersize is a power of two should speed the modulo compuation by 5x-10x
       //Correlation[ToneIndex] += Abs(AnalysisBuffer[(SampleIndex+Delays[ToneIndex]) mod AnalysisBufferSize] - AnalysisBuffer[SampleIndex]);
-      Correlation[ToneIndex] := Correlation[ToneIndex] + Abs(AnalysisBuffer[(SampleIndex+Delays[ToneIndex]) and (AnalysisBufferSize-1)] - AnalysisBuffer[SampleIndex]);
+      Correlation[ToneIndex] := Correlation[ToneIndex] + Abs(
+        AnalysisBuffer[Length(AnalysisBuffer)-AnalysisBufferSize+((SampleIndex+Delays[ToneIndex]) and (AnalysisBufferSize-1))] -
+        AnalysisBuffer[Length(AnalysisBuffer)-AnalysisBufferSize+SampleIndex]);
     end;
     Correlation[ToneIndex] := Correlation[ToneIndex] / AnalysisBufferSize;
   end;
@@ -752,7 +878,10 @@ var
   i: integer;
 begin
   for i := 0 to High(Sound) do
+  begin
     Sound[i].Free;
+    FreeAndNil(PhoneCalibrationBuffers[i]);
+  end;
   SetLength(Sound, 0);
   inherited;
 end;
@@ -928,6 +1057,15 @@ begin
   Result := CheckPlayersConfig(PlayerCount, PlayerState);
 end;
 
+function TAudioInputProcessor.ConfiguredPlayerCount: integer;
+var Local: TBooleanDynArray; I: integer;
+begin
+  CheckPlayersConfig(UIni.IMaxPlayerCount, Local);
+  Result := 0;
+  for I := 0 to High(Local) do
+    if Local[I] or RemoteInputProcessor.HasAssignedPlayer(I) then Result := I + 1;
+end;
+
 {*
  * Handles captured microphone input data.
  * Params:
@@ -974,7 +1112,7 @@ begin
     begin
       CaptureChannel := InputDevice.CaptureChannel[ChannelIndex];
       // check if a capture buffer was assigned, otherwise there is nothing to do
-      if (CaptureChannel <> nil) then
+      if CaptureChannel <> nil then
       begin
         // Use pointer arithmetic instead of open-array indexing to avoid range
         // checks on bogus channel layouts reported by some devices.

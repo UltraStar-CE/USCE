@@ -72,6 +72,7 @@ implementation
 
 uses
   UGraphic,
+  URemoteBridgeIPC,
   UHelp,
   UIni,
   ULanguage,
@@ -297,6 +298,7 @@ end;
 procedure TScreenMain.OnShow;
 begin
   inherited;
+  RemoteBridgeIPC.SendGameState('main_menu', 0, 0);
 
   SoundLib.StartBgMusic;
 

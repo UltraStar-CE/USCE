@@ -1,0 +1,1393 @@
+{* UltraStar Deluxe - Karaoke Game
+ *
+ * In-process hosted relay client and typed game command adapter.
+ * Room/control messages and bounded microphone signaling/PCM use the outgoing
+ * native WebSocket; queued writes keep backpressure off the game thread.
+ *}
+
+unit URemoteBridgeIPC;
+
+interface
+
+{$IFDEF FPC}
+  {$MODE Delphi}
+{$ENDIF}
+
+{$I switches.inc}
+
+uses
+  Classes,
+  SysUtils,
+  URemoteControl,
+  URemoteInput;
+
+type
+  TRemoteBridgeCommandEvent = procedure(PlayerIndex: integer;
+    const PlayerId: UTF8String; Command: TRemoteControlCommand;
+    CommandId: integer; const ArgsText: UTF8String; ArgsIndex: integer;
+    ArgsItemIndex: integer);
+
+  TRemoteBridgePlayer = record
+    PlayerId: UTF8String;
+    Name: UTF8String;
+    Role: UTF8String;
+    Slot: integer;
+    Connected: boolean;
+    Difficulty: integer;
+    AvatarId, AvatarFile: UTF8String;
+  end;
+
+  TRemoteBridgeIPC = class
+  private
+    FThread: TThread;
+    FOnCommand: TRemoteBridgeCommandEvent;
+    FStatusLock: TRTLCriticalSection;
+    FConnected: boolean;
+    FDisplayCode: UTF8String;
+    FStatusSeq: integer;
+    FGameStateSeq: integer;
+    FRequestedPlayerCount: integer;
+    FProfilesDirty: boolean;
+    FPlayers: array of TRemoteBridgePlayer;
+    FLastInputState: string;
+    FLastInputTick: QWord;
+    procedure ClearRoomStatus;
+    procedure SetRoomStatus(Connected: boolean; const DisplayCode: UTF8String);
+    procedure ClearPlayers;
+    procedure UpsertPlayer(const PlayerId, Name, Role: UTF8String; Slot, Difficulty: integer;
+      const AvatarId, AvatarFile: UTF8String);
+    procedure SetPlayerConnected(const PlayerId: UTF8String; Connected: boolean);
+    procedure RemovePlayer(const PlayerId: UTF8String);
+    function BuildPlayersJson(out ControllerPlayerId: UTF8String): string;
+  public
+    constructor Create;
+    destructor Destroy; override;
+
+    procedure Start;
+    procedure Stop;
+    procedure ApplyPendingPlayerCount(RefreshProfiles: boolean = false);
+    procedure SendAck(const PlayerId: UTF8String; CommandId: integer;
+      Accepted: boolean; const Reason: UTF8String; GameStateSeq: integer);
+    procedure SendSongStarted(SongSeq: integer; SongId: integer; MediaStartUs: int64;
+      DurationUs: int64; const Title, Artist: UTF8String);
+    procedure SendSongPaused(SongSeq: integer; MediaStartUs: int64; DurationUs: int64);
+    procedure SendSongResumed(SongSeq: integer; MediaStartUs: int64; DurationUs: int64);
+    procedure SendSongEnded(SongSeq: integer; MediaStartUs: int64; DurationUs: int64);
+    procedure SendPlayerAssigned(const PlayerId, Role: UTF8String; Slot: integer);
+    procedure SendJsonMessage(const JsonMessage: string);
+    function SendGameState(const State: UTF8String; SongSeq: integer;
+      PlaylistSize: integer): integer;
+    procedure GetRoomStatus(out Connected: boolean; out DisplayCode: UTF8String;
+      out StatusSeq: integer; out ConnectedPlayers: integer);
+
+    property OnCommand: TRemoteBridgeCommandEvent read FOnCommand write FOnCommand;
+    property GameStateSeq: integer read FGameStateSeq;
+  end;
+
+function RemoteBridgeIPC(): TRemoteBridgeIPC;
+function RemoteJsonEscape(const Value: UTF8String): string;
+function NativeRelayRequested: boolean;
+function RemoteScoringClockFields: string;
+
+implementation
+
+uses
+  UPhoneAudio,
+  URemoteRelaySession,
+  URemoteRelayProtocol,
+  UConfig,
+  UMusic,
+  fpjson,
+  jsonparser,
+  ULog,
+  UIni,
+  UAvatars,
+  UGraphic,
+  URecord,
+  UDisplay,
+  UInputSource,
+  UThemes,
+  UCommon,
+  UParty,
+  UNote;
+
+type
+  TRemoteBridgeIPCThread = class(TThread)
+  private
+    FOwner: TRemoteBridgeIPC;
+    FQueueLock: TRTLCriticalSection;
+    FSendQueue: TStringList;
+    FSendQueueBytes: int64;
+    FNativeRelay: TRemoteRelaySession;
+    FNativeProtocol: TRemoteRelayProtocol;
+
+    procedure ExecuteNative;
+    procedure FlushNativeWrites;
+    function SendNativeMessage(Message: TJSONObject): boolean;
+    procedure HandleMessage(Obj: TJSONObject);
+    procedure HandlePlayerAssigned(Obj: TJSONObject);
+    procedure HandlePlayersSnapshot(Obj: TJSONObject);
+    procedure HandleSettingsUpdate(Obj: TJSONObject);
+    procedure HandlePlayerDisconnected(Obj: TJSONObject);
+    procedure HandlePlayerLeft(Obj: TJSONObject);
+    procedure HandleSongStarted(Obj: TJSONObject);
+    procedure HandlePitchBatch(Obj: TJSONObject);
+    procedure HandlePitchBeats(Obj: TJSONObject);
+    procedure HandleControlCommand(Obj: TJSONObject);
+    procedure SendAck(const PlayerId: UTF8String; CommandId: integer;
+      Accepted: boolean; const Reason: UTF8String; GameStateSeq: integer);
+    procedure SendSongStarted(SongSeq: integer; SongId: integer; MediaStartUs: int64;
+      DurationUs: int64; const Title, Artist: UTF8String);
+    procedure SendPlayerAssigned(const PlayerId, Role: UTF8String; Slot: integer);
+    procedure SendGameState(Seq: integer; const State: UTF8String;
+      SongSeq: integer; PlaylistSize: integer; const PlayersJson: string;
+      const ControllerPlayerId: UTF8String);
+    procedure SendSongEvent(const EventType: string; SongSeq: integer; MediaStartUs: int64; DurationUs: int64);
+    procedure SendSongPaused(SongSeq: integer; MediaStartUs: int64; DurationUs: int64);
+    procedure SendSongResumed(SongSeq: integer; MediaStartUs: int64; DurationUs: int64);
+    procedure SendSongEnded(SongSeq: integer; MediaStartUs: int64; DurationUs: int64);
+    procedure SendLine(const Line: string);
+  protected
+    procedure Execute; override;
+  public
+    constructor Create(Owner: TRemoteBridgeIPC);
+    destructor Destroy; override;
+  end;
+
+var
+  singleton_RemoteBridgeIPC: TRemoteBridgeIPC = nil;
+  remotePitchLogCounter: integer = 0;
+  remotePitchRejectLogCounter: integer = 0;
+
+function NativeRelayRequested: boolean;
+begin
+  // The relay runs inside the game; no local Node process is required.
+  Result := true;
+end;
+
+function RemoteScoringClockFields: string;
+begin
+  Result := '';
+  if NativeRelayRequested and Assigned(LyricsState) and (LyricsState.FrameHostUs > 0) then
+    Result := ',"hostStateUs":' + IntToStr(LyricsState.FrameHostUs) +
+      ',"scoringSongTimeUs":' + IntToStr(Round(LyricsState.FrameTime * 1000000));
+end;
+
+function RemoteBridgeIPC(): TRemoteBridgeIPC;
+begin
+  if singleton_RemoteBridgeIPC = nil then
+    singleton_RemoteBridgeIPC := TRemoteBridgeIPC.Create;
+
+  Result := singleton_RemoteBridgeIPC;
+end;
+
+function JsonGetString(Obj: TJSONObject; const Name, Default: string): string;
+var
+  Data: TJSONData;
+begin
+  Result := Default;
+  Data := Obj.Find(Name);
+  if (Data <> nil) and (Data.JSONType = jtString) then
+    Result := Data.AsString;
+end;
+
+function JsonGetInt(Obj: TJSONObject; const Name: string; Default: integer): integer;
+var
+  Data: TJSONData;
+begin
+  Result := Default;
+  Data := Obj.Find(Name);
+  if (Data <> nil) and (Data.JSONType <> jtNull) then
+  begin
+    try
+      Result := Data.AsInteger;
+    except
+      Result := Default;
+    end;
+  end;
+end;
+
+function JsonGetInt64(Obj: TJSONObject; const Name: string; Default: int64): int64;
+var
+  Data: TJSONData;
+begin
+  Result := Default;
+  Data := Obj.Find(Name);
+  if (Data <> nil) and (Data.JSONType <> jtNull) then
+  begin
+    try
+      Result := Data.AsInt64;
+    except
+      Result := Default;
+    end;
+  end;
+end;
+
+function JsonGetFloat(Obj: TJSONObject; const Name: string; Default: double): double;
+var
+  Data: TJSONData;
+begin
+  Result := Default;
+  Data := Obj.Find(Name);
+  if (Data <> nil) and (Data.JSONType <> jtNull) then
+  begin
+    try
+      Result := Data.AsFloat;
+    except
+      Result := Default;
+    end;
+  end;
+end;
+
+function JsonGetBool(Obj: TJSONObject; const Name: string; Default: boolean): boolean;
+var
+  Data: TJSONData;
+begin
+  Result := Default;
+  Data := Obj.Find(Name);
+  if (Data <> nil) and (Data.JSONType <> jtNull) then
+  begin
+    try
+      Result := Data.AsBoolean;
+    except
+      Result := Default;
+    end;
+  end;
+end;
+
+function JsonArrayGetInt(Arr: TJSONArray; Index: integer; Default: integer): integer;
+begin
+  Result := Default;
+  if (Arr = nil) or (Index < 0) or (Index >= Arr.Count) or
+     (Arr.Items[Index].JSONType = jtNull) then
+    Exit;
+  try
+    Result := Arr.Items[Index].AsInteger;
+  except
+    Result := Default;
+  end;
+end;
+
+function JsonArrayGetInt64(Arr: TJSONArray; Index: integer; Default: int64): int64;
+begin
+  Result := Default;
+  if (Arr = nil) or (Index < 0) or (Index >= Arr.Count) or
+     (Arr.Items[Index].JSONType = jtNull) then
+    Exit;
+  try
+    Result := Arr.Items[Index].AsInt64;
+  except
+    Result := Default;
+  end;
+end;
+
+function JsonFindArray(Obj: TJSONObject; const Name: string): TJSONArray;
+var
+  Data: TJSONData;
+begin
+  Result := nil;
+  Data := Obj.Find(Name);
+  if (Data <> nil) and (Data.JSONType = jtArray) then
+    Result := TJSONArray(Data);
+end;
+
+function SlotToPlayerIndex(Slot: integer): integer;
+begin
+  Result := Slot - 1;
+end;
+
+function RemoteJsonEscape(const Value: UTF8String): string;
+var
+  I: integer;
+  Text: UnicodeString;
+begin
+  Text := UTF8Decode(Value);
+  Result := '';
+  for I := 1 to Length(Text) do
+    case Text[I] of
+      '\': Result := Result + '\\';
+      '"': Result := Result + '\"';
+      #32..#33, #35..#91, #93..#126: Result := Result + AnsiChar(Text[I]);
+      else Result := Result + '\u' + IntToHex(Ord(Text[I]), 4);
+    end;
+end;
+
+function JsonEscape(const Value: UTF8String): string;
+begin
+  Result := RemoteJsonEscape(Value);
+end;
+
+{ TRemoteBridgeIPC }
+
+constructor TRemoteBridgeIPC.Create;
+begin
+  inherited;
+  InitCriticalSection(FStatusLock);
+end;
+
+destructor TRemoteBridgeIPC.Destroy;
+begin
+  Stop;
+  DoneCriticalSection(FStatusLock);
+  inherited;
+end;
+
+procedure TRemoteBridgeIPC.ClearRoomStatus;
+begin
+  ClearPlayers;
+  SetRoomStatus(false, '');
+end;
+
+procedure TRemoteBridgeIPC.SetRoomStatus(Connected: boolean; const DisplayCode: UTF8String);
+begin
+  EnterCriticalSection(FStatusLock);
+  try
+    if (FConnected <> Connected) or (FDisplayCode <> DisplayCode) then
+    begin
+      FConnected := Connected;
+      FDisplayCode := DisplayCode;
+      Inc(FStatusSeq);
+    end;
+  finally
+    LeaveCriticalSection(FStatusLock);
+  end;
+end;
+
+procedure TRemoteBridgeIPC.GetRoomStatus(out Connected: boolean;
+  out DisplayCode: UTF8String; out StatusSeq: integer; out ConnectedPlayers: integer);
+var
+  I: integer;
+begin
+  EnterCriticalSection(FStatusLock);
+  try
+    Connected := FConnected;
+    DisplayCode := FDisplayCode;
+    StatusSeq := FStatusSeq;
+    ConnectedPlayers := 0;
+    for I := 0 to High(FPlayers) do
+      if FPlayers[I].Connected then
+        Inc(ConnectedPlayers);
+  finally
+    LeaveCriticalSection(FStatusLock);
+  end;
+end;
+
+procedure TRemoteBridgeIPC.ClearPlayers;
+begin
+  EnterCriticalSection(FStatusLock);
+  try
+    SetLength(FPlayers, 0);
+  finally
+    LeaveCriticalSection(FStatusLock);
+  end;
+end;
+
+procedure TRemoteBridgeIPC.UpsertPlayer(const PlayerId, Name, Role: UTF8String; Slot, Difficulty: integer;
+  const AvatarId, AvatarFile: UTF8String);
+var
+  I: integer;
+begin
+  if (PlayerId = '') then
+    Exit;
+
+  EnterCriticalSection(FStatusLock);
+  try
+    FProfilesDirty := true;
+    for I := 0 to High(FPlayers) do
+    begin
+      if (FPlayers[I].PlayerId = PlayerId) then
+      begin
+        if (Name <> '') then
+          FPlayers[I].Name := Name;
+        if (Role <> '') then
+          FPlayers[I].Role := Role;
+        if (FPlayers[I].Slot > 0) and (FPlayers[I].Slot <> Slot) then
+          RemoteInputProcessor.ClearPlayerSlot(SlotToPlayerIndex(FPlayers[I].Slot));
+        if (Slot >= 0) then
+          FPlayers[I].Slot := Slot;
+        FPlayers[I].Connected := true;
+        FPlayers[I].Difficulty := Difficulty;
+        FPlayers[I].AvatarId := AvatarId;
+        FPlayers[I].AvatarFile := AvatarFile;
+        Exit;
+      end;
+    end;
+
+    SetLength(FPlayers, Length(FPlayers) + 1);
+    FPlayers[High(FPlayers)].PlayerId := PlayerId;
+    FPlayers[High(FPlayers)].Name := Name;
+    FPlayers[High(FPlayers)].Role := Role;
+    FPlayers[High(FPlayers)].Slot := Slot;
+    FPlayers[High(FPlayers)].Connected := true;
+    FPlayers[High(FPlayers)].Difficulty := Difficulty;
+    FPlayers[High(FPlayers)].AvatarId := AvatarId;
+    FPlayers[High(FPlayers)].AvatarFile := AvatarFile;
+  finally
+    LeaveCriticalSection(FStatusLock);
+  end;
+end;
+
+procedure TRemoteBridgeIPC.SetPlayerConnected(const PlayerId: UTF8String; Connected: boolean);
+var
+  I: integer;
+begin
+  if (PlayerId = '') then
+    Exit;
+
+  EnterCriticalSection(FStatusLock);
+  try
+    for I := 0 to High(FPlayers) do
+    begin
+      if (FPlayers[I].PlayerId = PlayerId) then
+      begin
+        FPlayers[I].Connected := Connected;
+        FProfilesDirty := true;
+        if not Connected and (FPlayers[I].Slot > 0) then
+          RemoteInputProcessor.ClearPlayerSlot(SlotToPlayerIndex(FPlayers[I].Slot));
+        Exit;
+      end;
+    end;
+  finally
+    LeaveCriticalSection(FStatusLock);
+  end;
+end;
+
+procedure TRemoteBridgeIPC.RemovePlayer(const PlayerId: UTF8String);
+var
+  I: integer;
+  J: integer;
+begin
+  if (PlayerId = '') then
+    Exit;
+
+  EnterCriticalSection(FStatusLock);
+  try
+    for I := 0 to High(FPlayers) do
+    begin
+      if (FPlayers[I].PlayerId = PlayerId) then
+      begin
+        if (FPlayers[I].Slot > 0) then
+          RemoteInputProcessor.ClearPlayerSlot(SlotToPlayerIndex(FPlayers[I].Slot));
+        for J := I to High(FPlayers) - 1 do
+          FPlayers[J] := FPlayers[J + 1];
+        SetLength(FPlayers, Length(FPlayers) - 1);
+        Exit;
+      end;
+    end;
+  finally
+    LeaveCriticalSection(FStatusLock);
+  end;
+end;
+
+function TRemoteBridgeIPC.BuildPlayersJson(out ControllerPlayerId: UTF8String): string;
+var
+  I: integer;
+  PlayerJson: string;
+  SingingText: string;
+  ConnectedText: string;
+begin
+  Result := '[';
+  ControllerPlayerId := '';
+
+  EnterCriticalSection(FStatusLock);
+  try
+    for I := 0 to High(FPlayers) do
+    begin
+      if (I > 0) then
+        Result := Result + ',';
+
+      if (FPlayers[I].Role = 'controller') and (ControllerPlayerId = '') then
+        ControllerPlayerId := FPlayers[I].PlayerId;
+
+      if (FPlayers[I].Role = 'singer') or (FPlayers[I].Role = 'controller') then
+        SingingText := 'true'
+      else
+        SingingText := 'false';
+      if FPlayers[I].Connected then
+        ConnectedText := 'true'
+      else
+        ConnectedText := 'false';
+
+      PlayerJson :=
+        '{"slot":' + IntToStr(FPlayers[I].Slot) +
+        ',"playerId":"' + JsonEscape(FPlayers[I].PlayerId) + '"' +
+        ',"name":"' + JsonEscape(FPlayers[I].Name) + '"' +
+        ',"connected":' + ConnectedText +
+        ',"singing":' + SingingText +
+        ',"role":"' + JsonEscape(FPlayers[I].Role) + '"' +
+        '}';
+      Result := Result + PlayerJson;
+    end;
+  finally
+    LeaveCriticalSection(FStatusLock);
+  end;
+
+  Result := Result + ']';
+end;
+
+procedure TRemoteBridgeIPC.Start;
+begin
+  if (FThread <> nil) then
+    Exit;
+
+  FThread := TRemoteBridgeIPCThread.Create(Self);
+  FThread.Start;
+end;
+
+procedure TRemoteBridgeIPC.Stop;
+begin
+  if (FThread = nil) then
+    Exit;
+
+  FThread.Terminate;
+  FThread.WaitFor;
+  FreeAndNil(FThread);
+end;
+
+procedure TRemoteBridgeIPC.SendAck(const PlayerId: UTF8String; CommandId: integer;
+  Accepted: boolean; const Reason: UTF8String; GameStateSeq: integer);
+begin
+  if (FThread <> nil) and (FThread is TRemoteBridgeIPCThread) then
+    TRemoteBridgeIPCThread(FThread).SendAck(PlayerId, CommandId, Accepted, Reason, GameStateSeq);
+end;
+
+procedure TRemoteBridgeIPC.SendSongStarted(SongSeq: integer; SongId: integer; MediaStartUs: int64;
+  DurationUs: int64; const Title, Artist: UTF8String);
+begin
+  RemoteInputProcessor.SetSongSeq(SongSeq);
+  if (FThread <> nil) and (FThread is TRemoteBridgeIPCThread) then
+    TRemoteBridgeIPCThread(FThread).SendSongStarted(SongSeq, SongId, MediaStartUs, DurationUs, Title, Artist);
+end;
+
+procedure TRemoteBridgeIPC.SendSongPaused(SongSeq: integer; MediaStartUs: int64; DurationUs: int64);
+begin
+  if (FThread <> nil) and (FThread is TRemoteBridgeIPCThread) then
+    TRemoteBridgeIPCThread(FThread).SendSongPaused(SongSeq, MediaStartUs, DurationUs);
+end;
+
+procedure TRemoteBridgeIPC.SendSongResumed(SongSeq: integer; MediaStartUs: int64; DurationUs: int64);
+begin
+  if (FThread <> nil) and (FThread is TRemoteBridgeIPCThread) then
+    TRemoteBridgeIPCThread(FThread).SendSongResumed(SongSeq, MediaStartUs, DurationUs);
+end;
+
+procedure TRemoteBridgeIPC.SendSongEnded(SongSeq: integer; MediaStartUs: int64; DurationUs: int64);
+begin
+  if (FThread <> nil) and (FThread is TRemoteBridgeIPCThread) then
+    TRemoteBridgeIPCThread(FThread).SendSongEnded(SongSeq, MediaStartUs, DurationUs);
+end;
+
+procedure TRemoteBridgeIPC.SendPlayerAssigned(const PlayerId, Role: UTF8String; Slot: integer);
+begin
+  if (FThread <> nil) and (FThread is TRemoteBridgeIPCThread) then
+    TRemoteBridgeIPCThread(FThread).SendPlayerAssigned(PlayerId, Role, Slot);
+end;
+
+procedure TRemoteBridgeIPC.SendJsonMessage(const JsonMessage: string);
+begin
+  if (FThread <> nil) and (FThread is TRemoteBridgeIPCThread) and (JsonMessage <> '') then
+    TRemoteBridgeIPCThread(FThread).SendLine(JsonMessage + #10);
+end;
+
+function TRemoteBridgeIPC.SendGameState(const State: UTF8String; SongSeq: integer;
+  PlaylistSize: integer): integer;
+var
+  PlayersJson: string;
+  ControllerPlayerId: UTF8String;
+begin
+  Inc(FGameStateSeq);
+  Result := FGameStateSeq;
+  PlayersJson := BuildPlayersJson(ControllerPlayerId);
+  if (FThread <> nil) and (FThread is TRemoteBridgeIPCThread) then
+    TRemoteBridgeIPCThread(FThread).SendGameState(
+      Result,
+      State,
+      SongSeq,
+      PlaylistSize,
+      PlayersJson,
+      ControllerPlayerId
+    );
+end;
+
+{ TRemoteBridgeIPCThread }
+
+constructor TRemoteBridgeIPCThread.Create(Owner: TRemoteBridgeIPC);
+begin
+  inherited Create(true);
+  FreeOnTerminate := false;
+  FOwner := Owner;
+  InitCriticalSection(FQueueLock);
+  FSendQueue := TStringList.Create;
+end;
+
+destructor TRemoteBridgeIPCThread.Destroy;
+begin
+  FSendQueue.Free;
+  DoneCriticalSection(FQueueLock);
+  inherited;
+end;
+
+procedure TRemoteBridgeIPCThread.SendLine(const Line: string);
+begin
+  // Never let socket backpressure block the game/render/audio consumer thread.
+  EnterCriticalSection(FQueueLock);
+  try
+    if Terminated then Exit;
+    if (FSendQueue.Count >= 128) or (FSendQueueBytes + Length(Line) > 32 * 1024 * 1024) then
+    begin
+      Log.LogWarn('Native bridge output queue full; update dropped', 'Remote Bridge IPC');
+      Exit;
+    end;
+    FSendQueue.Add(Line);
+    Inc(FSendQueueBytes, Length(Line));
+  finally
+    LeaveCriticalSection(FQueueLock);
+  end;
+end;
+
+procedure TRemoteBridgeIPCThread.SendAck(const PlayerId: UTF8String; CommandId: integer;
+  Accepted: boolean; const Reason: UTF8String; GameStateSeq: integer);
+var
+  AcceptedText: string;
+  ReasonText: string;
+begin
+  if Accepted then
+    AcceptedText := 'true'
+  else
+    AcceptedText := 'false';
+
+  if (Reason = '') then
+    ReasonText := 'null'
+  else
+    ReasonText := '"' + JsonEscape(Reason) + '"';
+
+  SendLine(
+    '{"type":"ack","protocol":1,"playerId":"' + JsonEscape(PlayerId) +
+    '","commandId":' + IntToStr(CommandId) +
+    ',"accepted":' + AcceptedText +
+    ',"reason":' + ReasonText +
+    ',"gameStateSeq":' + IntToStr(GameStateSeq) +
+    '}' + #10
+  );
+end;
+
+procedure TRemoteBridgeIPCThread.SendSongStarted(SongSeq: integer; SongId: integer; MediaStartUs: int64;
+  DurationUs: int64; const Title, Artist: UTF8String);
+begin
+  SendLine(
+    '{"type":"song.started","protocol":1' +
+    ',"songSeq":' + IntToStr(SongSeq) +
+    ',"songId":' + IntToStr(SongId) +
+    ',"mediaStartUs":' + IntToStr(MediaStartUs) +
+    ',"durationUs":' + IntToStr(DurationUs) +
+    ',"title":"' + JsonEscape(Title) + '"' +
+    ',"artist":"' + JsonEscape(Artist) + '"' +
+    RemoteScoringClockFields +
+    '}' + #10
+  );
+end;
+
+procedure TRemoteBridgeIPCThread.SendPlayerAssigned(const PlayerId, Role: UTF8String; Slot: integer);
+begin
+  if (PlayerId = '') or (Slot < 0) then
+    Exit;
+
+  SendLine(
+    '{"type":"player.assigned","protocol":1' +
+    ',"playerId":"' + JsonEscape(PlayerId) + '"' +
+    ',"slot":' + IntToStr(Slot) +
+    ',"role":"' + JsonEscape(Role) + '"' +
+    '}' + #10
+  );
+end;
+
+procedure TRemoteBridgeIPCThread.SendGameState(Seq: integer; const State: UTF8String;
+  SongSeq: integer; PlaylistSize: integer; const PlayersJson: string;
+  const ControllerPlayerId: UTF8String);
+var
+  ControllerJson: string;
+begin
+  if (ControllerPlayerId = '') then
+    ControllerJson := 'null'
+  else
+    ControllerJson := '"' + JsonEscape(ControllerPlayerId) + '"';
+
+  SendLine(
+    '{"type":"game.state","protocol":1' +
+    ',"seq":' + IntToStr(Seq) +
+    ',"state":"' + JsonEscape(State) + '"' +
+    ',"songSeq":' + IntToStr(SongSeq) +
+    ',"players":' + PlayersJson +
+    ',"controllerPlayerId":' + ControllerJson +
+    ',"playlistSize":' + IntToStr(PlaylistSize) +
+    '}' + #10
+  );
+end;
+
+procedure TRemoteBridgeIPCThread.SendSongEvent(const EventType: string; SongSeq: integer; MediaStartUs: int64; DurationUs: int64);
+begin
+  SendLine(
+    '{"type":"' + JsonEscape(UTF8String(EventType)) + '","protocol":1' +
+    RemoteScoringClockFields +
+    ',"songSeq":' + IntToStr(SongSeq) +
+    ',"mediaStartUs":' + IntToStr(MediaStartUs) +
+    ',"durationUs":' + IntToStr(DurationUs) +
+    '}' + #10
+  );
+end;
+
+procedure TRemoteBridgeIPCThread.SendSongPaused(SongSeq: integer; MediaStartUs: int64; DurationUs: int64);
+begin
+  SendSongEvent('song.paused', SongSeq, MediaStartUs, DurationUs);
+end;
+
+procedure TRemoteBridgeIPCThread.SendSongResumed(SongSeq: integer; MediaStartUs: int64; DurationUs: int64);
+begin
+  SendSongEvent('song.resumed', SongSeq, MediaStartUs, DurationUs);
+end;
+
+procedure TRemoteBridgeIPCThread.SendSongEnded(SongSeq: integer; MediaStartUs: int64; DurationUs: int64);
+var I: integer; PlayersJson: string;
+begin
+  PlayersJson := '[';
+  for I := 0 to High(Player) do
+  begin
+    if I > 0 then PlayersJson := PlayersJson + ',';
+    PlayersJson := PlayersJson + '{"slot":' + IntToStr(I + 1) +
+        ',"score":' + IntToStr(Player[I].ScoreInt) +
+        ',"scoreLine":' + IntToStr(Player[I].ScoreLineInt) +
+        ',"scoreGolden":' + IntToStr(Player[I].ScoreGoldenInt) +
+        ',"scoreTotal":' + IntToStr(Player[I].ScoreTotalInt) + '}';
+  end;
+  SendLine('{"type":"song.ended","protocol":1,"songSeq":' + IntToStr(SongSeq) +
+      ',"mediaStartUs":' + IntToStr(MediaStartUs) + ',"durationUs":' + IntToStr(DurationUs) +
+      ',"players":' + PlayersJson + ']}' + #10);
+end;
+
+procedure TRemoteBridgeIPCThread.Execute;
+begin
+  ExecuteNative;
+end;
+
+function TRemoteBridgeIPCThread.SendNativeMessage(Message: TJSONObject): boolean;
+begin
+  Result := FNativeRelay.Send(Message);
+end;
+
+procedure TRemoteBridgeIPCThread.FlushNativeWrites;
+var I: integer;
+    Line: string;
+    Data: TJSONData;
+    Accepted: boolean;
+begin
+  for I := 1 to 8 do
+  begin
+    EnterCriticalSection(FQueueLock);
+    try
+      if FSendQueue.Count = 0 then Exit;
+      Line := FSendQueue[0];
+    finally LeaveCriticalSection(FQueueLock); end;
+    Accepted := true;
+    Data := nil;
+    try
+      try
+        Data := GetJSON(Trim(Line));
+        if Data.JSONType = jtObject then
+          Accepted := FNativeProtocol.FromGame(TJSONObject(Data));
+      except
+        Log.LogWarn('Invalid native relay output message', 'Remote relay');
+      end;
+    finally Data.Free; end;
+    if not Accepted then Exit;
+    EnterCriticalSection(FQueueLock);
+    try
+      FSendQueue.Delete(0);
+      Dec(FSendQueueBytes, Length(Line));
+    finally LeaveCriticalSection(FQueueLock); end;
+  end;
+end;
+
+procedure TRemoteBridgeIPCThread.ExecuteNative;
+var Url: string;
+    Shutdown: TJSONObject;
+    LoopStart, TickEnd, WriteEnd, MediaEnd, PreviousEnd, GapMs: QWord;
+begin
+  FNativeRelay := TRemoteRelaySession.Create;
+  FNativeProtocol := TRemoteRelayProtocol.Create;
+  try
+    FNativeRelay.OnMessage := FNativeProtocol.FromRelay;
+    FNativeProtocol.OnGame := HandleMessage;
+    FNativeProtocol.OnSend := SendNativeMessage;
+    Url := GetEnvironmentVariable('USDX_REMOTE_SERVER');
+    if Url = '' then Url := Ini.RemoteBridgeServerUrl;
+    if Url = '' then Url := DEFAULT_REMOTE_BRIDGE_SERVER_URL;
+    FNativeRelay.Start(Url, GetEnvironmentVariable('USCE_RAW_AUDIO_LIBRARY'), USCE_VERSION);
+    Log.LogStatus('In-process relay enabled', 'Remote relay');
+    PreviousEnd := GetTickCount64;
+    while not Terminated do
+    begin
+      LoopStart := GetTickCount64;
+      GapMs := LoopStart - PreviousEnd;
+      FNativeRelay.Tick;
+      TickEnd := GetTickCount64;
+      FlushNativeWrites;
+      WriteEnd := GetTickCount64;
+      FNativeProtocol.TickMedia;
+      MediaEnd := GetTickCount64;
+      if (MediaEnd - LoopStart >= 250) or (GapMs >= 250) then
+        Log.LogWarn(Format('gapMs=%d relayMs=%d writeMs=%d mediaMs=%d registered=%s',
+          [GapMs, TickEnd-LoopStart, WriteEnd-TickEnd, MediaEnd-WriteEnd,
+           BoolToStr(FNativeRelay.Registered, true)]), 'Remote relay timing');
+      PreviousEnd := MediaEnd;
+      Sleep(5);
+    end;
+    Shutdown := TJSONObject.Create(['type', 'host.shutdown', 'reason', 'game_exit']);
+    try
+      if FNativeRelay.Registered then
+      begin
+        FNativeRelay.Send(Shutdown);
+        Sleep(50);
+      end;
+    finally Shutdown.Free; end;
+  finally
+    FreeAndNil(FNativeRelay);
+    FreeAndNil(FNativeProtocol);
+  end;
+end;
+
+procedure TRemoteBridgeIPCThread.HandleMessage(Obj: TJSONObject);
+var
+  MessageType: string;
+  DisplayCode: string;
+  CalibrationReply: TJSONObject;
+begin
+  MessageType := JsonGetString(Obj, 'type', '');
+  if PhoneAudio.Enabled and ((Pos('p2p.', MessageType) = 1) or
+    (Pos('room.', MessageType) = 1) or (Pos('player.', MessageType) = 1) or
+    (MessageType = 'audio.pcm') or (MessageType = 'audio.calibration.pcm') or
+    (MessageType = 'remote.players.snapshot') or (MessageType = 'bridge.ready') or
+    (MessageType = 'bridge.disconnected')) then
+    PhoneAudio.Signal(UTF8String(Obj.AsJSON));
+  if (MessageType = 'bridge.ready') then
+  begin
+    DisplayCode := JsonGetString(Obj, 'displayCode', '');
+    if (DisplayCode <> '') then
+      FOwner.SetRoomStatus(true, UTF8String(DisplayCode));
+  end
+  else if (MessageType = 'room.created') then
+  begin
+    DisplayCode := JsonGetString(Obj, 'displayCode', '');
+    if (DisplayCode <> '') then
+    begin
+      FOwner.SetRoomStatus(true, UTF8String(DisplayCode));
+      if NativeRelayRequested then Log.LogStatus('Room code: ' + DisplayCode, 'Remote relay');
+    end;
+  end
+  else if (MessageType = 'room.resumed') then
+  begin
+    DisplayCode := JsonGetString(Obj, 'displayCode', '');
+    if (DisplayCode <> '') then
+      FOwner.SetRoomStatus(true, UTF8String(DisplayCode));
+  end
+  else if (MessageType = 'remote.players.snapshot') then
+    HandlePlayersSnapshot(Obj)
+  else if (MessageType = 'player.joined') or (MessageType = 'player.assigned') then
+    HandlePlayerAssigned(Obj)
+  else if (MessageType = 'settings.update') then
+    HandleSettingsUpdate(Obj)
+  else if (MessageType = 'audio.calibration.request') then
+  begin
+    if not PhoneAudio.Enabled or not PhoneAudio.Calibration.Queue(
+      JsonGetInt(Obj, 'slot', 0) - 1, UTF8String(JsonGetString(Obj, 'playerId', '')),
+      UTF8String(JsonGetString(Obj, 'requestId', '')),
+      JsonGetInt(Obj, 'clockUncertaintyMs', -1), int64(GetTickCount64) * 1000) then
+    begin
+      CalibrationReply := TJSONObject.Create(['type', 'audio.calibration.result',
+        'playerId', JsonGetString(Obj, 'playerId', ''),
+        'requestId', JsonGetString(Obj, 'requestId', ''),
+        'accepted', false, 'reason', 'request_not_ready', 'scope', 'digital-path']);
+      try FOwner.SendJsonMessage(CalibrationReply.AsJSON);
+      finally CalibrationReply.Free; end;
+    end;
+  end
+  else if (MessageType = 'audio.calibration.cancel') then
+    PhoneAudio.Calibration.Cancel(JsonGetInt(Obj, 'slot', 0) - 1,
+      UTF8String(JsonGetString(Obj, 'playerId', '')),
+      UTF8String(JsonGetString(Obj, 'requestId', '')))
+  else if (MessageType = 'player.disconnected') then
+    HandlePlayerDisconnected(Obj)
+  else if (MessageType = 'player.left') then
+    HandlePlayerLeft(Obj)
+  else if (MessageType = 'song.started') then
+    HandleSongStarted(Obj)
+  else if (MessageType = 'pitch.batch') then
+    HandlePitchBatch(Obj)
+  else if (MessageType = 'pitch.beats') then
+    HandlePitchBeats(Obj)
+  else if (MessageType = 'control.command') then
+    HandleControlCommand(Obj)
+  else if (MessageType = 'bridge.disconnected') then
+  begin
+    FOwner.ClearRoomStatus;
+    // A transport interruption does not unassign singers or erase live scores.
+    // A new room/player snapshot still clears actual departed assignments.
+    RemoteInputProcessor.ClearFrames;
+  end;
+end;
+
+procedure TRemoteBridgeIPC.ApplyPendingPlayerCount(RefreshProfiles: boolean = false);
+var
+  Count, I, Slot, A: integer;
+  Local: TBooleanDynArray;
+  InputState, SourceName: string;
+  PlayerColor: TRGB;
+  Remote: boolean;
+  Profiles: array of TRemoteBridgePlayer;
+begin
+  if Assigned(Party) and Party.bPartyGame then Exit;
+  EnterCriticalSection(FStatusLock);
+  try
+    Count := FRequestedPlayerCount;
+    FRequestedPlayerCount := 0;
+    if FProfilesDirty or RefreshProfiles then
+      Profiles := Copy(FPlayers);
+    FProfilesDirty := false;
+  finally
+    LeaveCriticalSection(FStatusLock);
+  end;
+  for I := 0 to High(Profiles) do
+  begin
+    Slot := Profiles[I].Slot - 1;
+    if (Slot < 0) or (Slot >= IMaxPlayerCount) or
+      ((Profiles[I].Role <> 'singer') and (Profiles[I].Role <> 'controller')) or
+      not Profiles[I].Connected then Continue;
+    Ini.Name[Slot] := Profiles[I].Name;
+    Ini.PlayerLevel[Slot] := Profiles[I].Difficulty;
+    Ini.PlayerAvatar[Slot] := '';
+    for A := 0 to High(AvatarsMD5) do
+      if (Profiles[I].AvatarId <> '') and (AvatarsMD5[A] = Profiles[I].AvatarId) or
+        ((Profiles[I].AvatarFile <> '') and (A <= High(AvatarsList)) and
+         Assigned(AvatarsList[A]) and
+         (AvatarsList[A].GetName.ToUTF8 = Profiles[I].AvatarFile)) then
+      begin
+        Ini.PlayerAvatar[Slot] := AvatarsMD5[A];
+        Break;
+      end;
+    if Slot <= High(Player) then
+    begin
+      Player[Slot].Name := Ini.Name[Slot];
+      if Display.CurrentScreen <> @ScreenSing then Player[Slot].Level := Ini.PlayerLevel[Slot];
+    end;
+    if Assigned(ScreenSing) then ScreenSing.PlayerNames[Slot + 1] := Ini.Name[Slot];
+  end;
+  // The adapter's suggested count cannot account for local microphones.
+  Count := AudioInputProcessor.ConfiguredPlayerCount;
+  if Assigned(ScreenSing) and (Display.CurrentScreen = @ScreenSing) and
+    (Display.NextScreen = nil) then ScreenSing.RefreshInputRoster(Count);
+  if (FLastInputTick = 0) or (GetTickCount64 - FLastInputTick >= 100) then
+  begin
+    FLastInputTick := GetTickCount64;
+    AudioInputProcessor.CheckPlayersConfig(IMaxPlayerCount, Local);
+    InputState := '{"type":"input.state","playerCount":' + IntToStr(Count) + ',"inputs":[';
+    Slot := 0;
+    for I := 0 to High(Local) do
+    begin
+      Remote := RemoteInputProcessor.HasAssignedPlayer(I);
+      if not Local[I] and not Remote then Continue;
+      if Slot > 0 then InputState := InputState + ',';
+      Inc(Slot);
+      case PlayerInputSource(I) of
+        pisLocal: SourceName := 'local';
+        pisDirect: SourceName := 'direct';
+        else SourceName := 'server';
+      end;
+      InputState := InputState + '{"slot":' + IntToStr(I+1) + ',"local":' + LowerCase(BoolToStr(Local[I],true)) +
+        ',"source":"' + SourceName + '","name":"' + JsonEscape(Ini.Name[I]) + '"}';
+    end;
+    InputState := InputState + '],"playerColors":[';
+    for I := 0 to IMaxPlayerCount - 1 do
+    begin
+      if I > 0 then InputState := InputState + ',';
+      PlayerColor := GetPlayerColor(Ini.PlayerColor[I]);
+      InputState := InputState + '"#' + IntToHex(Round(PlayerColor.R * 255), 2) +
+        IntToHex(Round(PlayerColor.G * 255), 2) + IntToHex(Round(PlayerColor.B * 255), 2) + '"';
+    end;
+    InputState := InputState + ']}';
+    if InputState <> FLastInputState then
+    begin
+      SendJsonMessage(InputState);
+      FLastInputState := InputState;
+    end;
+  end;
+  if Count > 0 then Ini.Players := Count - 1;
+  if Assigned(ScreenName) and
+    ((Display.CurrentScreen = @ScreenName) or (Display.CurrentScreen = @ScreenSong)) and
+    ((Length(Profiles) > 0) or (PlayersPlay <> Count)) then
+    ScreenName.LoadPlayersFromIni(true);
+end;
+
+procedure TRemoteBridgeIPCThread.HandlePlayersSnapshot(Obj: TJSONObject);
+var Data: TJSONData; Players: TJSONArray; Entry: TJSONObject; I: integer;
+begin
+  Data := Obj.Find('players');
+  if (Data = nil) or (Data.JSONType <> jtArray) then Exit;
+  Players := TJSONArray(Data);
+  FOwner.ClearPlayers;
+  for I := 0 to IMaxPlayerCount - 1 do
+    RemoteInputProcessor.ClearPlayerSlot(I);
+  for I := 0 to Players.Count - 1 do
+    if Players.Items[I].JSONType = jtObject then
+    begin
+      Entry := TJSONObject(Players.Items[I]);
+      HandlePlayerAssigned(Entry);
+      FOwner.SetPlayerConnected(UTF8String(JsonGetString(Entry, 'playerId', '')),
+          JsonGetBool(Entry, 'connected', true));
+    end;
+  EnterCriticalSection(FOwner.FStatusLock);
+  try
+    FOwner.FRequestedPlayerCount := JsonGetInt(Obj, 'gamePlayerCount', 0);
+  finally
+    LeaveCriticalSection(FOwner.FStatusLock);
+  end;
+end;
+
+procedure TRemoteBridgeIPCThread.HandlePlayerAssigned(Obj: TJSONObject);
+var
+  Slot: integer;
+  PlayerIndex: integer;
+  PlayerId: UTF8String;
+  Name: UTF8String;
+  Role: UTF8String;
+  MicDelayMs: integer;
+  Difficulty: integer;
+  DifficultyText: string;
+  DifficultyData: TJSONData;
+begin
+  Slot := JsonGetInt(Obj, 'slot', 0);
+  PlayerIndex := SlotToPlayerIndex(Slot);
+  PlayerId := UTF8String(JsonGetString(Obj, 'playerId', ''));
+  Name := UTF8String(JsonGetString(Obj, 'name', ''));
+  Role := UTF8String(JsonGetString(Obj, 'role', 'singer'));
+  MicDelayMs := JsonGetInt(Obj, 'micDelayMs', 0);
+  DifficultyText := LowerCase(JsonGetString(Obj, 'difficulty',
+    JsonGetString(Obj, 'difficultyMode', 'medium')));
+  Difficulty := 1;
+  if (DifficultyText = 'easy') or (DifficultyText = '0') then Difficulty := 0;
+  if (DifficultyText = 'hard') or (DifficultyText = '2') then Difficulty := 2;
+  DifficultyData := Obj.Find('difficulty');
+  if (DifficultyData <> nil) and (DifficultyData.JSONType = jtNumber) then
+  begin
+    Difficulty := JsonGetInt(Obj, 'difficulty', 1);
+    if (Difficulty < 0) or (Difficulty > 2) then Difficulty := 1;
+  end;
+  FOwner.UpsertPlayer(PlayerId, Name, Role, Slot, Difficulty,
+    UTF8String(JsonGetString(Obj, 'avatarId', '')),
+    UTF8String(JsonGetString(Obj, 'avatarFile', '')));
+  if (Slot > 0) then
+    RemoteInputProcessor.AssignPlayerSlot(
+      PlayerIndex,
+      PlayerId,
+      Role,
+      Slot,
+      MicDelayMs
+    );
+  FOwner.SendPlayerAssigned(PlayerId, Role, Slot);
+end;
+
+procedure TRemoteBridgeIPCThread.HandleSettingsUpdate(Obj: TJSONObject);
+const
+  NO_DELAY_VALUE = -MaxInt;
+var
+  Slot: integer;
+  PlayerIndex: integer;
+  MicDelayMs: integer;
+  SettingsData: TJSONData;
+  Settings: TJSONObject;
+begin
+  Slot := JsonGetInt(Obj, 'slot', 0);
+  if (Slot <= 0) then
+    Slot := JsonGetInt(Obj, 'playerSlot', 0);
+  if (Slot <= 0) then
+    Exit;
+
+  MicDelayMs := JsonGetInt(Obj, 'micDelayMs',
+    JsonGetInt(Obj, 'playerDelayMs', NO_DELAY_VALUE));
+
+  SettingsData := Obj.Find('settings');
+  if (SettingsData <> nil) and (SettingsData.JSONType = jtObject) then
+  begin
+    Settings := TJSONObject(SettingsData);
+    MicDelayMs := JsonGetInt(Settings, 'micDelayMs',
+      JsonGetInt(Settings, 'playerDelayMs', MicDelayMs));
+  end;
+
+  if (MicDelayMs = NO_DELAY_VALUE) then
+    Exit;
+
+  PlayerIndex := SlotToPlayerIndex(Slot);
+  RemoteInputProcessor.SetPlayerDelayMs(PlayerIndex, MicDelayMs);
+end;
+
+procedure TRemoteBridgeIPCThread.HandlePlayerDisconnected(Obj: TJSONObject);
+begin
+  FOwner.SetPlayerConnected(UTF8String(JsonGetString(Obj, 'playerId', '')), false);
+end;
+
+procedure TRemoteBridgeIPCThread.HandlePlayerLeft(Obj: TJSONObject);
+begin
+  FOwner.RemovePlayer(UTF8String(JsonGetString(Obj, 'playerId', '')));
+end;
+
+procedure TRemoteBridgeIPCThread.HandleSongStarted(Obj: TJSONObject);
+begin
+  RemoteInputProcessor.SetSongSeq(JsonGetInt(Obj, 'songSeq', 0));
+end;
+
+procedure TRemoteBridgeIPCThread.HandlePitchBatch(Obj: TJSONObject);
+var
+  Frames: TJSONArray;
+  FrameObj: TJSONObject;
+  FrameArr: TJSONArray;
+  Frame: TRemotePitchFrame;
+  I: integer;
+  Slot: integer;
+  PlayerIndex: integer;
+  Added: integer;
+  BatchSongSeq: integer;
+  BaseSongTimeUs: int64;
+  FrameDurUs: int64;
+begin
+  Slot := JsonGetInt(Obj, 'slot', 0);
+  if (Slot <= 0) then
+    Slot := JsonGetInt(Obj, 'playerSlot', 0);
+  if (Slot <= 0) then
+  begin
+    Inc(remotePitchRejectLogCounter);
+    if (remotePitchRejectLogCounter <= 5) or ((remotePitchRejectLogCounter mod 50) = 0) then
+      Log.LogWarn('pitch.batch rejected: missing slot', 'Remote Pitch');
+    Exit;
+  end;
+
+  PlayerIndex := SlotToPlayerIndex(Slot);
+  Frames := JsonFindArray(Obj, 'frames');
+  if (Frames = nil) then
+  begin
+    Inc(remotePitchRejectLogCounter);
+    if (remotePitchRejectLogCounter <= 5) or ((remotePitchRejectLogCounter mod 50) = 0) then
+      Log.LogWarn('pitch.batch rejected: missing frames array slot=' + IntToStr(Slot), 'Remote Pitch');
+    Exit;
+  end;
+
+  Added := 0;
+  BatchSongSeq := JsonGetInt(Obj, 'songSeq', 0);
+  BaseSongTimeUs := JsonGetInt64(Obj, 'baseSongTimeUs', -1);
+  FrameDurUs := JsonGetInt64(Obj, 'frameDurUs', 0);
+  for I := 0 to Frames.Count - 1 do
+  begin
+    Frame.SongSeq := BatchSongSeq;
+    Frame.SongTimeUs := -1;
+    Frame.DurUs := FrameDurUs;
+    Frame.F0Hz := 0;
+    Frame.F0Cents := 0;
+    Frame.RmsDb := -120;
+    Frame.Confidence := 0;
+    Frame.Voiced := false;
+
+    if (Frames.Items[I].JSONType = jtObject) then
+    begin
+      FrameObj := TJSONObject(Frames.Items[I]);
+      Frame.SongTimeUs := JsonGetInt64(FrameObj, 'songTimeUs', -1);
+      Frame.DurUs := JsonGetInt64(FrameObj, 'durUs', FrameDurUs);
+      Frame.F0Hz := JsonGetFloat(FrameObj, 'f0Hz', 0);
+      Frame.F0Cents := JsonGetInt(FrameObj, 'f0Cents', 0);
+      Frame.RmsDb := JsonGetFloat(FrameObj, 'rmsDb', -120);
+      Frame.Confidence := JsonGetFloat(FrameObj, 'confidence', 0);
+      Frame.Voiced := JsonGetBool(FrameObj, 'voiced', false);
+    end
+    else if (Frames.Items[I].JSONType = jtArray) then
+    begin
+      FrameArr := TJSONArray(Frames.Items[I]);
+      if (FrameArr.Count < 2) then
+        Continue;
+      Frame.SongTimeUs := JsonArrayGetInt64(FrameArr, 0, -1);
+      if (BaseSongTimeUs >= 0) and (Frame.SongTimeUs >= 0) then
+        Frame.SongTimeUs := BaseSongTimeUs + Frame.SongTimeUs;
+      Frame.F0Cents := JsonArrayGetInt(FrameArr, 1, 0);
+      Frame.RmsDb := JsonArrayGetInt(FrameArr, 2, 0) / 10;
+      Frame.Confidence := JsonArrayGetInt(FrameArr, 3, 255) / 255;
+      Frame.Voiced := JsonArrayGetInt(FrameArr, 4, 1) <> 0;
+    end
+    else
+      Continue;
+
+    if (Frame.SongTimeUs >= 0) then
+    begin
+      RemoteInputProcessor.AddPitchFrame(PlayerIndex, Frame);
+      Inc(Added);
+    end;
+  end;
+
+  if (Added > 0) then
+  begin
+    Inc(remotePitchLogCounter);
+  end
+  else
+  begin
+    Inc(remotePitchRejectLogCounter);
+    if (remotePitchRejectLogCounter <= 5) or ((remotePitchRejectLogCounter mod 50) = 0) then
+      Log.LogWarn(
+        'pitch.batch decoded zero frames slot=' + IntToStr(Slot) +
+        ' playerIndex=' + IntToStr(PlayerIndex) +
+        ' songSeq=' + IntToStr(BatchSongSeq) +
+        ' rawFrames=' + IntToStr(Frames.Count),
+        'Remote Pitch'
+      );
+  end;
+
+  if (Added > 0) and ((remotePitchLogCounter = 1) or ((remotePitchLogCounter mod 25) = 0)) then
+    Log.LogStatus(
+      'pitch.batch slot=' + IntToStr(Slot) +
+      ' playerIndex=' + IntToStr(PlayerIndex) +
+      ' songSeq=' + IntToStr(JsonGetInt(Obj, 'songSeq', 0)) +
+      ' frames=' + IntToStr(Added) +
+      ' totalBatches=' + IntToStr(remotePitchLogCounter),
+      'Remote Pitch'
+    );
+end;
+
+procedure TRemoteBridgeIPCThread.HandlePitchBeats(Obj: TJSONObject);
+var
+  Frames: TJSONArray;
+  FrameArr: TJSONArray;
+  I: integer;
+  Slot: integer;
+  PlayerIndex: integer;
+  Beat: integer;
+  Tone: integer;
+  Added: integer;
+begin
+  Slot := JsonGetInt(Obj, 'slot', 0);
+  if (Slot <= 0) then
+    Slot := JsonGetInt(Obj, 'playerSlot', 0);
+  if (Slot <= 0) then
+  begin
+    Inc(remotePitchRejectLogCounter);
+    if (remotePitchRejectLogCounter <= 5) or ((remotePitchRejectLogCounter mod 50) = 0) then
+      Log.LogWarn('pitch.beats rejected: missing slot', 'Remote Pitch');
+    Exit;
+  end;
+
+  Frames := JsonFindArray(Obj, 'frames');
+  if (Frames = nil) then
+  begin
+    Inc(remotePitchRejectLogCounter);
+    if (remotePitchRejectLogCounter <= 5) or ((remotePitchRejectLogCounter mod 50) = 0) then
+      Log.LogWarn('pitch.beats rejected: missing frames array slot=' + IntToStr(Slot), 'Remote Pitch');
+    Exit;
+  end;
+
+  PlayerIndex := SlotToPlayerIndex(Slot);
+  Added := 0;
+  for I := 0 to Frames.Count - 1 do
+  begin
+    if (Frames.Items[I].JSONType <> jtArray) then
+      Continue;
+
+    FrameArr := TJSONArray(Frames.Items[I]);
+    if (FrameArr.Count < 2) then
+      Continue;
+
+    Beat := JsonArrayGetInt(FrameArr, 0, -1);
+    Tone := JsonArrayGetInt(FrameArr, 1, REMOTE_TONE_UNVOICED);
+    if (Beat < 0) then
+      Continue;
+
+    RemoteInputProcessor.AddBeatTone(PlayerIndex, Beat, Tone);
+    Inc(Added);
+  end;
+
+  if (Added > 0) then
+    Inc(remotePitchLogCounter)
+  else
+  begin
+    Inc(remotePitchRejectLogCounter);
+    if (remotePitchRejectLogCounter <= 5) or ((remotePitchRejectLogCounter mod 50) = 0) then
+      Log.LogWarn(
+        'pitch.beats decoded zero frames slot=' + IntToStr(Slot) +
+        ' playerIndex=' + IntToStr(PlayerIndex) +
+        ' rawFrames=' + IntToStr(Frames.Count),
+        'Remote Pitch'
+      );
+  end;
+
+  if (Added > 0) and ((remotePitchLogCounter = 1) or ((remotePitchLogCounter mod 25) = 0)) then
+    Log.LogStatus(
+      'pitch.beats slot=' + IntToStr(Slot) +
+      ' playerIndex=' + IntToStr(PlayerIndex) +
+      ' frames=' + IntToStr(Added) +
+      ' totalBatches=' + IntToStr(remotePitchLogCounter),
+      'Remote Pitch'
+    );
+end;
+
+procedure TRemoteBridgeIPCThread.HandleControlCommand(Obj: TJSONObject);
+var
+  Command: TRemoteControlCommand;
+  Slot: integer;
+  PlayerIndex: integer;
+  ArgsData: TJSONData;
+  Args: TJSONObject;
+  SongIds: TJSONArray;
+  ArgsText: UTF8String;
+  ArgsIndex: integer;
+  ArgsItemIndex: integer;
+  I: integer;
+begin
+  if not TryParseRemoteControlCommand(
+    UTF8String(JsonGetString(Obj, 'command', '')),
+    Command
+  ) then
+    Exit;
+
+  Slot := JsonGetInt(Obj, 'slot', 0);
+  if (Slot <= 0) then
+    Slot := JsonGetInt(Obj, 'playerSlot', 0);
+  PlayerIndex := SlotToPlayerIndex(Slot);
+  ArgsText := '';
+  ArgsIndex := -1;
+  ArgsItemIndex := -1;
+  ArgsData := Obj.Find('args');
+  if (ArgsData <> nil) and (ArgsData.JSONType = jtObject) then
+  begin
+    Args := TJSONObject(ArgsData);
+    ArgsText := UTF8String(JsonGetString(Args, 'text', ''));
+    SongIds := JsonFindArray(Args, 'songIds');
+    if (SongIds <> nil) then
+    begin
+      ArgsText := '';
+      for I := 0 to SongIds.Count - 1 do
+      begin
+        if (I > 0) then
+          ArgsText := ArgsText + ',';
+        ArgsText := ArgsText + UTF8String(IntToStr(SongIds.Items[I].AsInteger));
+      end;
+    end;
+    if Command = rccContinuousStart then ArgsText := UTF8String(Args.AsJSON);
+    ArgsIndex := JsonGetInt(Args, 'playlistIndex',
+      JsonGetInt(Args, 'songId', JsonGetInt(Args, 'index', -1)));
+    ArgsItemIndex := JsonGetInt(Args, 'itemIndex', JsonGetInt(Args, 'songId', -1));
+  end;
+
+  if Assigned(FOwner.OnCommand) then
+    FOwner.OnCommand(
+      PlayerIndex,
+      UTF8String(JsonGetString(Obj, 'playerId', '')),
+      Command,
+      JsonGetInt(Obj, 'commandId', 0),
+      ArgsText,
+      ArgsIndex,
+      ArgsItemIndex
+    );
+end;
+
+end.
