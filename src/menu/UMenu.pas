@@ -690,6 +690,7 @@ begin
     ThemeStatic.Typ, $FFFFFF, ThemeStatic.Reflection, ThemeStatic.Reflectionspacing);
     if (Result >= 0) then
       Statics[Result].Texture.ScaleMode := ThemeStatic.ScaleMode;
+      Statics[Result].Texture.CornerRadius := ThemeStatic.CornerRadius;
 end;
 
 function TMenu.AddStaticPosition(static: TThemePosition): integer;
@@ -719,6 +720,7 @@ begin
   if Result >= 0 then
   begin
     Statics[Result].Texture.Z := static.Z;
+    Statics[Result].Texture.CornerRadius := static.CornerRadius;
     Statics[Result].Texture.ScaleMode := static.ScaleMode;
   end;
 end;
@@ -744,7 +746,10 @@ begin
     false, 0
   );
   if Result >= 0 then
+  begin
+    Statics[Result].Texture.CornerRadius := static.CornerRadius;
     Statics[Result].Texture.ScaleMode := static.ScaleMode;
+  end;
 end;
 
 function TMenu.AddStaticColorRectangle(static: TThemeStaticColorRectangle): integer;

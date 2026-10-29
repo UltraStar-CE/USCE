@@ -983,6 +983,7 @@ begin
     Statics[AvatarStaticRef[I]].Texture.W := Theme.Score.AvatarStatic[SlotIndex].W;
     Statics[AvatarStaticRef[I]].Texture.Z := Theme.Score.AvatarStatic[SlotIndex].Z;
     Statics[AvatarStaticRef[I]].Texture.Alpha := Theme.Score.AvatarStatic[SlotIndex].Alpha;
+    Statics[AvatarStaticRef[I]].Texture.CornerRadius := Theme.Score.AvatarStatic[SlotIndex].CornerRadius;
     Statics[AvatarStaticRef[I]].Texture.ScaleMode := Theme.Score.AvatarStatic[SlotIndex].ScaleMode;
     Statics[AvatarStaticRef[I]].Visible := true;
     ApplyScoreSlotPlayerVisuals(Self, SlotIndex, I);

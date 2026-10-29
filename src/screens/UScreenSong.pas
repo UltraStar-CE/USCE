@@ -2286,6 +2286,8 @@ begin
 
     Button[B].Texture.Free();
     Button[B].Texture := CatSongs.Song[B].CoverTex.Clone();
+    Button[B].Texture.CornerRadius := Theme.Song.Cover.CornerRadius;
+    Button[B].Texture.ScaleMode := Theme.Song.Cover.ScaleMode;
     Button[B].Selected := False;
   end;
 end;
@@ -2743,6 +2745,7 @@ begin
   else
     Statics[StaticActual].Texture := Renderer.LoadTexture(Button[Interaction].Texture.Name);
 
+  Statics[StaticActual].Texture.CornerRadius := Theme.Song.Cover.CornerRadius;
   Statics[StaticActual].Texture.ScaleMode := lsCrop;
 
   Statics[StaticActual].Texture.Alpha := 1;
@@ -2820,6 +2823,7 @@ begin
   else
     Statics[StaticActual].Texture := Renderer.LoadTexture(Button[Interaction].Texture.Name);
 
+  Statics[StaticActual].Texture.CornerRadius := Theme.Song.Cover.CornerRadius;
   Statics[StaticActual].Texture.ScaleMode := lsCrop;
   Statics[StaticActual].Texture.Alpha := 1;
 

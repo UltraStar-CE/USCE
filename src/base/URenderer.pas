@@ -174,6 +174,7 @@ type
       ReflectionTexY1: single;
       ReflectionTexY2: single;
       ScaleMode: TLayoutScaleMode;
+      CornerRadius: single; // fraction of the shorter displayed side, 0..0.5
       EdgeExtend: boolean;
       EdgeExtendSolidFill: boolean;
       EdgeExtendPixels: single;
@@ -365,6 +366,7 @@ begin
   ReflectionTexY1 := TexY2;
   ReflectionTexY2 := TexY1 + ReflectionHeight;
   ScaleMode := lsStretch;
+  CornerRadius := 0;
   EdgeExtend := false;
   EdgeExtendSolidFill := false;
   EdgeExtendPixels := 1;
@@ -403,6 +405,7 @@ begin
   T.ReflectionTexY1 := ReflectionTexY1;
   T.ReflectionTexY2 := ReflectionTexY2;
   T.ScaleMode := ScaleMode;
+  T.CornerRadius := CornerRadius;
   T.EdgeExtend := EdgeExtend;
   T.EdgeExtendSolidFill := EdgeExtendSolidFill;
   T.EdgeExtendPixels := EdgeExtendPixels;

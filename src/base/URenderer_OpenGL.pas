@@ -49,6 +49,7 @@ type
 
       // Shader programs
       MainProgram: GLuint;
+      ShapeUVLocation, ShapeSizeLocation: GLint;
       TextProgram: GLuint;
       LineStripProgram: GLuint;
 
@@ -256,9 +257,21 @@ const
     '[FRAG_IN] vec2 tc;                             ' + #10 +
     '[FRAG_OUT_DECL]                                ' + #10 +
     'uniform sampler2D tex;                         ' + #10 +
+    'uniform vec4 shape_uv;                          ' + #10 +
+    'uniform vec3 shape_size;                        ' + #10 +
     'void main()                                    ' + #10 +
     '{                                              ' + #10 +
-    '  [FRAG_OUT] = [TEXTURE_FUNC](tex, tc) * col;  ' + #10 +
+    '  vec4 result_color = [TEXTURE_FUNC](tex, tc) * col;' + #10 +
+    '  if (shape_size.z > 0.0) {                     ' + #10 +
+    '    vec2 p = (tc - shape_uv.xy) / shape_uv.zw;   ' + #10 +
+    '    vec2 q = abs(p - 0.5) * shape_size.xy       ' + #10 +
+    '      - shape_size.xy * 0.5 + shape_size.z;     ' + #10 +
+    '    float d = length(max(q, vec2(0.0)));        ' + #10 +
+    '    result_color.a *= 1.0 - smoothstep(         ' + #10 +
+    '      shape_size.z - 0.75, shape_size.z + 0.75, d);' + #10 +
+    '  }                                            ' + #10 +
+    '  if (shape_size.z > 0.0 && result_color.a <= 0.0) discard;' + #10 +
+    '  [FRAG_OUT] = result_color;                    ' + #10 +
     '}';
 
   // The text rendering requires a special fragment shader because the texture provided by FreeType
@@ -466,6 +479,8 @@ begin
 
   // Get uniform locations in shader programs
   TransformLocationMain := glGetUniformLocation(MainProgram, 'transform');
+  ShapeUVLocation := glGetUniformLocation(MainProgram, 'shape_uv');
+  ShapeSizeLocation := glGetUniformLocation(MainProgram, 'shape_size');
   TransformLocationText := glGetUniformLocation(TextProgram, 'transform');
   TransformLocationLineStrip := glGetUniformLocation(LineStripProgram, 'transform');
   ColorLocationLineStrip := glGetUniformLocation(LineStripProgram, 'color');
@@ -745,6 +760,7 @@ var
   Bytes: GLuint;
   ColorR, ColorG, ColorB: single;
   X2, Y2: single;
+  ShapeW, ShapeH: single;
 begin
   Tex := TTexture_OpenGL(Texture);
   if (Tex.TexID = 0) then
@@ -907,8 +923,22 @@ begin
   // Upload our vertex data to the GPU
   UploadArray(Bytes);
 
+  // The mask belongs to this draw, never to the shared image/cache.
+  if (Prog = MainProgram) and (Texture.CornerRadius > 0) and
+     (Texture.TexX1 <> Texture.TexX2) and (Texture.TexY1 <> Texture.TexY2) then
+  begin
+    ShapeW := Abs(Texture.W * GetLayoutScaleX);
+    ShapeH := Abs(Texture.H * GetLayoutScaleY);
+    glUniform4f(ShapeUVLocation, Texture.TexX1, Texture.TexY1,
+      Texture.TexX2 - Texture.TexX1, Texture.TexY2 - Texture.TexY1);
+    glUniform3f(ShapeSizeLocation, ShapeW, ShapeH,
+      EnsureRange(Texture.CornerRadius, 0.0, 0.5) * Min(ShapeW, ShapeH));
+  end;
+
   // Draw elements and update VBO and EBO positions
   glDrawElements(GL_TRIANGLES, NumQuads * 6, GL_UNSIGNED_INT, PGLvoid(EBOCursor * SizeOf(GLuint)));
+  if (Prog = MainProgram) and (Texture.CornerRadius > 0) then
+    glUniform3f(ShapeSizeLocation, 0, 0, 0);
   VBOCursor := VBOCursor + (NumQuads * 4 * VERTEX_STRIDE);
   EBOCursor := EBOCursor + (NumQuads * 6);
   {$IFDEF DEBUG_MODE}
