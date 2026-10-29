@@ -353,19 +353,12 @@ type
   end;
 
   TThemeMain = class(TThemeBasic)
-    ButtonSolo:       TThemeButton;
-    ButtonMulti:      TThemeButton;
-    ButtonJukebox:    TThemeButton;
-    ButtonStat:       TThemeButton;
-    ButtonEditor:     TThemeButton;
-    ButtonOptions:    TThemeButton;
-    ButtonAbout:      TThemeButton;
-    ButtonExit:       TThemeButton;
+    Buttons: array[0..3] of TThemeButton;
 
     TextDescription:      TThemeText;
     TextDescriptionLong:  TThemeText;
-    Description:          array[0..7] of UTF8String;
-    DescriptionLong:      array[0..7] of UTF8String;
+    Description:          array[0..3] of UTF8String;
+    DescriptionLong:      array[0..3] of UTF8String;
   end;
 
   TThemeName = class(TThemeBasic)
@@ -1200,6 +1193,7 @@ type
     procedure ThemeLoadOptionsSub;
     procedure ThemeLoadBackground(var ThemeBackground: TThemeBackground; const Name: string);
     procedure ThemeLoadHighScores;
+    procedure ThemeLoadMainButtons;
     procedure ThemeLoadHighScoreList(var List: TThemeHighScoreList; const Name: string);
     procedure ThemeLoadText(var ThemeText: TThemeText; const Name: string);
     procedure ThemeLoadTexts(var ThemeText: AThemeText; const Name: string);
@@ -2016,33 +2010,17 @@ begin
 
       ThemeLoadText(Main.TextDescription, 'MainTextDescription');
       ThemeLoadText(Main.TextDescriptionLong, 'MainTextDescriptionLong');
-      ThemeLoadButton(Main.ButtonSolo, 'MainButtonSolo');
-      ThemeLoadButton(Main.ButtonMulti, 'MainButtonMulti');
-      ThemeLoadButton(Main.ButtonJukebox, 'MainButtonJukebox');
-      ThemeLoadButton(Main.ButtonStat, 'MainButtonStats');
-      ThemeLoadButton(Main.ButtonEditor, 'MainButtonEditor');
-      ThemeLoadButton(Main.ButtonOptions, 'MainButtonOptions');
-      ThemeLoadButton(Main.ButtonAbout, 'MainButtonAbout');
-      ThemeLoadButton(Main.ButtonExit, 'MainButtonExit');
-
-      //Main Desc Text Translation Start
+      ThemeLoadMainButtons;
+      SetLength(Main.ButtonCollection, 0);
 
       Main.Description[0] := Language.Translate('SING_SING');
       Main.DescriptionLong[0] := Language.Translate('SING_SING_DESC');
       Main.Description[1] := Language.Translate('SING_MULTI');
       Main.DescriptionLong[1] := Language.Translate('SING_MULTI_DESC');
-      Main.Description[2] := Language.Translate('CONTINUOUS_TITLE');
-      Main.DescriptionLong[2] := Language.Translate('CONTINUOUS_DESC');
-      Main.Description[3] := Language.Translate('SING_STATS');
-      Main.DescriptionLong[3] := Language.Translate('SING_STATS_DESC');
-      Main.Description[4] := Language.Translate('SING_EDITOR');
-      Main.DescriptionLong[4] := Language.Translate('SING_EDITOR_DESC');
-      Main.Description[5] := Language.Translate('SING_GAME_OPTIONS');
-      Main.DescriptionLong[5] := Language.Translate('SING_GAME_OPTIONS_DESC');
-      Main.Description[6] := Language.Translate('SING_ABOUT');
-      Main.DescriptionLong[6] := Language.Translate('SING_ABOUT_DESC');
-      Main.Description[7] := Language.Translate('SING_EXIT');
-      Main.DescriptionLong[7] := Language.Translate('SING_EXIT_DESC');
+      Main.Description[2] := Language.Translate('SING_STATS');
+      Main.DescriptionLong[2] := Language.Translate('SING_STATS_DESC');
+      Main.Description[3] := Language.Translate('SING_SETTINGS');
+      Main.DescriptionLong[3] := Language.Translate('SING_GAME_OPTIONS_DESC');
 
       //Main Desc Text Translation End
 
@@ -3186,6 +3164,29 @@ begin
   ThemeBackground.Color.G := ReadFloat(SectionList, 'ColG', 1);
   ThemeBackground.Color.B := ReadFloat(SectionList, 'ColB', 1);
   ThemeBackground.Alpha   := ReadFloat(SectionList, 'Alpha', 1);
+end;
+
+procedure TTheme.ThemeLoadMainButtons;
+const
+  Sections: array[0..3] of string = (
+    'MainButtonSing', 'MainButtonParty', 'MainButtonStatistics', 'MainButtonSettings');
+var
+  I: integer;
+begin
+  for I := 0 to High(Main.Buttons) do
+  begin
+    if ResolveThemeFile(Sections[I]) <> nil then
+      ThemeLoadButton(Main.Buttons[I], Sections[I])
+    else
+    begin
+      ThemeLoadButton(Main.Buttons[I], 'MainButtonSolo');
+      Main.Buttons[I].X := 95 + 155 * I;
+      Main.Buttons[I].Y := 270;
+      Main.Buttons[I].Fade := false;
+      Main.Buttons[I].FadeText := false;
+    end;
+    Main.Buttons[I].Parent := 0;
+  end;
 end;
 
 procedure TTheme.ThemeLoadHighScoreList(var List: TThemeHighScoreList; const Name: string);
