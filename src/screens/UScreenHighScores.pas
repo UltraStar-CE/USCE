@@ -289,8 +289,8 @@ begin
   Trial := CalculateTextListLayout(Theme.HighScores.RowNameText.Y,
       Theme.HighScores.List.BottomY, HalfRows + 2, Theme.HighScores.List.MinTextSize,
       Theme.HighScores.RowNameText.Size,
-      FontSizePerRowPitch(HalfRows, 5, 20, 0.78, 1.10, 2.0), 0.85);
-  MinimumSize := Layout.TextSize * 1.1;
+      FontSizePerRowPitch(HalfRows, 5, Theme.HighScores.List.MaxEntries, 0.78, 1.10, 2.0), 0.85);
+  MinimumSize := Theme.HighScores.List.MinTextSize;
   FontSize := Trial.TextSize;
   while FontSize >= MinimumSize do
   begin
@@ -335,7 +335,7 @@ begin
   Layout := CalculateTextListLayout(Theme.HighScores.RowNameText.Y,
       Theme.HighScores.List.BottomY, LayoutRows,
       Theme.HighScores.List.MinTextSize, Theme.HighScores.RowNameText.Size,
-      FontSizePerRowPitch(LayoutEntryCount, 5, 20, 0.78, 1.10, 2.0), 0.85);
+      FontSizePerRowPitch(LayoutEntryCount, 5, Theme.HighScores.List.MaxEntries, 0.78, 1.10, 2.0), 0.85);
   TryTwoColumns(Layout);
   Layout.RowPitch := Min(Layout.RowPitch, Layout.TextSize / 0.78 + 2);
   EntryTextSize := Layout.TextSize;
