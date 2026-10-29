@@ -508,6 +508,8 @@ begin
   if (Length(CurrentSong.Score[Player[0].Level]) = 0) and
      not ScreenContinuousPlayback.Session.Active then
   begin
+    // Redirecting from OnShow replaces the pending screen before OnHide runs.
+    Background.OnFinish;
     ScreenSong.PreservePreviewForReturn;
     FadeTo(@ScreenSong);
   end;
