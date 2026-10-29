@@ -417,6 +417,9 @@ type
   end;
 
   TThemeSong = class(TThemeBasic)
+    SearchPanel: TThemeStatic;
+    SearchText: TThemeText;
+    ModernFooter: AThemeText;
     TextConfiguration: TThemeText;
     ListRowCover: TThemeStatic;
     HasListRowCover: boolean;
@@ -5056,6 +5059,46 @@ begin
   ThemeLoadText(Song.TextTitle, 'Song' + prefix + 'TextTitle');
   ThemeLoadText(Song.TextNumber, 'Song' + prefix + 'TextNumber');
   ThemeLoadText(Song.TextYear, 'Song' + prefix + 'TextYear');
+
+  Song.SearchPanel := Default(TThemeStatic);
+  with Song.SearchPanel do
+  begin
+    X := 500; Y := 95; W := 280; H := 30; Z := 0.97;
+    ColR := 0.02; ColG := 0.03; ColB := 0.06; Alpha := 0.7;
+    ScaleMode := lsStretch;
+  end;
+  if SectionExists('SongSearchPanel', Enabled) then
+    ThemeLoadStatic(Song.SearchPanel, 'SongSearchPanel');
+  Song.SearchText := Song.TextYear;
+  with Song.SearchText do
+  begin
+    X := Song.SearchPanel.X + 8; Y := Song.SearchPanel.Y + 4;
+    W := Song.SearchPanel.W - 16; H := Song.SearchPanel.H - 8;
+    Z := 0.98; Size := 18; Align := 0; Reflection := false;
+    ColR := 1; ColG := 1; ColB := 1; ScaleMode := lsStretch;
+  end;
+  if SectionExists('SongSearchText', Enabled) then
+    ThemeLoadText(Song.SearchText, 'SongSearchText');
+  SetLength(Song.ModernFooter, 5);
+  for I := 0 to High(Song.ModernFooter) do
+  begin
+    Song.ModernFooter[I] := Song.SearchText;
+    with Song.ModernFooter[I] do
+    begin
+      Y := 549; H := 22; Size := 17; W := 125;
+      ColR := 0; ColG := 0; ColB := 0;
+      case I of
+        0: begin X := 15; W := 215; ColR := 1; ColG := 1; ColB := 1;
+          Text := Language.Translate('SONG_KEY_CONFIGURATION'); end;
+        1: begin X := 268; Text := Language.Translate('SONG_KEY_TYPE_SEARCH'); end;
+        2: begin X := 400; Text := Language.Translate('SONG_KEY_FILTERS'); end;
+        3: begin X := 532; Text := Language.Translate('SONG_KEY_MENU'); end;
+        4: begin X := 664; Text := Language.Translate('SONG_KEY_PLAYLIST'); end;
+      end;
+    end;
+  end;
+  if SectionExists('SongModernFooterText1', Enabled) then
+    ThemeLoadTexts(Song.ModernFooter, 'SongModernFooterText');
 
   Song.TextConfiguration := Song.TextYear;
   with Song.TextConfiguration do
