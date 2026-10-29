@@ -152,8 +152,18 @@ def main():
             if not args.skip_video:
                 command.extend([str(fixture), args.hwdec])
             print("Running", renderer, flush=True)
+            # ConsoleWriteLn checks for a console window on Windows, including
+            # when output is redirected. Keep that console hidden during tests.
+            process_options = {}
+            if windows and os.name == "nt":
+                startup = subprocess.STARTUPINFO()
+                startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                startup.wShowWindow = subprocess.SW_HIDE
+                process_options = {"startupinfo": startup,
+                                   "creationflags": subprocess.CREATE_NEW_CONSOLE}
             result = subprocess.run(command, cwd=temp, env=environment,
-                                    capture_output=True, text=True, timeout=90)
+                                    capture_output=True, text=True, timeout=90,
+                                    **process_options)
             output = result.stdout + result.stderr
             (temp / (renderer + ".log")).write_text(output)
             print(output, end="", flush=True)
