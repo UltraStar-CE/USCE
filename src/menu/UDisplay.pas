@@ -70,6 +70,7 @@ type
       OSD_LastError: string;
       ProblemFlags: TSongProblems;
       ProblemFlagsUnavailable: boolean;
+      SongProblemTexture: TTexture;
       function ProblemSong: TSong;
       function EnsureProblemFlags: boolean;
       procedure DrawSongProblem;
@@ -171,7 +172,7 @@ const
 implementation
 
 uses UDuplicateSongUI, UMenuBackground,
-  UPlatform, USongs, UThemes, UNote,
+  UPlatform, USongs, UThemes, UNote, USkins,
   UText,
   StrUtils,
   UCommandLine,
@@ -296,6 +297,7 @@ end;
 
 destructor TDisplay.Destroy;
 begin
+  SongProblemTexture.Free;
   FadeTex[0].Free;
   FadeTex[1].Free;
   OpaqueFadeTex[0].Free;
@@ -724,46 +726,34 @@ procedure TDisplay.DrawSongProblem;
 var
   Song: TSong;
   Style: TThemeStatic;
-  Lines: TLineList;
-  Count: integer;
-
-  procedure Line(AX1, AY1, AX2, AY2: single);
-  begin
-    Lines[Count].X1 := Style.X + AX1 * Style.W;
-    Lines[Count].Y1 := Style.Y + AY1 * Style.H;
-    Lines[Count].X2 := Style.X + AX2 * Style.W;
-    Lines[Count].Y2 := Style.Y + AY2 * Style.H;
-    Lines[Count].Thickness := 1.25;
-    Lines[Count].ColR := Style.ColR;
-    Lines[Count].ColG := Style.ColG;
-    Lines[Count].ColB := Style.ColB;
-    Lines[Count].Alpha := Style.Alpha;
-    Inc(Count);
-  end;
+  IconPath: IPath;
 begin
   Song := ProblemSong;
   if (Song = nil) or not EnsureProblemFlags then Exit;
   if not ProblemFlags.IsFlagged(Song.Path.Append(Song.FileName)) then Exit;
   Style := Theme.SongProblemIndicator;
   if (Style.W = 0) or (Style.H = 0) or (Style.Alpha = 0) then Exit;
-  SetLength(Lines, 14);
-  Count := 0;
-  // Keep the warning large and legible; the document is a secondary detail.
-  Line(0.46, 0.40, 0.46, 0.03);
-  Line(0.46, 0.03, 0.78, 0.03);
-  Line(0.78, 0.03, 0.96, 0.20);
-  Line(0.96, 0.20, 0.96, 0.61);
-  Line(0.78, 0.03, 0.78, 0.20);
-  Line(0.78, 0.20, 0.96, 0.20);
-  Line(0.78, 0.61, 0.96, 0.61);
-  Line(0.59, 0.28, 0.85, 0.28);
-  Line(0.69, 0.39, 0.85, 0.39);
-  Line(0.45, 0.25, 0.89, 0.95);
-  Line(0.89, 0.95, 0.02, 0.95);
-  Line(0.02, 0.95, 0.45, 0.25);
-  Line(0.45, 0.51, 0.45, 0.73);
-  Line(0.45, 0.83, 0.45, 0.86);
-  Renderer.DrawLines(Lines);
+  IconPath := Skin.GetTextureFileName(Style.Tex);
+  if IconPath.IsUnset or not IconPath.IsFile then Exit;
+  if (SongProblemTexture = nil) or not SongProblemTexture.Name.Equals(IconPath) then
+  begin
+    FreeAndNil(SongProblemTexture);
+    SongProblemTexture := Renderer.GetTexture(IconPath, TEXTURE_TYPE_TRANSPARENT);
+  end;
+  if SongProblemTexture.IsEmpty then Exit;
+  with SongProblemTexture do
+  begin
+    X := Style.X;
+    Y := Style.Y;
+    W := Style.W;
+    H := Style.H;
+    Z := Style.Z;
+    ColR := Style.ColR;
+    ColG := Style.ColG;
+    ColB := Style.ColB;
+    Alpha := Style.Alpha;
+  end;
+  Renderer.DrawTexture(SongProblemTexture);
 end;
 
 function TDisplay.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown : boolean; Repeated : boolean = false): boolean;
