@@ -94,7 +94,7 @@ var
 
 implementation
 
-uses
+uses UMenuBackground,
   SysUtils,
   Math,
   UText,
@@ -121,6 +121,7 @@ end;
 
 procedure SingDrawWebCamFrame;
 begin
+  if TMenuBackground.SuppressDrawing then Exit;
 
   Webcam.GetWebcamFrame;
 
@@ -158,6 +159,7 @@ var
   ScreenAspect: double;  // aspect of screen resolution and image
   ScaledTexWidth, ScaledTexHeight: double;
 begin
+  if TMenuBackground.SuppressDrawing then Exit;
   // TODO: this is also called if a video is playing
   if (ScreenSing.Tex_Background <> nil) then
   begin

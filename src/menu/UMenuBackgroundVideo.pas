@@ -206,6 +206,7 @@ end;
 
 procedure TMenuBackgroundVideo.Draw;
 begin
+  if SuppressDrawing then Exit;
   // clear just once when in dual screen mode
   if (ScreenAct = 1) then
   begin
