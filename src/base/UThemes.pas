@@ -1030,7 +1030,6 @@ type
 
   TThemeStatDetailTable = record
     ColumnCount:       integer;
-    UsePageRightBound: boolean;
     RightInset:        real;
     Column:            array[0..STAT_DETAIL_MAX_COLUMNS - 1] of TThemeStatDetailColumn;
   end;
@@ -1064,7 +1063,6 @@ type
     FontSizeCurve:    real;
     LineHeight:       real;
     MinColumnGap:     real;
-    PageTextMargin:   real;
     TwoColumnMinEntries: integer;
     TableColumnGap: real;
     ColumnPadding:    real;
@@ -2610,7 +2608,6 @@ begin
       StatDetail.FontSizeCurve := 2.0;
       StatDetail.LineHeight := 0.85;
       StatDetail.MinColumnGap := 0.70;
-      StatDetail.PageTextMargin := 8;
       StatDetail.ColumnPadding := 6;
       StatDetail.FallbackRowPitch := 18;
       StatDetail.MinEntries := 5;
@@ -2620,7 +2617,6 @@ begin
       StatDetail.FirstContentRow := 1;
       FillChar(StatDetail.BestScoresTable, SizeOf(StatDetail.BestScoresTable), 0);
       StatDetail.BestScoresTable.ColumnCount := 6;
-      StatDetail.BestScoresTable.UsePageRightBound := false;
       StatDetail.BestScoresTable.RightInset := 0;
       StatDetail.BestScoresTable.Column[0].AutoWidth := true;
       StatDetail.BestScoresTable.Column[0].GapBefore := 0.00;
@@ -2648,7 +2644,6 @@ begin
       StatDetail.BestScoresTable.Column[5].Flexible := true;
       FillChar(StatDetail.BestSingersTable, SizeOf(StatDetail.BestSingersTable), 0);
       StatDetail.BestSingersTable.ColumnCount := 4;
-      StatDetail.BestSingersTable.UsePageRightBound := true;
       StatDetail.BestSingersTable.RightInset := 0;
       StatDetail.BestSingersTable.Column[0].AutoWidth := true;
       StatDetail.BestSingersTable.Column[0].GapBefore := 0.00;
@@ -2668,7 +2663,6 @@ begin
       StatDetail.BestSingersTable.Column[3].CompactGap := true;
       FillChar(StatDetail.PopularTable, SizeOf(StatDetail.PopularTable), 0);
       StatDetail.PopularTable.ColumnCount := 4;
-      StatDetail.PopularTable.UsePageRightBound := true;
       StatDetail.PopularTable.RightInset := 0;
       StatDetail.PopularTable.Column[0].AutoWidth := true;
       StatDetail.PopularTable.Column[0].GapBefore := 0.00;
@@ -2699,7 +2693,6 @@ begin
       StatDetail.FontSizeCurve := ReadFloat(SectionList, 'FontSizeCurve', StatDetail.FontSizeCurve);
       StatDetail.LineHeight := ReadFloat(SectionList, 'LineHeight', StatDetail.LineHeight);
       StatDetail.MinColumnGap := ReadFloat(SectionList, 'MinColumnGap', StatDetail.MinColumnGap);
-      StatDetail.PageTextMargin := ReadFloat(SectionList, 'PageTextMargin', StatDetail.PageTextMargin);
       StatDetail.ColumnPadding := ReadFloat(SectionList, 'ColumnPadding', StatDetail.ColumnPadding);
       StatDetail.TwoColumnMinEntries := Max(2, ReadInteger(SectionList, 'TwoColumnMinEntries', 20));
       StatDetail.TableColumnGap := Max(0, ReadFloat(SectionList, 'TableColumnGap', 64));
@@ -3125,7 +3118,6 @@ begin
   SectionList := GetSectionList(SectionName);
 
   Table.ColumnCount := ReadInteger(SectionList, 'ColumnCount', Table.ColumnCount);
-  Table.UsePageRightBound := ReadBool(SectionList, 'UsePageRightBound', Table.UsePageRightBound);
   Table.RightInset := ReadFloat(SectionList, 'RightInset', Table.RightInset);
 
   for ColumnIndex := Low(Table.Column) to High(Table.Column) do
