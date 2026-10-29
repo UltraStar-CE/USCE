@@ -2748,7 +2748,7 @@ begin
     Statics[StaticActual].Texture := Renderer.LoadTexture(Button[Interaction].Texture.Name);
 
   Statics[StaticActual].Texture.CornerRadius := Theme.Song.Cover.CornerRadius;
-  Statics[StaticActual].Texture.ScaleMode := lsCrop;
+  Statics[StaticActual].Texture.ScaleMode := Theme.Song.Cover.ScaleMode;
 
   Statics[StaticActual].Texture.Alpha := 1;
 
@@ -2826,7 +2826,7 @@ begin
     Statics[StaticActual].Texture := Renderer.LoadTexture(Button[Interaction].Texture.Name);
 
   Statics[StaticActual].Texture.CornerRadius := Theme.Song.Cover.CornerRadius;
-  Statics[StaticActual].Texture.ScaleMode := lsCrop;
+  Statics[StaticActual].Texture.ScaleMode := Theme.Song.Cover.ScaleMode;
   Statics[StaticActual].Texture.Alpha := 1;
 
   Statics[StaticActual].Texture.X := Theme.Song.Cover.SelectX;
