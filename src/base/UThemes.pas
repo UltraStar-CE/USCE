@@ -3186,7 +3186,6 @@ begin
     begin
       ThemeLoadButton(Main.Buttons[I], 'MainButtonSolo');
       Main.Buttons[I].X := 95 + 155 * I;
-      Main.Buttons[I].Y := 270;
       Main.Buttons[I].Fade := false;
       Main.Buttons[I].FadeText := false;
     end;
