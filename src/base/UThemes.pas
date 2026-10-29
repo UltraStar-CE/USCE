@@ -2998,6 +2998,7 @@ begin
   SongJumpto.SuggestionButton := SongJumpto.ButtonSearchText;
   if ResolveThemeFile('SongJumptoSuggestionButton') <> nil then
     ThemeLoadButton(SongJumpto.SuggestionButton, 'SongJumptoSuggestionButton');
+  EnsureText(SongJumpto.SuggestionButton, 24);
   Sections := GetSectionList('SongJumptoSuggestions');
   SongJumpto.SuggestionWidth := Max(80, ReadInteger(Sections, 'Width', 220));
   SongJumpto.SuggestionRowHeight := Max(20, ReadInteger(Sections, 'RowHeight', 30));
