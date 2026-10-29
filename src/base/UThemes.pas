@@ -395,6 +395,10 @@ type
 
   TThemeSong = class(TThemeBasic)
     TextConfiguration: TThemeText;
+    ListRowCover: TThemeStatic;
+    HasListRowCover: boolean;
+    ListSelectedText: array[0..2] of TThemeText;
+    HasListSelectedText: array[0..2] of boolean;
     StaticContinuousKey, StaticContinuousStatus: TThemeStatic;
     TextArtist:       TThemeText;
     TextTitle:        TThemeText;
@@ -4863,6 +4867,20 @@ begin
   Song.Cover.SelectH := ReadInteger(SectionList, 'SelectH', Song.Cover.H);
   Song.Cover.SelectReflection := ReadBool(SectionList, 'SelectReflection', false);
   Song.Cover.SelectReflectionSpacing := ReadInteger(SectionList, 'SelectReflectionSpacing', 0);
+
+  Song.HasListRowCover := (TSongMenuMode(Ini.SongMenu) = smList) and
+    (ResolveThemeFile('SongListRowCover') <> nil);
+  if Song.HasListRowCover then
+    ThemeLoadStatic(Song.ListRowCover, 'SongListRowCover');
+  Song.HasListSelectedText[0] := (TSongMenuMode(Ini.SongMenu) = smList) and
+    (ResolveThemeFile('SongListSelectedTitle') <> nil);
+  Song.HasListSelectedText[1] := (TSongMenuMode(Ini.SongMenu) = smList) and
+    (ResolveThemeFile('SongListSelectedArtist') <> nil);
+  Song.HasListSelectedText[2] := (TSongMenuMode(Ini.SongMenu) = smList) and
+    (ResolveThemeFile('SongListSelectedYear') <> nil);
+  if Song.HasListSelectedText[0] then ThemeLoadText(Song.ListSelectedText[0], 'SongListSelectedTitle');
+  if Song.HasListSelectedText[1] then ThemeLoadText(Song.ListSelectedText[1], 'SongListSelectedArtist');
+  if Song.HasListSelectedText[2] then ThemeLoadText(Song.ListSelectedText[2], 'SongListSelectedYear');
 
   // Song menu modes: 0 - roulette, 1 - chessboard, 2 - list
 
