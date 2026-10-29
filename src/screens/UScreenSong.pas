@@ -97,6 +97,7 @@ type
       SearchOverlay, ModernFooter: TMenu;
       function ModernKeyboard: boolean;
       procedure DrawSearchField;
+      procedure LayoutSearchHeader;
 
       procedure SchedulePreview(SelectionSettled: boolean = false);
       procedure StartMusicPreview();
@@ -252,6 +253,7 @@ type
       procedure SyncCoversToSongs();
       procedure OnShow; override;
       destructor Destroy; override;
+      procedure OnWindowResized; override;
       procedure OnShowFinish; override;
       procedure OnHide; override;
       procedure SelectNext(onlyFix: boolean = true);
@@ -2965,6 +2967,7 @@ begin
   inherited;
   SyncDuetSingerTheme;
   SetTextInput(ModernKeyboard);
+  LayoutSearchHeader;
   AltJumpPrefix := '';
   AltJumpLastTick := 0;
 
@@ -3220,6 +3223,31 @@ end;
 function TScreenSong.ModernKeyboard: boolean;
 begin
   Result := (Ini.SongKeyboard = 0) and FreeListMode;
+end;
+
+procedure TScreenSong.LayoutSearchHeader;
+var Header: TThemeText;
+begin
+  if Length(TextNonParty) = 0 then Exit;
+  Header := Theme.Song.TextNonParty[0];
+  if (Header.X >= Theme.Song.SearchPanel.X) or
+     (Header.Y >= Theme.Song.SearchPanel.Y + Theme.Song.SearchPanel.H) then Exit;
+  with Text[TextNonParty[0]] do
+  begin
+    W := Header.W; H := Header.H; Size := Header.Size;
+    if ModernKeyboard then
+    begin
+      W := Max(1, Theme.Song.SearchPanel.X - Header.X - 20);
+      H := Theme.Song.SearchPanel.H;
+    end;
+    Text := Header.Text;
+  end;
+end;
+
+procedure TScreenSong.OnWindowResized;
+begin
+  inherited;
+  LayoutSearchHeader;
 end;
 
 procedure TScreenSong.DrawSearchField;
@@ -3691,6 +3719,8 @@ begin
   end;
   for I := 0 to High(Text) do
   begin
+    // Modern search has one visible query in the header, not a duplicate subtitle.
+    if ModernKeyboard and (I = TextCat) then Continue;
     if (ModernKeyboard or ScreenSongJumpto.Visible) and (Length(Theme.SongJumpto.Footer.Text) > 0) and
        (Text[I].Y >= Theme.SongJumpto.Footer.Text[0].Y - 8) then Continue;
     Text[I].Draw;

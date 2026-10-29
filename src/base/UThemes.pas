@@ -4719,7 +4719,7 @@ begin
   Song.SearchPanel := Default(TThemeStatic);
   with Song.SearchPanel do
   begin
-    X := 500; Y := 95; W := 280; H := 30; Z := 0.97;
+    X := 335; Y := 20; W := 250; H := 36; Z := 0.97;
     ColR := 0.02; ColG := 0.03; ColB := 0.06; Alpha := 0.7;
     ScaleMode := lsStretch;
   end;
