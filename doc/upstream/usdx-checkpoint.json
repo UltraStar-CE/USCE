@@ -1,7 +1,7 @@
 {
   "repository": "UltraStar-Deluxe/USDX",
   "branch": "master",
-  "sha": "f4fbb218c0bd3c822d77f27a6682734b80cb6bef",
+  "sha": "54f6e010800458543223dc2d7a3fb65140a78649",
   "meaning": "Assessed upstream tip; changes incorporated through linked USCE PRs and original upstream ancestry recorded.",
   "resolutions": [
     {
@@ -30,6 +30,23 @@
       ],
       "disposition": "Windows dependency updates and installer cleanup integrated, retaining USCE adaptations and original upstream ancestry.",
       "usce_pr": 151
+    },
+    {
+      "commits": [
+        "ea2ebca34565f61f9b61d094cb5d7a2c5318c5e3",
+        "642bac47c6c1e48d02079a9add89e26e9f0c9389"
+      ],
+      "disposition": "Equivalent sound-effect restart behavior is already provided by USCE PlaySound explicitly stopping and restarting effects. Preserve idempotent generic Play for active synth streams. Original upstream ancestry recorded without reverting USCE behavior.",
+      "usce_prs": [
+        155
+      ]
+    },
+    {
+      "commits": [
+        "a7ee0f4f8903c84536b4a715f2391f7520e1a17c",
+        "54f6e010800458543223dc2d7a3fb65140a78649"
+      ],
+      "disposition": "Adopt issue forms with USCE names and retain the optional reporter testing question; remove the duplicate Markdown bug template."
     }
   ],
   "from": "5541017022b8276cc6d101264e913eb5ac6dd9ac"
