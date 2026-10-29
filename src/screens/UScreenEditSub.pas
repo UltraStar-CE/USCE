@@ -2459,6 +2459,7 @@ begin
 
     if (Interactions[Interaction].Typ = iButton) and (Interactions[Interaction].Num = PlayOnlyButtonID) then
     begin
+      RestoreStandardPlayback(false);
       // Play Sentence
       AudioPlayback.Stop;
       PlayVideo := false;
@@ -2483,6 +2484,7 @@ begin
 
     if (Interactions[Interaction].Typ = iButton) and (Interactions[Interaction].Num = PlayWithNoteButtonID) then
     begin
+      RestoreStandardPlayback(false);
       CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Color := 1;
       CurrentNote[CurrentTrack] := 0;
       PlaySentenceMidi := true;
