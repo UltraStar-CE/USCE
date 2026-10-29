@@ -202,6 +202,7 @@ type
       // Song Preview
       PreviewVolume:  integer;
       PreviewFading:  integer;
+      EndedSongAction: integer;
 
       // Lyrics
       LyricsFont:     integer;
@@ -374,6 +375,9 @@ const
   // Song Preview
   IPreviewVolume:             array[0..12] of UTF8String = ('Off', '3%', '5%', '10%', '20%', '30%', '40%', '50%', '60%', '70%', '80%', '90%', '100%');
   IPreviewVolumeVals:         array[0..12] of single     = ( 0,  0.03,  0.05,  0.10,  0.20,  0.30,  0.40,  0.50,  0.60,  0.70,  0.80,  0.90,   1.00  );
+
+  IEndedSongAction: array[0..3] of UTF8String = ('Preview', 'Beginning', 'Silence', 'Menu music');
+  IEndedSongActionTranslated: array[0..3] of UTF8String = ('', '', '', '');
 
   IPreviewFading:             array[0..5] of UTF8String  = ('Off', '1 Sec', '2 Secs', '3 Secs', '4 Secs', '5 Secs');
   IPreviewFadingVals:         array[0..5] of integer     = ( 0,     1,       2,        3,        4,        5      );
@@ -1082,6 +1086,11 @@ begin
   IPreviewVolumeTranslated[10]        := '80%';
   IPreviewVolumeTranslated[11]        := '90%';
   IPreviewVolumeTranslated[12]        := '100%';
+
+  IEndedSongActionTranslated[0] := ULanguage.Language.Translate('OPTION_VALUE_ENDED_PREVIEW');
+  IEndedSongActionTranslated[1] := ULanguage.Language.Translate('OPTION_VALUE_ENDED_BEGINNING');
+  IEndedSongActionTranslated[2] := ULanguage.Language.Translate('OPTION_VALUE_ENDED_SILENCE');
+  IEndedSongActionTranslated[3] := ULanguage.Language.Translate('OPTION_VALUE_ENDED_MENU');
 
   IPreviewFadingTranslated[0]         :=        ULanguage.Language.Translate('OPTION_VALUE_OFF');
   IPreviewFadingTranslated[1]         := '1 ' + ULanguage.Language.Translate('OPTION_VALUE_SEC');
@@ -1797,6 +1806,8 @@ begin
   // ReplayGain
   ReplayGain := ReadArrayIndex(IReplayGain, IniFile, 'Sound', 'ReplayGain', 0);
 
+  EndedSongAction := ReadArrayIndex(IEndedSongAction, IniFile, 'Sound', 'EndedSongAction', 0);
+
   //Preview Fading
   PreviewFading := ReadArrayIndex(IPreviewFading, IniFile, 'Sound', 'PreviewFading', 3);
 
@@ -2050,6 +2061,8 @@ begin
     IniFile.WriteInteger('Sound', 'SfxVolume', SfxVolume);
     IniFile.WriteInteger('Sound', 'BackgroundMusicVolume', BackgroundMusicVolume);
     IniFile.WriteInteger('Sound', 'PreviewVolume', PreviewVolume);
+
+    IniFile.WriteString('Sound', 'EndedSongAction', IEndedSongAction[EndedSongAction]);
 
     // PreviewFading
     IniFile.WriteString('Sound', 'PreviewFading', IPreviewFading[PreviewFading]);

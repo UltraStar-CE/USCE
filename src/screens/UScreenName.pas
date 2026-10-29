@@ -1143,8 +1143,12 @@ procedure TScreenName.OnShow;
 var
   I: integer;
   Counts: array of UTF8String;
+  PreviewEnd: real;
 begin
   inherited;
+  if Goto_SingScreen and (CatSongs.Selected >= 0) and
+     (CatSongs.Selected < Length(CatSongs.Song)) then
+    ScreenSong.StartFinishedSong(CatSongs.Song[CatSongs.Selected], PreviewEnd);
   AudioPlayback.SetVolume(EnsureRange(Ini.PreviewVolume, 0, 100) / 100);
 
   Ini.ReloadNames;

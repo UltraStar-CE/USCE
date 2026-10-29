@@ -109,6 +109,7 @@ type
     iSfxVolumeSlide,
     iPreviewVolumeSlide,
     iPreviewFadingSlide,
+    iEndedSongActionSlide,
     iBackButton
   );
 
@@ -243,6 +244,7 @@ begin
   SfxVolumeSelectId := AddVolumeSlider('SING_OPTIONS_SOUND_SFXVOLUME', Ini.SfxVolume);
   PreviewVolumeSelectId := AddVolumeSlider('SING_OPTIONS_SOUND_PREVIEWVOLUME', Ini.PreviewVolume);
   AddSelectSlide('SING_OPTIONS_SOUND_PREVIEWFADING', Ini.PreviewFading, IPreviewFadingTranslated);
+  AddSelectSlide('SING_OPTIONS_SOUND_ENDED_SONG', Ini.EndedSongAction, IEndedSongActionTranslated);
   SyncVolumeSlidersFromIni;
 end;
 

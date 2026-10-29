@@ -94,6 +94,9 @@ type
       RandomSearchOrder, RandomSearchPool: CardinalArray;
       MarkedPlaylistSong: integer;
       KeepPreviewMusicOnHide: boolean;
+      TransitionSong: TSong;
+      TransitionAction: integer;
+      function SuppressTransitionPreview(Song: TSong): boolean;
 
       procedure SchedulePreview(SelectionSettled: boolean = false);
       procedure StartMusicPreview();
@@ -317,6 +320,7 @@ type
       procedure ResetScrollList;
 
       procedure PreservePreviewForReturn;
+      procedure StartFinishedSong(Song: TSong; out EndPosition: real);
       procedure OpenContinuousFromMainMenu;
   end;
 
@@ -2895,6 +2899,7 @@ procedure TScreenSong.OnShow;
 var
   I: integer;
   KeepPreview: boolean;
+  TransitionCandidate: TSong;
 begin
   inherited;
   SyncDuetSingerTheme;
@@ -2966,13 +2971,19 @@ begin
   {**
    * Pause background music
    *}
-  SoundLib.PauseBgMusic;
+  TransitionCandidate := nil;
+  if (Interaction >= 0) and (Interaction < Length(CatSongs.Song)) then
+    TransitionCandidate := CatSongs.Song[Interaction];
+  if not SuppressTransitionPreview(TransitionCandidate) then
+    SoundLib.PauseBgMusic;
 
+  if KeepPreviewPositionOnShow then
+    StartFinishedSong(TransitionCandidate, PreviewEnd);
   KeepPreview := KeepPreviewPositionOnShow and
     (AudioPlayback.Length > 0) and not AudioPlayback.Finished;
   if (SongIndex <> Interaction) and not KeepPreview then
     AudioPlayback.Stop;
-  if KeepPreview then
+  if KeepPreview or SuppressTransitionPreview(TransitionCandidate) then
     PreviewOpened := Interaction
   else
     PreviewOpened := -1;
@@ -3887,6 +3898,12 @@ procedure TScreenSong.SchedulePreview(SelectionSettled: boolean);
 begin
   if PreviewInteraction <> Interaction then
   begin
+    if (Interaction >= 0) and (Interaction < Length(CatSongs.Song)) and
+       (TransitionSong <> CatSongs.Song[Interaction]) then
+    begin
+      TransitionSong := nil;
+      SoundLib.PauseBgMusic;
+    end;
     // A newly selected song must not keep playing the previous preview while
     // cover loading or the debounce delays opening its replacement.
     if (PreviewOpened <> -1) and (PreviewOpened <> Interaction) then
@@ -3997,6 +4014,8 @@ begin
   if Song.main then
     Exit;
 
+  if SuppressTransitionPreview(Song) then Exit;
+
   VideoFile := Song.Path.Append(Song.Video);
   if (Song.Video.IsSet) and VideoFile.IsFile then
   begin
@@ -4022,13 +4041,56 @@ end;
 
 procedure TScreenSong.PreservePreviewForReturn;
 begin
-  KeepPreviewPositionOnShow := (AudioPlayback.Length > 0) and
-    not AudioPlayback.Finished;
+  KeepPreviewPositionOnShow := true;
+end;
+
+function TScreenSong.SuppressTransitionPreview(Song: TSong): boolean;
+begin
+  Result := (Song <> nil) and (TransitionSong = Song) and
+    (TransitionAction in [2, 3]);
+end;
+
+procedure TScreenSong.StartFinishedSong(Song: TSong; out EndPosition: real);
+var PreviewPos: real; Volume: single;
+begin
+  EndPosition := 0;
+  if (Song = nil) or Song.Main or not AudioPlayback.Finished or
+     SuppressTransitionPreview(Song) then Exit;
+  // No opened song means there was no ended stream to resume.
+  if AudioPlayback.Length <= 0 then Exit;
+  TransitionSong := Song;
+  TransitionAction := Ini.EndedSongAction;
+  AudioPlayback.Close;
+  if TransitionAction = 3 then
+  begin
+    SoundLib.StartBgMusic;
+    Exit;
+  end;
+  SoundLib.PauseBgMusic;
+  if (TransitionAction = 2) or (Ini.PreviewVolume = 0) then Exit;
+  if not AudioPlayback.Open(Song.Path.Append(Song.Audio), nil) then Exit;
+  PreviewPos := 0;
+  if TransitionAction = 0 then
+    Song.GetPreviewRange(AudioPlayback.Length, PreviewPos, EndPosition);
+  AudioPlayback.Position := PreviewPos;
+  Volume := EnsureRange(Ini.PreviewVolume, 0, 100) / 100;
+  if Ini.PreviewFading = 0 then
+  begin
+    AudioPlayback.SetVolume(Volume);
+    AudioPlayback.Play;
+  end
+  else
+  begin
+    AudioPlayback.SetVolume(0);
+    AudioPlayback.FadeIn(Ini.PreviewFading, Volume);
+  end;
 end;
 
 // Changes previewed song
 procedure TScreenSong.ChangeMusic;
 begin
+  TransitionSong := nil;
+  SoundLib.PauseBgMusic;
   StopMusicPreview();
   StopVideoPreview();
   PreviewOpened := -1;
@@ -4396,6 +4458,7 @@ end;
 
 procedure TScreenSong.MarkSongStarted;
 begin
+  TransitionSong := nil;
   SongReturnPending := (Mode = smNormal) and not ScreenContinuousPlayback.Session.Active; // only normal mode returns to song selection
 end;
 
