@@ -686,6 +686,7 @@ end;
 
 procedure TScreenSingController.RefreshInputRoster(NewCount: integer);
 var I, OldCount: integer; Color: TRGB; Levels: array[0..UIni.IMaxPlayerCount-1] of integer;
+  Names: array[0..UIni.IMaxPlayerCount-1] of UTF8String;
 begin
   if (ScreenSong.Mode <> smNormal) or Party.bPartyGame or FadeOut or
     ScoringTailActive or not ShowFinish then Exit;
@@ -693,9 +694,17 @@ begin
   OldCount := PlayersPlay;
   // Keep live singer records through input loss; the next song resets the roster.
   if NewCount <= OldCount then Exit;
-  for I := 0 to High(Player) do Levels[I] := Player[I].Level;
+  for I := 0 to High(Player) do
+  begin
+    Levels[I] := Player[I].Level;
+    Names[I] := Player[I].Name;
+  end;
   ScreenName.LoadPlayersFromIni(true);
-  for I := 0 to Min(OldCount,NewCount)-1 do Player[I].Level := Levels[I];
+  for I := 0 to Min(OldCount,NewCount)-1 do
+  begin
+    Player[I].Level := Levels[I];
+    Player[I].Name := Names[I];
+  end;
   for I := OldCount to NewCount-1 do
   begin
     Player[I].HighNote := -1;
@@ -1612,12 +1621,15 @@ begin
 end;
 
 procedure TScreenSingController.AnnounceRemoteSongPosition(const Reason: UTF8String);
+var HostStateUs: int64;
 begin
   if (RemoteSongSeq <= 0) then
     Exit;
 
+  HostStateUs := GetTickCount64 * 1000;
   RemoteBridgeIPC.SendJsonMessage(
     '{"type":"song.position","protocol":1' +
+    ',"hostStateUs":' + IntToStr(HostStateUs) +
     ',"songSeq":' + IntToStr(RemoteSongSeq) +
     ',"mediaStartUs":' + IntToStr(RemoteMediaStartUs) +
     ',"durationUs":' + IntToStr(RemoteSongDurationUs) +
