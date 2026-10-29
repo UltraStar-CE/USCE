@@ -83,7 +83,8 @@ Classic keeps bare-letter commands and Alt artist/title jumps.
 
 Themes can override `[SongSearchPanel]`, `[SongSearchText]` and
 `[SongModernFooterText1]` onwards using the normal static/text fields. Search
-panel coordinates and hit testing share the same scale mode. The Modern legend
+panel coordinates and hit testing share the same scale mode. The Blue skin uses
+a widescreen song background with the USCE logo at the right of the header. The Modern legend
 replaces key hints while retaining the theme's existing footer bars.
 `TMenu.AddKeyHint` enables the existing `**bold**` text markup for trusted footer
 hints, so keys can be bold and action labels regular. Other text stays literal.
