@@ -3341,6 +3341,7 @@ end;
 
 procedure TScreenEditSub.ApplyTone(NewTone: Integer);
 begin
+  RestoreStandardPlayback(false);
   StopMidiPlayback;
 
   CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Tone := NewTone;
@@ -8368,7 +8369,11 @@ begin
   begin
     // stop the music
     if (GetPlaybackPosition >= PlayStopTime) or
-       ((not FUsingVocalsPreviewPlayback) and AudioPlayback.Finished) then
+       ((not FUsingVocalsPreviewPlayback) and AudioPlayback.Finished) or
+       (FUsingVocalsPreviewPlayback and Assigned(FVocalsPreviewPlaybackStream) and
+        (FPreviewBuildComplete or FAnalysisFailed) and
+        ((FVocalsPreviewPlaybackStream.Status = ssStopped) or
+         (GetPlaybackPosition >= GetPlaybackLength))) then
     begin
       StopPlayback;
       RestoreStandardPlayback(true);
