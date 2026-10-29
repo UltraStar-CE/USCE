@@ -471,37 +471,9 @@ var
     end;
   end;
 
-  function TextLeftEdge(TextID: integer): real;
-  var
-    TextWidth: real;
-  begin
-    TextWidth := MeasureTextMaxLineWidth(Text[TextID].Text, Text[TextID].Font,
-        Text[TextID].Style, Text[TextID].Size);
-
-    case Text[TextID].Align of
-      1:
-        Result := Text[TextID].X - TextWidth / 2;
-      2:
-        Result := Text[TextID].X - TextWidth;
-      else
-        Result := Text[TextID].X;
-    end;
-  end;
-
-  function PageTextRightBound: real;
-  begin
-    Result := 1.0;
-    if (ThemeText.W > 0) and (Text[TextPage].Text <> '') then
-      Result := EnsureRange((TextLeftEdge(TextPage) - Theme.StatDetail.PageTextMargin -
-          ThemeText.X) / ThemeText.W, 0.0, 1.0);
-  end;
-
   function TableRightBound(const Table: TThemeStatDetailTable): real;
   begin
-    if Table.UsePageRightBound then
-      Result := PageTextRightBound
-    else
-      Result := 1.0;
+    Result := 1.0;
 
     if (ThemeText.W > 0) then
       Result := EnsureRange(Result - Table.RightInset /
@@ -552,10 +524,11 @@ var
     FullWidth := ThemeText.W;
     RightBound := TableRightBound(Table);
     SingleLayout := ListLayout;
-    TrialRows := (EntriesPerPage + 1) div 2;
-    Gap := Max(Theme.StatDetail.ColumnPadding * 2, MaxTextSize);
+    TrialRows := (VisibleEntries + 1) div 2;
+    Gap := Max(Theme.StatDetail.TableColumnGap, MaxTextSize * 2);
     ThemeText.W := Trunc((FullWidth * RightBound - Gap) / 2);
-    if (VisibleEntries > TrialRows) and (ThemeText.W > 0) then
+    if (VisibleEntries >= Theme.StatDetail.TwoColumnMinEntries) and
+       (SingleLayout.TextSize < MaxTextSize * 0.9) and (ThemeText.W > 0) then
     begin
       ListLayout := CalculateTextListLayout(TopY, BottomY,
           TrialRows + Theme.StatDetail.PaddingRows,
@@ -623,7 +596,7 @@ begin
         (EntriesPerPage + Theme.StatDetail.PaddingRows - 1);
   end;
 
-  LayoutRows := EntriesPerPage + Theme.StatDetail.PaddingRows;
+  LayoutRows := Max(Theme.StatDetail.MinEntries, VisibleEntries) + Theme.StatDetail.PaddingRows;
   ThemeText.X := ListX;
   ThemeText.W := ListW;
   TopY := ListY;
@@ -638,6 +611,7 @@ begin
       Theme.StatDetail.FontSizeDense, Theme.StatDetail.FontSizeCurve),
       Theme.StatDetail.LineHeight);
   HeaderSize := Theme.StatDetail.TextHeader.Size;
+  ListLayout.RowPitch := Min(ListLayout.RowPitch, ListLayout.TextSize / 0.78 + 2);
   ColumnCompactFactor := EnsureRange(ListLayout.TextSize / MaxTextSize,
       0.0, 1.0);
 
@@ -671,6 +645,7 @@ begin
     stMostPopBand:
       SetColumns(Theme.StatDetail.PopularTable, POPULAR_BAND_COLUMNS);
   end;
+  ListLayout.RowPitch := Min(ListLayout.RowPitch, ListLayout.TextSize / 0.78 + 2);
   for Row := 0 to High(TextList) do
     for Column := 0 to STAT_DETAIL_MAX_COLUMNS - 1 do
     begin
@@ -739,8 +714,8 @@ begin
     PerPage := EntriesPerPage;
 
   try
-    Text[TextPage].Text := Format(Theme.StatDetail.PageStr,
-        [Page + 1, TotPages, PerPage, TotEntrys]);
+    Text[TextPage].Text := StringReplace(Format(Theme.StatDetail.PageStr,
+        [Page + 1, TotPages, PerPage, TotEntrys]), '\n', ' ', [rfReplaceAll]);
   except
     on E: EConvertError do
     begin
