@@ -310,6 +310,7 @@ begin
       ScreenScore.Statics[StaticIndex].Texture.Z := CurrentTexture.Z;
       ScreenScore.Statics[StaticIndex].Texture.Alpha := CurrentTexture.Alpha;
       ScreenScore.Statics[StaticIndex].Texture.ScaleMode := CurrentTexture.ScaleMode;
+      ScreenScore.Statics[StaticIndex].Texture.CornerRadius := ThemeStatic.CornerRadius;
       CurrentTexture.Free;
     end
     else
