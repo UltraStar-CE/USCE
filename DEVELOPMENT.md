@@ -68,6 +68,7 @@ layout (defaults 400 and 300). `Size` defaults to 300; `Font` and `Style` use th
 usual theme font identifiers. `ColR`, `ColG`, `ColB` and `Alpha` control its color
 and opacity. Missing fields retain the existing blue countdown appearance.
 The Lyrics option selects Off or the minimum gap duration, from 5 to 60 seconds.
+Qualifying gaps show only their final ten seconds.
 All voices contribute to gap detection; the countdown does not hide lyrics or
 change the notes, progress bar or scoring.
 

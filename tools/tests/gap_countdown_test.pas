@@ -14,7 +14,10 @@ begin
     G.Add(20, 22); G.Add(0, 2); G.Prepare;
     Check(-1, 5, 0, 'intro uses existing count-in');
     Check(1, 5, 0, 'active note');
-    Check(2, 5, 18, 'gap starts at preceding note end');
+    Check(2, 5, 0, 'long gap stays hidden before final ten seconds');
+    Check(9.999, 5, 0, 'just before countdown window');
+    Check(10, 5, 10, 'countdown window starts at ten seconds');
+    Check(10.001, 5, 9.999, 'inside countdown window');
     Check(19.5, 5, 0.5, 'countdown reaches next note');
     Check(10, 20, 0, 'gap below threshold');
     Check(10, 18, 10, 'exact threshold');
