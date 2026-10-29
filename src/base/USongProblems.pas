@@ -14,8 +14,16 @@ type
     function IsFlagged(const SongFile: IPath): boolean;
     procedure Toggle(const SongFile: IPath);
   end;
+function GetSongProblems: TSongProblems;
 implementation
-uses SysUtils, fpjson, jsonparser;
+uses SysUtils, fpjson, jsonparser, UPlatform;
+var SharedProblems: TSongProblems;
+function GetSongProblems: TSongProblems;
+begin
+  if SharedProblems = nil then
+    SharedProblems := TSongProblems.Create(Platform.GetGameUserPath.Append('song-problems.json'));
+  Result := SharedProblems;
+end;
 constructor TSongProblems.Create(const FileName: IPath);
 var Stream: TBinaryFileStream; Data: TJSONData; I: integer;
 begin
@@ -81,4 +89,6 @@ begin
     FPaths.Assign(Updated);
   finally Updated.Free; end;
 end;
+finalization
+  SharedProblems.Free;
 end.

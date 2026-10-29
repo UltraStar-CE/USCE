@@ -102,7 +102,7 @@ type
 
 implementation
 
-uses Math, UCommon, UDisplay, UFiles, UMusic, UGraphic, ULibraryLockdown, ULockdownUI,
+uses Math, USongProblems, UCommon, UDisplay, UFiles, UMusic, UGraphic, ULibraryLockdown, ULockdownUI,
   UHelp, UIni, ULanguage, ULog, UMain, UParty, URenderer, UPlaylist,
   UScreenSong, UUnicodeUtils, UPath, UMenuInteract, UMenuText, UAge, UFilterTerms, Contnrs, sha1, UPlatform, UPathUtils, UScreenPopup;
 
@@ -600,8 +600,14 @@ begin
     fPlaylist := PlaylistMan.CurPlayList;
     Text[0].Text := Format(Theme.SongJumpto.SongsFound, [CatSongs.VisibleSongs]);
   end;
-  fFocus := 0; fFirst := 0;
   fLastPlayed := ScreenSong.Interaction;
+  // Reopening reevaluates flags and keeps the selection inside the results.
+  if CatSongs.CatNumShow = -2 then
+  begin
+    fPending := true;
+    FlushChanges;
+  end;
+  fFocus := 0; fFirst := 0;
   RefreshRows;
 end;
 
@@ -765,6 +771,8 @@ begin
           fltYear: if Song.Year > 0 then Value := IntToStr(Song.Year);
           fltCreator: Value := Song.Creator;
           fltTags: Value := Song.Tags;
+          fltProblem: if GetSongProblems.IsFlagged(Song.Path.Append(Song.FileName)) then
+            Value := 'yes' else Value := 'no';
           fltAge: begin Age := AgeForRegion(Song.AgeRaw, Region);
             if Age < 0 then Value := '?' else Value := IntToStr(Age); end;
         end;

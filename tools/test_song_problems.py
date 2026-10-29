@@ -33,10 +33,12 @@ def main():
                 part.startswith('ffmpeg-') and part != 'ffmpeg-8.0' for part in p.parts)})
         command += ['-Fu' + str(p) for p in directories]
         env = os.environ.copy()
+        env['XDG_CONFIG_HOME'] = str(out)
+        env['HOME'] = str(out)
         env['PATH'] = str(args.library_dir.resolve()) + os.pathsep + env.get('PATH', '')
         if os.name != 'nt':
             env['LD_LIBRARY_PATH'] = str(args.library_dir.resolve()) + os.pathsep + env.get('LD_LIBRARY_PATH', '')
-        for name in ('song_problems_test',):
+        for name in ('song_problems_test', 'song_problem_filter_test'):
             subprocess.run(command + [str(ROOT / 'tools/tests' / (name + '.pas'))], cwd=ROOT / 'src', check=True)
             exe = out / (name + ('.exe' if os.name == 'nt' else ''))
             subprocess.run([str(exe), str(out)], env=env, check=True)
