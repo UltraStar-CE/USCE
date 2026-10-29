@@ -25,3 +25,17 @@ test('upstream report includes commit subjects, file scope and incomplete covera
   assert.match(report, /src\/base\/Audio.pas/);
   assert.match(report, /comparison limit reached/);
 });
+
+
+test('closing-keyword escaping preserves exact comparison URL destinations', () => {
+  const url = 'https://github.com/fix/usdx-resolve/compare/a...b';
+  const commits = [{sha: 'a'.repeat(40), title: 'Fix #42', author: 'author'}];
+  const fork = forkReport({batch: [{repository: 'fix/usdx-resolve', branch: 'fix',
+    ahead: 1, behind: 0, compareUrl: url, commits}]});
+  const upstream = upstreamReport({url, total: 1, commits, files: []});
+  for (const report of [fork, upstream]) {
+    assert.ok(report.includes(url));
+    assert.match(report, /&#70;ix #42/);
+    assert.ok(!report.includes('https://github.com/&#'));
+  }
+});
