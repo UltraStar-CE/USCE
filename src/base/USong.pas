@@ -1350,7 +1350,9 @@ begin
       RemoveTagsFromTagMap('VOCALS');
       EncFile := DecodeFilename(Value);
       if (self.Path.Append(EncFile).IsFile) then
-        self.Vocals := EncFile;
+        self.Vocals := EncFile
+      else
+        Log.LogError('Can''t find vocals file in song: ' + FullFileName, 'TSong.ReadHeader');
     end;
 
     // Video Gap

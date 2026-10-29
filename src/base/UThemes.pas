@@ -660,9 +660,12 @@ type
 
 
   TThemeEditSub = class(TThemeBasic)
+      VocalsContourColor: array[0..1] of TRGB;
+      VocalsContourAlpha, VocalsContourWidth: array[0..1] of real;
       InactiveVoiceColor: TRGB;
       InactiveVoiceAlpha: real;
       VoiceFieldPadding: integer;
+
       // statics
       BackgroundImage:              TThemeStatic;
       HeaderBackground:             TThemeStatic;
@@ -712,6 +715,8 @@ type
       SelectVolAudio:      TThemeSelectSlide;
       SelectVolMidi:       TThemeSelectSlide;
       SelectVolClick:      TThemeSelectSlide;
+      SelectPrerollAudio:  TThemeSelectSlide;
+      SelectPrerollMidi:   TThemeSelectSlide;
       SlideVideoGap:       TThemeSelectSlide;
 
       // texts
@@ -2286,12 +2291,25 @@ begin
 
       // editor
       ThemeLoadBasic (EditSub,               'EditSub');
+      SectionList := GetSectionList('EditSubVocalsHalo');
+      EditSub.VocalsContourColor[0].R := EnsureRange(ReadFloat(SectionList, 'Red', 0.55), 0.0, 1.0);
+      EditSub.VocalsContourColor[0].G := EnsureRange(ReadFloat(SectionList, 'Green', 0), 0.0, 1.0);
+      EditSub.VocalsContourColor[0].B := EnsureRange(ReadFloat(SectionList, 'Blue', 0), 0.0, 1.0);
+      EditSub.VocalsContourAlpha[0] := EnsureRange(ReadFloat(SectionList, 'Alpha', 0.1), 0.0, 1.0);
+      EditSub.VocalsContourWidth[0] := Max(0, ReadFloat(SectionList, 'Width', 5));
+      SectionList := GetSectionList('EditSubVocalsLine');
+      EditSub.VocalsContourColor[1].R := EnsureRange(ReadFloat(SectionList, 'Red', 1), 0.0, 1.0);
+      EditSub.VocalsContourColor[1].G := EnsureRange(ReadFloat(SectionList, 'Green', 0), 0.0, 1.0);
+      EditSub.VocalsContourColor[1].B := EnsureRange(ReadFloat(SectionList, 'Blue', 0), 0.0, 1.0);
+      EditSub.VocalsContourAlpha[1] := EnsureRange(ReadFloat(SectionList, 'Alpha', 0.35), 0.0, 1.0);
+      EditSub.VocalsContourWidth[1] := Max(0, ReadFloat(SectionList, 'Width', 2.5));
       SectionList := GetSectionList('EditSubInactiveVoice');
       EditSub.InactiveVoiceColor.R := EnsureRange(ReadFloat(SectionList, 'Red', 0.45), 0.0, 1.0);
       EditSub.InactiveVoiceColor.G := EnsureRange(ReadFloat(SectionList, 'Green', 0.45), 0.0, 1.0);
       EditSub.InactiveVoiceColor.B := EnsureRange(ReadFloat(SectionList, 'Blue', 0.45), 0.0, 1.0);
       EditSub.InactiveVoiceAlpha := EnsureRange(ReadFloat(SectionList, 'Alpha', 0.4), 0.0, 1.0);
       EditSub.VoiceFieldPadding := Max(0, ReadInteger(SectionList, 'FieldPadding', 4));
+
       ThemeLoadStatic(EditSub.BackgroundImage, 'EditSubBackgroundImage');
       ThemeLoadStatic(EditSub.HeaderBackground, 'EditSubHeaderBackground');
       ThemeLoadStatic(EditSub.CurrentNoteInfoBackground, 'EditSubCurrentNoteInfoBackground');
@@ -2337,6 +2355,8 @@ begin
       ThemeLoadSelectSlide(EditSub.SelectVolAudio, 'EditSubSelectVolAudio');
       ThemeLoadSelectSlide(EditSub.SelectVolMidi, 'EditSubSelectVolMidi');
       ThemeLoadSelectSlide(EditSub.SelectVolClick, 'EditSubSelectVolClick');
+      ThemeLoadSelectSlide(EditSub.SelectPrerollAudio, 'EditSubSelectPrerollAudio');
+      ThemeLoadSelectSlide(EditSub.SelectPrerollMidi, 'EditSubSelectPrerollMidi');
       ThemeLoadSelectSlide(EditSub.SlideVideoGap, 'EditSubVideoGap');
       ThemeLoadText(EditSub.TextInfo, 'EditSubTextInfo');
       ThemeLoadText(EditSub.TextSentence, 'EditSubTextSentence');
