@@ -107,9 +107,8 @@ type
       LastRemoteStateInteraction: integer;
       LastRemoteStateVisibleSongs: integer;
       LastRemoteStateTick: cardinal;
-      function SuppressTransitionPreview(Song: TSong): boolean;
-
       SearchOverlay, ModernFooter: TMenu;
+      function SuppressTransitionPreview(Song: TSong): boolean;
       function ModernKeyboard: boolean;
       procedure DrawSearchField;
       procedure LayoutSearchHeader;
@@ -355,6 +354,7 @@ uses
   URemoteSongLibrary,
   URecord,
   UInputSource,
+  UJoystick,
   UAudioPlaybackBase,
   UGraphic,
   UHelp,
@@ -879,7 +879,7 @@ begin
       if (Songs.SongList.Count > 0) and FreeListMode then ScreenSongJumpto.Visible := true;
       Exit;
     end;
-    if ModernKeyboard then
+    if ModernKeyboard and not ControllerKeyInput then
     begin
       // SDL text events carry layout-aware Unicode. AltGr text is text, not a command.
       if (CharCode >= 32) and (CharCode <> 127) and
@@ -3351,6 +3351,7 @@ var
   PlaylistItem, TargetSongID, NextSongID: Integer;
   PlaylistReloaded, PlaylistReapplied: Boolean;
 begin
+  SetTextInput(ModernKeyboard);
   SyncDuetSingerTheme;
 
   isScrolling := true;

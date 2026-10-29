@@ -1253,7 +1253,12 @@ begin
               ContinueSearchText := (Event.type_ = SDL_TEXTINPUT) and
                 (Display.CurrentScreen = @ScreenSong) and (Ini.SongKeyboard = 0) and
                 not ScreenSongMenu.Visible and not ScreenSongJumpto.Visible;
-              KeepGoing := Display.ParseInput(SimKey, KeyCharUnicode, true, Event.key._repeat > 0);
+              ControllerKeyInput := ShouldSimulateJoystickKeyInput(Event);
+              try
+                KeepGoing := Display.ParseInput(SimKey, KeyCharUnicode, true, Event.key._repeat > 0);
+              finally
+                ControllerKeyInput := false;
+              end;
               // SDL can deliver several composed Unicode characters in one event.
               if ContinueSearchText and KeepGoing then
                 for KeyTextIndex := 1 to High(KeyTextUnicode)-1 do
