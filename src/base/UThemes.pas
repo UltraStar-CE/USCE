@@ -4741,7 +4741,7 @@ begin
     Song.ModernFooter[I] := Song.SearchText;
     with Song.ModernFooter[I] do
     begin
-      Y := 549; H := 22; Size := 17; W := 125;
+      Y := 547; H := 25; Size := 21; W := 125;
       ColR := 0; ColG := 0; ColB := 0;
       case I of
         0: begin X := 15; W := 215; ColR := 1; ColG := 1; ColB := 1;
