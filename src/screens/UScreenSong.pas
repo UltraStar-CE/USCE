@@ -2234,8 +2234,10 @@ begin
       Continue;
 
     // Covers must fill their themed slots without distorting the artwork.
-    CoverButton.Texture.ScaleMode := lsCrop;
-    CoverButton.DeSelectTexture.ScaleMode := lsCrop;
+    CoverButton.Texture.ScaleMode := Theme.Song.Cover.ScaleMode;
+    CoverButton.DeSelectTexture.ScaleMode := Theme.Song.Cover.ScaleMode;
+    CoverButton.Texture.CornerRadius := Theme.Song.Cover.CornerRadius;
+    CoverButton.DeSelectTexture.CornerRadius := Theme.Song.Cover.CornerRadius;
 
     Song := CatSongs.Song[I];
 
