@@ -107,17 +107,6 @@ begin
         end;
       end;
 
-      SDLK_J: begin
-        if (Songs.SongList.Count >= 1) then
-        begin
-          ScreenSong.OpenContinuousFromMainMenu;
-          FadeTo(@ScreenSong, SoundLib.Start);
-        end
-        else
-          ScreenPopupError.ShowPopup(Language.Translate('ERROR_NO_SONGS'));
-        Exit;
-      end;
-
       SDLK_R: begin
         UGraphic.UnLoadScreens();
         Theme.LoadTheme(Ini.Theme, Ini.Color);
@@ -203,41 +192,11 @@ begin
             ScreenPopupError.ShowPopup(Language.Translate('ERROR_NO_SONGS'));
         end;
 
-        // Continuous playback entry
         if Interaction = 2 then
-        begin
-          if (Songs.SongList.Count >= 1) then
-          begin
-            ScreenSong.OpenContinuousFromMainMenu;
-            FadeTo(@ScreenSong, SoundLib.Start);
-          end
-          else //show error message, No Songs Loaded
-            ScreenPopupError.ShowPopup(Language.Translate('ERROR_NO_SONGS'));
-        end;
-
-        //Stats
-        if Interaction = 3 then
-        begin
           FadeTo(@ScreenStatMain, SoundLib.Start);
-        end;
 
-        //Options
-        if Interaction = 4 then
-        begin
+        if Interaction = 3 then
           FadeTo(@ScreenOptions, SoundLib.Start);
-        end;
-
-        //About
-        if Interaction = 5 then
-        begin
-          FadeTo(@ScreenAbout, SoundLib.Start);
-        end;
-
-        //Exit
-        if Interaction = 6 then
-        begin
-          Result := false;
-        end;
       end;
       {**
        * Up and Down could be done at the same time,
@@ -265,6 +224,8 @@ begin
 end;
 
 constructor TScreenMain.Create;
+var
+  I: integer;
 begin
   inherited Create;
 {**
@@ -280,14 +241,12 @@ begin
 
   LoadFromTheme(Theme.Main);
 
-  AddButton(Theme.Main.ButtonSolo);
-  AddButton(Theme.Main.ButtonMulti);
-  AddButton(Theme.Main.ButtonJukebox); // Preserve the theme slot for compatibility.
-  Button[High(Button)].Text[0].Text := Language.Translate('CONTINUOUS_TITLE');
-  AddButton(Theme.Main.ButtonStat);
-  AddButton(Theme.Main.ButtonOptions);
-  AddButton(Theme.Main.ButtonAbout);
-  AddButton(Theme.Main.ButtonExit);
+  for I := 0 to High(Theme.Main.Buttons) do
+  begin
+    AddButton(Theme.Main.Buttons[I]);
+    if Length(Button[High(Button)].Text) > 0 then
+      Button[High(Button)].Text[0].Text := Theme.Main.Description[I];
+  end;
 
   Interaction := 0;
 
