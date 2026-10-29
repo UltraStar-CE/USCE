@@ -1154,7 +1154,7 @@ type
     SongJumpto:       TThemeSongJumpTo;
     DuplicateSongs: TThemeDuplicateSongs;
     BoldSelection: boolean;
-    SongProblemIndicator: TThemeText;
+    SongProblemIndicator: TThemeStatic;
     //Party Screens:
     PartyNewRound:    TThemePartyNewRound;
     PartyScore:       TThemePartyScore;
@@ -1972,13 +1972,17 @@ begin
           BaseThemeInis[I].ReadString('Theme', 'ButtonAlpha', ''), DefaultButtonAlpha);
     DefaultButtonAlpha := EnsureRange(ReadFloat(GetSectionList('Theme'),
         'ButtonAlpha', DefaultButtonAlpha), 0.0, 1.0);
-    ThemeLoadText(SongProblemIndicator, 'SongProblemIndicator');
-    if ResolveThemeFile('SongProblemIndicator') = nil then
+    SectionList := GetSectionList('SongProblemIndicator');
+    with SongProblemIndicator do
     begin
-      SongProblemIndicator.X := 790; SongProblemIndicator.Y := 8;
-      SongProblemIndicator.Align := 2; SongProblemIndicator.Size := 22;
-      SongProblemIndicator.ColR := 1; SongProblemIndicator.ColG := 0.7;
-      SongProblemIndicator.Text := Language.Translate('SONG_PROBLEM_FLAGGED');
+      X := ReadInteger(SectionList, 'X', 760);
+      Y := ReadInteger(SectionList, 'Y', 10);
+      W := Max(0, ReadInteger(SectionList, 'W', 30));
+      H := Max(0, ReadInteger(SectionList, 'H', 32));
+      ColR := EnsureRange(ReadFloat(SectionList, 'ColR', 1), 0.0, 1.0);
+      ColG := EnsureRange(ReadFloat(SectionList, 'ColG', 1), 0.0, 1.0);
+      ColB := EnsureRange(ReadFloat(SectionList, 'ColB', 1), 0.0, 1.0);
+      Alpha := EnsureRange(ReadFloat(SectionList, 'Alpha', 0.6), 0.0, 1.0);
     end;
     if ThemeIni.ReadString('Theme', 'Name', '') <> '' then
     begin

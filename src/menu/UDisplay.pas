@@ -69,7 +69,6 @@ type
 
       OSD_LastError: string;
       ProblemFlags: TSongProblems;
-      ProblemIndicator: TText;
       ProblemFlagsUnavailable: boolean;
       function ProblemSong: TSong;
       function EnsureProblemFlags: boolean;
@@ -297,7 +296,6 @@ end;
 
 destructor TDisplay.Destroy;
 begin
-  ProblemIndicator.Free;
   FadeTex[0].Free;
   FadeTex[1].Free;
   OpaqueFadeTex[0].Free;
@@ -720,21 +718,49 @@ begin
 end;
 
 procedure TDisplay.DrawSongProblem;
-var Song: TSong; Style: TThemeText;
+var
+  Song: TSong;
+  Style: TThemeStatic;
+  Lines: TLineList;
+  Count: integer;
+
+  procedure Line(AX1, AY1, AX2, AY2: single);
+  begin
+    Lines[Count].X1 := Style.X + AX1 * Style.W;
+    Lines[Count].Y1 := Style.Y + AY1 * Style.H;
+    Lines[Count].X2 := Style.X + AX2 * Style.W;
+    Lines[Count].Y2 := Style.Y + AY2 * Style.H;
+    Lines[Count].Thickness := Max(1, Round(Min(Style.W, Style.H) / 20.0));
+    Lines[Count].ColR := Style.ColR;
+    Lines[Count].ColG := Style.ColG;
+    Lines[Count].ColB := Style.ColB;
+    Lines[Count].Alpha := Style.Alpha;
+    Inc(Count);
+  end;
 begin
   Song := ProblemSong;
   if (Song = nil) or not EnsureProblemFlags then Exit;
   if not ProblemFlags.IsFlagged(Song.Path.Append(Song.FileName)) then Exit;
   Style := Theme.SongProblemIndicator;
-  if ProblemIndicator = nil then
-    ProblemIndicator := TText.Create(Style.X, Style.Y, Style.W, Style.H, Style.Font,
-      Style.Style, Style.Size, Style.ColR, Style.ColG, Style.ColB, Style.Align,
-      Style.Text, false, 0, Style.Z, false);
-  ProblemIndicator.X := Style.X; ProblemIndicator.Y := Style.Y;
-  ProblemIndicator.Size := Style.Size; ProblemIndicator.Align := Style.Align;
-  ProblemIndicator.ColR := Style.ColR; ProblemIndicator.ColG := Style.ColG;
-  ProblemIndicator.ColB := Style.ColB; ProblemIndicator.Text := Style.Text;
-  ProblemIndicator.Draw;
+  if (Style.W = 0) or (Style.H = 0) or (Style.Alpha = 0) then Exit;
+  SetLength(Lines, 14);
+  Count := 0;
+  // Document with a folded corner; a small warning triangle overlaps its lower corner.
+  Line(0.08, 0.90, 0.08, 0.05);
+  Line(0.08, 0.05, 0.48, 0.05);
+  Line(0.48, 0.05, 0.68, 0.24);
+  Line(0.68, 0.24, 0.68, 0.45);
+  Line(0.08, 0.90, 0.28, 0.90);
+  Line(0.48, 0.05, 0.48, 0.24);
+  Line(0.48, 0.24, 0.68, 0.24);
+  Line(0.20, 0.38, 0.53, 0.38);
+  Line(0.20, 0.50, 0.40, 0.50);
+  Line(0.62, 0.49, 0.96, 0.94);
+  Line(0.96, 0.94, 0.28, 0.94);
+  Line(0.28, 0.94, 0.62, 0.49);
+  Line(0.62, 0.67, 0.62, 0.78);
+  Line(0.62, 0.85, 0.62, 0.86);
+  Renderer.DrawLines(Lines);
 end;
 
 function TDisplay.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown : boolean; Repeated : boolean = false): boolean;
