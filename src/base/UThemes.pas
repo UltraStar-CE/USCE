@@ -600,6 +600,8 @@ type
   end;
 
   TThemeHighScoreList = record
+    ColumnGap: real;
+    TwoColumnMinEntries: integer;
     BottomY: integer;
     MinTextSize: integer;
     DefaultEntries: integer;
@@ -3191,6 +3193,8 @@ var
   SectionList: TThemeSectionList;
 begin
   SectionList := GetSectionList(Name);
+  List.ColumnGap := Max(0, ReadFloat(SectionList, 'ColumnGap', 64));
+  List.TwoColumnMinEntries := Max(2, ReadInteger(SectionList, 'TwoColumnMinEntries', 20));
   List.BottomY := ReadInteger(SectionList, 'BottomY', 390);
   List.MinTextSize := ReadInteger(SectionList, 'MinTextSize', 18);
   List.DefaultEntries := EnsureRange(ReadInteger(SectionList, 'DefaultEntries', 5), 5, 20);
