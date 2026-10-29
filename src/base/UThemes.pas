@@ -3190,7 +3190,10 @@ procedure TTheme.ThemeLoadHighScores;
       Result := LegacyName;
   end;
 begin
-  ThemeLoadBasic(HighScores, SectionName('HighScores', 'Top5'));
+  if ResolveThemeFile('HighScoresBackground') <> nil then
+    ThemeLoadBasic(HighScores, 'HighScores')
+  else
+    ThemeLoadBasic(HighScores, 'Top5');
   ThemeLoadText(HighScores.TextTitle,            SectionName('HighScoresTextTitle', 'Top5Text1'));
   ThemeLoadText(HighScores.TextWhereAmI,         SectionName('HighScoresTextWhereAmI', 'Top5Text2'));
   ThemeLoadText(HighScores.TextArtistTitle,      SectionName('HighScoresTextArtistTitle', 'Top5TextArtistTitle'));
