@@ -189,6 +189,7 @@ type
 
       // for chessboard songmenu
       StaticActual: integer;
+      ListSelectedText: array[0..2] of integer;
 
       // for list songmenu
       StaticList: array of integer;
@@ -2019,6 +2020,13 @@ begin
   StaticActual := AddStatic(Theme.Song.Cover.SelectX, Theme.Song.Cover.SelectY,
                             Theme.Song.Cover.SelectW, Theme.Song.Cover.SelectH, PATH_NONE);
 
+  for I := 0 to High(ListSelectedText) do
+  begin
+    ListSelectedText[I] := -1;
+    if Theme.Song.HasListSelectedText[I] then
+      ListSelectedText[I] := AddText(Theme.Song.ListSelectedText[I]);
+  end;
+
   Num := Theme.Song.ListCover.Rows;
 
   SetLength(StaticList, Num);
@@ -2793,6 +2801,17 @@ begin
           Button[B].Y := Theme.Song.Cover.Y + (Line - ListMinLine) * (Theme.Song.Cover.H + Theme.Song.Cover.Padding);
           Button[B].W := Theme.Song.Cover.W;
           Button[B].H := Theme.Song.Cover.H;
+          if Theme.Song.HasListRowCover then
+          begin
+            Button[B].X := Theme.Song.ListRowCover.X;
+            Button[B].Y := Theme.Song.ListRowCover.Y + (Line - ListMinLine) *
+              (Theme.Song.ListCover.H + Theme.Song.ListCover.Padding);
+            Button[B].W := Theme.Song.ListRowCover.W;
+            Button[B].H := Theme.Song.ListRowCover.H;
+            Button[B].Texture.ScaleMode := Theme.Song.ListRowCover.ScaleMode;
+            Button[B].Texture.CornerRadius := Theme.Song.ListRowCover.CornerRadius;
+          end;
+
 
           Line := Line + 1;
         end
@@ -2819,6 +2838,18 @@ var
   SongID: array of integer;
   Alpha: real;
 begin
+  for I := 0 to High(ListSelectedText) do
+    if ListSelectedText[I] >= 0 then
+    begin
+      case I of
+        0: Text[ListSelectedText[I]].Text := CatSongs.Song[Interaction].Title;
+        1: Text[ListSelectedText[I]].Text := CatSongs.Song[Interaction].Artist;
+        2: if CatSongs.Song[Interaction].Year <> 0 then
+             Text[ListSelectedText[I]].Text := IntToStr(CatSongs.Song[Interaction].Year)
+           else Text[ListSelectedText[I]].Text := '';
+      end;
+    end;
+
   Statics[StaticActual].Texture.Free;
   if (Button[Interaction].Texture.Name.IsUnset) then
     Statics[StaticActual].Texture := Renderer.GetTexture(Skin.GetTextureFileName('SongCover'), TEXTURE_TYPE_PLAIN)

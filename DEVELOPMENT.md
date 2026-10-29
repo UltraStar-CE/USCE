@@ -138,3 +138,14 @@ the existing square image. The same key in `SongChessboardCover`,
 `ScaleMode=crop` optionally fills their bounds without stretching the image.
 This is a draw-time mask: source images and shared texture caches are unchanged.
 An absent key retains legacy behavior; inherited sections can supply the key.
+
+
+### Optional song-list details
+
+`SongListRowCover` positions each visible row's existing cover widget. Its X/Y
+are the first row's coordinates; following rows use the normal list row stride.
+W/H, ScaleMode and CornerRadius style the cover. Without this section the old
+list layout is retained. Existing list-row selection and hit testing still apply.
+`SongListSelectedTitle`, `SongListSelectedArtist` and `SongListSelectedYear` are
+optional ordinary text sections for an independent selected-song detail panel.
+They use the highlighted song, including when browsing a filtered playlist.
