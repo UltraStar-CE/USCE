@@ -72,6 +72,20 @@ Qualifying gaps show only their final ten seconds.
 All voices contribute to gap detection; the countdown does not hide lyrics or
 change the notes, progress bar or scoring.
 
+### Song selection keyboard and search layout
+
+Input options selects Modern (default) or Classic, stored as
+`Controller/SongKeyboard=Modern` or `Classic`. Modern typing adds an All row
+within the current filters or playlist. Ctrl+F opens the full filter dialog;
+that typed row becomes an ordinary editable filter. Esc clears the current
+typed query first. Commands use Ctrl, with Ctrl+Shift+F for custom medley.
+Classic keeps bare-letter commands and Alt artist/title jumps.
+
+Themes can override `[SongSearchPanel]`, `[SongSearchText]` and
+`[SongModernFooterText1]` onwards using the normal static/text fields. Search
+panel coordinates and hit testing share the same scale mode. The Modern legend
+replaces key hints while retaining the theme's existing footer bars.
+
 ### English fallback coverage
 
 English is the fallback for incomplete translations. New labels need an entry

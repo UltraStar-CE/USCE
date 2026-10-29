@@ -318,6 +318,7 @@ procedure TScreenSongMenu.MenuShow(sMenu: byte);
 var
   I, MSongs: integer;
 begin
+  StopTextInput;
   Interaction := 0; // reset interaction
   Visible := true;  // set visible
   case sMenu of
