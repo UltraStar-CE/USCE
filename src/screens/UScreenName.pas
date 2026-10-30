@@ -1470,6 +1470,14 @@ var I, First, Last, J: integer;
       Text.Size := Max(8, Round(Source.TextSize * SY));
       for K := 0 to High(TextOpt) do TextOpt[K].Size := Text.Size;
       SetX(R.X + Source.X * SX); SetY(R.Y + Source.Y * SY);
+      // These setup slides show one option. Moving a slide does not regenerate
+      // its option positions, so keep that option centered in its new card.
+      for K := 0 to High(TextOpt) do
+      begin
+        TextOpt[K].X := TextureSBG.X + TextureSBG.W / 2;
+        TextOpt[K].Align := 1;
+      end;
+      SetSelectOpt(SelectedOption);
     end;
   end;
 begin
@@ -1494,10 +1502,12 @@ begin
     if Theme.Name.Cards.ShowLabel then Caption(LabelText, 60, 22, 10, TextColor);
     with Statics[PlayerCurrentAvatar[I]].Texture do
     begin
-      X := R.X + Theme.Name.Cards.Avatar.X * SX;
-      Y := R.Y + Theme.Name.Cards.Avatar.Y * SY;
-      W := Theme.Name.Cards.Avatar.W * SX;
-      H := Theme.Name.Cards.Avatar.H * SY;
+      W := Theme.Name.Cards.Avatar.W * Min(SX, SY);
+      H := Theme.Name.Cards.Avatar.H * Min(SX, SY);
+      X := R.X + Theme.Name.Cards.Avatar.X * SX +
+        (Theme.Name.Cards.Avatar.W * SX - W) / 2;
+      Y := R.Y + Theme.Name.Cards.Avatar.Y * SY +
+        (Theme.Name.Cards.Avatar.H * SY - H) / 2;
       ScaleMode := lsStretch;
       CornerRadius := Theme.Name.PlayerSelectTemplateAvatar.CornerRadius;
     end;
@@ -1538,10 +1548,11 @@ begin
       R := CardRect(I);
       SX := R.W / Max(1, Theme.Name.Cards.Panel.W);
       SY := R.H / Max(1, Theme.Name.Cards.Panel.H);
-      Button[PlayerAvatar].X := R.X + Theme.Name.Cards.Avatar.X * SX;
-      Button[PlayerAvatar].Y := R.Y + Theme.Name.Cards.Avatar.Y * SY;
-      Button[PlayerAvatar].W := Theme.Name.Cards.Avatar.W * SX;
-      Button[PlayerAvatar].H := Theme.Name.Cards.Avatar.H * SY;
+      with Statics[PlayerCurrentAvatar[I]].Texture do
+      begin
+        Button[PlayerAvatar].X := X; Button[PlayerAvatar].Y := Y;
+        Button[PlayerAvatar].W := W; Button[PlayerAvatar].H := H;
+      end;
       if Interaction = PlayerAvatarIID then
         Caption('< >', 20, 73, 12, GetPlayerColor(Num[I]));
     end
