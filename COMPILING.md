@@ -133,6 +133,6 @@ Omitted options use the saved continuous-playback profile.
 
 ## Signed APT repository
 
-The Ubuntu DEB release can also be published as a signed repository on GitHub
-Pages. See [APT.md](APT.md) for supported distributions, installation and the
-one-time signing/publication setup.
+Ubuntu packages are published by the separate [UltraStar-CE/apt repository](https://github.com/UltraStar-CE/apt).
+See its README for supported distributions, installation and signing/publication setup.
+The DEB packages themselves remain part of USCE releases.
