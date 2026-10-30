@@ -444,7 +444,8 @@ begin
           end;
           try
             ePreDraw.CallHookChain(false);
-            CurrentScreen.Draw;
+            // An aborted destination may not have finished initialization.
+            if CurrentScreen.ShowFinish then CurrentScreen.Draw;
             eDraw.CallHookChain(false);
           finally
             TMenuBackground.SuppressDrawing := false;

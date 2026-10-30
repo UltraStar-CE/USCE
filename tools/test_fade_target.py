@@ -93,3 +93,37 @@ begin
   WriteLn('PASS: shutdown fade, redirected target and second screen');
 end.
 ''')
+
+    def test_aborted_unfinished_screen_is_not_drawn_for_snapshot(self):
+        source = (Path(__file__).resolve().parents[1] / 'src/menu/UDisplay.pas').read_text()
+        guard = next(line.strip() for line in source.splitlines()
+                     if 'if CurrentScreen.ShowFinish then CurrentScreen.Draw;' in line)
+        self.run_harness('''program AbortedSnapshot;
+{$mode delphi}
+uses SysUtils;
+type TMenu = class
+  ShowFinish: boolean;
+  Calls: integer;
+  procedure Draw;
+end;
+procedure TMenu.Draw;
+begin
+  if not ShowFinish then raise Exception.Create('Drew an uninitialized screen');
+  Inc(Calls);
+end;
+var CurrentScreen: TMenu;
+procedure Capture;
+begin
+''' + guard + '''
+end;
+begin
+  CurrentScreen := TMenu.Create;
+  Capture;
+  if CurrentScreen.Calls <> 0 then raise Exception.Create('Captured aborted screen');
+  CurrentScreen.ShowFinish := true;
+  Capture;
+  if CurrentScreen.Calls <> 1 then raise Exception.Create('Skipped valid source');
+  CurrentScreen.Free;
+  WriteLn('PASS: aborted screen omitted, initialized screen captured');
+end.
+''')
