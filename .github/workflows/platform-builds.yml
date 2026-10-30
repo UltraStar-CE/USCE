@@ -318,6 +318,12 @@ jobs:
           key: linux-docker-${{ hashFiles('dists/linux/dl.sh', 'dists/linux/tasks.sh', 'dists/linux/dockerenv.sh', 'dists/linux/Dockerfile.in') }}
           path: |
             dists/linux/prefix
+      - name: Install native test compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y fp-compiler
+      - name: Test native library notifications
+        run: python3 -m unittest discover -s tools -p "test_library*.py" -v
       - name: Start container builder
         uses: docker/setup-buildx-action@v4
       - name: Generate Dockerfile
@@ -336,7 +342,6 @@ jobs:
         run: |
           cd dists/linux
           ./dockerenv.sh --use-existing=usce/buildenv:latest env USCE_THEMES_DIR=/src/.release-themes/bundle make compress
-          ./dockerenv.sh --use-existing=usce/buildenv:latest python3 -m unittest discover -s tools -p 'test_library*.py' -v
           mv USCE*.AppImage ../../USCE-linux-${{ env.versionName }}.AppImage
       - name: Upload Image Artifact
         uses: actions/upload-artifact@v6

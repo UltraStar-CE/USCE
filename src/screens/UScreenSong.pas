@@ -512,6 +512,7 @@ procedure TScreenSong.ParseInputNextHorizontal(PressedKey: cardinal; CharCode: U
 var
   SDL_ModState: word;
 begin
+  if not HasSelection then Exit;
   CloseMessage();
 
   SDL_ModState := SDL_GetModState and (KMOD_LSHIFT + KMOD_RSHIFT
@@ -550,6 +551,7 @@ procedure TScreenSong.ParseInputPrevHorizontal(PressedKey: cardinal; CharCode: U
 var
   SDL_ModState: word;
 begin
+  if not HasSelection then Exit;
   CloseMessage();
 
   SDL_ModState := SDL_GetModState and (KMOD_LSHIFT + KMOD_RSHIFT
@@ -588,6 +590,7 @@ procedure TScreenSong.ParseInputNextVertical(PressedKey: cardinal; CharCode: UCS
 var
   I: integer;
 begin
+  if not HasSelection then Exit;
   CloseMessage();
 
   if (FreeListMode) and not (TSongMenuMode(Ini.SongMenu) in [smList]) then
@@ -652,6 +655,7 @@ procedure TScreenSong.ParseInputPrevVertical(PressedKey: cardinal; CharCode: UCS
 var
   I, I2: integer;
 begin
+  if not HasSelection then Exit;
   CloseMessage();
 
   if (FreeListMode) and not (TSongMenuMode(Ini.SongMenu) in [smList]) then
@@ -2374,7 +2378,7 @@ var
 begin
   VS := CatSongs.VisibleSongs;
   UpdateListSelectedText;
-  if VS > 0 then
+  if HasSelection then
   begin
 
     case TSongMenuMode(Ini.SongMenu) of
@@ -3738,6 +3742,7 @@ var
   NextInt: integer;
   OriginalInteraction: integer;
 begin
+  if not HasSelection then Exit;
   VS := CatSongs.VisibleSongs;
 
   if VS > 0 then
@@ -3792,6 +3797,7 @@ var
   PrevInt: integer;
   OriginalInteraction: integer;
 begin
+  if not HasSelection then Exit;
   VS := CatSongs.VisibleSongs;
 
   if (VS > 0) then
@@ -3838,6 +3844,7 @@ var
   MaxLine: real;
   OriginalInteraction: integer;
 begin
+  if not HasSelection then Exit;
   VS := CatSongs.VisibleSongs;
 
   if (SDL_GetTicks - LastChangeSoundTime >= CHANGE_SOUND_THROTTLE_MS) then
@@ -3904,6 +3911,7 @@ var
   VS:   integer;
   OriginalInteraction: integer;
 begin
+  if not HasSelection then Exit;
   VS := CatSongs.VisibleSongs;
 
   if (SDL_GetTicks - LastChangeSoundTime >= CHANGE_SOUND_THROTTLE_MS) then
@@ -3960,6 +3968,7 @@ end;
 
 procedure TScreenSong.SelectNextListRow;
 begin
+  if not HasSelection then Exit;
   AudioPlayback.PlaySound(SoundLib.Change);
   SelectNext;
 
@@ -3972,6 +3981,7 @@ end;
 
 procedure TScreenSong.SelectPrevListRow;
 begin
+  if not HasSelection then Exit;
   AudioPlayback.PlaySound(SoundLib.Change);
   SelectPrev;
 
@@ -4678,7 +4688,7 @@ begin
   end
   else if not ShowFinish or (Display.CurrentScreen <> @ScreenSong) then Exit;
   if (Display.NextScreen <> nil) or (Display.NextScreenWithCheck <> nil) or
-     (Mode <> smNormal) or ScreenSongMenu.Visible or
+     (Mode <> smNormal) or MakeMedley or ScreenSongMenu.Visible or
      ScreenPopupError.Visible or ScreenPopupCheck.Visible or
      ScreenPopupHelp.Visible or ScreenPopupInfo.Visible or
      ScreenSongJumpto.Visible or ScreenContinuousPlayback.Session.Active or

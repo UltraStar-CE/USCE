@@ -65,9 +65,22 @@ begin
   ForceDirectories(Root); ForceDirectories(Other);
   Roots := TStringList.Create; Changes := TStringList.Create;
   Roots.Add(Root);
+  {$IFDEF LINUX}
+  ForceDirectories(Root + '/Artist'); ForceDirectories(Root + '/artist');
+  ForceDirectories(Root + '-Case'); ForceDirectories(Root + '-case');
+  Roots.Add(Root + '-Case'); Roots.Add(Root + '-case');
+  {$ENDIF}
   Watch := TLibraryWatch.Create(Roots);
   try
     WaitChange(Root, true); Quiet;
+    {$IFDEF LINUX}
+    WriteFile(Root + '/Artist/song.txt', 'upper directory'); WaitChange(Root + '/Artist/song.txt');
+    WriteFile(Root + '/artist/song.txt', 'lower directory'); WaitChange(Root + '/artist/song.txt');
+    WriteFile(Root + '-Case/song.txt', 'upper root'); WaitChange(Root + '-Case/song.txt');
+    WriteFile(Root + '-case/song.txt', 'lower root'); WaitChange(Root + '-case/song.txt');
+    DeleteFile(Root + '/Artist/song.txt'); DeleteFile(Root + '/artist/song.txt');
+    RemoveDir(Root + '/Artist'); RemoveDir(Root + '/artist'); WaitChange(Root);
+    {$ENDIF}
     WriteFile(Root + PathDelim + 'song.txt', 'first'); WaitChange(Root);
     WriteFile(Root + PathDelim + 'song.txt', 'updated'); WaitChange(Root);
     Changes.LoadFromFile(Root + PathDelim + 'song.txt'); Quiet; // reading is not a mutation
@@ -85,6 +98,10 @@ begin
     Check(RemoveDir(Root), 'root remove failed'); WaitChange(Root, true);
     ForceDirectories(Root); WaitChange(Root, true);
     WriteFile(Root + PathDelim + 'restored.txt', 'after root recreation'); WaitChange(Root);
+    Check(RenameFile(Root, Root + '-moved'), 'root rename failed'); WaitChange(Root, true);
+    ForceDirectories(Root); WaitChange(Root, true);
+    WriteFile(Root + PathDelim + 'fresh.txt', 'new inode at configured root'); WaitChange(Root);
+    WriteFile(Root + '-moved' + PathDelim + 'old-root.txt', 'no longer in library'); Quiet;
     Quiet;
     Writeln('PASS native add/change/rename/delete, new nested watches, root recreation, idle and outside-library isolation');
   finally Watch.Free; Roots.Free; Changes.Free; end;

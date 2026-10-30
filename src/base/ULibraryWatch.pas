@@ -57,7 +57,9 @@ begin
   inherited Create(true);
   InitCriticalSection(Lock);
   Roots := TStringList.Create;
+  Roots.CaseSensitive := true;
   Pending := TStringList.Create;
+  Pending.CaseSensitive := true;
   {$IFDEF DARWIN}CanonicalRoots := TStringList.Create;{$ENDIF}
   for I := 0 to Paths.Count - 1 do
     if Roots.IndexOf(Normal(Paths[I])) < 0 then Roots.Add(Normal(Paths[I]));
@@ -222,7 +224,7 @@ end;
 
 procedure TLibraryWatch.RunNative;
 var Watches: TList; I, J, Offset: integer; W: TDirectoryWatch;
-  Bytes, Next, NameLength: DWORD; N: UnicodeString; Reopen: boolean;
+  Bytes, Next, NameLength: DWORD; N: UnicodeString; Reopen: boolean; ResetRoots: TStringList;
 procedure Add(const Name: string; Recursive: boolean);
 var K: integer; Item: TDirectoryWatch;
 begin
@@ -247,6 +249,7 @@ begin
 end;
 begin
   Watches := TList.Create;
+  ResetRoots := TStringList.Create;
   try
     for I := 0 to Roots.Count - 1 do
     begin
@@ -257,6 +260,7 @@ begin
     while not Terminated do
     begin
       Reopen := false;
+      ResetRoots.Clear;
       for I := Watches.Count - 1 downto 0 do
       begin
         W := TDirectoryWatch(Watches[I]);
@@ -285,7 +289,10 @@ begin
               // A directory scan also handles removals and related media changes.
               ChangedEntry(UTF8Encode(N));
               for J := 0 to Roots.Count - 1 do
-                if Normal(UTF8Encode(N)) = Roots[J] then begin Recover; Reopen := true; end;
+                if Normal(UTF8Encode(N)) = Roots[J] then
+                begin
+                  Recover; Reopen := true; ResetRoots.Add(Roots[J]);
+                end;
             end;
             if Next = 0 then Break;
             if (Next < 12) or (Next > Bytes - DWORD(Offset)) then begin Recover; Break; end;
@@ -298,6 +305,14 @@ begin
           W.Free; Watches.Delete(I);
         end;
       end;
+      // A renamed directory handle follows the old inode, not the configured
+      // pathname. Close it before watching a replacement at the original path.
+      for I := Watches.Count - 1 downto 0 do
+      begin
+        W := TDirectoryWatch(Watches[I]);
+        if W.Recursive and (ResetRoots.IndexOf(W.Name) >= 0) then
+        begin W.Free; Watches.Delete(I); end;
+      end;
       // Reopen roots only after a native event reports their recreation.
       if Reopen then for I := 0 to Roots.Count - 1 do Add(Roots[I], true);
       Sleep(50);
@@ -305,6 +320,7 @@ begin
   finally
     for I := 0 to Watches.Count - 1 do TObject(Watches[I]).Free;
     Watches.Free;
+    ResetRoots.Free;
   end;
 end;
 {$ENDIF}
@@ -358,6 +374,7 @@ begin
      (fpFcntl(FD, F_SETFD, 1 {FD_CLOEXEC}) < 0) then
   begin fpClose(FD); RaiseLastOSError; end;
   Dirs := TStringList.Create;
+  Dirs.CaseSensitive := true;
   try
     for I := 0 to Roots.Count - 1 do
     begin
