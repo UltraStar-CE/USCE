@@ -428,6 +428,7 @@ const
   sOpenMenu = 2;
 
   IPartyPopup:    array[0..1] of UTF8String = ('Off', 'On');
+  IPartyHighscores: array[0..2] of UTF8String = ('Nothing', 'Duels', 'FullSongs');
 
   IJoypad:        array[0..1] of UTF8String = ('Off', 'On');
 
@@ -522,6 +523,7 @@ var
   IAskbeforeDelTranslated:     array[0..1] of UTF8String = ('Off', 'On');
   IOnSongClickTranslated:      array[0..2] of UTF8String = ('Sing', 'Select Players', 'Open Menu');
   IPartyPopupTranslated:       array[0..1] of UTF8String = ('Off', 'On');
+  IPartyHighscoresTranslated: array[0..2] of UTF8String;
   ISingScoresTranslated:       array[0..3] of UTF8String = ('Off', 'On', 'Bar Rating', 'Remaining Score');
   IDuetScoresTranslated:       array[0..3] of UTF8String = ('Off', 'Separate', 'Combined', 'Both');
   ITopScoresTranslated:        array[0..1] of UTF8String = ('All', 'Player');
@@ -1031,6 +1033,9 @@ begin
 
   IPartyPopupTranslated[0]            := ULanguage.Language.Translate('OPTION_VALUE_OFF');
   IPartyPopupTranslated[1]            := ULanguage.Language.Translate('OPTION_VALUE_ON');
+  IPartyHighscoresTranslated[0] := ULanguage.Language.Translate('PARTY_HIGHSCORES_NOTHING');
+  IPartyHighscoresTranslated[1] := ULanguage.Language.Translate('PARTY_HIGHSCORES_DUELS');
+  IPartyHighscoresTranslated[2] := ULanguage.Language.Translate('PARTY_HIGHSCORES_FULL');
 
   ISingScoresTranslated[0]          := ULanguage.Language.Translate('OPTION_VALUE_OFF');
   ISingScoresTranslated[1]          := ULanguage.Language.Translate('OPTION_VALUE_ON');
@@ -1868,7 +1873,7 @@ begin
 
   // PartyPopup
   PartyPopup := ReadArrayIndex(IPartyPopup, IniFile, 'Advanced', 'PartyPopup', IGNORE_INDEX, 'On');
-  PartyHighscores := ReadArrayIndex(IPartyPopup, IniFile, 'Advanced', 'PartyHighscores', IGNORE_INDEX, 'Off');
+  PartyHighscores := ReadArrayIndex(IPartyHighscores, IniFile, 'Party', 'Highscores', IGNORE_INDEX, 'Nothing');
 
   // SingScores
   SingScores := ReadArrayIndex(ISingScores, IniFile, 'Advanced', 'SingScores', IGNORE_INDEX, 'On');
@@ -2120,7 +2125,7 @@ begin
 
     //Party Popup
     IniFile.WriteString('Advanced', 'PartyPopup', IPartyPopup[PartyPopup]);
-    IniFile.WriteString('Advanced', 'PartyHighscores', IPartyPopup[PartyHighscores]);
+    IniFile.WriteString('Party', 'Highscores', IPartyHighscores[PartyHighscores]);
 
     //SingScores
     IniFile.WriteString('Advanced', 'SingScores', ISingScores[SingScores]);

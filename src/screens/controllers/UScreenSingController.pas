@@ -939,7 +939,7 @@ begin
     end;
 
     // select new song in party mode
-    if ScreenSong.Mode = smPartyClassic then
+    if ScreenSong.Mode in [smPartyClassic, smPartyFree] then
       ScreenSong.SelectRandomSong();
 
     if (Length(CurrentSong.LastError) > 0) then
@@ -972,7 +972,7 @@ begin
         Display.AbortScreenChange;
 
         // select new song in party mode
-        if ScreenSong.Mode = smPartyClassic then
+        if ScreenSong.Mode in [smPartyClassic, smPartyFree] then
           ScreenSong.SelectRandomSong();
 
         if (Length(CurrentSong.LastError) > 0) then
@@ -1628,7 +1628,7 @@ function TScreenSingController.LocalHighscoresAllowed: boolean;
 begin
   Result := (PlayersPlay > 0) and SungToEnd and not PlaybackSeeked and
     ((ScreenSong.Mode = smNormal) or
-     ((ScreenSong.Mode = smPartyClassic) and not CurrentSong.isDuet and
+     ((ScreenSong.Mode in [smPartyClassic, smPartyFree]) and not CurrentSong.isDuet and
       Party.LocalHighscoresEnabled));
 end;
 
@@ -1970,7 +1970,7 @@ begin
         begin
           Name1 := Player[I].Name;
           ScoreLevel := Player[I].Level;
-          if ScreenSong.Mode = smPartyClassic then
+          if ScreenSong.Mode in [smPartyClassic, smPartyFree] then
           begin
             Name1 := Party.CurrentSingerName(I);
             if Name1 = '' then Continue;

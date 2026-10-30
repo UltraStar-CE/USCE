@@ -31,18 +31,6 @@ approval or authorizes an automatic merge.
 
 ## Development direction and upstream
 
-### Local Party highscores
-
-Advanced options has an optional Local Party highscores setting, off by default.
-It saves completed, unseeked, single-voice classic Party rounds for the actual
-singer and difficulty, and shows local highscores before the team result screen.
-It does not upload Party scores. Duet/team aggregates remain excluded.
-
-Party plugins can opt in with `Mode.LocalHighscores = true` only for full-length
-individual rounds with unchanged scoring and timing. Duel, Blind, BlindLyrics,
-BlindTotal and Deaf opt in. Target, shortened, elimination and singer-rotation
-modes retain the default false. Random rounds use the resolved played mode.
-
 Contributions to [UltraStar Deluxe](https://github.com/UltraStar-Deluxe/USDX) are
 welcome too. USDX has its own focus, priorities and development cadence. With
 USCE, we aim to move quickly on new features and community-led experiments,
@@ -136,3 +124,7 @@ The logic code about how to handle key pressed events for each screen can be fou
 - `UIni`: reads + writes settings form the config.ini file
 - `UTheme`: loads all the theme files and processes them
 - `UScreenOptions`...: displays the various game screens + handles mouse + keyboard input
+
+
+`PartyOptionsSelectHighscores` styles the Party highscore selector. Without that
+section it inherits the mode selector style and sits below the playlist fields.

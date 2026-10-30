@@ -70,7 +70,6 @@ type
 
     CanNonParty: Boolean; //< is playable when not in party mode
     CanParty: Boolean;    //< is playable in party mode
-    LocalHighscores: Boolean; //< full-length individual singing with standard scoring
 
     // one bit in the following settings stands for
     // a player or team count
@@ -436,7 +435,6 @@ begin
   Info.Parent := -1; //< not loaded by plugin (e.g. Duell)
   Info.CanNonParty := false;
   Info.CanParty := false;
-  Info.LocalHighscores := false;
   Info.PlayerCount := High(Integer); //< no restrictions either on player count
   Info.TeamCount := High(Integer);   //< nor on team count
   Info.Functions.BeforeSongSelect := ''; //< use default functions
@@ -941,10 +939,14 @@ function TPartyGame.LocalHighscoresEnabled: boolean;
 var Mode: integer;
 begin
   Result := false;
-  if (Ini.PartyHighscores <> 1) or not bPartyGame or not bPartyStarted or
+  if (Ini.PartyHighscores = 0) or not bPartyGame or not bPartyStarted or
     (CurRound < 0) or (CurRound >= Length(Rounds)) then Exit;
   Mode := Rounds[CurRound].Mode; // random rounds already contain their resolved mode
-  Result := (Mode >= 0) and (Mode < Length(Modes)) and Modes[Mode].LocalHighscores;
+  Result := (Mode >= 0) and (Mode < Length(Modes));
+  if not Result then Exit;
+  // Shared-singer modes cannot produce an individual highscore.
+  Result := (Modes[Mode].PlayerCount and 1 <> 0) and
+    ((Ini.PartyHighscores = 2) or SameText(Modes[Mode].Name, 'Duel'));
 end;
 
 function TPartyGame.CurrentSingerName(Team: integer): UTF8String;

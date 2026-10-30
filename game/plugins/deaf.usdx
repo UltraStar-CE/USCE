@@ -10,7 +10,6 @@ function plugin_init()
   local Mode = {};
 
   Mode.Name = 'deaf';
-  Mode.LocalHighscores = true;
   Mode.CanNonParty = true;
   Mode.CanParty = true;
   Mode.BeforeSing = 'BeforeSing';

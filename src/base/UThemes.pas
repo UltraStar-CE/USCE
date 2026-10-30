@@ -921,6 +921,7 @@ type
     SelectLevel: TThemeSelectSlide;
     SelectPlayList: TThemeSelectSlide;
     SelectPlayList2: TThemeSelectSlide;
+    SelectHighscores: TThemeSelectSlide;
 
     {ButtonNext: TThemeButton;
     ButtonPrev: TThemeButton;}
@@ -2455,6 +2456,15 @@ begin
       ThemeLoadSelectSlide(PartyOptions.SelectLevel, 'PartyOptionsSelectLevel');
       ThemeLoadSelectSlide(PartyOptions.SelectPlayList, 'PartyOptionsSelectPlayList');
       ThemeLoadSelectSlide(PartyOptions.SelectPlayList2, 'PartyOptionsSelectPlayList2');
+      if ResolveThemeFile('PartyOptionsSelectHighscores') <> nil then
+        ThemeLoadSelectSlide(PartyOptions.SelectHighscores, 'PartyOptionsSelectHighscores')
+      else
+      begin
+        PartyOptions.SelectHighscores := PartyOptions.SelectMode;
+        PartyOptions.SelectHighscores.Y := Max(PartyOptions.SelectPlayList2.Y,
+          PartyOptions.SelectPlayList.Y) + PartyOptions.SelectMode.H + 15;
+        PartyOptions.SelectHighscores.Text := Language.Translate('PARTY_HIGHSCORES');
+      end;
       {ThemeLoadButton (ButtonNext, 'ButtonNext');
       ThemeLoadButton (ButtonPrev, 'ButtonPrev');}
 

@@ -465,7 +465,7 @@ end;
 
 procedure TScreenHighScores.ReturnFromScores;
 begin
-  if (ScreenSong.Mode = smPartyClassic) and ScreenSing.LocalHighscoresAllowed then
+  if (ScreenSong.Mode in [smPartyClassic, smPartyFree]) and ScreenSing.LocalHighscoresAllowed then
     FadeTo(@ScreenPartyScore)
   else
   begin
@@ -600,7 +600,7 @@ begin
 
   IsFadingOut := false;
   VisibleDifficulty := Player[0].Level;
-  if ScreenSong.Mode = smPartyClassic then VisibleDifficulty := Ini.Difficulty;
+  if ScreenSong.Mode in [smPartyClassic, smPartyFree] then VisibleDifficulty := Ini.Difficulty;
 
   UpdateEntryLayout;
   UpdateHeaderText;
