@@ -33,11 +33,12 @@ function issueReport(changes, previous) {
     (changes.remaining ? '\n\nAdditional changed reports remain for the next assessment.' : '');
 }
 function forkReport(changes) {
-  return boundedReport('New fork work for assessment:\n\n' + changes.batch.map(f =>
+  return boundedReport('New fork work for assessment:\n\n' + changes.batch.filter(f => !f.newCommits || f.newCommits.length).map(f =>
     '### ' + text(f.repository, 100) + ' / ' + text(f.branch, 100) + '\n\n' + f.compareUrl + '\n\n' +
-    f.ahead + ' commits outside USDX history; ' + f.behind + ' commits behind USDX.\n\n' + commitList(f.commits.slice(0, 6), 6) +
-    (f.ahead > Math.min(6, f.commits.length) ? '\n\nOnly ' + Math.min(6, f.commits.length) + ' commit titles are shown; inspect the full comparison before deciding.' : '')
-  ).join('\n\n') + review + '\n\nFor rendering/backend changes, explain the proposed mechanism and what to measure on older laptops or Raspberry Pi. Do not infer a speedup from the title. Check USCE equivalents and dependencies before proposing a port.');
+    f.ahead + (f.comparisonKind === 'since-checkpoint' ? ' commits since the previous branch checkpoint.' : ' commits outside the comparison base (USCE main for new branches).') +
+    '\n\n' + (f.newCommits ? f.newCommits.length + ' commits not already inventoried on another branch.\n\n' : '') + commitList((f.newCommits || f.commits).slice(0, 6), 6) +
+    ((f.newCommits || f.commits).length > 6 ? '\n\nOnly ' + Math.min(6, f.commits.length) + ' commit titles are shown; inspect the full comparison before deciding.' : '')
+  ).join('\n\n') + review + '\n\nAssess the full inventory, not just these excerpts. Retain earlier decisions and inspect only the new delta on known branches. Group shared commits and equivalent features across forks. Check current USCE source and existing PRs before proposing work; exact ancestry alone does not detect rebased or adapted changes. Record already-covered, superseded and rejected work with evidence so it is not repeatedly presented as new. Keep unresolved candidates linked to their existing follow-up; do not create duplicate issues or PRs. A newly discovered old branch is a one-time baseline assessment, not new development. Prepare concrete recommendations and focused follow-ups; ask Daniel only for actual product decisions.\n\nFor rendering/backend changes, explain the proposed mechanism and what to measure on older laptops or Raspberry Pi. Do not infer a speedup from the title. Check USCE equivalents and dependencies before proposing a port.');
 }
 // Escape source prose at its insertion points; comparison URL destinations stay exact.
 module.exports = {upstreamReport, issueReport, forkReport};

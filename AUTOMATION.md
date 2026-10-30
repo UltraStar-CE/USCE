@@ -111,3 +111,18 @@ Build results identify the exact source revision tested. See
 Automation does not approve its own proposals, change review requirements or
 merge PRs. A human evaluates the change, testing and review feedback before
 deciding to merge.
+
+### Incremental fork assessment
+
+Known branches are compared with their last recorded head. Newly discovered
+branches are compared with USCE main, excluding commits already in its history.
+The complete paginated commit inventory is retained; excerpts are only a summary.
+Prior heads and decisions remain in assessment history. Shared commits are
+presented once across the batch and previous inventories. A new push elsewhere
+in a fork does not make its old branch history new development.
+
+Assessors check rebased/adapted equivalents against USCE source and existing
+PRs, record covered/superseded/rejected work with evidence, and link unresolved
+work to existing follow-ups. These semantic decisions are not inferred from
+commit titles or ancestry. Initial old history is assessed once. Reports should
+provide recommendations and concrete follow-ups rather than another reading list.

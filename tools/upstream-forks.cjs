@@ -37,9 +37,18 @@ function forkChanges(previous, snapshots) {
     return fork.ahead > 0 && ![...records.values()].some(old => old.repository === fork.repository && old.head === fork.head);
   }).slice(0, 20);
   if (!batch.length) return null;
+  const seen = new Set((previous?.forks || []).flatMap(f => [...(f.commits || []), ...(f.assessmentHistory || []).flatMap(h => h.commits || [])].map(c => c.sha)));
+  for (const fork of batch) {
+    fork.newCommits = (fork.commits || []).filter(c => !seen.has(c.sha));
+    for (const c of fork.commits || []) seen.add(c.sha);
+  }
   for (const fork of batch) records.set(recordKey(fork), {...fork,
     assessment: {decision: 'pending', usceReferences: [], reason: ''},
-    ...(records.get(recordKey(fork))?.assessment ? {previousAssessment: records.get(recordKey(fork)).assessment} : {})});
+    ...(records.get(recordKey(fork))?.assessment ? {previousHead: records.get(recordKey(fork)).head,
+      previousAssessment: records.get(recordKey(fork)).assessment,
+      assessmentHistory: [...(records.get(recordKey(fork)).assessmentHistory || []),
+        {head: records.get(recordKey(fork)).head, commits: records.get(recordKey(fork)).commits || [],
+          assessment: records.get(recordKey(fork)).assessment}]} : {})});
   return {batch, checkpoint: {repository: 'UltraStar-Deluxe/USDX', forks: [...records.values()]}};
 }
 
@@ -80,15 +89,27 @@ async function trackForks({github, context, core, now = new Date()}) {
       if (!shaPattern.test(head)) throw Error('Missing fork head: ' + fork.full_name);
       if (seenHeads.has(head) || previous?.forks.some(record => record.repository === fork.full_name && record.head === head)) continue;
       seenHeads.add(head);
-      const comparison = (await github.rest.repos.compareCommitsWithBasehead({...source,
-        basehead: upstreamHead + '...' + head, per_page: 100})).data;
+      const prior = previous?.forks.find(record => recordKey(record) === fork.full_name + '#' + branch.name);
+      // Compare known branches with their checkpoint, not their entire USDX history.
+      // For first discovery, exclude exact commits already in USCE's main history.
+      const base = prior?.head || sha;
+      const args = {...context.repo, basehead: base + '...' + head, per_page: 100};
+      const comparison = (await github.rest.repos.compareCommitsWithBasehead(args)).data;
       if (!Number.isSafeInteger(comparison.ahead_by) || !Number.isSafeInteger(comparison.behind_by) ||
           !Array.isArray(comparison.commits)) throw Error('Incomplete fork comparison: ' + fork.full_name);
+      const commits = [...comparison.commits];
+      for (let page = 2; commits.length < comparison.ahead_by; page++) {
+        const next = (await github.rest.repos.compareCommitsWithBasehead({...args, page})).data.commits;
+        if (!Array.isArray(next) || !next.length) throw Error('Incomplete fork commit inventory: ' + fork.full_name);
+        commits.push(...next);
+      }
+      if (new Set(commits.map(c => c.sha)).size !== commits.length) throw Error('Duplicate fork commit inventory');
+      if (commits.length !== comparison.ahead_by) throw Error('Incomplete fork commit inventory: ' + fork.full_name);
       snapshots.push({repository: fork.full_name, branch: branch.name, head, upstreamHead,
+        comparisonBase: base, comparisonKind: prior ? 'since-checkpoint' : 'outside-usce',
         ahead: comparison.ahead_by, behind: comparison.behind_by,
-        compareUrl: 'https://github.com/' + fork.full_name + '/compare/' + upstreamHead + '...' + head,
-        // A bounded excerpt for discovery; the compare link contains the full change set.
-        commits: comparison.commits.slice(0, 12).map(c => ({sha: c.sha,
+        compareUrl: 'https://github.com/' + ownRepository + '/compare/' + base + '...' + head,
+        commits: commits.map(c => ({sha: c.sha,
           title: c.commit.message.split('\n')[0], author: c.author?.login || c.commit.author.name}))});
     }
   }
