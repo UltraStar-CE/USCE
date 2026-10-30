@@ -239,6 +239,7 @@ type
       procedure SetRouletteScrollRefresh;
       procedure SetChessboardScrollRefresh;
       procedure SetListScrollRefresh;
+      procedure UpdateListSelectedText;
       procedure SyncDuetSingerTheme;
 
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
@@ -2360,6 +2361,7 @@ var
   VisibleCount: integer;
 begin
   VS := CatSongs.VisibleSongs;
+  UpdateListSelectedText;
   if VS > 0 then
   begin
 
@@ -2832,15 +2834,20 @@ begin
 
 end;
 
-procedure TScreenSong.SetListScrollRefresh;
-var
-  B, Count, I:  integer;
-  SongID: array of integer;
-  Alpha: real;
+procedure TScreenSong.UpdateListSelectedText;
+var I: integer;
 begin
   for I := 0 to High(ListSelectedText) do
     if ListSelectedText[I] >= 0 then
     begin
+      Text[ListSelectedText[I]].Visible := (CatSongs.VisibleSongs > 0) and
+        (Interaction >= 0) and (Interaction < Length(CatSongs.Song)) and
+        CatSongs.Song[Interaction].Visible;
+      if not Text[ListSelectedText[I]].Visible then
+      begin
+        Text[ListSelectedText[I]].Text := '';
+        Continue;
+      end;
       case I of
         0: Text[ListSelectedText[I]].Text := CatSongs.Song[Interaction].Title;
         1: Text[ListSelectedText[I]].Text := CatSongs.Song[Interaction].Artist;
@@ -2849,6 +2856,16 @@ begin
            else Text[ListSelectedText[I]].Text := '';
       end;
     end;
+
+end;
+
+procedure TScreenSong.SetListScrollRefresh;
+var
+  B, Count, I:  integer;
+  SongID: array of integer;
+  Alpha: real;
+begin
+  UpdateListSelectedText;
 
   Statics[StaticActual].Texture.Free;
   if (Button[Interaction].Texture.Name.IsUnset) then
