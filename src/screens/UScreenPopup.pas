@@ -1717,7 +1717,7 @@ end;
 
 function TScreenPopup.ButtonWidth(const Caption: UTF8String): real;
 begin
-  SetFontFamily(Button[0].Text[0].Font);
+  SetFontFamily(ResolveThemeFont(Button[0].Text[0].FontFile, Button[0].Text[0].Font));
   SetFontStyle(Button[0].Text[0].Style);
   SetFontSize(Button[0].Text[0].Size);
   Result := Max(Theme.ErrorPopup.Button1.W,
