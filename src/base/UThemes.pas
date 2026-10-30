@@ -217,6 +217,9 @@ type
     FadeTexPos: integer;
 
     Alpha: real;
+    FocusWidth, FocusInset, FocusRadius: real;
+    FocusColR, FocusColG, FocusColB, FocusAlpha: real;
+    FocusDuration: integer;
 
     //Button Collection Mod
     Parent: byte; //Number of the Button Collection this Button is assigned to. IF 0: No Assignement
@@ -3566,6 +3569,7 @@ var
   Collections2: PAThemeButtonCollection;
   SectionList: TThemeSectionList;
 begin
+  ThemeButton.FocusWidth := 0;
   if SectionExists(Name, Enabled) and (not Enabled) then
   begin
     SetLength(ThemeButton.Text, 0);
@@ -3640,6 +3644,22 @@ begin
     ThemeButton.DColR := Color[C].RGB.R;
     ThemeButton.DColG := Color[C].RGB.G;
     ThemeButton.DColB := Color[C].RGB.B;
+  end;
+
+  ThemeButton.FocusWidth := Max(0, ReadFloat(SectionList, 'FocusWidth', 0));
+  ThemeButton.FocusInset := ReadFloat(SectionList, 'FocusInset', 0);
+  ThemeButton.FocusRadius := Max(0, ReadFloat(SectionList, 'FocusRadius', 0));
+  ThemeButton.FocusDuration := EnsureRange(ReadInteger(SectionList, 'FocusDuration', 0), 0, 2000);
+  ThemeButton.FocusAlpha := EnsureRange(ReadFloat(SectionList, 'FocusAlpha', 1), 0.0, 1.0);
+  ThemeButton.FocusColR := ThemeButton.ColR;
+  ThemeButton.FocusColG := ThemeButton.ColG;
+  ThemeButton.FocusColB := ThemeButton.ColB;
+  C := ColorExists(ReadString(SectionList, 'FocusColor', ''));
+  if C >= 0 then
+  begin
+    ThemeButton.FocusColR := Color[C].RGB.R;
+    ThemeButton.FocusColG := Color[C].RGB.G;
+    ThemeButton.FocusColB := Color[C].RGB.B;
   end;
 
   //Set Collections to Last Basic Collections if no valid Value
