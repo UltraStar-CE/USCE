@@ -102,6 +102,10 @@ begin
   Check(100, 50, 2, 2, 1, 1);
   Check(50, 100, 2, 2, 1, 1);
   Check(100, 50, 2.4, 1.8, 1, 1);
+  FocusTexture.W := -1; FocusTexture.H := 10;
+  FocusTexture.OutlineWidth := 0; Calculate;
+  if FocusTexture.OutlineWidth <> 0 then
+    raise Exception.Create('Inverted inset bounds must not produce an outline');
   FocusTexture.Free; Texture.Free;
   WriteLn('PASS: uniform 16:9, 21:9, 4:3 and stretch outline geometry');
 end.
