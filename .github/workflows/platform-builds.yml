@@ -163,6 +163,8 @@ jobs:
           ./autogen.sh
           ./configure --with-opencv --with-libprojectM
           make
+      - name: Verify packaged Windows DLL loading without development paths
+        run: python tools/check_windows_runtime.py game
       - name: Create installer
         run: |
           del game\*.debug
