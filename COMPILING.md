@@ -130,3 +130,9 @@ unlocking requires the password. The remaining singing configuration options are
 - `-singing-display`: `full`, `notes-info`, `notes`, `info`, `none`.
 
 Omitted options use the saved continuous-playback profile.
+
+## Signed APT repository
+
+Ubuntu packages are published by the separate [UltraStar-CE/apt repository](https://github.com/UltraStar-CE/apt).
+See its README for supported distributions, installation and signing/publication setup.
+The DEB packages themselves remain part of USCE releases.
