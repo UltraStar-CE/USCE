@@ -361,8 +361,8 @@ begin
   FocusTexture.W := Right - FocusInset * UnitW - FocusTexture.X;
   FocusTexture.H := Bottom - FocusInset * UnitH - FocusTexture.Y;
   // Shape fractions use physical pixels, matching the renderer.
-  ShortSide := Min(Abs(FocusTexture.W * GetLayoutScaleX),
-    Abs(FocusTexture.H * GetLayoutScaleY));
+  ShortSide := Min(FocusTexture.W * GetLayoutScaleX,
+    FocusTexture.H * GetLayoutScaleY);
   PixelScale := Min(Abs(UnitW * GetLayoutScaleX), Abs(UnitH * GetLayoutScaleY));
   if ShortSide <= 0 then Exit;
   FocusTexture.Z := Texture.Z;
