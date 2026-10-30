@@ -278,6 +278,7 @@ end;
 
 procedure TSongs.Execute();
 begin
+  try
 {$IFDEF USE_PSEUDO_THREAD}
   int_LoadSongList();
 {$ELSE}
@@ -295,6 +296,12 @@ begin
     Suspend();
   end;
 {$ENDIF}
+  except
+    {$IFNDEF USE_PSEUDO_THREAD}
+    LogWorkerException('TSongs.Execute');
+    {$ENDIF}
+    raise;
+  end;
 end;
 
 procedure TSongs.int_LoadSongList;
