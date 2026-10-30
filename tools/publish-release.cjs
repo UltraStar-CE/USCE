@@ -86,8 +86,8 @@ async function publishDraft({github, context, core}, version) {
   if (!versionPattern.test(version)) throw Error('Invalid release version');
   const paths = fs.readdirSync('release-output').sort();
   const expected = ['USCE-windows-installer-' + version + '.exe', 'USCE-windows-portable-' + version + '.zip',
-    'USCE-linux-' + version + '.AppImage', 'USCE-mac-ARM-' + version + '.dmg', 'USCE-mac-x86-' + version + '.dmg', 'SHA256SUMS', 'VERSION'].sort();
-  if (JSON.stringify(paths) !== JSON.stringify(expected)) throw Error('Expected five packages, VERSION and SHA256SUMS');
+    'USCE-linux-' + version + '.AppImage', 'USCE-linux-deb-' + version + '.deb', 'USCE-mac-ARM-' + version + '.dmg', 'USCE-mac-x86-' + version + '.dmg', 'SHA256SUMS', 'VERSION'].sort();
+  if (JSON.stringify(paths) !== JSON.stringify(expected)) throw Error('Expected six packages, VERSION and SHA256SUMS');
   const marker = '<!-- usce-source:' + context.sha + ' -->';
   const tag = 'v' + version;
   let tagExists = false;

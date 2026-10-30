@@ -1,4 +1,4 @@
-"""Collect exact-version release artifacts and checksum the five downloads."""
+"""Collect exact-version release artifacts and checksum the six downloads."""
 import hashlib, json, re, sys, zipfile
 from pathlib import Path
 
@@ -10,9 +10,9 @@ def package(source, dest, version):
         raise ValueError('Release output directory must be empty')
     dest.mkdir(parents=True, exist_ok=True)
     names = {'USCE-windows-installer-' + version: '.exe', 'USCE-windows-portable-' + version: '.zip',
-             'USCE-linux-' + version: '.AppImage', 'USCE-mac-ARM-' + version: '.dmg', 'USCE-mac-x86-' + version: '.dmg'}
+             'USCE-linux-' + version: '.AppImage', 'USCE-linux-deb-' + version: '.deb', 'USCE-mac-ARM-' + version: '.dmg', 'USCE-mac-x86-' + version: '.dmg'}
     if set(p.name for p in source.iterdir()) != set(names):
-        raise ValueError('Expected exactly the five matching platform artifacts')
+        raise ValueError('Expected exactly the six matching platform artifacts')
     for name, ext in names.items():
         directory = source / name
         files = sorted(p for p in directory.rglob('*') if p.is_file())
