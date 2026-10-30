@@ -83,7 +83,10 @@ def audit(root, extra_themes=(), english_path=None):
                 add(f'MODE_{match[2].upper()}_{suffix}', path.relative_to(root),
                     text.count('\n', 0, match.start()) + 1)
 
-    for folder in (root / 'game/themes', *extra_themes):
+    local_themes = root / 'game/themes'
+    # Release builds scan the pinned external checkout instead of a local setup.
+    theme_folders = ((local_themes,) if local_themes.is_dir() or not extra_themes else ())
+    for folder in (*theme_folders, *extra_themes):
         if not folder.is_dir():
             errors.append(f'{folder}: theme directory does not exist')
             continue
