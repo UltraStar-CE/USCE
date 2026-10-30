@@ -318,14 +318,14 @@ begin
   end;
 
   Layout := GetSingLaneLayout(PlayerCountOnScreen, LocalIndex, Theme.Sing.PlayerLayout,
-    CurrentSong.isDuet and (PlayersPlay <> 1));
+    CurrentSong.isDuet);
   LaneLeft := Layout.ColumnLeft;
   LaneWidth := Layout.ColumnWidth;
 
   BaseTemplate := Theme.Sing.PlayerTemplate;
   GetSingHeaderPlacement(PlayerCountOnScreen, LocalIndex, Layout,
     Theme.Sing.PlayerWidgetLayout, LaneLeft, LaneWidth, GroupTop, Scale,
-    CurrentSong.isDuet and (PlayersPlay <> 1));
+    CurrentSong.isDuet);
 
   ScoreScale := Min(Scale, (LaneWidth * Theme.Sing.PlayerWidgetLayout.ScoreWidthFraction) /
     Max(1.0, BaseTemplate.ScoreBackground.W * 1.0));
