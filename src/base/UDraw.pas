@@ -397,7 +397,7 @@ begin
   for Count := 0 to 9 do
   begin
     Y := Top + Count * LineSpacing;
-    Renderer.DrawLine(Left, Y, Right, Y, 0, LineThickness, Skin_P1_LinesR, Skin_P1_LinesG, Skin_P1_LinesB, 0.4);
+    Renderer.DrawLine(Left, Y, Right, Y, 0, LineThickness, Skin_P1_LinesR, Skin_P1_LinesG, Skin_P1_LinesB, Theme.Sing.GuideAlpha);
   end;
 end;
 
@@ -935,6 +935,16 @@ begin
         ColB := Col.B;
         Alpha := BarAlpha;
       end;
+      if Theme.Sing.HelperAbove then
+      begin
+        Tex_Lyric_Help_Bar.X := Left + LyricsMid - 50 * (1 - BarProgress);
+        Tex_Lyric_Help_Bar.Y := LyricEngine.UpperLineY - 8;
+        Tex_Lyric_Help_Bar.W := 100 * (1 - BarProgress);
+        Tex_Lyric_Help_Bar.H := 4;
+        Tex_Lyric_Help_Bar.ColR := Theme.Sing.LyricActive.R;
+        Tex_Lyric_Help_Bar.ColG := Theme.Sing.LyricActive.G;
+        Tex_Lyric_Help_Bar.ColB := Theme.Sing.LyricActive.B;
+      end;
       Renderer.DrawTexture(Tex_Lyric_Help_Bar);
     end;
   end;
@@ -1132,7 +1142,7 @@ begin
     Layout := GetSingLaneLayout(PlayerCountOnScreen, LocalIndex, Theme.Sing.PlayerLayout,
       CurrentSong.isDuet);
     ContentScale := Layout.ContentScale;
-    NotesH[I - 1] := Max(2.0, BaseNoteH * ContentScale);
+    NotesH[I - 1] := Max(2.0, BaseNoteH * ContentScale * Theme.Sing.NoteScale);
     NotesW[I - 1] := Max(1.0, BaseNoteW * ContentScale);
   end;
 

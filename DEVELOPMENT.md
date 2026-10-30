@@ -222,3 +222,46 @@ is visible. `[MainPreview]` may set `FadeTime` in seconds (default 0, maximum 5)
 and `SlideX` in theme coordinates (default 0). Transitions reverse smoothly on
 rapid input. Groups are decorative: input stays with the existing buttons.
 Absent groups retain the existing main menu.
+
+
+### Optional player cards and singing HUD styling
+
+These settings are opt-in. Themes without them keep the existing menu, setup
+carousel, player headers, note textures and progress colors. No theme name is
+checked by the renderer.
+
+`[NameCards] Enabled=1` displays player cards using the normal setup controls.
+`X/Y/W/H` define their area, `Columns` and `Rows` the page size (defaults 3x2),
+`Gap` their spacing and `MaxH` their height limit. The selected player's page
+follows keyboard navigation. Clicking a card selects its player. Names, avatars,
+colors, difficulty and multi-voice assignments use the existing state and save
+path. `NameCardPanel` and `NameCardFocus` are ordinary static sections; their
+W/H are the reference dimensions for the card contents. `NameCardAvatar` and
+`NameCardName` position its avatar and name. The regular name button and select
+slides use card-local coordinates, or screen coordinates with `EditOutside=1`.
+`ShowLabel`, `Initials`, `LevelSegments` and `TintControls` customize the view.
+The difficulty segments retain the existing arrow-key control and also accept
+mouse clicks. The shared count selector still supports every player count.
+
+`[SingPlayerHeader]` adds an ordinary static panel behind each shared player
+header. `SingPlayerWidgetPlacement` can set `DockTop=1`, `DockY` and `DockW` for
+a row of headers across the top. Multi-voice songs retain lane-local headers
+so the top lyric bank stays clear. The existing anchors and reference rectangle
+still control widget placement and scaling.
+
+`[SingScoreStyle]` can set `ThemedText=1` to use the score text's position,
+alignment, font file and color, `Digits` (default 5), `PlayerColor` (default 1)
+and `BackgroundAlpha` (default 1). `[Sing]` supports `NoteScale` (default 1),
+`PlainNotesUsePlayerColor` (default 1), `GuideAlpha` (default 0.4), an optional
+`DefaultAvatarTex` for the singing screen alone, and `HelperAbove=1` for a thin
+lyric count-in cue. Custom player avatars are retained. `SingLanePanel` can add
+an `AccentWidth` stripe in the player's color. `SingTimeProgress VoiceColors=0`
+uses its theme color for every lyric section; `SingTimeText ShowSongTitle=1`
+includes the title beside the time. All voices use the same rendering path.
+
+`[Main] DynamicDescription=0` keeps the theme's own heading text. Buttons can
+set `DAlpha` for a separate deselected background opacity. A button text section
+can opt into its selected/deselected colors with `FocusColors=1`; existing text
+color behavior remains the default. Select slides can set `EmptyText=1` to omit
+their label while retaining the option text. Required text sections may use
+`Enabled=0` to omit their text, as numbered optional text sections already do.

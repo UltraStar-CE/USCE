@@ -1048,6 +1048,8 @@ begin
     Skin.GetTextureFileName(ThemeButton.Tex), ThemeButton.Typ,
     ThemeButton.Reflection, ThemeButton.Reflectionspacing, ThemeButton.DeSelectReflectionspacing);
 
+  Button[Result].HasDeselectAlpha := ThemeButton.HasDAlpha;
+  Button[Result].DeselectAlpha := ThemeButton.DAlpha;
   Button[Result].BackgroundAlpha := ThemeButton.Alpha;
   Button[Result].Texture.Alpha := ThemeButton.Alpha;
   Button[Result].DeSelectTexture.Alpha := ThemeButton.Alpha;
@@ -1090,12 +1092,25 @@ begin
   Button[Result].FadeTexPos := ThemeButton.FadeTexPos;
 
   BTLen := Length(ThemeButton.Text);
+  SetLength(Button[Result].TextColors, BTLen);
   for BT := 0 to BTLen-1 do
   begin
     AddButtonText(ThemeButton.Text[BT].X, ThemeButton.Text[BT].Y,
       ThemeButton.Text[BT].ColR, ThemeButton.Text[BT].ColG, ThemeButton.Text[BT].ColB,
       ThemeButton.Text[BT].Font, ThemeButton.Text[BT].Style, ThemeButton.Text[BT].Size,
       ThemeButton.Text[BT].Align, ThemeButton.Text[BT].Text);
+    with Button[Result].TextColors[BT] do
+    begin
+      Enabled := ThemeButton.Text[BT].FocusColors;
+      R := ThemeButton.Text[BT].ColR; G := ThemeButton.Text[BT].ColG; B := ThemeButton.Text[BT].ColB;
+      DR := ThemeButton.Text[BT].DColR; DG := ThemeButton.Text[BT].DColG; DB := ThemeButton.Text[BT].DColB;
+    end;
+    if ThemeButton.Text[BT].FocusColors and not Button[Result].Selected then
+    begin
+      Button[Result].Text[BT].ColR := ThemeButton.Text[BT].DColR;
+      Button[Result].Text[BT].ColG := ThemeButton.Text[BT].DColG;
+      Button[Result].Text[BT].ColB := ThemeButton.Text[BT].DColB;
+    end;
     Button[Result].Text[BT].FontFile := ThemeButton.Text[BT].FontFile;
     if (ThemeButton.Text[BT].FontFile <> nil) and ThemeButton.Text[BT].FontFile.IsSet then
       Button[Result].Text[BT].Text := ThemeButton.Text[BT].Text;

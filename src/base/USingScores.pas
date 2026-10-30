@@ -303,7 +303,7 @@ var
   RatingOffsetY: integer;
   PopupYOffset: integer;
   PopupFontSize: integer;
-  GroupTop: real;
+  GroupTop: integer;
   Layout: TSingLaneLayout;
 begin
   if Screens > 1 then
@@ -323,7 +323,9 @@ begin
   LaneWidth := Layout.ColumnWidth;
 
   BaseTemplate := Theme.Sing.PlayerTemplate;
-  Scale := Layout.WidgetScale;
+  GetSingHeaderPlacement(PlayerCountOnScreen, LocalIndex, Layout,
+    Theme.Sing.PlayerWidgetLayout, LaneLeft, LaneWidth, GroupTop, Scale,
+    CurrentSong.isDuet and (PlayersPlay <> 1));
 
   ScoreScale := Min(Scale, (LaneWidth * Theme.Sing.PlayerWidgetLayout.ScoreWidthFraction) /
     Max(1.0, BaseTemplate.ScoreBackground.W * 1.0));
@@ -333,8 +335,7 @@ begin
     Round(BaseTemplate.ScoreBackground.W * ScoreScale));
   Result.BGH := Max(1,
     Round(BaseTemplate.ScoreBackground.H * ScoreScale));
-  GroupTop := Max(10, Layout.RowAnchorY -
-    GetSingHeaderTopOffset(Theme.Sing.PlayerWidgetLayout, Layout.GridRows, Scale));
+
   Result.BGX := GetSingPlayerWidgetX(BaseTemplate.ScoreBackground.X,
     BaseTemplate.ScoreBackground.W, Round(Result.BGW), LaneLeft, LaneWidth,
     Theme.Sing.PlayerWidgetLayout.ScoreAnchorX, ScoreScale, Theme.Sing.PlayerWidgetLayout);
@@ -980,15 +981,18 @@ begin
       W := Position.BGW;
       H := Position.BGH;
       ScaleMode := Theme.Sing.PlayerTemplate.ScoreBackground.ScaleMode;
+      Alpha := Theme.Sing.ScoreAlpha;
     end;
     Renderer.DrawTexture(Players[Index].ScoreBG);
 
     // draw score text
     ScoreStr := IntToStr(Players[Index].ScoreDisplayed);
-    while (Length(ScoreStr) < 5) do
+    while (Length(ScoreStr) < Theme.Sing.ScoreDigits) do
       ScoreStr := '0' + ScoreStr;
 
-    SetFontFamily(Position.TextFont);
+    if Theme.Sing.ScoreThemedText then
+      SetFontFamily(ResolveThemeFont(Theme.Sing.PlayerTemplate.Score.FontFile, Position.TextFont))
+    else SetFontFamily(Position.TextFont);
     SetFontStyle(Position.TextStyle);
     SetFontItalic(false);
     SetFontReflection(false, 0);
@@ -1008,6 +1012,15 @@ begin
     end;
 
     TextX := Position.BGX + (Position.BGW - TextW) / 2;
+    if Theme.Sing.ScoreThemedText then
+    begin
+      TextX := Position.TextX;
+      case Theme.Sing.PlayerTemplate.Score.Align of
+        1: TextX := TextX - TextW / 2;
+        2: TextX := TextX - TextW;
+      end;
+      with Theme.Sing.PlayerTemplate.Score do SetFontColor(ColR, ColG, ColB, 1);
+    end;
     SetFontPos(TextX, Position.TextY);
     PrintText(ScoreStr);
   end; // eo player has position

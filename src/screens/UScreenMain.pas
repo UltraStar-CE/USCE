@@ -353,6 +353,7 @@ end;
 procedure TScreenMain.SetInteraction(Num: integer);
 begin
   inherited SetInteraction(Num);
+  if not Theme.Main.DynamicDescription then Exit;
   Text[TextDescription].Text     := Theme.Main.Description[Interaction];
   Text[TextDescriptionLong].Text := Theme.Main.DescriptionLong[Interaction];
 end;
