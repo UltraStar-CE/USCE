@@ -4019,7 +4019,7 @@ var
 begin
   Result := -1;
   for C := 0 to High(Color) do
-    if Color[C].Name = Name then
+    if SameText(Color[C].Name, Name) then
       Result := C;
 end;
 
