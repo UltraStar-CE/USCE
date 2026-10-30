@@ -211,3 +211,14 @@ Texture background sections may set `Motion=1` for slow gradient drift. The
 value controls speed (0 through 10); the default 0 retains the existing static
 background. It does not affect videos, controls or screen-transition scaling.
 The enlarged texture always covers the viewport, including multiple screens.
+
+### Optional main-menu preview groups
+
+Themes may declare `MainPreviewSingStatic1`, `MainPreviewPartyStatic1`,
+`MainPreviewStatisticsStatic1`, `MainPreviewSettingsStatic1`,
+`MainPreviewAboutStatic1` and `MainPreviewExitStatic1`, followed by consecutively
+numbered ordinary static sections per group. Only the selected action's group
+is visible. `[MainPreview]` may set `FadeTime` in seconds (default 0, maximum 5)
+and `SlideX` in theme coordinates (default 0). Transitions reverse smoothly on
+rapid input. Groups are decorative: input stays with the existing buttons.
+Absent groups retain the existing main menu.

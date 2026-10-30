@@ -366,6 +366,8 @@ type
   TThemeMain = class(TThemeBasic)
     Buttons: array[0..3] of TThemeButton;
     ButtonAbout, ButtonExit: TThemeButton;
+    Preview: array[0..5] of AThemeStatic;
+    PreviewFadeTime, PreviewSlideX: real;
 
     TextDescription:      TThemeText;
     TextDescriptionLong:  TThemeText;
@@ -1218,6 +1220,7 @@ type
     procedure ThemeLoadBackground(var ThemeBackground: TThemeBackground; const Name: string);
     procedure ThemeLoadHighScores;
     procedure ThemeLoadMainButtons;
+    procedure ThemeLoadMainPreviews;
     procedure ThemeLoadHighScoreList(var List: TThemeHighScoreList; const Name: string);
     procedure ThemeLoadText(var ThemeText: TThemeText; const Name: string);
     procedure ThemeLoadTexts(var ThemeText: AThemeText; const Name: string);
@@ -2057,6 +2060,7 @@ begin
       ThemeLoadText(Main.TextDescription, 'MainTextDescription');
       ThemeLoadText(Main.TextDescriptionLong, 'MainTextDescriptionLong');
       ThemeLoadMainButtons;
+      ThemeLoadMainPreviews;
       SetLength(Main.ButtonCollection, 0);
 
       Main.Description[0] := Language.Translate('SING_SING');
@@ -3243,6 +3247,23 @@ begin
   ThemeBackground.Color.B := ReadFloat(SectionList, 'ColB', 1);
   ThemeBackground.Alpha   := ReadFloat(SectionList, 'Alpha', 1);
   ThemeBackground.Motion  := EnsureRange(ReadFloat(SectionList, 'Motion', 0), 0, 10);
+end;
+
+procedure TTheme.ThemeLoadMainPreviews;
+const
+  Roles: array[0..5] of string = ('Sing', 'Party', 'Statistics', 'Settings', 'About', 'Exit');
+var
+  I: integer;
+  Sections: TThemeSectionList;
+begin
+  Sections := GetSectionList('MainPreview');
+  Main.PreviewFadeTime := EnsureRange(ReadFloat(Sections, 'FadeTime', 0), 0, 5);
+  Main.PreviewSlideX := ReadFloat(Sections, 'SlideX', 0);
+  for I := 0 to High(Roles) do
+  begin
+    SetLength(Main.Preview[I], 0);
+    ThemeLoadStatics(Main.Preview[I], 'MainPreview' + Roles[I] + 'Static');
+  end;
 end;
 
 procedure TTheme.ThemeLoadMainButtons;
