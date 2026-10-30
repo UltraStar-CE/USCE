@@ -517,6 +517,7 @@ begin
   case Command of
     rccContinuousStart: Exit(ScreenContinuousPlayback.StartRemoteQueue(ArgsText));
     rccContinuousQueue: Exit(ScreenContinuousPlayback.ReplaceRemoteQueue(ArgsText));
+    rccContinuousConfirm: Exit(ScreenContinuousPlayback.ConfirmRemotePlayers);
     rccContinuousStop, rccContinuousSkip:
       begin
         Result := ScreenContinuousPlayback.IsRemoteSession;

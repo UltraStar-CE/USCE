@@ -36,6 +36,7 @@ type
     procedure BeginSession;
     function StartRemoteQueue(const SongIds: UTF8String): boolean;
     function ReplaceRemoteQueue(const SongIds: UTF8String): boolean;
+    function ConfirmRemotePlayers: boolean;
     function IsRemoteSession: boolean;
     function BeginNormalResults: boolean;
     constructor Create; override;
@@ -342,6 +343,15 @@ begin
   if Result then Session.ReplaceUpcoming(RemoteSelection(SongIds));
 end;
 
+function TScreenContinuousPlayback.ConfirmRemotePlayers: boolean;
+begin
+  Result := IsRemoteSession and WaitingForPlayers and
+    (Display.CurrentScreen = @ScreenName) and (Display.NextScreen = nil);
+  if not Result then Exit;
+  ScreenName.SetInteraction(0);
+  ScreenName.ParseInput(SDLK_RETURN, 0, true);
+end;
+
 function TScreenContinuousPlayback.BeginNormalResults: boolean;
 begin
   SyncProfile;
@@ -359,7 +369,8 @@ begin
 end;
 
 procedure TScreenContinuousPlayback.Advance;
-var SongIndex, Skipped: integer; Message: UTF8String;
+var SongIndex, Skipped, I: integer; Message: UTF8String;
+    Handoff: TJSONObject; Singers: TJSONArray;
 begin
   if PreviousRequested then
   begin
@@ -386,6 +397,17 @@ begin
   PreparingPlayers := Session.Stage = psPlayers;
   if PreparingPlayers then
   begin
+    if RemoteOwned then
+    begin
+      Handoff := TJSONObject.Create(['type', 'continuous.handoff', 'songId', SongIndex]);
+      try
+        Singers := TJSONArray.Create;
+        Handoff.Add('singers', Singers);
+        for I := 0 to PlayersPlay - 1 do
+          Singers.Add(TJSONObject.Create(['slot', I + 1, 'name', string(Ini.Name[I])]));
+        RemoteBridgeIPC.SendJsonMessage(UTF8String(Handoff.AsJSON));
+      finally Handoff.Free; end;
+    end;
     ScreenName.Goto_SingScreen := true;
     FadeTo(@ScreenName);
   end

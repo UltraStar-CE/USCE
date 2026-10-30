@@ -53,6 +53,19 @@ type
 
 implementation
 
+uses URemoteControl;
+
+function NativeCapabilities: TJSONArray;
+var Command: TRemoteControlCommand; Name: UTF8String;
+begin
+  Result := TJSONArray.Create(['song.list']);
+  for Command := Succ(Low(TRemoteControlCommand)) to High(TRemoteControlCommand) do
+  begin
+    Name := RemoteControlCommandToString(Command);
+    if Name <> '' then Result.Add(string(Name));
+  end;
+end;
+
 function CloneObject(Message: TJSONObject): TJSONObject;
 begin
   Result := TJSONObject(Message.Clone);
@@ -167,7 +180,7 @@ begin
 end;
 
 procedure TRemoteRelayProtocol.Replay;
-const Order: array[0..11] of string = ('input.state', 'game.state', 'continuous.state', 'api.state', 'song.results', 'screen.info',
+const Order: array[0..12] of string = ('input.state', 'game.state', 'continuous.state', 'continuous.handoff', 'api.state', 'song.results', 'screen.info',
   'playlist.state', 'song.select.state', 'song.clock', 'song.lyrics', 'score.snapshot', 'score.sheet');
 var I: integer;
     Data: TJSONData;
@@ -510,8 +523,7 @@ begin
       ApiState := TJSONObject.Create(['type', 'api.state', 'libraryHash', FSongs.Id,
         'totalSongs', FSongs.Count]);
       try
-        ApiState.Add('apiCapabilities', TJSONArray.Create(['song.list', 'continuous.start',
-          'continuous.queue', 'continuous.stop', 'continuous.skip']));
+        ApiState.Add('apiCapabilities', NativeCapabilities);
         Previous := FCache.Find('input.state');
         if (Previous is TJSONObject) and (TJSONObject(Previous).Find('playerColors') is TJSONArray) then
           ApiState.Add('playerColors', TJSONObject(Previous).Find('playerColors').Clone);
@@ -549,6 +561,8 @@ begin
         (TJSONObject(Previous).Get('state', '') <> Message.Get('state', '')) then
         RemoveField(FCache, 'screen.info');
     end;
+    if (Kind = 'song.started') or ((Kind = 'continuous.state') and not Message.Get('active', false)) then
+      RemoveField(FCache, 'continuous.handoff');
     if Kind = 'song.started' then
     begin
       RemoveField(FCache, 'song.lyrics');
@@ -560,7 +574,7 @@ begin
       // Catalog and preview transfer are separate handlers. Never upload a
       // game's full private library (or local paths) as live screen state.
       RemoveField(PublicMessage, 'apiCapabilities');
-      PublicMessage.Add('apiCapabilities', TJSONArray.Create(['song.list', 'continuous.start', 'continuous.queue', 'continuous.stop', 'continuous.skip']));
+      PublicMessage.Add('apiCapabilities', NativeCapabilities);
       RemoveField(PublicMessage, 'library');
       RemoveField(PublicMessage, 'audioPath');
       RemoveField(PublicMessage, 'coverPath');
@@ -592,7 +606,7 @@ begin
     end;
     if (Kind = 'input.state') or (Kind = 'game.state') or (Kind = 'screen.info') or
       (Kind = 'playlist.state') or (Kind = 'song.select.state') or (Kind = 'continuous.state') or
-      (Kind = 'song.lyrics') or (Kind = 'score.sheet') or (Kind = 'score.snapshot') then Cache(PublicMessage);
+      (Kind = 'continuous.handoff') or (Kind = 'song.lyrics') or (Kind = 'score.sheet') or (Kind = 'score.snapshot') then Cache(PublicMessage);
     // Cache state even offline. Obsolete ACKs/signaling must not block later
     // state/results or replay into a freshly negotiated connection.
     Result := Send(PublicMessage);
