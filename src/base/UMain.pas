@@ -517,11 +517,12 @@ begin
     rccContinuousStart: Exit(ScreenContinuousPlayback.StartRemoteQueue(ArgsText));
     rccContinuousQueue: Exit(ScreenContinuousPlayback.ReplaceRemoteQueue(ArgsText));
     rccContinuousConfirm: Exit(ScreenContinuousPlayback.ConfirmRemotePlayers(ArgsIndex));
-    rccContinuousStop, rccContinuousSkip:
+    rccContinuousStop, rccContinuousSkip, rccContinuousPrevious:
       begin
         Result := ScreenContinuousPlayback.IsRemoteSession;
         if Result then
           if Command = rccContinuousStop then ScreenContinuousPlayback.Stop
+          else if Command = rccContinuousPrevious then ScreenContinuousPlayback.HandlePlaybackKey(SDLK_LEFT, true)
           else ScreenContinuousPlayback.HandlePlaybackKey(SDLK_RIGHT, true);
         Exit;
       end;
