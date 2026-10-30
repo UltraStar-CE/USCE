@@ -13,6 +13,7 @@ type
     SingingSlide, ActiveProfile: integer;
     ResultsOnly: boolean;
     RemoteOwned: boolean;
+    HandoffId: integer;
     RepeatSelection, ResultTime, HighScoreTime, PlayerTime: integer;
     PreparingPlayers: boolean;
     PreviousRequested: boolean;
@@ -36,7 +37,7 @@ type
     procedure BeginSession;
     function StartRemoteQueue(const SongIds: UTF8String): boolean;
     function ReplaceRemoteQueue(const SongIds: UTF8String): boolean;
-    function ConfirmRemotePlayers: boolean;
+    function ConfirmRemotePlayers(ExpectedHandoff: integer): boolean;
     function IsRemoteSession: boolean;
     function BeginNormalResults: boolean;
     constructor Create; override;
@@ -56,7 +57,7 @@ type
 
 implementation
 
-uses SysUtils, Classes, fpjson, jsonparser, Math, UNote, UGraphic, ULanguage, UHelp, ULog, UMusic, UPlaylist,
+uses SysUtils, Classes, fpjson, jsonparser, Math, UNote, UGraphic, URemoteInput, ULanguage, UHelp, ULog, UMusic, UPlaylist,
   USongs, USong, UIni, UThemes, ULyrics, UDisplay, URecord, URemoteBridgeIPC,
   UScreenScore, UScreenSingController, UCommandLine, ULibraryLockdown;
 
@@ -343,10 +344,14 @@ begin
   if Result then Session.ReplaceUpcoming(RemoteSelection(SongIds));
 end;
 
-function TScreenContinuousPlayback.ConfirmRemotePlayers: boolean;
+function TScreenContinuousPlayback.ConfirmRemotePlayers(ExpectedHandoff: integer): boolean;
 begin
   Result := IsRemoteSession and WaitingForPlayers and
-    (Display.CurrentScreen = @ScreenName) and (Display.NextScreen = nil);
+    (Display.CurrentScreen = @ScreenName) and (Display.NextScreen = nil) and
+    (ExpectedHandoff = HandoffId) and not ScreenPopupHelp.Visible and
+    not ScreenPopupError.Visible and not ScreenPopupInfo.Visible and
+    not ScreenPopupCheck.Visible and not ScreenPopupSendScore.Visible and
+    Display.CurrentScreen^.ShowFinish;
   if not Result then Exit;
   ScreenName.SetInteraction(0);
   ScreenName.ParseInput(SDLK_RETURN, 0, true);
@@ -370,7 +375,7 @@ end;
 
 procedure TScreenContinuousPlayback.Advance;
 var SongIndex, Skipped, I: integer; Message: UTF8String;
-    Handoff: TJSONObject; Singers: TJSONArray;
+    Handoff: TJSONObject; Singers: TJSONArray; Local: TBooleanDynArray;
 begin
   if PreviousRequested then
   begin
@@ -399,12 +404,15 @@ begin
   begin
     if RemoteOwned then
     begin
-      Handoff := TJSONObject.Create(['type', 'continuous.handoff', 'songId', SongIndex]);
+      Inc(HandoffId);
+      Handoff := TJSONObject.Create(['type', 'continuous.handoff', 'songId', SongIndex, 'handoffId', HandoffId]);
       try
         Singers := TJSONArray.Create;
         Handoff.Add('singers', Singers);
+        AudioInputProcessor.CheckPlayersConfig(IMaxPlayerCount, Local);
         for I := 0 to PlayersPlay - 1 do
-          Singers.Add(TJSONObject.Create(['slot', I + 1, 'name', string(Ini.Name[I])]));
+          if Local[I] or RemoteInputProcessor.HasAssignedPlayer(I) then
+            Singers.Add(TJSONObject.Create(['slot', I + 1, 'name', string(Ini.Name[I])]));
         RemoteBridgeIPC.SendJsonMessage(UTF8String(Handoff.AsJSON));
       finally Handoff.Free; end;
     end;

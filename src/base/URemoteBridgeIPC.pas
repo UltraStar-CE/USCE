@@ -1376,6 +1376,7 @@ begin
     ArgsIndex := JsonGetInt(Args, 'playlistIndex',
       JsonGetInt(Args, 'songId', JsonGetInt(Args, 'index', -1)));
     ArgsItemIndex := JsonGetInt(Args, 'itemIndex', JsonGetInt(Args, 'songId', -1));
+    if Command = rccContinuousConfirm then ArgsIndex := JsonGetInt(Args, 'handoffId', -1);
   end;
 
   if Assigned(FOwner.OnCommand) then
