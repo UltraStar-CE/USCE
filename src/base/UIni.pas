@@ -228,6 +228,7 @@ type
       AskBeforeDel:   integer;
       OnSongClick:    integer;
       PartyPopup:     integer;
+      PartyHighscores: integer;
       SingScores:     integer;
       DuetScores:     integer;
       TopScores:      integer;
@@ -1867,6 +1868,7 @@ begin
 
   // PartyPopup
   PartyPopup := ReadArrayIndex(IPartyPopup, IniFile, 'Advanced', 'PartyPopup', IGNORE_INDEX, 'On');
+  PartyHighscores := ReadArrayIndex(IPartyPopup, IniFile, 'Advanced', 'PartyHighscores', IGNORE_INDEX, 'Off');
 
   // SingScores
   SingScores := ReadArrayIndex(ISingScores, IniFile, 'Advanced', 'SingScores', IGNORE_INDEX, 'On');
@@ -2118,6 +2120,7 @@ begin
 
     //Party Popup
     IniFile.WriteString('Advanced', 'PartyPopup', IPartyPopup[PartyPopup]);
+    IniFile.WriteString('Advanced', 'PartyHighscores', IPartyPopup[PartyHighscores]);
 
     //SingScores
     IniFile.WriteString('Advanced', 'SingScores', ISingScores[SingScores]);

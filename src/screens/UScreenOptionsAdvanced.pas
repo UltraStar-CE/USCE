@@ -169,6 +169,7 @@ begin
   AddSelectSlide('SING_OPTIONS_ADVANCED_ONSONGCLICK', Ini.OnSongClick, IOnSongClickTranslated);
   AddSelectSlide('SING_OPTIONS_ADVANCED_ASKBEFOREDEL', Ini.AskBeforeDel, IAskbeforeDelTranslated);
   AddSelectSlide('SING_OPTIONS_ADVANCED_PARTYPOPUP', Ini.PartyPopup, IPartyPopupTranslated);
+  AddSelectSlide('SING_OPTIONS_ADVANCED_PARTY_HIGHSCORES', Ini.PartyHighscores, IPartyPopupTranslated);
   AddSelectSlide('SING_OPTIONS_ADVANCED_SINGSCORES', Ini.SingScores, ISingScoresTranslated);
   AddSelectSlide('SING_OPTIONS_ADVANCED_DUETSCORES', Ini.DuetScores, IDuetScoresTranslated);
   AddSelectSlide('SING_OPTIONS_ADVANCED_TOPSCORES', Ini.TopScores, ITopScoresTranslated);

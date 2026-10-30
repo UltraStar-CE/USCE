@@ -32,6 +32,7 @@ function plugin_init()
   local Mode = {}
 
   Mode.Name = 'Duel'
+  Mode.LocalHighscores = true;
   Mode.CanNonParty = true;
   Mode.CanParty = true;
 
