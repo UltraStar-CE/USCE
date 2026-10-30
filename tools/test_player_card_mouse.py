@@ -25,7 +25,8 @@ class PlayerCardMouseTests(unittest.TestCase):
 {$mode Delphi}
 uses SysUtils, Math;
 type
- TPlayerSlotRect = record X,Y,W,H: real; end;
+ TPlayerSlotRect = record X,Y,W,H: integer; end;
+ TMouseOverRect = record X,Y,W,H: single; end;
  TText = record Text: string; end;
  TButton = record Selected: boolean; Text: array[0..0] of TText; end;
  TSlide = class procedure SetSelectOpt(Value: integer); end;
@@ -42,7 +43,7 @@ type
   SelectsS: array[0..0] of TSlide;
   function InteractAt(X,Y: integer): integer;
   function CardRect(I: integer): TPlayerSlotRect;
-  function DifficultySegmentRect(PlayerID, Segment: integer): TPlayerSlotRect;
+  function DifficultySegmentRect(PlayerID, Segment: integer): TMouseOverRect;
   procedure RefreshProfile;
   function ParseMouse(MouseButton: integer; BtnDown: boolean; X,Y: integer): boolean; override;
  end;
