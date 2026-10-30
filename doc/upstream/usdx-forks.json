@@ -3986,7 +3986,7 @@
           "https://github.com/UltraStar-CE/USCE/pull/295",
           "https://github.com/UltraStar-CE/USCE/pull/296"
         ],
-        "reason": "cda33435 adds ResetToAllSongs in Main.OnShow: UnsetPlaylist, RestoreSongOrder and SetFilter clear the active playlist/category/filter on every main-menu return. USCE #294 already restores multipart visibility using the active selection rules. Keep filters/playlists/lockdown intact rather than importing the global reset. Previous 53-commit assessment remains in previousAssessment. Current follow-ups include #293 joker debounce, #294 multipart visibility, #295 Party highscores and #296 redirected fades. Remaining Party features stay in their existing issues; none is reopened as new work.",
+        "reason": "Return from Party to normal library (one new commit): cda33435 adds ResetToAllSongs in Main.OnShow: UnsetPlaylist, RestoreSongOrder and SetFilter clear the active playlist/category/filter on every main-menu return. USCE #294 already restores multipart visibility using the active selection rules. Keep filters/playlists/lockdown intact rather than importing the global reset. Earlier decisions retained: Previous 53-commit assessment remains in previousAssessment. Current follow-ups include #293 joker debounce, #294 multipart visibility, #295 Party highscores and #296 redirected fades. Remaining Party features stay in their existing issues; none is reopened as new work.",
         "authorDateCutoff": "2026-04-30T00:00:00Z"
       },
       "previousAssessment": {
@@ -5638,14 +5638,16 @@
           },
           {
             "area": "Ready check, part cues and readable lyric colors",
-            "decision": "deferred",
-            "reason": "These are genuine optional presentation ideas beyond basic multipart support. The ready check waits for microphone activity, while cues dim inactive tracks and announce the next entrance. They must preserve theme controls, generic voices and continuous/zero-player modes. No automatic gameplay delay or changed lyric colors is adopted.",
+            "decision": "needs-decision",
+            "reason": "The ready check and next-voice cues are explicit product decisions for @dgruss in #304, with recommendations and generic-player/theme requirements.",
             "usceReferences": [
               "https://github.com/UltraStar-CE/USCE/issues/260",
               "https://github.com/UltraStar-CE/USCE/issues/124",
-              "https://github.com/UltraStar-CE/USCE/issues/299"
+              "https://github.com/UltraStar-CE/USCE/issues/299",
+              "https://github.com/UltraStar-CE/USCE/issues/304"
             ],
-            "nextTest": "Prototype separately: missing/disabled microphones must not block startup; test duet/multipart and high player counts, skins, and continuous mode."
+            "nextTest": "Prototype separately: missing/disabled microphones must not block startup; test duet/multipart and high player counts, skins, and continuous mode.",
+            "output": "https://github.com/UltraStar-CE/USCE/issues/304"
           },
           {
             "area": "Fork release files, demonstrations and binary assets",
@@ -5661,9 +5663,10 @@
           "https://github.com/UltraStar-CE/USCE/issues/143",
           "https://github.com/UltraStar-CE/USCE/issues/299",
           "https://github.com/UltraStar-CE/USCE/issues/260",
-          "https://github.com/UltraStar-CE/USCE/issues/124"
+          "https://github.com/UltraStar-CE/USCE/issues/124",
+          "https://github.com/UltraStar-CE/USCE/issues/304"
         ],
-        "reason": "Six-part parsing, assignment, singing and editing: USCE already supports eight voices and per-player assignments through #142/#143. Current ReadTXTHeader skips blank lines before voice markers; editor arrays and voice counts are generic. Do not replace these with a six-track cap, pair-based editor UI or fixed two-column layouts. Undo after switching voices and voice-name bounds: The fork fixes its own two-track-to-six-track transition. Current USCE uses generic undo snapshots. No equivalent failure has been established; retain as a targeted regression check rather than importing the alternate editor rewrite. Ready check, part cues and readable lyric colors: These are genuine optional presentation ideas beyond basic multipart support. The ready check waits for microphone activity, while cues dim inactive tracks and announce the next entrance. They must preserve theme controls, generic voices and continuous/zero-player modes. No automatic gameplay delay or changed lyric colors is adopted. Fork release files, demonstrations and binary assets: Fork-only release workflows/docs are not USCE changes. Do not copy bundled demo audio or screenshots without checking their provenance.",
+        "reason": "Six-part parsing, assignment, singing and editing: USCE already supports eight voices and per-player assignments through #142/#143. Current ReadTXTHeader skips blank lines before voice markers; editor arrays and voice counts are generic. Do not replace these with a six-track cap, pair-based editor UI or fixed two-column layouts. Undo after switching voices and voice-name bounds: The fork fixes its own two-track-to-six-track transition. Current USCE uses generic undo snapshots. No equivalent failure has been established; retain as a targeted regression check rather than importing the alternate editor rewrite. Ready check, part cues and readable lyric colors: The ready check and next-voice cues are explicit product decisions for @dgruss in #304, with recommendations and generic-player/theme requirements. Fork release files, demonstrations and binary assets: Fork-only release workflows/docs are not USCE changes. Do not copy bundled demo audio or screenshots without checking their provenance.",
         "authorDateCutoff": "2026-04-30T00:00:00Z"
       },
       "lastSourceCommitAt": "2026-10-29T20:47:51Z",
@@ -5832,12 +5835,14 @@
         "items": [
           {
             "area": "Translation additions",
-            "decision": "adapt",
-            "reason": "Useful additions to remaining TODO entries. Port only keys still missing in USCE; retain current translations, format placeholders and USCE-specific keys. Translation quality has not been certified.",
+            "decision": "ported",
+            "reason": "Ported the missing TODO entries in #305, preserving existing translations and matching English placeholders. Native-language quality review remains.",
             "usceReferences": [
-              "https://github.com/UltraStar-CE/USCE/issues/299"
+              "https://github.com/UltraStar-CE/USCE/issues/299",
+              "https://github.com/UltraStar-CE/USCE/pull/305"
             ],
-            "nextTest": "Check placeholders and duplicates, then have speakers review each language before a focused translation PR."
+            "nextTest": "Check placeholders and duplicates, then have speakers review each language before a focused translation PR.",
+            "output": "https://github.com/UltraStar-CE/USCE/pull/305"
           },
           {
             "area": "Background video decoding",
@@ -5901,6 +5906,7 @@
         ],
         "usceReferences": [
           "https://github.com/UltraStar-CE/USCE/issues/299",
+          "https://github.com/UltraStar-CE/USCE/pull/305",
           "https://github.com/UltraStar-CE/USCE/issues/210",
           "https://github.com/UltraStar-CE/USCE/issues/173",
           "https://github.com/UltraStar-CE/USCE/issues/164",
@@ -5915,7 +5921,7 @@
           "https://github.com/UltraStar-CE/USCE/issues/64",
           "https://github.com/UltraStar-CE/USCE/issues/197"
         ],
-        "reason": "Translation additions: Useful additions to remaining TODO entries. Port only keys still missing in USCE; retain current translations, format placeholders and USCE-specific keys. Translation quality has not been certified. Background video decoding: This is another version of the already assessed worker-decoder approach. Keep the recorded decision to pursue optional MPV; no new performance claim or parallel decoder port. Karaoke theme and UI primitives: Keep artwork in Themes and shared capabilities optional. Existing rounded shapes, fonts, backplates and section inheritance cover part of this work; focus outlines remain #297. Do not replace generic player layouts with fixed 3/4/6 layouts. Top-N presentation belongs to the theme assessment. Cover-loader exception recovery: Independent worker/cache work is already in #276. The fork catches worker exceptions but just sets Surface=nil; a port must also free partially allocated surfaces and preserve queue progress. Medley for every song: USCE #64 already calculates fallback medleys across tracks. Do not reintroduce fork restrictions such as excluding CALCMEDLEY:OFF songs or fixed 20-30 second timing without a separate product decision. Pass-the-mic banner in normal singing: A visual handover prompt is distinct from actual team/singer reassignment. Existing Team Duel and #197 cover related passing rounds. This fork draws hard-coded geometry and schedules changes by score-weight percentages; do not import it as a new scoring mode. macOS Cmd seeking and its revert: The develop branch includes the Cmd-seek change and its revert. No surviving feature to import from that pair. Fork branch-layout documentation and merge commits are not USCE product changes.",
+        "reason": "Translation additions: Ported the missing TODO entries in #305, preserving existing translations and matching English placeholders. Native-language quality review remains. Background video decoding: This is another version of the already assessed worker-decoder approach. Keep the recorded decision to pursue optional MPV; no new performance claim or parallel decoder port. Karaoke theme and UI primitives: Keep artwork in Themes and shared capabilities optional. Existing rounded shapes, fonts, backplates and section inheritance cover part of this work; focus outlines remain #297. Do not replace generic player layouts with fixed 3/4/6 layouts. Top-N presentation belongs to the theme assessment. Cover-loader exception recovery: Independent worker/cache work is already in #276. The fork catches worker exceptions but just sets Surface=nil; a port must also free partially allocated surfaces and preserve queue progress. Medley for every song: USCE #64 already calculates fallback medleys across tracks. Do not reintroduce fork restrictions such as excluding CALCMEDLEY:OFF songs or fixed 20-30 second timing without a separate product decision. Pass-the-mic banner in normal singing: A visual handover prompt is distinct from actual team/singer reassignment. Existing Team Duel and #197 cover related passing rounds. This fork draws hard-coded geometry and schedules changes by score-weight percentages; do not import it as a new scoring mode. macOS Cmd seeking and its revert: The develop branch includes the Cmd-seek change and its revert. No surviving feature to import from that pair. Fork branch-layout documentation and merge commits are not USCE product changes.",
         "authorDateCutoff": "2026-04-30T00:00:00Z"
       },
       "lastSourceCommitAt": "2026-10-29T19:30:44Z",
@@ -6152,18 +6158,21 @@
         "items": [
           {
             "area": "Translation additions",
-            "decision": "adapt",
-            "reason": "Useful additions to remaining TODO entries. Port only keys still missing in USCE; retain current translations, format placeholders and USCE-specific keys. Translation quality has not been certified.",
+            "decision": "ported",
+            "reason": "Ported the missing TODO entries in #305, preserving existing translations and matching English placeholders. Native-language quality review remains.",
             "usceReferences": [
-              "https://github.com/UltraStar-CE/USCE/issues/299"
+              "https://github.com/UltraStar-CE/USCE/issues/299",
+              "https://github.com/UltraStar-CE/USCE/pull/305"
             ],
-            "nextTest": "Check placeholders and duplicates, then have speakers review each language before a focused translation PR."
+            "nextTest": "Check placeholders and duplicates, then have speakers review each language before a focused translation PR.",
+            "output": "https://github.com/UltraStar-CE/USCE/pull/305"
           }
         ],
         "usceReferences": [
-          "https://github.com/UltraStar-CE/USCE/issues/299"
+          "https://github.com/UltraStar-CE/USCE/issues/299",
+          "https://github.com/UltraStar-CE/USCE/pull/305"
         ],
-        "reason": "Translation additions: Useful additions to remaining TODO entries. Port only keys still missing in USCE; retain current translations, format placeholders and USCE-specific keys. Translation quality has not been certified.",
+        "reason": "Translation additions: Ported the missing TODO entries in #305, preserving existing translations and matching English placeholders. Native-language quality review remains.",
         "coveredBy": {
           "repository": "3Ryuusei3/USDX",
           "branch": "develop",
@@ -6205,18 +6214,21 @@
         "items": [
           {
             "area": "Translation additions",
-            "decision": "adapt",
-            "reason": "Useful additions to remaining TODO entries. Port only keys still missing in USCE; retain current translations, format placeholders and USCE-specific keys. Translation quality has not been certified.",
+            "decision": "ported",
+            "reason": "Ported the missing TODO entries in #305, preserving existing translations and matching English placeholders. Native-language quality review remains.",
             "usceReferences": [
-              "https://github.com/UltraStar-CE/USCE/issues/299"
+              "https://github.com/UltraStar-CE/USCE/issues/299",
+              "https://github.com/UltraStar-CE/USCE/pull/305"
             ],
-            "nextTest": "Check placeholders and duplicates, then have speakers review each language before a focused translation PR."
+            "nextTest": "Check placeholders and duplicates, then have speakers review each language before a focused translation PR.",
+            "output": "https://github.com/UltraStar-CE/USCE/pull/305"
           }
         ],
         "usceReferences": [
-          "https://github.com/UltraStar-CE/USCE/issues/299"
+          "https://github.com/UltraStar-CE/USCE/issues/299",
+          "https://github.com/UltraStar-CE/USCE/pull/305"
         ],
-        "reason": "Translation additions: Useful additions to remaining TODO entries. Port only keys still missing in USCE; retain current translations, format placeholders and USCE-specific keys. Translation quality has not been certified.",
+        "reason": "Translation additions: Ported the missing TODO entries in #305, preserving existing translations and matching English placeholders. Native-language quality review remains.",
         "coveredBy": {
           "repository": "3Ryuusei3/USDX",
           "branch": "develop",
