@@ -90,6 +90,7 @@ type
         LastTick: cardinal;
         Active: boolean;
       end;
+      PartyDuetsHidden: boolean;
 
       SongReturnPending: boolean; // song selection is pending a return from singing
 
@@ -3024,6 +3025,8 @@ begin
   // selected after the song, however, the song screen is shown first.
   ScreenName.LoadPlayersFromIni(false);
 
+  FilterDuetsInPartyMode;
+
   //Cat Mod etc
   if (Ini.TabsAtStartup = 1) and (CatSongs.CatNumShow = -1) then
   begin
@@ -4412,11 +4415,28 @@ var
 begin
   if (Mode in [smPartyClassic, smPartyFree, smPartyTournament]) then
   begin
+    PartyDuetsHidden := true;
     for I := 0 to High(CatSongs.Song) do
       if CatSongs.Song[I].isDuet then
         CatSongs.Song[I].Visible := false;
     // Reset visible-index cache so VisibleIndex() recomputes correctly
     CatSongs.ResetVisibleIndexCache;
+  end
+  else if PartyDuetsHidden then
+  begin
+    PartyDuetsHidden := false;
+    // Rebuild the active view, never blindly unhide songs excluded by a search,
+    // playlist or the locked library.
+    if CatSongs.CatNumShow = -2 then
+      ScreenSongJumpto.ApplyFilter
+    else if PlaylistMan.CurPlayList <> -1 then
+      PlaylistMan.SetPlayList(PlaylistMan.CurPlayList, Interaction)
+    else if CatSongs.CatNumShow >= 0 then
+      CatSongs.ShowCategory(CatSongs.CatNumShow)
+    else if Ini.Tabs = 1 then
+      CatSongs.ShowCategoryList
+    else
+      CatSongs.SetFilter('', fltAll);
   end;
 end;
 
