@@ -331,7 +331,7 @@ end;
 
 procedure TButton.DrawFocus;
 var Right, Bottom, ShortSide, FadeX, FadeY, FadeW, FadeH: single;
-    InsetX, InsetY, UnitW, UnitH: single;
+    InsetX, InsetY, UnitW, UnitH, PixelScale: single;
 begin
   if FocusTexture = nil then Exit;
   UpdateFocus;
@@ -360,12 +360,15 @@ begin
   FocusTexture.Y := FocusTexture.Y + FocusInset * UnitH;
   FocusTexture.W := Right - FocusInset * UnitW - FocusTexture.X;
   FocusTexture.H := Bottom - FocusInset * UnitH - FocusTexture.Y;
-  ShortSide := Min(FocusTexture.W, FocusTexture.H);
+  // Shape fractions use physical pixels, matching the renderer.
+  ShortSide := Min(Abs(FocusTexture.W * GetLayoutScaleX),
+    Abs(FocusTexture.H * GetLayoutScaleY));
+  PixelScale := Min(Abs(UnitW * GetLayoutScaleX), Abs(UnitH * GetLayoutScaleY));
   if ShortSide <= 0 then Exit;
   FocusTexture.Z := Texture.Z;
   FocusTexture.ScaleMode := lsStretch;
-  FocusTexture.CornerRadius := Min(0.5, FocusRadius * Min(UnitW, UnitH) / ShortSide);
-  FocusTexture.OutlineWidth := Min(0.5, FocusWidth * Min(UnitW, UnitH) / ShortSide);
+  FocusTexture.CornerRadius := Min(0.5, FocusRadius * PixelScale / ShortSide);
+  FocusTexture.OutlineWidth := Min(0.5, FocusWidth * PixelScale / ShortSide);
   FocusTexture.Alpha := FocusAlpha * FocusProgress * Texture.Alpha;
   Renderer.DrawTexture(FocusTexture);
 end;
