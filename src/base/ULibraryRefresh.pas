@@ -6,7 +6,7 @@ type
   // Owns staged headers until the main thread accepts them. No menus, audio or GPU.
   TLibraryRefresh = class(TThread)
   private
-    Roots, FolderRoots: TPathDynArray;
+    Roots, FolderRoots, Skipped: TPathDynArray;
     procedure Scan(const Name: IPath);
     procedure ReadSong(const Name: IPath);
   protected
@@ -55,6 +55,8 @@ end;
 function TLibraryRefresh.Covers(const Name: IPath): boolean;
 var I: integer;
 begin
+  for I := 0 to High(Skipped) do
+    if (Key(Name) = Key(Skipped[I])) or Name.IsChildOf(Skipped[I], false) then Exit(false);
   for I := 0 to High(Roots) do
     if (Key(Name) = Key(Roots[I])) or Name.IsChildOf(Roots[I], false) then Exit(true);
   Result := false;
@@ -115,7 +117,14 @@ begin
     Info := Iter.Next;
     if Info.Name.Equals('.') or Info.Name.Equals('..') then Continue;
     Child := Name.Append(Info.Name);
-    if (Info.Attr and faSymLink) <> 0 then Continue;
+    if (Info.Attr and faSymLink) <> 0 then
+    begin
+      // Startup may already have followed this alias. Not scanning it must not
+      // be interpreted as deletion of its existing catalog entries.
+      SetLength(Skipped, Length(Skipped) + 1);
+      Skipped[High(Skipped)] := Child;
+      Continue;
+    end;
     if (Info.Attr and faDirectory) <> 0 then Scan(Child)
     else if Child.GetExtension.Equals('.txt', true) then ReadSong(Child);
   end;

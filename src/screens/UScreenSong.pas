@@ -2347,6 +2347,7 @@ end;
 
 procedure TScreenSong.SetScrollRefresh;
 begin
+  if (Interaction < 0) or (Interaction > High(Button)) then Exit;
   SchedulePreview;
   case TSongMenuMode(Ini.SongMenu) of
     smRoulette: SetRouletteScrollRefresh;
@@ -2761,6 +2762,7 @@ end;
 
 procedure TScreenSong.SetChessboardScrollRefresh;
 begin
+  if (Interaction < 0) or (Interaction > High(Button)) then Exit;
   Statics[StaticActual].Texture.Free;
   if (Button[Interaction].Texture.Name.IsUnset) then
     Statics[StaticActual].Texture := Renderer.GetTexture(Skin.GetTextureFileName('SongCover'), TEXTURE_TYPE_PLAIN)
@@ -2876,6 +2878,7 @@ var
   Alpha: real;
 begin
   UpdateListSelectedText;
+  if (Interaction < 0) or (Interaction > High(Button)) then Exit;
 
   Statics[StaticActual].Texture.Free;
   if (Button[Interaction].Texture.Name.IsUnset) then
@@ -4718,6 +4721,7 @@ begin
       SetLength(CatSongs.Song, 0);
       CatSongs.Refresh;
       GenerateThumbnails;
+      if Length(Button) = 0 then SelInteraction := -1;
       NewIds.Sorted := true;
       NewIds.CaseSensitive := true;
       for I := 0 to High(CatSongs.Song) do

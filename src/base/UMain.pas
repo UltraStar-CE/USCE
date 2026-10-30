@@ -360,6 +360,8 @@ begin
     // call an uninitialize routine for every initialize step
     // or at least use the corresponding Free methods
 
+    if Assigned(Songs) then Songs.StopRefresh;
+
     Log.LogStatus('Closing DB file', 'Finalization');
     if (DataBase <> nil) then
     begin

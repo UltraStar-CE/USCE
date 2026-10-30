@@ -109,6 +109,7 @@ type
 
     procedure LoadSongList;     // load all songs
     procedure ReplayDeferredReload;
+    procedure StopRefresh;
     // Main-thread request; nil rescans configured roots. Busy requests return false.
     function RequestRefresh(const Target: IPath = nil): boolean;
     function RefreshReady: boolean;
@@ -257,7 +258,7 @@ end;
 
 destructor TSongs.Destroy();
 begin
-  FreeAndNil(fRefresh);
+  StopRefresh;
   FreeAndNil(SongList);
 
   inherited;
@@ -333,6 +334,13 @@ begin
   end;
 end;
 
+
+procedure TSongs.StopRefresh;
+begin
+  FreeAndNil(fRefresh); // TLibraryRefresh terminates and joins before freeing its data.
+  fRefreshAgain := false;
+  fProcessing := false;
+end;
 
 procedure TSongs.LoadSongList;
 begin
