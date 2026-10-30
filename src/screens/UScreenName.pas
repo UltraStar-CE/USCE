@@ -1410,7 +1410,7 @@ end;
 procedure TScreenName.DrawCards;
 var I, First, Last, J: integer;
   R: TPlayerSlotRect;
-  SX, SY: real;
+  SX, SY, AvatarSide: real;
   Panel: TTexture;
   LabelText: UTF8String;
   procedure Difficulty(PlayerID: integer);
@@ -1502,8 +1502,11 @@ begin
     if Theme.Name.Cards.ShowLabel then Caption(LabelText, 60, 22, 10, TextColor);
     with Statics[PlayerCurrentAvatar[I]].Texture do
     begin
-      W := Theme.Name.Cards.Avatar.W * Min(SX, SY);
-      H := Theme.Name.Cards.Avatar.H * Min(SX, SY);
+      // Fit a square avatar in physical pixels, including non-16:9 viewports.
+      AvatarSide := Min(Theme.Name.Cards.Avatar.W * SX * GetLayoutScaleX,
+        Theme.Name.Cards.Avatar.H * SY * GetLayoutScaleY);
+      W := AvatarSide / Max(0.0001, GetLayoutScaleX);
+      H := AvatarSide / Max(0.0001, GetLayoutScaleY);
       X := R.X + Theme.Name.Cards.Avatar.X * SX +
         (Theme.Name.Cards.Avatar.W * SX - W) / 2;
       Y := R.Y + Theme.Name.Cards.Avatar.Y * SY +
