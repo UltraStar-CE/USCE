@@ -8,10 +8,19 @@ import unittest
 
 
 class FadeTargetTests(unittest.TestCase):
-    def test_once_per_target_and_redirect_from_onshow(self):
+    def run_harness(self, harness):
         compiler = os.environ.get('USCE_FPC') or shutil.which('fpc')
         if not compiler:
             self.skipTest('Free Pascal is not installed')
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'fade_target.pas'
+            path.write_bytes(harness.encode())
+            result = subprocess.run([compiler, '-Mdelphi', '-Ciro', str(path)], cwd=directory,
+                                    capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            subprocess.run([str(path.with_suffix('.exe' if os.name == 'nt' else ''))], check=True)
+
+    def test_once_per_target_and_redirect_from_onshow(self):
         source = (Path(__file__).resolve().parents[1] / 'src/menu/UDisplay.pas').read_text()
         method = source.split('function TDisplay.InitializeNextScreen: boolean;', 1)[1].split('function TDisplay.Draw:', 1)[0]
         harness = '''program FadeTarget;
@@ -55,10 +64,32 @@ begin
   WriteLn('PASS: once per target, target change, reentrant OnShow and nil target');
 end.
 '''
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / 'fade_target.pas'
-            path.write_bytes(harness.encode())
-            result = subprocess.run([compiler, '-Mdelphi', '-Ciro', str(path)], cwd=directory,
-                                    capture_output=True, text=True)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            subprocess.run([str(path.with_suffix('.exe' if os.name == 'nt' else ''))], check=True)
+        self.run_harness(harness)
+
+    def test_shutdown_fade_keeps_its_start_time(self):
+        source = (Path(__file__).resolve().parents[1] / 'src/menu/UDisplay.pas').read_text()
+        reset = next(line.strip() for line in source.splitlines()
+                     if '(ShownScreen <> NextScreen)' in line)
+        self.run_harness('''program ShutdownFade;
+{$mode delphi}
+uses SysUtils;
+var S, I, ShownScreen, NextScreen: integer;
+    BlackScreen: boolean; FadeStartTime: cardinal;
+procedure ResetTarget;
+begin
+''' + reset + '''
+end;
+begin
+  S := 1; ShownScreen := 0; NextScreen := 1;
+  BlackScreen := true; FadeStartTime := 42;
+  for I := 1 to 100 do ResetTarget;
+  if FadeStartTime <> 42 then raise Exception.Create('Shutdown fade keeps restarting');
+  BlackScreen := false; ResetTarget;
+  if FadeStartTime <> 0 then raise Exception.Create('Redirect did not restart');
+  FadeStartTime := 42; ShownScreen := NextScreen; ResetTarget;
+  if FadeStartTime <> 42 then raise Exception.Create('Initialized target restarted');
+  ShownScreen := 0; S := 2; ResetTarget;
+  if FadeStartTime <> 42 then raise Exception.Create('Second screen restarted');
+  WriteLn('PASS: shutdown fade, redirected target and second screen');
+end.
+''')
