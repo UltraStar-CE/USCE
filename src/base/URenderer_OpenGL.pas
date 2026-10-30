@@ -261,11 +261,11 @@ const
     '[FRAG_OUT_DECL]                                ' + #10 +
     'uniform sampler2D tex;                         ' + #10 +
     'uniform vec4 shape_rect;                          ' + #10 +
-    'uniform vec3 shape_size;                        ' + #10 +
+    'uniform vec4 shape_size;                        ' + #10 +
     'void main()                                    ' + #10 +
     '{                                              ' + #10 +
     '  vec4 result_color = [TEXTURE_FUNC](tex, tc) * col;' + #10 +
-    '  if (shape_size.z > 0.0) {                     ' + #10 +
+    '  if (shape_size.z > 0.0 || shape_size.w > 0.0) {                     ' + #10 +
     '    vec2 p = (canvas_pos - shape_rect.xy) / shape_rect.zw;' + #10 +
     '    vec2 q = abs(p - 0.5) * shape_size.xy       ' + #10 +
     '      - shape_size.xy * 0.5 + shape_size.z;     ' + #10 +
@@ -273,8 +273,10 @@ const
     '      + min(max(q.x, q.y), 0.0) - shape_size.z;' + #10 +
     '    result_color.a *= 1.0 - smoothstep(         ' + #10 +
     '      -0.75, 0.75, d);                         ' + #10 +
+    '    if (shape_size.w > 0.0)                     ' + #10 +
+    '      result_color.a *= smoothstep(-shape_size.w - 0.75, -shape_size.w + 0.75, d);' + #10 +
     '  }                                            ' + #10 +
-    '  if (shape_size.z > 0.0 && result_color.a <= 0.0) discard;' + #10 +
+    '  if ((shape_size.z > 0.0 || shape_size.w > 0.0) && result_color.a <= 0.0) discard;' + #10 +
     '  [FRAG_OUT] = result_color;                    ' + #10 +
     '}';
 
@@ -929,15 +931,16 @@ begin
   UploadArray(Bytes);
 
   // Geometry, not source UVs, defines the mask (including cropped images).
-  HasShape := (Prog = MainProgram) and (Texture.CornerRadius > 0) and
+  HasShape := (Prog = MainProgram) and ((Texture.CornerRadius > 0) or (Texture.OutlineWidth > 0)) and
     (Texture.W > 0) and (Texture.H > 0);
   if HasShape then
   begin
     ShapeW := Abs(Texture.W * GetLayoutScaleX);
     ShapeH := Abs(Texture.H * GetLayoutScaleY);
     glUniform4f(ShapeRectLocation, Texture.X, Texture.Y, Texture.W, Texture.H);
-    glUniform3f(ShapeSizeLocation, ShapeW, ShapeH,
-      EnsureRange(Texture.CornerRadius, 0.0, 0.5) * Min(ShapeW, ShapeH));
+    glUniform4f(ShapeSizeLocation, ShapeW, ShapeH,
+      EnsureRange(Texture.CornerRadius, 0.0, 0.5) * Min(ShapeW, ShapeH),
+      EnsureRange(Texture.OutlineWidth, 0.0, 0.5) * Min(ShapeW, ShapeH));
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, PGLvoid(EBOCursor * SizeOf(GLuint)));
     if Texture.Reflection then
     begin
@@ -947,7 +950,7 @@ begin
         Texture.Y + 2 * Texture.H + Texture.ReflectionSpacing, Texture.W, -Texture.H);
       glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, PGLvoid((EBOCursor + 6) * SizeOf(GLuint)));
     end;
-    glUniform3f(ShapeSizeLocation, 0, 0, 0);
+    glUniform4f(ShapeSizeLocation, 0, 0, 0, 0);
   end
   else
     glDrawElements(GL_TRIANGLES, NumQuads * 6, GL_UNSIGNED_INT, PGLvoid(EBOCursor * SizeOf(GLuint)));

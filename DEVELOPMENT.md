@@ -181,3 +181,26 @@ so chained base themes can extend their own parent sections. It also works for
 `Colors`: inherited names remain available and derived names override them.
 Ordinary `Inherits=OtherSection` and sections without Inherits keep their previous
 lookup behavior. This avoids implicitly changing existing derived-theme layouts.
+
+### Optional button focus outline
+
+Ordinary button and button-collection sections may opt into a focus outline:
+
+```ini
+FocusWidth=3
+FocusInset=3
+FocusRadius=12
+FocusColor=White
+FocusAlpha=1
+FocusDuration=200
+```
+
+Width, inset and radius use the button's logical theme coordinates. Positive
+inset draws inside the existing bounds; negative inset draws outside. The
+outline follows the button's current selected/fading bounds and scale mode,
+without changing layout or the mouse hit region. Its center remains transparent.
+FocusColor defaults to the selected button color; FocusAlpha defaults to 1.
+FocusDuration is a reversible opacity transition in milliseconds (0..2000),
+with 0 switching immediately. FocusWidth defaults to 0, so existing themes keep
+their current appearance and allocate no outline texture. This does not replace
+the theme's existing selection texture or change the user's keyboard controls.

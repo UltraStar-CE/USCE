@@ -650,6 +650,12 @@ begin
   ButtonCollection[Num].DeSelectReflectionspacing := ThemeCollection.Style.DeSelectReflectionSpacing;
 
   ButtonCollection[Num].Z := ThemeCollection.Style.Z;
+  ButtonCollection[Num].ConfigureFocus(ThemeCollection.Style.FocusWidth,
+    ThemeCollection.Style.FocusInset, ThemeCollection.Style.FocusRadius,
+    ThemeCollection.Style.FocusColR, ThemeCollection.Style.FocusColG,
+    ThemeCollection.Style.FocusColB, ThemeCollection.Style.FocusAlpha,
+    ThemeCollection.Style.FocusDuration);
+
 
   //Some Things from ButtonFading
   ButtonCollection[Num].SelectH := ThemeCollection.Style.SelectH;
@@ -1049,6 +1055,10 @@ begin
   Button[Result].DeSelectTexture.ScaleMode := ThemeButton.ScaleMode;
 
   Button[Result].Z := ThemeButton.Z;
+  Button[Result].ConfigureFocus(ThemeButton.FocusWidth, ThemeButton.FocusInset,
+    ThemeButton.FocusRadius, ThemeButton.FocusColR, ThemeButton.FocusColG,
+    ThemeButton.FocusColB, ThemeButton.FocusAlpha, ThemeButton.FocusDuration);
+
 
   //Button Visibility
   Button[Result].Visible := ThemeButton.Visible;

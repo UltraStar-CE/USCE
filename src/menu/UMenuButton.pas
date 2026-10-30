@@ -52,6 +52,11 @@ type
     protected
       SelectBool:   boolean;
 
+      FocusTexture: TTexture;
+      FocusWidth, FocusInset, FocusRadius, FocusAlpha, FocusProgress: single;
+      FocusDuration: integer;
+      FocusLastTick: cardinal;
+
       FadeProgress: single;
       FadeLastTick: cardinal;
 
@@ -60,6 +65,9 @@ type
       PosX,
       PosY:         single;
 
+
+      procedure UpdateFocus;
+      procedure DrawFocus;
 
     public
       Text:                      array of TText;
@@ -120,6 +128,7 @@ type
       property H: single read GetH write SetH;
       property Selected: boolean read SelectBool write SetSelect;
 
+      procedure ConfigureFocus(Width, Inset, Radius, R, G, B, Alpha: single; Duration: integer);
       procedure   Draw; override;
 
       constructor Create(); overload;
@@ -133,7 +142,7 @@ type
 implementation
 
 uses
-  SysUtils,
+  SysUtils, Math,
   UDisplay,
   UScale, UThemes;
 
@@ -232,6 +241,7 @@ procedure TButton.SetSelect(Value : boolean);
 var
   T: integer;
 begin
+  if FocusTexture <> nil then UpdateFocus;
   SelectBool := Value;
 
   if (Value) then
@@ -284,6 +294,80 @@ begin
       Texture.H := DeSelectH;
     end;
   end;
+end;
+
+procedure TButton.ConfigureFocus(Width, Inset, Radius, R, G, B, Alpha: single; Duration: integer);
+var White: array[0..3] of byte;
+begin
+  FreeAndNil(FocusTexture);
+  FocusWidth := Max(0, Width);
+  if FocusWidth = 0 then Exit;
+  FocusInset := Inset;
+  FocusRadius := Max(0, Radius);
+  FocusAlpha := EnsureRange(Alpha, 0.0, 1.0);
+  FocusDuration := Max(0, Duration);
+  FocusProgress := Ord(SelectBool);
+  FocusLastTick := SDL_GetTicks;
+  FillChar(White, SizeOf(White), 255);
+  FocusTexture := Renderer.CreateTexture(PChar(@White[0]), nil, 1, 1, TEXTURE_TYPE_TRANSPARENT, false);
+  FocusTexture.ColR := R; FocusTexture.ColG := G; FocusTexture.ColB := B;
+end;
+
+procedure TButton.UpdateFocus;
+var Tick, Elapsed: cardinal; Step: single;
+begin
+  Tick := SDL_GetTicks;
+  if Tick >= FocusLastTick then Elapsed := Tick - FocusLastTick
+  else Elapsed := High(cardinal) - FocusLastTick + Tick + 1;
+  FocusLastTick := Tick;
+  if FocusDuration = 0 then FocusProgress := Ord(SelectBool)
+  else
+  begin
+    Step := Min(1.0, Elapsed / FocusDuration);
+    if SelectBool then FocusProgress := Min(1.0, FocusProgress + Step)
+    else FocusProgress := Max(0.0, FocusProgress - Step);
+  end;
+end;
+
+procedure TButton.DrawFocus;
+var Right, Bottom, ShortSide, FadeX, FadeY, FadeW, FadeH: single;
+    InsetX, InsetY, UnitW, UnitH: single;
+begin
+  if FocusTexture = nil then Exit;
+  UpdateFocus;
+  if FocusProgress <= 0 then Exit;
+  FocusTexture.X := Texture.X;
+  FocusTexture.Y := Texture.Y;
+  FocusTexture.W := Texture.W;
+  FocusTexture.H := Texture.H;
+  ResolveLayoutRect(FocusTexture.X, FocusTexture.Y, FocusTexture.W, FocusTexture.H, Texture.ScaleMode);
+  Right := FocusTexture.X + FocusTexture.W;
+  Bottom := FocusTexture.Y + FocusTexture.H;
+  if Fade and (FadeTex <> nil) then
+  begin
+    FadeX := FadeTex.X; FadeY := FadeTex.Y;
+    FadeW := FadeTex.W; FadeH := FadeTex.H;
+    ResolveLayoutRect(FadeX, FadeY, FadeW, FadeH, FadeTex.ScaleMode);
+    FocusTexture.X := Min(FocusTexture.X, FadeX);
+    FocusTexture.Y := Min(FocusTexture.Y, FadeY);
+    Right := Max(Right, FadeX + FadeW);
+    Bottom := Max(Bottom, FadeY + FadeH);
+  end;
+  // Transform each component before taking the union, as for mouse bounds.
+  InsetX := 0; InsetY := 0; UnitW := 1; UnitH := 1;
+  ResolveLayoutRect(InsetX, InsetY, UnitW, UnitH, Texture.ScaleMode);
+  FocusTexture.X := FocusTexture.X + FocusInset * UnitW;
+  FocusTexture.Y := FocusTexture.Y + FocusInset * UnitH;
+  FocusTexture.W := Right - FocusInset * UnitW - FocusTexture.X;
+  FocusTexture.H := Bottom - FocusInset * UnitH - FocusTexture.Y;
+  ShortSide := Min(FocusTexture.W, FocusTexture.H);
+  if ShortSide <= 0 then Exit;
+  FocusTexture.Z := Texture.Z;
+  FocusTexture.ScaleMode := lsStretch;
+  FocusTexture.CornerRadius := Min(0.5, FocusRadius * Min(UnitW, UnitH) / ShortSide);
+  FocusTexture.OutlineWidth := Min(0.5, FocusWidth * Min(UnitW, UnitH) / ShortSide);
+  FocusTexture.Alpha := FocusAlpha * FocusProgress * Texture.Alpha;
+  Renderer.DrawTexture(FocusTexture);
 end;
 
 // ***** Public methods ****** //
@@ -472,6 +556,7 @@ begin
     if Fade and (FadeTex <> nil) then
       Renderer.DrawTexture(FadeTex);
 
+    DrawFocus;
     for T := 0 to High(Text) do
     begin
       Text[T].NameSuggestionWidth := W - 8;
@@ -493,7 +578,7 @@ begin
     MainH := Texture.H;
     ResolveLayoutRect(MainX, MainY, MainW, MainH, Texture.ScaleMode);
 
-    if (not Fade) then
+    if (not Fade) or (FadeTex = nil) then
     begin
       Result.X := MainX;
       Result.Y := MainY;
@@ -543,6 +628,7 @@ end;
 
 destructor TButton.Destroy;
 begin
+  FocusTexture.Free;
   Texture.Free;
   DeSelectTexture.Free;
   FadeTex.Free;
