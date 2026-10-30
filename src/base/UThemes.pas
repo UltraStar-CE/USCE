@@ -1360,6 +1360,8 @@ begin
     Result := lsStretch
   else if SameText(Value, 'uniform') then
     Result := lsUniform
+  else if SameText(Value, 'crop') then
+    Result := lsCrop
   else
     Result := Default;
 end;
