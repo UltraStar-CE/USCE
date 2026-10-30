@@ -204,3 +204,10 @@ FocusDuration is a reversible opacity transition in milliseconds (0..2000),
 with 0 switching immediately. FocusWidth defaults to 0, so existing themes keep
 their current appearance and allocate no outline texture. This does not replace
 the theme's existing selection texture or change the user's keyboard controls.
+
+### Optional texture-background motion
+
+Texture background sections may set `Motion=1` for slow gradient drift. The
+value controls speed (0 through 10); the default 0 retains the existing static
+background. It does not affect videos, controls or screen-transition scaling.
+The enlarged texture always covers the viewport, including multiple screens.

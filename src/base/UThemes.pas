@@ -62,6 +62,7 @@ type
     Color:  TRGB;
     Tex:    string;
     Alpha:  real;
+    Motion: real; // optional texture background drift speed
   end;
 
 const
@@ -70,7 +71,8 @@ const
     BGType: bgtColor;
     Color:  (R:1; G:1; B:1);
     Tex:    '';
-    Alpha:  1.0
+    Alpha:  1.0;
+    Motion: 0
   );
 
   OPTIONS_DESC_INDEX_BACK      = 0;
@@ -3240,6 +3242,7 @@ begin
   ThemeBackground.Color.G := ReadFloat(SectionList, 'ColG', 1);
   ThemeBackground.Color.B := ReadFloat(SectionList, 'ColB', 1);
   ThemeBackground.Alpha   := ReadFloat(SectionList, 'Alpha', 1);
+  ThemeBackground.Motion  := EnsureRange(ReadFloat(SectionList, 'Motion', 0), 0, 10);
 end;
 
 procedure TTheme.ThemeLoadMainButtons;
