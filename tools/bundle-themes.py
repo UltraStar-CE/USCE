@@ -95,8 +95,8 @@ def setup(destination, pin):
             if any(parent.is_symlink() or (parent.exists() and not parent.is_dir())
                    for parent in target.parents if parent == destination or destination in parent.parents):
                 raise ValueError('Theme asset parents must be real directories: ' + entry['path'])
-            if target.exists() and (not target.is_file() or target.is_symlink() or
-                    hashlib.sha256(target.read_bytes()).hexdigest() != entry['sha256']):
+            if target.is_symlink() or (target.exists() and (not target.is_file() or
+                    hashlib.sha256(target.read_bytes()).hexdigest() != entry['sha256'])):
                 raise ValueError('Existing local themes are never overwritten: ' + entry['path'])
         for entry in manifest['files']:
             target = destination / entry['path']
