@@ -49,7 +49,7 @@ type
 
       // Shader programs
       MainProgram: GLuint;
-      ShapeUVLocation, ShapeSizeLocation: GLint;
+      ShapeRectLocation, ShapeSizeLocation: GLint;
       TextProgram: GLuint;
       LineStripProgram: GLuint;
 
@@ -243,32 +243,36 @@ const
     '[VTX_IN] vec2 tex_coords;                   ' + #10 +
     '[VTX_OUT] vec4 col;                         ' + #10 +
     '[VTX_OUT] vec2 tc;                          ' + #10 +
+    '[VTX_OUT] vec2 canvas_pos;                  ' + #10 +
     'uniform mat4 transform;                     ' + #10 +
     'void main()                                 ' + #10 +
     '{                                           ' + #10 +
 	  '  gl_Position = transform * vec4(pos, 1.0); ' + #10 +
 	  '  col = color;                              ' + #10 +
 	  '  tc = tex_coords;                          ' + #10 +
+    '  canvas_pos = pos.xy;                      ' + #10 +
     '}';
 
   // Main fragment shader source, use for drawing textures, quads, lines, triangles
   MAIN_FRAGMENT_SHADER_SOURCE =
     '[FRAG_IN] vec4 col;                            ' + #10 +
     '[FRAG_IN] vec2 tc;                             ' + #10 +
+    '[FRAG_IN] vec2 canvas_pos;                     ' + #10 +
     '[FRAG_OUT_DECL]                                ' + #10 +
     'uniform sampler2D tex;                         ' + #10 +
-    'uniform vec4 shape_uv;                          ' + #10 +
+    'uniform vec4 shape_rect;                          ' + #10 +
     'uniform vec3 shape_size;                        ' + #10 +
     'void main()                                    ' + #10 +
     '{                                              ' + #10 +
     '  vec4 result_color = [TEXTURE_FUNC](tex, tc) * col;' + #10 +
     '  if (shape_size.z > 0.0) {                     ' + #10 +
-    '    vec2 p = (tc - shape_uv.xy) / shape_uv.zw;   ' + #10 +
+    '    vec2 p = (canvas_pos - shape_rect.xy) / shape_rect.zw;' + #10 +
     '    vec2 q = abs(p - 0.5) * shape_size.xy       ' + #10 +
     '      - shape_size.xy * 0.5 + shape_size.z;     ' + #10 +
-    '    float d = length(max(q, vec2(0.0)));        ' + #10 +
+    '    float d = length(max(q, vec2(0.0)))        ' + #10 +
+    '      + min(max(q.x, q.y), 0.0) - shape_size.z;' + #10 +
     '    result_color.a *= 1.0 - smoothstep(         ' + #10 +
-    '      shape_size.z - 0.75, shape_size.z + 0.75, d);' + #10 +
+    '      -0.75, 0.75, d);                         ' + #10 +
     '  }                                            ' + #10 +
     '  if (shape_size.z > 0.0 && result_color.a <= 0.0) discard;' + #10 +
     '  [FRAG_OUT] = result_color;                    ' + #10 +
@@ -479,7 +483,7 @@ begin
 
   // Get uniform locations in shader programs
   TransformLocationMain := glGetUniformLocation(MainProgram, 'transform');
-  ShapeUVLocation := glGetUniformLocation(MainProgram, 'shape_uv');
+  ShapeRectLocation := glGetUniformLocation(MainProgram, 'shape_rect');
   ShapeSizeLocation := glGetUniformLocation(MainProgram, 'shape_size');
   TransformLocationText := glGetUniformLocation(TextProgram, 'transform');
   TransformLocationLineStrip := glGetUniformLocation(LineStripProgram, 'transform');
@@ -761,6 +765,7 @@ var
   ColorR, ColorG, ColorB: single;
   X2, Y2: single;
   ShapeW, ShapeH: single;
+  HasShape: boolean;
 begin
   Tex := TTexture_OpenGL(Texture);
   if (Tex.TexID = 0) then
@@ -923,22 +928,29 @@ begin
   // Upload our vertex data to the GPU
   UploadArray(Bytes);
 
-  // The mask belongs to this draw, never to the shared image/cache.
-  if (Prog = MainProgram) and (Texture.CornerRadius > 0) and
-     (Texture.TexX1 <> Texture.TexX2) and (Texture.TexY1 <> Texture.TexY2) then
+  // Geometry, not source UVs, defines the mask (including cropped images).
+  HasShape := (Prog = MainProgram) and (Texture.CornerRadius > 0) and
+    (Texture.W > 0) and (Texture.H > 0);
+  if HasShape then
   begin
     ShapeW := Abs(Texture.W * GetLayoutScaleX);
     ShapeH := Abs(Texture.H * GetLayoutScaleY);
-    glUniform4f(ShapeUVLocation, Texture.TexX1, Texture.TexY1,
-      Texture.TexX2 - Texture.TexX1, Texture.TexY2 - Texture.TexY1);
+    glUniform4f(ShapeRectLocation, Texture.X, Texture.Y, Texture.W, Texture.H);
     glUniform3f(ShapeSizeLocation, ShapeW, ShapeH,
       EnsureRange(Texture.CornerRadius, 0.0, 0.5) * Min(ShapeW, ShapeH));
-  end;
-
-  // Draw elements and update VBO and EBO positions
-  glDrawElements(GL_TRIANGLES, NumQuads * 6, GL_UNSIGNED_INT, PGLvoid(EBOCursor * SizeOf(GLuint)));
-  if (Prog = MainProgram) and (Texture.CornerRadius > 0) then
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, PGLvoid(EBOCursor * SizeOf(GLuint)));
+    if Texture.Reflection then
+    begin
+      // Mirror the original shape; a shortened reflection fades before its
+      // far edge rather than introducing a second pair of rounded corners.
+      glUniform4f(ShapeRectLocation, Texture.X,
+        Texture.Y + 2 * Texture.H + Texture.ReflectionSpacing, Texture.W, -Texture.H);
+      glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, PGLvoid((EBOCursor + 6) * SizeOf(GLuint)));
+    end;
     glUniform3f(ShapeSizeLocation, 0, 0, 0);
+  end
+  else
+    glDrawElements(GL_TRIANGLES, NumQuads * 6, GL_UNSIGNED_INT, PGLvoid(EBOCursor * SizeOf(GLuint)));
   VBOCursor := VBOCursor + (NumQuads * 4 * VERTEX_STRIDE);
   EBOCursor := EBOCursor + (NumQuads * 6);
   {$IFDEF DEBUG_MODE}
