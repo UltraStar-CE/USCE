@@ -57,7 +57,7 @@ type
       FadeEnabled:   boolean;  // true if fading is enabled
       FadeFailed:    boolean;  // true if fading is possible (enough memory, etc.)
       FadeStartTime: cardinal; // time when fading starts, 0 means that the fade texture must be initialized
-      DoneOnShow:    boolean;  // true if passed onShow after fading
+      ShownScreen: PMenu; // target that has received OnShow for this transition
 
       OpaqueFadeTex: array[0..1] of TTexture;
       FadeTex:       array[0..1] of TTexture;
@@ -71,6 +71,7 @@ type
       ProblemFlags: TSongProblems;
       ProblemFlagsUnavailable: boolean;
       SongProblemTexture: TTexture;
+      function InitializeNextScreen: boolean;
       function ProblemSong: TSong;
       function EnsureProblemFlags: boolean;
       procedure DrawSongProblem;
@@ -273,7 +274,7 @@ begin
   FadeStartTime := 0;
   FadeEnabled := (Ini.ScreenFade = 1);
   FadeFailed  := false;
-  DoneOnShow  := false;
+  ShownScreen := nil;
 
   InitFadeTextures();
 
@@ -321,6 +322,26 @@ begin
   end;
 end;
 
+function TDisplay.InitializeNextScreen: boolean;
+var Target: PMenu;
+begin
+  Target := NextScreen;
+  Result := Target <> nil;
+  if not Result then Exit;
+  if ShownScreen <> Target then
+  begin
+    // Set before the callback: OnShow may request another destination.
+    ShownScreen := Target;
+    Target.OnShow;
+  end;
+  Result := NextScreen = Target;
+  if not Result then
+  begin
+    ShownScreen := nil;
+    FadeStartTime := 0;
+  end;
+end;
+
 function TDisplay.Draw: boolean;
 var
   S:               integer;
@@ -328,6 +349,7 @@ var
   FadeStateSquare, FadeZoom: real;
   FadeW, FadeH:    real;
   FadeCopyW, FadeCopyH: integer;
+  DrawnScreen: PMenu;
 
 begin
   Result := true;
@@ -378,6 +400,7 @@ begin
 
       // fade
       FadeStartTime := 0;
+      ShownScreen := nil;
       if ((Ini.ScreenFade = 1) and (not FadeFailed)) then
         FadeEnabled := true
       else
@@ -393,6 +416,8 @@ begin
         FadeEnabled := false;
       end;
       
+      if (S = 1) and (ShownScreen <> NextScreen) then FadeStartTime := 0;
+
       if (FadeEnabled and not FadeFailed) then
       begin
         // create fading texture if we're just starting
@@ -440,11 +465,8 @@ begin
             Log.LogError('Fading disabled: $' + IntToHex(Renderer.GetErrorCode(), 4), 'TDisplay.Draw');
           end;
 
-          if not BlackScreen and (S = 1) and not DoneOnShow then
-          begin
-            NextScreen.OnShow;
-            DoneOnShow := true;
-          end;
+          if not BlackScreen and (S = 1) then
+            if not InitializeNextScreen then Exit;
 
 
           // set fade time once on second screen (or first if screens = 1)
@@ -455,7 +477,14 @@ begin
         if not BlackScreen then
         begin
           ePreDraw.CallHookChain(false);
-          NextScreen.Draw; // draw next screen
+          DrawnScreen := NextScreen;
+          DrawnScreen.Draw; // draw next screen
+          if NextScreen <> DrawnScreen then
+          begin
+            ShownScreen := nil;
+            FadeStartTime := 0;
+            Exit;
+          end;
           eDraw.CallHookChain(false);
         end
         else if ScreenAct = 1 then
@@ -510,7 +539,7 @@ begin
       // there is no need to init next screen if it is a black screen
       else if not BlackScreen then
       begin
-        NextScreen.OnShow;
+        if not InitializeNextScreen then Exit;
       end;
 
       if ((FadeStartTime + FADE_DURATION < SDL_GetTicks) or
@@ -519,7 +548,7 @@ begin
       begin
         // fade out complete...
         FadeStartTime := 0;
-        DoneOnShow := false;
+        ShownScreen := nil;
         CurrentScreen.onHide;
         CurrentScreen.ShowFinish := false;
         CurrentScreen := NextScreen;
