@@ -94,7 +94,16 @@ check out or execute proposed code, merge PRs, or purchase additional usage.
 Queue requests and their source commits are recorded in PR comments.
 `tools/codex-review-queue.cjs` selects one eligible request from complete metadata
 and the owner-authored request ledger; missing in-flight state stops dispatch. This local
-schedule runs while its Codex host is available.
+  schedule runs while its Codex host is available.
+
+Only an unverified request on the current head of an open PR blocks dispatch.
+`classifyRequests` requires fresh PR metadata for every request, including closed
+and merged PRs. Superseded heads and closed PRs remain outstanding, count toward
+historical usage, and are monitored for completion and late findings. They do
+not block current-head reviews. Never infer completion from age, rebase or merge,
+cancel an existing review, or retry a stale request. Surface new actionable late
+findings on merged PRs for follow-up without repeating unchanged stale blockers.
+Only verified native completion evidence enters `completedCommentIds`.
 
 Build results identify the exact source revision tested. See
 [USCE-CI.md](USCE-CI.md) for platform coverage.
