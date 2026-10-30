@@ -1,0 +1,64 @@
+"""Exercise the production transition initializer with reentrant callbacks."""
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import tempfile
+import unittest
+
+
+class FadeTargetTests(unittest.TestCase):
+    def test_once_per_target_and_redirect_from_onshow(self):
+        compiler = os.environ.get('USCE_FPC') or shutil.which('fpc')
+        if not compiler:
+            self.skipTest('Free Pascal is not installed')
+        source = (Path(__file__).resolve().parents[1] / 'src/menu/UDisplay.pas').read_text()
+        method = source.split('function TDisplay.InitializeNextScreen: boolean;', 1)[1].split('function TDisplay.Draw:', 1)[0]
+        harness = '''program FadeTarget;
+{$mode delphi}
+uses SysUtils;
+type
+  TMenu = class;
+  PMenu = ^TMenu;
+  TMenu = class
+    Calls: integer;
+    Redirect: PMenu;
+    procedure OnShow;
+  end;
+  TDisplay = class
+    ShownScreen, NextScreen: PMenu;
+    FadeStartTime: cardinal;
+    function InitializeNextScreen: boolean;
+  end;
+var D: TDisplay;
+procedure TMenu.OnShow;
+begin Inc(Calls); if Redirect <> nil then D.NextScreen := Redirect; end;
+function TDisplay.InitializeNextScreen: boolean;
+''' + method + '''
+procedure Check(Value: boolean; const Msg: string);
+begin if not Value then raise Exception.Create(Msg); end;
+var A, B, C: TMenu;
+begin
+  D := TDisplay.Create; A := TMenu.Create; B := TMenu.Create; C := TMenu.Create;
+  D.NextScreen := @A;
+  Check(D.InitializeNextScreen, 'first target not initialized');
+  Check(D.InitializeNextScreen and (A.Calls=1), 'same target initialized twice');
+  D.NextScreen := @B;
+  Check(D.InitializeNextScreen and (B.Calls=1), 'changed target skipped');
+  A.Redirect := @C; D.NextScreen := @A; D.FadeStartTime := 42;
+  Check(not D.InitializeNextScreen, 'reentrant redirect was accepted as initialized');
+  Check((C.Calls=0) and (D.ShownScreen=nil) and (D.FadeStartTime=0), 'redirect state not reset');
+  Check(D.InitializeNextScreen and (C.Calls=1), 'replacement target skipped');
+  D.NextScreen := nil;
+  Check(not D.InitializeNextScreen, 'nil target initialized');
+  A.Free; B.Free; C.Free; D.Free;
+  WriteLn('PASS: once per target, target change, reentrant OnShow and nil target');
+end.
+'''
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'fade_target.pas'
+            path.write_bytes(harness.encode())
+            result = subprocess.run([compiler, '-Mdelphi', '-Ciro', str(path)], cwd=directory,
+                                    capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            subprocess.run([str(path.with_suffix('.exe' if os.name == 'nt' else ''))], check=True)
