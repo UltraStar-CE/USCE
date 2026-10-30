@@ -416,7 +416,7 @@ begin
         FadeEnabled := false;
       end;
       
-      if (S = 1) and (ShownScreen <> NextScreen) then FadeStartTime := 0;
+      if not BlackScreen and (S = 1) and (ShownScreen <> NextScreen) then FadeStartTime := 0;
 
       if (FadeEnabled and not FadeFailed) then
       begin
