@@ -49,6 +49,14 @@ uses
 type
 
   TScreenMain = class(TMenu)
+  private
+    Preview: array[0..5] of record
+      Statics: array of integer;
+      BaseX, BaseAlpha: array of real;
+      Alpha: real;
+    end;
+    PreviewTick: cardinal;
+    procedure UpdatePreviews;
   public
     TextDescription:     integer;
     TextDescriptionLong: integer;
@@ -72,6 +80,7 @@ implementation
 
 uses
   UGraphic,
+  Math,
   UHelp,
   UIni,
   ULanguage,
@@ -229,7 +238,7 @@ end;
 
 constructor TScreenMain.Create;
 var
-  I: integer;
+  I, J, Index: integer;
 begin
   inherited Create;
 {**
@@ -255,14 +264,34 @@ begin
   AddButton(Theme.Main.ButtonAbout);
   AddButton(Theme.Main.ButtonExit);
 
+  for I := 0 to High(Preview) do
+  begin
+    SetLength(Preview[I].Statics, Length(Theme.Main.Preview[I]));
+    SetLength(Preview[I].BaseX, Length(Theme.Main.Preview[I]));
+    SetLength(Preview[I].BaseAlpha, Length(Theme.Main.Preview[I]));
+    for J := 0 to High(Preview[I].Statics) do
+    begin
+      Index := AddStatic(Theme.Main.Preview[I][J]);
+      Preview[I].Statics[J] := Index;
+      Preview[I].BaseX[J] := Statics[Index].Texture.X;
+      Preview[I].BaseAlpha[J] := Statics[Index].Texture.Alpha;
+      Statics[Index].Visible := false;
+    end;
+  end;
+
   Interaction := 0;
 
   WantSoftwareRenderingMsg := Renderer.SoftwareRendering;
 end;
 
 procedure TScreenMain.OnShow;
+var
+  I: integer;
 begin
   inherited;
+  PreviewTick := SDL_GetTicks;
+  for I := 0 to High(Preview) do
+    Preview[I].Alpha := Ord(I = Interaction);
 
   SoundLib.StartBgMusic;
 
@@ -278,8 +307,37 @@ begin
   Party.Clear;
 end;
 
+procedure TScreenMain.UpdatePreviews;
+var
+  Now, Elapsed: cardinal;
+  I, J, Index: integer;
+  Step: real;
+begin
+  Now := SDL_GetTicks;
+  if Now >= PreviewTick then Elapsed := Now - PreviewTick
+  else Elapsed := cardinal(QWord(High(cardinal)) - PreviewTick + Now + 1);
+  PreviewTick := Now;
+  if Theme.Main.PreviewFadeTime > 0 then
+    Step := Elapsed / (1000 * Theme.Main.PreviewFadeTime)
+  else
+    Step := 1;
+  for I := 0 to High(Preview) do
+  begin
+    if I = Interaction then Preview[I].Alpha := Min(1, Preview[I].Alpha + Step)
+    else Preview[I].Alpha := Max(0, Preview[I].Alpha - Step);
+    for J := 0 to High(Preview[I].Statics) do
+    begin
+      Index := Preview[I].Statics[J];
+      Statics[Index].Visible := Preview[I].Alpha > 0;
+      Statics[Index].Texture.Alpha := Preview[I].BaseAlpha[J] * Preview[I].Alpha;
+      Statics[Index].Texture.X := Preview[I].BaseX[J] + Theme.Main.PreviewSlideX * (1 - Preview[I].Alpha);
+    end;
+  end;
+end;
+
 function TScreenMain.Draw: boolean;
 begin
+  UpdatePreviews;
   Result := inherited Draw;
 
   if not ScreenPopupError.Visible then
