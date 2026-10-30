@@ -759,10 +759,15 @@ function ParseThreadMain(Data: Pointer): integer; cdecl;
 var
   Stream: TFFmpegDecodeStream;
 begin
+  try
   Stream := TFFmpegDecodeStream(Data);
   if (Stream <> nil) then
     Stream.Parse();
   Result := 0;
+  except
+    LogWorkerException('ParseThreadMain');
+    raise;
+  end;
 end;
 
 procedure TFFmpegDecodeStream.Parse();
