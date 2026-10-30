@@ -3684,12 +3684,255 @@
           "sha": "cabdd347d1e52d102b0ae82b7b6794da6e61282b",
           "title": "Merge Feature 1b + 3 (Punkte-Bildschirm im Party-Modus, Medley-Runde)",
           "author": "MDDD87"
+        },
+        {
+          "sha": "f8384c3b56f6303fab5e16a7386944fb19f40cdf",
+          "title": "Party mode: medley tuning, micro medley, Pass the Mic, no repeated songs",
+          "author": "claude"
+        },
+        {
+          "sha": "425abc3a8854d21fbdac294fbccd20ab42b76296",
+          "title": "CI (fork): report compiler errors as annotations",
+          "author": "claude"
+        },
+        {
+          "sha": "28909a579d0e358e0e38c971503d0b370cb8a0c3",
+          "title": "Fix compile error in ApplyPartyMedleyTiming (field named High)",
+          "author": "claude"
+        },
+        {
+          "sha": "0c6e742c1ca263510d9b7c2af614d640018965a9",
+          "title": "Merge Medley-Feinschliff, Micro-Medley, Pass the Mic, keine Song-Wiederholungen",
+          "author": "MDDD87"
+        },
+        {
+          "sha": "764fbf06e518c7be7325baf23043fc2506a3f70e",
+          "title": "Score screen in SingStar style, party screens, names, aborted songs",
+          "author": "claude"
+        },
+        {
+          "sha": "8f53b0f0b867be6b46eaa8be453afc63480bd8cd",
+          "title": "Merge Punkte-Bildschirm im SingStar-Stil, Party-Bildschirme, Namen, abgebrochene Songs",
+          "author": "MDDD87"
+        },
+        {
+          "sha": "4ce8e3c6c734ea23a150f35a2680ed4e82f5ab38",
+          "title": "Party polish: standings, round rules, team numbers, counting, winner screen",
+          "author": "claude"
+        },
+        {
+          "sha": "af2ed4c557fe6a1956e4551aafda52f4357c6188",
+          "title": "Fix compile error: method declaration before fields in TScreenPartyScore",
+          "author": "claude"
+        },
+        {
+          "sha": "8f9e1352d1b500fed013fc64e8bc559e5f6c2dfb",
+          "title": "Party polish 2: round overview layout, best performances page, highscore sound",
+          "author": "claude"
+        },
+        {
+          "sha": "f367efb4e22598613bb1f86164b997f54aef5d7b",
+          "title": "Fix range check error on the party winner screen without best performances",
+          "author": "claude"
+        },
+        {
+          "sha": "f57fb65be12bc0c541d31ad04b5b26c245539a0a",
+          "title": "Party polish 3: highscore highlight, best performances layout, fewer party modes",
+          "author": "claude"
+        },
+        {
+          "sha": "51b60dc008ea506ed4051b06a782bf5356b0389d",
+          "title": "Fix compile error: highlight constants declared before use",
+          "author": "claude"
+        },
+        {
+          "sha": "1051f9b02e65036276d7e006ac69c54c65dfdf2c",
+          "title": "Round overview colors like the round table; highscore highlight in sing color, new highscore box below the header",
+          "author": "claude"
+        },
+        {
+          "sha": "4474054a614305ba6e5aeaa562dd495a2997bd0e",
+          "title": "Merge PR #5: Party-Feinschliff",
+          "author": "MDDD87"
+        },
+        {
+          "sha": "b2887608d6520bce1974a3d4ad8fd824b51bc1aa",
+          "title": "Feature 4: SingStar duets in the party mode",
+          "author": "claude"
+        },
+        {
+          "sha": "edbc7a19f21ddfee4459f9db2965db1514524c6f",
+          "title": "Duet round fixes: singer names, mic numbers and lyric colors on the sing screen; voices in the announcement",
+          "author": "claude"
+        },
+        {
+          "sha": "2f52a5a0d42f9c611ebf4129fd81cb486e02f6a2",
+          "title": "Duet highscores: after a party duet only the team entries are listed; team entry highlighted in the team color; highlight bar as tinted white texture",
+          "author": "claude"
+        },
+        {
+          "sha": "90be3e84e43b101accd7e2a8520d6da6eb4f17bb",
+          "title": "Duet announcement: simplified screen in the middle (song, team, singers with mic and voice), background music while getting ready, stopped before singing",
+          "author": "claude"
+        },
+        {
+          "sha": "d9780ca37a89a48b9eff6c49fb7789d5e6b7ecd5",
+          "title": "Party evaluation: score of each team in this round below its bar (duet: team result)",
+          "author": "claude"
+        },
+        {
+          "sha": "1b7ca6c6d91a81e47c7f5d16aca259da152fb4fd",
+          "title": "Rename party modes: Blind -> \"Ohne Noten\", Total blindness -> \"Ohne Noten & Text\"",
+          "author": "claude"
+        },
+        {
+          "sha": "4ec1da5d4c6e8e22fad08c744d215cccf76530ce",
+          "title": "Show the duet songs again in the normal mode after a party (original USDX left them hidden until restart)",
+          "author": "claude"
+        },
+        {
+          "sha": "ba1a6e486725da8d9f7f8ee5e142ba0cd8b534fe",
+          "title": "Duet announcement: plain hyphen between artist and title (the en dash in the source was shown as garbage)",
+          "author": "claude"
+        },
+        {
+          "sha": "1a6a7bb23b63f67d82072e561170cf1d4f512454",
+          "title": "Joker: one key press used two jokers (key and text event); ignore a second joker within 400 ms",
+          "author": "claude"
+        },
+        {
+          "sha": "9721e53ab4790cd888fd93747f7e8ee7a83ee48d",
+          "title": "Duet announcement: \"Mic 1/2\" above the boxes, voice inside the box below the name, no reflection, wider boxes",
+          "author": "claude"
+        },
+        {
+          "sha": "1200e9725b4fefd95602fc65a6ca8f1647681827",
+          "title": "Feature 5.2: Pass the Medley and Pass the Micro-Medley",
+          "author": "claude"
+        },
+        {
+          "sha": "8f3a9fc80f16559e3b3dac018323634118f2a781",
+          "title": "Pass rounds like SingStar: bar below each team with the singer, filling up before the change with \"NEXT: <name>\"",
+          "author": "claude"
+        },
+        {
+          "sha": "5f6a13a4424e245701ec211ee98a31666419bd52",
+          "title": "Round overview: order of the singers also for Pass the Mic",
+          "author": "claude"
+        },
+        {
+          "sha": "efe5cb9a072424e5969273d32e408a8dd9fef2fd",
+          "title": "Pass bars: rounded (tinted white tab texture) and a little lower below the team name",
+          "author": "claude"
+        },
+        {
+          "sha": "288c75b2e37440c21dcd20c8596a8a225b0543d9",
+          "title": "Party: hide avatar frames in all layouts, equal bars and medals for a draw, narrower pass bar",
+          "author": "claude"
+        },
+        {
+          "sha": "efd7e0d301b49af7385c8d722a0d9fe4625d10c5",
+          "title": "Party score: only the points for Pass the Mic / Pass the Medley rounds",
+          "author": "claude"
+        },
+        {
+          "sha": "452270af903f636254a77b675adaacbef5c1c9ac",
+          "title": "Pass bar: estimate the text width instead of TextWidth (range check error in UFont)",
+          "author": "claude"
+        },
+        {
+          "sha": "d4b75ada9afcb18927a1974e5d67df6c41528d06",
+          "title": "Review fixes: duet team highscores not cut off by the single voices, joker debounce per team",
+          "author": "claude"
+        },
+        {
+          "sha": "8d73d69ee08385e5f270399ed0019eddd4d0cb2d",
+          "title": "Merge pull request #6 from MDDD87/feature-4-duette",
+          "author": "MDDD87"
+        },
+        {
+          "sha": "90189710e77c578248dc4b54c3d2ff497fd5d717",
+          "title": "Party-Optionen: Karussell mit Playlist-Covern",
+          "author": "claude"
+        },
+        {
+          "sha": "11f3ea2c6e81be1aff9f37e40743033f2c93b6cb",
+          "title": "Party-Optionen: Zeile Playlist im Karussell-Modus ausgeblendet",
+          "author": "claude"
+        },
+        {
+          "sha": "f318b6db1ce182ed69500aeb383bb4ea141386d0",
+          "title": "Karussell: Text im Platzhalter richtig zentriert, lange Woerter verkleinert",
+          "author": "claude"
+        },
+        {
+          "sha": "a6732c0d7965331e21280c03ada65d7a589b6940",
+          "title": "Party: Playlist-Name ohne [Fixed Order]-Zusatz",
+          "author": "claude"
+        },
+        {
+          "sha": "dcecd82bbbef89467f4a7a985a8c3dcd07d997a3",
+          "title": "Party-Auswertung: Fehler beim Aufbau abfangen und in Error.log schreiben",
+          "author": "claude"
+        },
+        {
+          "sha": "ff607b56873c371f8402098f4fe99e5fb5cbeafb",
+          "title": "Bildschirmwechsel waehrend Ueberblendung: OnShow des neuen Ziels aufrufen",
+          "author": "claude"
+        },
+        {
+          "sha": "a7d090ffd3154d5181c0c7a6a3259a576b2d2878",
+          "title": "Punkte-Bildschirm: Hintergrundmusik nicht nach der Songauswahl neu starten",
+          "author": "claude"
+        },
+        {
+          "sha": "c179de14998d0d1f85f7b1c57badaa7199cfd2e5",
+          "title": "Party: Rundenauswahl zeigt nur Modi, die mit dem gewaehlten Songpool spielbar sind",
+          "author": "claude"
+        },
+        {
+          "sha": "cda33435b1144b151bc3bd05be61e15e0bcefafc",
+          "title": "Normaler Modus startet immer mit allen Songs (Playlist der Party wird geschlossen)",
+          "author": "claude"
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "assessed",
+        "assessedAgainst": "c3fc8e4993394373cc00f7b1ed2f01f85a2a72e3",
+        "reviewedCommitCount": 1,
+        "scope": "Full 54-commit inventory retained; static review of the single commit since previousHead. Earlier decisions preserved, not re-reviewed or runtime-accepted.",
+        "items": [
+          {
+            "area": "Return from Party to normal library (one new commit)",
+            "decision": "not-adopted",
+            "reason": "cda33435 adds ResetToAllSongs in Main.OnShow: UnsetPlaylist, RestoreSongOrder and SetFilter clear the active playlist/category/filter on every main-menu return. USCE #294 already restores multipart visibility using the active selection rules. Keep filters/playlists/lockdown intact rather than importing the global reset.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/pull/294",
+              "https://github.com/UltraStar-CE/USCE/pull/147",
+              "https://github.com/UltraStar-CE/USCE/pull/107"
+            ]
+          },
+          {
+            "area": "Earlier decisions retained",
+            "decision": "tracked",
+            "reason": "Previous 53-commit assessment remains in previousAssessment. Current follow-ups include #293 joker debounce, #294 multipart visibility, #295 Party highscores and #296 redirected fades. Remaining Party features stay in their existing issues; none is reopened as new work.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/pull/293",
+              "https://github.com/UltraStar-CE/USCE/pull/294",
+              "https://github.com/UltraStar-CE/USCE/pull/295",
+              "https://github.com/UltraStar-CE/USCE/pull/296"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/294",
+          "https://github.com/UltraStar-CE/USCE/pull/147",
+          "https://github.com/UltraStar-CE/USCE/pull/107",
+          "https://github.com/UltraStar-CE/USCE/pull/293",
+          "https://github.com/UltraStar-CE/USCE/pull/295",
+          "https://github.com/UltraStar-CE/USCE/pull/296"
+        ],
+        "reason": "cda33435 adds ResetToAllSongs in Main.OnShow: UnsetPlaylist, RestoreSongOrder and SetFilter clear the active playlist/category/filter on every main-menu return. USCE #294 already restores multipart visibility using the active selection rules. Keep filters/playlists/lockdown intact rather than importing the global reset. Previous 53-commit assessment remains in previousAssessment. Current follow-ups include #293 joker debounce, #294 multipart visibility, #295 Party highscores and #296 redirected fades. Remaining Party features stay in their existing issues; none is reopened as new work."
       },
       "previousAssessment": {
         "decision": "assessed",
@@ -3800,7 +4043,125 @@
             ]
           }
         ]
-      }
+      },
+      "lastSourceCommitAt": "2026-10-30T06:53:59Z",
+      "previousHead": "c179de14998d0d1f85f7b1c57badaa7199cfd2e5",
+      "assessmentHistory": [
+        {
+          "head": "c179de14998d0d1f85f7b1c57badaa7199cfd2e5",
+          "assessment": {
+            "decision": "assessed",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/196",
+              "https://github.com/UltraStar-CE/USCE/issues/275",
+              "https://github.com/UltraStar-CE/USCE/issues/57",
+              "https://github.com/UltraStar-CE/USCE/issues/243",
+              "https://github.com/UltraStar-CE/USCE/issues/197",
+              "https://github.com/UltraStar-CE/USCE/issues/199",
+              "https://github.com/UltraStar-CE/USCE/issues/19",
+              "https://github.com/UltraStar-CE/USCE/issues/125",
+              "https://github.com/UltraStar-CE/USCE/issues/129",
+              "https://github.com/UltraStar-CE/USCE/issues/222",
+              "https://github.com/UltraStar-CE/USCE/issues/278",
+              "https://github.com/UltraStar-CE/USCE/issues/280",
+              "https://github.com/UltraStar-CE/USCE/issues/274",
+              "https://github.com/UltraStar-CE/USCE/issues/279",
+              "https://github.com/UltraStar-CE/USCE/issues/162",
+              "https://github.com/UltraStar-CE/USCE/issues/259",
+              "https://github.com/UltraStar-CE/USCE/issues/264"
+            ],
+            "reason": "Classic Party multipart rounds and comparable highscores: Shared team/duet history belongs to #196. Keep arbitrary voice assignments and configurable scoring; do not import fixed two-voice completion/highscore assumptions. Party medley and passing rounds: Medley, micro-medley, Pass the Medley and next-singer bars belong to the existing focused proposal. Party results and awards: Round totals, best performances, draws, score presentation and aborted-song rules belong to #199, preserving theme control and generic layouts. Existing fixes and fork CI: dav1d naming is fixed; team naming and Party no-repeat have existing USCE implementations. Trigger-build and fork-only Windows CI simplifications do not belong in USCE. Restore hidden multipart songs and joker dispatch: Inspect current visibility rebuilds and actual SDL events. Do not blindly unhide stored indices or use a global debounce that suppresses another team. Playlist cover carousel: Useful optional playlist selection presentation, but current fork geometry/colors must become theme-controlled. Redirected transitions: NextScreen/DoneOnShow state also exists in current main; reproduce a redirected fade and verify lifecycle ordering. Compatible round choices and result audio: Filter Party modes against the selected song pool under #196/#197. Keep current sustain-audio policy rather than copying restart changes. Catch-and-continue in Party results can leave placeholder values and is not adopted verbatim. Overlapping branch history: All commits in this pinned branch were enumerated. Other MDDD87 branches share many of these commits; the same feature is tracked once, not once per branch.",
+            "reviewedCommitCount": 53,
+            "scope": "Complete paginated commit inventory; static review of new relevant source deltas against USCE main b466dedf and existing focused issues/PRs. Earlier decisions are retained. No fork code executed, imported, or runtime-accepted.",
+            "items": [
+              {
+                "area": "Classic Party multipart rounds and comparable highscores",
+                "decision": "tracked",
+                "reason": "Shared team/duet history belongs to #196. Keep arbitrary voice assignments and configurable scoring; do not import fixed two-voice completion/highscore assumptions.",
+                "usceReferences": [
+                  "https://github.com/UltraStar-CE/USCE/issues/196",
+                  "https://github.com/UltraStar-CE/USCE/issues/275",
+                  "https://github.com/UltraStar-CE/USCE/issues/57",
+                  "https://github.com/UltraStar-CE/USCE/issues/243"
+                ]
+              },
+              {
+                "area": "Party medley and passing rounds",
+                "decision": "tracked",
+                "reason": "Medley, micro-medley, Pass the Medley and next-singer bars belong to the existing focused proposal.",
+                "usceReferences": [
+                  "https://github.com/UltraStar-CE/USCE/issues/197"
+                ]
+              },
+              {
+                "area": "Party results and awards",
+                "decision": "tracked",
+                "reason": "Round totals, best performances, draws, score presentation and aborted-song rules belong to #199, preserving theme control and generic layouts.",
+                "usceReferences": [
+                  "https://github.com/UltraStar-CE/USCE/issues/199"
+                ]
+              },
+              {
+                "area": "Existing fixes and fork CI",
+                "decision": "already-covered",
+                "reason": "dav1d naming is fixed; team naming and Party no-repeat have existing USCE implementations. Trigger-build and fork-only Windows CI simplifications do not belong in USCE.",
+                "usceReferences": [
+                  "https://github.com/UltraStar-CE/USCE/issues/19",
+                  "https://github.com/UltraStar-CE/USCE/issues/125",
+                  "https://github.com/UltraStar-CE/USCE/issues/129",
+                  "https://github.com/UltraStar-CE/USCE/issues/222"
+                ]
+              },
+              {
+                "area": "Restore hidden multipart songs and joker dispatch",
+                "decision": "tracked",
+                "reason": "Inspect current visibility rebuilds and actual SDL events. Do not blindly unhide stored indices or use a global debounce that suppresses another team.",
+                "usceReferences": [
+                  "https://github.com/UltraStar-CE/USCE/issues/278",
+                  "https://github.com/UltraStar-CE/USCE/issues/280"
+                ]
+              },
+              {
+                "area": "Playlist cover carousel",
+                "decision": "tracked",
+                "reason": "Useful optional playlist selection presentation, but current fork geometry/colors must become theme-controlled.",
+                "usceReferences": [
+                  "https://github.com/UltraStar-CE/USCE/issues/274"
+                ]
+              },
+              {
+                "area": "Redirected transitions",
+                "decision": "tracked",
+                "reason": "NextScreen/DoneOnShow state also exists in current main; reproduce a redirected fade and verify lifecycle ordering.",
+                "usceReferences": [
+                  "https://github.com/UltraStar-CE/USCE/issues/279"
+                ]
+              },
+              {
+                "area": "Compatible round choices and result audio",
+                "decision": "tracked",
+                "reason": "Filter Party modes against the selected song pool under #196/#197. Keep current sustain-audio policy rather than copying restart changes. Catch-and-continue in Party results can leave placeholder values and is not adopted verbatim.",
+                "usceReferences": [
+                  "https://github.com/UltraStar-CE/USCE/issues/196",
+                  "https://github.com/UltraStar-CE/USCE/issues/197",
+                  "https://github.com/UltraStar-CE/USCE/issues/199",
+                  "https://github.com/UltraStar-CE/USCE/issues/162",
+                  "https://github.com/UltraStar-CE/USCE/issues/259"
+                ]
+              },
+              {
+                "area": "Overlapping branch history",
+                "decision": "assessed",
+                "reason": "All commits in this pinned branch were enumerated. Other MDDD87 branches share many of these commits; the same feature is tracked once, not once per branch.",
+                "usceReferences": [
+                  "https://github.com/UltraStar-CE/USCE/issues/264"
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "deltaCompareUrl": "https://github.com/MDDD87/USDX/compare/c179de14998d0d1f85f7b1c57badaa7199cfd2e5...cda33435b1144b151bc3bd05be61e15e0bcefafc"
     },
     {
       "repository": "MDDD87/USDX",
@@ -4945,10 +5306,39 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
-      }
+        "decision": "assessed",
+        "assessedAgainst": "c3fc8e4993394373cc00f7b1ed2f01f85a2a72e3",
+        "reviewedCommitCount": 4,
+        "scope": "Complete paginated source commit inventory and static assessment of relevant deltas against current USCE and prior recorded decisions. No fork code executed or runtime acceptance claimed.",
+        "items": [
+          {
+            "area": "External file-driven singer/song queue",
+            "decision": "not-adopted",
+            "reason": "The next.txt/playing.txt/result.txt protocol and automatic screen polling overlap the chosen native remote API/usrelay architecture and continuous playback. Do not add another IPC/queue implementation, fixed 6/12-second delays or legacy 1/2/3/4/6-player setup.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/168",
+              "https://github.com/UltraStar-CE/USCE/issues/124",
+              "https://github.com/UltraStar-CE/usrelay/issues/16"
+            ]
+          },
+          {
+            "area": "Fork-specific CI downloads",
+            "decision": "not-adopted",
+            "reason": "The karaoke branch adds fork triggers and installer download retries/size checks. This is not an assessment of USCE packaging; retain the current required build/package workflow.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/292"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/168",
+          "https://github.com/UltraStar-CE/USCE/issues/124",
+          "https://github.com/UltraStar-CE/usrelay/issues/16",
+          "https://github.com/UltraStar-CE/USCE/issues/292"
+        ],
+        "reason": "External file-driven singer/song queue: The next.txt/playing.txt/result.txt protocol and automatic screen polling overlap the chosen native remote API/usrelay architecture and continuous playback. Do not add another IPC/queue implementation, fixed 6/12-second delays or legacy 1/2/3/4/6-player setup. Fork-specific CI downloads: The karaoke branch adds fork triggers and installer download retries/size checks. This is not an assessment of USCE packaging; retain the current required build/package workflow."
+      },
+      "lastSourceCommitAt": "2026-10-30T00:17:52Z"
     },
     {
       "repository": "guidop182/USDX",
@@ -4986,10 +5376,44 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
-      }
+        "decision": "assessed",
+        "assessedAgainst": "c3fc8e4993394373cc00f7b1ed2f01f85a2a72e3",
+        "reviewedCommitCount": 5,
+        "scope": "Complete paginated source commit inventory and static assessment of relevant deltas against current USCE and prior recorded decisions. No fork code executed or runtime acceptance claimed.",
+        "items": [
+          {
+            "area": "External file-driven singer/song queue",
+            "decision": "not-adopted",
+            "reason": "The next.txt/playing.txt/result.txt protocol and automatic screen polling overlap the chosen native remote API/usrelay architecture and continuous playback. Do not add another IPC/queue implementation, fixed 6/12-second delays or legacy 1/2/3/4/6-player setup.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/168",
+              "https://github.com/UltraStar-CE/USCE/issues/124",
+              "https://github.com/UltraStar-CE/usrelay/issues/16"
+            ]
+          },
+          {
+            "area": "Fork-specific CI downloads",
+            "decision": "not-adopted",
+            "reason": "The karaoke branch adds fork triggers and installer download retries/size checks. This is not an assessment of USCE packaging; retain the current required build/package workflow.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/292"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/168",
+          "https://github.com/UltraStar-CE/USCE/issues/124",
+          "https://github.com/UltraStar-CE/usrelay/issues/16",
+          "https://github.com/UltraStar-CE/USCE/issues/292"
+        ],
+        "reason": "External file-driven singer/song queue: The next.txt/playing.txt/result.txt protocol and automatic screen polling overlap the chosen native remote API/usrelay architecture and continuous playback. Do not add another IPC/queue implementation, fixed 6/12-second delays or legacy 1/2/3/4/6-player setup. Fork-specific CI downloads: The karaoke branch adds fork triggers and installer download retries/size checks. This is not an assessment of USCE packaging; retain the current required build/package workflow.",
+        "coveredBy": {
+          "repository": "guidop182/USDX",
+          "branch": "master",
+          "head": "a35cac85f1904b86248913bb16898fd61f1bd852"
+        }
+      },
+      "lastSourceCommitAt": "2026-10-30T02:48:41Z"
     },
     {
       "repository": "poloio/USDX",
@@ -5059,13 +5483,98 @@
           "sha": "82befdfe1b04583fb2c00cc02ef8e3517e6faf80",
           "title": "Edit songs with up to 6 parts in the song editor",
           "author": "poloio"
+        },
+        {
+          "sha": "8882eb417e4309da961538568e4e7fb782d22a12",
+          "title": "Docs: the song editor edits songs with 3 to 6 parts",
+          "author": "poloio"
+        },
+        {
+          "sha": "def8ecd1f1190656a46168dcfcc1d376d39bb82f",
+          "title": "Fork only: what's new in the README and the release notes",
+          "author": "poloio"
+        },
+        {
+          "sha": "b3a7c77e0acbe9dcae02f8c17766a92b08d6fe15",
+          "title": "Fork only: the what's new section names its release",
+          "author": "poloio"
+        },
+        {
+          "sha": "c6944a4dda790cab2d4c74918c0cc3c0ad9608a8",
+          "title": "Read part names only for the parts a song has",
+          "author": "poloio"
+        },
+        {
+          "sha": "482f4e08e172cd23f4b730ae7bea98c0e3e6d845",
+          "title": "Lyrics: light variant for very dark player colors",
+          "author": "poloio"
+        },
+        {
+          "sha": "5d2a01ee89835c860dcfe045fb3865f1d95bcf83",
+          "title": "Ready check and part cues for songs with 2 or more players",
+          "author": "poloio"
+        },
+        {
+          "sha": "93602a659a00d36fd1c05d2406ee8999c6fde7b5",
+          "title": "Fork only: what's new for release trio-2026.10.29.2",
+          "author": "poloio"
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
-      }
+        "decision": "assessed",
+        "assessedAgainst": "c3fc8e4993394373cc00f7b1ed2f01f85a2a72e3",
+        "reviewedCommitCount": 19,
+        "scope": "Complete paginated source commit inventory and static assessment of relevant deltas against current USCE and prior recorded decisions. No fork code executed or runtime acceptance claimed.",
+        "items": [
+          {
+            "area": "Six-part parsing, assignment, singing and editing",
+            "decision": "already-covered",
+            "reason": "USCE already supports eight voices and per-player assignments through #142/#143. Current ReadTXTHeader skips blank lines before voice markers; editor arrays and voice counts are generic. Do not replace these with a six-track cap, pair-based editor UI or fixed two-column layouts.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/142",
+              "https://github.com/UltraStar-CE/USCE/issues/143"
+            ]
+          },
+          {
+            "area": "Undo after switching voices and voice-name bounds",
+            "decision": "deferred",
+            "reason": "The fork fixes its own two-track-to-six-track transition. Current USCE uses generic undo snapshots. No equivalent failure has been established; retain as a targeted regression check rather than importing the alternate editor rewrite.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/143",
+              "https://github.com/UltraStar-CE/USCE/issues/299"
+            ],
+            "nextTest": "Switch among 1/3/8 voices, edit, undo/redo, and check missing or extra voice-name tags."
+          },
+          {
+            "area": "Ready check, part cues and readable lyric colors",
+            "decision": "deferred",
+            "reason": "These are genuine optional presentation ideas beyond basic multipart support. The ready check waits for microphone activity, while cues dim inactive tracks and announce the next entrance. They must preserve theme controls, generic voices and continuous/zero-player modes. No automatic gameplay delay or changed lyric colors is adopted.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/260",
+              "https://github.com/UltraStar-CE/USCE/issues/124",
+              "https://github.com/UltraStar-CE/USCE/issues/299"
+            ],
+            "nextTest": "Prototype separately: missing/disabled microphones must not block startup; test duet/multipart and high player counts, skins, and continuous mode."
+          },
+          {
+            "area": "Fork release files, demonstrations and binary assets",
+            "decision": "not-adopted",
+            "reason": "Fork-only release workflows/docs are not USCE changes. Do not copy bundled demo audio or screenshots without checking their provenance.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/299"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/142",
+          "https://github.com/UltraStar-CE/USCE/issues/143",
+          "https://github.com/UltraStar-CE/USCE/issues/299",
+          "https://github.com/UltraStar-CE/USCE/issues/260",
+          "https://github.com/UltraStar-CE/USCE/issues/124"
+        ],
+        "reason": "Six-part parsing, assignment, singing and editing: USCE already supports eight voices and per-player assignments through #142/#143. Current ReadTXTHeader skips blank lines before voice markers; editor arrays and voice counts are generic. Do not replace these with a six-track cap, pair-based editor UI or fixed two-column layouts. Undo after switching voices and voice-name bounds: The fork fixes its own two-track-to-six-track transition. Current USCE uses generic undo snapshots. No equivalent failure has been established; retain as a targeted regression check rather than importing the alternate editor rewrite. Ready check, part cues and readable lyric colors: These are genuine optional presentation ideas beyond basic multipart support. The ready check waits for microphone activity, while cues dim inactive tracks and announce the next entrance. They must preserve theme controls, generic voices and continuous/zero-player modes. No automatic gameplay delay or changed lyric colors is adopted. Fork release files, demonstrations and binary assets: Fork-only release workflows/docs are not USCE changes. Do not copy bundled demo audio or screenshots without checking their provenance."
+      },
+      "lastSourceCommitAt": "2026-10-29T20:47:51Z"
     },
     {
       "repository": "3Ryuusei3/USDX",
@@ -5135,13 +5644,162 @@
           "sha": "73798429f3c259a6bdc9d330ba58887627023ea0",
           "title": "Merge translations into develop",
           "author": "3Ryuusei3"
+        },
+        {
+          "sha": "f4bb55aa45d7ab506c3bd7676dc753a8320af8c6",
+          "title": "Merge medley-all-songs into develop",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "84d7e3ce95744992950d8e18618ae1527164c835",
+          "title": "Merge redesign (branch docs) into develop",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "c10c64545fd6a9f055df7140386463b97e44a5ea",
+          "title": "CLAUDE.md: document the branch layout (master, topic branches, develop)",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "a71632370da96ebccbabfe36c99caddb5216bfda",
+          "title": "Pass the mic: option to hand the microphone to the next singer",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "53541a10053199b4a1dbb8200339707b6ff3a27f",
+          "title": "Merge pass-the-mic into develop",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "98120bc983fb6b1ba3447e7e1b81507603461aff",
+          "title": "Merge redesign (docs) into develop",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "70ebdc644d2c7d84b95a269c71bc55c92900c255",
+          "title": "CLAUDE.md: pass-the-mic now has its own branch",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "bd25e5c38a598f5c6f16696681d7320a18227314",
+          "title": "Merge redesign (top-N screen) into develop",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "33b14c24e6812bde191be2eed8cd946bd1061bb8",
+          "title": "Karaoke theme: redesigned top-N screen",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "b7e80fd03f4c093eecf75f69b4c783405868e977",
+          "title": "Revert \"Merge seek-keys-cmd-mac-pr into develop\"",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "0817c764d5146dfe49dadb8cccd2f82ad028c633",
+          "title": "CLAUDE.md: drop the seek-keys branch",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "9adf94721115f4cd565c3b9a5622ebb3ed4cc261",
+          "title": "Merge redesign (docs) into develop",
+          "author": "3Ryuusei3"
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
-      }
+        "decision": "assessed",
+        "assessedAgainst": "c3fc8e4993394373cc00f7b1ed2f01f85a2a72e3",
+        "reviewedCommitCount": 24,
+        "scope": "Complete paginated source commit inventory and static assessment of relevant deltas against current USCE and prior recorded decisions. No fork code executed or runtime acceptance claimed.",
+        "items": [
+          {
+            "area": "Translation additions",
+            "decision": "adapt",
+            "reason": "Useful additions to remaining TODO entries. Port only keys still missing in USCE; retain current translations, format placeholders and USCE-specific keys. Translation quality has not been certified.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/299"
+            ],
+            "nextTest": "Check placeholders and duplicates, then have speakers review each language before a focused translation PR."
+          },
+          {
+            "area": "Background video decoding",
+            "decision": "deferred",
+            "reason": "This is another version of the already assessed worker-decoder approach. Keep the recorded decision to pursue optional MPV; no new performance claim or parallel decoder port.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/210",
+              "https://github.com/UltraStar-CE/USCE/issues/173",
+              "https://github.com/UltraStar-CE/USCE/issues/164"
+            ]
+          },
+          {
+            "area": "Karaoke theme and UI primitives",
+            "decision": "tracked",
+            "reason": "Keep artwork in Themes and shared capabilities optional. Existing rounded shapes, fonts, backplates and section inheritance cover part of this work; focus outlines remain #297. Do not replace generic player layouts with fixed 3/4/6 layouts. Top-N presentation belongs to the theme assessment.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/Themes/issues/16",
+              "https://github.com/UltraStar-CE/USCE/issues/211",
+              "https://github.com/UltraStar-CE/USCE/issues/283",
+              "https://github.com/UltraStar-CE/USCE/issues/285",
+              "https://github.com/UltraStar-CE/USCE/issues/286",
+              "https://github.com/UltraStar-CE/USCE/issues/287",
+              "https://github.com/UltraStar-CE/USCE/issues/297"
+            ]
+          },
+          {
+            "area": "Cover-loader exception recovery",
+            "decision": "tracked",
+            "reason": "Independent worker/cache work is already in #276. The fork catches worker exceptions but just sets Surface=nil; a port must also free partially allocated surfaces and preserve queue progress.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/276"
+            ]
+          },
+          {
+            "area": "Medley for every song",
+            "decision": "already-covered",
+            "reason": "USCE #64 already calculates fallback medleys across tracks. Do not reintroduce fork restrictions such as excluding CALCMEDLEY:OFF songs or fixed 20-30 second timing without a separate product decision.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/64",
+              "https://github.com/UltraStar-CE/USCE/issues/197"
+            ]
+          },
+          {
+            "area": "Pass-the-mic banner in normal singing",
+            "decision": "deferred",
+            "reason": "A visual handover prompt is distinct from actual team/singer reassignment. Existing Team Duel and #197 cover related passing rounds. This fork draws hard-coded geometry and schedules changes by score-weight percentages; do not import it as a new scoring mode.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/197",
+              "https://github.com/UltraStar-CE/USCE/issues/299"
+            ],
+            "nextTest": "If pursued, make the cue themeable and verify pause/seek/restart, zero-weight songs and all supported voices."
+          },
+          {
+            "area": "macOS Cmd seeking and its revert",
+            "decision": "not-adopted",
+            "reason": "The develop branch includes the Cmd-seek change and its revert. No surviving feature to import from that pair. Fork branch-layout documentation and merge commits are not USCE product changes.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/299"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/299",
+          "https://github.com/UltraStar-CE/USCE/issues/210",
+          "https://github.com/UltraStar-CE/USCE/issues/173",
+          "https://github.com/UltraStar-CE/USCE/issues/164",
+          "https://github.com/UltraStar-CE/Themes/issues/16",
+          "https://github.com/UltraStar-CE/USCE/issues/211",
+          "https://github.com/UltraStar-CE/USCE/issues/283",
+          "https://github.com/UltraStar-CE/USCE/issues/285",
+          "https://github.com/UltraStar-CE/USCE/issues/286",
+          "https://github.com/UltraStar-CE/USCE/issues/287",
+          "https://github.com/UltraStar-CE/USCE/issues/297",
+          "https://github.com/UltraStar-CE/USCE/issues/276",
+          "https://github.com/UltraStar-CE/USCE/issues/64",
+          "https://github.com/UltraStar-CE/USCE/issues/197"
+        ],
+        "reason": "Translation additions: Useful additions to remaining TODO entries. Port only keys still missing in USCE; retain current translations, format placeholders and USCE-specific keys. Translation quality has not been certified. Background video decoding: This is another version of the already assessed worker-decoder approach. Keep the recorded decision to pursue optional MPV; no new performance claim or parallel decoder port. Karaoke theme and UI primitives: Keep artwork in Themes and shared capabilities optional. Existing rounded shapes, fonts, backplates and section inheritance cover part of this work; focus outlines remain #297. Do not replace generic player layouts with fixed 3/4/6 layouts. Top-N presentation belongs to the theme assessment. Cover-loader exception recovery: Independent worker/cache work is already in #276. The fork catches worker exceptions but just sets Surface=nil; a port must also free partially allocated surfaces and preserve queue progress. Medley for every song: USCE #64 already calculates fallback medleys across tracks. Do not reintroduce fork restrictions such as excluding CALCMEDLEY:OFF songs or fixed 20-30 second timing without a separate product decision. Pass-the-mic banner in normal singing: A visual handover prompt is distinct from actual team/singer reassignment. Existing Team Duel and #197 cover related passing rounds. This fork draws hard-coded geometry and schedules changes by score-weight percentages; do not import it as a new scoring mode. macOS Cmd seeking and its revert: The develop branch includes the Cmd-seek change and its revert. No surviving feature to import from that pair. Fork branch-layout documentation and merge commits are not USCE product changes."
+      },
+      "lastSourceCommitAt": "2026-10-29T19:30:44Z"
     },
     {
       "repository": "3Ryuusei3/USDX",
@@ -5159,10 +5817,33 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
-      }
+        "decision": "assessed",
+        "assessedAgainst": "c3fc8e4993394373cc00f7b1ed2f01f85a2a72e3",
+        "reviewedCommitCount": 1,
+        "scope": "Complete paginated source commit inventory and static assessment of relevant deltas against current USCE and prior recorded decisions. No fork code executed or runtime acceptance claimed.",
+        "items": [
+          {
+            "area": "Medley for every song",
+            "decision": "already-covered",
+            "reason": "USCE #64 already calculates fallback medleys across tracks. Do not reintroduce fork restrictions such as excluding CALCMEDLEY:OFF songs or fixed 20-30 second timing without a separate product decision.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/64",
+              "https://github.com/UltraStar-CE/USCE/issues/197"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/64",
+          "https://github.com/UltraStar-CE/USCE/issues/197"
+        ],
+        "reason": "Medley for every song: USCE #64 already calculates fallback medleys across tracks. Do not reintroduce fork restrictions such as excluding CALCMEDLEY:OFF songs or fixed 20-30 second timing without a separate product decision.",
+        "coveredBy": {
+          "repository": "3Ryuusei3/USDX",
+          "branch": "develop",
+          "head": "9adf94721115f4cd565c3b9a5622ebb3ed4cc261"
+        }
+      },
+      "lastSourceCommitAt": "2026-10-29T18:37:04Z"
     },
     {
       "repository": "3Ryuusei3/USDX",
@@ -5180,10 +5861,34 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
-      }
+        "decision": "assessed",
+        "assessedAgainst": "c3fc8e4993394373cc00f7b1ed2f01f85a2a72e3",
+        "reviewedCommitCount": 1,
+        "scope": "Complete paginated source commit inventory and static assessment of relevant deltas against current USCE and prior recorded decisions. No fork code executed or runtime acceptance claimed.",
+        "items": [
+          {
+            "area": "Pass-the-mic banner in normal singing",
+            "decision": "deferred",
+            "reason": "A visual handover prompt is distinct from actual team/singer reassignment. Existing Team Duel and #197 cover related passing rounds. This fork draws hard-coded geometry and schedules changes by score-weight percentages; do not import it as a new scoring mode.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/197",
+              "https://github.com/UltraStar-CE/USCE/issues/299"
+            ],
+            "nextTest": "If pursued, make the cue themeable and verify pause/seek/restart, zero-weight songs and all supported voices."
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/197",
+          "https://github.com/UltraStar-CE/USCE/issues/299"
+        ],
+        "reason": "Pass-the-mic banner in normal singing: A visual handover prompt is distinct from actual team/singer reassignment. Existing Team Duel and #197 cover related passing rounds. This fork draws hard-coded geometry and schedules changes by score-weight percentages; do not import it as a new scoring mode.",
+        "coveredBy": {
+          "repository": "3Ryuusei3/USDX",
+          "branch": "develop",
+          "head": "9adf94721115f4cd565c3b9a5622ebb3ed4cc261"
+        }
+      },
+      "lastSourceCommitAt": "2026-10-29T19:03:25Z"
     },
     {
       "repository": "3Ryuusei3/USDX",
@@ -5236,10 +5941,52 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
-      }
+        "decision": "assessed",
+        "assessedAgainst": "c3fc8e4993394373cc00f7b1ed2f01f85a2a72e3",
+        "reviewedCommitCount": 8,
+        "scope": "Complete paginated source commit inventory and static assessment of relevant deltas against current USCE and prior recorded decisions. No fork code executed or runtime acceptance claimed.",
+        "items": [
+          {
+            "area": "Karaoke theme and UI primitives",
+            "decision": "tracked",
+            "reason": "Keep artwork in Themes and shared capabilities optional. Existing rounded shapes, fonts, backplates and section inheritance cover part of this work; focus outlines remain #297. Do not replace generic player layouts with fixed 3/4/6 layouts. Top-N presentation belongs to the theme assessment.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/Themes/issues/16",
+              "https://github.com/UltraStar-CE/USCE/issues/211",
+              "https://github.com/UltraStar-CE/USCE/issues/283",
+              "https://github.com/UltraStar-CE/USCE/issues/285",
+              "https://github.com/UltraStar-CE/USCE/issues/286",
+              "https://github.com/UltraStar-CE/USCE/issues/287",
+              "https://github.com/UltraStar-CE/USCE/issues/297"
+            ]
+          },
+          {
+            "area": "Cover-loader exception recovery",
+            "decision": "tracked",
+            "reason": "Independent worker/cache work is already in #276. The fork catches worker exceptions but just sets Surface=nil; a port must also free partially allocated surfaces and preserve queue progress.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/276"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/Themes/issues/16",
+          "https://github.com/UltraStar-CE/USCE/issues/211",
+          "https://github.com/UltraStar-CE/USCE/issues/283",
+          "https://github.com/UltraStar-CE/USCE/issues/285",
+          "https://github.com/UltraStar-CE/USCE/issues/286",
+          "https://github.com/UltraStar-CE/USCE/issues/287",
+          "https://github.com/UltraStar-CE/USCE/issues/297",
+          "https://github.com/UltraStar-CE/USCE/issues/276"
+        ],
+        "reason": "Karaoke theme and UI primitives: Keep artwork in Themes and shared capabilities optional. Existing rounded shapes, fonts, backplates and section inheritance cover part of this work; focus outlines remain #297. Do not replace generic player layouts with fixed 3/4/6 layouts. Top-N presentation belongs to the theme assessment. Cover-loader exception recovery: Independent worker/cache work is already in #276. The fork catches worker exceptions but just sets Surface=nil; a port must also free partially allocated surfaces and preserve queue progress.",
+        "coveredBy": {
+          "repository": "3Ryuusei3/USDX",
+          "branch": "develop",
+          "head": "9adf94721115f4cd565c3b9a5622ebb3ed4cc261"
+        }
+      },
+      "lastSourceCommitAt": "2026-10-29T19:30:44Z"
     },
     {
       "repository": "3Ryuusei3/USDX",
@@ -5257,10 +6004,32 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
-      }
+        "decision": "assessed",
+        "assessedAgainst": "c3fc8e4993394373cc00f7b1ed2f01f85a2a72e3",
+        "reviewedCommitCount": 1,
+        "scope": "Complete paginated source commit inventory and static assessment of relevant deltas against current USCE and prior recorded decisions. No fork code executed or runtime acceptance claimed.",
+        "items": [
+          {
+            "area": "Translation additions",
+            "decision": "adapt",
+            "reason": "Useful additions to remaining TODO entries. Port only keys still missing in USCE; retain current translations, format placeholders and USCE-specific keys. Translation quality has not been certified.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/299"
+            ],
+            "nextTest": "Check placeholders and duplicates, then have speakers review each language before a focused translation PR."
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/299"
+        ],
+        "reason": "Translation additions: Useful additions to remaining TODO entries. Port only keys still missing in USCE; retain current translations, format placeholders and USCE-specific keys. Translation quality has not been certified.",
+        "coveredBy": {
+          "repository": "3Ryuusei3/USDX",
+          "branch": "develop",
+          "head": "9adf94721115f4cd565c3b9a5622ebb3ed4cc261"
+        }
+      },
+      "lastSourceCommitAt": "2026-10-29T15:18:13Z"
     },
     {
       "repository": "3Ryuusei3/USDX",
@@ -5283,10 +6052,32 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
-      }
+        "decision": "assessed",
+        "assessedAgainst": "c3fc8e4993394373cc00f7b1ed2f01f85a2a72e3",
+        "reviewedCommitCount": 2,
+        "scope": "Complete paginated source commit inventory and static assessment of relevant deltas against current USCE and prior recorded decisions. No fork code executed or runtime acceptance claimed.",
+        "items": [
+          {
+            "area": "Translation additions",
+            "decision": "adapt",
+            "reason": "Useful additions to remaining TODO entries. Port only keys still missing in USCE; retain current translations, format placeholders and USCE-specific keys. Translation quality has not been certified.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/299"
+            ],
+            "nextTest": "Check placeholders and duplicates, then have speakers review each language before a focused translation PR."
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/299"
+        ],
+        "reason": "Translation additions: Useful additions to remaining TODO entries. Port only keys still missing in USCE; retain current translations, format placeholders and USCE-specific keys. Translation quality has not been certified.",
+        "coveredBy": {
+          "repository": "3Ryuusei3/USDX",
+          "branch": "develop",
+          "head": "9adf94721115f4cd565c3b9a5622ebb3ed4cc261"
+        }
+      },
+      "lastSourceCommitAt": "2026-10-29T15:17:32Z"
     },
     {
       "repository": "3Ryuusei3/USDX",
@@ -5304,10 +6095,35 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
-      }
+        "decision": "assessed",
+        "assessedAgainst": "c3fc8e4993394373cc00f7b1ed2f01f85a2a72e3",
+        "reviewedCommitCount": 1,
+        "scope": "Complete paginated source commit inventory and static assessment of relevant deltas against current USCE and prior recorded decisions. No fork code executed or runtime acceptance claimed.",
+        "items": [
+          {
+            "area": "Background video decoding",
+            "decision": "deferred",
+            "reason": "This is another version of the already assessed worker-decoder approach. Keep the recorded decision to pursue optional MPV; no new performance claim or parallel decoder port.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/210",
+              "https://github.com/UltraStar-CE/USCE/issues/173",
+              "https://github.com/UltraStar-CE/USCE/issues/164"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/210",
+          "https://github.com/UltraStar-CE/USCE/issues/173",
+          "https://github.com/UltraStar-CE/USCE/issues/164"
+        ],
+        "reason": "Background video decoding: This is another version of the already assessed worker-decoder approach. Keep the recorded decision to pursue optional MPV; no new performance claim or parallel decoder port.",
+        "coveredBy": {
+          "repository": "3Ryuusei3/USDX",
+          "branch": "develop",
+          "head": "9adf94721115f4cd565c3b9a5622ebb3ed4cc261"
+        }
+      },
+      "lastSourceCommitAt": "2026-10-29T15:31:12Z"
     },
     {
       "repository": "dgruss/USDX",
@@ -5377,13 +6193,174 @@
           "sha": "8a6c485158bbd22dea969f69f4f9596f00512cfe",
           "title": "remove trailing whitespace",
           "author": "dgruss"
+        },
+        {
+          "sha": "6eb466973717c953bdcd8aaca2e67ee99b8face4",
+          "title": "more stats + adjust all languages for that",
+          "author": "dgruss"
+        },
+        {
+          "sha": "84f57e63cb8f146d2a9c9ab8a00b2eba049576c3",
+          "title": "remove debug",
+          "author": "dgruss"
+        },
+        {
+          "sha": "5402f1fa0a889b381bb104133e4bc7d38db93a5f",
+          "title": "whitespace fix",
+          "author": "dgruss"
+        },
+        {
+          "sha": "8956ed0d8f5cda98e2cd8ed45193e2b62648889d",
+          "title": "better default",
+          "author": "dgruss"
+        },
+        {
+          "sha": "407a7047eb6f300586a68b5b7e5885a57ddab39e",
+          "title": "automatically adjust to newlines in format string",
+          "author": "dgruss"
+        },
+        {
+          "sha": "c5b80bcd4bf2d3081314e3ffbbaa6eefb2f66377",
+          "title": "whitespace fix",
+          "author": "dgruss"
+        },
+        {
+          "sha": "2f89eda352cf2d9c68e8aaef0e45fa440349c163",
+          "title": "add a per player delay",
+          "author": "dgruss"
+        },
+        {
+          "sha": "7e3a260cdd6655eec1ad6a7d59f197ca1f5d6541",
+          "title": "playersplay variable was missing",
+          "author": "dgruss"
+        },
+        {
+          "sha": "96bcc3ed251bafdd4cfacbae2969376580c3e0be",
+          "title": "use global variable instead of argument",
+          "author": "dgruss"
+        },
+        {
+          "sha": "e109e0dec1456f06a611d00d4e45635b9ffc88c2",
+          "title": "set notes after audio end to freestyle",
+          "author": "dgruss"
+        },
+        {
+          "sha": "25d3c98f2fbe8aba42c6bcfbf2aab7f0b913f595",
+          "title": "fix audio ending + line not finished but all non-freestyle finished",
+          "author": "dgruss"
+        },
+        {
+          "sha": "2d4fd73cb3bb919b1d7e863c9899675aae2ca4a3",
+          "title": "Merge remote-tracking branch 'dgruss/morestats' into beta2",
+          "author": "dgruss"
+        },
+        {
+          "sha": "82fb8626f06b9d679d5c267c21ab77253c90ebb8",
+          "title": "Merge remote-tracking branch 'dgruss/topscorecount' into beta2",
+          "author": "dgruss"
+        },
+        {
+          "sha": "d0ce0497869b1dfe7bce0cc4ba680858ece65e4c",
+          "title": "Merge remote-tracking branch 'dgruss/perplayerdelay' into beta2",
+          "author": "dgruss"
+        },
+        {
+          "sha": "8990d5d40be7a69bab0b26d813e4539782b385ed",
+          "title": "fix #START and #END and don't do anything if no end is known or if we",
+          "author": "dgruss"
+        },
+        {
+          "sha": "ff4c4c780c32c48b518324c12d10afb12c6cacc1",
+          "title": "this appears to fix the missing AudioPlayback.Length issue",
+          "author": "dgruss"
+        },
+        {
+          "sha": "ba6557f1ec8fe1a1fe09d2ab80acecda6bf1a862",
+          "title": "remove excessive debug output",
+          "author": "dgruss"
+        },
+        {
+          "sha": "2eb7fdd7a4424545b17a11dec400c5b36fa68215",
+          "title": "first mic delay tests.",
+          "author": "dgruss"
+        },
+        {
+          "sha": "f60a1a34140c2cc8dec2465658327f9822e28532",
+          "title": "move to the optionsrecord screen",
+          "author": "dgruss"
+        },
+        {
+          "sha": "21260345c44d1156a53210dc94f8b9f2b7f450f2",
+          "title": "work with 3 notes",
+          "author": "dgruss"
+        },
+        {
+          "sha": "017363e7228f856e8a9b026f79222c37d2683ea2",
+          "title": "..",
+          "author": "dgruss"
+        },
+        {
+          "sha": "20b1f79feb172b476e8bc0b36c2da522a85b290f",
+          "title": "Merge branch 'micsync' into beta2",
+          "author": "dgruss"
+        },
+        {
+          "sha": "531dc337667d4e9ba5eabf44f72d317c7e81e9a5",
+          "title": "Merge branch 'ignoreearlysongend' into beta2",
+          "author": "dgruss"
+        },
+        {
+          "sha": "90eaf00bef08d94e1c565192f34f02711dc99380",
+          "title": "reload playlist from file when opening it",
+          "author": "dgruss"
+        },
+        {
+          "sha": "af119a4f73819f270b12c5c971ab05e9844743ed",
+          "title": "update names from ini upon file change",
+          "author": "dgruss"
+        },
+        {
+          "sha": "966e27d96e91540a3e1658b6672d1c8f5553ed0f",
+          "title": "fix data types",
+          "author": "dgruss"
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
-      }
+        "decision": "assessed",
+        "assessedAgainst": "c3fc8e4993394373cc00f7b1ed2f01f85a2a72e3",
+        "reviewedCommitCount": 38,
+        "scope": "Complete paginated source commit inventory and static assessment of relevant deltas against current USCE and prior recorded decisions. No fork code executed or runtime acceptance claimed. Historical branch baseline; not new development.",
+        "items": [
+          {
+            "area": "Historical 2025 integration work",
+            "decision": "superseded",
+            "reason": "This head dates to September 2025. Duet scores, statistics, per-player delays, end handling and playlist refresh now have focused USCE implementations. Machine-specific usdxbox/Mumble scripts and old calibration prototypes are not new development. Keep any unresolved calibration work in its existing proposal.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/11",
+              "https://github.com/UltraStar-CE/USCE/issues/43",
+              "https://github.com/UltraStar-CE/USCE/issues/46",
+              "https://github.com/UltraStar-CE/USCE/issues/82",
+              "https://github.com/UltraStar-CE/USCE/issues/143",
+              "https://github.com/UltraStar-CE/USCE/issues/181",
+              "https://github.com/UltraStar-CE/USCE/issues/193",
+              "https://github.com/UltraStar-CE/USCE/issues/243"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/11",
+          "https://github.com/UltraStar-CE/USCE/issues/43",
+          "https://github.com/UltraStar-CE/USCE/issues/46",
+          "https://github.com/UltraStar-CE/USCE/issues/82",
+          "https://github.com/UltraStar-CE/USCE/issues/143",
+          "https://github.com/UltraStar-CE/USCE/issues/181",
+          "https://github.com/UltraStar-CE/USCE/issues/193",
+          "https://github.com/UltraStar-CE/USCE/issues/243"
+        ],
+        "reason": "Historical 2025 integration work: This head dates to September 2025. Duet scores, statistics, per-player delays, end handling and playlist refresh now have focused USCE implementations. Machine-specific usdxbox/Mumble scripts and old calibration prototypes are not new development. Keep any unresolved calibration work in its existing proposal.",
+        "baselineOnly": true
+      },
+      "lastSourceCommitAt": "2025-09-02T18:08:16Z"
     },
     {
       "repository": "dgruss/USDX",
@@ -5453,13 +6430,154 @@
           "sha": "c5b80bcd4bf2d3081314e3ffbbaa6eefb2f66377",
           "title": "whitespace fix",
           "author": "dgruss"
+        },
+        {
+          "sha": "e109e0dec1456f06a611d00d4e45635b9ffc88c2",
+          "title": "set notes after audio end to freestyle",
+          "author": "dgruss"
+        },
+        {
+          "sha": "25d3c98f2fbe8aba42c6bcfbf2aab7f0b913f595",
+          "title": "fix audio ending + line not finished but all non-freestyle finished",
+          "author": "dgruss"
+        },
+        {
+          "sha": "8990d5d40be7a69bab0b26d813e4539782b385ed",
+          "title": "fix #START and #END and don't do anything if no end is known or if we",
+          "author": "dgruss"
+        },
+        {
+          "sha": "ff4c4c780c32c48b518324c12d10afb12c6cacc1",
+          "title": "this appears to fix the missing AudioPlayback.Length issue",
+          "author": "dgruss"
+        },
+        {
+          "sha": "ba6557f1ec8fe1a1fe09d2ab80acecda6bf1a862",
+          "title": "remove excessive debug output",
+          "author": "dgruss"
+        },
+        {
+          "sha": "2eb7fdd7a4424545b17a11dec400c5b36fa68215",
+          "title": "first mic delay tests.",
+          "author": "dgruss"
+        },
+        {
+          "sha": "f60a1a34140c2cc8dec2465658327f9822e28532",
+          "title": "move to the optionsrecord screen",
+          "author": "dgruss"
+        },
+        {
+          "sha": "21260345c44d1156a53210dc94f8b9f2b7f450f2",
+          "title": "work with 3 notes",
+          "author": "dgruss"
+        },
+        {
+          "sha": "017363e7228f856e8a9b026f79222c37d2683ea2",
+          "title": "..",
+          "author": "dgruss"
+        },
+        {
+          "sha": "4029f76a7020ed8e2fd6df9b14f470fceaf94304",
+          "title": "reload playlist from file when opening it",
+          "author": "dgruss"
+        },
+        {
+          "sha": "b921c30a34ddfe40a939756c1b26ca93f5402c99",
+          "title": "Merge remote-tracking branch 'dgruss/duetscount' into beta3",
+          "author": "dgruss"
+        },
+        {
+          "sha": "bc180b0f1d2f8c10d22e2f3158205452558ca2dd",
+          "title": "Merge remote-tracking branch 'dgruss/topscorecount' into beta3",
+          "author": "dgruss"
+        },
+        {
+          "sha": "6b73df340c22a827c921e336639f9821e5cc3993",
+          "title": "Merge remote-tracking branch 'dgruss/morestats' into beta3",
+          "author": "dgruss"
+        },
+        {
+          "sha": "527807af628ca593567c62e7e9e6beb35a33a6be",
+          "title": "Merge branch 'micsync' into beta3",
+          "author": "dgruss"
+        },
+        {
+          "sha": "b786fcb5e717513ea8535b9802f54f555a222800",
+          "title": "Merge branch 'ignoreearlysongend' into beta3",
+          "author": "dgruss"
+        },
+        {
+          "sha": "b1873e01744b500296271c26dbf13405d9d48319",
+          "title": "per player delay via ini",
+          "author": "dgruss"
+        },
+        {
+          "sha": "6526dbf89793ab9c0e3d399916ff414651e70d4d",
+          "title": "Merge branch 'dontcheckallsentences' into beta3",
+          "author": "dgruss"
+        },
+        {
+          "sha": "e8cd992eff521658ca1a019bf305ddbd9da92880",
+          "title": "Merge branch 'perplayerdelayini' into beta3",
+          "author": "dgruss"
+        },
+        {
+          "sha": "5774e3a78b3b10c8fa6c430df04c0c8418dbbcec",
+          "title": "Merge remote-tracking branch 'dgruss/update_names_upon_file_change' into beta3",
+          "author": "dgruss"
+        },
+        {
+          "sha": "84436c394864bd5eaa3403cbcf8bc5d80e14bf8d",
+          "title": "Merge remote-tracking branch 'dgruss/reload_playlist' into beta3",
+          "author": "dgruss"
+        },
+        {
+          "sha": "a80c654157da3e20151ce9df121700dce1206a39",
+          "title": "reload delays in the right places",
+          "author": "dgruss"
+        },
+        {
+          "sha": "310a6943733070bedca8ebed2a0a0f2798bdf04d",
+          "title": "scripts to start server / usdx",
+          "author": "dgruss"
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
-      }
+        "decision": "assessed",
+        "assessedAgainst": "c3fc8e4993394373cc00f7b1ed2f01f85a2a72e3",
+        "reviewedCommitCount": 34,
+        "scope": "Complete paginated source commit inventory and static assessment of relevant deltas against current USCE and prior recorded decisions. No fork code executed or runtime acceptance claimed. Historical branch baseline; not new development.",
+        "items": [
+          {
+            "area": "Historical 2025 integration work",
+            "decision": "superseded",
+            "reason": "Same shared 2025 integration history as beta2, with deployment scripts and per-player-delay variants. No new feature batch; retain current score completion, delay and playlist behavior.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/11",
+              "https://github.com/UltraStar-CE/USCE/issues/43",
+              "https://github.com/UltraStar-CE/USCE/issues/46",
+              "https://github.com/UltraStar-CE/USCE/issues/82",
+              "https://github.com/UltraStar-CE/USCE/issues/143",
+              "https://github.com/UltraStar-CE/USCE/issues/181",
+              "https://github.com/UltraStar-CE/USCE/issues/193",
+              "https://github.com/UltraStar-CE/USCE/issues/243"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/11",
+          "https://github.com/UltraStar-CE/USCE/issues/43",
+          "https://github.com/UltraStar-CE/USCE/issues/46",
+          "https://github.com/UltraStar-CE/USCE/issues/82",
+          "https://github.com/UltraStar-CE/USCE/issues/143",
+          "https://github.com/UltraStar-CE/USCE/issues/181",
+          "https://github.com/UltraStar-CE/USCE/issues/193",
+          "https://github.com/UltraStar-CE/USCE/issues/243"
+        ],
+        "reason": "Historical 2025 integration work: Same shared 2025 integration history as beta2, with deployment scripts and per-player-delay variants. No new feature batch; retain current score completion, delay and playlist behavior.",
+        "baselineOnly": true
+      },
+      "lastSourceCommitAt": "2025-09-08T22:19:32Z"
     },
     {
       "repository": "dgruss/USDX",
@@ -5482,10 +6600,31 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
-      }
+        "decision": "assessed",
+        "assessedAgainst": "c3fc8e4993394373cc00f7b1ed2f01f85a2a72e3",
+        "reviewedCommitCount": 2,
+        "scope": "Complete paginated source commit inventory and static assessment of relevant deltas against current USCE and prior recorded decisions. No fork code executed or runtime acceptance claimed. Historical branch baseline; not new development.",
+        "items": [
+          {
+            "area": "Theme fallback and asset deduplication",
+            "decision": "already-covered",
+            "reason": "Existing #81/#52 implement the USCE theme inheritance direction. Modern synchronization is separately tracked in #270. Do not replay the historical branch.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/81",
+              "https://github.com/UltraStar-CE/USCE/issues/52",
+              "https://github.com/UltraStar-CE/USCE/issues/270"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/81",
+          "https://github.com/UltraStar-CE/USCE/issues/52",
+          "https://github.com/UltraStar-CE/USCE/issues/270"
+        ],
+        "reason": "Theme fallback and asset deduplication: Existing #81/#52 implement the USCE theme inheritance direction. Modern synchronization is separately tracked in #270. Do not replay the historical branch.",
+        "baselineOnly": true
+      },
+      "lastSourceCommitAt": "2026-08-02T18:29:19Z"
     },
     {
       "repository": "dgruss/USDX",
@@ -5508,10 +6647,35 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
-      }
+        "decision": "assessed",
+        "assessedAgainst": "c3fc8e4993394373cc00f7b1ed2f01f85a2a72e3",
+        "reviewedCommitCount": 2,
+        "scope": "Complete paginated source commit inventory and static assessment of relevant deltas against current USCE and prior recorded decisions. No fork code executed or runtime acceptance claimed. Historical branch baseline; not new development.",
+        "items": [
+          {
+            "area": "Individual and combined voice highscores",
+            "decision": "already-covered",
+            "reason": "Existing multipart/combined score work already covers the intended behavior. Preserve current generic voices and score completion, not the historical two-track implementation.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/141",
+              "https://github.com/UltraStar-CE/USCE/issues/142",
+              "https://github.com/UltraStar-CE/USCE/issues/143",
+              "https://github.com/UltraStar-CE/USCE/issues/181",
+              "https://github.com/UltraStar-CE/USCE/issues/243"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/141",
+          "https://github.com/UltraStar-CE/USCE/issues/142",
+          "https://github.com/UltraStar-CE/USCE/issues/143",
+          "https://github.com/UltraStar-CE/USCE/issues/181",
+          "https://github.com/UltraStar-CE/USCE/issues/243"
+        ],
+        "reason": "Individual and combined voice highscores: Existing multipart/combined score work already covers the intended behavior. Preserve current generic voices and score completion, not the historical two-track implementation.",
+        "baselineOnly": true
+      },
+      "lastSourceCommitAt": "2026-08-24T17:46:17Z"
     },
     {
       "repository": "dgruss/USDX",
@@ -5529,10 +6693,33 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
-      }
+        "decision": "assessed",
+        "assessedAgainst": "c3fc8e4993394373cc00f7b1ed2f01f85a2a72e3",
+        "reviewedCommitCount": 1,
+        "scope": "Complete paginated source commit inventory and static assessment of relevant deltas against current USCE and prior recorded decisions. No fork code executed or runtime acceptance claimed. Historical branch baseline; not new development.",
+        "items": [
+          {
+            "area": "Preview scheduling",
+            "decision": "already-covered",
+            "reason": "Historical preview scheduling is superseded by current song selection scheduling and sustain-music fixes. The branch name is not evidence of a new missing debounce.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/135",
+              "https://github.com/UltraStar-CE/USCE/issues/137",
+              "https://github.com/UltraStar-CE/USCE/issues/155",
+              "https://github.com/UltraStar-CE/USCE/issues/162"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/135",
+          "https://github.com/UltraStar-CE/USCE/issues/137",
+          "https://github.com/UltraStar-CE/USCE/issues/155",
+          "https://github.com/UltraStar-CE/USCE/issues/162"
+        ],
+        "reason": "Preview scheduling: Historical preview scheduling is superseded by current song selection scheduling and sustain-music fixes. The branch name is not evidence of a new missing debounce.",
+        "baselineOnly": true
+      },
+      "lastSourceCommitAt": "2026-08-13T17:25:49Z"
     },
     {
       "repository": "dgruss/USDX",
@@ -5550,10 +6737,33 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
-      }
+        "decision": "assessed",
+        "assessedAgainst": "c3fc8e4993394373cc00f7b1ed2f01f85a2a72e3",
+        "reviewedCommitCount": 1,
+        "scope": "Complete paginated source commit inventory and static assessment of relevant deltas against current USCE and prior recorded decisions. No fork code executed or runtime acceptance claimed. Historical branch baseline; not new development.",
+        "items": [
+          {
+            "area": "Duets in highscores",
+            "decision": "already-covered",
+            "reason": "Current generic multipart highscore handling supersedes this 2025 single change.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/141",
+              "https://github.com/UltraStar-CE/USCE/issues/143",
+              "https://github.com/UltraStar-CE/USCE/issues/181",
+              "https://github.com/UltraStar-CE/USCE/issues/243"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/141",
+          "https://github.com/UltraStar-CE/USCE/issues/143",
+          "https://github.com/UltraStar-CE/USCE/issues/181",
+          "https://github.com/UltraStar-CE/USCE/issues/243"
+        ],
+        "reason": "Duets in highscores: Current generic multipart highscore handling supersedes this 2025 single change.",
+        "baselineOnly": true
+      },
+      "lastSourceCommitAt": "2025-12-23T22:24:32Z"
     },
     {
       "repository": "dgruss/USDX",
@@ -5571,10 +6781,27 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
-      }
+        "decision": "assessed",
+        "assessedAgainst": "c3fc8e4993394373cc00f7b1ed2f01f85a2a72e3",
+        "reviewedCommitCount": 1,
+        "scope": "Complete paginated source commit inventory and static assessment of relevant deltas against current USCE and prior recorded decisions. No fork code executed or runtime acceptance claimed. Historical branch baseline; not new development.",
+        "items": [
+          {
+            "area": "Editor line ending preservation",
+            "decision": "already-covered",
+            "reason": "Current UFiles.SaveSong calls DetectLineBreak(Name) and assigns SongFile.LineBreak. The June 2026 source is historical; no new port is needed.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/blob/c3fc8e4993394373cc00f7b1ed2f01f85a2a72e3/src/base/UFiles.pas#L182"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/blob/c3fc8e4993394373cc00f7b1ed2f01f85a2a72e3/src/base/UFiles.pas#L182"
+        ],
+        "reason": "Editor line ending preservation: Current UFiles.SaveSong calls DetectLineBreak(Name) and assigns SongFile.LineBreak. The June 2026 source is historical; no new port is needed.",
+        "baselineOnly": true
+      },
+      "lastSourceCommitAt": "2026-06-21T07:51:06Z"
     },
     {
       "repository": "dgruss/USDX",
@@ -5607,10 +6834,31 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
-      }
+        "decision": "assessed",
+        "assessedAgainst": "c3fc8e4993394373cc00f7b1ed2f01f85a2a72e3",
+        "reviewedCommitCount": 4,
+        "scope": "Complete paginated source commit inventory and static assessment of relevant deltas against current USCE and prior recorded decisions. No fork code executed or runtime acceptance claimed. Historical branch baseline; not new development.",
+        "items": [
+          {
+            "area": "Editor mouse controls and MIDI stop on navigation",
+            "decision": "already-covered",
+            "reason": "The focused editor mouse port #60 and subsequent synth/editor changes supersede this historical branch. No second copy of those controls is proposed.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/60",
+              "https://github.com/UltraStar-CE/USCE/issues/116",
+              "https://github.com/UltraStar-CE/USCE/issues/155"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/60",
+          "https://github.com/UltraStar-CE/USCE/issues/116",
+          "https://github.com/UltraStar-CE/USCE/issues/155"
+        ],
+        "reason": "Editor mouse controls and MIDI stop on navigation: The focused editor mouse port #60 and subsequent synth/editor changes supersede this historical branch. No second copy of those controls is proposed.",
+        "baselineOnly": true
+      },
+      "lastSourceCommitAt": "2026-05-23T14:34:01Z"
     },
     {
       "repository": "dgruss/USDX",
@@ -5680,13 +6928,698 @@
           "sha": "75b5567af9adfc7b929dddf90f83e592a577d2ab",
           "title": "show lyrics in loop mode",
           "author": "dgruss"
+        },
+        {
+          "sha": "64fcb88ab4edb89cb1ceb7f56daaf2f3ad988c37",
+          "title": "support duets in loop mode lyrics display",
+          "author": "dgruss"
+        },
+        {
+          "sha": "95c665215c5d4be679012caed989cb61248aec42",
+          "title": "make elements themeable",
+          "author": "dgruss"
+        },
+        {
+          "sha": "62e85db1bb4dc20bdcef74f1a6ed770c614d52d1",
+          "title": "link main menu jukebox button to loop mode",
+          "author": "dgruss"
+        },
+        {
+          "sha": "f04fd1453cedddfff8b3b50ad5450091e85cc045",
+          "title": "remove jukebox throughout and link remaining buttons to loop mode",
+          "author": "dgruss"
+        },
+        {
+          "sha": "d4b8901aef43e1c003950c44d2faf9da6a86ebbb",
+          "title": "sustain music across screens",
+          "author": "dgruss"
+        },
+        {
+          "sha": "d5b398bfc1ae07c40f8084a9c0f0e88923489c69",
+          "title": "make more elements themeable",
+          "author": "dgruss"
+        },
+        {
+          "sha": "c0dafccae3acdd74037853b4fff209cf7ff241fa",
+          "title": "allow to full screen the video preview with V in the song selection",
+          "author": "dgruss"
+        },
+        {
+          "sha": "2bca7126e698217c7dea31e059a0bf87eb91f6e3",
+          "title": "check whitespace issues locally within the Makefile",
+          "author": "dgruss"
+        },
+        {
+          "sha": "a2b9bf84ce6706701daff7be14429c9b1bc9b0d5",
+          "title": "allow 5 players",
+          "author": "dgruss"
+        },
+        {
+          "sha": "50fa42e9d80cf07a6a75884c6f3f9c9ebb43052f",
+          "title": "complete refactor of how player counts are handled",
+          "author": "dgruss"
+        },
+        {
+          "sha": "78c089666381ce7375cd3f4f8b650bf51a13700f",
+          "title": "themeify the refactored layouts",
+          "author": "dgruss"
+        },
+        {
+          "sha": "8d6c1e108c28cb0cd9bf5a6ebd5ad1c1d3ebfa4f",
+          "title": "improve score screen usage",
+          "author": "dgruss"
+        },
+        {
+          "sha": "efadc0f29a9536f71520f026a2487a5996d087b7",
+          "title": "smaller layout improvements",
+          "author": "dgruss"
+        },
+        {
+          "sha": "7ca27f3d59b7dc279c053317bb60a18d156a7a5a",
+          "title": "fine tuning layout",
+          "author": "dgruss"
+        },
+        {
+          "sha": "9419a9f78dd876284426d352a84dea5f70b4f349",
+          "title": "move constants into theme",
+          "author": "dgruss"
+        },
+        {
+          "sha": "295d2abd9a1e3cfd08f4c4d1a835643038894523",
+          "title": "add an html to test theme constants and as documentation",
+          "author": "dgruss"
+        },
+        {
+          "sha": "f6e20f786f023b6c17df81b98bb76b7d7361cfcf",
+          "title": "language changes slipped in while testing layout changes",
+          "author": "dgruss"
+        },
+        {
+          "sha": "fc284e0d9b7fd1f6861779271603eceb25b715a7",
+          "title": "do not crash when saving player levels and ini is read-only",
+          "author": "dgruss"
+        },
+        {
+          "sha": "522cc7ade5d6424c4d08902391f52c10e66983e6",
+          "title": "don't suggest uninstall on reinstall and don't delete avatars unless user wants it",
+          "author": "dgruss"
+        },
+        {
+          "sha": "66014ce67a2f02f13ce706cbb5e12c02bcf0e70a",
+          "title": "don't crash if language file cannot be loaded. fallback to english, then fallback to no language rather than crash",
+          "author": "dgruss"
+        },
+        {
+          "sha": "92bcb75ca3fea61030aa33e7e405ffd1faf6ef8f",
+          "title": "whitespace fixes",
+          "author": "dgruss"
+        },
+        {
+          "sha": "35971f256b40773053caf12534d50dcd6482b3a1",
+          "title": "refresh audio devices when entering ScreenOptionsRecord",
+          "author": "dgruss"
+        },
+        {
+          "sha": "93a9b9779b940fecccfbc6d2e0d21dcc8f8e66a9",
+          "title": "split audio device detection into fast and full, and only do full for",
+          "author": "dgruss"
+        },
+        {
+          "sha": "c696f91f32edcea78b88fca14a126e2c0392a70d",
+          "title": "update info banner in configure.ac",
+          "author": "dgruss"
+        },
+        {
+          "sha": "7e1eb766be211bc19d38c3952f5df569571638e7",
+          "title": "first working 64-bit build",
+          "author": "dgruss"
+        },
+        {
+          "sha": "13ba9f2692b8e375eab374b8b835d91757d83adf",
+          "title": "add openCV 4.6 on 64-bit windows and adjust CI build",
+          "author": "dgruss"
+        },
+        {
+          "sha": "a69217c1e80783823818fc61f8ee496f49b97ceb",
+          "title": "wrapper fix",
+          "author": "dgruss"
+        },
+        {
+          "sha": "b51d1f4bb244ce3ce739a33fa7d2e334892c3b64",
+          "title": "unnecessary import + fix typo",
+          "author": "dgruss"
+        },
+        {
+          "sha": "c787b7c15824b2761ec4f3d42dd75e4c30fc729c",
+          "title": "download bass.dll",
+          "author": "dgruss"
+        },
+        {
+          "sha": "c10fd24e5874f1d6e5f8cf25eba8fe25394c51d3",
+          "title": "fix 32-bit pointer cast leading to segfault",
+          "author": "dgruss"
+        },
+        {
+          "sha": "1009d0d2e32a094da4cc2e45efcf4a47bd9adc14",
+          "title": "download bass first",
+          "author": "dgruss"
+        },
+        {
+          "sha": "a5d7e783155f0d5d0d085ff8185d65a5240f6bb8",
+          "title": "avoid calls into the projectM library while destructor is already being",
+          "author": "dgruss"
+        },
+        {
+          "sha": "700b42f8ce713296e4efeb4464af40adac830c04",
+          "title": "use correct flags by default on windows",
+          "author": "dgruss"
+        },
+        {
+          "sha": "017855a69dae5183669d4bf9ad93c44b6bdbfacc",
+          "title": "implement a scaling mechanism that allows themes to scale from 4:3 to",
+          "author": "dgruss"
+        },
+        {
+          "sha": "96a6d9a2aa5f785e9f17f3ba8ea56f02be1953bd",
+          "title": "scale note area as well? does not look good",
+          "author": "dgruss"
+        },
+        {
+          "sha": "c8cde49e39852e65a11ac096a0459111e11d6a5f",
+          "title": "remove letterbox/pillarbox",
+          "author": "dgruss"
+        },
+        {
+          "sha": "d796c56ba5c857aac6ef3eeaaba5ce5dfe8db05a",
+          "title": "fix broken timings of clicks and midi notes in the editor",
+          "author": "dgruss"
+        },
+        {
+          "sha": "cd7db5aa6289c700ba4b53a723da677dcb76ed80",
+          "title": "fix double midi sounds and confused state between space / P midi playing",
+          "author": "dgruss"
+        },
+        {
+          "sha": "fc50aff5171a87bf610417fa303b239a39f633ab",
+          "title": "add UI elements to actually configure the lead/preroll",
+          "author": "dgruss"
+        },
+        {
+          "sha": "66b88820ccbf91bd3f66860ff5d51158162b382a",
+          "title": "disable cover and background search via ini or cache the result otherwise",
+          "author": "dgruss"
+        },
+        {
+          "sha": "d31b3e1e38ead15688fd9da36987fa1db58d407a",
+          "title": "lazy load md5 checksums",
+          "author": "dgruss"
+        },
+        {
+          "sha": "83d1cd180841f41b972c7fc481742baa0b0e65db",
+          "title": "lazy load song notes",
+          "author": "dgruss"
+        },
+        {
+          "sha": "56fcfb580051f56ab8a17f016bab191b6f9060da",
+          "title": "option setting for auto song file search",
+          "author": "dgruss"
+        },
+        {
+          "sha": "d9bdea3c43c0ac8eafb90ccbb052887bbb9daa20",
+          "title": "change default for these options to off to speed up loading times by default",
+          "author": "dgruss"
+        },
+        {
+          "sha": "8bf166bdcfdcb7a54362018209793905d4589235",
+          "title": "remove automatic search for background and cover",
+          "author": "dgruss"
+        },
+        {
+          "sha": "e92567532790557a2f9bf1d470344edc5460f8b7",
+          "title": "remove options because they are not necessary",
+          "author": "dgruss"
+        },
+        {
+          "sha": "6eaa8454267fcb24f62b0cbabeb9885e0a06f255",
+          "title": "add volume settings throughout the game",
+          "author": "dgruss"
+        },
+        {
+          "sha": "098df7b3cae8df9a67e629b9359f6926d1cf46c0",
+          "title": "handle repeat keys in editor when shifting notes",
+          "author": "dgruss"
+        },
+        {
+          "sha": "72be2185420303c3f8ddc23d13dfd1ba29a27675",
+          "title": "fix unicode issue on windows",
+          "author": "dgruss"
+        },
+        {
+          "sha": "d4d18a45ad69d0d9f7118765a2b34300935a0bdd",
+          "title": "make duets go into highscore",
+          "author": "dgruss"
+        },
+        {
+          "sha": "ca3f38e0b427f492b2f08be15427d5ee0b73f93c",
+          "title": "per player delay via ini",
+          "author": "dgruss"
+        },
+        {
+          "sha": "add7a009c68510d9c8285d5590defc0df4490a1b",
+          "title": "reload delays in the right places",
+          "author": "dgruss"
+        },
+        {
+          "sha": "8255734eef03f1470c1c172148c8d914c1b1e371",
+          "title": "change top5 to configurable top N players",
+          "author": "dgruss"
+        },
+        {
+          "sha": "e243ac5380bc1068099912264fbd436d99bad5d1",
+          "title": "add a midi emulation for devices without midi support",
+          "author": "dgruss"
+        },
+        {
+          "sha": "e14d86079210f80fb9b41a02dedf3256c5823202",
+          "title": "midiemu: no need to track overtone phase",
+          "author": "s09bQ5"
+        },
+        {
+          "sha": "048bf911cff26ac0f6aa9cd29bb12c400b681243",
+          "title": "midiemu: protect access to FFreq with mutex",
+          "author": "s09bQ5"
+        },
+        {
+          "sha": "a46e3cf3c7b2dc5a9d4756450a5132617cce1844",
+          "title": "midiemu: FPhase can't be smaller than -Pi",
+          "author": "s09bQ5"
+        },
+        {
+          "sha": "703347b9bbc86d168d4ca13260bfb384e4b81948",
+          "title": "SoftMixer: do nothing when Play is called on playing stream",
+          "author": "s09bQ5"
+        },
+        {
+          "sha": "70624baa42ab774a59fa6dbe519378d500c4117b",
+          "title": "midiemu: avoid FEnvLevel ramping up while FActive false",
+          "author": "s09bQ5"
+        },
+        {
+          "sha": "3b3a3040fec2867457ecd17390e3584dd6bdc5cd",
+          "title": "midiemu: don't force FEnvLevel to zero on new note",
+          "author": "s09bQ5"
+        },
+        {
+          "sha": "6ed7b1877298e38ea805d83e1925b3ade093bd3e",
+          "title": "midiemu: ignore note off for wrong note",
+          "author": "s09bQ5"
+        },
+        {
+          "sha": "585357b5d583ac124f23356bd5a89e65490f8ea2",
+          "title": "midiemu: make overtone decay independent of sample rate",
+          "author": "s09bQ5"
+        },
+        {
+          "sha": "fb5c3981bbbf3e58b5cc5794b1bcf377ff5e1d8a",
+          "title": "midiemu: implement volume control",
+          "author": "s09bQ5"
+        },
+        {
+          "sha": "2fc9b93b4d65064371b98a7e0029476021c0b123",
+          "title": "more stats + adjust all languages for that",
+          "author": "dgruss"
+        },
+        {
+          "sha": "8b99cb65de2af0c0f1269516c975f2f328b9e562",
+          "title": "replace more hardcoded screen sizes",
+          "author": "dgruss"
+        },
+        {
+          "sha": "a8bb64f6a575e08399de655b4ea7270485cfb151",
+          "title": "add a scorebar feature similar to that from CMD mod",
+          "author": "dgruss"
+        },
+        {
+          "sha": "e1c70cab3a017026418c24a6ea4372a5afe1fbab",
+          "title": "report progress about how many songs have been parsed",
+          "author": "dgruss"
+        },
+        {
+          "sha": "eaac8c7e0f0595e0a34fd0f4c8f17312a1233f07",
+          "title": "speed up file discovery",
+          "author": "dgruss"
+        },
+        {
+          "sha": "9cebf0a8bdb99c67ff87113868a8940988da8fd7",
+          "title": "Merge branch 'volumesettings' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "c3c08fcc72d75ddfdb73b5a33d01d035429304f8",
+          "title": "Merge branch 'missingclicks' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "106de31f76b7901a0660769b5c40f888c48d5b35",
+          "title": "allow both ctrl + shift while not in duet mode (as the keys are not",
+          "author": "dgruss"
+        },
+        {
+          "sha": "36de9a8b3318e5b1225674469427db037067b79d",
+          "title": "Merge branch 'alternativenotepitchkey' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "0dcc1b559a602df5b6ab6e28a527c21e2c54f1dd",
+          "title": "Merge branch 'perplayerdelayini' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "ed18c8cf5e6b9a0bb5ab59bff001d072a0bc3913",
+          "title": "Merge branch 'repeatkeys' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "e097615042410914e0cee8e728d8efc0821c1482",
+          "title": "Merge branch 'duetscount' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "0822e8a1d2dabe5ac51695db46da2340d4cd53d2",
+          "title": "Merge branch 'topscorecount' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "e825b12fb64b8c897fb3fe5e56899f91d35d6440",
+          "title": "Merge branch 'morestats' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "7ea742dc000815c41163d05d2605825b884c88b0",
+          "title": "Merge branch 'midialternative' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "e844dc03bbbe86477de270e74264b46ccc7f1646",
+          "title": "Merge branch 'scorebar' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "1c204122deef509aff6d89ac8e20d4d43724845e",
+          "title": "Merge branch 'scaling' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "703a7b28782ed783b2b636e02004a8dc569b085a",
+          "title": "add missing scalemodes to avatar frames",
+          "author": "dgruss"
+        },
+        {
+          "sha": "87d665b48af8dad8e0b0dc0fc5d64f25b8e5013f",
+          "title": "Merge branch 'scaling' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "ba672230d379e9706894dbaa7074c53c40f04a40",
+          "title": "Merge branch 'x64' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "c91d3100df36b9a9437bc54a9df56a87333b1390",
+          "title": "linter fix",
+          "author": "dgruss"
+        },
+        {
+          "sha": "23b117f4e79a4586b65a7cb8833a64e08f585626",
+          "title": "Merge branch 'fixwindowspaths' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "005047fde0aeb771cbbc898360e0f08bb5d9d6f6",
+          "title": "Merge branch 'improve-picture-quality' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "e7feaa74e3d0f1ffb8d9e6cd57845832c29d9bc6",
+          "title": "Merge branch 'oldinfo' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "92226c5f50e9deda1444537804e30bc5eccf8dd3",
+          "title": "Merge branch 'dbstringfix' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "55be3c7a685f20c3d94bf80f3947c8324004910d",
+          "title": "Merge branch 'hotplug' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "9526cb5e318bb5d2e8bb278c01bbe762d6da4228",
+          "title": "Merge branch 'dontcrashoniniwrites' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "0a2aa2dcd32fe09b739e7201584e619eac68ca25",
+          "title": "Merge branch 'dontcrashlanguage' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "ac98395b548d317d3965e3988a1cdb6fcfa8529d",
+          "title": "Merge branch 'fixupdater2' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "232ab0015675d19de3ceedcb63da88a139052e04",
+          "title": "Merge branch 'refactorplayers' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "758c6fc74ac396558b11dd330f11cdc5333aae4a",
+          "title": "make placement of duet indicators on song screen themeable",
+          "author": "dgruss"
+        },
+        {
+          "sha": "157de40ba89f715739684378c18fb041b35cb9f0",
+          "title": "add duet detection into lightweight loading",
+          "author": "dgruss"
+        },
+        {
+          "sha": "f672784f11491c24609c225f0430ac2859bf9628",
+          "title": "Merge branch 'removewomecredits' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "b0e7a070ea171048eb6eea3cca06ee370179163c",
+          "title": "Merge branch 'whitespacecheck' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "1e7378d8c463f591cb12e9eefa5b6b0ee6ba2c85",
+          "title": "Merge branch 'morethemeable' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "76815af73cf06fadb3e996bc177d09ce41b965b8",
+          "title": "Merge branch 'fullscreenvideo' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "49acf073300b8b6ea7c033f08969260f32d270f8",
+          "title": "Merge branch 'audiocrash' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "c8e2bc874894a0503036fa0f88eea7b3e1501293",
+          "title": "Merge branch 'sustainmusic' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "ce9f32265397d3b4a18c17fc7bc8a55a53257eb8",
+          "title": "use the previewvolume without going through the ini object",
+          "author": "dgruss"
+        },
+        {
+          "sha": "61940973d762523021cea9e80cca62569af53856",
+          "title": "sustain music also from sing screen",
+          "author": "dgruss"
+        },
+        {
+          "sha": "f5ad1dc636fa6ba8207cade50559e507ab91dbd6",
+          "title": "sustain music when going back from player selection",
+          "author": "dgruss"
+        },
+        {
+          "sha": "4b0a91611d133412ef2840d988aa421b7edc6fc5",
+          "title": "Merge branch 'newjukebox' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "5ef6dbad6b3b77d01a2379a2e9e9fa0e08323eac",
+          "title": "load lyrics if they have not been loaded so far",
+          "author": "dgruss"
+        },
+        {
+          "sha": "5ba70a60a2f0088ffe5db94aab9f5a14d06c7403",
+          "title": "Merge branch 'screenshots' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "a7254d9de103228e704a610b1266ae0ee595f6bf",
+          "title": "Merge branch 'removejukebox' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "cf78e532237f2e11a55d43c12458d2c65e4fc0bc",
+          "title": "lost declaration during merge",
+          "author": "dgruss"
+        },
+        {
+          "sha": "09c3d369cda4837aea8ccfb3d83d9fb1f785e7b0",
+          "title": "fix advancing after singing in loop mode",
+          "author": "dgruss"
+        },
+        {
+          "sha": "9ebac7f54333b0304b6c69c363e44c5b99f15ab7",
+          "title": "Merge branch 'altkeys' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "05aa7e5572eb0754b194c4414faed977738a39ec",
+          "title": "Merge branch 'altkeys2' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "66c326c61ba0880f99fb1bcbebbda8393f8d7d5e",
+          "title": "Merge branch 'varbpm' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "b6724d25e06ad3bd35b76b9244b093b625b54abf",
+          "title": "Merge branch 'resolution' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "1fba728b333bd45b7fdaf4378cd4e7512b56f8a3",
+          "title": "Merge remote-tracking branch 'upstream/link-releasepage' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "7e904ed88854e9eb9e53fb688eacfb36f718cf3a",
+          "title": "fix merge problems",
+          "author": "dgruss"
+        },
+        {
+          "sha": "519b64302d681700f9fd638b100c86162d31a7b4",
+          "title": "set version to 2026.3.0+beta-pr to indicate that this is the beta PR",
+          "author": "dgruss"
+        },
+        {
+          "sha": "3a9263e507ef506c401d1db6c3bb6cdcf4344ebb",
+          "title": "Count In for Songs With Low #GAP Values",
+          "author": "complexlogic"
+        },
+        {
+          "sha": "9089157ff405ef8bddcc7081a2dd2282b56c562c",
+          "title": "write song errors into a separate log file",
+          "author": "dgruss"
+        },
+        {
+          "sha": "0b7172da86b2449baf10abdf861873eaf7369616",
+          "title": "use full path for song errors",
+          "author": "dgruss"
+        },
+        {
+          "sha": "61d8d69f7df0b0deacac50d15b9fe41acf7c9a72",
+          "title": "fix note splitting regressions",
+          "author": "dgruss"
+        },
+        {
+          "sha": "2e3d7144f4b5338854357a8055e89f46edbb4c66",
+          "title": "Merge remote-tracking branch 'complexlogic/swr_flush' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "7cf177868765aa7c9b0d31943384d3584803018d",
+          "title": "Merge remote-tracking branch 'complexlogic/count_in' into usdxbeta",
+          "author": "dgruss"
+        },
+        {
+          "sha": "7a4f57a49ebaa52dc7232a706dd85539c9868cce",
+          "title": "fix regression: fix word splitting and note splitting with ~ puts the space on the wrong side",
+          "author": "dgruss"
+        },
+        {
+          "sha": "c5c4769106daf48deb0ce6505d31309ac542c1f9",
+          "title": "vocals pitch preview and live score estimation in editor",
+          "author": "dgruss"
+        },
+        {
+          "sha": "a131689cd10a8171404e158c1fff75aa6681b210",
+          "title": "make V/P keys in editor more consistent",
+          "author": "dgruss"
+        },
+        {
+          "sha": "c07556fbf08f2a50ba3018ef339638041a572d85",
+          "title": "do not generate pitch curve from regular track",
+          "author": "dgruss"
+        },
+        {
+          "sha": "eca62c886ecdd32a5560f723971164c9d1e4c8c8",
+          "title": "Fix vocals preview fallback/stop handling",
+          "author": "dgruss"
+        },
+        {
+          "sha": "fd4ad6f52b8a6d7200cc957af0ecb5fbc33474be",
+          "title": "Simplify preview score recomputation and fix editor refresh behavior",
+          "author": "dgruss"
+        },
+        {
+          "sha": "0005cb8f4c2332f99031b23936e02dec9d38cdc1",
+          "title": "support #VOCALS tag for pitch curve in editor",
+          "author": "dgruss"
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
-      }
+        "decision": "assessed",
+        "assessedAgainst": "c3fc8e4993394373cc00f7b1ed2f01f85a2a72e3",
+        "reviewedCommitCount": 142,
+        "scope": "Complete paginated source commit inventory and static assessment of relevant deltas against current USCE and prior recorded decisions. No fork code executed or runtime acceptance claimed. Historical branch baseline; not new development.",
+        "items": [
+          {
+            "area": "Historical March 2026 integration and vocals-preview branch",
+            "decision": "superseded",
+            "reason": "This is shared integration history: generic players, scaling, synth, statistics, volumes, playlists, continuous playback and sustain already have focused USCE ports. Vocals pitch preview is still the existing draft #88, not a new waveform feature. Machine-specific deployment and old merge fixes are not imported.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/11",
+              "https://github.com/UltraStar-CE/USCE/issues/88",
+              "https://github.com/UltraStar-CE/USCE/issues/43",
+              "https://github.com/UltraStar-CE/USCE/issues/64",
+              "https://github.com/UltraStar-CE/USCE/issues/82",
+              "https://github.com/UltraStar-CE/USCE/issues/124",
+              "https://github.com/UltraStar-CE/USCE/issues/143",
+              "https://github.com/UltraStar-CE/USCE/issues/145",
+              "https://github.com/UltraStar-CE/USCE/issues/155",
+              "https://github.com/UltraStar-CE/USCE/issues/162"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/11",
+          "https://github.com/UltraStar-CE/USCE/issues/88",
+          "https://github.com/UltraStar-CE/USCE/issues/43",
+          "https://github.com/UltraStar-CE/USCE/issues/64",
+          "https://github.com/UltraStar-CE/USCE/issues/82",
+          "https://github.com/UltraStar-CE/USCE/issues/124",
+          "https://github.com/UltraStar-CE/USCE/issues/143",
+          "https://github.com/UltraStar-CE/USCE/issues/145",
+          "https://github.com/UltraStar-CE/USCE/issues/155",
+          "https://github.com/UltraStar-CE/USCE/issues/162"
+        ],
+        "reason": "Historical March 2026 integration and vocals-preview branch: This is shared integration history: generic players, scaling, synth, statistics, volumes, playlists, continuous playback and sustain already have focused USCE ports. Vocals pitch preview is still the existing draft #88, not a new waveform feature. Machine-specific deployment and old merge fixes are not imported.",
+        "baselineOnly": true
+      },
+      "lastSourceCommitAt": "2026-03-18T09:49:02Z"
     }
   ],
   "unavailableForks": [
