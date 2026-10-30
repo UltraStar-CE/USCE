@@ -218,13 +218,13 @@ function TScreenName.ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: in
 var
   I: integer;
   Btn: integer;
+  MouseX, MouseY: integer;
   Card: TPlayerSlotRect;
 begin
   Result := true;
 
-  inherited ParseMouse(MouseButton, BtnDown, X, Y);
-  SetTextInput(Button[PlayerName].Selected);
-
+  MouseX := X;
+  MouseY := Y;
   // transfer mousecords to the 800x600 raster we use to draw
   X := Round((X / (ScreenW / Screens)) * RenderW);
   if (X > RenderW) then
@@ -233,6 +233,15 @@ begin
 
   if Theme.Name.Cards.Enabled and BtnDown and (MouseButton = SDL_BUTTON_LEFT) then
   begin
+    Btn := InteractAt(X, Y);
+    // Selecting a card editor must not generate the menu's Return action.
+    // This also covers themes that place the name editor outside the card.
+    if (Btn = PlayerNameIID) or (Btn = PlayerAvatarIID) then
+    begin
+      Interaction := Btn;
+      SetTextInput(Button[PlayerName].Selected);
+      Exit;
+    end;
     for I := 0 to SelectedPlayerCount - 1 do
       if I div (Theme.Name.Cards.Columns * Theme.Name.Cards.Rows) = PlayerIndex div (Theme.Name.Cards.Columns * Theme.Name.Cards.Rows) then
       begin
@@ -258,12 +267,19 @@ begin
             SelectsS[PlayerSelectLevel].SetSelectOpt(LevelIndex);
             Interaction := PlayerSelectLevelIID;
           end
-          else if X < Card.X + Card.W * 0.24 then Interaction := PlayerAvatarIID;
+          else if (Btn = PlayerColorIID) or (Btn = PlayerSelectLevelIID) or
+            (Btn = PlayerSelectVoiceIID) then
+          begin
+            // Slides retain their normal click/arrow handling.
+            inherited ParseMouse(MouseButton, BtnDown, MouseX, MouseY);
+          end;
           SetTextInput(Button[PlayerName].Selected);
           Exit;
         end;
       end;
   end;
+  inherited ParseMouse(MouseButton, BtnDown, MouseX, MouseY);
+  SetTextInput(Button[PlayerName].Selected);
   if (BtnDown) then
   begin
      //if RightMbESC is set, send ESC keypress
