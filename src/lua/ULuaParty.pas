@@ -138,8 +138,6 @@ begin
       Info.CanNonParty := lua_toBoolean(L, -1)
     else if (Key = 'canparty') and lua_isBoolean(L, -1) then
       Info.CanParty := lua_toBoolean(L, -1)
-    else if (Key = 'localhighscores') and lua_isBoolean(L, -1) then
-      Info.LocalHighscores := lua_toBoolean(L, -1)
     else if (Key = 'playercount') and lua_isTable(L, -1) then
       Info.PlayerCount := lua_toBinInt(L, -1)
     else if (Key = 'teamcount') and lua_isTable(L, -1) then

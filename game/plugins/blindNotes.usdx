@@ -33,7 +33,6 @@ function plugin_init()
   local Mode = {}
 
   Mode.Name = 'Blind'
-  Mode.LocalHighscores = true;
   Mode.CanNonParty = true;
   Mode.CanParty = true;
 

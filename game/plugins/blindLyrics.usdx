@@ -7,7 +7,6 @@ function plugin_init()
   local Mode = {}
 
   Mode.Name = 'BlindLyrics'
-  Mode.LocalHighscores = true;
   Mode.CanNonParty = true;
   Mode.CanParty = true;
 
