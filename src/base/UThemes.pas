@@ -176,6 +176,7 @@ type
     Size:     integer;
     Align:    integer;
     Text:     UTF8String;
+    FocusColors: boolean;
     Writable: boolean; // true -> add a blink char (|) at the end
     //Reflection
     Reflection:           boolean;
@@ -185,6 +186,8 @@ type
   AThemeText = array of TThemeText;
 
   TThemeButton = record
+    HasDAlpha: boolean;
+    DAlpha: real;
     Text:   AThemeText;
     X:      integer;
     Y:      integer;
@@ -337,6 +340,8 @@ type
     MinFrameH: integer;
     MinScoreW: integer;
     MinScoreH: integer;
+    DockTop: boolean;
+    DockY, DockW: integer;
     HeaderOffsetTopBase: integer;
     HeaderOffsetTopPerExtraRow: integer;
     ReferenceX: integer;
@@ -368,6 +373,7 @@ type
     ButtonAbout, ButtonExit: TThemeButton;
     Preview: array[0..5] of AThemeStatic;
     PreviewFadeTime, PreviewSlideX: real;
+    DynamicDescription: boolean;
 
     TextDescription:      TThemeText;
     TextDescriptionLong:  TThemeText;
@@ -376,6 +382,15 @@ type
   end;
 
   TThemeName = class(TThemeBasic)
+    Cards: record
+      Enabled: boolean;
+      Area: TPlayerSlotRect;
+      Columns, Rows, Gap, MaxH: integer;
+      Panel, Focus: TThemeStatic;
+      Avatar: TThemePosition;
+      NameText: TThemeText;
+      EditOutside, ShowLabel, TintControls, LevelSegments, Initials: boolean;
+    end;
     PlayerButtonName:          TThemeButton;
     PlayerButtonAvatar:        TThemeButton;
 
@@ -526,6 +541,15 @@ type
   end;
 
   TThemeSing = class(TThemeBasic)
+    Header: TThemeStatic;
+    HasHeader: boolean;
+    DefaultAvatarTex: string;
+    HelperAbove: boolean;
+    LaneAccentWidth: integer;
+    ScoreThemedText, ScorePlayerColor, PlainNotesUsePlayerColor: boolean;
+    ScoreDigits: integer;
+    ScoreAlpha, NoteScale, GuideAlpha: real;
+    ProgressVoiceColors, TimeShowTitle: boolean;
     LyricActive, LyricCurrent, LyricNext: TRGB;
     LyricOutlineActive, LyricOutlineCurrent, LyricOutlineNext: TRGB;
     LyricUsePlayerColors: boolean;
@@ -1273,6 +1297,8 @@ function GetNamePlayerSelectLayoutBounds(const BaseBounds: TPlayerSlotRect;
 function GetNamePlayerSelectSlotRect(PlayerIndex, PlayerCount: integer;
   const BaseBounds, LayoutBounds: TPlayerSlotRect; const Layout: TThemeNamePlayerSelectLayout): TPlayerSlotRect;
 function GetNamePlayerSelectMaxScale(PlayerCount: integer; const Layout: TThemeNamePlayerSelectLayout): real;
+procedure GetSingHeaderPlacement(PlayerCount, PlayerIndex: integer; const Lane: TSingLaneLayout;
+  const Config: TThemeSingPlayerWidgetLayout; out Left, Width, Top: integer; out Scale: real; ReserveTopLyrics: boolean = false);
 function GetSingHeaderTopOffset(const Layout: TThemeSingPlayerWidgetLayout;
   RowCount: integer; Scale: real): integer;
 function GetSingPlayerWidgetX(BaseX, BaseW, ActualW, LaneLeft, LaneWidth: integer;
@@ -1563,6 +1589,26 @@ begin
   if PlayerCount <= 4 then
     Exit(Layout.MaxScaleMedium);
   Result := Layout.MaxScaleDefault;
+end;
+
+procedure GetSingHeaderPlacement(PlayerCount, PlayerIndex: integer; const Lane: TSingLaneLayout;
+  const Config: TThemeSingPlayerWidgetLayout; out Left, Width, Top: integer; out Scale: real; ReserveTopLyrics: boolean);
+var CellWidth: real;
+begin
+  Left := Lane.ColumnLeft;
+  Width := Lane.ColumnWidth;
+  Scale := Lane.WidgetScale;
+  Top := Max(10, Lane.RowAnchorY - GetSingHeaderTopOffset(Config, Lane.GridRows, Scale));
+  if not Config.DockTop or ReserveTopLyrics then Exit;
+  // Share the available width across any number of players on this screen.
+  CellWidth := Theme.Sing.PlayerLayout.ColumnContainerWidth / Max(1, PlayerCount);
+  Width := Min(Config.DockW, Max(1, Floor(CellWidth)));
+  Scale := Min(1.0, Width / Config.ReferenceW);
+  if PlayerCount > 1 then
+    Left := Theme.Sing.PlayerLayout.ColumnContainerLeft + Round(PlayerIndex *
+      (Theme.Sing.PlayerLayout.ColumnContainerWidth - Width) / (PlayerCount - 1))
+  else Left := Theme.Sing.PlayerLayout.ColumnContainerLeft;
+  Top := Config.DockY;
 end;
 
 function GetSingHeaderTopOffset(const Layout: TThemeSingPlayerWidgetLayout;
@@ -2078,12 +2124,37 @@ begin
 
       //Main Desc Text Translation End
 
-      Main.TextDescription.Text := Main.Description[0];
-      Main.TextDescriptionLong.Text := Main.DescriptionLong[0];
+      if Main.DynamicDescription then
+      begin
+        Main.TextDescription.Text := Main.Description[0];
+        Main.TextDescriptionLong.Text := Main.DescriptionLong[0];
+      end;
 
       // Name
       ThemeLoadBasic(Name, 'Name');
 
+      SectionList := GetSectionList('NameCards');
+      Name.Cards.Enabled := ReadBool(SectionList, 'Enabled', false);
+      Name.Cards.Area.X := ReadInteger(SectionList, 'X', 30);
+      Name.Cards.Area.Y := ReadInteger(SectionList, 'Y', 172);
+      Name.Cards.Area.W := Max(1, ReadInteger(SectionList, 'W', 740));
+      Name.Cards.Area.H := Max(1, ReadInteger(SectionList, 'H', 320));
+      Name.Cards.Columns := EnsureRange(ReadInteger(SectionList, 'Columns', 3), 1, UIni.IMaxPlayerCount);
+      Name.Cards.Rows := EnsureRange(ReadInteger(SectionList, 'Rows', 2), 1, UIni.IMaxPlayerCount);
+      Name.Cards.Gap := Max(0, ReadInteger(SectionList, 'Gap', 12));
+      Name.Cards.MaxH := Max(1, ReadInteger(SectionList, 'MaxH', 225));
+      if Name.Cards.Enabled then
+      begin
+        ThemeLoadStatic(Name.Cards.Panel, 'NameCardPanel');
+        ThemeLoadStatic(Name.Cards.Focus, 'NameCardFocus');
+        ThemeLoadPosition(Name.Cards.Avatar, 'NameCardAvatar');
+        ThemeLoadText(Name.Cards.NameText, 'NameCardName');
+        Name.Cards.EditOutside := ReadBool(SectionList, 'EditOutside', false);
+        Name.Cards.ShowLabel := ReadBool(SectionList, 'ShowLabel', true);
+        Name.Cards.TintControls := ReadBool(SectionList, 'TintControls', true);
+        Name.Cards.Initials := ReadBool(SectionList, 'Initials', false);
+        Name.Cards.LevelSegments := ReadBool(SectionList, 'LevelSegments', false);
+      end;
       ThemeLoadButton(Name.PlayerButtonName, 'NamePlayerButtonName');
       ThemeLoadButton(Name.PlayerButtonAvatar, 'NamePlayerButtonAvatar');
 
@@ -2195,6 +2266,21 @@ begin
 
       //TimeBar mod
       ThemeLoadStatic(Sing.StaticTimeBar, 'SingTimeBar');
+      Sing.DefaultAvatarTex := ReadString(GetSectionList('Sing'), 'DefaultAvatarTex', '');
+      Sing.HelperAbove := ReadBool(GetSectionList('Sing'), 'HelperAbove', false);
+      Sing.LaneAccentWidth := EnsureRange(ReadInteger(GetSectionList('SingLanePanel'), 'AccentWidth', 0), 0, 12);
+      Sing.HasHeader := ResolveThemeFile('SingPlayerHeader') <> nil;
+      if Sing.HasHeader then ThemeLoadStatic(Sing.Header, 'SingPlayerHeader');
+      SectionList := GetSectionList('SingScoreStyle');
+      Sing.ScoreThemedText := ReadBool(SectionList, 'ThemedText', false);
+      Sing.ScorePlayerColor := ReadBool(SectionList, 'PlayerColor', true);
+      Sing.ScoreDigits := EnsureRange(ReadInteger(SectionList, 'Digits', 5), 0, 8);
+      Sing.ScoreAlpha := EnsureRange(ReadFloat(SectionList, 'BackgroundAlpha', 1), 0.0, 1.0);
+      Sing.PlainNotesUsePlayerColor := ReadBool(GetSectionList('Sing'), 'PlainNotesUsePlayerColor', true);
+      Sing.GuideAlpha := EnsureRange(ReadFloat(GetSectionList('Sing'), 'GuideAlpha', 0.4), 0.0, 1.0);
+      Sing.ProgressVoiceColors := ReadBool(GetSectionList('SingTimeProgress'), 'VoiceColors', true);
+      Sing.TimeShowTitle := ReadBool(GetSectionList('SingTimeText'), 'ShowSongTitle', false);
+      Sing.NoteScale := EnsureRange(ReadFloat(GetSectionList('Sing'), 'NoteScale', 1), 0.2, 2.0);
       ThemeLoadStaticColorRectangle(Sing.StaticTimeProgress, 'SingTimeProgress');
       ThemeLoadText(Sing.TextTimeLabelText, 'SingTimeLabelText');
       ThemeLoadText(Sing.TextTimeText, 'SingTimeText');
@@ -2240,6 +2326,9 @@ begin
       Sing.PlayerLayout.WidgetScaleMin := EnsureRange(Sing.PlayerLayout.WidgetScaleMin, 0.1, 1.0);
 
       SectionList := GetSectionList('SingPlayerWidgetPlacement');
+      Sing.PlayerWidgetLayout.DockTop := ReadBool(SectionList, 'DockTop', false);
+      Sing.PlayerWidgetLayout.DockY := ReadInteger(SectionList, 'DockY', 28);
+      Sing.PlayerWidgetLayout.DockW := Max(1, ReadInteger(SectionList, 'DockW', 138));
       Sing.PlayerWidgetLayout.MinFrameW := ReadInteger(SectionList, 'MinFrameW', 26);
       Sing.PlayerWidgetLayout.MinFrameH := ReadInteger(SectionList, 'MinFrameH', 26);
       Sing.PlayerWidgetLayout.MinScoreW := ReadInteger(SectionList, 'MinScoreW', 56);
@@ -3257,6 +3346,7 @@ var
   Sections: TThemeSectionList;
 begin
   Sections := GetSectionList('MainPreview');
+  Main.DynamicDescription := ReadBool(GetSectionList('Main'), 'DynamicDescription', true);
   Main.PreviewFadeTime := EnsureRange(ReadFloat(Sections, 'FadeTime', 0), 0, 5);
   Main.PreviewSlideX := ReadFloat(Sections, 'SlideX', 0);
   for I := 0 to High(Roles) do
@@ -3366,6 +3456,7 @@ begin
   ThemeText.Text  := Language.Translate(ReadString(SectionList, 'Text', ''));
   ThemeText.Color := ReadString(SectionList, 'Color', '');
   ThemeText.DColor := ReadString(SectionList, 'DColor', '');
+  ThemeText.FocusColors := ReadBool(SectionList, 'FocusColors', false);
 
   //Reflection
   ThemeText.Reflection         := ReadBool(SectionList, 'Reflection', ThemeText.Reflection);
@@ -3387,6 +3478,11 @@ begin
     ThemeText.DColB := Color[C].RGB.B;
   end;
 
+  if not ReadBool(SectionList, 'Enabled', true) then
+  begin
+    ThemeText.Text := '';
+    ThemeText.Size := 0;
+  end;
   ThemeText.ScaleMode := ParseScaleMode(ReadString(SectionList, 'ScaleMode', ''), lsUniform);
 end;
 
@@ -3630,6 +3726,8 @@ begin
   ThemeButton.Int :=  ReadFloat(SectionList, 'Int', 1);
   ThemeButton.Alpha := EnsureRange(ReadFloat(SectionList, 'Alpha',
     DefaultButtonAlpha), 0.0, 1.0);
+  ThemeButton.HasDAlpha := ReadString(SectionList, 'DAlpha', '') <> '';
+  ThemeButton.DAlpha := EnsureRange(ReadFloat(SectionList, 'DAlpha', ThemeButton.Alpha), 0.0, 1.0);
   ThemeButton.DColR := ReadFloat(SectionList, 'DColR', 1);
   ThemeButton.DColG := ReadFloat(SectionList, 'DColG', 1);
   ThemeButton.DColB := ReadFloat(SectionList, 'DColB', 1);
@@ -3730,6 +3828,7 @@ begin
     Log.LogWarn('Required theme section ' + Name + ' (selectslide) does not exist.', 'TTheme.ThemeLoadSelectSlide');
   end;
   ThemeSelectS.Text := Language.Translate(ReadString(SectionList, 'Text', ''));
+  if ReadBool(SectionList, 'EmptyText', false) then ThemeSelectS.Text := '';
 
   ThemeSelectS.Tex := ReadString(SectionList, 'Tex', '');
   ThemeSelectS.Typ := ParseTextureType(ReadString(SectionList, 'Type', ''), TEXTURE_TYPE_PLAIN);

@@ -71,10 +71,16 @@ type
 
     public
       Text:                      array of TText;
+      TextColors: array of record
+        Enabled: boolean;
+        R, G, B, DR, DG, DB: single;
+      end;
       TextOffset:                array of TTextOffset;
       Texture:                   TTexture; // Button Screen position and size
 
       BackgroundAlpha:           single;
+      DeselectAlpha: single;
+      HasDeselectAlpha: boolean;
       Colorized:                 boolean;
       DeSelectTexture:           TTexture; // texture for colorized hack
 
@@ -243,6 +249,22 @@ var
 begin
   if FocusTexture <> nil then UpdateFocus;
   SelectBool := Value;
+  for T := 0 to Min(High(Text), High(TextColors)) do
+    if TextColors[T].Enabled then
+    begin
+      if Value then
+      begin
+        Text[T].ColR := TextColors[T].R;
+        Text[T].ColG := TextColors[T].G;
+        Text[T].ColB := TextColors[T].B;
+      end
+      else
+      begin
+        Text[T].ColR := TextColors[T].DR;
+        Text[T].ColG := TextColors[T].DG;
+        Text[T].ColB := TextColors[T].DB;
+      end;
+    end;
 
   if (Value) then
   begin
@@ -385,6 +407,12 @@ var
 begin
   if Visible then
   begin
+    if HasDeselectAlpha then
+    begin
+      if SelectBool then Texture.Alpha := BackgroundAlpha
+      else Texture.Alpha := DeselectAlpha;
+      DeSelectTexture.Alpha := Texture.Alpha;
+    end;
     //Fade Mod
     T:=0;
     if Fade then
@@ -644,6 +672,8 @@ begin
   // We initialize all to 0, nil or false
   Visible        := true;
   BackgroundAlpha := 1;
+  DeselectAlpha := 1;
+  HasDeselectAlpha := false;
   SelectBool     := false;
   DeselectType   := 0;
   Selectable     := true;

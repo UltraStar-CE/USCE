@@ -61,6 +61,9 @@ type
   private
     GapCountdown: TGapCountdown;
     LanePanelTexture: TTexture;
+    HeaderTexture: TTexture;
+    DefaultAvatarTexture: TTexture;
+    procedure DrawHeaders;
     procedure DrawLanePanels;
     procedure DrawGapCountdown;
   public
@@ -177,7 +180,6 @@ function BuildSingPlayerTemplate(const PlayerCountOnScreen, PlayerIndexOnScreen:
 var
   BaseTemplate: TThemeSingPlayer;
   LaneLeft: integer;
-  LaneTop: integer;
   LaneWidth: integer;
   Scale: real;
   FrameW: integer;
@@ -193,16 +195,13 @@ begin
   BaseTemplate := Theme.Sing.PlayerTemplate;
   Layout := GetSingLaneLayout(PlayerCountOnScreen, PlayerIndexOnScreen, Theme.Sing.PlayerLayout,
     IsCurrentSongDuet);
-  LaneLeft := Layout.ColumnLeft;
-  LaneTop := Layout.RowAnchorY;
-  LaneWidth := Layout.ColumnWidth;
-  Scale := Layout.WidgetScale;
+  GetSingHeaderPlacement(PlayerCountOnScreen, PlayerIndexOnScreen, Layout,
+    Theme.Sing.PlayerWidgetLayout, LaneLeft, LaneWidth, GroupTop, Scale, IsCurrentSongDuet);
 
   FrameW := Max(1, Round(BaseTemplate.AvatarFrame.W * Scale));
   FrameH := Max(1, Round(BaseTemplate.AvatarFrame.H * Scale));
   ScoreW := Max(1, Round(BaseTemplate.ScoreBackground.W * Scale));
-  GroupTop := Max(10, LaneTop -
-    GetSingHeaderTopOffset(Theme.Sing.PlayerWidgetLayout, Layout.GridRows, Scale));
+
 
   Result := BaseTemplate;
   Result.AvatarFrame.X := GetSingPlayerWidgetX(BaseTemplate.AvatarFrame.X,
@@ -347,7 +346,16 @@ var
         CurrentTexture := ScreenSing.Statics[Slots[J]].Texture;
         if AvatarPlayerTextures[PlayerIndex] = nil then
           Continue;
-        ScreenSing.Statics[Slots[J]].Texture := AvatarPlayerTextures[PlayerIndex].Clone;
+        if (DefaultAvatarTexture <> nil) and
+          (AvatarPlayerTextures[PlayerIndex] = NoAvatarTexture[PlayerIndex]) then
+        begin
+          ScreenSing.Statics[Slots[J]].Texture := DefaultAvatarTexture.Clone;
+          ScreenSing.Statics[Slots[J]].Texture.ColR := NoAvatarTexture[PlayerIndex].ColR;
+          ScreenSing.Statics[Slots[J]].Texture.ColG := NoAvatarTexture[PlayerIndex].ColG;
+          ScreenSing.Statics[Slots[J]].Texture.ColB := NoAvatarTexture[PlayerIndex].ColB;
+        end
+        else
+          ScreenSing.Statics[Slots[J]].Texture := AvatarPlayerTextures[PlayerIndex].Clone;
         ScreenSing.Statics[Slots[J]].Texture.X := CurrentTexture.X;
         ScreenSing.Statics[Slots[J]].Texture.Y := CurrentTexture.Y;
         ScreenSing.Statics[Slots[J]].Texture.W := CurrentTexture.W;
@@ -480,6 +488,18 @@ var
         assignAvatarStaticForSlot(LayoutPlayerCount, SlotIndex,
           PlayerAvatarSlots[LayoutPlayerCount, SlotIndex],
           AvatarPlayerTextures[PlayerIndex]);
+        if (DefaultAvatarTexture <> nil) and
+          (AvatarPlayerTextures[PlayerIndex] = NoAvatarTexture[PlayerIndex]) then
+        begin
+          with ScreenSing.Statics[PlayerAvatarSlots[LayoutPlayerCount, SlotIndex]] do
+          begin
+            Texture.Free;
+            Texture := DefaultAvatarTexture.Clone;
+            Texture.ColR := NoAvatarTexture[PlayerIndex].ColR;
+            Texture.ColG := NoAvatarTexture[PlayerIndex].ColG;
+            Texture.ColB := NoAvatarTexture[PlayerIndex].ColB;
+          end;
+        end;
       end;
     end;
   end;
@@ -564,15 +584,50 @@ begin
     LanePanelTexture.ScaleMode := lsStretch;
   end;
 
+  if Theme.Sing.HasHeader then
+  begin
+    I := ScreenSing.AddStatic(Theme.Sing.Header);
+    HeaderTexture := ScreenSing.Statics[I].Texture.Clone;
+    ScreenSing.Statics[I].Visible := false;
+  end;
+  if Theme.Sing.DefaultAvatarTex <> '' then
+    DefaultAvatarTexture := Renderer.LoadTexture(Skin.GetTextureFileName(Theme.Sing.DefaultAvatarTex),
+      TEXTURE_TYPE_TRANSPARENT, 0);
   InitAvatarSlots(UIni.IMaxPlayerCount);
 end;
 
 destructor TScreenSingView.Destroy;
 begin
+  DefaultAvatarTexture.Free;
+  HeaderTexture.Free;
   LanePanelTexture.Free;
   GapCountdown.Free;
   UnloadSingScreenTextures;
   inherited;
+end;
+
+procedure TScreenSingView.DrawHeaders;
+var I, Count, LocalIndex, Left, Width, Top: integer;
+  Scale: real;
+  Lane: TSingLaneLayout;
+begin
+  if (HeaderTexture = nil) or not (ScreenSing.Settings.AvatarsVisible or
+    ScreenSing.Settings.ScoresVisible) then Exit;
+  Count := GetScreenPlayerCount(PlayersPlay, Screens, ScreenAct);
+  for I := 0 to PlayersPlay - 1 do
+  begin
+    if GetPlayerScreen(I, PlayersPlay, Screens) <> ScreenAct then Continue;
+    LocalIndex := GetPlayerIndexOnScreen(I, PlayersPlay, Screens);
+    Lane := GetSingLaneLayout(Count, LocalIndex, Theme.Sing.PlayerLayout, IsCurrentSongDuet);
+    GetSingHeaderPlacement(Count, LocalIndex, Lane, Theme.Sing.PlayerWidgetLayout,
+      Left, Width, Top, Scale, IsCurrentSongDuet);
+    HeaderTexture.X := GetSingPlayerWidgetX(Theme.Sing.Header.X, Theme.Sing.Header.W,
+      Round(Theme.Sing.Header.W * Scale), Left, Width, 0, Scale, Theme.Sing.PlayerWidgetLayout);
+    HeaderTexture.Y := GetSingPlayerWidgetY(Theme.Sing.Header.Y, Top, Scale, Theme.Sing.PlayerWidgetLayout);
+    HeaderTexture.W := Theme.Sing.Header.W * Scale;
+    HeaderTexture.H := Theme.Sing.Header.H * Scale;
+    Renderer.DrawTexture(HeaderTexture);
+  end;
 end;
 
 procedure TScreenSingView.DrawLanePanels;
@@ -580,6 +635,7 @@ var
   PlayerIndex, Count, LocalIndex: integer;
   Layout: TSingLaneLayout;
   Padding: single;
+  Col: TRGB;
 begin
   if LanePanelTexture = nil then Exit;
   Count := GetScreenPlayerCount(PlayersPlay, Screens, ScreenAct);
@@ -596,6 +652,13 @@ begin
     LanePanelTexture.H := 9 * Layout.NoteLineSpacing + 2 * Padding;
     LanePanelTexture.Z := Theme.Sing.LanePanel.Z;
     Renderer.DrawTexture(LanePanelTexture);
+    if Theme.Sing.LaneAccentWidth > 0 then
+    begin
+      Col := GetPlayerColor(Ini.SingColor[PlayerIndex]);
+      Renderer.DrawQuad(LanePanelTexture.X + 1, LanePanelTexture.Y + 8 * Layout.ContentScale,
+        0, Theme.Sing.LaneAccentWidth * Layout.ContentScale,
+        Max(1, LanePanelTexture.H - 16 * Layout.ContentScale), Col.R, Col.G, Col.B, 1);
+    end;
   end;
 end;
 
@@ -767,8 +830,11 @@ begin
   DisplaySec := Round(DisplayTime) mod 60;
 
   // update static menu with time ...
-  ScreenSing.Text[TextTimeLabelText].Visible := ScreenSing.Settings.TimeBarVisible;
+  ScreenSing.Text[TextTimeLabelText].Visible := ScreenSing.Settings.TimeBarVisible and
+    (Theme.Sing.TextTimeLabelText.Size > 0);
   ScreenSing.Text[TextTimeText].Text := Format('%s%.2d:%.2d', [DisplayPrefix, DisplayMin, DisplaySec]);
+  if Theme.Sing.TimeShowTitle then
+    ScreenSing.Text[TextTimeText].Text := CurrentSong.Title + '   ' + ScreenSing.Text[TextTimeText].Text;
   ScreenSing.Text[TextTimeText].Visible := ScreenSing.Settings.TimeBarVisible;
 
   // Only voices actually assigned to players determine scoring completion.
@@ -861,6 +927,7 @@ begin
 
   // Optional panels use the same lanes and visibility as normal note drawing.
   DrawLanePanels;
+  DrawHeaders;
 
   // draw static menu (FG)
   ScreenSing.DrawFG;
@@ -1252,6 +1319,12 @@ begin
     else
       Col := GetLyricColor(Ini.SingColor[CurrentTrack]);
 
+    if not Theme.Sing.ProgressVoiceColors then
+    begin
+      Col.R := Theme.Sing.StaticTimeProgress.ColR;
+      Col.G := Theme.Sing.StaticTimeProgress.ColG;
+      Col.B := Theme.Sing.StaticTimeProgress.ColB;
+    end;
     for LineIndex := 0 to numLines - 1 do
     begin
       if (CurrentSong.Tracks[CurrentTrack].Lines[LineIndex].Notes = nil) then Continue;
