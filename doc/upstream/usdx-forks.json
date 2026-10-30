@@ -3619,11 +3619,11 @@
     {
       "repository": "MDDD87/USDX",
       "branch": "feature-playlist-karussell",
-      "head": "c179de14998d0d1f85f7b1c57badaa7199cfd2e5",
+      "head": "cda33435b1144b151bc3bd05be61e15e0bcefafc",
       "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
-      "ahead": 53,
+      "ahead": 54,
       "behind": 10,
-      "compareUrl": "https://github.com/MDDD87/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...c179de14998d0d1f85f7b1c57badaa7199cfd2e5",
+      "compareUrl": "https://github.com/MDDD87/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...cda33435b1144b151bc3bd05be61e15e0bcefafc",
       "commits": [
         {
           "sha": "7a1358e51a06bd1228b520c144a86994a87a9c8b",
@@ -3684,214 +3684,14 @@
           "sha": "cabdd347d1e52d102b0ae82b7b6794da6e61282b",
           "title": "Merge Feature 1b + 3 (Punkte-Bildschirm im Party-Modus, Medley-Runde)",
           "author": "MDDD87"
-        },
-        {
-          "sha": "f8384c3b56f6303fab5e16a7386944fb19f40cdf",
-          "title": "Party mode: medley tuning, micro medley, Pass the Mic, no repeated songs",
-          "author": "claude"
-        },
-        {
-          "sha": "425abc3a8854d21fbdac294fbccd20ab42b76296",
-          "title": "CI (fork): report compiler errors as annotations",
-          "author": "claude"
-        },
-        {
-          "sha": "28909a579d0e358e0e38c971503d0b370cb8a0c3",
-          "title": "Fix compile error in ApplyPartyMedleyTiming (field named High)",
-          "author": "claude"
-        },
-        {
-          "sha": "0c6e742c1ca263510d9b7c2af614d640018965a9",
-          "title": "Merge Medley-Feinschliff, Micro-Medley, Pass the Mic, keine Song-Wiederholungen",
-          "author": "MDDD87"
-        },
-        {
-          "sha": "764fbf06e518c7be7325baf23043fc2506a3f70e",
-          "title": "Score screen in SingStar style, party screens, names, aborted songs",
-          "author": "claude"
-        },
-        {
-          "sha": "8f53b0f0b867be6b46eaa8be453afc63480bd8cd",
-          "title": "Merge Punkte-Bildschirm im SingStar-Stil, Party-Bildschirme, Namen, abgebrochene Songs",
-          "author": "MDDD87"
-        },
-        {
-          "sha": "4ce8e3c6c734ea23a150f35a2680ed4e82f5ab38",
-          "title": "Party polish: standings, round rules, team numbers, counting, winner screen",
-          "author": "claude"
-        },
-        {
-          "sha": "af2ed4c557fe6a1956e4551aafda52f4357c6188",
-          "title": "Fix compile error: method declaration before fields in TScreenPartyScore",
-          "author": "claude"
-        },
-        {
-          "sha": "8f9e1352d1b500fed013fc64e8bc559e5f6c2dfb",
-          "title": "Party polish 2: round overview layout, best performances page, highscore sound",
-          "author": "claude"
-        },
-        {
-          "sha": "f367efb4e22598613bb1f86164b997f54aef5d7b",
-          "title": "Fix range check error on the party winner screen without best performances",
-          "author": "claude"
-        },
-        {
-          "sha": "f57fb65be12bc0c541d31ad04b5b26c245539a0a",
-          "title": "Party polish 3: highscore highlight, best performances layout, fewer party modes",
-          "author": "claude"
-        },
-        {
-          "sha": "51b60dc008ea506ed4051b06a782bf5356b0389d",
-          "title": "Fix compile error: highlight constants declared before use",
-          "author": "claude"
-        },
-        {
-          "sha": "1051f9b02e65036276d7e006ac69c54c65dfdf2c",
-          "title": "Round overview colors like the round table; highscore highlight in sing color, new highscore box below the header",
-          "author": "claude"
-        },
-        {
-          "sha": "4474054a614305ba6e5aeaa562dd495a2997bd0e",
-          "title": "Merge PR #5: Party-Feinschliff",
-          "author": "MDDD87"
-        },
-        {
-          "sha": "b2887608d6520bce1974a3d4ad8fd824b51bc1aa",
-          "title": "Feature 4: SingStar duets in the party mode",
-          "author": "claude"
-        },
-        {
-          "sha": "edbc7a19f21ddfee4459f9db2965db1514524c6f",
-          "title": "Duet round fixes: singer names, mic numbers and lyric colors on the sing screen; voices in the announcement",
-          "author": "claude"
-        },
-        {
-          "sha": "2f52a5a0d42f9c611ebf4129fd81cb486e02f6a2",
-          "title": "Duet highscores: after a party duet only the team entries are listed; team entry highlighted in the team color; highlight bar as tinted white texture",
-          "author": "claude"
-        },
-        {
-          "sha": "90be3e84e43b101accd7e2a8520d6da6eb4f17bb",
-          "title": "Duet announcement: simplified screen in the middle (song, team, singers with mic and voice), background music while getting ready, stopped before singing",
-          "author": "claude"
-        },
-        {
-          "sha": "d9780ca37a89a48b9eff6c49fb7789d5e6b7ecd5",
-          "title": "Party evaluation: score of each team in this round below its bar (duet: team result)",
-          "author": "claude"
-        },
-        {
-          "sha": "1b7ca6c6d91a81e47c7f5d16aca259da152fb4fd",
-          "title": "Rename party modes: Blind -> \"Ohne Noten\", Total blindness -> \"Ohne Noten & Text\"",
-          "author": "claude"
-        },
-        {
-          "sha": "4ec1da5d4c6e8e22fad08c744d215cccf76530ce",
-          "title": "Show the duet songs again in the normal mode after a party (original USDX left them hidden until restart)",
-          "author": "claude"
-        },
-        {
-          "sha": "ba1a6e486725da8d9f7f8ee5e142ba0cd8b534fe",
-          "title": "Duet announcement: plain hyphen between artist and title (the en dash in the source was shown as garbage)",
-          "author": "claude"
-        },
-        {
-          "sha": "1a6a7bb23b63f67d82072e561170cf1d4f512454",
-          "title": "Joker: one key press used two jokers (key and text event); ignore a second joker within 400 ms",
-          "author": "claude"
-        },
-        {
-          "sha": "9721e53ab4790cd888fd93747f7e8ee7a83ee48d",
-          "title": "Duet announcement: \"Mic 1/2\" above the boxes, voice inside the box below the name, no reflection, wider boxes",
-          "author": "claude"
-        },
-        {
-          "sha": "1200e9725b4fefd95602fc65a6ca8f1647681827",
-          "title": "Feature 5.2: Pass the Medley and Pass the Micro-Medley",
-          "author": "claude"
-        },
-        {
-          "sha": "8f3a9fc80f16559e3b3dac018323634118f2a781",
-          "title": "Pass rounds like SingStar: bar below each team with the singer, filling up before the change with \"NEXT: <name>\"",
-          "author": "claude"
-        },
-        {
-          "sha": "5f6a13a4424e245701ec211ee98a31666419bd52",
-          "title": "Round overview: order of the singers also for Pass the Mic",
-          "author": "claude"
-        },
-        {
-          "sha": "efe5cb9a072424e5969273d32e408a8dd9fef2fd",
-          "title": "Pass bars: rounded (tinted white tab texture) and a little lower below the team name",
-          "author": "claude"
-        },
-        {
-          "sha": "288c75b2e37440c21dcd20c8596a8a225b0543d9",
-          "title": "Party: hide avatar frames in all layouts, equal bars and medals for a draw, narrower pass bar",
-          "author": "claude"
-        },
-        {
-          "sha": "efd7e0d301b49af7385c8d722a0d9fe4625d10c5",
-          "title": "Party score: only the points for Pass the Mic / Pass the Medley rounds",
-          "author": "claude"
-        },
-        {
-          "sha": "452270af903f636254a77b675adaacbef5c1c9ac",
-          "title": "Pass bar: estimate the text width instead of TextWidth (range check error in UFont)",
-          "author": "claude"
-        },
-        {
-          "sha": "d4b75ada9afcb18927a1974e5d67df6c41528d06",
-          "title": "Review fixes: duet team highscores not cut off by the single voices, joker debounce per team",
-          "author": "claude"
-        },
-        {
-          "sha": "8d73d69ee08385e5f270399ed0019eddd4d0cb2d",
-          "title": "Merge pull request #6 from MDDD87/feature-4-duette",
-          "author": "MDDD87"
-        },
-        {
-          "sha": "90189710e77c578248dc4b54c3d2ff497fd5d717",
-          "title": "Party-Optionen: Karussell mit Playlist-Covern",
-          "author": "claude"
-        },
-        {
-          "sha": "11f3ea2c6e81be1aff9f37e40743033f2c93b6cb",
-          "title": "Party-Optionen: Zeile Playlist im Karussell-Modus ausgeblendet",
-          "author": "claude"
-        },
-        {
-          "sha": "f318b6db1ce182ed69500aeb383bb4ea141386d0",
-          "title": "Karussell: Text im Platzhalter richtig zentriert, lange Woerter verkleinert",
-          "author": "claude"
-        },
-        {
-          "sha": "a6732c0d7965331e21280c03ada65d7a589b6940",
-          "title": "Party: Playlist-Name ohne [Fixed Order]-Zusatz",
-          "author": "claude"
-        },
-        {
-          "sha": "dcecd82bbbef89467f4a7a985a8c3dcd07d997a3",
-          "title": "Party-Auswertung: Fehler beim Aufbau abfangen und in Error.log schreiben",
-          "author": "claude"
-        },
-        {
-          "sha": "ff607b56873c371f8402098f4fe99e5fb5cbeafb",
-          "title": "Bildschirmwechsel waehrend Ueberblendung: OnShow des neuen Ziels aufrufen",
-          "author": "claude"
-        },
-        {
-          "sha": "a7d090ffd3154d5181c0c7a6a3259a576b2d2878",
-          "title": "Punkte-Bildschirm: Hintergrundmusik nicht nach der Songauswahl neu starten",
-          "author": "claude"
-        },
-        {
-          "sha": "c179de14998d0d1f85f7b1c57badaa7199cfd2e5",
-          "title": "Party: Rundenauswahl zeigt nur Modi, die mit dem gewaehlten Songpool spielbar sind",
-          "author": "claude"
         }
       ],
       "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      },
+      "previousAssessment": {
         "decision": "assessed",
         "usceReferences": [
           "https://github.com/UltraStar-CE/USCE/issues/196",
@@ -5112,6 +4912,780 @@
             ]
           }
         ]
+      }
+    },
+    {
+      "repository": "guidop182/USDX",
+      "branch": "master",
+      "head": "a35cac85f1904b86248913bb16898fd61f1bd852",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 4,
+      "behind": 0,
+      "compareUrl": "https://github.com/guidop182/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...a35cac85f1904b86248913bb16898fd61f1bd852",
+      "commits": [
+        {
+          "sha": "59048e35deb986b7cdffc727037d050c022ab541",
+          "title": "Modo karaoke: hooks en pantallas de seleccion y puntaje",
+          "author": "guidop182"
+        },
+        {
+          "sha": "2c44d9f135b0cd6df8c8a6d60a0a1f6e3f4cdebc",
+          "title": "Modo karaoke: unidad UKaraokeQueue",
+          "author": "guidop182"
+        },
+        {
+          "sha": "b8deac8e4e44ce8f3230b77b591aa7c732ec943a",
+          "title": "Add files via upload",
+          "author": "guidop182"
+        },
+        {
+          "sha": "a35cac85f1904b86248913bb16898fd61f1bd852",
+          "title": "Create KARAOKE.md",
+          "author": "guidop182"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "guidop182/USDX",
+      "branch": "karaoke",
+      "head": "dbd976ac681df34f9c7d3fbcab361efcfbd32bc4",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 5,
+      "behind": 15,
+      "compareUrl": "https://github.com/guidop182/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...dbd976ac681df34f9c7d3fbcab361efcfbd32bc4",
+      "commits": [
+        {
+          "sha": "6bdbb2143682b3dd062bff34e591b3de5dafa39b",
+          "title": "Modo karaoke: pantallas",
+          "author": "guidop182"
+        },
+        {
+          "sha": "f8a7f3b8b29671c6f553e918c687916e92685a3f",
+          "title": "Add files via upload",
+          "author": "guidop182"
+        },
+        {
+          "sha": "af47a0284e51baf068d3faae10b6f03514e90cd3",
+          "title": "Add files via upload",
+          "author": "guidop182"
+        },
+        {
+          "sha": "56f7f554f5b41bf621ad640a5ec71bb596ddddde",
+          "title": "Add files via upload",
+          "author": "guidop182"
+        },
+        {
+          "sha": "dbd976ac681df34f9c7d3fbcab361efcfbd32bc4",
+          "title": "Add files via upload",
+          "author": "guidop182"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "poloio/USDX",
+      "branch": "trio",
+      "head": "93602a659a00d36fd1c05d2406ee8999c6fde7b5",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 19,
+      "behind": 12,
+      "compareUrl": "https://github.com/poloio/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...93602a659a00d36fd1c05d2406ee8999c6fde7b5",
+      "commits": [
+        {
+          "sha": "66dfe7e5b26286708ea8ff6a069c3ac64e7c286c",
+          "title": "Support songs with up to 6 singing parts (P1..P6)",
+          "author": "poloio"
+        },
+        {
+          "sha": "0e8bd4975bfe79a99e8ed7e569847024189fb85a",
+          "title": "Show the next line of each part below its current line",
+          "author": "poloio"
+        },
+        {
+          "sha": "d38e4b352384b6583d694be1622cdaecc4caf1e0",
+          "title": "Show which players sing a part when players share parts",
+          "author": "poloio"
+        },
+        {
+          "sha": "8fbcd24dd80593a46e15eae0c39c95c9a3b855ff",
+          "title": "Document songs with 3 to 6 parts, add a demo song",
+          "author": "poloio"
+        },
+        {
+          "sha": "ec35f03a313753df3d024bc47ba551f1ba350009",
+          "title": "Add ERROR_MULTI_TRACK_NOT_EDITABLE to all language files",
+          "author": "poloio"
+        },
+        {
+          "sha": "c024c40bf329ea7969b8291401270ce4641dcaf6",
+          "title": "Fork only: README section and release builds for trio-* tags",
+          "author": "poloio"
+        },
+        {
+          "sha": "07c9c576abf2ee46e25274672a7fe51c96be317f",
+          "title": "Docs: old duet files with P3, link to the format discussion",
+          "author": "poloio"
+        },
+        {
+          "sha": "e8c48bb1d55ab8f9bdae763ffb46f5b4e6c164ec",
+          "title": "Fork only: release job downloads only the game builds",
+          "author": "poloio"
+        },
+        {
+          "sha": "1ca0793148fdb7c7ffb72171857ef04baef1cfad",
+          "title": "Detect duet parts after empty lines below the header",
+          "author": "poloio"
+        },
+        {
+          "sha": "28ae5b63a1779515eeb529061eff1d6ecdfc8090",
+          "title": "Let players choose their part, place lyrics near their notes",
+          "author": "poloio"
+        },
+        {
+          "sha": "ec9699610d087c17451c162065083dd9ba15a5ef",
+          "title": "Editor: no crash on undo after switching duet tracks",
+          "author": "poloio"
+        },
+        {
+          "sha": "82befdfe1b04583fb2c00cc02ef8e3517e6faf80",
+          "title": "Edit songs with up to 6 parts in the song editor",
+          "author": "poloio"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "3Ryuusei3/USDX",
+      "branch": "develop",
+      "head": "9adf94721115f4cd565c3b9a5622ebb3ed4cc261",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 24,
+      "behind": 0,
+      "compareUrl": "https://github.com/3Ryuusei3/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...9adf94721115f4cd565c3b9a5622ebb3ed4cc261",
+      "commits": [
+        {
+          "sha": "b5bb135ba7114a22bf7c2f22a729dc71cfc054a9",
+          "title": "Spanish: translate the remaining non-editor texts",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "61977fa3e7da9ea5eb181211f9182ff401fc1d27",
+          "title": "Video: decode in a background thread to stop stutter and FPS drops",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "81cb64b3e75aff78f30b758c67a5fdf1d39713e5",
+          "title": "Sing: seek with Cmd instead of Ctrl on macOS",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "fb9f6a162f264215d8660eb9c71b0dceb094ed67",
+          "title": "SuperStar: Karaoke theme redesign and UI/UX engine improvements",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "b1830464ed848ae58876910f247b84e9068b2045",
+          "title": "Sing row with the name pill at the right, instant score bars, party screens",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "27e1b9ce7a47eb37e4605c33b573953116818ee8",
+          "title": "Karaoke theme: 3/4/6 player layouts, accent colour, UI polish",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "c94a7c03fd536b64e32e4c72cb7fd51c88bf02ca",
+          "title": "Cover loader: keep the thread alive when a cover fails",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "4d4db61c37f8264b92ab79ec3d50d1520838476e",
+          "title": "Translate the texts that were still in English in all languages",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "d353f463067ee0f2e37eab47b7e53c8cf9422edf",
+          "title": "Medley for every song: random 20-30 s range when there is no tag or refrain",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "10d8e0950b7d84f7e02d5840ac3c515fe25e6959",
+          "title": "Merge video-decode-thread into develop",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "aa4971164b2fa6017569dde8bc628a2f224655d2",
+          "title": "Merge seek-keys-cmd-mac-pr into develop",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "73798429f3c259a6bdc9d330ba58887627023ea0",
+          "title": "Merge translations into develop",
+          "author": "3Ryuusei3"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "3Ryuusei3/USDX",
+      "branch": "medley-all-songs",
+      "head": "d353f463067ee0f2e37eab47b7e53c8cf9422edf",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 1,
+      "behind": 0,
+      "compareUrl": "https://github.com/3Ryuusei3/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...d353f463067ee0f2e37eab47b7e53c8cf9422edf",
+      "commits": [
+        {
+          "sha": "d353f463067ee0f2e37eab47b7e53c8cf9422edf",
+          "title": "Medley for every song: random 20-30 s range when there is no tag or refrain",
+          "author": "3Ryuusei3"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "3Ryuusei3/USDX",
+      "branch": "pass-the-mic",
+      "head": "a71632370da96ebccbabfe36c99caddb5216bfda",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 1,
+      "behind": 0,
+      "compareUrl": "https://github.com/3Ryuusei3/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...a71632370da96ebccbabfe36c99caddb5216bfda",
+      "commits": [
+        {
+          "sha": "a71632370da96ebccbabfe36c99caddb5216bfda",
+          "title": "Pass the mic: option to hand the microphone to the next singer",
+          "author": "3Ryuusei3"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "3Ryuusei3/USDX",
+      "branch": "redesign",
+      "head": "0817c764d5146dfe49dadb8cccd2f82ad028c633",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 8,
+      "behind": 0,
+      "compareUrl": "https://github.com/3Ryuusei3/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...0817c764d5146dfe49dadb8cccd2f82ad028c633",
+      "commits": [
+        {
+          "sha": "fb9f6a162f264215d8660eb9c71b0dceb094ed67",
+          "title": "SuperStar: Karaoke theme redesign and UI/UX engine improvements",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "b1830464ed848ae58876910f247b84e9068b2045",
+          "title": "Sing row with the name pill at the right, instant score bars, party screens",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "27e1b9ce7a47eb37e4605c33b573953116818ee8",
+          "title": "Karaoke theme: 3/4/6 player layouts, accent colour, UI polish",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "c94a7c03fd536b64e32e4c72cb7fd51c88bf02ca",
+          "title": "Cover loader: keep the thread alive when a cover fails",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "c10c64545fd6a9f055df7140386463b97e44a5ea",
+          "title": "CLAUDE.md: document the branch layout (master, topic branches, develop)",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "70ebdc644d2c7d84b95a269c71bc55c92900c255",
+          "title": "CLAUDE.md: pass-the-mic now has its own branch",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "33b14c24e6812bde191be2eed8cd946bd1061bb8",
+          "title": "Karaoke theme: redesigned top-N screen",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "0817c764d5146dfe49dadb8cccd2f82ad028c633",
+          "title": "CLAUDE.md: drop the seek-keys branch",
+          "author": "3Ryuusei3"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "3Ryuusei3/USDX",
+      "branch": "spanish-translations",
+      "head": "b5bb135ba7114a22bf7c2f22a729dc71cfc054a9",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 1,
+      "behind": 0,
+      "compareUrl": "https://github.com/3Ryuusei3/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...b5bb135ba7114a22bf7c2f22a729dc71cfc054a9",
+      "commits": [
+        {
+          "sha": "b5bb135ba7114a22bf7c2f22a729dc71cfc054a9",
+          "title": "Spanish: translate the remaining non-editor texts",
+          "author": "3Ryuusei3"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "3Ryuusei3/USDX",
+      "branch": "translations",
+      "head": "4d4db61c37f8264b92ab79ec3d50d1520838476e",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 2,
+      "behind": 0,
+      "compareUrl": "https://github.com/3Ryuusei3/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...4d4db61c37f8264b92ab79ec3d50d1520838476e",
+      "commits": [
+        {
+          "sha": "b5bb135ba7114a22bf7c2f22a729dc71cfc054a9",
+          "title": "Spanish: translate the remaining non-editor texts",
+          "author": "3Ryuusei3"
+        },
+        {
+          "sha": "4d4db61c37f8264b92ab79ec3d50d1520838476e",
+          "title": "Translate the texts that were still in English in all languages",
+          "author": "3Ryuusei3"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "3Ryuusei3/USDX",
+      "branch": "video-decode-thread",
+      "head": "61977fa3e7da9ea5eb181211f9182ff401fc1d27",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 1,
+      "behind": 0,
+      "compareUrl": "https://github.com/3Ryuusei3/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...61977fa3e7da9ea5eb181211f9182ff401fc1d27",
+      "commits": [
+        {
+          "sha": "61977fa3e7da9ea5eb181211f9182ff401fc1d27",
+          "title": "Video: decode in a background thread to stop stutter and FPS drops",
+          "author": "3Ryuusei3"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "beta2",
+      "head": "966e27d96e91540a3e1658b6672d1c8f5553ed0f",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 38,
+      "behind": 659,
+      "compareUrl": "https://github.com/dgruss/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...966e27d96e91540a3e1658b6672d1c8f5553ed0f",
+      "commits": [
+        {
+          "sha": "b55e5aa545ac0a41584b56c6efe09fbe988feec4",
+          "title": "add config screen and config support for duet scores",
+          "author": "dgruss"
+        },
+        {
+          "sha": "afefc16709d5ed5ed0591eed575e059a958accaf",
+          "title": "duets go into highscore",
+          "author": "dgruss"
+        },
+        {
+          "sha": "c9ccd7cf961b7d7da4236950169aa7708fe0ec37",
+          "title": "fix stupid pascal syntax mistake",
+          "author": "dgruss"
+        },
+        {
+          "sha": "5016a3dc3689cfc00a7e12391f4166a06a25bca3",
+          "title": "Merge remote-tracking branch 'dgruss/ignorefreestyleend' into beta2",
+          "author": "dgruss"
+        },
+        {
+          "sha": "3702c0b896d19ca1a3c27bb7a309079e6f930acb",
+          "title": "Merge remote-tracking branch 'dgruss/duetscount' into beta2",
+          "author": "dgruss"
+        },
+        {
+          "sha": "5ebf3eac87b06b4ff46ed929e6f1a5c1c547744c",
+          "title": "usdxbox adaptations",
+          "author": "dgruss"
+        },
+        {
+          "sha": "36af2f364fcaecf9ff87b660e8dacb8fbcecfaee",
+          "title": "fix mic delay player dependency",
+          "author": "dgruss"
+        },
+        {
+          "sha": "3099a53a7521d0213d361624dfd4516008f56fb6",
+          "title": "usdxbox specific py script",
+          "author": "dgruss"
+        },
+        {
+          "sha": "0d34e165f222d77f590e0e39614954bed40a9b57",
+          "title": "improve name channel script and add startup script for mumble audio routing",
+          "author": "dgruss"
+        },
+        {
+          "sha": "446ee7b50ccd95f1866b4cf9339c93bf2f380588",
+          "title": "first version of top N score setting",
+          "author": "dgruss"
+        },
+        {
+          "sha": "75da2221acbdfd5697292a7d00604a1a11221120",
+          "title": "change top5 to configurable top N players",
+          "author": "dgruss"
+        },
+        {
+          "sha": "8a6c485158bbd22dea969f69f4f9596f00512cfe",
+          "title": "remove trailing whitespace",
+          "author": "dgruss"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "beta3",
+      "head": "310a6943733070bedca8ebed2a0a0f2798bdf04d",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 34,
+      "behind": 610,
+      "compareUrl": "https://github.com/dgruss/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...310a6943733070bedca8ebed2a0a0f2798bdf04d",
+      "commits": [
+        {
+          "sha": "b55e5aa545ac0a41584b56c6efe09fbe988feec4",
+          "title": "add config screen and config support for duet scores",
+          "author": "dgruss"
+        },
+        {
+          "sha": "afefc16709d5ed5ed0591eed575e059a958accaf",
+          "title": "duets go into highscore",
+          "author": "dgruss"
+        },
+        {
+          "sha": "c9ccd7cf961b7d7da4236950169aa7708fe0ec37",
+          "title": "fix stupid pascal syntax mistake",
+          "author": "dgruss"
+        },
+        {
+          "sha": "446ee7b50ccd95f1866b4cf9339c93bf2f380588",
+          "title": "first version of top N score setting",
+          "author": "dgruss"
+        },
+        {
+          "sha": "75da2221acbdfd5697292a7d00604a1a11221120",
+          "title": "change top5 to configurable top N players",
+          "author": "dgruss"
+        },
+        {
+          "sha": "8a6c485158bbd22dea969f69f4f9596f00512cfe",
+          "title": "remove trailing whitespace",
+          "author": "dgruss"
+        },
+        {
+          "sha": "6eb466973717c953bdcd8aaca2e67ee99b8face4",
+          "title": "more stats + adjust all languages for that",
+          "author": "dgruss"
+        },
+        {
+          "sha": "84f57e63cb8f146d2a9c9ab8a00b2eba049576c3",
+          "title": "remove debug",
+          "author": "dgruss"
+        },
+        {
+          "sha": "5402f1fa0a889b381bb104133e4bc7d38db93a5f",
+          "title": "whitespace fix",
+          "author": "dgruss"
+        },
+        {
+          "sha": "8956ed0d8f5cda98e2cd8ed45193e2b62648889d",
+          "title": "better default",
+          "author": "dgruss"
+        },
+        {
+          "sha": "407a7047eb6f300586a68b5b7e5885a57ddab39e",
+          "title": "automatically adjust to newlines in format string",
+          "author": "dgruss"
+        },
+        {
+          "sha": "c5b80bcd4bf2d3081314e3ffbbaa6eefb2f66377",
+          "title": "whitespace fix",
+          "author": "dgruss"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "cleanuptheme",
+      "head": "d50437d908a2368d90eea8aef7a3405f7e5f8ed5",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 2,
+      "behind": 127,
+      "compareUrl": "https://github.com/dgruss/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...d50437d908a2368d90eea8aef7a3405f7e5f8ed5",
+      "commits": [
+        {
+          "sha": "42e3f64fcc198bd95980883e31664dcbec897506",
+          "title": "allow themes to fall back to parent theme and remove duplicated resources",
+          "author": "dgruss"
+        },
+        {
+          "sha": "d50437d908a2368d90eea8aef7a3405f7e5f8ed5",
+          "title": "Fix theme fallback state",
+          "author": "dgruss"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "combined-duet-scores",
+      "head": "6e2ea75301225b19335cbc279252e92a94c7ba91",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 2,
+      "behind": 78,
+      "compareUrl": "https://github.com/dgruss/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...6e2ea75301225b19335cbc279252e92a94c7ba91",
+      "commits": [
+        {
+          "sha": "89fc66e4b2c5afcfe6b2519419dc456fd818f599",
+          "title": "Add separate high scores for duet tracks",
+          "author": "dgruss"
+        },
+        {
+          "sha": "6e2ea75301225b19335cbc279252e92a94c7ba91",
+          "title": "Add combined duet high scores",
+          "author": "dgruss"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "debouncemouse",
+      "head": "ac3a1e0ae78c5f07c8a479f28342f220859503df",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 1,
+      "behind": 90,
+      "compareUrl": "https://github.com/dgruss/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...ac3a1e0ae78c5f07c8a479f28342f220859503df",
+      "commits": [
+        {
+          "sha": "ac3a1e0ae78c5f07c8a479f28342f220859503df",
+          "title": "Improve song preview scheduling",
+          "author": "dgruss"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "duetscount",
+      "head": "f0ef67058627a37ea237d74b6cedf907f5039a81",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 1,
+      "behind": 127,
+      "compareUrl": "https://github.com/dgruss/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...f0ef67058627a37ea237d74b6cedf907f5039a81",
+      "commits": [
+        {
+          "sha": "f0ef67058627a37ea237d74b6cedf907f5039a81",
+          "title": "make duets go into highscore",
+          "author": "dgruss"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "editormaintainnewlines",
+      "head": "bc32379141ad9e0e0edae1ee04d9b305cd725150",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 1,
+      "behind": 127,
+      "compareUrl": "https://github.com/dgruss/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...bc32379141ad9e0e0edae1ee04d9b305cd725150",
+      "commits": [
+        {
+          "sha": "bc32379141ad9e0e0edae1ee04d9b305cd725150",
+          "title": "Preserve line endings when saving songs in editor",
+          "author": "dgruss"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "editormouse",
+      "head": "ecc0d55ddd1dd4c3711e6c52c53480c0b6868caa",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 4,
+      "behind": 127,
+      "compareUrl": "https://github.com/dgruss/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...ecc0d55ddd1dd4c3711e6c52c53480c0b6868caa",
+      "commits": [
+        {
+          "sha": "d541bf35d3e39f33f3fa0b5b2e362908a4cb1308",
+          "title": "Fix subtitle editor control targets",
+          "author": "dgruss"
+        },
+        {
+          "sha": "50cc282dc787e8a8085c5934ea468a9e8ead7eda",
+          "title": "Bound subtitle editor lyric hit testing",
+          "author": "dgruss"
+        },
+        {
+          "sha": "f911feac2c43c84000adfc6404ce7fd082ff1bd2",
+          "title": "Stop editor MIDI playback on navigation",
+          "author": "dgruss"
+        },
+        {
+          "sha": "ecc0d55ddd1dd4c3711e6c52c53480c0b6868caa",
+          "title": "Refine subtitle editor mouse note editing",
+          "author": "dgruss"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "editorwaveform",
+      "head": "0005cb8f4c2332f99031b23936e02dec9d38cdc1",
+      "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
+      "ahead": 142,
+      "behind": 420,
+      "compareUrl": "https://github.com/dgruss/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...0005cb8f4c2332f99031b23936e02dec9d38cdc1",
+      "commits": [
+        {
+          "sha": "748d58b4706bf624d68ea3927e00792c40783688",
+          "title": "allow much larger textures",
+          "author": "barbeque-squared"
+        },
+        {
+          "sha": "dec838089f17a5337fd0d3c6d293805c7afbd83c",
+          "title": "use multisampling",
+          "author": "barbeque-squared"
+        },
+        {
+          "sha": "a53a9e715d0a7b0a3a19449007b9fc57f8752052",
+          "title": "deprecate #RESOLUTION tag",
+          "author": "dgruss"
+        },
+        {
+          "sha": "d1ce08af8c6b010dd18f65f33ad4541a21eb8186",
+          "title": "refactor BPM to a single floating point number",
+          "author": "dgruss"
+        },
+        {
+          "sha": "f4ce968fa1acb9403245ca6a3bda39f299b843a2",
+          "title": "prevent Windows from making a screenshot while we make a screenshot",
+          "author": "dgruss"
+        },
+        {
+          "sha": "ae6dce570d398f51cd137f01fd5689e0e8e6fb79",
+          "title": "fix Alt+Key search",
+          "author": "dgruss"
+        },
+        {
+          "sha": "e965f1ae41ce43f0d63c0a064ddd75009218d515",
+          "title": "fix Alt+Key search",
+          "author": "dgruss"
+        },
+        {
+          "sha": "f4f168fc5679b62da4efd746bdae080287932e28",
+          "title": "let alt keys search more than 1 char",
+          "author": "dgruss"
+        },
+        {
+          "sha": "697f153ec97b293076f8642866c03639fed271f5",
+          "title": "allow to full screen the video preview with V in the song selection",
+          "author": "dgruss"
+        },
+        {
+          "sha": "479140c58cdd0bc9f852740665853f0d41c4e1b5",
+          "title": "avoid out-of-bounds access when config.ini has too high player counts",
+          "author": "dgruss"
+        },
+        {
+          "sha": "2f9a701f52d4b3751878afa74c1c8b6088d811d9",
+          "title": "jukebox replacement: a autoplay loop mode for the song screen",
+          "author": "dgruss"
+        },
+        {
+          "sha": "75b5567af9adfc7b929dddf90f83e592a577d2ab",
+          "title": "show lyrics in loop mode",
+          "author": "dgruss"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
       }
     }
   ],
