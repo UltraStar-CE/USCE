@@ -892,6 +892,8 @@ begin
     end
     else if (((PressedKey = SDLK_PAGEUP) or (PressedKey = SDLK_PAGEDOWN)) and (FreeListMode)) then
     begin
+      if not HasSelection then
+        Exit;
       I2 := Length(CatSongs.Song);
       //get first letter of artist of currently selected song
       UpperLetter := UCS4UpperCase(UTF8ToUCS4String(CatSongs.Song[(Interaction) mod I2].Artist)[0]);
