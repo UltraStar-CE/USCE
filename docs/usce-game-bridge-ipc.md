@@ -115,8 +115,9 @@ With `playerSetupSeconds: -1`, remote continuous playback waits on the normal
 player-setup screen. `continuous.handoff` identifies the selected `songId` and
 initial configured `singers` (slot/name), including local singers. It is replayed
 on reconnect and discarded once the song starts or the session stops.
+Each handoff includes a generation `handoffId`; pass it in the confirmation args.
 `continuous.confirm` accepts the normal setup action only while this remote
-session is waiting on that screen, outside a screen transition. Else it returns
+session is waiting on that screen, outside a screen transition or modal popup, and only for that handoff generation. Else it returns
 an unsuccessful ACK; it never starts or skips a different song. A successful ACK
 still needs the normal `song.started` event before clients show playback.
 `apiCapabilities` now uses the native command-name table plus `song.list`, so
