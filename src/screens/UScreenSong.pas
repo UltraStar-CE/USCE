@@ -86,6 +86,10 @@ type
       PreviewSettledTime: integer;
       LastPlaylistReloadTime: cardinal;
       PreviewEndReloaded: boolean;
+      JokerDebounce: array of record
+        LastTick: cardinal;
+        Active: boolean;
+      end;
 
       SongReturnPending: boolean; // song selection is pending a return from singing
 
@@ -1498,6 +1502,7 @@ begin
         end;
       SDLK_1:
         begin //Joker
+          if Repeated then Exit;
           if (SDL_ModState = KMOD_LSHIFT) then
           begin
           end
@@ -1513,6 +1518,7 @@ begin
 
       SDLK_2:
         begin //Joker
+          if Repeated then Exit;
           if (SDL_ModState = KMOD_LSHIFT) then
           begin
           end
@@ -1529,6 +1535,7 @@ begin
 
       SDLK_3:
         begin //Joker
+          if Repeated then Exit;
           if (SDL_ModState = KMOD_LSHIFT) then
           begin
           end
@@ -4510,12 +4517,22 @@ end;
 
 //Team No of Team (0-5)
 procedure TScreenSong.DoJoker (Team: integer; SDL_ModState: Word);
+var
+  Tick: cardinal;
 begin
+  if (Team < 0) or (Team >= Length(Party.Teams)) then Exit;
   if (Mode = smPartyClassic) and
      (High(Party.Teams) >= Team) and
      (Party.Teams[Team].JokersLeft > 0) then
   begin
+    if Length(JokerDebounce) <> Length(Party.Teams) then
+      SetLength(JokerDebounce, Length(Party.Teams));
+    Tick := SDL_GetTicks;
+    if JokerDebounce[Team].Active and
+      (cardinal(Tick - JokerDebounce[Team].LastTick) < 400) then Exit;
     if not SelectRandomSong then Exit;
+    JokerDebounce[Team].LastTick := Tick;
+    JokerDebounce[Team].Active := true;
 
     //Use Joker (unless ALT modifier is used to cheat)
     if (SDL_ModState <> KMOD_LALT) then
