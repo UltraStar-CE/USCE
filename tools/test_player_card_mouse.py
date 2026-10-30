@@ -13,7 +13,11 @@ class PlayerCardMouseTests(unittest.TestCase):
         if not compiler:
             self.skipTest('Free Pascal is not installed')
         root = Path(__file__).resolve().parents[1]
-        method = (root / 'src/screens/UScreenName.pas').read_text().split(
+        production = (root / 'src/screens/UScreenName.pas').read_text()
+        geometry = 'function TScreenName.DifficultySegmentRect' + production.split(
+            'function TScreenName.DifficultySegmentRect', 1)[1].split(
+            'function TScreenName.ParseMouse', 1)[0]
+        method = production.split(
             'function TScreenName.ParseMouse(', 1)[1]
         method = 'function TScreenName.ParseMouse(' + method.split(
             '  if (BtnDown) then', 1)[0] + 'end;\n'
@@ -38,6 +42,7 @@ type
   SelectsS: array[0..0] of TSlide;
   function InteractAt(X,Y: integer): integer;
   function CardRect(I: integer): TPlayerSlotRect;
+  function DifficultySegmentRect(PlayerID, Segment: integer): TPlayerSlotRect;
   procedure RefreshProfile;
   function ParseMouse(MouseButton: integer; BtnDown: boolean; X,Y: integer): boolean; override;
  end;
@@ -46,9 +51,9 @@ const SDL_BUTTON_LEFT=1; PlayerName=0; PlayerNameIID=2;
  PlayerSelectVoiceIID=6; PlayerSelectLevel=0;
 var
  Theme: record Name: record
-  Cards: record Enabled,LevelSegments:boolean; Columns,Rows:integer;
-   Panel: record H:real; end; end;
-  SelectPlayerLevel: record Y:real; end;
+  Cards: record Enabled,LevelSegments,EditOutside:boolean; Columns,Rows:integer;
+   Panel: record W,H:real; end; end;
+  SelectPlayerLevel: record X,Y:real; end;
  end; end;
  ScreenW,ScreenH,Screens,RenderW,RenderH: integer;
  Hit,Calls,LastX,LastY: integer; S:TScreenName;
@@ -61,13 +66,14 @@ begin Result:=Hit;end;
 function TScreenName.CardRect(I:integer):TPlayerSlotRect;
 begin Result.X:=I*100;Result.Y:=0;Result.W:=100;Result.H:=100;end;
 procedure TScreenName.RefreshProfile; begin end;
-''' + method + r'''
+''' + geometry + method + r'''
 procedure Check(Value:boolean;const Msg:string);
 begin if not Value then raise Exception.Create(Msg);end;
 begin
  ScreenW:=1600;ScreenH:=1200;Screens:=1;RenderW:=800;RenderH:=600;
  Theme.Name.Cards.Enabled:=true;Theme.Name.Cards.Columns:=2;
- Theme.Name.Cards.Rows:=1;Theme.Name.Cards.Panel.H:=100;
+ Theme.Name.Cards.Rows:=1;Theme.Name.Cards.Panel.H:=100;Theme.Name.Cards.Panel.W:=100;
+ Theme.Name.SelectPlayerLevel.X:=10;
  S:=TScreenName.Create;S.SelectedPlayerCount:=2;S.SelectsS[0]:=TSlide.Create;
  try
   Hit:=PlayerAvatarIID;S.ParseMouse(1,true,40,40);
@@ -83,6 +89,9 @@ begin
   Theme.Name.Cards.LevelSegments:=true;Theme.Name.SelectPlayerLevel.Y:=50;
   Hit:=PlayerSelectLevelIID;S.ParseMouse(1,true,350,110);
   Check((Calls=1) and (S.LevelIndex=2),'difficulty segment delegated twice');
+  Theme.Name.Cards.EditOutside:=true;
+  S.ParseMouse(1,true,40,110);
+  Check((Calls=1) and (S.LevelIndex=0),'external difficulty segment submitted setup');
   Theme.Name.Cards.Enabled:=false;Hit:=PlayerNameIID;
   S.ParseMouse(1,true,40,40);Check(Calls=2,'legacy click dispatch changed');
  finally S.SelectsS[0].Free;S.Free;end;
