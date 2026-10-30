@@ -163,6 +163,10 @@ jobs:
           ./autogen.sh
           ./configure --with-opencv --with-libprojectM
           make
+      - name: Test native library notifications
+        env:
+          USCE_FPC: C:/FPC/3.2.2/bin/i386-win32/fpc.exe
+        run: python -m unittest discover -s tools -p "test_library*.py" -v
       - name: Verify packaged Windows DLL loading without development paths
         run: python tools/check_windows_runtime.py game
       - name: Create installer
@@ -243,6 +247,8 @@ jobs:
       - name: Install Homebrew Dependencies
         run: |
           brew install fpc sdl2-compat sdl2_image automake portaudio lua ffmpeg opencv
+      - name: Test native library notifications
+        run: python3 -m unittest discover -s tools -p "test_library*.py" -v
       - name: Cache ProjectM
         if: inputs.use-caches
         id: cache-projectm
@@ -330,6 +336,7 @@ jobs:
         run: |
           cd dists/linux
           ./dockerenv.sh --use-existing=usce/buildenv:latest env USCE_THEMES_DIR=/src/.release-themes/bundle make compress
+          ./dockerenv.sh --use-existing=usce/buildenv:latest python3 -m unittest discover -s tools -p 'test_library*.py' -v
           mv USCE*.AppImage ../../USCE-linux-${{ env.versionName }}.AppImage
       - name: Upload Image Artifact
         uses: actions/upload-artifact@v6

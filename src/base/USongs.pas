@@ -52,7 +52,7 @@ uses
   UPlaylist,
   USong,
   UIni,
-  UCatCovers, ULibraryRefresh;
+  UCatCovers, ULibraryRefresh, ULibraryWatch;
 
 type
   TSongFilter = (
@@ -93,7 +93,11 @@ type
     fReloadAfterLockdown: boolean;
     fRefresh: TLibraryRefresh;
     fRefreshAgain: boolean;
+    fWatcher: TLibraryWatch;
+    fWatchRoots: string;
     fOwnerThread: TThreadID;
+    procedure PollLibraryChanges;
+    function RequestRefreshPaths(const Roots: TPathDynArray): boolean;
     function CollectSongFiles: TPathDynArray;
     procedure int_LoadSongList;
     procedure DoDirChanged(Sender: TObject);
@@ -337,6 +341,8 @@ end;
 
 procedure TSongs.StopRefresh;
 begin
+  FreeAndNil(fWatcher);
+  fWatchRoots := '';
   FreeAndNil(fRefresh); // TLibraryRefresh terminates and joins before freeing its data.
   fRefreshAgain := false;
   fProcessing := false;
@@ -351,13 +357,55 @@ begin
     fRefreshAgain := true;
 end;
 
-function TSongs.RequestRefresh(const Target: IPath): boolean;
-var Roots, FolderRoots: TPathDynArray; I: integer;
+procedure TSongs.PollLibraryChanges;
+var Paths, Changed: TStringList; Roots: TPathDynArray;
+  I: integer; AllRoots: boolean; Error: string;
+begin
+  if (SDL_ThreadID <> fOwnerThread) or LibraryLockdown.Active then Exit;
+  Paths := TStringList.Create;
+  Changed := TStringList.Create;
+  try
+    if Params.Song.IsSet then Paths.Add(Params.Song.ToUTF8)
+    else for I := 0 to SongPaths.Count - 1 do Paths.Add((SongPaths[I] as IPath).GetAbsolutePath.ToUTF8);
+    if (fWatcher = nil) or (Paths.Text <> fWatchRoots) then
+    begin
+      FreeAndNil(fWatcher);
+      fWatchRoots := Paths.Text;
+      if Paths.Count > 0 then fWatcher := TLibraryWatch.Create(Paths);
+    end;
+    if (fWatcher = nil) or (fRefresh <> nil) then Exit;
+    if not fWatcher.TakeChanges(Changed, AllRoots, Error) then
+    begin
+      if Error <> '' then Log.LogError(Error, 'Library watcher');
+      Exit;
+    end;
+    if Error <> '' then Log.LogError(Error, 'Library watcher');
+    if AllRoots then RequestRefresh
+    else
+    begin
+      SetLength(Roots, Changed.Count);
+      for I := 0 to Changed.Count - 1 do Roots[I] := Path(UTF8String(Changed[I]));
+      RequestRefreshPaths(Roots);
+    end;
+  finally Changed.Free; Paths.Free; end;
+end;
+
+function TSongs.RequestRefreshPaths(const Roots: TPathDynArray): boolean;
+var FolderRoots: TPathDynArray; I: integer;
 begin
   Result := false;
-  if (SDL_ThreadID <> fOwnerThread) or LibraryLockdown.Active or (fRefresh <> nil) then Exit;
+  if (SDL_ThreadID <> fOwnerThread) or LibraryLockdown.Active or
+     (fRefresh <> nil) or (Length(Roots) = 0) then Exit;
   SetLength(FolderRoots, SongPaths.Count);
   for I := 0 to SongPaths.Count - 1 do FolderRoots[I] := SongPaths[I] as IPath;
+  fRefresh := TLibraryRefresh.Create(Roots, FolderRoots, Ini.DefaultEncoding, Ini.AgeCountry);
+  fProcessing := true;
+  Result := true;
+end;
+
+function TSongs.RequestRefresh(const Target: IPath): boolean;
+var Roots: TPathDynArray; I: integer;
+begin
   if Target <> nil then
   begin
     SetLength(Roots, 1);
@@ -373,14 +421,12 @@ begin
     SetLength(Roots, SongPaths.Count);
     for I := 0 to SongPaths.Count - 1 do Roots[I] := SongPaths[I] as IPath;
   end;
-  if Length(Roots) = 0 then Exit;
-  fRefresh := TLibraryRefresh.Create(Roots, FolderRoots, Ini.DefaultEncoding, Ini.AgeCountry);
-  fProcessing := true;
-  Result := true;
+  Result := RequestRefreshPaths(Roots);
 end;
 
 function TSongs.RefreshReady: boolean;
 begin
+  PollLibraryChanges;
   Result := false;
   if (SDL_ThreadID <> fOwnerThread) or (fRefresh = nil) or
      not fRefresh.Finished or LibraryLockdown.Active then Exit;

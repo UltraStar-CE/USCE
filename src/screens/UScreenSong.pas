@@ -760,14 +760,6 @@ begin
       AltJumpPrefix := '';
     AltJumpModifiers := SDL_ModState;
 
-    if (PressedKey = SDLK_R) and ((SDL_ModState and KMOD_CTRL) <> 0) and
-       ((SDL_ModState and KMOD_SHIFT) <> 0) and ((SDL_ModState and KMOD_ALT) = 0) then
-    begin
-      if not Repeated and Songs.RequestRefresh then
-        WriteMessage(Language.Translate('LIBRARY_REFRESH_STARTED'));
-      Exit;
-    end;
-
     //Jump to Artist/Title
     if ((SDL_ModState and KMOD_LALT <> 0) and (FreeListMode)) then
     begin
