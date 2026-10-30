@@ -574,6 +574,7 @@ type
       function InitializeRecord(ScanMode: TAudioInputScanMode): boolean;
       function FinalizeRecord(): boolean;
 
+      function IsCapturing: boolean;
       procedure CaptureStart;
       procedure CaptureStop;
   end;
