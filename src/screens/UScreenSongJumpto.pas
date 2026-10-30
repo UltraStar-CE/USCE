@@ -80,7 +80,6 @@ type
     function SuggestionPrefix: UTF8String;
     procedure SetVisible(Value: boolean);
     procedure SetTextFound(Count: cardinal; SelectedSong: TSong);
-    function ApplyFilter: cardinal;
     function FilterSummary: UTF8String;
     procedure RefreshRows;
     procedure Changed;
@@ -89,6 +88,7 @@ type
     procedure ActivateAction(Action: integer);
     procedure MoveFocus(Direction: integer);
   public
+    function ApplyFilter: cardinal;
     constructor Create; override;
     destructor Destroy; override;
     function ParseInput(PressedKey: cardinal; CharCode: UCS4Char;
