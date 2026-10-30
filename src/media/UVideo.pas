@@ -1257,7 +1257,8 @@ begin
     end;
     SDL_UnlockMutex(fLock);
   end
-  else if ReachedEnd and fLoop and not DecodeFailed then
+  else if ReachedEnd and fLoop and not DecodeFailed and
+          (CurrentTime >= fFrameTime + fFrameDuration) then
   begin
     // we have to loop, so rewind
     SetPosition(0);
