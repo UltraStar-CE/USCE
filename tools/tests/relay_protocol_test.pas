@@ -218,6 +218,21 @@ begin
     Assert(TJSONObject(Probe.Sent.Items[Before]).Get('type', '') = 'api.state');
     Assert(TJSONObject(Probe.Sent.Items[Before]).Arrays['playerColors'].Strings[0] = '#123456',
       'Catalog refresh must retain the game color palette');
+    Game('{"type":"continuous.handoff","songId":3}');
+    Before := Probe.Sent.Count;
+    Relay('{"type":"room.resumed","roomId":"room","displayCode":"TEST"}');
+    Snapshot := nil;
+    for I := Before to Probe.Sent.Count - 1 do
+      if TJSONObject(Probe.Sent.Items[I]).Get('type', '') = 'continuous.handoff' then
+        Snapshot := TJSONObject(Probe.Sent.Items[I]);
+    Assert(Assigned(Snapshot), 'Pending handoff must be replayed after reconnect');
+    Assert(Snapshot.Get('songId', -1) = 3);
+    Game('{"type":"song.started","songId":3,"songSeq":50}');
+    Before := Probe.Sent.Count;
+    Relay('{"type":"room.resumed","roomId":"room","displayCode":"TEST"}');
+    for I := Before to Probe.Sent.Count - 1 do
+      Assert(TJSONObject(Probe.Sent.Items[I]).Get('type', '') <> 'continuous.handoff',
+        'Started songs must not replay an obsolete confirmation request');
   finally Adapter.Free; Probe.Free; end;
   WriteLn('Native relay protocol: profile/slot merge, controls, clocks, state authority, privacy and ended-song replay passed');
 end.
