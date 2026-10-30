@@ -338,3 +338,43 @@ jobs:
           path: USCE-linux-${{ env.versionName }}.AppImage
           if-no-files-found: error
           retention-days: 7
+
+  build_deb:
+    needs: resolve
+    name: Build Ubuntu 22.04 package (amd64)
+    runs-on: ubuntu-22.04
+    env:
+      USCE_RELEASE_VERSION: ${{ inputs.release-version }}
+      USCE_BUILD_CHANNEL: development
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Bundle reviewed themes
+        uses: ./.github/actions/bundle-themes
+      - name: Install native build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fpc automake build-essential pkg-config libsdl2-image-dev libavformat-dev libavcodec-dev libavutil-dev libswresample-dev libswscale-dev libsqlite3-dev libfreetype6-dev portaudio19-dev liblua5.3-dev fonts-dejavu-core dpkg-dev desktop-file-utils
+      - name: Build native game
+        run: |
+          ./autogen.sh
+          ./configure --prefix=/usr --with-opencv=no --with-libprojectM=no
+          make -j2
+          v=$(python3 tools/generate-version.py)
+          echo "versionName=${v/-dev./~dev.}" >> "$GITHUB_ENV"
+      - name: Build and inspect Debian package
+        run: |
+          python3 tools/build-deb.py --version "$versionName" --output deb-output --themes .release-themes/bundle
+          python3 tools/check_deb_install.py deb-output/*.deb
+          sudo apt-get install -y ./deb-output/*.deb
+          usce -help
+      - name: Upload Debian package
+        uses: actions/upload-artifact@v6
+        with:
+          name: USCE-linux-deb-${{ env.versionName }}
+          path: deb-output/*.deb
+          if-no-files-found: error
+          retention-days: 7

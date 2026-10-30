@@ -131,6 +131,20 @@ unlocking requires the password. The remaining singing configuration options are
 
 Omitted options use the saved continuous-playback profile.
 
+## Ubuntu package
+
+The native Ubuntu 22.04 amd64 CI build also produces a `.deb` with the reviewed
+Themes bundle. Download it from the build artifacts or release and install with
+`sudo apt install ./USCE-linux-deb-VERSION.deb`. This resolves runtime dependencies;
+Webcam and projectM support are omitted from
+this initial package. Songs, configuration and scores remain in your user directory
+and are not removed by uninstalling the package.
+
+For a local package, configure with `--prefix=/usr`, build, then run
+`python3 tools/build-deb.py --version VERSION --output deb-output --themes PATH`
+with the reviewed theme bundle. The package builder derives linked dependencies
+from the native executable and adds the dynamically loaded runtime libraries.
+
 ## Signed APT repository
 
 Ubuntu packages are published by the separate [UltraStar-CE/apt repository](https://github.com/UltraStar-CE/apt).
