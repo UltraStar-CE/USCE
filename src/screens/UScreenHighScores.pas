@@ -600,6 +600,7 @@ begin
 
   IsFadingOut := false;
   VisibleDifficulty := Player[0].Level;
+  if ScreenSong.Mode = smPartyClassic then VisibleDifficulty := Ini.Difficulty;
 
   UpdateEntryLayout;
   UpdateHeaderText;
@@ -609,7 +610,7 @@ begin
 
   // An explicitly timed continuous-mode screen also stays visible when this
   // difficulty has no saved scores yet.
-  if (Length(CurrentSong.Score[Player[0].Level]) = 0) and
+  if (Length(CurrentSong.Score[VisibleDifficulty]) = 0) and
      not ScreenContinuousPlayback.Session.Active then
   begin
     // Redirecting from OnShow replaces the pending screen before OnHide runs.
@@ -617,7 +618,7 @@ begin
     ReturnFromScores;
   end;
 
-  ShowScoresForDifficulty(Player[0].Level);
+  ShowScoresForDifficulty(VisibleDifficulty);
 end;
 
 procedure TScreenHighScores.ShowScoresForDifficulty(difficulty: integer);
