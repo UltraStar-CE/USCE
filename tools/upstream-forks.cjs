@@ -22,6 +22,22 @@ function activeForks(forks, now, ownRepository) {
   }).sort((a, b) => Date.parse(b.pushed_at) - Date.parse(a.pushed_at) || a.full_name.localeCompare(b.full_name));
 }
 
+function recentCommits(commits, now) {
+  const cutoff = new Date(now);
+  // Clamp month ends (October 31 -> April 30), rather than overflowing into May.
+  const day = cutoff.getUTCDate();
+  cutoff.setUTCDate(1);
+  cutoff.setUTCMonth(cutoff.getUTCMonth() - 6);
+  const last = new Date(Date.UTC(cutoff.getUTCFullYear(), cutoff.getUTCMonth() + 1, 0)).getUTCDate();
+  cutoff.setUTCDate(Math.min(day, last));
+  if (!Number.isFinite(cutoff.getTime())) throw Error('Invalid assessment time');
+  return commits.filter(c => {
+    const time = Date.parse(c.authoredAt);
+    if (!Number.isFinite(time)) throw Error('Missing commit author date');
+    return time >= cutoff.getTime();
+  });
+}
+
 function forkChanges(previous, snapshots) {
   if (previous && (previous.repository !== 'UltraStar-Deluxe/USDX' || !Array.isArray(previous.forks)))
     throw Error('Invalid fork assessment checkpoint');
@@ -105,12 +121,17 @@ async function trackForks({github, context, core, now = new Date()}) {
       }
       if (new Set(commits.map(c => c.sha)).size !== commits.length) throw Error('Duplicate fork commit inventory');
       if (commits.length !== comparison.ahead_by) throw Error('Incomplete fork commit inventory: ' + fork.full_name);
+      const inventory = commits.map(c => ({sha: c.sha,
+        title: c.commit.message.split('\n')[0], author: c.author?.login || c.commit.author.name,
+        authoredAt: c.commit.author.date}));
+      const eligible = recentCommits(inventory, now);
+      if (!eligible.length) continue;
       snapshots.push({repository: fork.full_name, branch: branch.name, head, upstreamHead,
         comparisonBase: base, comparisonKind: prior ? 'since-checkpoint' : 'outside-usce',
         ahead: comparison.ahead_by, behind: comparison.behind_by,
         compareUrl: 'https://github.com/' + ownRepository + '/compare/' + base + '...' + head,
-        commits: commits.map(c => ({sha: c.sha,
-          title: c.commit.message.split('\n')[0], author: c.author?.login || c.commit.author.name}))});
+        ignoredOldCommitCount: inventory.length - eligible.length,
+        commits: eligible});
     }
   }
   const changes = forkChanges(previous, snapshots);
@@ -125,4 +146,4 @@ async function trackForks({github, context, core, now = new Date()}) {
     (unavailableForks.length ? '\n\nUnavailable forks, not assessed: ' + unavailableForks.join(', ') : ''), {reopenClosed: true});
   core.notice('Fork assessment: ' + pr.html_url);
 }
-module.exports = {activeForks, forkChanges, trackForks};
+module.exports = {activeForks, recentCommits, forkChanges, trackForks};
