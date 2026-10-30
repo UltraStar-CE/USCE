@@ -70,6 +70,7 @@ type
 
     CanNonParty: Boolean; //< is playable when not in party mode
     CanParty: Boolean;    //< is playable in party mode
+    LocalHighscores: Boolean; //< full-length individual singing with standard scoring
 
     // one bit in the following settings stands for
     // a player or team count
@@ -137,6 +138,8 @@ type
     ShufflePool, ShuffleOrder: CardinalArray;
     NextShuffleIndex: cardinal;
     function NextRandomSong(const Candidates: CardinalArray): integer;
+    function LocalHighscoresEnabled: boolean;
+    function CurrentSingerName(Team: integer): UTF8String;
 
     property CurrentRound: Integer read CurRound;
 
@@ -257,6 +260,7 @@ var
 implementation
 
 uses
+  UIni,
   UGraphic,
   ULanguage,
   ULog,
@@ -431,6 +435,7 @@ begin
   Info.Parent := -1; //< not loaded by plugin (e.g. Duell)
   Info.CanNonParty := false;
   Info.CanParty := false;
+  Info.LocalHighscores := false;
   Info.PlayerCount := High(Integer); //< no restrictions either on player count
   Info.TeamCount := High(Integer);   //< nor on team count
   Info.Functions.BeforeSongSelect := ''; //< use default functions
@@ -931,6 +936,25 @@ begin
   end;
 end;
 
+function TPartyGame.LocalHighscoresEnabled: boolean;
+var Mode: integer;
+begin
+  Result := false;
+  if (Ini.PartyHighscores <> 1) or not bPartyGame or not bPartyStarted or
+    (CurRound < 0) or (CurRound >= Length(Rounds)) then Exit;
+  Mode := Rounds[CurRound].Mode; // random rounds already contain their resolved mode
+  Result := (Mode >= 0) and (Mode < Length(Modes)) and Modes[Mode].LocalHighscores;
+end;
+
+function TPartyGame.CurrentSingerName(Team: integer): UTF8String;
+begin
+  Result := '';
+  if (Team < 0) or (Team >= Length(Teams)) then Exit;
+  with Teams[Team] do
+    if (NextPlayer >= 0) and (NextPlayer < Length(Players)) then
+      Result := Players[NextPlayer].Name;
+end;
+
 procedure TPartyGame.CallAfterSing;
   var
     ExecuteDefault: boolean;
@@ -948,7 +972,9 @@ begin
   // execute default function:
   if ExecuteDefault then
   begin
-    if (bPartyGame) then
+    if bPartyGame and ScreenSing.LocalHighscoresAllowed then
+      Display.FadeTo(@ScreenHighScores)
+    else if (bPartyGame) then
       // display party score screen
       Display.FadeTo(@ScreenPartyScore)
     else //display standard score screen

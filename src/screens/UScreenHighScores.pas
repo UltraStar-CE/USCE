@@ -66,6 +66,7 @@ type
       procedure UpdateEntryLayout;
       procedure UpdateColumnLayout;
       procedure UpdateHeaderText;
+      procedure ReturnFromScores;
     public
       TextTitle:            integer;
       TextWhereAmI:         integer;
@@ -103,6 +104,7 @@ const
 implementation
 
 uses
+  USong,
   UDataBase,
   UGraphic,
   UHelp,
@@ -461,6 +463,17 @@ begin
   Text[TextWhereAmI].Text := FormatEntryCountText(Theme.HighScores.TextWhereAmI.Text);
 end;
 
+procedure TScreenHighScores.ReturnFromScores;
+begin
+  if (ScreenSong.Mode = smPartyClassic) and ScreenSing.LocalHighscoresAllowed then
+    FadeTo(@ScreenPartyScore)
+  else
+  begin
+    ScreenSong.PreservePreviewForReturn;
+    FadeTo(@ScreenSong);
+  end;
+end;
+
 function TScreenHighScores.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
 begin
   if ScreenContinuousPlayback.HandlePlaybackKey(PressedKey, PressedDown, Repeated) then Exit(true);
@@ -484,8 +497,7 @@ begin
         begin
           if (not IsFadingOut) then
           begin
-            ScreenSong.PreservePreviewForReturn;
-            FadeTo(@ScreenSong);
+            ReturnFromScores;
             IsFadingOut := true;
           end;
         end;
@@ -602,8 +614,7 @@ begin
   begin
     // Redirecting from OnShow replaces the pending screen before OnHide runs.
     Background.OnFinish;
-    ScreenSong.PreservePreviewForReturn;
-    FadeTo(@ScreenSong);
+    ReturnFromScores;
   end;
 
   ShowScoresForDifficulty(Player[0].Level);

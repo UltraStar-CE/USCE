@@ -173,6 +173,7 @@ type
     PictureAspectCorrection: TAspectCorrection;
     FadeOut: boolean;
 
+    function LocalHighscoresAllowed: boolean;
     procedure ClearSettings;
     procedure AllNotesVisible(visible: boolean);
     procedure ApplySettings; //< applies changes of settings record
@@ -1623,6 +1624,14 @@ begin
   Sing(Self);
 end;
 
+function TScreenSingController.LocalHighscoresAllowed: boolean;
+begin
+  Result := (PlayersPlay > 0) and SungToEnd and not PlaybackSeeked and
+    ((ScreenSong.Mode = smNormal) or
+     ((ScreenSong.Mode = smPartyClassic) and not CurrentSong.isDuet and
+      Party.LocalHighscoresEnabled));
+end;
+
 procedure TScreenSingController.Finish;
 var
   I, J:     integer;
@@ -1636,12 +1645,11 @@ begin
   if PlayersPlay > 0 then AudioInput.CaptureStop;
   AudioPlayback.SetSyncSource(nil);
 
-  if (PlayersPlay > 0) and (ScreenSong.Mode = smNormal) and SungToEnd and
-     not PlaybackSeeked then
+  if LocalHighscoresAllowed then
   begin
     SaveLocalScores;
 
-    if (Length(DllMan.Websites) > 0) then
+    if (ScreenSong.Mode = smNormal) and (Length(DllMan.Websites) > 0) then
     begin
       AutoSendScore;
       AutoSaveScore;
@@ -1960,9 +1968,15 @@ begin
         Score1 := Round(Player[I].ScoreTotalInt);
         if Score1 > 0 then
         begin
+          Name1 := Player[I].Name;
+          if ScreenSong.Mode = smPartyClassic then
+          begin
+            Name1 := Party.CurrentSingerName(I);
+            if Name1 = '' then Continue;
+          end;
           DataBase.AddScore(CurrentSong, Player[I].Level,
               Length(CurrentSong.Tracks), 1 shl Player[I].Track,
-              Player[I].Name, Score1);
+              Name1, Score1);
           Sung := true;
         end;
       end;
