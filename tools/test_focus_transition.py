@@ -57,3 +57,59 @@ end.
                                     capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             subprocess.run([str(path.with_suffix('.exe' if os.name == 'nt' else ''))], check=True)
+
+    def test_outline_uses_physical_scale_for_wide_and_tall_buttons(self):
+        compiler = os.environ.get('USCE_FPC') or shutil.which('fpc')
+        if not compiler:
+            self.skipTest('Free Pascal is not installed')
+        source = (Path(__file__).resolve().parents[1] / 'src/menu/UMenuButton.pas').read_text()
+        geometry = source.split('  // Shape fractions use physical pixels, matching the renderer.\n', 1)[1].split('  FocusTexture.Alpha :=', 1)[0]
+        harness = '''program FocusGeometry;
+{$mode delphi}
+uses Math, SysUtils;
+const lsStretch = 0;
+type TTexture = class
+  W, H, Z, CornerRadius, OutlineWidth: single;
+  ScaleMode: integer;
+end;
+var FocusTexture, Texture: TTexture;
+    ShortSide, PixelScale, UnitW, UnitH, FocusRadius, FocusWidth, SX, SY: single;
+function GetLayoutScaleX: single; begin Result := SX; end;
+function GetLayoutScaleY: single; begin Result := SY; end;
+procedure Calculate;
+begin
+''' + geometry + '''
+end;
+procedure Check(W, H, ScaleX, ScaleY, UX, UY: single);
+var Expected: single;
+begin
+  SX := ScaleX; SY := ScaleY; UnitW := UX; UnitH := UY;
+  FocusTexture.W := W * UX; FocusTexture.H := H * UY;
+  Calculate;
+  Expected := Min(UX * SX, UY * SY);
+  if Abs(FocusTexture.OutlineWidth * ShortSide - 3 * Expected) > 0.001 then
+    raise Exception.Create('Outline width changes with button aspect ratio');
+  if Abs(FocusTexture.CornerRadius * ShortSide - 12 * Expected) > 0.001 then
+    raise Exception.Create('Corner radius changes with button aspect ratio');
+end;
+begin
+  FocusTexture := TTexture.Create; Texture := TTexture.Create;
+  FocusWidth := 3; FocusRadius := 12;
+  Check(100, 50, 2.4, 1.8, 0.75, 1);
+  Check(50, 100, 2.4, 1.8, 0.75, 1);
+  Check(100, 50, 3.2, 1.8, 0.5625, 1);
+  Check(50, 100, 3.2, 1.8, 0.5625, 1);
+  Check(100, 50, 2, 2, 1, 1);
+  Check(50, 100, 2, 2, 1, 1);
+  Check(100, 50, 2.4, 1.8, 1, 1);
+  FocusTexture.Free; Texture.Free;
+  WriteLn('PASS: uniform 16:9, 21:9, 4:3 and stretch outline geometry');
+end.
+'''
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'focus_geometry.pas'
+            path.write_bytes(harness.encode())
+            result = subprocess.run([compiler, '-Mdelphi', '-Ciro', str(path)], cwd=directory,
+                                    capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            subprocess.run([str(path.with_suffix('.exe' if os.name == 'nt' else ''))], check=True)
