@@ -1,0 +1,19 @@
+name: Check APT repository
+on:
+  pull_request:
+    paths:
+      - tools/apt-repository.py
+      - tools/test_apt_repository.py
+      - .github/workflows/apt-repository*.yml
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - run: sudo apt-get update && sudo apt-get install -y apt-utils dpkg-dev gnupg
+      - run: python3 -m unittest discover -s tools -p test_apt_repository.py -v
