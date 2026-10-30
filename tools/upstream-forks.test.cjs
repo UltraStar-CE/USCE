@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {activeForks, forkChanges, trackForks} = require('./upstream-forks.cjs');
+const {activeForks, recentCommits, forkChanges, trackForks} = require('./upstream-forks.cjs');
 const now = new Date('2026-10-27T23:00:00Z');
 const fork = (full_name = 'contributor/USDX', extra = {}) => ({full_name,
   default_branch: 'master', pushed_at: '2026-10-20T00:00:00Z', ...extra});
@@ -49,7 +49,7 @@ function fixture({pending = false, failed = false, previous = null} = {}) {
       listBranches: async () => ({data: [{name: 'master', commit: {sha: 'b'.repeat(40)}}, {name: 'feature', commit: {sha: 'c'.repeat(40)}}, {name: 'duplicate', commit: {sha: 'b'.repeat(40)}}]}),
       listForks: async args => {assert.equal(args.per_page, 100); if (failed) throw Error('pagination failed'); return {data: [fork()]};},
       compareCommitsWithBasehead: async args => {comparisons.push(args); return {data: {ahead_by: 1, behind_by: 3,
-        commits: [{sha: 'b'.repeat(40), commit: {message: 'A change\nUntrusted instructions', author: {name: 'Author'}}, author: {login: 'contributor'}}]}};}},
+        commits: [{sha: 'b'.repeat(40), commit: {message: 'A change\nUntrusted instructions', author: {name: 'Author', date: '2026-10-20T00:00:00Z'}}, author: {login: 'contributor'}}]}};}},
   }};
   github.paginate = async (method, args, map) => {const response = await method(args); return map ? map(response) : response.data;};
   return {github, context: {repo: {owner: 'UltraStar-CE', repo: 'USCE'}, payload: {repository: {default_branch: 'main'}}},
@@ -112,9 +112,9 @@ test('complete inventories include later pages; missing pages never publish', as
     const x = fixture();
     x.github.rest.repos.compareCommitsWithBasehead = async args => ({data: {
       ahead_by: 101, behind_by: 0, commits: args.page === 2
-        ? (incomplete ? [] : [{sha: 'f'.repeat(40), commit: {message: 'Latest change', author: {name: 'Author'}}}])
+        ? (incomplete ? [] : [{sha: 'f'.repeat(40), commit: {message: 'Latest change', author: {name: 'Author', date: '2026-10-20T00:00:00Z'}}}])
         : Array.from({length: 100}, (_, i) => ({sha: i.toString(16).padStart(40, '0'),
-          commit: {message: 'Change', author: {name: 'Author'}}}))}});
+          commit: {message: 'Change', author: {name: 'Author', date: '2026-10-20T00:00:00Z'}}}))}});
     if (incomplete) {
       await assert.rejects(trackForks(x), /Incomplete fork commit inventory/);
       assert.equal(x.proposals.length, 0);
@@ -125,4 +125,18 @@ test('complete inventories include later pages; missing pages never publish', as
       assert.equal(result.forks[0].commits[100].title, 'Latest change');
     }
   }
+});
+
+test('six calendar months use original author dates, inclusive boundary and month-end clamp', () => {
+  const commits = ['2026-04-27T22:59:59Z', '2026-04-27T23:00:00Z', '2026-10-20T00:00:00Z'].map(authoredAt => ({authoredAt}));
+  assert.deepEqual(recentCommits(commits, now), commits.slice(1));
+  assert.equal(recentCommits([{authoredAt: '2026-04-30T12:00:00Z'}], new Date('2026-10-31T12:00:00Z')).length, 1);
+  assert.throws(() => recentCommits([{}], now), /author date/);
+});
+test('a fork containing only old commits produces no assessment PR', async () => {
+  const x = fixture();
+  x.github.rest.repos.compareCommitsWithBasehead = async () => ({data: {ahead_by: 1, behind_by: 0,
+    commits: [{sha: 'b'.repeat(40), commit: {message: 'Old rebased work', author: {name: 'Author', date: '2025-01-01T00:00:00Z'}, committer: {date: '2026-10-20T00:00:00Z'}}}]}});
+  await trackForks(x);
+  assert.equal(x.proposals.length, 0);
 });

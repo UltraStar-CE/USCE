@@ -116,7 +116,7 @@ deciding to merge.
 
 Known branches are compared with their last recorded head. Newly discovered
 branches are compared with USCE main, excluding commits already in its history.
-The complete paginated commit inventory is retained; excerpts are only a summary.
+The complete commit inventory is paginated before applying the six-month author-date cutoff; eligible commits and the number excluded are recorded. Excerpts are only a summary.
 Prior heads and decisions remain in assessment history. Shared commits are
 presented once across the batch and previous inventories. A new push elsewhere
 in a fork does not make its old branch history new development.
@@ -124,5 +124,5 @@ in a fork does not make its old branch history new development.
 Assessors check rebased/adapted equivalents against USCE source and existing
 PRs, record covered/superseded/rejected work with evidence, and link unresolved
 work to existing follow-ups. These semantic decisions are not inferred from
-commit titles or ancestry. Initial old history is assessed once. Reports should
+commit titles or ancestry. Commits older than six calendar months are excluded using their original author date, including recently rebased commits. Old-only branches produce no proposal. Reports should
 provide recommendations and concrete follow-ups rather than another reading list.
