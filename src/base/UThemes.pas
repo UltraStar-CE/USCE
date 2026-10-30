@@ -2465,6 +2465,8 @@ begin
         EditSub.Microphone.Y := 10;
         EditSub.Microphone.W := 220;
         EditSub.Microphone.H := 24;
+        EditSub.Microphone.SelectW := EditSub.Microphone.W;
+        EditSub.Microphone.SelectH := EditSub.Microphone.H;
         EditSub.Microphone.Visible := true;
       end;
       ThemeLoadSelectSlide(EditSub.SlideTitle, 'EditSubTitle');
