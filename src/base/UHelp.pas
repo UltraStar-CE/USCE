@@ -73,6 +73,7 @@ type
       AEntry:       TEntry;
       List:         array of TLanguageList;
       Implode_Glue1, Implode_Glue2: String;
+      procedure LoadLanguage(const Language: String);
     public
       MaxLines: integer;
       constructor Create;
@@ -113,8 +114,7 @@ begin
   Implode_Glue1 := ', ';
   Implode_Glue2 := ' and ';
 
-  if (Length(List) = 0) then //No Language Files Loaded -> Abort Loading
-    Log.CriticalError('Could not load any Language File (Help System)');
+  // Missing help files must not prevent the game from starting.
 
   //Standard Language (If a Language File is Incomplete)
   //Then use English Language
@@ -176,6 +176,27 @@ end;
 //ChangeLanguage - Load the specified LanguageFile
 //----------
 procedure THelp.ChangeLanguage(Language: String);
+begin
+  SetLength(Entry, 0);
+  Implode_Glue1 := ', ';
+  Implode_Glue2 := ' and ';
+  try
+    LoadLanguage(Language);
+  except
+    // Help is optional. An unreadable translation uses the English cache.
+    SetLength(Entry, 0);
+    if not SameText(Language, 'English') then
+    begin
+      try
+        LoadLanguage('English');
+      except
+        SetLength(Entry, 0);
+      end;
+    end;
+  end;
+end;
+
+procedure THelp.LoadLanguage(const Language: String);
 var
   IniFile:    TIniFile;
   E:          integer; // entry
@@ -189,6 +210,8 @@ var
   ActSub:     integer;
   ActKey:     integer;
   ActSubEntry:    integer;
+  InvalidEntry: boolean;
+  DefaultTitle, DefaultDescription: string;
 
   function GetIDStr(ID: integer):string;
   var
@@ -203,7 +226,7 @@ var
   var
     I:  Integer;
   begin
-    Result := 'Error';
+    Result := Key;
     for I := 0 to Length(Keys) - 1 do
     begin
       if Keys[I].Key=Key then
@@ -215,6 +238,9 @@ var
   end;
 
 begin
+  IniFile := nil;
+  S := nil;
+  try
   IniFile := TIniFile.Create(LanguagesPath.toNative() + Language + '.ini');
 
   SetLength(Keys, 0);
@@ -237,18 +263,36 @@ begin
   SetLength(Entry, 0);
   num := IniFile.ReadInteger('config', 'NumIDs', 0);
 
+  if (num < 0) or (num > 1000) then
+    raise EConvertError.Create('Invalid help entry count');
+
   if num>0 then
   begin
     SetLength(Entry, num);
     for I:=1 to num do
     begin
 
+      InvalidEntry := false;
+      DefaultTitle := '';
+      DefaultDescription := '';
+      for J := 0 to High(SEntry) do
+        if SEntry[J].ID = GetIDStr(I) then
+        begin
+          DefaultTitle := SEntry[J].Title;
+          DefaultDescription := SEntry[J].Description;
+          break;
+        end;
       Entry[I-1].ID:= GetIDStr(I);
-      Entry[I-1].Title := IniFile.ReadString(GetIDStr(I), 'Title', 'error title: ' + GetIDStr(I));
-      Entry[I-1].Description := IniFile.ReadString(GetIDStr(I), 'Description', 'error description: ' + GetIDStr(I));
+      if not IniFile.SectionExists(GetIDStr(I)) then
+      begin
+        Entry[I-1].ID := '';
+        Continue;
+      end;
+      Entry[I-1].Title := IniFile.ReadString(GetIDStr(I), 'Title', DefaultTitle);
+      Entry[I-1].Description := IniFile.ReadString(GetIDStr(I), 'Description', DefaultDescription);
 
       //read subs, sections and keymapping
-      S := TStringList.Create;
+      S.Clear;
       IniFile.ReadSectionValues(GetIDStr(I), S);
       ActSub := -1;
       ActSubEntry := -1;
@@ -263,15 +307,21 @@ begin
         else if S.Names[E] = 'IMPLODE_GLUE2' then
           Implode_Glue2 := ' ' + S.ValueFromIndex[E] + ' ';
 
-        if (S.Names[E] <> 'Title') and (S.Names[E] <> 'Description') then
+        if not SameText(S.Names[E], 'Title') and not SameText(S.Names[E], 'Description') and
+           not SameText(S.Names[E], 'IMPLODE_GLUE1') and not SameText(S.Names[E], 'IMPLODE_GLUE2') then
         begin
           tempStr := S.Names[E];
 
           SL:=TStringList.Create;
           try
             ExtractStrings(['_'], [], PChar(tempStr), SL);
+            if SL.Count = 0 then
+            begin
+              InvalidEntry := true;
+              Continue;
+            end;
             //check new Sub
-            if SL[0]='SUB' then
+            if SameText(SL[0], 'SUB') then
             begin
               inc(ActSub);
               ActSubEntry := -1;
@@ -281,15 +331,20 @@ begin
             end
 
             //check sub entry
-            else if SL[0]='ENT' then
+            else if SameText(SL[0], 'ENT') then
             begin
+              if ActSub < 0 then
+              begin
+                InvalidEntry := true;
+                Continue;
+              end;
               inc(ActSubEntry);
               SetLength(Entry[I-1].Subs[ActSub].text, ActSubEntry+1);
               Entry[I-1].Subs[ActSub].text[ActSubEntry] := S.ValueFromIndex[E];
             end
 
             //check new section
-            else if SL[0]='SEC' then
+            else if SameText(SL[0], 'SEC') then
             begin
               inc(ActSection);
               ActKey := -1;
@@ -300,7 +355,7 @@ begin
             //read keymap
             else if ActSection=-1 then
             begin
-              Log.LogError('No section in keymapping of ' + GetIDStr(I) + ' in ' + language + '.ini');
+              InvalidEntry := true;
             end else
             begin
               inc(ActKey);
@@ -319,11 +374,17 @@ begin
         end;
       end;
 
-      S.Free;
+      // Malformed localized topics fall back as a whole. In English, retain
+      // the usable text and ignore malformed lines rather than losing help.
+      if InvalidEntry and not SameText(Language, 'English') then
+        Entry[I-1].ID := '';
     end;
   end;
 
-  IniFile.Free;
+  finally
+    S.Free;
+    IniFile.Free;
+  end;
 end;
 
 function THelp.SetHelpID(ID: String):boolean;
