@@ -23,6 +23,17 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: git -c core.whitespace=blank-at-eol diff --check --no-ext-diff "$BASE_SHA...$HEAD_SHA" -- . ':!src/lib' ':!src/webSDK'
+      - name: Read pinned Modern revision
+        id: modern-pin
+        run: python3 tools/bundle-themes.py pin >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          repository: UltraStar-CE/Themes
+          ref: ${{ steps.modern-pin.outputs.sha }}
+          path: .release-themes/source
+          persist-credentials: false
+      - name: Check bundled Modern against the pinned source
+        run: python3 tools/bundle-themes.py check-modern
       - name: Required builds for code and build changes
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         with:

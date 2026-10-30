@@ -84,4 +84,6 @@ __pycache__/
 /game/song-problems.json
 /game/song-problems.json.tmp
 /game/song-problems.json.bak
-/game/themes/
+/game/themes/*
+!/game/themes/Modern.ini
+!/game/themes/Modern/

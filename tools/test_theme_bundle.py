@@ -4,6 +4,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location('bundle_themes', Path(__file__).with_name('bundle-themes.py'))
 themes = importlib.util.module_from_spec(spec)
@@ -83,11 +84,54 @@ class ThemeBundleTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'repository root'):
             themes.bundle(self.source / 'Modern', self.root / 'subset', self.pin)
 
-    def test_development_setup_preserves_existing_local_themes(self):
+    def test_modern_comparison_detects_changed_missing_and_extra_files(self):
+        destination = self.root / 'bundled'
+        themes.bundle(self.source, destination, self.pin)
+        themes.modern(self.source, destination, self.pin)
+        asset = destination / 'Modern' / 'asset with spaces.png'
+        asset.write_bytes(b'changed')
+        with self.assertRaisesRegex(ValueError, 'asset with spaces'):
+            themes.modern(self.source, destination, self.pin)
+        asset.unlink()
+        with self.assertRaisesRegex(ValueError, 'asset with spaces'):
+            themes.modern(self.source, destination, self.pin)
+        asset.write_bytes(b'asset bytes')
+        (destination / 'Modern' / 'extra.png').write_bytes(b'extra')
+        with self.assertRaisesRegex(ValueError, 'extra.png'):
+            themes.modern(self.source, destination, self.pin)
+
+    def test_sync_replaces_clean_tracked_files_but_refuses_local_edits(self):
+        destination = self.root / 'game-repo'
+        destination.mkdir()
+        subprocess.run(['git', 'init', '--quiet', str(destination)], check=True)
+        (destination / 'Modern.ini').write_text('old')
+        subprocess.run(['git', '-C', str(destination), 'add', '.'], check=True)
+        subprocess.run(['git', '-C', str(destination), '-c', 'user.name=Test',
+                        '-c', 'user.email=test@example.invalid', 'commit', '--quiet', '-m', 'fixture'], check=True)
+        themes.modern(self.source, destination, self.pin, sync=True)
+        themes.modern(self.source, destination, self.pin)
+        (destination / 'Modern.ini').write_text('local edit')
+        with self.assertRaisesRegex(ValueError, 'Commit or stash'):
+            themes.modern(self.source, destination, self.pin, sync=True)
+        self.assertEqual((destination / 'Modern.ini').read_text(), 'local edit')
+
+    def test_development_setup_preserves_additions_and_refuses_conflicts_before_copying(self):
         destination = self.root / 'local-themes'
         destination.mkdir()
         artwork = destination / 'custom.png'
         artwork.write_bytes(b'local artwork')
-        with self.assertRaisesRegex(ValueError, 'never overwritten'):
+        run = subprocess.run
+        def local_fetch(args, **kwargs):
+            args = list(args)
+            if 'fetch' in args:
+                args[-2] = str(self.source)
+            return run(args, **kwargs)
+        with patch.object(themes.subprocess, 'run', side_effect=local_fetch):
             themes.setup(destination, self.pin)
-        self.assertEqual(artwork.read_bytes(), b'local artwork')
+            themes.setup(destination, self.pin)
+            self.assertEqual(artwork.read_bytes(), b'local artwork')
+            (destination / 'Modern.ini').write_text('local edit')
+            (destination / 'Inherited.ini').unlink()
+            with self.assertRaisesRegex(ValueError, 'never overwritten'):
+                themes.setup(destination, self.pin)
+            self.assertFalse((destination / 'Inherited.ini').exists())

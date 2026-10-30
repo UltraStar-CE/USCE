@@ -50,17 +50,27 @@ builds, run `python3 tools/generate-version.py` before compiling.
 
 - `git clone https://github.com/UltraStar-CE/USCE`
 - `cd USCE`
-- `python3 tools/bundle-themes.py setup` (Windows: `python`)
 - Windows only: compile the DLLs with `make -C dists/windows install`
 - `./autogen.sh`
 - `./configure` (see optional flags below)
 - `make` (on macOS: `make macos-standalone-app`)
 - `./game/usce[.exe]` (on MacOS: `open "UltraStar Community Edition.app"`)
 
-Themes live in the separate Themes repository. Setup downloads the exact revision
-in `themes.json` into `game/themes`; existing local themes are never overwritten.
-Release packages include that same pinned snapshot. To update a development
-installation, move the existing themes directory aside before running setup again.
+Modern is bundled, so a checkout runs without downloading themes. Themes is the
+source of truth: the bundled `Modern.ini` and `Modern/` assets must match the
+exact revision in `themes.json`. CI checks missing, extra and changed files.
+
+After merging a Modern change in Themes, update the pin, fetch that exact
+commit into `.release-themes/source`, then run
+`python3 tools/bundle-themes.py sync-modern`. Commit the pin and synchronized
+files together. The sync command refuses dirty Modern files and preserves
+untracked custom assets. `check-modern` performs the same comparison without
+writing. On Windows use `python` instead of `python3`.
+
+Optional themes can be installed with `python3 tools/bundle-themes.py setup`.
+Setup adds missing files from the pinned snapshot, preserves local additions,
+and refuses conflicting existing files before copying anything. Release
+packages include the complete pinned snapshot.
 
 On Windows, `make` builds the game and its enabled wrappers; the separate
 dependency step supplies the runtime DLLs. If launching reports a missing DLL,
