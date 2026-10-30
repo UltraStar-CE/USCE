@@ -61,6 +61,7 @@ begin
   InitializeVideo; P := VideoPlayback;
   for I := 1 to 5 do
   begin
+    Red := 0; Green := 0; Blue := 0;
     V := P.Open(Path(ParamStr(1))); Check(V <> nil, 'fixture did not open');
     V.Play; AwaitColor(0.2, 0);
     V.Pause; BeforePause := Updates;
@@ -81,6 +82,19 @@ begin
     Start := SDL_GetTicks; V := nil;
     Check(SDL_GetTicks - Start < 2000, 'decoder close did not join promptly');
   end;
-  WriteLn('PASS: main-thread uploads, pause, seek generations, backward seek, EOF loop and repeated close');
+  V := P.Open(Path(ParamStr(2))); Check(V <> nil, 'slow fixture did not open');
+  V.SetPosition(2.1); AwaitColor(2.1, 2); V.Loop := true;
+  // An exhausted queue must not truncate the final frame's display interval.
+  for I := 1 to 25 do
+  begin
+    V.GetFrame(2.2); SDL_Delay(2);
+    Check(Blue > 200, 'loop restarted before the final frame duration elapsed');
+  end;
+  Start := SDL_GetTicks;
+  repeat V.GetFrame(3.0); SDL_Delay(2);
+  until (Red > 200) or (SDL_GetTicks - Start > 2000);
+  Check(Red > 200, 'loop did not restart after final-frame duration');
+  V := nil;
+  WriteLn('PASS: main-thread uploads, pause, seek generations, backward seek, EOF loop, final-frame duration and repeated close');
   P := nil; Renderer.Free; Renderer := nil;
 end.

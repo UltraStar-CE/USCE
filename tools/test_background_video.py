@@ -30,6 +30,12 @@ def main():
                         '-f', 'rawvideo', '-pixel_format', 'rgb24', '-video_size', '64x64',
                         '-framerate', '25', '-i', 'pipe:0', '-c:v', 'ffv1', '-g', '1',
                         str(fixture)], input=colors, check=True)
+        slow_fixture = out / 'slow.mkv'
+        subprocess.run([args.ffmpeg, '-hide_banner', '-loglevel', 'error', '-y',
+                        '-f', 'rawvideo', '-pixel_format', 'rgb24', '-video_size', '64x64',
+                        '-framerate', '1', '-i', 'pipe:0', '-c:v', 'ffv1', '-g', '1',
+                        str(slow_fixture)], input=b''.join(bytes(rgb) * (64 * 64) for rgb in
+                        [(255, 0, 0), (0, 255, 0), (0, 0, 255)]), check=True)
         command = [args.fpc, '-B', '-Si', '-Ciro', '-gl', '-v0',
                    '-Fi' + str(ROOT / 'src'), '-Fi' + str(ROOT / 'src/base'),
                    '-FU' + str(out), '-FE' + str(out), '-Fl' + str(args.library_dir.resolve())]
@@ -46,7 +52,7 @@ def main():
         if sys.platform != 'win32':
             env['LD_LIBRARY_PATH'] = str(args.library_dir.resolve()) + os.pathsep + env.get('LD_LIBRARY_PATH', '')
         exe = out / ('background_video_test.exe' if os.name == 'nt' else 'background_video_test')
-        subprocess.run([str(exe), str(fixture)], env=env, timeout=25, check=True)
+        subprocess.run([str(exe), str(fixture), str(slow_fixture)], env=env, timeout=25, check=True)
 
 
 if __name__ == '__main__':
