@@ -105,6 +105,7 @@ type
       TransitionPreviewEnd: real;
       function SuppressTransitionPreview(Song: TSong): boolean;
 
+      function HasSelection: boolean;
       procedure SchedulePreview(SelectionSettled: boolean = false);
       procedure StartMusicPreview();
       procedure StartVideoPreview();
@@ -401,6 +402,12 @@ begin
   end;
 
   Result := CatSongs.Song[SongIndex].Medley.Source >= msCalculated;
+end;
+
+function TScreenSong.HasSelection: boolean;
+begin
+  Result := (Interaction >= 0) and (Interaction <= High(CatSongs.Song)) and
+    CatSongs.Song[Interaction].Visible;
 end;
 
 function TScreenSong.FreeListMode: boolean;
@@ -953,7 +960,7 @@ begin
 
       SDLK_M: //Show SongMenu
         begin
-          if (Songs.SongList.Count > 0) then
+          if HasSelection then
           begin
 
             if not(MakeMedley) and (FreeListMode) and (Mode <> smPartyFree) and (Mode <> smPartyTournament) then
@@ -999,7 +1006,7 @@ begin
 
       SDLK_P: //Show Playlist Menu
         begin
-          if (Songs.SongList.Count > 0) and (FreeListMode) then
+          if HasSelection and FreeListMode then
           begin
             ScreenSongMenu.OnShow;
             ScreenSongMenu.MenuShow(SM_Playlist_Load);
@@ -1155,7 +1162,7 @@ begin
       SDLK_W:
         begin
 
-          if not CatSongs.Song[Interaction].Main then
+          if HasSelection and not CatSongs.Song[Interaction].Main then
           begin
             WebList := '';
 
@@ -1328,7 +1335,7 @@ begin
 
           LastSelectTime := SDL_GetTicks;
 
-          if (Songs.SongList.Count > 0) then
+          if HasSelection then
           begin
             if CatSongs.Song[Interaction].Main then
             begin // clicked on Category Button
@@ -1494,7 +1501,7 @@ begin
         end;
       SDLK_SPACE:
         begin
-          if (CatSongs.CatNumShow = -3) and (not CatSongs.Song[Interaction].Main) then
+          if HasSelection and (CatSongs.CatNumShow = -3) and (not CatSongs.Song[Interaction].Main) then
           begin
             if MarkedPlaylistSong = -1 then
             begin
@@ -1508,7 +1515,7 @@ begin
             Exit;
           end;
 
-          if (Mode = smNormal) and (CatSongs.Song[Interaction].isDuet) then
+          if HasSelection and (Mode = smNormal) and (CatSongs.Song[Interaction].isDuet) then
             begin
               VoiceAssignments.SelectSong(CatSongs.Song[Interaction]);
               VoiceAssignments.Rotate(CatSongs.Song[Interaction].VoiceCount);
@@ -4548,6 +4555,7 @@ end;
 
 procedure TScreenSong.StartSong;
 begin
+  if not HasSelection then Exit;
   // The sing and score screens are created by player setup.
   if not Assigned(ScreenSing) then
   begin
@@ -4581,6 +4589,7 @@ end;
 
 procedure TScreenSong.SelectPlayers;
 begin
+  if not HasSelection then Exit;
   CatSongs.Selected := Interaction;
 
   KeepPreviewMusicOnHide := true;
@@ -4590,7 +4599,7 @@ end;
 
 procedure TScreenSong.OpenEditor;
 begin
-  if (Songs.SongList.Count > 0) and
+  if HasSelection and
      (not CatSongs.Song[Interaction].Main) and
      // currently, the editor is not suitable to edit duets
      //(not CatSongs.Song[Interaction].isDuet) and
@@ -4715,6 +4724,7 @@ begin
       AudioPlayback.Close;
       TransitionSong := nil;
       CurrentSong := nil;
+      VoiceAssignments.Reset;
       KeepPreviewPositionOnShow := false;
       for I := 0 to High(CatSongs.Song) do
         if CatSongs.Song[I].Main then CatSongs.Song[I].Free;
@@ -4794,6 +4804,7 @@ begin
         Text[TextArtist].Text := '';
         Text[TextTitle].Text := '';
         Text[TextYear].Text := '';
+        SongScore;
       end;
       WriteMessage(Language.Translate('LIBRARY_REFRESH_FINISHED'));
     finally
@@ -4873,6 +4884,7 @@ var
   SongNr: integer;
 
 begin
+  if not HasSelection then Exit;
   //Sel3 := 0;
   if (NumSongs > 0) and not MakeMedley then
   begin
@@ -4979,6 +4991,12 @@ procedure TScreenSong.SongScore;
     setVisible(elements, true);
   end;
 begin
+  if not HasSelection then
+  begin
+    hide([TextScore, TextMaxScore, TextMediaScore, TextScoreUser, TextMaxScore2,
+      TextMediaScore2, TextScoreUserLocal, TextMaxScoreLocal, TextMediaScoreLocal]);
+    Exit;
+  end;
 
   if ((Mode <> smNormal) or (Ini.ShowScores = 0) or (CatSongs.Song[Interaction].Edition = '') or ((Ini.ShowScores = 1) and ((Text[TextMaxScore2].Text = '0') and (Text[TextMaxScoreLocal].Text = '0')))) then
   begin

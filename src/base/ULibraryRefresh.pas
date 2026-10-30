@@ -21,7 +21,21 @@ type
     class function Key(const Name: IPath): string; static;
   end;
 implementation
-uses SysUtils, UFilesystem, ULog, UUnicodeUtils;
+uses SysUtils, UFilesystem, ULog, UUnicodeUtils,
+  {$IFDEF MSWINDOWS}Windows{$ELSE}BaseUnix{$ENDIF};
+procedure ClearSearchError;
+begin
+  {$IFDEF MSWINDOWS}SetLastError(0);{$ELSE}fpSetErrno(0);{$ENDIF}
+end;
+function SearchEnded(Code, Error: integer; Opening: boolean): boolean;
+begin
+  {$IFDEF MSWINDOWS}
+  Result := (Code = 18) or (Opening and (Code = 2)); // no more files / empty match
+  {$ELSE}
+  // FPC Unix returns -1 for both EOF and failure; errno distinguishes them.
+  Result := (Code = -1) and (Error = 0);
+  {$ENDIF}
+end;
 constructor TLibraryRefresh.Create(const Paths, LibraryRoots: TPathDynArray; Encoding: UTextEncoding.TEncoding; const Country: UTF8String);
 begin
   inherited Create(true);
@@ -102,7 +116,7 @@ begin
   Song.Free;
 end;
 procedure TLibraryRefresh.Scan(const Name: IPath);
-var Iter: IFileIterator; Info: TFileInfo; Child: IPath;
+var Search: TSytemSearchRec; Entry, Child: IPath; Code, Error: integer;
 begin
   if Terminated then Exit;
   if Name.IsFile then
@@ -111,22 +125,38 @@ begin
     Exit;
   end;
   if not Name.IsDirectory then raise Exception.Create('Cannot scan ' + Name.ToUTF8);
-  Iter := FileSystem.FileFind(Name.Append('*'), faAnyFile);
-  while Iter.HasNext and not Terminated do
+  ClearSearchError;
+  Code := FileSystem.FindFirst(Name.Append('*'), faAnyFile, Search);
+  Error := GetLastOSError;
+  if Code <> 0 then
   begin
-    Info := Iter.Next;
-    if Info.Name.Equals('.') or Info.Name.Equals('..') then Continue;
-    Child := Name.Append(Info.Name);
-    if (Info.Attr and faSymLink) <> 0 then
+    if SearchEnded(Code, Error, true) and Name.IsDirectory then Exit;
+    raise Exception.Create('Cannot enumerate ' + Name.ToUTF8 + ' (OS error ' + IntToStr(Error) + ')');
+  end;
+  try
+    while (Code = 0) and not Terminated do
     begin
-      // Startup may already have followed this alias. Not scanning it must not
-      // be interpreted as deletion of its existing catalog entries.
-      SetLength(Skipped, Length(Skipped) + 1);
-      Skipped[High(Skipped)] := Child;
-      Continue;
+      Entry := Path(Search.Name);
+      if not Entry.Equals('.') and not Entry.Equals('..') then
+      begin
+        Child := Name.Append(Entry);
+        if (Search.Attr and faSymLink) <> 0 then
+        begin
+          // Preserve aliases already followed by startup, without recursing cycles.
+          SetLength(Skipped, Length(Skipped) + 1);
+          Skipped[High(Skipped)] := Child;
+        end
+        else if (Search.Attr and faDirectory) <> 0 then Scan(Child)
+        else if Child.GetExtension.Equals('.txt', true) then ReadSong(Child);
+      end;
+      ClearSearchError;
+      Code := FileSystem.FindNext(Search);
+      Error := GetLastOSError;
     end;
-    if (Info.Attr and faDirectory) <> 0 then Scan(Child)
-    else if Child.GetExtension.Equals('.txt', true) then ReadSong(Child);
+    if not Terminated and not SearchEnded(Code, Error, false) then
+      raise Exception.Create('Cannot finish enumeration of ' + Name.ToUTF8 + ' (OS error ' + IntToStr(Error) + ')');
+  finally
+    FileSystem.FindClose(Search);
   end;
 end;
 procedure TLibraryRefresh.Execute;
