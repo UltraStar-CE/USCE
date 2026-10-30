@@ -130,3 +130,9 @@ unlocking requires the password. The remaining singing configuration options are
 - `-singing-display`: `full`, `notes-info`, `notes`, `info`, `none`.
 
 Omitted options use the saved continuous-playback profile.
+
+## Signed APT repository
+
+The Ubuntu DEB release can also be published as a signed repository on GitHub
+Pages. See [APT.md](APT.md) for supported distributions, installation and the
+one-time signing/publication setup.
