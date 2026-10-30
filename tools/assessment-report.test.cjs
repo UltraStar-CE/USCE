@@ -26,6 +26,17 @@ test('upstream report includes commit subjects, file scope and incomplete covera
   assert.match(report, /comparison limit reached/);
 });
 
+test('entity expansion cannot exceed the final GitHub body budget', () => {
+  const commits = Array.from({length: 6}, () => ({sha: 'a'.repeat(40),
+    title: 'fix '.repeat(55), author: 'fix '.repeat(20)}));
+  const report = forkReport({batch: Array.from({length: 20}, () => ({
+    repository: 'fork/repo', branch: 'feature', ahead: 6, behind: 0,
+    compareUrl: 'https://github.com/fork/repo/compare/a...b', commits}))});
+  assert.ok(report.length < 65536);
+  assert.match(report, /Report excerpts truncated/);
+  assert.match(report, /complete batch remains in the assessment file/);
+});
+
 
 test('closing-keyword escaping preserves exact comparison URL destinations', () => {
   const url = 'https://github.com/fix/usdx-resolve/compare/a...b';
