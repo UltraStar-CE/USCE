@@ -302,6 +302,8 @@ type
       VolumeMidi:              array of UTF8String;
       VolumeClick:             array of UTF8String;
       // control buttons
+      MicrophoneButtonId: Integer;
+      MicrophoneEnabled, OwnsMicrophoneCapture: boolean;
       UndoButtonId:            Integer;
       PreviousSeqButtonID:     Integer;
       NextSeqButtonID:         Integer;
@@ -354,6 +356,7 @@ type
       TimingErrorBeat:         Integer;
       TimingErrorValid:        boolean;
 
+      procedure SetMicrophoneEnabled(Enabled: boolean);
       procedure ChangeBPM(newBPM: real);
       procedure HandleSaveSong(SDL_ModState: word);
       procedure SetPreviewStart(SDL_ModState: word);
@@ -656,6 +659,8 @@ begin
       SDLK_F4: EnterTextEditMode(SDL_ModState);
       SDLK_F5: EnterBPMEditMode(SDL_ModState);
       SDLK_F6: EnterPianoEditMode(SDL_ModState);
+      SDLK_F7: if (SDL_ModState = 0) and not Repeated then
+        SetMicrophoneEnabled(not MicrophoneEnabled);
       SDLK_SPACE: PlayNote(SDL_ModState);
       SDLK_RETURN: ToggleTextEditMode(SDL_ModState);
       SDLK_DELETE: DeleteNotes(SDL_ModState);
@@ -3258,6 +3263,11 @@ begin
   if BtnDown and (MouseButton = SDL_BUTTON_LEFT) and
      (nBut >= 0) and (Interactions[nBut].Typ = iButton) and (NoteIndex < 0) then
   begin
+    if Interactions[nBut].Num = MicrophoneButtonId then
+    begin
+      SetMicrophoneEnabled(not MicrophoneEnabled);
+      Exit;
+    end;
     if Interactions[nBut].Num = UndoButtonId then
     begin
       CopyFromUndo;
@@ -5972,6 +5982,12 @@ begin
   PlayOnlyButtonID     := AddButton(Theme.EditSub.PlayOnly);
   PlayWithNoteButtonID := AddButton(Theme.EditSub.PlayWithNote);
   PlayNoteButtonID     := AddButton(Theme.EditSub.PlayNote);
+  MicrophoneButtonId := AddButton(Theme.EditSub.Microphone);
+  if Length(Button[MicrophoneButtonId].Text) = 0 then
+    AddButtonText(4, 0, Theme.EditSub.TextInfo.ColR, Theme.EditSub.TextInfo.ColG,
+      Theme.EditSub.TextInfo.ColB, Theme.EditSub.TextInfo.Font,
+      Theme.EditSub.TextInfo.Style, 14, 0, '');
+  SetMicrophoneEnabled(false);
 
   // current line
   TextSentence := AddButton(Theme.EditSub.ButtonCurrentLine);
@@ -6451,8 +6467,8 @@ begin
     CancelPendingNoteClick;
     //show transparent background for notes
     ShowInteractiveBackground;
-    // user input tracking
-    AudioInput.CaptureStart;
+    // Opening an editor must not acquire the microphone implicitly.
+    SetMicrophoneEnabled(false);
   end;
 
   // background picture
@@ -6769,7 +6785,7 @@ begin
 
   CurrentSound := AudioInputProcessor.Sound[0];
   CurrentSound.AnalyzeBuffer;
-  if (CurrentSound.ToneString <> '-') and
+  if MicrophoneEnabled and (CurrentSound.ToneString <> '-') and
      CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].HasLength() then
   begin
     Count := trunc((720 / (GetTimeFromBeat(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].EndBeat) - GetTimeFromBeat(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[0].StartBeat)))*(AudioPlayback.Position - GetTimeFromBeat(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[0].StartBeat)));
@@ -6809,6 +6825,26 @@ begin
   Result := true;
 end;
 
+procedure TScreenEditSub.SetMicrophoneEnabled(Enabled: boolean);
+begin
+  if Enabled and not MicrophoneEnabled then
+  begin
+    OwnsMicrophoneCapture := not AudioInput.IsCapturing;
+    if OwnsMicrophoneCapture then
+      AudioInput.CaptureStart;
+  end
+  else if not Enabled and OwnsMicrophoneCapture then
+  begin
+    AudioInput.CaptureStop;
+    OwnsMicrophoneCapture := false;
+  end;
+  MicrophoneEnabled := Enabled;
+  if Enabled then
+    Button[MicrophoneButtonId].Text[0].Text := Language.Translate('EDIT_MICROPHONE_ON')
+  else
+    Button[MicrophoneButtonId].Text[0].Text := Language.Translate('EDIT_MICROPHONE_OFF');
+end;
+
 procedure TScreenEditSub.OnHide;
 begin
   inherited;
@@ -6818,7 +6854,7 @@ begin
   FreeAndNil(MidiOut);
 
   //Music.SetVolume(1.0);
-  AudioInput.CaptureStop;
+  SetMicrophoneEnabled(false);
 end;
 
 function TScreenEditSub.GetNoteName(Note: Integer): string;

@@ -222,6 +222,7 @@ type
       function InitializeRecord(ScanMode: TAudioInputScanMode): boolean; virtual; abstract;
       function FinalizeRecord: boolean;   virtual;
 
+      function IsCapturing: boolean;
       procedure CaptureStart;
       procedure CaptureStop;
   end;
@@ -1053,6 +1054,11 @@ end;
 {*
  * Start capturing on all used input-device.
  *}
+function TAudioInputBase.IsCapturing: boolean;
+begin
+  Result := Started;
+end;
+
 procedure TAudioInputBase.CaptureStart;
 var
   S:            integer;

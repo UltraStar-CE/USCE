@@ -73,6 +73,7 @@ type
       // IAudioInput
       function InitializeRecord(ScanMode: TAudioInputScanMode): boolean;
       function FinalizeRecord: boolean;
+      function IsCapturing: boolean;
       procedure CaptureStart;
       procedure CaptureStop;
       procedure GetFFTData(var data: TFFTData);
@@ -261,6 +262,11 @@ end;
 function TAudio_Dummy.FinalizeRecord: boolean;
 begin
   Result := true;
+end;
+
+function TAudio_Dummy.IsCapturing: boolean;
+begin
+  Result := false;
 end;
 
 procedure TAudio_Dummy.CaptureStart;

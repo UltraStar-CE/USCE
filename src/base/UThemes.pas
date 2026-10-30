@@ -757,6 +757,7 @@ type
       SlideLyric:          TThemeSelectSlide;
       SelectVolAudio:      TThemeSelectSlide;
       SelectVolMidi:       TThemeSelectSlide;
+      Microphone:          TThemeButton;
       SelectVolClick:      TThemeSelectSlide;
       SlideVideoGap:       TThemeSelectSlide;
 
@@ -2452,6 +2453,20 @@ begin
       ThemeLoadButton(EditSub.PlayOnly,    'EditSubBarStatic6');
       ThemeLoadButton(EditSub.PlayWithNote,'EditSubBarStatic7');
       ThemeLoadButton(EditSub.PlayNote,    'EditSubBarStatic8');
+      if Length(GetSectionList('EditSubMicrophone')) > 0 then
+        ThemeLoadButton(EditSub.Microphone, 'EditSubMicrophone')
+      else
+      begin
+        // Older themes still get a visible, keyboard-accessible control.
+        EditSub.Microphone := EditSub.PlayNote;
+        SetLength(EditSub.Microphone.Text, 0);
+        EditSub.Microphone.Tex := 'SelectBG';
+        EditSub.Microphone.X := 350;
+        EditSub.Microphone.Y := 10;
+        EditSub.Microphone.W := 220;
+        EditSub.Microphone.H := 24;
+        EditSub.Microphone.Visible := true;
+      end;
       ThemeLoadSelectSlide(EditSub.SlideTitle, 'EditSubTitle');
       ThemeLoadSelectSlide(EditSub.SlideArtist, 'EditSubArtist');
       ThemeLoadSelectSlide(EditSub.SlideLanguage, 'EditSubLanguage');
