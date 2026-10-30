@@ -35,6 +35,7 @@ interface
 
 uses
   UVoiceAssignments,
+  ULibraryRefresh,
   UCatCovers,
   UCommon,
   UDataBase,
@@ -258,6 +259,7 @@ type
 
       procedure GenerateThumbnails();
       procedure SyncCoversToSongs();
+      procedure ApplyLibraryRefresh;
       procedure OnShow; override;
       procedure OnShowFinish; override;
       procedure OnHide; override;
@@ -349,7 +351,7 @@ uses
   UScreenSongMenu,
   USkins,
   UUnicodeUtils,
-  Math;
+  Classes, Math;
 
 function GetSongPlayerColor(PlayerIndex: integer): TRGB;
 begin
@@ -750,6 +752,14 @@ begin
     if (SDL_ModState <> AltJumpModifiers) or (SDL_ModState and KMOD_LALT = 0) or ((AltJumpPrefix <> '') and (SDL_GetTicks - AltJumpLastTick > 1000)) then
       AltJumpPrefix := '';
     AltJumpModifiers := SDL_ModState;
+
+    if (PressedKey = SDLK_R) and ((SDL_ModState and KMOD_CTRL) <> 0) and
+       ((SDL_ModState and KMOD_SHIFT) <> 0) and ((SDL_ModState and KMOD_ALT) = 0) then
+    begin
+      if not Repeated and Songs.RequestRefresh then
+        WriteMessage(Language.Translate('LIBRARY_REFRESH_STARTED'));
+      Exit;
+    end;
 
     //Jump to Artist/Title
     if ((SDL_ModState and KMOD_LALT <> 0) and (FreeListMode)) then
@@ -3404,6 +3414,7 @@ var
   end;
 
 begin
+  ApplyLibraryRefresh;
   UpdateTransitionPreview;
 
   FadeMessage();
@@ -3576,7 +3587,8 @@ begin
     end;
   end;
 
-  if (TSongMenuMode(Ini.SongMenu) = smRoulette) then
+  if (TSongMenuMode(Ini.SongMenu) = smRoulette) and
+     (Interaction >= 0) and (Interaction <= High(Button)) then
     VideoAlpha := Button[interaction].Texture.Alpha * (CoverTime-1)
   else
     VideoAlpha := 1;
@@ -3647,7 +3659,8 @@ begin
   end;
 
   // duet names
-  if (CatSongs.Song[Interaction].isDuet) then
+  if (Interaction >= 0) and (Interaction <= High(CatSongs.Song)) and
+     CatSongs.Song[Interaction].isDuet then
     ColorDuetNameSingers();
 
   for I := 0 to High(Theme.Song.Statics) do
@@ -3680,7 +3693,8 @@ begin
   end;
 
   // Keep duet assignment widgets in the foreground to avoid mode-specific overlap.
-  if CatSongs.Song[Interaction].isDuet then
+  if (Interaction >= 0) and (Interaction <= High(CatSongs.Song)) and
+     CatSongs.Song[Interaction].isDuet then
   begin
     for I := 0 to High(DuetSingerStatics) do
       if Statics[DuetSingerStatics[I]].Visible then
@@ -4639,6 +4653,152 @@ begin
     Tex.CornerRadius := Theme.Song.Cover.CornerRadius;
     Button[NumberOfButtonInArray].Texture.Free;
     Button[NumberOfButtonInArray].Texture := Tex;
+  end;
+end;
+
+procedure TScreenSong.ApplyLibraryRefresh;
+var
+  Retired: TList;
+  SelectedPath, Category: UTF8String;
+  OldCategory, P, Item, I, Index, NewIndex: integer;
+  PlaylistPaths, NewIds: TStringList;
+  Song: TSong;
+  EmptyMainMenu: boolean;
+begin
+  EmptyMainMenu := (Display.CurrentScreen = @ScreenMain) and (Songs.SongList.Count = 0);
+  if EmptyMainMenu then
+  begin
+    if not ScreenMain.ShowFinish then Exit;
+  end
+  else if not ShowFinish or (Display.CurrentScreen <> @ScreenSong) then Exit;
+  if (Display.NextScreen <> nil) or (Display.NextScreenWithCheck <> nil) or
+     (Mode <> smNormal) or ScreenSongMenu.Visible or
+     ScreenPopupError.Visible or ScreenPopupCheck.Visible or
+     ScreenPopupHelp.Visible or ScreenPopupInfo.Visible or
+     ScreenSongJumpto.Visible or ScreenContinuousPlayback.Session.Active or
+     not Songs.RefreshReady then Exit;
+  SelectedPath := '';
+  Category := '';
+  OldCategory := CatSongs.CatNumShow;
+  if (Interaction >= 0) and (Interaction < Length(CatSongs.Song)) then
+  begin
+    Song := CatSongs.Song[Interaction];
+    if not Song.Main then SelectedPath := TLibraryRefresh.Key(Song.Path.Append(Song.FileName));
+  end;
+  if OldCategory >= 0 then
+    for I := 0 to High(CatSongs.Song) do
+      if CatSongs.Song[I].Main and (CatSongs.Song[I].OrderNum = OldCategory) then
+        Category := CatSongs.Song[I].Artist;
+  PlaylistPaths := TStringList.Create;
+  NewIds := TStringList.Create;
+  try
+    for P := 0 to High(PlaylistMan.Playlists) do
+      for Item := 0 to High(PlaylistMan.Playlists[P].Items) do
+      begin
+        I := PlaylistMan.Playlists[P].Items[Item].SongID;
+        if (I >= 0) and (I < Length(CatSongs.Song)) then
+          PlaylistPaths.Add(TLibraryRefresh.Key(CatSongs.Song[I].Path.Append(CatSongs.Song[I].FileName)))
+        else PlaylistPaths.Add('');
+      end;
+    if not Songs.PublishRefresh(Retired) then
+    begin
+      WriteMessage(Language.Translate('LIBRARY_REFRESH_FAILED'));
+      Exit;
+    end;
+    try
+      // No running song/editor is changed. Release only the selection preview now.
+      StopMusicPreview;
+      StopVideoPreview;
+      AudioPlayback.Close;
+      TransitionSong := nil;
+      CurrentSong := nil;
+      KeepPreviewPositionOnShow := false;
+      for I := 0 to High(CatSongs.Song) do
+        if CatSongs.Song[I].Main then CatSongs.Song[I].Free;
+      SetLength(CatSongs.Song, 0);
+      CatSongs.Refresh;
+      GenerateThumbnails;
+      NewIds.Sorted := true;
+      NewIds.CaseSensitive := true;
+      for I := 0 to High(CatSongs.Song) do
+        if not CatSongs.Song[I].Main then
+          NewIds.AddObject(TLibraryRefresh.Key(CatSongs.Song[I].Path.Append(CatSongs.Song[I].FileName)), TObject(PtrInt(I + 1)));
+      Index := 0;
+      for P := 0 to High(PlaylistMan.Playlists) do
+        for Item := 0 to High(PlaylistMan.Playlists[P].Items) do
+        begin
+          I := NewIds.IndexOf(PlaylistPaths[Index]);
+          if I >= 0 then
+          begin
+            NewIndex := PtrInt(NewIds.Objects[I]) - 1;
+            PlaylistMan.Playlists[P].Items[Item].SongID := NewIndex;
+            PlaylistMan.Playlists[P].Items[Item].Artist := CatSongs.Song[NewIndex].Artist;
+            PlaylistMan.Playlists[P].Items[Item].Title := CatSongs.Song[NewIndex].Title;
+          end;
+          Inc(Index);
+        end;
+      PlaylistMan.ReindexAllPlaylists;
+      if not EmptyMainMenu then OnShow;
+      if (OldCategory = -3) and (PlaylistMan.CurPlaylist >= 0) then
+        PlaylistMan.ApplyPlayList(PlaylistMan.CurPlaylist)
+      else if Category <> '' then
+      begin
+        for I := 0 to High(CatSongs.Song) do
+          if CatSongs.Song[I].Main and (CatSongs.Song[I].Artist = Category) then
+          begin CatSongs.ShowCategory(CatSongs.Song[I].OrderNum); Break; end;
+      end;
+      ScreenSongJumpto.LibraryChanged(OldCategory);
+      // Playlist order/filter application can reorder category indices.
+      NewIds.Clear;
+      for I := 0 to High(CatSongs.Song) do
+        if not CatSongs.Song[I].Main then
+          NewIds.AddObject(TLibraryRefresh.Key(CatSongs.Song[I].Path.Append(CatSongs.Song[I].FileName)), TObject(PtrInt(I + 1)));
+      I := NewIds.IndexOf(SelectedPath);
+      if (I >= 0) and CatSongs.Song[PtrInt(NewIds.Objects[I]) - 1].Visible then
+        Interaction := PtrInt(NewIds.Objects[I]) - 1
+      else if CatSongs.VisibleSongs > 0 then Interaction := CatSongs.FindNextVisible(-1)
+      else SelInteraction := -1;
+      if Interaction >= 0 then
+      begin
+        FixSelected;
+        SkipTo(CatSongs.VisibleIndex(Interaction), Interaction);
+        CatSongs.Selected := Interaction;
+      end;
+      ResetRandomSongState;
+      if Interaction < 0 then
+      begin
+        CatSongs.Selected := -1;
+        isScrolling := false;
+        SongCurrent := 0;
+        SongTarget := 0;
+        PreviewEnd := 0;
+        PreviewOpened := -1;
+        LastPreviewStartTime := 0;
+        PreviewSettledTime := 0;
+        SetDuetSingerVisibility(0);
+        for I := 0 to High(ListTextArtist) do
+        begin
+          Text[ListTextArtist[I]].Visible := false;
+          Text[ListTextTitle[I]].Visible := false;
+          Text[ListTextYear[I]].Visible := false;
+          Statics[ListVideoIcon[I]].Visible := false;
+          Statics[ListDuetIcon[I]].Visible := false;
+        end;
+        Statics[VideoIcon].Visible := false;
+        Statics[DuetIcon].Visible := false;
+        Statics[StaticActual].Visible := false;
+        Text[TextArtist].Text := '';
+        Text[TextTitle].Text := '';
+        Text[TextYear].Text := '';
+      end;
+      WriteMessage(Language.Translate('LIBRARY_REFRESH_FINISHED'));
+    finally
+      for I := 0 to Retired.Count - 1 do TObject(Retired[I]).Free;
+      Retired.Free;
+    end;
+  finally
+    NewIds.Free;
+    PlaylistPaths.Free;
   end;
 end;
 

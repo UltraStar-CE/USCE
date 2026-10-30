@@ -172,6 +172,7 @@ uses
   UFramePacer       in 'base\UFramePacer.pas',
   USong             in 'base\USong.pas',
   USongProblems     in 'base\USongProblems.pas',
+  ULibraryRefresh   in 'base\ULibraryRefresh.pas',
   USongs            in 'base\USongs.pas',
   UAge              in 'base\UAge.pas',
   UFilterTerms      in 'base\UFilterTerms.pas',

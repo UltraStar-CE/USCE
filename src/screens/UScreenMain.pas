@@ -338,6 +338,7 @@ end;
 function TScreenMain.Draw: boolean;
 begin
   UpdatePreviews;
+  ScreenSong.ApplyLibraryRefresh;
   Result := inherited Draw;
 
   if not ScreenPopupError.Visible then
