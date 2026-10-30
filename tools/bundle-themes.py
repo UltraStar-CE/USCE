@@ -79,20 +79,74 @@ def portable(game, themes, destination, pin):
 
 def setup(destination, pin):
     destination = Path(destination).resolve()
-    if destination.exists() and (not destination.is_dir() or any(destination.iterdir())):
-        raise ValueError('Themes destination must be empty; existing local themes are never overwritten')
+    if destination.exists() and not destination.is_dir():
+        raise ValueError('Themes destination must be a directory')
     with tempfile.TemporaryDirectory(prefix='usce-themes-') as temporary:
         source = Path(temporary) / 'source'
         subprocess.run(['git', 'init', '--quiet', str(source)], check=True)
         subprocess.run(['git', '-C', str(source), 'fetch', '--depth=1',
                         'https://github.com/' + REPOSITORY + '.git', pin['sha']], check=True)
         subprocess.run(['git', '-C', str(source), 'checkout', '--quiet', '--detach', 'FETCH_HEAD'], check=True)
-        return bundle(source, destination, pin)
+        staged = Path(temporary) / 'bundle'
+        manifest = bundle(source, staged, pin)
+        # Preflight everything before writing; bundled Modern and local additions stay intact.
+        for entry in manifest['files']:
+            target = destination / entry['path']
+            if any(parent.is_symlink() or (parent.exists() and not parent.is_dir())
+                   for parent in target.parents if parent == destination or destination in parent.parents):
+                raise ValueError('Theme asset parents must be real directories: ' + entry['path'])
+            if target.exists() and (not target.is_file() or target.is_symlink() or
+                    hashlib.sha256(target.read_bytes()).hexdigest() != entry['sha256']):
+                raise ValueError('Existing local themes are never overwritten: ' + entry['path'])
+        for entry in manifest['files']:
+            target = destination / entry['path']
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if not target.exists():
+                shutil.copyfile(staged / entry['path'], target)
+        return manifest
+
+
+def modern(source, destination, pin, sync=False):
+    destination = Path(destination).resolve()
+    with tempfile.TemporaryDirectory(prefix='usce-modern-') as temporary:
+        staged = Path(temporary) / 'bundle'
+        manifest = bundle(source, staged, pin)
+        expected = {e['path']: e['sha256'] for e in manifest['files']
+                    if e['path'] == 'Modern.ini' or e['path'].startswith('Modern/')}
+        if 'Modern.ini' not in expected:
+            raise ValueError('Pinned snapshot has no Modern theme')
+        actual = {p.relative_to(destination).as_posix(): p for p in
+                  [destination / 'Modern.ini', *(destination / 'Modern').rglob('*')]
+                  if p.is_file() or p.is_symlink()}
+        extra = sorted(set(actual) - set(expected))
+        changed = sorted(name for name, digest in expected.items() if name not in actual or
+                         actual[name].is_symlink() or hashlib.sha256(actual[name].read_bytes()).hexdigest() != digest)
+        if not sync:
+            if extra or changed:
+                raise ValueError('Bundled Modern differs from themes.json: ' + ', '.join(changed + extra))
+            return
+        # Only a clean tracked copy can be replaced. Never delete local custom assets.
+        root = Path(subprocess.check_output(['git', '-C', str(destination), 'rev-parse', '--show-toplevel'], text=True).strip())
+        relative = destination.relative_to(root).as_posix()
+        paths = [relative + '/Modern.ini', relative + '/Modern']
+        if subprocess.check_output(['git', '-C', str(root), 'status', '--porcelain', '--untracked-files=all', '--', *paths], text=True):
+            raise ValueError('Commit or stash local Modern changes before synchronizing')
+        tracked = set(subprocess.check_output(['git', '-C', str(root), 'ls-files', '-z', '--', *paths], text=True).split('\0'))
+        if any(relative + '/' + name not in tracked for name in extra):
+            raise ValueError('Local Modern assets are never deleted: ' + ', '.join(extra))
+        for name in extra:
+            actual[name].unlink()
+        for name in changed:
+            target = destination / name
+            if target.is_symlink():
+                raise ValueError('Modern assets must not be symlinks')
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(staged / name, target)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['pin', 'bundle', 'portable', 'setup'])
+    parser.add_argument('command', choices=['pin', 'bundle', 'portable', 'setup', 'check-modern', 'sync-modern'])
     parser.add_argument('--pin', default=str(ROOT / 'themes.json'))
     parser.add_argument('--source', default=str(ROOT / '.release-themes/source'))
     parser.add_argument('--destination')
@@ -107,5 +161,8 @@ if __name__ == '__main__':
     elif args.command == 'setup':
         manifest = setup(args.destination or ROOT / 'game/themes', pin)
         print('Installed {} themes from {}'.format(len(manifest['themes']), manifest['sha']))
+    elif args.command in ('check-modern', 'sync-modern'):
+        modern(args.source, args.destination or ROOT / 'game/themes', pin, args.command == 'sync-modern')
+        print('Modern matches ' + pin['sha'])
     else:
         portable(args.source, args.themes, args.destination or ROOT / '.release-themes/bundle', pin)
