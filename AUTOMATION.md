@@ -126,3 +126,19 @@ PRs, record covered/superseded/rejected work with evidence, and link unresolved
 work to existing follow-ups. These semantic decisions are not inferred from
 commit titles or ancestry. Commits older than six calendar months are excluded using their original author date, including recently rebased commits. Old-only branches produce no proposal. Reports should
 provide recommendations and concrete follow-ups rather than another reading list.
+
+### Concrete follow-through
+
+The local daily upstream follow-through task consumes discovery records and
+prepares the actual outputs: worthwhile source changes become focused regular
+PRs with preserved authorship and appropriate checks; relevant reports become
+attributed issues; product decisions become specific questions for @dgruss.
+Draft is for incomplete work, not a default for automated proposals. Existing
+outputs are reused, and the assessment links those outputs rather than handing
+the maintainer a reading list. Covered or excluded work creates no new action.
+The six-month commit-age cutoff and the fixed new-issue watch cutoff apply.
+
+The local registry at outputs/upstream-assessment/registry.json remembers source
+heads, decisions and output links while repository checkpoints await merge.
+This task is separate from the metadata-only review queue and does not merge,
+approve, publish releases or close reporter issues.

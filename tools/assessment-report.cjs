@@ -4,7 +4,7 @@ const escapeClosingWords = value => value.replace(/\b(?:close[sd]?|fix(?:e[sd])?
   word => '&#' + word.charCodeAt(0) + ';' + word.slice(1));
 const text = (value, max = 500) => escapeClosingWords(String(value || '').replace(/\s+/g, ' ').replace(/[<>`]/g, '').slice(0, max));
 const quote = value => '> ' + text(value);
-const review = '\n\nFor each item, record what behavior changes, whether current USCE already handles it (with a local PR/commit), and whether to adopt, adapt, defer or reject it. Explain the reason and the next test or decision needed. File names and commit messages are discovery evidence, not proof of applicability or performance. No game code is imported by this assessment.';
+const review = '\n\nFor each item, check current USCE and existing outputs before taking action. Port worthwhile code changes or source PRs into focused regular PRs, preserving authorship and running appropriate checks. Copy relevant bug reports into attributed issues, distinguishing reports from locally confirmed failures. When a product decision is needed, tag @dgruss in the relevant issue with the exact question and a recommendation. Reuse existing outputs. Record actual PR/issue links and dispositions; do not stop at a reading list or ask dgruss to do routine preparation. Covered, rejected and unchanged deferred work needs no new action item. File names and commit messages are discovery evidence, not proof of applicability or performance. The discovery workflow imports no game code; follow-through prepares separate PRs.';
 function boundedReport(body) {
   if (body.length <= 60000) return body;
   return body.slice(0, body.lastIndexOf('\n', 60000)) +
