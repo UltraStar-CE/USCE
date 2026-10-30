@@ -1955,7 +1955,7 @@ var
   I: integer;
   Sung: boolean;
   Name1, Name2, CombinedName: UTF8String;
-  Score1, Score2, CombinedScore, CombinedMask: integer;
+  Score1, Score2, CombinedScore, CombinedMask, ScoreLevel: integer;
 begin
   Sung := false;
 
@@ -1969,12 +1969,14 @@ begin
         if Score1 > 0 then
         begin
           Name1 := Player[I].Name;
+          ScoreLevel := Player[I].Level;
           if ScreenSong.Mode = smPartyClassic then
           begin
             Name1 := Party.CurrentSingerName(I);
             if Name1 = '' then Continue;
+            ScoreLevel := Ini.Difficulty;
           end;
-          DataBase.AddScore(CurrentSong, Player[I].Level,
+          DataBase.AddScore(CurrentSong, ScoreLevel,
               Length(CurrentSong.Tracks), 1 shl Player[I].Track,
               Name1, Score1);
           Sung := true;
