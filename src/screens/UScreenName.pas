@@ -41,6 +41,7 @@ uses
   UFiles,
   UIni,
   UMenu,
+  UMenuInteract,
   UMusic,
   UNote,
   UScreenScore,
@@ -100,7 +101,7 @@ type
       CardPanel, CardFocus: integer;
       function SelectedPlayerCount: integer;
       function CardRect(Index: integer): TPlayerSlotRect;
-      function DifficultySegmentRect(PlayerID, Segment: integer): TPlayerSlotRect;
+      function DifficultySegmentRect(PlayerID, Segment: integer): TMouseOverRect;
       procedure DrawCards;
       procedure RefreshVoice;
     public
@@ -215,7 +216,7 @@ begin
   inherited SetInteraction(Num);
 end;
 
-function TScreenName.DifficultySegmentRect(PlayerID, Segment: integer): TPlayerSlotRect;
+function TScreenName.DifficultySegmentRect(PlayerID, Segment: integer): TMouseOverRect;
 var R: TPlayerSlotRect; SX, SY, SegmentW: real;
 begin
   R := CardRect(PlayerID);
@@ -238,6 +239,7 @@ var
   Btn: integer;
   MouseX, MouseY: integer;
   Card: TPlayerSlotRect;
+  SegmentBounds: TMouseOverRect;
 begin
   Result := true;
 
@@ -254,9 +256,9 @@ begin
     if Theme.Name.Cards.LevelSegments then
       for I := 0 to 2 do
       begin
-        Card := DifficultySegmentRect(PlayerIndex, I);
-        if (X >= Card.X) and (X <= Card.X + Card.W) and
-          (Y >= Card.Y) and (Y <= Card.Y + Card.H) then
+        SegmentBounds := DifficultySegmentRect(PlayerIndex, I);
+        if (X >= SegmentBounds.X) and (X <= SegmentBounds.X + SegmentBounds.W) and
+          (Y >= SegmentBounds.Y) and (Y <= SegmentBounds.Y + SegmentBounds.H) then
         begin
           LevelIndex := I;
           PlayerLevel[PlayerIndex] := I;
@@ -1455,7 +1457,7 @@ var I, First, Last, J: integer;
   LabelText: UTF8String;
   procedure Difficulty(PlayerID: integer);
   var K: integer; T: TTexture; C: TRGB; BaseX, BaseY, SegmentW: real;
-    Bounds: TPlayerSlotRect;
+    Bounds: TMouseOverRect;
   begin
     BaseX := Theme.Name.SelectPlayerLevel.X;
     BaseY := Theme.Name.SelectPlayerLevel.Y;
