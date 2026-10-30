@@ -100,6 +100,7 @@ type
       CardPanel, CardFocus: integer;
       function SelectedPlayerCount: integer;
       function CardRect(Index: integer): TPlayerSlotRect;
+      function DifficultySegmentRect(PlayerID, Segment: integer): TPlayerSlotRect;
       procedure DrawCards;
       procedure RefreshVoice;
     public
@@ -214,6 +215,23 @@ begin
   inherited SetInteraction(Num);
 end;
 
+function TScreenName.DifficultySegmentRect(PlayerID, Segment: integer): TPlayerSlotRect;
+var R: TPlayerSlotRect; SX, SY, SegmentW: real;
+begin
+  R := CardRect(PlayerID);
+  SX := R.W / Max(1, Theme.Name.Cards.Panel.W);
+  SY := R.H / Max(1, Theme.Name.Cards.Panel.H);
+  if (PlayerID = PlayerIndex) and Theme.Name.Cards.EditOutside then
+  begin
+    R.X := 0; R.Y := 0; SX := 1; SY := 1;
+  end;
+  SegmentW := (Theme.Name.Cards.Panel.W - 30) / 3;
+  Result.X := R.X + (Theme.Name.SelectPlayerLevel.X + Segment * SegmentW) * SX;
+  Result.Y := R.Y + Theme.Name.SelectPlayerLevel.Y * SY;
+  Result.W := (SegmentW - 4) * SX;
+  Result.H := 29 * SY;
+end;
+
 function TScreenName.ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
 var
   I: integer;
@@ -233,6 +251,21 @@ begin
 
   if Theme.Name.Cards.Enabled and BtnDown and (MouseButton = SDL_BUTTON_LEFT) then
   begin
+    if Theme.Name.Cards.LevelSegments then
+      for I := 0 to 2 do
+      begin
+        Card := DifficultySegmentRect(PlayerIndex, I);
+        if (X >= Card.X) and (X <= Card.X + Card.W) and
+          (Y >= Card.Y) and (Y <= Card.Y + Card.H) then
+        begin
+          LevelIndex := I;
+          PlayerLevel[PlayerIndex] := I;
+          SelectsS[PlayerSelectLevel].SetSelectOpt(I);
+          Interaction := PlayerSelectLevelIID;
+          SetTextInput(false);
+          Exit;
+        end;
+      end;
     Btn := InteractAt(X, Y);
     // Selecting a card editor must not generate the menu's Return action.
     // This also covers themes that place the name editor outside the card.
@@ -257,15 +290,6 @@ begin
             AvatarCurrent := AvatarTarget;
             RefreshProfile;
             Interaction := PlayerNameIID;
-          end
-          else if Theme.Name.Cards.LevelSegments and
-            (Y >= Card.Y + Theme.Name.SelectPlayerLevel.Y * Card.H / Theme.Name.Cards.Panel.H) and
-            (Y <= Card.Y + (Theme.Name.SelectPlayerLevel.Y + 29) * Card.H / Theme.Name.Cards.Panel.H) then
-          begin
-            LevelIndex := EnsureRange(Trunc((X - Card.X) * 3 / Card.W), 0, 2);
-            PlayerLevel[I] := LevelIndex;
-            SelectsS[PlayerSelectLevel].SetSelectOpt(LevelIndex);
-            Interaction := PlayerSelectLevelIID;
           end
           else if (Btn = PlayerColorIID) or (Btn = PlayerSelectLevelIID) or
             (Btn = PlayerSelectVoiceIID) then
@@ -1431,6 +1455,7 @@ var I, First, Last, J: integer;
   LabelText: UTF8String;
   procedure Difficulty(PlayerID: integer);
   var K: integer; T: TTexture; C: TRGB; BaseX, BaseY, SegmentW: real;
+    Bounds: TPlayerSlotRect;
   begin
     BaseX := Theme.Name.SelectPlayerLevel.X;
     BaseY := Theme.Name.SelectPlayerLevel.Y;
@@ -1440,9 +1465,9 @@ var I, First, Last, J: integer;
       if PlayerLevel[PlayerID] = K then
       begin
         T := SelectsS[PlayerSelectLevel].TextureSBG;
-        T.X := R.X + (BaseX + K * SegmentW) * SX;
-        T.Y := R.Y + BaseY * SY;
-        T.W := (SegmentW - 4) * SX; T.H := 29 * SY;
+        Bounds := DifficultySegmentRect(PlayerID, K);
+        T.X := Bounds.X; T.Y := Bounds.Y;
+        T.W := Bounds.W; T.H := Bounds.H;
         if (PlayerID = PlayerIndex) and (Interaction = PlayerSelectLevelIID) then
           C := GetPlayerColor(Num[PlayerID])
         else begin C.R := 0.2; C.G := 0.21; C.B := 0.22; end;
