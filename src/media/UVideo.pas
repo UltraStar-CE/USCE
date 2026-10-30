@@ -101,6 +101,7 @@ type
   private
     fOpened: boolean;     //**< stream successfully opened
     fPaused: boolean;     //**< stream paused
+    fDecodeFailed: boolean; // stop automatic looping after a terminal decoder error
     fEOF: boolean;        //**< end-of-file state
 
     fLoop: boolean;       //**< looping enabled
@@ -647,6 +648,7 @@ begin
   fFrameTexValid := false;
 
   fEOF := false;
+  fDecodeFailed := false;
 
   fLoop := false;
   fLoopTime := 0;
@@ -760,7 +762,13 @@ begin
       Exit;
     end;
     if errnum <> AVERROR(EAGAIN) then
-      Continue;
+    begin
+      Log.LogError('Video frame receive error: ' + IntToStr(errnum), 'TVideoPlayback_FFmpeg.DecodeFrame');
+      fEOF := true;
+      fDecodeFailed := true;
+      av_packet_free(@AVPacket);
+      Exit;
+    end;
 
     if (AVPacket = nil) then
       AVPacket := av_packet_alloc();
@@ -931,7 +939,7 @@ begin
   // check if we got an EOF or error
   if (not Success) then
   begin
-    if fLoop then
+    if fLoop and not fDecodeFailed then
     begin
       // we have to loop, so rewind
       SetPosition(0);
@@ -1242,6 +1250,7 @@ begin
   fFrameTime := Time;
   fNextFrameTime := Time;
   fEOF := false;
+  fDecodeFailed := false;
   fFrameTexValid := false;
 
   if (av_seek_frame(fFormatContext,
