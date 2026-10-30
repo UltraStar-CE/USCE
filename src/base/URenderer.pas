@@ -214,6 +214,8 @@ const
 
 function TextureTypeToStr(TexType: TTextureType): string;
 function ParseTextureType(const TypeStr: string; Default: TTextureType): TTextureType;
+function PrepareTextureSurface(const Identifier: IPath; Typ: TTextureType; Col: LongWord; Limit: integer): PSDL_Surface;
+
 procedure AdjustPixelFormat(var TexSurface: PSDL_Surface; Typ: TTextureType);
 type
   PTextureEntry = ^TTextureEntry;
@@ -315,6 +317,7 @@ type
       property VSync: boolean read GetVSync write SetVSync;
       property SupportsProjectM: boolean read fSupportsProjectM;
       property MaxTextureSize: integer read fMaxTextureSize;
+      property TextureLimit: integer read Limit;
       property Error: boolean read GetError;
       property ErrorCode: integer read GetErrorCode;
   end;
@@ -441,7 +444,7 @@ begin
   Result := LoadTexture(Identifier, TEXTURE_TYPE_PLAIN, 0);
 end;
 
-function TRenderer.LoadTexture(const Identifier: IPath; Typ: TTextureType; Col: LongWord): TTexture;
+function PrepareTextureSurface(const Identifier: IPath; Typ: TTextureType; Col: LongWord; Limit: integer): PSDL_Surface;
 var
   TexSurface: PSDL_Surface;
   newWidth, newHeight: integer;
@@ -450,7 +453,7 @@ begin
   // load texture data into memory
   if (Identifier = nil) or (Identifier.IsUnset) then
   begin
-    Result := CreateEmptyTexture(Identifier);
+    Result := nil;
     Exit;
   end;
   TexSurface := LoadImage(Identifier);
@@ -458,16 +461,17 @@ begin
   begin
     Log.LogError('Could not load texture: "' + Identifier.ToNative +'" with type "'+ TextureTypeToStr(Typ) +'"',
                  'TRenderer.LoadTexture');
-    Result := CreateEmptyTexture(Identifier);
+    Result := nil;
     Exit;
   end;
 
+  try
   // convert pixel format as needed
   AdjustPixelFormat(TexSurface, Typ);
   if not assigned(TexSurface) then
   begin
     Log.LogError('Could not convert surface', 'TRenderer.LoadTexture');
-    Result := CreateEmptyTexture(Identifier);
+    Result := nil;
     SDL_FreeSurface(TexSurface);
     Exit;
   end;
@@ -487,9 +491,26 @@ begin
   if (Typ = TEXTURE_TYPE_COLORIZED) then
     ColorizeImage(TexSurface, Col);
 
-  SDL_LockSurface(TexSurface); // unlocked by SDL_FreeSurface
-  Result := LoadTexture(TexSurface^.pixels, TexSurface^.w, TexSurface^.h, Identifier, Typ, true);
-  SDL_FreeSurface(TexSurface);
+  Result := TexSurface;
+  except
+    SDL_FreeSurface(TexSurface);
+    raise;
+  end;
+end;
+
+function TRenderer.LoadTexture(const Identifier: IPath; Typ: TTextureType; Col: LongWord): TTexture;
+var
+  Surface: PSDL_Surface;
+begin
+  Surface := PrepareTextureSurface(Identifier, Typ, Col, Limit);
+  if Surface = nil then
+    Exit(CreateEmptyTexture(Identifier));
+  try
+    SDL_LockSurface(Surface);
+    Result := LoadTexture(Surface^.pixels, Surface^.w, Surface^.h, Identifier, Typ, true);
+  finally
+    SDL_FreeSurface(Surface);
+  end;
 end;
 
 function TRenderer.GetTexture(const Name: IPath; Typ: TTextureType): TTexture;

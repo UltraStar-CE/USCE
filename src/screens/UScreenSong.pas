@@ -36,6 +36,7 @@ interface
 uses
   UVoiceAssignments,
   UCatCovers,
+  UCoverDecode,
   UCommon,
   UDataBase,
   UDisplay,
@@ -64,6 +65,7 @@ type
   TScreenSong = class(TMenu)
     private
       Equalizer: Tms_Equalizer;
+      CoverDecode: TCoverDecode;
 
       PreviewOpened: Integer; // interaction of the Song that is loaded for preview music
                               // -1 if nothing is opened
@@ -300,6 +302,7 @@ type
 
       procedure UnloadCover(NumberOfButtonInArray: integer);
       procedure LoadCover(NumberOfButtonInArray: integer);
+      destructor Destroy; override;
 
       procedure SongScore;
 
@@ -1902,6 +1905,7 @@ var
   StaticY: real;
 begin
   inherited Create;
+  CoverDecode := TCoverDecode.Create(Renderer.TextureLimit);
 
   MarkedPlaylistSong := -1;
 
@@ -2337,6 +2341,7 @@ end;
 
 procedure TScreenSong.SetScrollRefresh;
 begin
+  CoverDecode.Clear;
   SchedulePreview;
   case TSongMenuMode(Ini.SongMenu) of
     smRoulette: SetRouletteScrollRefresh;
@@ -2751,11 +2756,12 @@ end;
 
 procedure TScreenSong.SetChessboardScrollRefresh;
 begin
+  LoadCover(Interaction);
   Statics[StaticActual].Texture.Free;
   if (Button[Interaction].Texture.Name.IsUnset) then
     Statics[StaticActual].Texture := Renderer.GetTexture(Skin.GetTextureFileName('SongCover'), TEXTURE_TYPE_PLAIN)
   else
-    Statics[StaticActual].Texture := Renderer.LoadTexture(Button[Interaction].Texture.Name);
+    Statics[StaticActual].Texture := Button[Interaction].Texture.Clone;
 
   Statics[StaticActual].Texture.CornerRadius := Theme.Song.Cover.CornerRadius;
   Statics[StaticActual].Texture.ScaleMode := Theme.Song.Cover.ScaleMode;
@@ -2867,11 +2873,12 @@ var
 begin
   UpdateListSelectedText;
 
+  LoadCover(Interaction);
   Statics[StaticActual].Texture.Free;
   if (Button[Interaction].Texture.Name.IsUnset) then
     Statics[StaticActual].Texture := Renderer.GetTexture(Skin.GetTextureFileName('SongCover'), TEXTURE_TYPE_PLAIN)
   else
-    Statics[StaticActual].Texture := Renderer.LoadTexture(Button[Interaction].Texture.Name);
+    Statics[StaticActual].Texture := Button[Interaction].Texture.Clone;
 
   Statics[StaticActual].Texture.CornerRadius := Theme.Song.Cover.CornerRadius;
   Statics[StaticActual].Texture.ScaleMode := Theme.Song.Cover.ScaleMode;
@@ -3203,6 +3210,7 @@ end;
 
 procedure TScreenSong.OnHide;
 begin
+  CoverDecode.Clear;
   inherited;
   if not KeepPreviewMusicOnHide then
   begin
@@ -3468,8 +3476,21 @@ begin
 
   //Log.BenchmarkStart(5);
 
+  CoverDecode.BeginFrame;
+  // Prioritize the selected cover; retry pending visible covers once per frame.
+  if (Interaction >= 0) and (Interaction <= High(Button)) then LoadCover(Interaction);
   // Song Menu Style
   SetScroll;
+  CoverDecode.EndFrame;
+  if (StaticActual >= 0) and (StaticActual <= High(Statics)) and
+     Statics[StaticActual].Texture.IsEmpty and (Interaction >= 0) and
+     (Interaction <= High(Button)) and not Button[Interaction].Texture.IsEmpty then
+  begin
+    case TSongMenuMode(Ini.SongMenu) of
+      smChessboard: SetChessboardScrollRefresh;
+      smList: SetListScrollRefresh;
+    end;
+  end;
 
   //Log.BenchmarkEnd(5);
   //Log.LogBenchmark('SetScroll4', 5);
@@ -4631,15 +4652,29 @@ end;
 procedure TScreenSong.LoadCover(NumberOfButtonInArray: integer);
 var
   Tex: TTexture;
+  Surface: PSDL_Surface;
 begin
   If (Button[NumberOfButtonInArray].Texture.IsEmpty) and Assigned(Button[NumberOfButtonInArray].Texture.Name) then
   begin
-    Tex := Renderer.LoadTexture(Button[NumberOfButtonInArray].Texture.Name);
+    if not CoverDecode.Poll(Button[NumberOfButtonInArray].Texture.Name, Surface) then Exit;
+    try
+      SDL_LockSurface(Surface);
+      Tex := Renderer.CreateTexture(PChar(Surface.pixels), Button[NumberOfButtonInArray].Texture.Name,
+        Surface.w, Surface.h, TEXTURE_TYPE_PLAIN);
+    finally
+      SDL_FreeSurface(Surface);
+    end;
     Tex.ScaleMode := Theme.Song.Cover.ScaleMode;
     Tex.CornerRadius := Theme.Song.Cover.CornerRadius;
     Button[NumberOfButtonInArray].Texture.Free;
     Button[NumberOfButtonInArray].Texture := Tex;
   end;
+end;
+
+destructor TScreenSong.Destroy;
+begin
+  CoverDecode.Free;
+  inherited;
 end;
 
 procedure TScreenSong.Refresh;
