@@ -103,6 +103,8 @@ uses
   ULuaText,
   ULuaParty,
   ULuaScreenSing,
+  ULuaScreenSong,
+  ULuaMusic,
   UTime,
   UWebcam,
   ULibraryLockdown,
@@ -329,6 +331,8 @@ begin
     LuaCore.RegisterModule('Text', ULuaText_Lib_f);
     LuaCore.RegisterModule('Party', ULuaParty_Lib_f);
     LuaCore.RegisterModule('ScreenSing', ULuaScreenSing_Lib_f);
+    LuaCore.RegisterModule('ScreenSong', ULuaScreenSong_Lib_f);
+    LuaCore.RegisterModule('Music', ULuaMusic_Lib_f);
 
     LuaCore.LoadPlugins;
 
@@ -365,6 +369,7 @@ begin
          DataBase.Destroy();
     end;
 
+    LuaMusicReleaseAll;
     Log.LogStatus('Finalize Media', 'Finalization');
     FinalizeMedia();
 

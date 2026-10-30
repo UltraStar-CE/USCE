@@ -127,6 +127,7 @@ type
 
     //the song was sung to the end
     SungToEnd: boolean;
+    SungPaused: boolean;
 
     // some settings to be set by plugins
     Settings: record
@@ -284,6 +285,8 @@ begin
         if ScreenSong.Mode = smMedley then Exit;
         SeekTo(fStartTime);
         PlaybackSeeked := false;
+        SungPaused := false;
+        SungToEnd := false;
         Exit;
       end;
 
@@ -665,6 +668,7 @@ begin
   begin
     // pause time
     Paused := true;
+    SungPaused := true;
 
     LyricsState.Pause();
     StopSingClicks;
@@ -745,6 +749,7 @@ begin
   //the song was sung to the end
   SungToEnd := false;
   PlaybackSeeked := false;
+  SungPaused := false;
 
   ClearSettings;
   Party.CallBeforeSing;
@@ -1029,6 +1034,8 @@ var
 
 begin
   ResetSungPitchReference;
+  SungPaused := false;
+  SungToEnd := false;
   // background texture (garbage disposal)
   FreeAndNil(Tex_Background);
 

@@ -690,6 +690,7 @@ procedure DumpMediaInterfaces();
 function FindNote(beat: integer): TPos;
 function IsUnpitchedNote(NoteType: TNoteType): boolean;
 function HasStandardScoreFactors: boolean;
+function ResolveSoundAsset(const Filename: UTF8String): IPath;
 
 implementation
 

@@ -1,0 +1,2 @@
+function plugin_init() register(current_filename,'1.0');require('Usdx.Music');return true end
+function plugin_unload() end
