@@ -27,7 +27,7 @@ async function fixture(run) {
     fs.mkdirSync('docs/images', {recursive:true});
     for (const kind of ['usce','upstream']) fs.writeFileSync('docs/images/release-2026.10.0-' + kind + '.svg', '<svg xmlns="http://www.w3.org/2000/svg"/>');
     fs.mkdirSync('release-output');
-    for (const name of ['USCE-windows-installer-2026.10.0.exe','USCE-windows-portable-2026.10.0.zip','USCE-linux-2026.10.0.AppImage','USCE-mac-ARM-2026.10.0.dmg','USCE-mac-x86-2026.10.0.dmg','SHA256SUMS','VERSION']) fs.writeFileSync('release-output/'+name, name);
+    for (const name of ['USCE-windows-installer-2026.10.0.exe','USCE-windows-portable-2026.10.0.zip','USCE-linux-2026.10.0.AppImage','USCE-linux-deb-2026.10.0.deb','USCE-mac-ARM-2026.10.0.dmg','USCE-mac-x86-2026.10.0.dmg','SHA256SUMS','VERSION']) fs.writeFileSync('release-output/'+name, name);
     const state = {releases:[],assets:[],uploads:0,outputs:{}};
     const repos = {
       getCommit: async () => {const e=Error('missing tag');e.status=404;throw e;},
@@ -56,16 +56,16 @@ test('draft publisher pins source, retains attribution and retries matching asse
   assert(x.state.releases[0].body.includes('UltraStar-Deluxe/USDX#1460'));
   assert(x.state.releases[0].body.includes('https://github.com/UltraStar-Deluxe/USDX/pull/1460'));
   assert(x.state.releases[0].body.includes(themePin.sha));
-  assert.equal(x.state.uploads,7);
+  assert.equal(x.state.uploads,8);
   await publishDraft(x,'2026.10.0');
   assert.equal(x.state.releases.length,1);
-  assert.equal(x.state.uploads,7);
+  assert.equal(x.state.uploads,8);
   fs.writeFileSync('release-output/SHA256SUMS','changed');
   await assert.rejects(publishDraft(x,'2026.10.0'), /asset differs/);
 }));
 test('publisher rejects a missing package, a different tag and an already published release', async()=>fixture(async x=>{
   fs.renameSync('release-output/SHA256SUMS','sums');
-  await assert.rejects(publishDraft(x,'2026.10.0'), /five packages/);
+  await assert.rejects(publishDraft(x,'2026.10.0'), /six packages/);
   assert.equal(x.state.releases.length,0);
   fs.renameSync('sums','release-output/SHA256SUMS');
   x.git.getRef=async()=>({data:{object:{type:'tag',sha:'annotated-tag'}}});

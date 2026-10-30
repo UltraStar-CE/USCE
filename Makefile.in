@@ -358,26 +358,10 @@ dist:
 # Debian package
 #################################################
 
-debpkgdir    ?= dists/debian
-debpkgtmpdir := $(debpkgdir)/deb-package
-debpkgprefix := $(USCE_PACKAGE_NAME)
-debpkgname   := $(debpkgprefix)_$(USCE_VERSION)_$(PPROCESSOR).deb
-
+debpkgdir ?= dists/debian
 .PHONY: deb
 deb: all
-	$(RM_REC) $(debpkgtmpdir)
-
-	$(MKDIR) $(debpkgdir)
-	$(MKDIR) $(debpkgtmpdir)/DEBIAN
-
-	$(MAKE) DESTDIR=$(debpkgtmpdir)/ install-all
-
-	$(INSTALL_DATA) $(debpkgdir)/$(debpkgprefix).control $(debpkgtmpdir)/DEBIAN/control
-
-	dpkg-deb --build $(debpkgtmpdir)
-	mv $(debpkgtmpdir)/../deb-package.deb $(debpkgdir)/$(debpkgname)
-
-	$(RM_REC) $(debpkgtmpdir)
+	python3 tools/build-deb.py --version "$(USCE_VERSION)" --output "$(debpkgdir)" --themes "$(USCE_THEMES_DIR)"
 
 #################################################
 # RPM (TODO)
