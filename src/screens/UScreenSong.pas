@@ -1176,7 +1176,8 @@ begin
           begin
             Fix := true;
 
-            if (CatSongs.CatNumShow = -2) and (PlaylistMan.CurPlayList <> -1) then
+            if (CatSongs.CatNumShow = -2) and (PlaylistMan.Mode = smPlaylist) and
+              (PlaylistMan.CurPlayList <> -1) then
             begin
               PlaylistMan.SetPlayList(PlaylistMan.CurPlayList, Interaction);
               NextRandomSearchIdx := CatSongs.VisibleSongs;
@@ -3095,7 +3096,7 @@ begin
   CoverTime := 10;
   PlaylistReapplied := false;
 
-  if (PlaylistMan.CurPlayList <> -1) then
+  if (PlaylistMan.Mode = smPlaylist) and (PlaylistMan.CurPlayList <> -1) then
   begin
     PlaylistReloaded := PlaylistMan.ReloadPlayList(PlaylistMan.CurPlayList);
 
@@ -3212,7 +3213,7 @@ begin
   if not Assigned(PlayListMan) then
     Exit;
 
-  if (PlayListMan.CurPlayList < 0) or
+  if (PlayListMan.Mode <> smPlaylist) or (PlayListMan.CurPlayList < 0) or
      (PlayListMan.CurPlayList > High(PlayListMan.Playlists)) or
      (CatSongs.CatNumShow <> -3) then
     Exit;
@@ -4429,7 +4430,7 @@ begin
     // playlist or the locked library.
     if CatSongs.CatNumShow = -2 then
       ScreenSongJumpto.ApplyFilter
-    else if PlaylistMan.CurPlayList <> -1 then
+    else if (PlaylistMan.Mode = smPlaylist) and (PlaylistMan.CurPlayList <> -1) then
       PlaylistMan.SetPlayList(PlaylistMan.CurPlayList, Interaction)
     else if CatSongs.CatNumShow >= 0 then
       CatSongs.ShowCategory(CatSongs.CatNumShow)
