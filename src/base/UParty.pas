@@ -260,6 +260,7 @@ var
 implementation
 
 uses
+  UDataBase,
   UIni,
   UGraphic,
   ULanguage,
@@ -957,7 +958,7 @@ end;
 
 procedure TPartyGame.CallAfterSing;
   var
-    ExecuteDefault: boolean;
+    ExecuteDefault, ShowHighscores: boolean;
 begin
   if not bPartyStarted then
     ExecuteDefault := true
@@ -972,11 +973,21 @@ begin
   // execute default function:
   if ExecuteDefault then
   begin
-    if bPartyGame and ScreenSing.LocalHighscoresAllowed then
-      Display.FadeTo(@ScreenHighScores)
-    else if (bPartyGame) then
-      // display party score screen
-      Display.FadeTo(@ScreenPartyScore)
+    if bPartyGame then
+    begin
+      ShowHighscores := false;
+      if ScreenSing.LocalHighscoresAllowed then
+      begin
+        DataBase.ReadScore(CurrentSong);
+        ShowHighscores := Length(CurrentSong.Score[Ini.Difficulty]) > 0;
+      end;
+      // Choose before fading: redirecting from an empty highscore OnShow can
+      // bypass initialization of the replacement Party results screen.
+      if ShowHighscores then
+        Display.FadeTo(@ScreenHighScores)
+      else
+        Display.FadeTo(@ScreenPartyScore);
+    end
     else //display standard score screen
     begin
       if (ScreenSong.Mode = smPartyTournament) then
