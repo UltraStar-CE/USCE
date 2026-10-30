@@ -103,8 +103,6 @@ const
   // decoder cannot keep up at all, one frame is still converted after this
   // many consecutive skipped frames.
   VIDEO_MAX_CONSECUTIVE_DROPS = 15;
-  // consecutive avcodec_receive_frame errors tolerated before giving up
-  MAX_RECEIVE_ERRORS = 100;
 
 type
   IVideo_FFmpeg = interface (IVideo)
@@ -123,6 +121,7 @@ type
   private
     fOpened: boolean;     //**< stream successfully opened
     fPaused: boolean;     //**< stream paused
+    fDecodeFailed: boolean; // terminal decoder error (worker only)
     fEOF: boolean;        //**< end-of-file state of the decoder (decode thread only)
 
     {*
@@ -140,6 +139,7 @@ type
     fSeekTime:     extended;
     fSeekGen:      integer;    //**< incremented on each seek to discard stale frames
     fRequestedTime: extended;  //**< stream time the main thread is currently displaying
+    fDecoderFailed: boolean; // published terminal failure, protected by fLock
     fDecoderEOF:   boolean;    //**< decode thread reached the end of the stream
     fSlots:        array of TVideoFrameSlot; //**< ring buffer of converted frames
     fSlotHead:     integer;    //**< index of the oldest queued frame
@@ -190,7 +190,7 @@ type
 
     function AllocSlots(): boolean;
     procedure FreeSlots();
-    procedure StartDecodeThread();
+    function StartDecodeThread(): boolean;
     procedure StopDecodeThread();
     procedure DecodeLoop();
     procedure DoSeek(Time: extended);
@@ -674,7 +674,11 @@ begin
   end;
 
   fOpened := true;
-  StartDecodeThread();
+  if not StartDecodeThread() then
+  begin
+    Close();
+    Exit;
+  end;
   Result := true;
 end;
 
@@ -739,27 +743,38 @@ begin
       Log.LogError('Video decode thread: ' + E.Message, 'VideoDecodeThreadMain');
       with TVideo_FFmpeg(Data) do
       begin
-        // the exception may have left fLock held by this thread: take it
-        // (recursive), end the stream, then release every hold
+        // DecodeLoop releases its mutex in its finally block.
         SDL_LockMutex(fLock);
-        fDecoderEOF := true;
-        while (SDL_UnlockMutex(fLock) = 0) do;
+        try
+          fDecoderFailed := true;
+          fDecoderEOF := true;
+        finally
+          SDL_UnlockMutex(fLock);
+        end;
       end;
     end;
   end;
   Result := 0;
 end;
 
-procedure TVideo_FFmpeg.StartDecodeThread();
+function TVideo_FFmpeg.StartDecodeThread(): boolean;
 begin
   fQuit := false;
   fSeekPending := false;
   fDecoderEOF := false;
+  fDecoderFailed := false;
   fLock := SDL_CreateMutex();
   fWakeCond := SDL_CreateCond();
-  fDecodeThread := SDL_CreateThread(@VideoDecodeThreadMain, 'USDX video decoder', Self);
+  Result := false;
+  if (fLock = nil) or (fWakeCond = nil) then
+  begin
+    Log.LogError('Could not create video decode synchronization: ' + SDL_GetError(), 'TVideoPlayback_ffmpeg.Open');
+    Exit;
+  end;
+  fDecodeThread := SDL_CreateThread(@VideoDecodeThreadMain, 'USCE video decoder', Self);
   if (fDecodeThread = nil) then
     Log.LogError('Could not create video decode thread: ' + SDL_GetError(), 'TVideoPlayback_ffmpeg.Open');
+  Result := fDecodeThread <> nil;
 end;
 
 procedure TVideo_FFmpeg.StopDecodeThread();
@@ -797,98 +812,110 @@ var
   Stale: boolean;
   Drops: integer;
   errnum: integer;
+  LockHeld: boolean;
 begin
   Drops := 0;
   SDL_LockMutex(fLock);
-  while not fQuit do
-  begin
-    if fSeekPending then
+  LockHeld := true;
+  try
+    while not fQuit do
     begin
-      fSeekPending := false;
-      SeekTo := fSeekTime;
+      if fSeekPending then
+      begin
+        fSeekPending := false;
+        SeekTo := fSeekTime;
+        LockHeld := false;
+        SDL_UnlockMutex(fLock);
+        DoSeek(SeekTo);
+        Drops := 0;
+        SDL_LockMutex(fLock);
+        LockHeld := true;
+        Continue;
+      end;
+
+      if (fSlotCount >= Length(fSlots)) or fDecoderEOF then
+      begin
+        SDL_CondWait(fWakeCond, fLock);
+        Continue;
+      end;
+
+      Gen := fSeekGen;
+      LockHeld := false;
       SDL_UnlockMutex(fLock);
-      DoSeek(SeekTo);
-      Drops := 0;
+
+      Success := DecodeFrame();
+      FrameTime := fDecFrameTime;
+
       SDL_LockMutex(fLock);
-      Continue;
+      LockHeld := true;
+      if (Gen <> fSeekGen) or fQuit then
+        Continue; // a seek was requested meanwhile, this frame is obsolete
+      if not Success then
+      begin
+        fDecoderFailed := fDecodeFailed;
+        fDecoderEOF := true;
+        Continue;
+      end;
+
+      // Skip the conversion of frames that are already too late to be shown
+      // (e.g. after seeking to a keyframe before the requested position, or if
+      // the decoder fell behind). A queued frame is never newer than this one,
+      // so this does not change which frame ends up on screen.
+      // Frames before the seek target are always skipped, otherwise at most
+      // VIDEO_MAX_CONSECUTIVE_DROPS in a row so the picture keeps moving.
+      Stale := (FrameTime + fFrameDuration <= fRequestedTime) and
+               ((FrameTime + fFrameDuration <= fDecSeekTarget) or
+                (Drops < VIDEO_MAX_CONSECUTIVE_DROPS));
+      if Stale then
+      begin
+        Inc(Drops);
+        Continue;
+      end;
+      Drops := 0;
+
+      // Only the decode thread writes to the slot behind the queue's tail,
+      // the main thread only reads queued slots, so no lock is needed here.
+      Slot := (fSlotHead + fSlotCount) mod Length(fSlots);
+      LockHeld := false;
+      SDL_UnlockMutex(fLock);
+
+      errnum := -1;
+      try
+        errnum := sws_scale(fSwScaleContext, @fAVFrame.data, @fAVFrame.linesize,
+                0, fCodecContext^.Height,
+                @fSlots[Slot].Data[0], @fSlots[Slot].Linesize[0]);
+      except
+        ;
+      end;
+
+      {$IF LIBSWSCALE_VERSION < 8003000}
+      {$IF DEFINED(CPUX86_64) or DEFINED(CPUX86)}
+      // Unscaled conversion with libswscale lacked the emms instruction.
+      // With FFmpeg 7.1 these mmx(ext) implementations have been removed.
+      // I assume you won't run this game on an x86 system that does not yet support mmx.
+      asm
+        emms
+      end ['st(0)','st(1)','st(2)','st(3)','st(4)','st(5)','st(6)','st(7)',
+           'mm0','mm1','mm2','mm3','mm4','mm5','mm6','mm7'];
+      {$ENDIF}
+      {$ENDIF}
+
+      SDL_LockMutex(fLock);
+      LockHeld := true;
+      if (errnum < 0) then
+      begin
+        Log.LogError('Image conversion failed', 'TVideoPlayback_ffmpeg.DecodeLoop');
+        Continue;
+      end;
+      if (Gen = fSeekGen) and not fQuit then
+      begin
+        fSlots[Slot].Time := FrameTime;
+        Inc(fSlotCount);
+      end;
     end;
-
-    if (fSlotCount >= Length(fSlots)) or fDecoderEOF then
-    begin
-      SDL_CondWait(fWakeCond, fLock);
-      Continue;
-    end;
-
-    Gen := fSeekGen;
-    SDL_UnlockMutex(fLock);
-
-    Success := DecodeFrame();
-    FrameTime := fDecFrameTime;
-
-    SDL_LockMutex(fLock);
-    if (Gen <> fSeekGen) or fQuit then
-      Continue; // a seek was requested meanwhile, this frame is obsolete
-    if not Success then
-    begin
-      fDecoderEOF := true;
-      Continue;
-    end;
-
-    // Skip the conversion of frames that are already too late to be shown
-    // (e.g. after seeking to a keyframe before the requested position, or if
-    // the decoder fell behind). A queued frame is never newer than this one,
-    // so this does not change which frame ends up on screen.
-    // Frames before the seek target are always skipped, otherwise at most
-    // VIDEO_MAX_CONSECUTIVE_DROPS in a row so the picture keeps moving.
-    Stale := (FrameTime + fFrameDuration <= fRequestedTime) and
-             ((FrameTime + fFrameDuration <= fDecSeekTarget) or
-              (Drops < VIDEO_MAX_CONSECUTIVE_DROPS));
-    if Stale then
-    begin
-      Inc(Drops);
-      Continue;
-    end;
-    Drops := 0;
-
-    // Only the decode thread writes to the slot behind the queue's tail,
-    // the main thread only reads queued slots, so no lock is needed here.
-    Slot := (fSlotHead + fSlotCount) mod Length(fSlots);
-    SDL_UnlockMutex(fLock);
-
-    errnum := -1;
-    try
-      errnum := sws_scale(fSwScaleContext, @fAVFrame.data, @fAVFrame.linesize,
-              0, fCodecContext^.Height,
-              @fSlots[Slot].Data[0], @fSlots[Slot].Linesize[0]);
-    except
-      ;
-    end;
-
-    {$IF LIBSWSCALE_VERSION < 8003000}
-    {$IF DEFINED(CPUX86_64) or DEFINED(CPUX86)}
-    // Unscaled conversion with libswscale lacked the emms instruction.
-    // With FFmpeg 7.1 these mmx(ext) implementations have been removed.
-    // I assume you won't run this game on an x86 system that does not yet support mmx.
-    asm
-      emms
-    end ['st(0)','st(1)','st(2)','st(3)','st(4)','st(5)','st(6)','st(7)',
-         'mm0','mm1','mm2','mm3','mm4','mm5','mm6','mm7'];
-    {$ENDIF}
-    {$ENDIF}
-
-    SDL_LockMutex(fLock);
-    if (errnum < 0) then
-    begin
-      Log.LogError('Image conversion failed', 'TVideoPlayback_ffmpeg.DecodeLoop');
-      Continue;
-    end;
-    if (Gen = fSeekGen) and not fQuit then
-    begin
-      fSlots[Slot].Time := FrameTime;
-      Inc(fSlotCount);
-    end;
+  finally
+    if LockHeld then SDL_UnlockMutex(fLock);
   end;
-  SDL_UnlockMutex(fLock);
 end;
 
 {**
@@ -902,6 +929,7 @@ begin
   fDecFrameTime := Time;
   fDecNextFrameTime := Time;
   fEOF := false;
+  fDecodeFailed := false;
 
   // Do not use the AVSEEK_FLAG_ANY here. It will seek to any frame, even
   // non keyframes (P-/B-frames). It will produce corrupted video frames as
@@ -937,7 +965,9 @@ begin
   fTexHasContent := false;
 
   fEOF := false;
+  fDecodeFailed := false;
   fDecoderEOF := false;
+  fDecoderFailed := false;
   fDecFrameTime := 0;
   fDecNextFrameTime := 0;
   fDecSeekTarget := 0;
@@ -1039,10 +1069,8 @@ var
   dts: int64;
   fileSize: int64;
   urlError: integer;
-  ReceiveErrors: integer;
 begin
   Result := false;
-  ReceiveErrors := 0;
   FrameFinished := 0;
   AVPacket := nil;
 
@@ -1062,16 +1090,12 @@ begin
     end;
     if errnum <> AVERROR(EAGAIN) then
     begin
-      // a single bad packet is skipped, but a persistent error would loop forever
-      Inc(ReceiveErrors);
-      if (ReceiveErrors < MAX_RECEIVE_ERRORS) then
-        Continue;
-      Log.LogError('Video decoder error: ' + IntToStr(errnum), 'TVideoPlayback_FFmpeg.DecodeFrame');
-      if (AVPacket <> nil) then
-        av_packet_free(@AVPacket);
+      Log.LogError('Video frame receive error: ' + IntToStr(errnum), 'TVideoPlayback_FFmpeg.DecodeFrame');
+      fEOF := true;
+      fDecodeFailed := true;
+      av_packet_free(@AVPacket);
       Exit;
     end;
-    ReceiveErrors := 0;
 
     if (AVPacket = nil) then
       AVPacket := av_packet_alloc();
@@ -1151,7 +1175,7 @@ var
   Slot: integer;
   SlotTime: Extended;
   Freed: boolean;
-  ReachedEnd: boolean;
+  ReachedEnd, DecodeFailed: boolean;
 begin
   if not fOpened then
     Exit;
@@ -1203,6 +1227,7 @@ begin
   end;
 
   ReachedEnd := (fSlotCount = 0) and fDecoderEOF;
+  DecodeFailed := fDecoderFailed;
 
   if Freed then
     SDL_CondSignal(fWakeCond);
@@ -1232,7 +1257,7 @@ begin
     end;
     SDL_UnlockMutex(fLock);
   end
-  else if ReachedEnd and fLoop then
+  else if ReachedEnd and fLoop and not DecodeFailed then
   begin
     // we have to loop, so rewind
     SetPosition(0);
@@ -1364,7 +1389,7 @@ begin
   GetVideoRect(ScreenRect, TexRect);
 
   Renderer.SetScissorRect(
-    round(fPosX*VertexW + (ScreenWPerScreen)*(fScreen-1)),
+    round(fPosX*VertexW + Renderer.ViewportX),
     round((RenderH-fPosY-fHeight)*VertexH),
     round(fWidth*VertexW),
     round(fHeight*VertexH)
@@ -1501,6 +1526,7 @@ begin
   fRequestedTime := Time;
   fSlotCount := 0;
   fDecoderEOF := false;
+  fDecoderFailed := false;
   SDL_CondSignal(fWakeCond);
   SDL_UnlockMutex(fLock);
 end;
