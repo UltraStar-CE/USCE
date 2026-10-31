@@ -39,15 +39,14 @@ uses
   sdl2,
   UText,
   UPath,
-  UMenuInteract;
+  UMenuInteract,
+  URecentNames;
 
 type
   TText = class
     private
       SelectBool:  boolean;
-      TextString:  UTF8String;
-      NamePrediction: UTF8String;
-      NameEditing: boolean;
+      NameInput: TNameEntryState;
       TextTiles:   array of UTF8String;
       TextTileBoldStart: array of boolean;
       FitBaseSize: single;
@@ -56,6 +55,8 @@ type
       STicks:      cardinal;
       SelectBlink: boolean;
 
+      function GetText: UTF8String;
+      procedure RebuildText(const Value: UTF8String);
       function GetLineCount: integer;
     public
       X:       single;
@@ -97,7 +98,7 @@ type
       property Selected: boolean read SelectBool write SetSelect;
 
       procedure SetText(Value: UTF8String);
-      property  Text: UTF8String read TextString write SetText;
+      property  Text: UTF8String read GetText write SetText;
 
       property LineCount: integer read GetLineCount;
 
@@ -118,59 +119,46 @@ uses
   UGraphic,
   UIni,
   UThemes,
-  URecentNames,
   UDisplay,
   UUnicodeStringHelper,
   UUnicodeUtils,
   StrUtils;
 
 procedure TText.TypeNameCharacter(const Value: UTF8String);
-var Edited: UTF8String;
 begin
   NameEntryField := true;
-  Edited := TypeNameInput(NameEditing, Text, Value);
-  Text := Edited;
-  NameEditing := true;
+  NameInput.TypeText(Value);
+  RebuildText(NameInput.Value);
   SuggestRecentName;
 end;
 
 procedure TText.DeleteNameCharacter;
 begin
   NameEntryField := true;
-  DeleteLastLetter;
-  NameEditing := true;
+  NameInput.Backspace;
+  RebuildText(NameInput.Value);
   SuggestRecentName;
 end;
 
 procedure TText.SuggestRecentName;
 begin
-  NamePrediction := '';
-  if Assigned(Ini) and (Theme.NameSuggestionAlpha > 0) then
+  NameInput.Cancel;
+  if Assigned(Ini) then
   begin
-    if TeamNameField then
-      NamePrediction := PredictRecentName(Ini.RecentTeamNames, Text)
-    else
-      NamePrediction := PredictRecentName(Ini.RecentNames, Text);
+    if TeamNameField then NameInput.Suggest(Ini.RecentTeamNames, Theme.NameSuggestionAlpha > 0)
+    else NameInput.Suggest(Ini.RecentNames, Theme.NameSuggestionAlpha > 0);
   end;
 end;
 
 function TText.AcceptNameSuggestion: boolean;
-var Value: UTF8String;
 begin
-  Result := NamePrediction <> '';
-  if Result then
-  begin
-    Value := NamePrediction;
-    NamePrediction := '';
-    Text := Value;
-    NameEditing := true;
-  end;
+  Result := NameInput.Accept;
+  if Result then RebuildText(NameInput.Value);
 end;
 
 function TText.CancelNameSuggestion: boolean;
 begin
-  Result := NamePrediction <> '';
-  NamePrediction := '';
+  Result := NameInput.Cancel;
 end;
 
 function InlineBoldStyle(BaseStyle: integer): integer;
@@ -294,8 +282,7 @@ procedure TText.SetSelect(Value: boolean);
 begin
   if SelectBool and not Value then
   begin
-    AcceptNameSuggestion;
-    NameEditing := false;
+    if NameInput.Finish then RebuildText(NameInput.Value);
   end;
   SelectBool := Value;
 
@@ -304,7 +291,18 @@ begin
   STicks := SDL_GetTicks() div 550;
 end;
 
+function TText.GetText: UTF8String;
+begin
+  Result := NameInput.Value;
+end;
+
 procedure TText.SetText(Value: UTF8String);
+begin
+  NameInput.Assign(Value);
+  RebuildText(Value);
+end;
+
+procedure TText.RebuildText(const Value: UTF8String);
 var
   DecFontSize: boolean = true; // how to handle strings that are too long to fit a given height, either decrease font size or cut off with ellipsis
   MaxSize:     single;
@@ -478,10 +476,6 @@ var
   end;
 
 begin
-  // set TextString
-  NamePrediction := '';
-  NameEditing := false;
-  TextString := Value;
 
   // set cursor visible
   SelectBlink := true;
@@ -517,7 +511,7 @@ end;
 
 procedure TText.DeleteLastLetter;
 begin
-  SetText(UTF8Copy(TextString, 1, LengthUTF8(TextString)-1));
+  SetText(UTF8Copy(Text, 1, LengthUTF8(Text)-1));
 end;
 
 function TText.GetLineCount: integer;
@@ -589,12 +583,12 @@ begin
     end
     else
     begin}
-    if (NamePrediction <> '') and SelectBool then
+    if (NameInput.Prediction <> '') and SelectBool then
     begin
-      if Length(TextTiles) <> 1 then NamePrediction := ''
+      if Length(TextTiles) <> 1 then NameInput.Cancel
       else
       begin
-        WideSuffix := Copy(UTF8Decode(NamePrediction), Length(UTF8Decode(Text)) + 1, MaxInt);
+        WideSuffix := UTF8Decode(NameInput.Suffix);
         Suffix := UTF8Encode(WideSuffix);
         while (NameSuggestionWidth > 0) and (Suffix <> '') and
           (TextWidth(Text + Suffix) > NameSuggestionWidth) do
@@ -604,7 +598,7 @@ begin
             SetLength(WideSuffix, Length(WideSuffix) - 1);
           Suffix := UTF8Encode(WideSuffix);
         end;
-        if Suffix = '' then NamePrediction := '';
+        if Suffix = '' then NameInput.Cancel;
         PrefixWidth := TextWidth(Text);
         case Align of
           1: X2 := X + MoveX - TextWidth(Text + Suffix) / 2;

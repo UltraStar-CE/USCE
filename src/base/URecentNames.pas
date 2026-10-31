@@ -6,7 +6,26 @@ interface
 
 uses SysUtils, IniFiles;
 
-type TRecentNames = array of UTF8String;
+type
+  TRecentNames = array of UTF8String;
+  TNameEntryState = record
+  private
+    FValue, FPrediction: UTF8String;
+    FEditing: boolean;
+    function GetSuffix: UTF8String;
+  public
+    procedure Assign(const Value: UTF8String);
+    procedure TypeText(const Input: UTF8String);
+    procedure Backspace;
+    procedure Suggest(const Names: TRecentNames; Enabled: boolean = true);
+    function Accept: boolean;
+    function Cancel: boolean;
+    function Finish: boolean;
+    property Value: UTF8String read FValue;
+    property Prediction: UTF8String read FPrediction;
+    property Suffix: UTF8String read GetSuffix;
+    property Editing: boolean read FEditing;
+  end;
 const MaxRecentNames = 256;
 
 function TypeNameInput(var Editing: boolean; const Current, Input: UTF8String): UTF8String;
@@ -16,6 +35,66 @@ function LoadRecentNames(Ini: TCustomIniFile; const Section: string = 'RecentNam
 procedure SaveRecentNames(Ini: TCustomIniFile; const Names: TRecentNames; const Section: string = 'RecentNames');
 
 implementation
+
+procedure TNameEntryState.Assign(const Value: UTF8String);
+begin
+  FValue := Value;
+  FPrediction := '';
+  FEditing := false;
+end;
+
+procedure TNameEntryState.TypeText(const Input: UTF8String);
+begin
+  FValue := TypeNameInput(FEditing, FValue, Input);
+  FPrediction := '';
+end;
+
+procedure TNameEntryState.Backspace;
+var Start: integer;
+begin
+  Start := Length(FValue);
+  if Start > 0 then
+  begin
+    while (Start > 1) and ((Ord(FValue[Start]) and $C0) = $80) do Dec(Start);
+    Delete(FValue, Start, MaxInt);
+  end;
+  FEditing := true;
+  FPrediction := '';
+end;
+
+procedure TNameEntryState.Suggest(const Names: TRecentNames; Enabled: boolean);
+begin
+  FPrediction := '';
+  if FEditing and Enabled then FPrediction := PredictRecentName(Names, FValue);
+end;
+
+function TNameEntryState.GetSuffix: UTF8String;
+begin
+  Result := UTF8Encode(Copy(UTF8Decode(FPrediction), Length(UTF8Decode(FValue)) + 1, MaxInt));
+end;
+
+function TNameEntryState.Accept: boolean;
+begin
+  Result := FPrediction <> '';
+  if Result then
+  begin
+    FValue := FPrediction;
+    FPrediction := '';
+    FEditing := true;
+  end;
+end;
+
+function TNameEntryState.Cancel: boolean;
+begin
+  Result := FPrediction <> '';
+  FPrediction := '';
+end;
+
+function TNameEntryState.Finish: boolean;
+begin
+  Result := Accept;
+  FEditing := false;
+end;
 
 function TypeNameInput(var Editing: boolean; const Current, Input: UTF8String): UTF8String;
 begin

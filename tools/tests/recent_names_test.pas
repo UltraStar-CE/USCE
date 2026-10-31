@@ -2,7 +2,8 @@ program RecentNamesTest;
 {$mode delphi}
 {$codepage utf8}
 uses SysUtils, IniFiles, URecentNames;
-var Names, Loaded, Teams: TRecentNames; Ini: TMemIniFile; I: integer; Editing: boolean; Typed: UTF8String;
+var Entry: TNameEntryState; Suggestions: TRecentNames;
+    Names, Loaded, Teams: TRecentNames; Ini: TMemIniFile; I: integer; Editing: boolean; Typed: UTF8String;
 
 procedure Expect(Value: boolean; const Message: string);
 begin
@@ -10,6 +11,43 @@ begin
 end;
 
 begin
+  RememberRecentName(Suggestions, 'Daniel');
+  Entry.Assign('Player1');
+  Entry.Suggest(Suggestions);
+  Expect(Entry.Prediction = '', 'Untyped model offered a prediction');
+  Entry.TypeText('D'); Entry.Suggest(Suggestions);
+  Expect((Entry.Value = 'D') and (Entry.Suffix = 'aniel'), 'Model did not replace the initial name or expose its suffix');
+  Entry.TypeText('a'); Entry.Suggest(Suggestions);
+  Expect((Entry.Value = 'Da') and (Entry.Suffix = 'niel'), 'Model typing did not append');
+  Expect(Entry.Cancel and (Entry.Value = 'Da'), 'Cancel changed typed input');
+  Entry.TypeText('n'); Entry.Suggest(Suggestions);
+  Expect(Entry.Accept and (Entry.Value = 'Daniel'), 'Model did not confirm the suggestion');
+  Entry.TypeText('!');
+  Expect(Entry.Value = 'Daniel!', 'Typing after confirmation replaced the name');
+  Entry.Finish;
+  Entry.TypeText('D'); Entry.Suggest(Suggestions);
+  Expect(Entry.Finish and (Entry.Value = 'Daniel') and not Entry.Editing, 'Focus loss did not accept the prediction and finish editing');
+  Entry.TypeText('A');
+  Expect(Entry.Value = 'A', 'A new edit did not replace the confirmed name');
+  Entry.Assign('Änne😀'); Entry.Backspace;
+  Expect(Entry.Value = 'Änne', 'Backspace split a supplementary UTF-8 character');
+  Entry.TypeText('!');
+  Expect(Entry.Value = 'Änne!', 'Typing after deletion replaced the remaining name');
+  Entry.Assign(''); Entry.Backspace;
+  Expect((Entry.Value = '') and Entry.Editing, 'Deleting an empty name failed');
+  RememberRecentName(Suggestions, 'Änne');
+  Entry.Assign('Player1'); Entry.TypeText('än'); Entry.Suggest(Suggestions);
+  Expect((Entry.Prediction = 'Änne') and (Entry.Suffix = 'ne'), 'Unicode model prediction or suffix failed');
+  Entry.Suggest(Suggestions, false);
+  Expect(Entry.Prediction = '', 'Disabled prediction remained active');
+  Entry.Assign('Daniel'); Entry.Suggest(Suggestions);
+  Expect(not Entry.Accept and not Entry.Cancel, 'An absent prediction reported a change');
+  Entry.TypeText('Q'); Entry.Suggest(Suggestions);
+  Expect(not Entry.Finish and (Entry.Value = 'Q') and not Entry.Editing,
+    'Finishing unmatched input changed its value or left editing active');
+  Entry.TypeText('D'); Entry.Suggest(Suggestions); Entry.Assign('Saved name');
+  Expect((Entry.Value = 'Saved name') and (Entry.Prediction = '') and not Entry.Editing,
+    'Assign retained an earlier prediction or editing session');
   Editing := false;
   Typed := TypeNameInput(Editing, 'Player1', 'D');
   Expect((Typed = 'D') and Editing, 'First character did not replace existing name');
@@ -65,5 +103,5 @@ begin
   finally
     Ini.Free;
   end;
-  WriteLn('PASS: MRU promotion, prefix matching, Unicode, deduplication and persistence');
+  WriteLn('PASS: name editing, prediction confirmation/cancellation, Unicode, MRU and persistence');
 end.
