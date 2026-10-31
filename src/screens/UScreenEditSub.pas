@@ -398,6 +398,7 @@ type
       procedure IncreaseVideoGap(SDL_ModState: word);
       procedure SetFreestyleNote(SDL_ModState: word);
       procedure SetGoldenNote(SDL_ModState: word);
+      procedure SetNoteType(NoteType: TNoteType; SDL_ModState: word);
       procedure ShowPopupHelp(SDL_ModState: word);
       procedure ToggleDuet(SDL_ModState: word);
       procedure DivideBPM;
@@ -1542,54 +1543,51 @@ end;
 
       // SDLK_G: SetGoldenNote;
 procedure TScreenEditSub.SetGoldenNote(SDL_ModState: word);
-// Golden Note
+// Golden Note: normal -> golden -> rap golden -> normal
 begin
-  CopyToUndo;
-  if (CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType = ntGolden) then
-  begin
-    CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType := ntRapGolden;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTE_SET_TO_RAPGOLDEN');
-  end
-  else if (CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType = ntRapGolden) then
-  begin
-    CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType := ntNormal;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTE_SET_TO_NORMAL');
-  end
-  else
-  begin
-    CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType := ntGolden;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTE_SET_TO_GOLDEN');
+  case CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType of
+    ntGolden:    SetNoteType(ntRapGolden, SDL_ModState);
+    ntRapGolden: SetNoteType(ntNormal, SDL_ModState);
+    else         SetNoteType(ntGolden, SDL_ModState);
   end;
-  GoldenRec.KillAll;
-  Exit;
 end;
 
       // SDLK_F: SetFreestyleNote;
 procedure TScreenEditSub.SetFreestyleNote(SDL_ModState: word);
-// Freestyle Note
+// Freestyle Note: normal -> freestyle -> rap -> normal
+begin
+  case CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType of
+    ntFreestyle: SetNoteType(ntRap, SDL_ModState);
+    ntRap:       SetNoteType(ntNormal, SDL_ModState);
+    else         SetNoteType(ntFreestyle, SDL_ModState);
+  end;
+end;
+
+// sets the current note to NoteType, or with Shift every note of the current line
+procedure TScreenEditSub.SetNoteType(NoteType: TNoteType; SDL_ModState: word);
+const
+  Names: array[TNoteType] of string = ('FREESTYLE', 'NORMAL', 'GOLDEN', 'RAP', 'RAPGOLDEN');
+var
+  N: integer;
 begin
   CopyToUndo;
-  if (CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType = ntFreestyle) then
-  begin
-    CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType := ntRap;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTE_SET_TO_RAP');
-  end
-  else if (CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType = ntRap) then
-  begin
-    CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType := ntNormal;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTE_SET_TO_NORMAL');
-  end
-  else
-  begin
-    CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType := ntFreestyle;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTE_SET_TO_FREESTYLE');
-  end;
+  with CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine] do
+    if (SDL_ModState and (KMOD_LSHIFT or KMOD_RSHIFT)) <> 0 then
+    begin
+      for N := 0 to HighNote do
+        Notes[N].NoteType := NoteType;
+      Text[TextInfo].Text := Language.Translate('EDIT_INFO_LINE_SET_TO_' + Names[NoteType]);
+    end
+    else
+    begin
+      Notes[CurrentNote[CurrentTrack]].NoteType := NoteType;
+      Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTE_SET_TO_' + Names[NoteType]);
+    end;
   GoldenRec.KillAll;
 
   // update lyrics
   EditorLyrics[CurrentTrack].AddLine(CurrentTrack, CurrentSong.Tracks[CurrentTrack].CurrentLine);
   EditorLyrics[CurrentTrack].Selected := CurrentNote[CurrentTrack];
-  Exit;
 end;
 
       // SDLK_Z: Undo;
