@@ -95,7 +95,7 @@ type
     fRefreshAgain: boolean;
     fWatcher: TLibraryWatch;
     fWatchRoots: string;
-    fOwnerThread: TThreadID;
+    fOwnerThread: cardinal; // SDL_ThreadID returns a Uint32, not a native thread handle.
     procedure PollLibraryChanges;
     function RequestRefreshPaths(const Roots: TPathDynArray): boolean;
     function CollectSongFiles: TPathDynArray;
