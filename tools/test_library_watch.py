@@ -59,6 +59,21 @@ begin
     Sleep(20);
   until GetTickCount64 - Start > 650;
 end;
+procedure SettleStartup;
+var Start, QuietSince: QWord;
+begin
+  // FSEvents can deliver root-creation events after the initial recovery scan,
+  // even after a synchronous flush. Require bounded settling, then test idle.
+  Start := GetTickCount64;
+  QuietSince := Start;
+  repeat
+    if Watch.TakeChanges(Changes, Full, Error) then QuietSince := GetTickCount64;
+    Check(Error = '', Error);
+    if GetTickCount64 - QuietSince >= 1000 then Exit;
+    Check(GetTickCount64 - Start < 8000, 'watcher did not settle after startup');
+    Sleep(20);
+  until false;
+end;
 begin
   Root := ExpandFileName(ParamStr(1));
   Sub := Root + PathDelim + 'new' + PathDelim + 'nested';
@@ -73,7 +88,7 @@ begin
   {$ENDIF}
   Watch := TLibraryWatch.Create(Roots);
   try
-    WaitChange(Root, true); Quiet('after startup');
+    WaitChange(Root, true); SettleStartup; Quiet('after startup');
     {$IFDEF LINUX}
     WriteFile(Root + '/Artist/song.txt', 'upper directory'); WaitChange(Root + '/Artist/song.txt');
     WriteFile(Root + '/artist/song.txt', 'lower directory'); WaitChange(Root + '/artist/song.txt');
