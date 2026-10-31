@@ -4,6 +4,7 @@ unit UDocumentUI;
 interface
 uses Classes, SysUtils;
 const
+  uiScreenPartyOptions = 'party-options';
   uiScreenPlayers = 'players';
   uiPlayersContinue = 'players.continue';
   uiPlayersPrevious = 'players.previous';

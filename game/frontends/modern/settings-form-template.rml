@@ -3,6 +3,7 @@
   <title>Modern settings form</title>
   <link type="text/rcss" href="modern.rcss" />
   <link type="text/template" href="footer-form.rml" />
+  <link type="text/template" href="form-fields.rml" />
 </head>
 <body class="settings-form">
   <div class="background-layer">
@@ -16,20 +17,7 @@
     <span class="heading" lang="SING_OPTIONS" />
     <span class="description" bind-text="form.description" />
     <div class="form-area">
-      <div class="form-fields">
-        <div data-for="field : data.form.fields" class="form-row" data-attr-id="'form-row-' + field.id" data-class-hidden="!field.visible" data-class-inline="field.inline" data-class-selected="field.selected" data-class-section="field.kind == 2" data-class-command="field.kind == 1">
-          <button class="form-label" action="form.activate" data-attr-id="'field-' + field.id" data-attr-target="field.id"><span>{{ field.label }}</span></button>
-          <div class="form-value">
-            <button class="form-previous" action="form.decrement" data-attr-target="field.id" data-class-available="field.previous"><svg src="arrow-left.svg" /></button>
-            <button class="form-current" action="form.activate" data-attr-target="field.id"><span>{{ field.value }}</span></button>
-            <button class="form-next" action="form.increment" data-attr-target="field.id" data-class-available="field.next"><svg src="arrow-right.svg" /></button>
-          </div>
-          <div class="form-choices"><div class="choices-scroll">
-            <button data-for="choice : field.choices" action="form.choose" data-attr-id="choice.id" data-attr-target="choice.target" data-class-chosen="choice.selected"><span>{{ choice.label }}</span></button>
-          </div></div>
-          <div class="form-surface" data-attr-id="'field-surface-' + field.id" />
-        </div>
-      </div>
+      <template src="form-fields" />
       <div class="form-footer">
       <button id="form-back" class="form-back" action="navigation.back" data-class-selected="data.form.backSelected"><span lang="SING_OPTIONS_EXIT" /></button>
       <button data-for="command : data.form.commands" class="form-extra-command" action="form.activate" data-attr-id="'command-' + command.id" data-attr-target="command.id" data-class-selected="command.selected"><span>{{ command.label }}</span></button>

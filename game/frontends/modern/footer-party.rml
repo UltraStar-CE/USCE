@@ -1,0 +1,10 @@
+<template name="footer-party">
+<head></head>
+<body>
+  <span class="where" bind-text="form.whereami" />
+  <img class="legend-icon navigation-icon" src="../../themes/Modern/[button]navi.png" />
+  <span class="legend navigation" lang="SING_LEGEND_NAVIGATE" />
+  <img class="legend-icon party-continue-icon" src="../../themes/Modern/[button]enter.png" />
+  <span class="legend party-continue" lang="SING_LEGEND_CONTINUE" />
+</body>
+</template>

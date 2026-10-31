@@ -242,6 +242,7 @@ TOptionsMenu = class(TMenu)
     WhereAmI:    AnsiString;
     function DocumentRegion(const ID: UTF8String; out Bounds: TDocumentRegion): boolean;
     function HasDocumentUI: boolean;
+    property DocumentBackField: integer read DocumentBack;
     procedure SetDocumentPreview(Value: boolean);
     procedure SetOptionLabel(InteractionID: integer; const Key: UTF8String);
     procedure SetOptionVisible(SelectNum: integer; Value: boolean);
@@ -250,6 +251,7 @@ TOptionsMenu = class(TMenu)
     function AddDocumentCommand(const Key: UTF8String): integer;
     procedure SetDocumentNotice(const Value: UTF8String);
     procedure OptionChanged(SelectNum: integer); virtual;
+    function TryLoadDocument: boolean;
     procedure Load;
     procedure LoadWidgets; virtual; abstract;
     procedure LoadLegend; virtual;
@@ -262,6 +264,7 @@ TOptionsMenu = class(TMenu)
     procedure SetOptionSelected(SelectNum, Value: integer);
 
   public
+    procedure OnShow; override;
     destructor Destroy; override;
     constructor Create; overload; override;
     function DrawFG: boolean; override;
@@ -2269,6 +2272,11 @@ begin
   inherited;
 end;
 
+procedure TOptionsMenu.OnShow;
+begin
+  if DocumentUI = nil then inherited;
+end;
+
 destructor TOptionsMenu.Destroy;
 var I: integer;
 begin
@@ -2288,11 +2296,7 @@ begin
     AddText(Theme.OptionsSub.LegendText[I]);
 end;
 
-procedure TOptionsMenu.Load;
-var
-  MenuHeight: integer;
-  ThemeText: TThemeText;
-  ThemeButtonBack: TThemeButton;
+function TOptionsMenu.TryLoadDocument: boolean;
 begin
   if DocumentRole <> '' then DocumentUI := TDocumentUI.Open(DocumentRole, uiFormFields);
   if DocumentUI <> nil then
@@ -2302,8 +2306,18 @@ begin
     LoadWidgets;
     DocumentBack := AddField('SING_OPTIONS_EXIT', okButton);
     Interaction := 0;
-    Exit;
+    Exit(true);
   end;
+  Result := false;
+end;
+
+procedure TOptionsMenu.Load;
+var
+  MenuHeight: integer;
+  ThemeText: TThemeText;
+  ThemeButtonBack: TThemeButton;
+begin
+  if TryLoadDocument then Exit;
   LoadFromTheme(Theme.OptionsSub);
   LoadLegend;
   // Add Description and WhereAmI texts (customized per subclass)
@@ -2555,8 +2569,7 @@ begin
     Prefix := uiFormFields + '[' + IntToStr(I) + '].';
     DocumentUI.SetModel(Prefix + 'id', IntToStr(I), 1);
     DocumentUI.SetModel(Prefix + 'inline', IntToStr(Ord(Fields[I].InlineChoices)), 2);
-    Count := 0;
-    if Fields[I].InlineChoices then Count := Length(Fields[I].Values);
+    Count := Length(Fields[I].Values);
     DocumentUI.SetArray(Prefix + 'choices', Count);
     for J := 0 to Count - 1 do
     begin
@@ -2586,7 +2599,7 @@ begin
   if Interaction = DocumentBack then DocumentUI.Focus('form-back')
   else if Interaction > DocumentBack then DocumentUI.Focus('command-' + IntToStr(Interaction))
   else DocumentUI.Focus('field-' + IntToStr(Interaction));
-  if (Interaction >= 0) and (Interaction < DocumentBack) and Fields[Interaction].InlineChoices then
+  if (Interaction >= 0) and (Interaction < DocumentBack) and (Fields[Interaction].Kind = okSelect) then
     DocumentUI.Reveal('choice-' + IntToStr(Interaction) + '-' + IntToStr(Fields[Interaction].Selected));
 end;
 
@@ -2629,7 +2642,7 @@ begin
     Separator := Pos(':', Payload);
     if (Separator > 0) and TryStrToInt(Copy(Payload, 1, Separator - 1), Target) and
       TryStrToInt(Copy(Payload, Separator + 1, MaxInt), Selected) and
-      (Target >= 0) and (Target < Length(Fields)) and Fields[Target].InlineChoices and
+      (Target >= 0) and (Target < Length(Fields)) and (Fields[Target].Kind = okSelect) and
       (Selected >= 0) and (Selected < OptionCount(Target)) then
     begin
       Interaction := Target;
@@ -2655,6 +2668,7 @@ begin
     SyncDocument;
     Exit(DocumentUI.Draw(false, true));
   end;
+  if Length(Widgets) = 0 then Exit(inherited DrawFG);
 
   for J := 0 to High(Statics) do
     Statics[J].Draw;

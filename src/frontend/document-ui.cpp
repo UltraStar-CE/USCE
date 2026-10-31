@@ -236,7 +236,7 @@ UI_EXPORT void ui_focus(const char* id) {
 UI_EXPORT void ui_reveal(const char* id) {
     if (!document) return;
     context->Update();
-    if (auto* element = document->GetElementById(id)) {
+    if (auto* element = document->GetElementById(id); element && element->IsVisible(true)) {
         Rml::ScrollIntoViewOptions options;
         options.vertical = options.horizontal = Rml::ScrollAlignment::Nearest;
         options.parentage = Rml::ScrollParentage::Closest;

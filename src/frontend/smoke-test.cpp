@@ -120,6 +120,20 @@ int main(int argc, char** argv) {
             }
             require(ui_open(form_document.c_str()) != 0, "Repeated form document");
             ui_render(1280, 720, 0);
+            const auto party_document = utf8(root / "frontends/modern/party-options.rml");
+            require(ui_open(party_document.c_str()) != 0, "Party options document");
+            ui_render(1280, 720, 0);
+            float party_x, party_y, party_w, party_h;
+            require(ui_bounds("form-row-0", &party_x, &party_y, &party_w, &party_h) != 0 &&
+                std::abs(party_x - 112) < 1 && std::abs(party_y - 132) < 1 &&
+                std::abs(party_w - 1024) < 1 && std::abs(party_h - 48) < 1,
+                "Party fields must retain their theme-defined position and size");
+            ui_mouse(1120, 156, 0, 1); ui_mouse(1120, 156, 0, 0);
+            require(std::string(ui_action()) == "form.increment" && std::string(ui_action_target()) == "0",
+                "Party fields must reuse the named form actions");
+            ui_clear_action();
+            require(ui_open(form_document.c_str()) != 0, "Return to settings form document");
+            ui_render(1280, 720, 0);
             ui_focus("field-0");
             require(std::string(ui_focused_target()) == "0", "Repeated field binding");
             ui_mouse(1152, 177, 0, 1); ui_mouse(1152, 177, 0, 0);
