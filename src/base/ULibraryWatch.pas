@@ -55,6 +55,22 @@ begin
   Result := (Name = Parent) or (Pos(IncludeTrailingPathDelimiter(Parent), Name) = 1);
 end;
 
+function ExistingParent(const Name: string): string;
+var Parent: string;
+begin
+  Result := ExtractFileDir(Name);
+  {$IFDEF MSWINDOWS}
+  while not DirectoryExists(UTF8Decode(Result)) do
+  {$ELSE}
+  while not DirectoryExists(Result) do
+  {$ENDIF}
+  begin
+    Parent := ExtractFileDir(Result);
+    if (Parent = Result) or (Parent = '') then Break;
+    Result := Parent;
+  end;
+end;
+
 constructor TLibraryWatch.Create(const Paths: TStrings);
 var I: integer;
 begin
@@ -257,7 +273,7 @@ begin
   try
     for I := 0 to Roots.Count - 1 do
     begin
-      Add(ExtractFileDir(Roots[I]), false); // root deletion/recreation
+      Add(ExistingParent(Roots[I]), false); // root deletion/recreation
       Add(Roots[I], true);
     end;
     Recover; // close the startup enumeration/registration race
@@ -293,7 +309,7 @@ begin
               // A directory scan also handles removals and related media changes.
               ChangedEntry(UTF8Encode(N));
               for J := 0 to Roots.Count - 1 do
-                if Normal(UTF8Encode(N)) = Roots[J] then
+                if Within(Roots[J], Normal(UTF8Encode(N))) then
                 begin
                   Recover; Reopen := true; ResetRoots.Add(Roots[J]);
                 end;
@@ -318,7 +334,11 @@ begin
         begin W.Free; Watches.Delete(I); end;
       end;
       // Reopen roots only after a native event reports their recreation.
-      if Reopen then for I := 0 to Roots.Count - 1 do Add(Roots[I], true);
+      if Reopen then for I := 0 to Roots.Count - 1 do
+      begin
+        Add(ExistingParent(Roots[I]), false);
+        Add(Roots[I], true);
+      end;
       Sleep(50);
     end;
   finally
@@ -331,7 +351,7 @@ end;
 
 {$IFDEF LINUX}
 procedure TLibraryWatch.RunNative;
-var FD, I, Count, Offset, Index, WD: integer; Dirs: TStringList;
+var FD, I, J, Count, Offset, Index, WD: integer; Dirs: TStringList;
   Buffer: array[0..65535] of byte; E: Pinotify_event; N, Parent: string;
 procedure AddTree(const Name: string; Recursive: boolean);
 var Search: TSearchRec; Code, Error: integer; Child: string;
@@ -383,7 +403,7 @@ begin
     for I := 0 to Roots.Count - 1 do
     begin
       AddTree(Roots[I], true);
-      AddTree(ExtractFileDir(Roots[I]), false);
+      AddTree(ExistingParent(Roots[I]), false);
     end;
     Recover;
     while not Terminated do
@@ -417,7 +437,16 @@ begin
                 begin inotify_rm_watch(FD, PtrInt(Dirs.Objects[I])); Dirs.Delete(I); end;
             end;
             if (E^.mask and IN_ISDIR <> 0) and (E^.mask and (IN_CREATE or IN_MOVED_TO) <> 0) then
-              AddTree(N, true);
+              for J := 0 to Roots.Count - 1 do
+              begin
+                if Within(N, Roots[J]) then AddTree(N, true)
+                else if Within(Roots[J], N) then
+                begin
+                  // An absent hierarchy may have appeared between notifications.
+                  AddTree(ExistingParent(Roots[J]), false);
+                  if Dirs.IndexOf(Roots[J]) < 0 then AddTree(Roots[J], true);
+                end;
+              end;
           end;
           if (E^.mask and IN_IGNORED <> 0) then
           begin
@@ -482,7 +511,7 @@ begin
       Text := CFStringCreateWithCString(nil, PChar(Native), kCFStringEncodingUTF8);
       if Text = nil then raise Exception.Create('Cannot encode FSEvents path');
       CFArrayAppendValue(Paths, Text); CFRelease(Text);
-      Text := CFStringCreateWithCString(nil, PChar(ExtractFileDir(Native)), kCFStringEncodingUTF8);
+      Text := CFStringCreateWithCString(nil, PChar(ExistingParent(Native)), kCFStringEncodingUTF8);
       if Text = nil then raise Exception.Create('Cannot encode FSEvents parent path');
       CFArrayAppendValue(Paths, Text); CFRelease(Text);
     end;
