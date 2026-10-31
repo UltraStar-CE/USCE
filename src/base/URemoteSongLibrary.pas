@@ -106,7 +106,7 @@ begin
     ',"duet":' + BoolJson(Item.isDuet) +
     ',"previewStart":' + StringReplace(FloatToStr(Item.PreviewStart), ',', '.', []) +
     ',"audioSource":"' + RemoteJsonEscape(AudioSource) + '"' +
-    ',"audioPath":"' + RemoteJsonEscape(UTF8String(AudioPath.ToNative)) + '"' +
+    ',"audioPath":"' + RemoteJsonEscape(AudioPath.ToUTF8) + '"' +
     ',"coverPath":"' + RemoteJsonEscape(RemoteCoverPath(Item)) + '"' +
     '}';
 end;
@@ -183,7 +183,7 @@ begin
         PlaylistItemsJson := PlaylistItemsJson +
           ',"previewStart":' + StringReplace(FloatToStr(CatSongs.Song[PlaylistSongId].PreviewStart), ',', '.', []) +
           ',"audioSource":"' + RemoteJsonEscape(PlaylistAudioSource) + '"' +
-          ',"audioPath":"' + RemoteJsonEscape(UTF8String(PlaylistAudioPath.ToNative)) + '"' +
+          ',"audioPath":"' + RemoteJsonEscape(PlaylistAudioPath.ToUTF8) + '"' +
           ',"coverPath":"' + RemoteJsonEscape(RemoteCoverPath(CatSongs.Song[PlaylistSongId])) + '"';
       end;
       PlaylistItemsJson := PlaylistItemsJson + '}';

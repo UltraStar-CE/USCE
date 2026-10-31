@@ -185,6 +185,7 @@ type
 
     function LocalHighscoresAllowed: boolean;
     procedure ClearSettings;
+    procedure UpdatePlayerVisibility;
     procedure AllNotesVisible(visible: boolean);
     procedure ApplySettings; //< applies changes of settings record
     procedure EndSong;
@@ -720,7 +721,11 @@ begin
   Color.R:=0; Color.G:=0; Color.B:=0;
   for I:=0 to NewCount-1 do Scores.AddPlayer(Tex_ScoreBG[I],Color,Player[I].ScoreTotalInt);
   Scores.Init;
-  if (OldCount=0) and (NewCount>0) then AudioInput.CaptureStart;
+  if (OldCount=0) and (NewCount>0) then
+  begin
+    UpdatePlayerVisibility;
+    AudioInput.CaptureStart;
+  end;
   if NewCount=0 then AudioInput.CaptureStop;
   if ScreenContinuousPlayback.Session.Active then ScreenContinuousPlayback.Session.Scored:=NewCount>0;
   SendRemoteScoreSnapshot(true);
@@ -1815,30 +1820,33 @@ procedure TScreenSingController.ClearSettings;
 var DisplayOptions: TContinuousDisplay;
 begin
   Settings.Finish := False;
-  Settings.OscilloscopeVisible := Boolean(Ini.Oscilloscope);
   Settings.LyricsVisible := True;
-  AllNotesVisible(PlayersPlay > 0);
-  Settings.ScoresVisible := PlayersPlay > 0;
-  Settings.AvatarsVisible := PlayersPlay > 0;
   Settings.TimeBarVisible := True;
-  Settings.InputVisible := PlayersPlay > 0;
-  if PlayersPlay = 0 then Settings.OscilloscopeVisible := false;
   Settings.PlayerEnabled := high(Integer);
   Settings.SoundEnabled := True;
-  Settings.FeedbackVisible := PlayersPlay > 0;
+  UpdatePlayerVisibility;
   if Assigned(ScreenContinuousPlayback) and (ScreenSong.Mode = smNormal) then
   begin
     DisplayOptions := ContinuousDisplay(PlayersPlay > 0,
       ScreenContinuousPlayback.SongDisplay, ScreenContinuousPlayback.SingingDisplay);
     Settings.LyricsVisible := DisplayOptions.Lyrics;
     Settings.TimeBarVisible := DisplayOptions.Progress;
-    AllNotesVisible(DisplayOptions.Notes);
-    Settings.InputVisible := DisplayOptions.Notes;
-    Settings.OscilloscopeVisible := Settings.OscilloscopeVisible and DisplayOptions.Notes;
-    Settings.ScoresVisible := DisplayOptions.PlayerInfo;
-    Settings.AvatarsVisible := DisplayOptions.PlayerInfo;
-    Settings.FeedbackVisible := DisplayOptions.Feedback;
   end;
+end;
+
+procedure TScreenSingController.UpdatePlayerVisibility;
+var DisplayOptions: TContinuousDisplay;
+begin
+  DisplayOptions := ContinuousDisplay(PlayersPlay > 0, 0, 0);
+  if Assigned(ScreenContinuousPlayback) and (ScreenSong.Mode = smNormal) then
+    DisplayOptions := ContinuousDisplay(PlayersPlay > 0,
+      ScreenContinuousPlayback.SongDisplay, ScreenContinuousPlayback.SingingDisplay);
+  AllNotesVisible(DisplayOptions.Notes);
+  Settings.InputVisible := DisplayOptions.Notes;
+  Settings.OscilloscopeVisible := Boolean(Ini.Oscilloscope) and DisplayOptions.Notes;
+  Settings.ScoresVisible := DisplayOptions.PlayerInfo;
+  Settings.AvatarsVisible := DisplayOptions.PlayerInfo;
+  Settings.FeedbackVisible := DisplayOptions.Feedback;
 end;
 
 procedure TScreenSingController.AllNotesVisible(visible: boolean);
