@@ -5,6 +5,6 @@
 namespace DocumentModel {
 bool Initialize(Rml::Context* context);
 void Reset();
-void Set(const Rml::String& path, const Rml::String& value, int type = 0);
-void Array(const Rml::String& path, int count);
+bool Set(const Rml::String& path, const Rml::String& value, int type = 0);
+bool Array(const Rml::String& path, int count);
 }

@@ -23,7 +23,7 @@ find_path(SDL2_INCLUDE_DIR SDL.h PATH_SUFFIXES SDL2 REQUIRED)
 find_library(SDL2_LIBRARY NAMES SDL2 REQUIRED)
 find_library(SDL2_IMAGE_LIBRARY NAMES SDL2_image REQUIRED)
 include(embed-renderer.cmake)
-add_library(usce-document-ui SHARED document-ui.cpp document-model.cpp
+add_library(usce-document-ui SHARED document-ui.cpp document-model.cpp document-table.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/embedded-renderer.cpp)
 target_compile_features(usce-document-ui PRIVATE cxx_std_17)
 target_include_directories(usce-document-ui PRIVATE ${rmlui_SOURCE_DIR}/Backends ${SDL2_INCLUDE_DIR})

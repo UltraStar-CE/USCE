@@ -5,6 +5,7 @@
 #include <RmlUi/Core/StyleSheetContainer.h>
 #include "RmlUi_Renderer_GL3.h"
 #include "document-model.h"
+#include "document-table.h"
 #include <SDL.h>
 #include <SDL_image.h>
 #include <lunasvg.h>
@@ -86,6 +87,10 @@ static std::string focused_target;
 static bool pointer_known = false;
 static int pointer_x = 0, pointer_y = 0;
 static bool initialized;
+static bool text_fit_dirty = true;
+static bool table_layout_dirty = true;
+static void update_document_layout();
+static int last_width = 0, last_height = 0;
 static std::vector<Rml::byte> font_data;
 static std::vector<Rml::byte> bold_font_data;
 
@@ -120,7 +125,7 @@ static void bind_tree(Rml::Element* element) {
         // SetInnerRML parses markup: translations must be escaped as plain text.
         element->SetInnerRML(Rml::StringUtilities::EncodeRml(translate ? translate(key.c_str()) : key));
     }
-    for (const char* attribute : {"bind-text", "bind-lines", "bind-value"}) {
+    for (const char* attribute : {"bind-text", "bind-lines", "bind-emphasis", "bind-value"}) {
         const auto name = element->GetAttribute<Rml::String>(attribute, "");
         if (!name.empty()) bindings[name].push_back({element, attribute});
     }
@@ -132,6 +137,7 @@ static void bind_tree(Rml::Element* element) {
 
 UI_EXPORT const char* ui_error() { return last_error.c_str(); }
 UI_EXPORT void ui_close_document() {
+    DocumentTables::ClearCache(); table_layout_dirty = true;
     bindings.clear(); controls.clear(); pending_action.clear(); pending_target.clear();
     if (document) { document->Close(); document = nullptr; context->Update(); }
 }
@@ -170,6 +176,7 @@ UI_EXPORT int ui_initialize(Translate translator, Log logger, const char* font, 
 UI_EXPORT int ui_open(const char* filename) {
     if (!initialized) return 0;
     ui_close_document();
+    text_fit_dirty = true;
     document = context->LoadDocument(filename);
     if (!document) { last_error = std::string("Cannot load frontend document: ") + filename; return 0; }
     bind_tree(document);
@@ -185,16 +192,34 @@ UI_EXPORT int ui_style(const char* filename) {
     if (!sheet) { last_error = std::string("Cannot load frontend stylesheet: ") + filename; return 0; }
     if (const auto* current = document->GetStyleSheetContainer())
         sheet = current->CombineStyleSheetContainer(*sheet);
+    text_fit_dirty = true; table_layout_dirty = true; DocumentTables::ClearCache();
     document->SetStyleSheetContainer(std::move(sheet));
     context->Update();
     return 1;
 }
 UI_EXPORT void ui_set(const char* name, const char* value) {
-    DocumentModel::Set(name, value);
+    if (DocumentModel::Set(name, value)) table_layout_dirty = true;
     const auto found = bindings.find(name);
     if (found == bindings.end()) return; // Optional elements need no game-side defaults.
+    text_fit_dirty = true; table_layout_dirty = true;
     for (const auto& binding : found->second) {
-        if (binding.attribute == "bind-lines") {
+        if (binding.attribute == "bind-emphasis") {
+            // Only line breaks and paired emphasis markers are interpreted.
+            // Escape metadata and translations before introducing any markup.
+            const auto escaped = Rml::StringUtilities::EncodeRml(value);
+            Rml::String markup;
+            bool bold = false;
+            for (size_t i = 0; i < escaped.size(); ++i) {
+                if (escaped[i] == '\n') markup += "<br/>";
+                else if (escaped[i] == '*' && i + 1 < escaped.size() && escaped[i+1] == '*') {
+                    markup += bold ? "</b>" : "<b>"; bold = !bold; ++i;
+                } else markup += escaped[i];
+            }
+            if (bold) markup += "</b>";
+            binding.element->SetInnerRML(markup);
+            text_fit_dirty = true;
+        }
+        else if (binding.attribute == "bind-lines") {
             auto markup = Rml::StringUtilities::EncodeRml(value);
             size_t position = 0;
             while ((position = markup.find('\n', position)) != Rml::String::npos) {
@@ -206,11 +231,64 @@ UI_EXPORT void ui_set(const char* name, const char* value) {
         else binding.element->SetAttribute("value", value);
     }
 }
+static void fit_text() {
+    std::vector<Rml::Element*> elements;
+    document->QuerySelectorAll(elements, "[fit-text]");
+    for (auto* element : elements) element->RemoveProperty(Rml::PropertyId::FontSize);
+    context->Update();
+    for (auto* element : elements) {
+        const float maximum = element->GetComputedValues().font_size();
+        float low = element->GetAttribute<float>("fit-text", 1.0f), high = maximum;
+        const auto fits = [&]() { return element->GetScrollHeight() <= element->GetClientHeight() + 0.5f; };
+        if (fits()) continue;
+        for (int step = 0; step < 10 && high - low > 0.25f; ++step) {
+            const float middle = (low + high) * 0.5f;
+            element->SetProperty(Rml::PropertyId::FontSize, Rml::Property(middle, Rml::Unit::PX));
+            context->Update();
+            if (fits()) low = middle; else high = middle;
+        }
+        element->SetProperty(Rml::PropertyId::FontSize, Rml::Property(low, Rml::Unit::PX));
+        context->Update();
+    }
+    text_fit_dirty = false;
+}
+// Repeated data views create elements after the document was opened. Translate
+// those elements too, without rebuilding unchanged text on animation frames.
+static void translate_dynamic_elements() {
+    Rml::ElementList elements;
+    document->QuerySelectorAll(elements, "[lang]");
+    std::unordered_map<Rml::String, Rml::String> translations;
+    for (auto* element : elements) {
+        const auto key = element->GetAttribute<Rml::String>("lang", "");
+        if (key.empty()) continue;
+        auto result = translations.find(key);
+        if (result == translations.end())
+            result = translations.emplace(key, translate ? translate(key.c_str()) : key).first;
+        const auto& value = result->second;
+        if (!element->HasAttribute("translated-value") ||
+            element->GetAttribute<Rml::String>("translated-value", "") != value) {
+            element->SetInnerRML(Rml::StringUtilities::EncodeRml(value));
+            element->SetAttribute("translated-value", value);
+            text_fit_dirty = true;
+        }
+    }
+}
+static void update_document_layout() {
+    context->Update();
+    if (table_layout_dirty) {
+        translate_dynamic_elements();
+        context->Update();
+    }
+    if (text_fit_dirty) fit_text();
+    if (table_layout_dirty) { DocumentTables::Layout(document, context); table_layout_dirty = false; }
+}
 UI_EXPORT void ui_render(int width, int height, int foreground_only) {
     if (!document || width <= 0 || height <= 0) return;
     document->SetClass("foreground-only", foreground_only == 1);
     document->SetClass("background-only", foreground_only == 2);
-    context->SetDimensions({width, height}); context->Update();
+    if (width != last_width || height != last_height) { text_fit_dirty = true; table_layout_dirty = true; }
+    last_width = width; last_height = height;
+    context->SetDimensions({width, height}); update_document_layout();
     renderer->SetViewport(width, height);
     renderer->BeginFrame(); context->Render(); renderer->EndFrame();
 }
@@ -222,11 +300,11 @@ UI_EXPORT const char* ui_focused_target() {
     return focused_target.c_str();
 }
 UI_EXPORT void ui_clear_action() { pending_action.clear(); pending_target.clear(); }
-UI_EXPORT void ui_model_set(const char* name, const char* value, int type) { DocumentModel::Set(name, value, type); }
-UI_EXPORT void ui_model_array(const char* name, int count) { DocumentModel::Array(name, count); }
+UI_EXPORT void ui_model_set(const char* name, const char* value, int type) { if (DocumentModel::Set(name, value, type)) table_layout_dirty = true; }
+UI_EXPORT void ui_model_array(const char* name, int count) { if (DocumentModel::Array(name, count)) table_layout_dirty = true; }
 UI_EXPORT void ui_focus(const char* id) {
     if (!document) return;
-    context->Update();
+    update_document_layout();
     if (auto* element = document->GetElementById(id)) {
         if (context->GetFocusElement() == element) return;
         element->Focus();
@@ -235,16 +313,19 @@ UI_EXPORT void ui_focus(const char* id) {
 }
 UI_EXPORT void ui_reveal(const char* id) {
     if (!document) return;
-    context->Update();
+    update_document_layout();
     if (auto* element = document->GetElementById(id); element && element->IsVisible(true)) {
         Rml::ScrollIntoViewOptions options;
-        options.vertical = options.horizontal = Rml::ScrollAlignment::Nearest;
+        options.horizontal = Rml::ScrollAlignment::Nearest;
+        options.vertical = element->GetAttribute<Rml::String>("reveal-align", "") == "start" ?
+            Rml::ScrollAlignment::Start : Rml::ScrollAlignment::Nearest;
         options.parentage = Rml::ScrollParentage::Closest;
         element->ScrollIntoView(options);
     }
 }
 UI_EXPORT void ui_mouse(int x, int y, int button, int down) {
     if (!document) return;
+    update_document_layout();
     const bool moved = !pointer_known || x != pointer_x || y != pointer_y;
     pointer_known = true; pointer_x = x; pointer_y = y;
     if (moved || button >= 0) {
@@ -260,7 +341,7 @@ UI_EXPORT void ui_mouse(int x, int y, int button, int down) {
 }
 UI_EXPORT int ui_bounds(const char* id, float* x, float* y, float* width, float* height) {
     if (!document || !id || !x || !y || !width || !height) return 0;
-    context->Update();
+    update_document_layout();
     auto* element = document->GetElementById(id);
     if (!element || !element->IsVisible(true)) return 0;
     const auto offset = element->GetAbsoluteOffset(Rml::BoxArea::Content);
@@ -274,7 +355,7 @@ UI_EXPORT void ui_scroll(float delta) {
 UI_EXPORT void ui_key(int key) {
     if (!document) return;
     // Navigation uses document geometry or order, independent of screen roles or button counts.
-    context->Update();
+    update_document_layout();
     controls.clear(); document->QuerySelectorAll(controls, "[action]");
     if (controls.empty()) return;
     auto it = std::find(controls.begin(), controls.end(), context->GetFocusElement());

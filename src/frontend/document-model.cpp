@@ -88,23 +88,25 @@ bool Initialize(Rml::Context* context) {
     return true;
 }
 void Reset() { model = {}; root = {}; }
-void Set(const Rml::String& path, const Rml::String& text, int type) {
+bool Set(const Rml::String& path, const Rml::String& text, int type) {
     auto* node = Resolve(path);
-    if (!node) return;
+    if (!node) return false;
     Rml::Variant value(text);
     if (type == 1) value = value.Get<int>();
     else if (type == 2) value = text == "1" || text == "true";
     else if (type == 3) value = value.Get<double>();
-    if (node->kind == Node::Value && node->value == value) return;
+    if (node->kind == Node::Value && node->value == value) return false;
     node->kind = Node::Value; node->value = std::move(value);
     if (model) model.DirtyVariable("data");
+    return true;
 }
-void Array(const Rml::String& path, int count) {
+bool Array(const Rml::String& path, int count) {
     auto* node = Resolve(path);
-    if (!node || count < 0 || count > 100000) return;
-    if (node->kind == Node::Array && node->items.size() == size_t(count)) return;
+    if (!node || count < 0 || count > 100000) return false;
+    if (node->kind == Node::Array && node->items.size() == size_t(count)) return false;
     node->kind = Node::Array;
     node->items.resize(count);
     if (model) model.DirtyVariable("data");
+    return true;
 }
 }

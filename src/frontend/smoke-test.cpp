@@ -31,7 +31,7 @@ void ui_shutdown();
 static void require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
-static const char* translate(const char* key) { return key; }
+static const char* translate(const char* key) { return std::string(key) == "REPEATED_TEST" ? "A translated repeated label" : key; }
 static int warnings = 0;
 static void log(int level, const char* message) {
     if (level <= 3) { ++warnings; std::cerr << message << '\n'; }
@@ -176,6 +176,54 @@ int main(int argc, char** argv) {
             ui_render(1280, 720, 0);
             require(warnings == before_shrink, "Nested array shrink must not evaluate removed choice bindings");
             ui_model_set("form.fields[0].inline", "0", 2);
+            require(ui_open(utf8(root / "frontends/modern/statistics.rml").c_str()) != 0, "Statistics overview document");
+            std::string overview = "**Library**: <button id='injected' action='unexpected'>plain metadata</button>\n\n";
+            for (int line = 0; line < 35; ++line) overview += "**Player** has a score on a long artist and song title.\n";
+            ui_set("statistics.overview", overview.c_str());
+            ui_render(1280, 720, 0); ui_render(1680, 720, 0); ui_render(1024, 768, 0);
+            float stats_x, stats_y, stats_w, stats_h;
+            require(!ui_bounds("injected", &stats_x, &stats_y, &stats_w, &stats_h), "Emphasis binding must escape embedded markup");
+            ui_render(1280, 720, 0);
+            ui_mouse(1088, 222, 0, 1); ui_mouse(1088, 222, 0, 0);
+            require(std::string(ui_action()) == "statistics.detail.open" && std::string(ui_action_target()) == "1",
+                "Statistics buttons use named detail actions");
+            ui_clear_action();
+            ui_model_set("statisticsDetail.kind", "1", 1);
+            ui_model_set("statisticsDetail.pageSize", "30", 1);
+            ui_model_array("statisticsDetail.columns", 4);
+            const char* table_headers[] = {"#", "Player", "Avg. score", "Scores"};
+            for (int column = 0; column < 4; ++column) {
+                const auto prefix = "statisticsDetail.columns[" + std::to_string(column) + "].";
+                ui_model_set((prefix + "id").c_str(), std::to_string(column).c_str(), 1);
+                ui_model_set((prefix + "header").c_str(), table_headers[column], 0);
+                ui_model_set((prefix + "numeric").c_str(), column == 1 ? "0" : "1", 2);
+                ui_model_set((prefix + "flexible").c_str(), column == 1 ? "1" : "0", 2);
+            }
+            const auto populate_table = [](int count, bool long_names) {
+                ui_model_array("statisticsDetail.rows", count);
+                for (int row = 0; row < count; ++row) {
+                    const auto prefix = "statisticsDetail.rows[" + std::to_string(row) + "].cells";
+                    ui_model_array(prefix.c_str(), 4);
+                    for (int column = 0; column < 4; ++column) {
+                        const auto cell = prefix + "[" + std::to_string(column) + "].";
+                        ui_model_set((cell + "id").c_str(), std::to_string(column).c_str(), 1);
+                        const std::string value = column == 1 ? (long_names ? std::string(160, 'W') : "Ari") : std::to_string(column == 0 ? row + 1 : 9000);
+                        ui_model_set((cell + "value").c_str(), value.c_str(), 0);
+                        ui_model_set((cell + "numeric").c_str(), column == 1 ? "0" : "1", 2);
+                    }
+                }
+            };
+            populate_table(30, false);
+            require(ui_open(utf8(root / "frontends/modern/statistics-detail.rml").c_str()) != 0, "Statistics table document");
+            ui_render(1280, 720, 0);
+            require(ui_bounds("statistics-detail-right", &stats_x, &stats_y, &stats_w, &stats_h), "Short statistics rows should use two measured tables");
+            populate_table(5, false);
+            require(!ui_bounds("statistics-detail-right", &stats_x, &stats_y, &stats_w, &stats_h), "Bounds queries must update split state after shrinking rows");
+            populate_table(30, true);
+            ui_model_set("statisticsDetail.kind", "2", 1);
+            ui_render(1280, 720, 0);
+            require(!ui_bounds("statistics-detail-right", &stats_x, &stats_y, &stats_w, &stats_h), "Long song rows must not be forced into narrow columns");
+            ui_render(1680, 720, 0); ui_render(1024, 768, 0);
             ui_model_set("participants.count", "2", 1);
             ui_model_set("participants.focus", "-1", 1);
             ui_model_set("participants.previousCount", "0", 2);
@@ -472,6 +520,28 @@ int main(int argc, char** argv) {
             ui_render(1280, 720, 0);
             require(ui_bounds("players-name", &player_x, &player_y, &player_w, &player_h) == 0,
                 "Lyrics-only setup must hide profile editing");
+            const auto language_fixture = std::filesystem::current_path() / "document-language-test.rml";
+            {
+                std::ofstream fixture(language_fixture);
+                fixture << R"(<rml><head><style>body{font-family:ui;font-size:20px;} span{display:inline-block;}</style></head>
+<body><div data-model="game"><div data-for="row : data.languageTest.rows"><span lang="REPEATED_TEST" data-attr-id="'language-row-' + row.id"></span></div></div></body></rml>)";
+            }
+            ui_model_array("languageTest.rows", 0);
+            require(ui_open(utf8(language_fixture).c_str()) != 0, "Repeated translation fixture");
+            ui_render(1280, 720, 0);
+            ui_model_array("languageTest.rows", 1);
+            ui_model_set("languageTest.rows[0].id", "0", 1);
+            ui_render(1280, 720, 0);
+            require(ui_bounds("language-row-0", &player_x, &player_y, &player_w, &player_h) != 0 && player_w > 190,
+                "Labels created after opening must receive their translation");
+            ui_model_array("languageTest.rows", 0);
+            ui_render(1280, 720, 0);
+            ui_model_array("languageTest.rows", 1);
+            ui_model_set("languageTest.rows[0].id", "1", 1);
+            ui_render(1280, 720, 0);
+            require(ui_bounds("language-row-1", &player_x, &player_y, &player_w, &player_h) != 0 && player_w > 190,
+                "Recreated repeated labels must receive their translation");
+            std::filesystem::remove(language_fixture);
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
             glDeleteFramebuffers(1, &framebuffer); glDeleteTextures(1, &texture);
             ui_shutdown();
