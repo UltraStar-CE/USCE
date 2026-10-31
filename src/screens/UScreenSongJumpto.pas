@@ -30,7 +30,7 @@ unit UScreenSongJumpto;
 
 interface
 
-uses UFilterPresets, UMenu, USongs, USong, UThemes, sdl2, SysUtils, Classes, UMenuButton;
+uses UDocumentUI, UFilterPresets, UMenu, USongs, USong, UThemes, sdl2, SysUtils, Classes, UMenuButton;
 
 const
   FILTER_SLOTS = 3;
@@ -50,6 +50,11 @@ type
 
   TScreenSongJumpto = class(TMenu)
   private
+    DocumentUI: TDocumentUI;
+    fDocumentDirty, fDocumentReveal: boolean;
+    fDocumentSuggestionKey, fDocumentFound: UTF8String;
+    fDocumentFocus, fDocumentSuggestion, fDocumentFirst, fDocumentCount: integer;
+    fDocumentSuggestionFocus: boolean;
     fVisible, fPlaylistSearch, fLockShortcutPending: boolean;
     fFooter, fLockIcons: TMenu;
     fSuggestions: TFilterSuggestionMenu;
@@ -69,6 +74,9 @@ type
     fSlotKinds: array[0..FILTER_SLOTS-1] of integer;
     fInputs, fCategories: array[0..FILTER_SLOTS-1] of integer;
     fActions: array[0..3] of integer;
+    function CategoryCaption(Kind: TSongFilter): UTF8String;
+    procedure SyncDocument;
+    function ParseDocumentMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
     procedure OpenPresets;
     procedure SavePreset;
     procedure PromptPresetName;
@@ -106,7 +114,206 @@ uses Math, USongProblems, UCommon, UDisplay, UFiles, UMusic, UGraphic, ULibraryL
   UHelp, UIni, ULanguage, ULog, UMain, UParty, URenderer, UPlaylist,
   UScreenSong, UUnicodeUtils, UPath, UMenuInteract, UMenuText, UAge, UFilterTerms, Contnrs, sha1, UPlatform, UPathUtils, UScreenPopup;
 
-const ID = 'ID_016';
+const
+  ID = 'ID_016';
+  uiSongSearchRole = 'song-search';
+  uiSearchRow = 'search.row';
+  uiSearchCategoryPrevious = 'search.category.previous';
+  uiSearchCategoryNext = 'search.category.next';
+  uiSearchSuggestion = 'search.suggestion';
+  uiSearchPresets = 'search.presets';
+  uiSearchClear = 'search.clear';
+  uiSearchLock = 'search.lock';
+  uiSearchClose = 'search.close';
+  uiSearchAdd = 'search.add';
+  uiSearchRemove = 'search.remove';
+
+
+function TScreenSongJumpto.CategoryCaption(Kind: TSongFilter): UTF8String;
+var Country: UTF8String;
+begin
+  if DocumentUI = nil then Exit(Theme.SongJumpto.IType[Ord(Kind)]);
+  Result := Language.Translate('SONG_JUMPTO_TYPE' + IntToStr(Ord(Kind) + 1));
+  if Kind = fltAge then
+  begin
+    Country := Ini.AgeCountry;
+    if Country = '' then Country := Language.Translate('OPTION_VALUE_AGE_DEFAULT');
+    Result := Result + ' (' + Country + ')';
+  end;
+end;
+
+procedure TScreenSongJumpto.SyncDocument;
+var
+  I, N, First, Count, Capacity: integer;
+  Prefix, SuggestionKey, FocusID: UTF8String;
+  View, Measure, RowsView, RowsMeasure: TDocumentRegion;
+  Position, ScrollRange, Top, RowHeight, RowsTop: single;
+  SuggestionsChanged, FocusChanged: boolean;
+  Kind: TSongFilter;
+begin
+  DocumentUI.SetModel('search.rowCount', IntToStr(Length(fRows)), 1);
+  DocumentUI.SetModel('search.categoryCount', IntToStr(Ord(High(TSongFilter)) + 1), 1);
+  DocumentUI.SetModel('search.focus', IntToStr(fFocus), 1);
+  DocumentUI.SetModel('search.suggestionFocus', IntToStr(Ord(fSuggestionFocus)), 2);
+  DocumentUI.SetModel('search.suggestionSelected', IntToStr(fSuggestionIndex), 1);
+  DocumentUI.SetModel('search.suggestionTotal', IntToStr(Length(fMatches)), 1);
+  DocumentUI.SetModel('search.locked', IntToStr(Ord(LibraryLockdown.Active)), 2);
+  {$IFDEF DARWIN}DocumentUI.SetModel('search.macAlt', '1', 2);{$ELSE}DocumentUI.SetModel('search.macAlt', '0', 2);{$ENDIF}
+  DocumentUI.SetValue('search.found', fDocumentFound);
+  if LibraryLockdown.Active then DocumentUI.SetValue('search.lockLabel', Language.Translate('FILTER_UNLOCK'))
+  else DocumentUI.SetValue('search.lockLabel', Language.Translate('FILTER_LOCK'));
+  if fDocumentDirty then
+  begin
+    DocumentUI.SetArray('search.categories', Ord(High(TSongFilter)) + 1);
+    for Kind := Low(TSongFilter) to High(TSongFilter) do
+    begin
+      Prefix := 'search.categories[' + IntToStr(Ord(Kind)) + '].';
+      DocumentUI.SetModel(Prefix + 'id', IntToStr(Ord(Kind)), 1);
+      DocumentUI.SetModel(Prefix + 'caption', CategoryCaption(Kind));
+    end;
+    DocumentUI.SetArray('search.rows', Length(fRows));
+    for I := 0 to High(fRows) do
+    begin
+      Prefix := 'search.rows[' + IntToStr(I) + '].';
+      DocumentUI.SetModel(Prefix + 'id', IntToStr(I), 1);
+      DocumentUI.SetModel(Prefix + 'kind', IntToStr(Ord(fRows[I].Kind)), 1);
+      DocumentUI.SetModel(Prefix + 'category', CategoryCaption(fRows[I].Kind));
+      DocumentUI.SetModel(Prefix + 'query', fRows[I].Query);
+    end;
+    fDocumentDirty := false;
+  end;
+  SuggestionKey := fSuggestionContext + #0 + fSuggestionQuery + #0 + IntToStr(Length(fMatches));
+  SuggestionsChanged := SuggestionKey <> fDocumentSuggestionKey;
+  if SuggestionsChanged then
+  begin
+    fDocumentSuggestionKey := SuggestionKey;
+    DocumentUI.ScrollTo('search-suggestions', 0);
+  end;
+  DocumentUI.PrepareLayout;
+  if fDocumentReveal and (fFocus < Length(fRows)) then
+  begin
+    DocumentUI.Reveal('search-row-' + IntToStr(fFocus));
+    DocumentUI.Reveal('search-caret-' + IntToStr(fFocus));
+    fDocumentReveal := false;
+  end;
+  RowsTop := 0;
+  if DocumentUI.Region('search-rows', RowsView) and DocumentUI.Region('search-row-measure', RowsMeasure) and
+      (RowsMeasure.H > 0) then
+    RowsTop := DocumentUI.ScrollPosition('search-rows') * Max(0, Length(fRows) * RowsMeasure.H - RowsView.H) / RowsMeasure.H;
+  DocumentUI.SetModel('search.focusSlot', IntToStr(fFocus - Floor(RowsTop)), 1);
+  First := 0; Count := 0;
+  if (Length(fMatches) > 0) and DocumentUI.Region('search-suggestions', View) and
+      DocumentUI.Region('search-suggestion-measure', Measure) and (Measure.H > 0) then
+  begin
+    RowHeight := Measure.H;
+    Capacity := Max(1, Ceil(View.H / RowHeight) + 2);
+    ScrollRange := Max(0, Length(fMatches) * RowHeight - View.H);
+    Position := DocumentUI.ScrollPosition('search-suggestions');
+    Top := Position * ScrollRange;
+    if fSuggestionFocus and ((fDocumentSuggestion <> fSuggestionIndex) or SuggestionsChanged) then
+    begin
+      if fSuggestionIndex * RowHeight < Top then Top := fSuggestionIndex * RowHeight
+      else if (fSuggestionIndex + 1) * RowHeight > Top + View.H then Top := (fSuggestionIndex + 1) * RowHeight - View.H;
+      Top := EnsureRange(Top, 0, ScrollRange);
+      if ScrollRange > 0 then DocumentUI.ScrollTo('search-suggestions', Top / ScrollRange);
+    end;
+    First := EnsureRange(Floor(Top / RowHeight), 0, High(fMatches));
+    Count := Min(Capacity, Length(fMatches) - First);
+  end;
+  DocumentUI.SetModel('search.suggestionFirst', IntToStr(First), 1);
+  if SuggestionsChanged or (fDocumentFirst <> First) or (fDocumentCount <> Count) then
+  begin
+    fDocumentFirst := First; fDocumentCount := Count;
+    DocumentUI.SetArray('search.suggestions', Count);
+    for I := 0 to Count - 1 do
+    begin
+      N := fMatches[First + I];
+      Prefix := 'search.suggestions[' + IntToStr(I) + '].';
+      DocumentUI.SetModel(Prefix + 'id', IntToStr(First + I), 1);
+      DocumentUI.SetModel(Prefix + 'value', fValues[N]);
+      DocumentUI.SetModel(Prefix + 'count', IntToStr(PtrInt(fValues.Objects[N])), 1);
+    end;
+  end;
+  FocusChanged := (fDocumentFocus <> fFocus) or (fDocumentSuggestionFocus <> fSuggestionFocus) or
+    (fSuggestionFocus and (fDocumentSuggestion <> fSuggestionIndex));
+  if FocusChanged then
+  begin
+    if fSuggestionFocus then FocusID := 'search-suggestion-' + IntToStr(fSuggestionIndex)
+    else if fFocus < Length(fRows) then FocusID := 'search-input-' + IntToStr(fFocus)
+    else case fFocus - Length(fRows) of
+      0: FocusID := 'search-presets';
+      1: FocusID := 'search-clear';
+      3: FocusID := 'search-lock';
+      else FocusID := '';
+    end;
+    if FocusID <> '' then DocumentUI.Focus(FocusID);
+    fDocumentFocus := fFocus;
+    fDocumentSuggestionFocus := fSuggestionFocus;
+    fDocumentSuggestion := fSuggestionIndex;
+  end;
+end;
+
+function TScreenSongJumpto.ParseDocumentMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
+var Action, Target: UTF8String; Index, Capacity, First: integer;
+  View, Measure: TDocumentRegion; Position, Range, Step: single;
+begin
+  Result := true;
+  if RightMbESC and (MouseButton = SDL_BUTTON_RIGHT) and BtnDown then begin Visible := false; Exit; end;
+  // Song selection forwards render-space coordinates to its extensions.
+  X := Round(X * ScreenW / RenderW); Y := Round(Y * ScreenH / RenderH);
+  if MouseButton = SDL_BUTTON_LEFT then DocumentUI.Mouse(X, Y, 0, BtnDown)
+  else DocumentUI.Mouse(X, Y);
+  if BtnDown and ((MouseButton = SDL_BUTTON_WHEELUP) or (MouseButton = SDL_BUTTON_WHEELDOWN)) then
+  begin
+    if DocumentUI.Region('search-suggestions', View) and
+        (X >= View.X * ScreenW / RenderW) and (X < (View.X + View.W) * ScreenW / RenderW) and
+        (Y >= View.Y * ScreenH / RenderH) and (Y < (View.Y + View.H) * ScreenH / RenderH) then
+    begin
+      fSuggestionFocus := false;
+      if MouseButton = SDL_BUTTON_WHEELUP then DocumentUI.Scroll(-1) else DocumentUI.Scroll(1);
+    end
+    else if DocumentUI.Region('search-rows', View) and DocumentUI.Region('search-row-measure', Measure) and (Measure.H > 0) then
+    begin
+      Range := Max(0, Length(fRows) * Measure.H - View.H);
+      Position := DocumentUI.ScrollPosition('search-rows');
+      if Range > 0 then
+      begin
+        Step := Measure.H / Range;
+        if MouseButton = SDL_BUTTON_WHEELUP then Position := Max(0, Position - Step)
+        else Position := Min(1, Position + Step);
+        DocumentUI.ScrollTo('search-rows', Position);
+      end;
+      First := Floor(Position * Range / Measure.H + 0.01);
+      Capacity := Max(1, Floor(View.H / Measure.H + 0.01));
+      fFocus := EnsureRange(fFocus, First, Min(High(fRows), First + Capacity - 1));
+      fDocumentFocus := -999;
+    end;
+    Exit;
+  end;
+  Action := DocumentUI.TakeAction; Target := DocumentUI.ActionTarget;
+  if Action = '' then Exit;
+  if (Action = uiSearchRow) or (Action = uiSearchCategoryPrevious) or (Action = uiSearchCategoryNext) or
+      (Action = uiSearchRemove) then
+  begin
+    if not TryStrToInt(Target, Index) or (Index < 0) or (Index >= Length(fRows)) then Exit;
+    fFocus := Index;
+    RefreshRows;
+    if Action = uiSearchCategoryPrevious then ParseInput(SDLK_LEFT, 0, true)
+    else if Action = uiSearchCategoryNext then ParseInput(SDLK_RIGHT, 0, true)
+    else if Action = uiSearchRemove then RemoveRow(Index);
+  end
+  else if Action = uiSearchSuggestion then
+  begin
+    if not TryStrToInt(Target, Index) or (Index < 0) or (Index >= Length(fMatches)) then Exit;
+    fSuggestionIndex := Index;
+    AcceptSuggestion;
+  end
+  else if Action = uiSearchAdd then AddRow
+  else if Action = uiSearchClose then ActivateAction(2)
+  else if Action = uiSearchPresets then begin fFocus := Length(fRows); ActivateAction(0); end
+  else if Action = uiSearchClear then begin fFocus := Length(fRows) + 1; ActivateAction(1); end
+  else if Action = uiSearchLock then begin fFocus := Length(fRows) + 3; ActivateAction(3); end;
+end;
 
 function TFilterSuggestionMenu.Row(Index: integer): TButton;
 begin
@@ -122,6 +329,14 @@ constructor TScreenSongJumpto.Create;
 var S, I: integer; Category: TThemeSelectSlide; Input: TThemeButton;
 begin
   inherited Create;
+  SetLength(fRows, 1);
+  fPlaylist := -1;
+  fDocumentFocus := -999;
+  fDocumentSuggestion := -1;
+  fDocumentFirst := -1; fDocumentCount := -1;
+  fDocumentSuggestionKey := #1;
+  DocumentUI := TDocumentUI.Open(uiSongSearchRole, 'search.rows');
+  if DocumentUI <> nil then begin fDocumentDirty := true; fDocumentReveal := true; Exit; end;
   AddText(Theme.SongJumpto.TextFound);
   LoadFromTheme(Theme.SongJumpto);
   for S := 0 to FILTER_SLOTS - 1 do
@@ -154,6 +369,7 @@ end;
 destructor TScreenSongJumpto.Destroy;
 var Kind: TSongFilter;
 begin
+  DocumentUI.Free;
   for Kind := Low(TSongFilter) to High(TSongFilter) do
   begin fValueCache[Kind].Values.Free; fValueCache[Kind].Keys.Free; end;
   fSuggestions.Free;
@@ -170,13 +386,18 @@ begin
     if Trim(fRows[R].Query) <> '' then
     begin
       if Result <> '' then Result := Result + ' / ';
-      Result := Result + Theme.SongJumpto.IType[Ord(fRows[R].Kind)] + ': ' + fRows[R].Query;
+      Result := Result + CategoryCaption(fRows[R].Kind) + ': ' + fRows[R].Query;
     end;
 end;
 
 procedure TScreenSongJumpto.RefreshRows;
 var S, R, I, Delta: integer; OffsetY: real;
 begin
+  if DocumentUI <> nil then
+  begin
+    fDocumentDirty := true; fDocumentReveal := true;
+    Exit;
+  end;
   for I := 0 to High(Statics) do Statics[I].Texture.Y := Theme.SongJumpto.Statics[I].Y;
   for I := 0 to High(Theme.SongJumpto.Text) do Text[I + 1].Y := Theme.SongJumpto.Text[I].Y;
   Text[0].Y := Theme.SongJumpto.TextFound.Y;
@@ -454,8 +675,12 @@ begin
         else
         begin
           S := fFocus - fFirst;
-          Button[fInputs[S]].Text[0].DeleteLastLetter;
-          fRows[fFocus].Query := Button[fInputs[S]].Text[0].Text;
+          if DocumentUI <> nil then UTF8Delete(fRows[fFocus].Query, LengthUTF8(fRows[fFocus].Query), 1)
+          else
+          begin
+            Button[fInputs[S]].Text[0].DeleteLastLetter;
+            fRows[fFocus].Query := Button[fInputs[S]].Text[0].Text;
+          end;
           Changed;
         end;
       end;
@@ -489,6 +714,7 @@ var S, R, I: integer; LX, LY: real; Area: TMouseOverRect;
       (LY >= Button[B].Y) and (LY <= Button[B].Y + Button[B].H);
   end;
 begin
+  if DocumentUI <> nil then Exit(ParseDocumentMouse(MouseButton, BtnDown, X, Y));
   Result := true;
   if not BtnDown then Exit;
   if (Length(fMatches) > 0) and (X >= fSuggestionX) and
@@ -583,7 +809,10 @@ end;
 procedure TScreenSongJumpto.OnShow;
 var Country: UTF8String; Kind: TSongFilter;
 begin
-  inherited;
+  if DocumentUI = nil then inherited;
+  fDocumentDirty := true; fDocumentReveal := true;
+  fDocumentSuggestionKey := #1; fDocumentFirst := -1; fDocumentCount := -1;
+  fDocumentFocus := -999; fDocumentSuggestion := -1;
   for Kind := Low(TSongFilter) to High(TSongFilter) do
   begin FreeAndNil(fValueCache[Kind].Values); FreeAndNil(fValueCache[Kind].Keys); end;
   fSuggestionContext := #1;
@@ -592,13 +821,14 @@ begin
   Help.SetHelpID(ID);
   Country := Ini.AgeCountry;
   if Country = '' then Country := Language.Translate('OPTION_VALUE_AGE_DEFAULT');
-  Theme.SongJumpto.IType[9] := Language.Translate('SONG_JUMPTO_TYPE10') + ' (' + Country + ')';
+  if DocumentUI = nil then Theme.SongJumpto.IType[9] := Language.Translate('SONG_JUMPTO_TYPE10') + ' (' + Country + ')';
   if CatSongs.CatNumShow <> -2 then
   begin
     ResetFilters;
     fPlaylistSearch := (CatSongs.CatNumShow = -3) and (PlaylistMan.CurPlayList <> -1);
     fPlaylist := PlaylistMan.CurPlayList;
-    Text[0].Text := Format(Theme.SongJumpto.SongsFound, [CatSongs.VisibleSongs]);
+    if DocumentUI <> nil then fDocumentFound := Format(Language.Translate('SONG_JUMPTO_SONGSFOUND'), [CatSongs.VisibleSongs])
+    else Text[0].Text := Format(Theme.SongJumpto.SongsFound, [CatSongs.VisibleSongs]);
   end;
   fLastPlayed := ScreenSong.Interaction;
   // Reopening reevaluates flags and keeps the selection inside the results.
@@ -639,6 +869,7 @@ begin
     fSuggestionContext := #1;
   end;
   Renderer.ClearFrameBuffer(CLEAR_DEPTH);
+  if DocumentUI <> nil then begin SyncDocument; Exit(DocumentUI.Draw(false, true)); end;
   Result := inherited Draw;
   for I := 0 to FILTER_SLOTS - 1 do
   begin
@@ -910,15 +1141,19 @@ end;
 procedure TScreenSongJumpto.SetTextFound(Count: cardinal; SelectedSong: TSong);
 var I, NewSelection: integer;
 begin
-  if Count = 0 then
-    Text[0].Text := Theme.SongJumpto.NoSongsFound
-  else
-    Text[0].Text := Format(Theme.SongJumpto.SongsFound, [Count]);
+  if DocumentUI <> nil then
+  begin
+    if Count = 0 then fDocumentFound := Language.Translate('SONG_JUMPTO_NOSONGSFOUND')
+    else fDocumentFound := Format(Language.Translate('SONG_JUMPTO_SONGSFOUND'), [Count]);
+  end
+  else if Count = 0 then Text[0].Text := Theme.SongJumpto.NoSongsFound
+  else Text[0].Text := Format(Theme.SongJumpto.SongsFound, [Count]);
 
   if FilterSummary = '' then
     ScreenSong.HideCatTL
   else
-    ScreenSong.ShowCatTLCustom(Format(Theme.SongJumpto.CatText, [FilterSummary]));
+    if DocumentUI <> nil then ScreenSong.ShowCatTLCustom(Format(Language.Translate('SONG_JUMPTO_CATTEXT'), [FilterSummary]))
+    else ScreenSong.ShowCatTLCustom(Format(Theme.SongJumpto.CatText, [FilterSummary]));
 
   //Set visSongs
   fVisSongs := Count;

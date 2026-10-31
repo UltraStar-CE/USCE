@@ -1,0 +1,6 @@
+<template name="song-search-footer"><head></head><body>
+<img class="legend-icon search-nav-icon" src="../../themes/Modern/[button]navi.png"/><span class="legend search-nav" lang="FILTER_KEY_NAV"/>
+<img class="legend-icon search-confirm-icon" src="../../themes/Modern/[button]enter.png"/><span class="legend search-confirm" lang="FILTER_KEY_CONFIRM"/>
+<img class="legend-icon search-clear-alt-icon" src="../../themes/Modern/[button]alt.png" data-class-hidden="data.search.macAlt"/><img class="legend-icon search-clear-alt-icon" src="../../themes/Modern/[button]altmac.png" data-class-hidden="!data.search.macAlt"/><span class="legend search-clear-plus">+</span><img class="legend-icon search-clear-key-icon" src="../../themes/Modern/[button]c.png"/><span class="legend search-clear-label" lang="FILTER_ACTION_CLEAR"/>
+<img class="legend-icon search-lock-alt-icon" src="../../themes/Modern/[button]alt.png" data-class-hidden="data.search.macAlt"/><img class="legend-icon search-lock-alt-icon" src="../../themes/Modern/[button]altmac.png" data-class-hidden="!data.search.macAlt"/><span class="legend search-lock-plus">+</span><img class="legend-icon search-lock-key-icon" src="../../themes/Modern/[button]l.png"/><span class="legend search-lock-label" bind-text="search.lockLabel"/>
+</body></template>

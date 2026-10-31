@@ -22,4 +22,4 @@
 <div class="library-count">{{ data.library.position }} / {{ data.library.total }}</div>
 <div class="library-continuous" data-class-hidden="!data.library.continuous"><img src="../../themes/Modern/[song]continuous.png"/></div>
 <div class="library-message">{{ data.library.message }}</div>
-<div class="footer"/><div class="footer-labels"><template src="library-footer"/></div><div class="reflection-clip"><div class="footer-labels"><template src="library-footer"/></div></div></div></div></body></rml>
+<div class="footer"/><div class="footer-labels" data-class-search-hidden="data.library.searching"><template src="library-footer"/></div><div class="reflection-clip"><div class="footer-labels" data-class-search-hidden="data.library.searching"><template src="library-footer"/></div></div></div></div></body></rml>

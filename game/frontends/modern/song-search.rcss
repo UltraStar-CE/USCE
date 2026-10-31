@@ -1,0 +1,57 @@
+/* Modern search uses semantic filter rows and a bounded suggestion viewport. */
+/* RmlUi has no HTML user-agent stylesheet; structural boxes are explicit. */
+.search-panel, .search-header, .search-rows, .search-row, .search-category,
+.search-found, .search-suggestions, .search-suggestion-space,
+.search-row-measure, .search-suggestion-measure { display: block; }
+.search-screen .hidden { display: none; }
+.search-screen .search-shade { position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; background-color: #0000004d; }
+.search-positioner { position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; }
+.search-panel { position: relative; width: 37.5vw; box-sizing: border-box; padding: 0 0.625vw 1.666667vh; decorator: image("../../themes/Modern/[interface]dialog_background.png"); }
+.search-header { position: relative; height: 9.666667vh; }
+.search-icon { position: absolute; left: 0.375vw; top: 2.5vh; width: 3vw; height: 4vh; }
+.search-title { position: absolute; left: 4.125vw; top: 1.5vh; width: 18.75vw; font-size: 4.5vh; white-space: nowrap; }
+.search-command { position: absolute; top: 2vh; width: 3.5vw; height: 4.666667vh; background-color: #0f141c; border: 1px transparent; box-sizing: border-box; }
+.search-command:focus { background-color: #0f141c; }
+.search-command.selected { border-color: #80d9ff; }
+.search-command svg { left: 15%; top: 15%; width: 70%; height: 70%; opacity: 1; }
+.search-presets { left: 23.75vw; } .search-lock { left: 28.25vw; } .search-clear { left: 32.75vw; }
+.search-clear span { font-size: 2.5vh; line-height: 4.166667vh; }
+.search-rows { position: relative; width: 100%; max-height: 29vh; overflow-x: hidden; overflow-y: auto; }
+.search-row-measure { position: absolute; left: 0; top: 0; width: 1px; height: 9.666667vh; opacity: 0; pointer-events: none; }
+.search-row { position: relative; width: 100%; height: 9.666667vh; }
+.search-category { position: relative; width: 100%; height: 4.333333vh; }
+.search-category button, .search-category button:focus { background-color: transparent; }
+.search-category-current { position: absolute; left: 3.75vw; top: 0; width: 28.75vw; height: 4.333333vh; font-size: 3vh; }
+.search-category-current span { line-height: 4.333333vh; white-space: nowrap; overflow: hidden; }
+.search-category-previous, .search-category-next { position: absolute; top: 0; width: 3.75vw; height: 4.333333vh; }
+.search-category-previous { left: 0; } .search-category-next { right: 0; }
+.search-category svg { left: 0; top: 0; width: 100%; height: 100%; opacity: 1; }
+.search-input, .search-input:focus { position: relative; width: 100%; height: 4.666667vh; padding: 0.166667vh 0.5vw; box-sizing: border-box; background-color: #0f141c; border: 1px transparent; overflow-x: auto; overflow-y: hidden; font-size: 2.5vh; text-align: left; }
+.search-row.selected .search-input { border-color: #80d9ff; }
+.search-input .query-line { display: block; position: relative; width: auto; white-space: pre; }
+.search-input .query-line span { position: relative; display: inline; white-space: pre; }
+.search-input scrollbarhorizontal { height: 0; }
+.search-caret { animation: 1s search-caret infinite; }
+@keyframes search-caret { from { opacity: 1; } 50% { opacity: 1; } 51% { opacity: 0; } to { opacity: 0; } }
+.search-found { position: relative; width: 100%; height: 3.555556vh; margin-top: 1vh; padding-left: 1.875vw; box-sizing: border-box; font-size: 2.5vh; white-space: nowrap; overflow: hidden; }
+.search-suggestions { position: absolute; left: 69.75vw; width: 27.5vw; max-width: 28.25vw; overflow-x: hidden; overflow-y: auto; background-color: #0f141c; }
+.search-suggestion-space { position: relative; width: 100%; }
+.search-suggestion-measure { position: absolute; left: 0; top: 0; width: 1px; height: 5vh; opacity: 0; pointer-events: none; }
+.search-suggestion, .search-suggestion:focus { position: absolute; left: 0; width: 100%; height: 5vh; padding: 0 0.5vw; box-sizing: border-box; background-color: transparent; text-align: left; font-size: 2.5vh; }
+.search-suggestion span { white-space: nowrap; overflow: hidden; line-height: 5vh; }
+.search-suggestion.selected { font-weight: bold; }
+.search-rows scrollbarvertical, .search-suggestions scrollbarvertical { width: 0.5vw; }
+.search-rows scrollbarvertical sliderbar, .search-suggestions scrollbarvertical sliderbar { background-color: #80d9ff; }
+.search-rows scrollbarvertical slidertrack, .search-suggestions scrollbarvertical slidertrack { background-color: transparent; }
+.search-screen .legend { font-size: 2.5vh; }
+.search-nav-icon { left: 32.5vw; } .search-nav { left: 36.75vw; }
+.search-confirm-icon { left: 55.625vw; } .search-confirm { left: 59.875vw; }
+.search-clear-alt-icon { left: 70vw; } .search-clear-plus { left: 74.25vw; } .search-clear-key-icon { left: 75.625vw; } .search-clear-label { left: 79.875vw; }
+.search-lock-alt-icon { left: 86.25vw; } .search-lock-plus { left: 90.5vw; } .search-lock-key-icon { left: 91.875vw; } .search-lock-label { left: 96.125vw; }
+
+/* Keep the caret exclusive to the active field, overriding inline text styling. */
+.search-screen .search-caret.hidden { display: none; }
+.search-row.selected .search-category-current { font-weight: bold; }
+.search-category .unavailable { visibility: hidden; pointer-events: none; }
+.search-category svg { left: 8.333333%; width: 83.333333%; }
+.search-suggestions scrollbarvertical { width: 0.25vw; }

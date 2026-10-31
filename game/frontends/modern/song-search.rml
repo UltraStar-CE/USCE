@@ -1,0 +1,22 @@
+<rml><head><title>Modern song search</title>
+<link type="text/rcss" href="modern.rcss"/><link type="text/rcss" href="song-search.rcss"/>
+<link type="text/template" href="song-search-footer.rml"/></head>
+<body class="search-screen"><div class="search-shade"/>
+<div data-model="game"><div class="search-positioner"><div id="search-panel" class="search-panel">
+<div class="search-header"><img class="search-icon" src="../../themes/Modern/[icon]song_search.png"/><span class="search-title description" lang="SONG_JUMPTO_TYPE_DESC"/>
+<button id="search-presets" class="search-command search-presets" action="search.presets" target="presets" data-class-selected="data.search.focus == data.search.rowCount"><svg src="search-pin.svg"/></button>
+<button id="search-lock" class="search-command search-lock" action="search.lock" target="lock" data-class-selected="data.search.focus == data.search.rowCount + 3"><svg src="search-lock.svg" data-class-hidden="!data.search.locked"/><svg src="search-unlock.svg" data-class-hidden="data.search.locked"/></button>
+<button id="search-clear" class="search-command search-clear" action="search.clear" target="clear" data-class-selected="data.search.focus == data.search.rowCount + 1"><span>x</span></button></div>
+<div id="search-rows" class="search-rows"><div id="search-row-measure" class="search-row-measure"/>
+<div data-for="row : data.search.rows" class="search-row" data-attr-id="'search-row-' + row.id" data-class-selected="data.search.focus == row.id">
+<div class="search-category"><button class="search-category-previous" data-class-unavailable="row.kind == 0" action="search.category.previous" data-attr-target="row.id"><svg src="arrow-left.svg"/></button><button class="search-category-current" action="search.row" data-attr-target="row.id"><span>{{ row.category }}</span></button><button class="search-category-next" data-class-unavailable="row.kind + 1 >= data.search.categoryCount" action="search.category.next" data-attr-target="row.id"><svg src="arrow-right.svg"/></button></div>
+<button class="search-input" data-attr-id="'search-input-' + row.id" action="search.row" data-attr-target="row.id"><span class="query-line"><span>{{ row.query }}</span><span class="search-caret" data-attr-id="'search-caret-' + row.id" data-class-hidden="data.search.focus != row.id || data.search.suggestionFocus">|</span></span></button>
+</div></div>
+<div class="search-found" bind-text="search.found"/>
+</div></div>
+<div id="search-suggestions" class="search-suggestions" data-class-hidden="data.search.suggestionTotal == 0" data-style-height="((data.search.suggestionTotal * 5) | min(85)) + 'vh'" data-style-top="((50 - (16 + 9.666667 * (data.search.rowCount | min(3))) / 2 + 14 + 9.666667 * ((data.search.focusSlot | min(2)) | max(0))) | min(88.166667 - ((data.search.suggestionTotal * 5) | min(85))) | max(2.666667)) + 'vh'">
+<div class="search-suggestion-space" data-style-height="(data.search.suggestionTotal * 5) + 'vh'"><div id="search-suggestion-measure" class="search-suggestion-measure"/>
+<button data-for="suggestion : data.search.suggestions" class="search-suggestion" data-attr-id="'search-suggestion-' + suggestion.id" action="search.suggestion" data-attr-target="suggestion.id" data-style-top="(suggestion.id * 5) + 'vh'" data-class-selected="data.search.suggestionFocus &amp;&amp; data.search.suggestionSelected == suggestion.id"><span>{{ suggestion.value }} ({{ suggestion.count }})</span></button>
+</div></div>
+<div class="footer"/><div class="footer-labels"><template src="song-search-footer"/></div><div class="reflection-clip"><div class="footer-labels"><template src="song-search-footer"/></div></div>
+</div></body></rml>

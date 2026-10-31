@@ -119,3 +119,5 @@
 .library-chessboard .selected-panel-reflection-clip, .library-roulette .selected-panel-reflection-clip { display: block; position: absolute; left: 3.125vw; top: 80.333333vh; width: 25vw; height: 13.333333vh; overflow: hidden; mask-image: vertical-gradient(#0008 #0000); pointer-events: none; z-index: 190; }
 .library-roulette .selected-panel-reflection-clip { left: 37.5vw; }
 .selected-panel-reflection { position: absolute; left: 0; top: 0; width: 100%; height: 26.666667vh; transform: scaleY(-1); }
+
+.library-screen .search-hidden { visibility: hidden; }
