@@ -68,6 +68,8 @@ type
   end;
   TDocumentUI = class
   private
+    DocumentHandle: QWord;
+    HandleGeneration: Cardinal;
     FileName, ArrayBinding: UTF8String;
     ColorStyle, SkinStyle: UTF8String;
     Values: TStringList;
@@ -101,9 +103,13 @@ type
 var
   LibraryHandle: TLibHandle = NilHandle;
   Current: TDocumentUI;
+  RuntimeGeneration: Cardinal;
   TranslationBuffer: UTF8String;
   Initialize: function(Translate: TTranslate; Logger: TLogger; Font, BoldFont: PAnsiChar): integer; cdecl;
-  OpenDocument, ApplyStyle: function(FileName: PAnsiChar): integer; cdecl;
+  ApplyStyle: function(FileName: PAnsiChar): integer; cdecl;
+  CreateDocument: function(FileName, ArrayBinding: PAnsiChar): QWord; cdecl;
+  SelectDocument: function(Handle: QWord): integer; cdecl;
+  DestroyDocument: procedure(Handle: QWord); cdecl;
   SetBinding: procedure(Name, Value: PAnsiChar); cdecl;
   Render: procedure(Width, Height, ForegroundOnly: integer); cdecl;
   ProcessMouse: procedure(X, Y, Button, Down: integer); cdecl;
@@ -155,7 +161,9 @@ begin
   try
     @Initialize := Symbol('ui_initialize');
     @Shutdown := Symbol('ui_shutdown');
-    @OpenDocument := Symbol('ui_open');
+    @CreateDocument := Symbol('ui_create');
+    @SelectDocument := Symbol('ui_select');
+    @DestroyDocument := Symbol('ui_destroy');
     @ApplyStyle := Symbol('ui_style');
     @SetBinding := Symbol('ui_set');
     @Render := Symbol('ui_render');
@@ -174,7 +182,11 @@ begin
     @GetError := Symbol('ui_error');
     Result := Initialize(@TranslateKey, @FrontendLog, PAnsiChar(Font), PAnsiChar(BoldFont)) <> 0;
     if not Result then Log.LogWarn(UTF8String(GetError()), 'DocumentUI');
-    if Result then Log.LogStatus('Loaded document frontend', 'DocumentUI');
+    if Result then
+    begin
+      Inc(RuntimeGeneration);
+      Log.LogStatus('Loaded document frontend', 'DocumentUI');
+    end;
   except
     on E: Exception do Log.LogWarn(E.Message, 'DocumentUI');
   end;
@@ -231,6 +243,8 @@ end;
 destructor TDocumentUI.Destroy;
 begin
   if Current = Self then Current := nil;
+  if (LibraryHandle <> NilHandle) and (HandleGeneration = RuntimeGeneration) and
+     (DocumentHandle <> 0) then DestroyDocument(DocumentHandle);
   Values.Free;
   inherited;
 end;
@@ -241,19 +255,22 @@ begin
   Result := LibraryHandle <> NilHandle;
   if not Result or (Current = Self) then Exit;
   Current := nil;
-  // Each form supplies its own fields before drawing. Do not instantiate a new
-  // document against the previous form's nested choices.
-  if ArrayBinding <> '' then SetModelArray(PAnsiChar(ArrayBinding), 0);
-  Result := OpenDocument(PAnsiChar(FileName)) <> 0;
-  if not Result then begin Log.LogWarn(UTF8String(GetError()), 'DocumentUI'); Exit; end;
-  if (SkinStyle <> '') and (ApplyStyle(PAnsiChar(SkinStyle)) = 0) then
+  if HandleGeneration <> RuntimeGeneration then DocumentHandle := 0;
+  if DocumentHandle <> 0 then
   begin
-    Log.LogWarn(UTF8String(GetError()), 'DocumentUI');
-    Exit(false);
+    Result := SelectDocument(DocumentHandle) <> 0;
+    if Result then begin Current := Self; Exit; end;
+    DocumentHandle := 0;
   end;
-  if (ColorStyle <> '') and (ApplyStyle(PAnsiChar(ColorStyle)) = 0) then
+  DocumentHandle := CreateDocument(PAnsiChar(FileName), PAnsiChar(ArrayBinding));
+  Result := DocumentHandle <> 0;
+  if not Result then begin Log.LogWarn(UTF8String(GetError()), 'DocumentUI'); Exit; end;
+  HandleGeneration := RuntimeGeneration;
+  if ((SkinStyle <> '') and (ApplyStyle(PAnsiChar(SkinStyle)) = 0)) or
+     ((ColorStyle <> '') and (ApplyStyle(PAnsiChar(ColorStyle)) = 0)) then
   begin
     Log.LogWarn(UTF8String(GetError()), 'DocumentUI');
+    DestroyDocument(DocumentHandle); DocumentHandle := 0;
     Exit(false);
   end;
   Current := Self;

@@ -19,6 +19,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <cstdint>
 
 #ifdef _WIN32
 #define UI_EXPORT extern "C" __declspec(dllexport)
@@ -76,48 +77,53 @@ class Renderer final : public RenderInterface_GL3 {
 };
 static System system_interface;
 static std::unique_ptr<Renderer> renderer;
-static Rml::Context* context;
-static Rml::ElementDocument* document;
 struct Binding { Rml::Element* element; std::string attribute; };
-static std::unordered_map<std::string, std::vector<Binding>> bindings;
-static std::vector<Rml::Element*> controls;
-static std::string pending_action;
-static std::string pending_target;
-static std::string focused_target;
+struct DocumentState;
+class Actions final : public Rml::EventListener {
+    DocumentState* owner;
+public:
+    explicit Actions(DocumentState* state) : owner(state) {}
+    void ProcessEvent(Rml::Event& event) override;
+};
+struct DocumentState {
+    Rml::Context* context = nullptr;
+    Rml::ElementDocument* document = nullptr;
+    std::unordered_map<std::string, std::vector<Binding>> bindings;
+    std::vector<Rml::Element*> controls;
+    std::string pending_action, pending_target, focused_target;
+    bool text_fit_dirty = true, table_layout_dirty = true;
+    int last_width = 0, last_height = 0;
+    Actions actions{this};
+};
+static DocumentState fallback;
+static DocumentState* active = &fallback;
+static std::unordered_map<uint64_t, std::unique_ptr<DocumentState>> documents;
+static uint64_t next_document_id = 1;
 static bool pointer_known = false;
 static int pointer_x = 0, pointer_y = 0;
 static bool initialized;
-static bool text_fit_dirty = true;
-static bool table_layout_dirty = true;
 static void update_document_layout();
-static int last_width = 0, last_height = 0;
-static std::vector<Rml::byte> font_data;
-static std::vector<Rml::byte> bold_font_data;
-
-class Actions final : public Rml::EventListener {
-public:
-    void ProcessEvent(Rml::Event& event) override {
+static std::vector<Rml::byte> font_data, bold_font_data;
+void Actions::ProcessEvent(Rml::Event& event) {
         // Queue actions. Never destroy a document while RmlUi is dispatching an event.
         auto* element = event.GetTargetElement();
         while (element && !element->HasAttribute("action")) element = element->GetParentNode();
         if (element) {
             if (event.GetId() == Rml::EventId::Click)
             {
-                pending_action = element->GetAttribute<Rml::String>("action", "");
-                pending_target = element->GetAttribute<Rml::String>("target", "");
+                owner->pending_action = element->GetAttribute<Rml::String>("action", "");
+                owner->pending_target = element->GetAttribute<Rml::String>("target", "");
             }
             else {
                 const auto target = element->GetAttribute<Rml::String>("focus-text-target", "");
                 const auto key = element->GetAttribute<Rml::String>("focus-text-lang", "");
-                if (document && !target.empty()) {
-                    if (auto* label = document->GetElementById(target))
+                if (owner->document && !target.empty()) {
+                    if (auto* label = owner->document->GetElementById(target))
                         label->SetInnerRML(Rml::StringUtilities::EncodeRml(translate ? translate(key.c_str()) : key));
                 }
             }
         }
-    }
-};
-static Actions actions;
+}
 
 static void bind_tree(Rml::Element* element) {
     const auto key = element->GetAttribute<Rml::String>("lang", "");
@@ -127,26 +133,66 @@ static void bind_tree(Rml::Element* element) {
     }
     for (const char* attribute : {"bind-text", "bind-lines", "bind-emphasis", "bind-value"}) {
         const auto name = element->GetAttribute<Rml::String>(attribute, "");
-        if (!name.empty()) bindings[name].push_back({element, attribute});
+        if (!name.empty()) active->bindings[name].push_back({element, attribute});
     }
     if (element->HasAttribute("action")) {
-        controls.push_back(element);
+        active->controls.push_back(element);
     }
     for (int i = 0; i < element->GetNumChildren(); ++i) bind_tree(element->GetChild(i));
 }
 
 UI_EXPORT const char* ui_error() { return last_error.c_str(); }
 UI_EXPORT void ui_close_document() {
-    DocumentTables::ClearCache(); table_layout_dirty = true;
-    bindings.clear(); controls.clear(); pending_action.clear(); pending_target.clear();
-    if (document) { document->Close(); document = nullptr; context->Update(); }
+    DocumentTables::ClearCache(); active->table_layout_dirty = true;
+    active->bindings.clear(); active->controls.clear(); active->pending_action.clear(); active->pending_target.clear();
+    if (active->document) { active->document->Close(); active->document = nullptr; active->context->Update(); }
+}
+static bool create_context(uint64_t id) {
+    auto state = std::make_unique<DocumentState>();
+    const auto name = "usce-" + std::to_string(id);
+    state->context = Rml::CreateContext(name, {800, 600});
+    if (!state->context) return false;
+    if (!DocumentModel::Initialize(state->context)) {
+        Rml::RemoveContext(name);
+        DocumentModel::Release(state->context);
+        return false;
+    }
+    active = state.get();
+    documents[id] = std::move(state);
+    return true;
+}
+UI_EXPORT int ui_select(uint64_t id) {
+    const auto found = documents.find(id);
+    if (found == documents.end()) return 0;
+    active = found->second.get();
+    DocumentModel::Select(active->context);
+    return 1;
+}
+UI_EXPORT void ui_destroy(uint64_t id) {
+    const auto found = documents.find(id);
+    if (id == 0 || found == documents.end()) return;
+    auto* previous = active;
+    active = found->second.get();
+    ui_close_document();
+    auto* context = active->context;
+    Rml::RemoveContext(context->GetName());
+    DocumentModel::Release(context);
+    if (previous == active) previous = documents.at(0).get();
+    documents.erase(found);
+    active = previous;
+    DocumentModel::Select(active->context);
 }
 UI_EXPORT void ui_shutdown() {
     if (!initialized) return;
-    ui_close_document();
-    Rml::Shutdown();
-    DocumentModel::Reset();
-    context = nullptr; renderer.reset(); font_data.clear(); bold_font_data.clear(); RmlGL3::Shutdown(); initialized = false;
+    for (auto& pair : documents) {
+        active = pair.second.get();
+        ui_close_document();
+        Rml::RemoveContext(active->context->GetName());
+        DocumentModel::Release(active->context);
+    }
+    documents.clear(); active = &fallback;
+    Rml::Shutdown(); DocumentModel::Reset();
+    renderer.reset(); font_data.clear(); bold_font_data.clear(); RmlGL3::Shutdown(); initialized = false;
 }
 UI_EXPORT int ui_initialize(Translate translator, Log logger, const char* font, const char* bold_font) {
     if (initialized) return 1;
@@ -159,11 +205,10 @@ UI_EXPORT int ui_initialize(Translate translator, Log logger, const char* font, 
     if (!Rml::Initialise()) { last_error = "RmlUi initialization failed"; renderer.reset(); return 0; }
     initialized = true;
     pointer_known = false;
-    context = Rml::CreateContext("usce", {800, 600});
-    if (context && !DocumentModel::Initialize(context)) { last_error = "Data model initialization failed"; ui_shutdown(); return 0; }
+    if (!create_context(0)) { last_error = "Data model initialization failed"; ui_shutdown(); return 0; }
     std::ifstream file(std::filesystem::u8path(font), std::ios::binary);
     font_data.assign(std::istreambuf_iterator<char>(file), {});
-    if (!context || font_data.empty() || !Rml::LoadFontFace(font_data, "ui", Rml::Style::FontStyle::Normal)) {
+    if (!active->context || font_data.empty() || !Rml::LoadFontFace(font_data, "ui", Rml::Style::FontStyle::Normal)) {
         last_error = "Frontend context/font unavailable"; ui_shutdown(); return 0;
     }
     if (bold_font && *bold_font) {
@@ -176,32 +221,41 @@ UI_EXPORT int ui_initialize(Translate translator, Log logger, const char* font, 
 UI_EXPORT int ui_open(const char* filename) {
     if (!initialized) return 0;
     ui_close_document();
-    text_fit_dirty = true;
-    document = context->LoadDocument(filename);
-    if (!document) { last_error = std::string("Cannot load frontend document: ") + filename; return 0; }
-    bind_tree(document);
-    document->AddEventListener(Rml::EventId::Click, &actions);
-    document->AddEventListener(Rml::EventId::Focus, &actions, true);
-    document->Show(); context->Update();
-    if (!controls.empty()) controls.front()->Focus();
+    active->text_fit_dirty = true;
+    active->document = active->context->LoadDocument(filename);
+    if (!active->document) { last_error = std::string("Cannot load frontend document: ") + filename; return 0; }
+    bind_tree(active->document);
+    active->document->AddEventListener(Rml::EventId::Click, &active->actions);
+    active->document->AddEventListener(Rml::EventId::Focus, &active->actions, true);
+    active->document->Show(); active->context->Update();
+    if (!active->controls.empty()) active->controls.front()->Focus();
     return 1;
 }
+UI_EXPORT uint64_t ui_create(const char* filename, const char* array_binding) {
+    if (!initialized || !filename) return 0;
+    auto* previous = active;
+    const auto id = next_document_id++;
+    if (!create_context(id)) { active = previous; DocumentModel::Select(active->context); return 0; }
+    if (array_binding && *array_binding) DocumentModel::Array(array_binding, 0);
+    if (!ui_open(filename)) { ui_destroy(id); active = previous; DocumentModel::Select(active->context); return 0; }
+    return id;
+}
 UI_EXPORT int ui_style(const char* filename) {
-    if (!document || !filename) return 0;
+    if (!active->document || !filename) return 0;
     auto sheet = Rml::Factory::InstanceStyleSheetFile(filename);
     if (!sheet) { last_error = std::string("Cannot load frontend stylesheet: ") + filename; return 0; }
-    if (const auto* current = document->GetStyleSheetContainer())
+    if (const auto* current = active->document->GetStyleSheetContainer())
         sheet = current->CombineStyleSheetContainer(*sheet);
-    text_fit_dirty = true; table_layout_dirty = true; DocumentTables::ClearCache();
-    document->SetStyleSheetContainer(std::move(sheet));
-    context->Update();
+    active->text_fit_dirty = true; active->table_layout_dirty = true; DocumentTables::ClearCache();
+    active->document->SetStyleSheetContainer(std::move(sheet));
+    active->context->Update();
     return 1;
 }
 UI_EXPORT void ui_set(const char* name, const char* value) {
-    if (DocumentModel::Set(name, value)) table_layout_dirty = true;
-    const auto found = bindings.find(name);
-    if (found == bindings.end()) return; // Optional elements need no game-side defaults.
-    text_fit_dirty = true; table_layout_dirty = true;
+    if (DocumentModel::Set(name, value)) active->table_layout_dirty = true;
+    const auto found = active->bindings.find(name);
+    if (found == active->bindings.end()) return; // Optional elements need no game-side defaults.
+    active->text_fit_dirty = true; active->table_layout_dirty = true;
     for (const auto& binding : found->second) {
         if (binding.attribute == "bind-emphasis") {
             // Only line breaks and paired emphasis markers are interpreted.
@@ -217,7 +271,7 @@ UI_EXPORT void ui_set(const char* name, const char* value) {
             }
             if (bold) markup += "</b>";
             binding.element->SetInnerRML(markup);
-            text_fit_dirty = true;
+            active->text_fit_dirty = true;
         }
         else if (binding.attribute == "bind-lines") {
             auto markup = Rml::StringUtilities::EncodeRml(value);
@@ -233,9 +287,9 @@ UI_EXPORT void ui_set(const char* name, const char* value) {
 }
 static void fit_text() {
     std::vector<Rml::Element*> elements;
-    document->QuerySelectorAll(elements, "[fit-text]");
+    active->document->QuerySelectorAll(elements, "[fit-text]");
     for (auto* element : elements) element->RemoveProperty(Rml::PropertyId::FontSize);
-    context->Update();
+    active->context->Update();
     for (auto* element : elements) {
         const float maximum = element->GetComputedValues().font_size();
         float low = element->GetAttribute<float>("fit-text", 1.0f), high = maximum;
@@ -244,19 +298,19 @@ static void fit_text() {
         for (int step = 0; step < 10 && high - low > 0.25f; ++step) {
             const float middle = (low + high) * 0.5f;
             element->SetProperty(Rml::PropertyId::FontSize, Rml::Property(middle, Rml::Unit::PX));
-            context->Update();
+            active->context->Update();
             if (fits()) low = middle; else high = middle;
         }
         element->SetProperty(Rml::PropertyId::FontSize, Rml::Property(low, Rml::Unit::PX));
-        context->Update();
+        active->context->Update();
     }
-    text_fit_dirty = false;
+    active->text_fit_dirty = false;
 }
 // Repeated data views create elements after the document was opened. Translate
 // those elements too, without rebuilding unchanged text on animation frames.
 static void translate_dynamic_elements() {
     Rml::ElementList elements;
-    document->QuerySelectorAll(elements, "[lang]");
+    active->document->QuerySelectorAll(elements, "[lang]");
     std::unordered_map<Rml::String, Rml::String> translations;
     for (auto* element : elements) {
         const auto key = element->GetAttribute<Rml::String>("lang", "");
@@ -269,52 +323,52 @@ static void translate_dynamic_elements() {
             element->GetAttribute<Rml::String>("translated-value", "") != value) {
             element->SetInnerRML(Rml::StringUtilities::EncodeRml(value));
             element->SetAttribute("translated-value", value);
-            text_fit_dirty = true;
+            active->text_fit_dirty = true;
         }
     }
 }
 static void update_document_layout() {
-    context->Update();
-    if (table_layout_dirty) {
+    active->context->Update();
+    if (active->table_layout_dirty) {
         translate_dynamic_elements();
-        context->Update();
+        active->context->Update();
     }
-    if (text_fit_dirty) fit_text();
-    if (table_layout_dirty) { DocumentTables::Layout(document, context); table_layout_dirty = false; }
+    if (active->text_fit_dirty) fit_text();
+    if (active->table_layout_dirty) { DocumentTables::Layout(active->document, active->context); active->table_layout_dirty = false; }
 }
 UI_EXPORT void ui_render(int width, int height, int foreground_only) {
-    if (!document || width <= 0 || height <= 0) return;
-    document->SetClass("foreground-only", foreground_only == 1);
-    document->SetClass("background-only", foreground_only == 2);
-    if (width != last_width || height != last_height) { text_fit_dirty = true; table_layout_dirty = true; }
-    last_width = width; last_height = height;
-    context->SetDimensions({width, height}); update_document_layout();
+    if (!active->document || width <= 0 || height <= 0) return;
+    active->document->SetClass("foreground-only", foreground_only == 1);
+    active->document->SetClass("background-only", foreground_only == 2);
+    if (width != active->last_width || height != active->last_height) { active->text_fit_dirty = true; active->table_layout_dirty = true; }
+    active->last_width = width; active->last_height = height;
+    active->context->SetDimensions({width, height}); update_document_layout();
     renderer->SetViewport(width, height);
-    renderer->BeginFrame(); context->Render(); renderer->EndFrame();
+    renderer->BeginFrame(); active->context->Render(); renderer->EndFrame();
 }
-UI_EXPORT const char* ui_action() { return pending_action.c_str(); }
-UI_EXPORT const char* ui_action_target() { return pending_target.c_str(); }
+UI_EXPORT const char* ui_action() { return active->pending_action.c_str(); }
+UI_EXPORT const char* ui_action_target() { return active->pending_target.c_str(); }
 UI_EXPORT const char* ui_focused_target() {
-    auto* element = context ? context->GetFocusElement() : nullptr;
-    focused_target = element ? element->GetAttribute<Rml::String>("focus-target", element->GetAttribute<Rml::String>("target", "")) : "";
-    return focused_target.c_str();
+    auto* element = active->context ? active->context->GetFocusElement() : nullptr;
+    active->focused_target = element ? element->GetAttribute<Rml::String>("focus-target", element->GetAttribute<Rml::String>("target", "")) : "";
+    return active->focused_target.c_str();
 }
-UI_EXPORT void ui_clear_action() { pending_action.clear(); pending_target.clear(); }
-UI_EXPORT void ui_model_set(const char* name, const char* value, int type) { if (DocumentModel::Set(name, value, type)) table_layout_dirty = true; }
-UI_EXPORT void ui_model_array(const char* name, int count) { if (DocumentModel::Array(name, count)) table_layout_dirty = true; }
+UI_EXPORT void ui_clear_action() { active->pending_action.clear(); active->pending_target.clear(); }
+UI_EXPORT void ui_model_set(const char* name, const char* value, int type) { if (DocumentModel::Set(name, value, type)) active->table_layout_dirty = true; }
+UI_EXPORT void ui_model_array(const char* name, int count) { if (DocumentModel::Array(name, count)) active->table_layout_dirty = true; }
 UI_EXPORT void ui_focus(const char* id) {
-    if (!document) return;
+    if (!active->document) return;
     update_document_layout();
-    if (auto* element = document->GetElementById(id)) {
-        if (context->GetFocusElement() == element) return;
+    if (auto* element = active->document->GetElementById(id)) {
+        if (active->context->GetFocusElement() == element) return;
         element->Focus();
         element->ScrollIntoView({Rml::ScrollAlignment::Nearest, Rml::ScrollAlignment::Nearest});
     }
 }
 UI_EXPORT void ui_reveal(const char* id) {
-    if (!document) return;
+    if (!active->document) return;
     update_document_layout();
-    if (auto* element = document->GetElementById(id); element && element->IsVisible(true)) {
+    if (auto* element = active->document->GetElementById(id); element && element->IsVisible(true)) {
         Rml::ScrollIntoViewOptions options;
         options.horizontal = Rml::ScrollAlignment::Nearest;
         options.vertical = element->GetAttribute<Rml::String>("reveal-align", "") == "start" ?
@@ -324,25 +378,25 @@ UI_EXPORT void ui_reveal(const char* id) {
     }
 }
 UI_EXPORT void ui_mouse(int x, int y, int button, int down) {
-    if (!document) return;
+    if (!active->document) return;
     update_document_layout();
     const bool moved = !pointer_known || x != pointer_x || y != pointer_y;
     pointer_known = true; pointer_x = x; pointer_y = y;
     if (moved || button >= 0) {
-        context->ProcessMouseMove(x, y, 0);
-        auto* hovered = context->GetHoverElement();
+        active->context->ProcessMouseMove(x, y, 0);
+        auto* hovered = active->context->GetHoverElement();
         while (hovered && !hovered->HasAttribute("action")) hovered = hovered->GetParentNode();
         if (hovered && !hovered->HasAttribute("disabled")) hovered->Focus();
     }
     if (button >= 0) {
-        if (down) context->ProcessMouseButtonDown(button, 0);
-        else context->ProcessMouseButtonUp(button, 0);
+        if (down) active->context->ProcessMouseButtonDown(button, 0);
+        else active->context->ProcessMouseButtonUp(button, 0);
     }
 }
 UI_EXPORT int ui_bounds(const char* id, float* x, float* y, float* width, float* height) {
-    if (!document || !id || !x || !y || !width || !height) return 0;
+    if (!active->document || !id || !x || !y || !width || !height) return 0;
     update_document_layout();
-    auto* element = document->GetElementById(id);
+    auto* element = active->document->GetElementById(id);
     if (!element || !element->IsVisible(true)) return 0;
     const auto offset = element->GetAbsoluteOffset(Rml::BoxArea::Content);
     const auto size = element->GetBox().GetSize(Rml::BoxArea::Content);
@@ -350,26 +404,26 @@ UI_EXPORT int ui_bounds(const char* id, float* x, float* y, float* width, float*
     return size.x > 0 && size.y > 0;
 }
 UI_EXPORT void ui_scroll(float delta) {
-    if (context) context->ProcessMouseWheel(delta, 0);
+    if (active->context) active->context->ProcessMouseWheel(delta, 0);
 }
 UI_EXPORT void ui_key(int key) {
-    if (!document) return;
+    if (!active->document) return;
     // Navigation uses document geometry or order, independent of screen roles or button counts.
     update_document_layout();
-    controls.clear(); document->QuerySelectorAll(controls, "[action]");
-    if (controls.empty()) return;
-    auto it = std::find(controls.begin(), controls.end(), context->GetFocusElement());
-    int index = it == controls.end() ? 0 : int(it - controls.begin());
+    active->controls.clear(); active->document->QuerySelectorAll(active->controls, "[action]");
+    if (active->controls.empty()) return;
+    auto it = std::find(active->controls.begin(), active->controls.end(), active->context->GetFocusElement());
+    int index = it == active->controls.end() ? 0 : int(it - active->controls.begin());
     if (std::abs(key) == 3) {
         // Ordered form navigation follows document order, treating arrow controls
         // for the same field as one stop. Spatial navigation remains available.
         const auto group = [](Rml::Element* e) {
             return e->GetAttribute<Rml::String>("focus-target", e->GetAttribute<Rml::String>("target", ""));
         };
-        const auto origin = group(controls[index]);
+        const auto origin = group(active->controls[index]);
         const int direction = key > 0 ? 1 : -1;
-        for (int step = 1; step <= int(controls.size()); ++step) {
-            auto* candidate = controls[(index + int(controls.size()) + direction * step) % int(controls.size())];
+        for (int step = 1; step <= int(active->controls.size()); ++step) {
+            auto* candidate = active->controls[(index + int(active->controls.size()) + direction * step) % int(active->controls.size())];
             if (!candidate->IsVisible(true) || candidate->HasAttribute("disabled")) continue;
             if (!origin.empty() && group(candidate) == origin) continue;
             candidate->Focus();
@@ -381,14 +435,14 @@ UI_EXPORT void ui_key(int key) {
         const auto center = [](Rml::Element* e) {
             return e->GetAbsoluteOffset(Rml::BoxArea::Border) + e->GetBox().GetSize(Rml::BoxArea::Border) * 0.5f;
         };
-        const auto from = center(controls[index]);
+        const auto from = center(active->controls[index]);
         float best = std::numeric_limits<float>::max();
         Rml::Element* next = nullptr;
-        for (auto* candidate : controls) {
-            if (candidate == controls[index] || !candidate->IsVisible(true) || candidate->HasAttribute("disabled")) continue;
+        for (auto* candidate : active->controls) {
+            if (candidate == active->controls[index] || !candidate->IsVisible(true) || candidate->HasAttribute("disabled")) continue;
             if (!vertical) {
-                const auto origin_top = controls[index]->GetAbsoluteOffset(Rml::BoxArea::Border).y;
-                const auto origin_bottom = origin_top + controls[index]->GetBox().GetSize(Rml::BoxArea::Border).y;
+                const auto origin_top = active->controls[index]->GetAbsoluteOffset(Rml::BoxArea::Border).y;
+                const auto origin_bottom = origin_top + active->controls[index]->GetBox().GetSize(Rml::BoxArea::Border).y;
                 const auto target_top = candidate->GetAbsoluteOffset(Rml::BoxArea::Border).y;
                 const auto target_bottom = target_top + candidate->GetBox().GetSize(Rml::BoxArea::Border).y;
                 if (std::min(origin_bottom, target_bottom) <= std::max(origin_top, target_top)) continue;
@@ -402,7 +456,7 @@ UI_EXPORT void ui_key(int key) {
         }
         if (next) next->Focus();
     } else if (key == 0) {
-        pending_action = controls[index]->GetAttribute<Rml::String>("action", "");
-        pending_target = controls[index]->GetAttribute<Rml::String>("target", "");
+        active->pending_action = active->controls[index]->GetAttribute<Rml::String>("action", "");
+        active->pending_target = active->controls[index]->GetAttribute<Rml::String>("target", "");
     }
 }

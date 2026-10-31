@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <cmath>
 #include <vector>
+#include <memory>
+#include <unordered_map>
 
 namespace DocumentModel {
 struct Node {
@@ -12,8 +14,9 @@ struct Node {
     std::map<Rml::String, Node> members;
     std::vector<Node> items;
 };
-static Node root;
-static Rml::DataModelHandle model;
+struct State { Node root; Rml::DataModelHandle model; };
+static std::unordered_map<Rml::Context*, std::unique_ptr<State>> states;
+static State* current;
 static Rml::DataVariable Variable(Node& node);
 
 class Definition final : public Rml::VariableDefinition {
@@ -45,8 +48,8 @@ static Rml::DataVariable Variable(Node& node) {
 
 // Resolve named paths such as players[2].name without screen-specific C++ structs.
 static Node* Resolve(const Rml::String& path) {
-    if (path.empty()) return nullptr;
-    auto* node = &root;
+    if (!current || path.empty()) return nullptr;
+    auto* node = &current->root;
     size_t position = 0;
     while (position < path.size()) {
         if (path[position] == '.') { ++position; continue; }
@@ -72,11 +75,14 @@ static Node* Resolve(const Rml::String& path) {
 }
 
 bool Initialize(Rml::Context* context) {
-    root = {}; root.kind = Node::Object;
+    auto state = std::make_unique<State>();
+    current = state.get();
+    states[context] = std::move(state);
+    current->root.kind = Node::Object;
     auto constructor = context->CreateDataModel("game");
     if (!constructor) return false;
     if (!constructor.RegisterCustomDataVariableDefinition<Node>(Rml::MakeUnique<Definition>(Rml::DataVariableType::Struct))) return false;
-    if (!constructor.Bind("data", &root)) return false;
+    if (!constructor.Bind("data", &current->root)) return false;
     constructor.RegisterTransformFunc("cyclic_offset", [](const Rml::VariantList& arguments) -> Rml::Variant {
         if (arguments.size() != 2) return Rml::Variant(0);
         const int count = arguments[1].Get<int>();
@@ -102,10 +108,22 @@ bool Initialize(Rml::Context* context) {
     constructor.RegisterTransformFunc("max", [](const Rml::VariantList& arguments) -> Rml::Variant {
         return arguments.size() == 2 ? Rml::Variant(std::max(arguments[0].Get<double>(), arguments[1].Get<double>())) : Rml::Variant(0);
     });
-    model = constructor.GetModelHandle();
+    current->model = constructor.GetModelHandle();
     return true;
 }
-void Reset() { model = {}; root = {}; }
+bool Select(Rml::Context* context) {
+    const auto found = states.find(context);
+    if (found == states.end()) return false;
+    current = found->second.get();
+    return true;
+}
+void Release(Rml::Context* context) {
+    const auto found = states.find(context);
+    if (found == states.end()) return;
+    if (current == found->second.get()) current = nullptr;
+    states.erase(found);
+}
+void Reset() { current = nullptr; states.clear(); }
 bool Set(const Rml::String& path, const Rml::String& text, int type) {
     auto* node = Resolve(path);
     if (!node) return false;
@@ -115,7 +133,7 @@ bool Set(const Rml::String& path, const Rml::String& text, int type) {
     else if (type == 3) value = value.Get<double>();
     if (node->kind == Node::Value && node->value == value) return false;
     node->kind = Node::Value; node->value = std::move(value);
-    if (model) model.DirtyVariable("data");
+    if (current->model) current->model.DirtyVariable("data");
     return true;
 }
 bool Array(const Rml::String& path, int count) {
@@ -124,7 +142,7 @@ bool Array(const Rml::String& path, int count) {
     if (node->kind == Node::Array && node->items.size() == size_t(count)) return false;
     node->kind = Node::Array;
     node->items.resize(count);
-    if (model) model.DirtyVariable("data");
+    if (current->model) current->model.DirtyVariable("data");
     return true;
 }
 }

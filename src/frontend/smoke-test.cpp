@@ -8,10 +8,14 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <cstdint>
 
 extern "C" {
 int ui_initialize(const char* (*)(const char*), void (*)(int, const char*), const char*, const char*);
 int ui_open(const char*);
+uint64_t ui_create(const char*, const char*);
+int ui_select(uint64_t);
+void ui_destroy(uint64_t);
 int ui_style(const char*);
 void ui_set(const char*, const char*);
 void ui_render(int, int, int);
@@ -564,6 +568,36 @@ int main(int argc, char** argv) {
             ui_render(1280, 720, 0);
             require(ui_bounds("math-clamp", &player_x, &player_y, &player_w, &player_h) != 0 && std::abs(player_w - 20) < 1,
                 "Theme math responds to model updates");
+            {
+                std::ofstream fixture(language_fixture);
+                fixture << R"(<rml><head><style>body{font-family:ui;} button{display:block;width:100px;height:25px;} .rows{display:block;width:500px;height:80px;overflow-y:auto;} .row{display:block;width:500px;height:25px;}</style></head>
+<body><button id="retained-a" action="choose" target="a">A</button><button id="retained-b" action="choose" target="b">B</button>
+<div data-model="game"><div class="rows"><div class="row" data-for="row : data.retained.rows" data-attr-id="'retained-row-' + row.id">{{ row.id }}</div></div></div></body></rml>)";
+            }
+            const auto base_handle = ui_create(utf8(language_fixture).c_str(), "retained.rows");
+            require(base_handle != 0, "Retained base creation");
+            ui_model_array("retained.rows", 30);
+            for (int i=0; i<30; ++i) ui_model_set(("retained.rows[" + std::to_string(i) + "].id").c_str(), std::to_string(i).c_str(), 1);
+            ui_render(1280,720,0); ui_focus("retained-b"); ui_reveal("retained-row-20");
+            float retained_x, retained_y, retained_w, retained_h;
+            require(ui_bounds("retained-row-20", &retained_x,&retained_y,&retained_w,&retained_h) != 0, "Retained base row");
+            const auto popup_handle = ui_create(utf8(language_fixture).c_str(), "retained.rows");
+            require(popup_handle != 0 && popup_handle != base_handle, "Independent popup creation");
+            ui_model_array("retained.rows", 1); ui_model_set("retained.rows[0].id", "90", 1);
+            ui_render(1280,720,0); ui_focus("retained-a");
+            require(ui_select(base_handle) != 0 && std::string(ui_focused_target()) == "b", "Popup must preserve base focus");
+            require(ui_bounds("retained-row-20", &player_x,&player_y,&player_w,&player_h) != 0 && std::abs(player_y-retained_y)<0.5f,
+                "Popup must preserve base scroll and array content");
+            require(ui_bounds("retained-row-90", &player_x,&player_y,&player_w,&player_h) == 0, "Popup model must not alter base rows");
+            ui_render(1024,768,0);
+            require(ui_select(popup_handle) != 0, "Retained popup selection"); ui_render(1024,768,0);
+            require(ui_bounds("retained-row-90", &player_x,&player_y,&player_w,&player_h) != 0, "Popup retains its own model after resize");
+            ui_destroy(popup_handle);
+            require(ui_select(popup_handle) == 0 && ui_select(base_handle) != 0, "Destroyed handles must be rejected");
+            require(std::string(ui_focused_target()) == "b", "Destroying popup preserves base focus");
+            const auto replacement_handle = ui_create(utf8(language_fixture).c_str(), "retained.rows");
+            require(replacement_handle > popup_handle && ui_select(popup_handle) == 0, "Handles must not be reused");
+            ui_destroy(replacement_handle); ui_destroy(base_handle); require(ui_select(0) != 0, "Default context remains available");
             std::filesystem::remove(language_fixture);
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
             glDeleteFramebuffers(1, &framebuffer); glDeleteTextures(1, &texture);
