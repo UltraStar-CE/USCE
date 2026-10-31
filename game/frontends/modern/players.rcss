@@ -25,7 +25,7 @@
 .avatar-frame img { position: absolute; left: 50%; top: 0; width: 33vh; height: 27.333333vh; transform: translateX(-50%); pointer-events: none; }
 .avatar-frame:focus, .avatar-frame:hover { background-color: transparent; }
 .avatar-carousel { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
-.avatar-slot { position: absolute; }
+.avatar-slot { position: absolute; left: 50vw; top: 60vh; width: 0; height: 0; opacity: 0; }
 .avatar-image { width: 100%; height: 100%; }
 .avatar-previous, .avatar-next { position: absolute; top: 56.666667vh; width: 2.5vw; height: 5vh; background-color: transparent; }
 .avatar-previous { left: 41.25vw; } .avatar-next { left: 57.5vw; }
@@ -44,7 +44,7 @@
 .avatar-image-button { width: 100%; height: 100%; background-color: transparent; pointer-events: auto; }
 .avatar-image-button:hover, .avatar-image-button:focus { background-color: transparent; }
 .avatar-image { pointer-events: none; }
-.slot-0 .avatar-image, .slot-1 .avatar-image, .slot-3 .avatar-image, .slot-4 .avatar-image { filter: brightness(0.7); }
+.avatar-slot[slot="0"] .avatar-image, .avatar-slot[slot="1"] .avatar-image, .avatar-slot[slot="3"] .avatar-image, .avatar-slot[slot="4"] .avatar-image { filter: brightness(0.7); }
 .count-1 .profile-slot { width: 50.000000%; height: 100%; }
 .count-1 .profile { transform: translateX(-50%) scale(1.000000); }
 .count-2 .profile-slot { width: 50.000000%; height: 100%; }
@@ -96,21 +96,32 @@
 
 .player-count.selected .count-label { font-weight: bold; background-color: #7ec5eae6; }
 /* Avatar centers follow the original carousel; sizes use the uniform viewport scale. */
-.avatar-reflection-clip { position: absolute; left: 0; top: 100%; margin-top: 0.333333vh; width: 100%; height: 60%; overflow: hidden; opacity: 0.4; mask-image: vertical-gradient(#000f #0000); pointer-events: none; }
-.avatar-reflection { position: absolute; left: 0; top: 0; width: 100%; height: 166.666667%; transform: scaleY(-1); }
-.slot-0 .avatar-reflection, .slot-1 .avatar-reflection, .slot-3 .avatar-reflection, .slot-4 .avatar-reflection { filter: brightness(0.7); }
+.avatar-reflection-clip { position: absolute; left: 0; top: 100%; margin-top: 0.333333vh; width: 100%; height: 50%; overflow: hidden; mask-image: vertical-gradient(#000000b3 #0000); pointer-events: none; }
+.avatar-reflection { position: absolute; left: 0; top: 0; width: 100%; height: 200%; transform: scaleY(-1); }
+.avatar-slot[slot="0"] .avatar-reflection, .avatar-slot[slot="1"] .avatar-reflection, .avatar-slot[slot="3"] .avatar-reflection, .avatar-slot[slot="4"] .avatar-reflection { filter: brightness(0.7); }
 .name-entry, .profile-choice { z-index: 4; }
 .name-entry .name-text .name-caret { width: 0; overflow: visible; animation: 1.1s name-caret infinite; }
 @keyframes name-caret { from { opacity: 1; } 49% { opacity: 1; } 50% { opacity: 0; } to { opacity: 0; } }
-.slot-0 { left: 24.663336vw; top: 61.896963vh; width: 11.252363vh; height: 10.537927vh; transform: translate(-50%, -50%); z-index: 1; }
-.slot-1 { left: 31.594946vw; top: 60.328349vh; width: 18.402440vh; height: 17.234031vh; transform: translate(-50%, -50%); z-index: 2; }
-.slot-2 { left: 50.375000vw; top: 59.666667vh; width: 21.000000vh; height: 19.666667vh; transform: translate(-50%, -50%); z-index: 3; }
-.slot-3 { left: 69.155054vw; top: 60.328349vh; width: 18.402440vh; height: 17.234031vh; transform: translate(-50%, -50%); z-index: 2; }
-.slot-4 { left: 76.086664vw; top: 61.896963vh; width: 11.252363vh; height: 10.537927vh; transform: translate(-50%, -50%); z-index: 1; }
+.avatar-slot[slot="0"] { left: 24.663336vw; top: 61.896963vh; width: 11.252363vh; height: 10.537927vh; transform: translate(-50%, -50%); z-index: 1; opacity: 1; }
+.avatar-slot[slot="1"] { left: 31.594946vw; top: 60.328349vh; width: 18.402440vh; height: 17.234031vh; transform: translate(-50%, -50%); z-index: 2; opacity: 1; }
+.avatar-slot[slot="2"] { left: 50.375000vw; top: 59.666667vh; width: 21.000000vh; height: 19.666667vh; transform: translate(-50%, -50%); z-index: 3; opacity: 1; }
+.avatar-slot[slot="3"] { left: 69.155054vw; top: 60.328349vh; width: 18.402440vh; height: 17.234031vh; transform: translate(-50%, -50%); z-index: 2; opacity: 1; }
+.avatar-slot[slot="4"] { left: 76.086664vw; top: 61.896963vh; width: 11.252363vh; height: 10.537927vh; transform: translate(-50%, -50%); z-index: 1; opacity: 1; }
 @media (max-aspect-ratio: 4/3) {
-  .slot-0 { width: 8.439272vw; height: 7.903445vw; }
-  .slot-1 { width: 13.801830vw; height: 12.925524vw; }
-  .slot-2 { width: 15.750000vw; height: 14.750000vw; }
-  .slot-3 { width: 13.801830vw; height: 12.925524vw; }
-  .slot-4 { width: 8.439272vw; height: 7.903445vw; }
+  .avatar-slot[slot="0"] { width: 8.439272vw; height: 7.903445vw; }
+  .avatar-slot[slot="1"] { width: 13.801830vw; height: 12.925524vw; }
+  .avatar-slot[slot="2"] { width: 15.750000vw; height: 14.750000vw; }
+  .avatar-slot[slot="3"] { width: 13.801830vw; height: 12.925524vw; }
+  .avatar-slot[slot="4"] { width: 8.439272vw; height: 7.903445vw; }
 }
+
+/* Stable item identities let CSS animate the carousel without game-side geometry. */
+.avatar-slot { transition: left top width height opacity 0.9s exponential-out; }
+.avatar-slot.offstage-left, .avatar-slot.offstage-right { display: none; }
+.avatar-slot[slot="-1"] { left: 20vw; top: 64vh; width: 7vh; height: 6.5vh; transform: translate(-50%, -50%); opacity: 0; pointer-events: none; }
+.avatar-slot[slot="5"] { left: 80vw; top: 64vh; width: 7vh; height: 6.5vh; transform: translate(-50%, -50%); opacity: 0; pointer-events: none; }
+
+.player-count.selected .count-value { background-color: #7ec5eae6; font-weight: bold; }
+.profile-choice.selected .current span { font-weight: bold; }
+
+.name-entry .name-text .name-caret.hidden { display: none; }

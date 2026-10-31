@@ -31,27 +31,27 @@
       </div>
     </div>
     <div class="profile-editor" data-class-hidden="!data.players.active">
-      <button id="players-avatar" class="avatar-frame" action="players.next" target="avatar" ><img src="../../themes/Modern/[name]frame.png" data-style-image-color="data.players.tint != '' ? data.players.tint : '#ffffff'" /></button>
+      <button id="players-avatar" class="avatar-frame" action="players.next" target="avatar"><img src="../../themes/Modern/[name]frame.png" data-style-image-color="data.players.focus == 'avatar' ? data.players.light : (data.players.tint != '' ? data.players.tint : '#ffffff')" /></button>
       <div class="avatar-carousel">
-        <div data-for="avatar : data.players.avatars" data-attr-class="'avatar-slot slot-' + avatar.slot">
-          <button class="avatar-image-button" action="players.avatar.select" focus-target="avatar" data-attr-target="avatar.id"><img class="avatar-image" data-attr-src="avatar.image" data-style-image-color="avatar.tint" /></button>
-          <div class="avatar-reflection-clip" data-attr-id="'avatar-reflection-clip-' + avatar.slot"><img class="avatar-reflection" data-attr-src="avatar.image" data-style-image-color="avatar.tint" /></div>
+        <div data-for="avatar : data.players.avatars" data-attr-id="'avatar-item-' + avatar.id" class="avatar-slot" data-attr-slot="((avatar.id - data.players.avatarSelected) | cyclic_offset(data.players.avatarCount)) + 2" data-class-offstage-left="((avatar.id - data.players.avatarSelected) | cyclic_offset(data.players.avatarCount)) &lt; -3" data-class-offstage-right="((avatar.id - data.players.avatarSelected) | cyclic_offset(data.players.avatarCount)) > 3">
+          <button class="avatar-image-button" action="players.avatar.select" focus-target="avatar" data-attr-target="avatar.id"><img width="1" height="1" class="avatar-image" data-attr-src="((avatar.id - data.players.avatarSelected) | cyclic_offset(data.players.avatarCount)) &lt; -3 ? '' : (((avatar.id - data.players.avatarSelected) | cyclic_offset(data.players.avatarCount)) > 3 ? '' : avatar.image)" data-style-image-color="avatar.tint" /></button>
+          <div class="avatar-reflection-clip" data-attr-id="'avatar-reflection-clip-' + avatar.id"><img width="1" height="1" class="avatar-reflection" data-attr-src="((avatar.id - data.players.avatarSelected) | cyclic_offset(data.players.avatarCount)) &lt; -3 ? '' : (((avatar.id - data.players.avatarSelected) | cyclic_offset(data.players.avatarCount)) > 3 ? '' : avatar.image)" data-style-image-color="avatar.tint" /></div>
         </div>
       </div>
       <button class="avatar-previous" action="players.previous" target="avatar" />
       <button class="avatar-next" action="players.next" target="avatar" />
       <button id="players-name" class="name-entry" action="players.focus" target="name" data-style-background-color="data.players.focus == 'name' ? data.players.light : (data.players.tint != '' ? data.players.tint : '#000000')"><div class="name-text"><span class="typed-name">{{ data.players.name }}</span><span class="name-caret" data-class-hidden="data.players.focus != 'name'">|</span><span class="suggested-name">{{ data.players.suffix }}</span></div></button>
-      <div class="profile-choice color-choice" data-style-background-color="data.players.tint != '' ? data.players.tint : '#000000'">
+      <div class="profile-choice color-choice" data-class-selected="data.players.focus == 'color'" data-style-background-color="data.players.focus == 'color' ? data.players.light : (data.players.tint != '' ? data.players.tint : '#000000')">
         <button class="previous" action="players.previous" target="color"><svg src="arrow-left.svg" /></button>
         <button id="players-color" class="current" action="players.next" target="color"><span>{{ data.players.color }}</span></button>
         <button class="next" action="players.next" target="color"><svg src="arrow-right.svg" /></button>
       </div>
-      <div class="profile-choice level-choice" data-style-background-color="data.players.tint != '' ? data.players.tint : '#000000'">
+      <div class="profile-choice level-choice" data-class-selected="data.players.focus == 'level'" data-style-background-color="data.players.focus == 'level' ? data.players.light : (data.players.tint != '' ? data.players.tint : '#000000')">
         <button class="previous" action="players.previous" target="level"><svg src="arrow-left.svg" /></button>
         <button id="players-level" class="current" action="players.next" target="level"><span>{{ data.players.level }}</span></button>
         <button class="next" action="players.next" target="level"><svg src="arrow-right.svg" /></button>
       </div>
-      <div class="profile-choice voice-choice" data-class-hidden="!data.players.voices" data-style-background-color="data.players.tint != '' ? data.players.tint : '#000000'">
+      <div class="profile-choice voice-choice" data-class-selected="data.players.focus == 'voice'" data-class-hidden="!data.players.voices" data-style-background-color="data.players.focus == 'voice' ? data.players.light : (data.players.tint != '' ? data.players.tint : '#000000')">
         <button class="previous" action="players.previous" target="voice"><svg src="arrow-left.svg" /></button>
         <button id="players-voice" class="current" action="players.next" target="voice"><span>{{ data.players.voice }}</span></button>
         <button class="next" action="players.next" target="voice"><svg src="arrow-right.svg" /></button>

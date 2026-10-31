@@ -75,6 +75,15 @@ bool Initialize(Rml::Context* context) {
     if (!constructor) return false;
     if (!constructor.RegisterCustomDataVariableDefinition<Node>(Rml::MakeUnique<Definition>(Rml::DataVariableType::Struct))) return false;
     if (!constructor.Bind("data", &root)) return false;
+    constructor.RegisterTransformFunc("cyclic_offset", [](const Rml::VariantList& arguments) -> Rml::Variant {
+        if (arguments.size() != 2) return Rml::Variant(0);
+        const int count = arguments[1].Get<int>();
+        if (count <= 0) return Rml::Variant(0);
+        int offset = arguments[0].Get<int>() % count;
+        if (offset * 2LL < -count) offset += count;
+        if (offset * 2LL > count) offset -= count;
+        return Rml::Variant(offset);
+    });
     model = constructor.GetModelHandle();
     return true;
 }

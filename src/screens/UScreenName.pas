@@ -60,6 +60,7 @@ type
       DocumentUI: TDocumentUI;
       DocumentName: TNameEntryState;
       DocumentControl: UTF8String;
+      DocumentAvatarsPlayer, DocumentAvatarsCount: integer;
       procedure SyncDocument;
       procedure FocusDocumentControl(const Control: UTF8String);
       function DocumentInput(Key: cardinal; CharCode: UCS4Char; Down: boolean): boolean;
@@ -342,7 +343,7 @@ begin
 end;
 
 procedure TScreenName.SyncDocument;
-var I, J, Count, AvatarID, VoiceCount, Voice: integer; Prefix, Value: UTF8String;
+var I, Count, VoiceCount, Voice: integer; Prefix, Value: UTF8String;
   function ColorText(const Color: TRGB): UTF8String;
   begin
     Result := '#' + IntToHex(EnsureRange(Round(Color.R * 255), 0, 255), 2) +
@@ -380,18 +381,26 @@ begin
   DocumentUI.SetModel('players.light', ColorText(GetPlayerLightColor(Num[PlayerIndex])));
   DocumentUI.SetModel('players.color', IPlayerColorTranslated[Num[PlayerIndex] - 1]);
   DocumentUI.SetModel('players.level', IDifficultyTranslated[PlayerLevel[PlayerIndex]]);
-  DocumentUI.SetArray('players.avatars', 5);
-  for I := 0 to 4 do
+  DocumentUI.SetModel('players.avatarSelected', IntToStr(PlayerAvatars[PlayerIndex]), 1);
+  DocumentUI.SetModel('players.avatarCount', IntToStr(Length(AvatarsList)), 1);
+  if (DocumentAvatarsPlayer <> PlayerIndex) or (DocumentAvatarsCount <> Length(AvatarsList)) then
   begin
-    J := I - 2;
-    AvatarID := (PlayerAvatars[PlayerIndex] + J + Length(AvatarsList) * 2) mod Max(1, Length(AvatarsList));
-    Prefix := 'players.avatars[' + IntToStr(I) + '].';
-    DocumentUI.SetModel(Prefix + 'slot', IntToStr(I), 1);
-    DocumentUI.SetModel(Prefix + 'id', IntToStr(AvatarID), 1);
-    DocumentUI.SetModel(Prefix + 'image', AvatarFile(PlayerIndex, AvatarID).ToUTF8(false));
-    DocumentUI.SetModel(Prefix + 'tint', '#ffffff');
-    if (AvatarID = 0) and Skin.ColorizeDefaultAvatars then
-      DocumentUI.SetModel(Prefix + 'tint', ColorText(GetPlayerColor(Num[PlayerIndex])));
+    DocumentUI.SetArray('players.avatars', Length(AvatarsList));
+    for I := 0 to High(AvatarsList) do
+    begin
+      Prefix := 'players.avatars[' + IntToStr(I) + '].';
+      DocumentUI.SetModel(Prefix + 'id', IntToStr(I), 1);
+      DocumentUI.SetModel(Prefix + 'image', AvatarFile(PlayerIndex, I).ToUTF8(false));
+      DocumentUI.SetModel(Prefix + 'tint', '#ffffff');
+    end;
+    DocumentAvatarsPlayer := PlayerIndex;
+    DocumentAvatarsCount := Length(AvatarsList);
+  end;
+  if Length(AvatarsList) > 0 then
+  begin
+    Value := '#ffffff';
+    if Skin.ColorizeDefaultAvatars then Value := ColorText(GetPlayerColor(Num[PlayerIndex]));
+    DocumentUI.SetModel('players.avatars[0].tint', Value);
   end;
   VoiceCount := 0;
   if Goto_SingScreen and (CatSongs.Selected >= 0) and (CatSongs.Selected < Length(CatSongs.Song)) and
@@ -1325,6 +1334,8 @@ var
 begin
   inherited Create;
 
+  DocumentAvatarsPlayer := -1;
+  DocumentAvatarsCount := -1;
   DocumentUI := TDocumentUI.Open(uiScreenPlayers);
   if DocumentUI <> nil then Exit;
 
@@ -1538,6 +1549,7 @@ begin
     for I := 0 to SelectedPlayerCount - 1 do Num[I] := NoRepeatColors(Num[I], I, 1);
     DocumentName.Assign(PlayerNames[PlayerIndex]);
     DocumentControl := 'count';
+    DocumentAvatarsPlayer := -1;
     Help.SetHelpID(ID);
     SyncDocument;
     DocumentUI.Focus('players-count');

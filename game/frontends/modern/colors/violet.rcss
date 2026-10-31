@@ -18,4 +18,4 @@ button { background-color: #c642e7e6; }
 .loading fill { decorator: image(violet-bar-right.svg); }
 
 .count-value { background-color: #c642e7e6; }
-.player-count.selected .count-label { background-color: #d97eeae6; }
+.player-count.selected .count-label, .player-count.selected .count-value { background-color: #d97eeae6; }

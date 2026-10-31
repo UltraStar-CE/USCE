@@ -269,6 +269,8 @@ int main(int argc, char** argv) {
                 ui_model_set((prefix + "avatarTint").c_str(), "#008fbe", 0);
                 ui_model_set((prefix + "selected").c_str(), i == 0 ? "1" : "0", 2);
             }
+            ui_model_set("players.avatarSelected", "2", 1);
+            ui_model_set("players.avatarCount", "5", 1);
             ui_model_array("players.avatars", 5);
             for (int i = 0; i < 5; ++i) {
                 const auto prefix = "players.avatars[" + std::to_string(i) + "].";
@@ -309,14 +311,67 @@ int main(int argc, char** argv) {
             require(std::string(ui_action()) == "players.select" && std::string(ui_action_target()) == "23",
                 "The last compact profile must be reachable inside the viewport");
             ui_clear_action();
-            require(ui_bounds("avatar-reflection-clip-1", &player_x, &player_y, &player_w, &player_h) != 0 && player_h > 60,
+            require(ui_bounds("avatar-reflection-clip-1", &player_x, &player_y, &player_w, &player_h) != 0 && player_h > 50,
                 "Avatar reflection clipping region must have a nonzero height");
+            glClear(GL_COLOR_BUFFER_BIT); ui_render(1280, 720, 1);
+            glReadPixels(400, 720-505, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+            require(pixel[3] > 100 && pixel[3] < 210, "Avatar reflection must retain the native fading alpha");
             ui_focus("players-name");
             require(std::string(ui_focused_target()) == "name", "Name field focus target");
             ui_mouse(850, 420, 0, 1); ui_mouse(850, 420, 0, 0);
             require(std::string(ui_action()) == "players.avatar.select", "Neighbor avatar mouse selection");
             require(std::string(ui_focused_target()) == "avatar", "Avatar action argument must not replace its focus group");
             ui_clear_action();
+            ui_mouse(640, 550, -1, 0);
+            ui_focus("players-avatar");
+            ui_mouse(640, 550, -1, 0);
+            require(std::string(ui_focused_target()) == "avatar", "A stationary pointer must not steal keyboard focus");
+            // Offstage entries have deliberately absent files. Only the visible window may request pixels.
+            ui_model_set("players.avatarCount", "101", 1);
+            ui_model_set("players.avatarSelected", "50", 1);
+            ui_model_array("players.avatars", 101);
+            for (int i = 0; i < 101; ++i) {
+                const auto prefix = "players.avatars[" + std::to_string(i) + "].";
+                ui_model_set((prefix + "id").c_str(), std::to_string(i).c_str(), 1);
+                ui_model_set((prefix + "image").c_str(), i >= 47 && i <= 54 ? avatar_image.c_str() : "absent-offstage-avatar.png", 0);
+                ui_model_set((prefix + "tint").c_str(), "#ffffff", 0);
+            }
+            require(ui_open(players_document.c_str()) != 0, "Large avatar list document");
+            ui_render(1280, 720, 0);
+            require(warnings == 0, "Offstage avatar images must stay unloaded");
+            glReadPixels(50, 720-50, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+            require(pixel[0] < 100 && pixel[2] > pixel[0] && pixel[3] > 240,
+                "Preloading carousel neighbors must preserve the screen background");
+            float before_x, before_y, before_w, before_h;
+            require(ui_bounds("avatar-item-50", &before_x, &before_y, &before_w, &before_h) != 0, "Selected avatar exists");
+            ui_model_set("players.avatarSelected", "51", 1);
+            ui_render(1280, 720, 0);
+            SDL_Delay(40); ui_render(1280, 720, 0);
+            glReadPixels(50, 720-50, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+            require(pixel[0] < 100 && pixel[2] > pixel[0] && pixel[3] > 240,
+                "Animating carousel items must preserve the screen background");
+            require(ui_bounds("avatar-item-50", &player_x, &player_y, &player_w, &player_h) != 0, "Moving avatar keeps its identity");
+            require(player_x < before_x - 1 && player_x > 410, "Avatar must animate between positions instead of swapping images");
+            for (int frame = 0; frame < 33; ++frame) { SDL_Delay(30); ui_render(1280, 720, 0); }
+            require(ui_bounds("avatar-item-50", &player_x, &player_y, &player_w, &player_h) != 0 && std::abs(player_x - 404.4f) < 2,
+                "Avatar must settle in its theme-defined neighboring slot");
+            for (int i : {0, 1, 2, 3, 97, 98, 99, 100}) {
+                const auto path = "players.avatars[" + std::to_string(i) + "].image";
+                ui_model_set(path.c_str(), avatar_image.c_str(), 0);
+            }
+            ui_model_set("players.avatarSelected", "100", 1);
+            for (int frame = 0; frame < 33; ++frame) { SDL_Delay(30); ui_render(1280, 720, 0); }
+            ui_model_set("players.avatarSelected", "0", 1);
+            for (int frame = 0; frame < 33; ++frame) { SDL_Delay(30); ui_render(1280, 720, 0); }
+            require(ui_bounds("avatar-item-100", &player_x, &player_y, &player_w, &player_h) != 0 && std::abs(player_x - 404.4f) < 2,
+                "Last avatar must wrap to the neighboring slot when the first is selected");
+            require(ui_bounds("avatar-item-0", &player_x, &player_y, &player_w, &player_h) != 0 && std::abs(player_x - 644.8f) < 2,
+                "Wrapped selection must settle on the first avatar");
+            ui_model_set("players.avatarCount", "1", 1);
+            ui_model_array("players.avatars", 1);
+            ui_render(1280, 720, 0);
+            require(ui_bounds("avatar-item-0", &player_x, &player_y, &player_w, &player_h) != 0 && std::abs(player_x - 644.8f) < 2,
+                "A single-avatar list must remain centered without duplicate items");
             ui_model_set("players.count", "0", 1);
             ui_model_set("players.active", "0", 2);
             ui_model_array("players.profiles", 0);
