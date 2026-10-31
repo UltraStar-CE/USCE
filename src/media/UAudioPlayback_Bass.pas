@@ -56,6 +56,7 @@ type
     private
       Handle: HSTREAM;
       NeedsRewind: boolean;
+      Seeking: LongInt; // explicit seek: do not synchronize while refilling its buffer
       PausedSeek: boolean; // true if a seek was performed in pause state
       fVolume: single;
 
@@ -170,6 +171,9 @@ begin
     Result := BytesRead;
 end;
 
+threadvar
+  SynchronizingStream: TBassPlaybackStream;
+
 function TBassPlaybackStream.ReadData(Buffer: PByte; BufferSize: integer): integer;
 var
   AdjustedSize: integer;
@@ -178,6 +182,7 @@ var
   SourceFormatInfo: TAudioFormatInfo;
   FrameSize: integer;
   PadFrame: PByteArray;
+  PreviousSynchronizingStream: TBassPlaybackStream;
 begin
   Result := -1;
 
@@ -195,7 +200,18 @@ begin
   FrameSize := SourceFormatInfo.FrameSize;
 
   // check how much data to fetch to be in synch
-  AdjustedSize := Synchronize(BufferSize, SourceFormatInfo);
+  if InterlockedCompareExchange(Seeking, 0, 0) <> 0 then
+    AdjustedSize := BufferSize
+  else
+  begin
+    PreviousSynchronizingStream := SynchronizingStream;
+    SynchronizingStream := Self;
+    try
+      AdjustedSize := Synchronize(BufferSize, SourceFormatInfo);
+    finally
+      SynchronizingStream := PreviousSynchronizingStream;
+    end;
+  end;
 
   // skip data if we are too far behind
   SkipCount := AdjustedSize - BufferSize;
@@ -451,8 +467,26 @@ begin
       PausedSeek := true;
     end;
 
-    // set new position
-    SourceStream.Position := Time;
+    // Synchronize may reposition from this stream's own read callback. Its
+    // current buffer is already being filled; restarting it would re-enter it.
+    if SynchronizingStream = Self then
+    begin
+      SourceStream.Position := Time;
+      Exit;
+    end;
+
+    InterlockedIncrement(Seeking);
+    try
+      SourceStream.Position := Time;
+      // Discard queued samples, and refill without comparing the new position
+      // against a master clock that the caller has not moved yet.
+      if (ChannelState = BASS_ACTIVE_PLAYING) or (ChannelState = BASS_ACTIVE_STALLED) then
+        if not BASS_ChannelPlay(Handle, true) then
+          Log.LogError('BASS_ChannelPlay failed after seeking: ' +
+            BassCore.ErrorGetString(BASS_ErrorGetCode()), 'TBassPlaybackStream.SetPosition');
+    finally
+      InterlockedDecrement(Seeking);
+    end;
   end;
 end;
 
