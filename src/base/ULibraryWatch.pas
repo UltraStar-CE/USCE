@@ -498,7 +498,7 @@ end;
 
 procedure TLibraryWatch.RunNative;
 var Paths: CFMutableArrayRef; Text: CFStringRef; Context: FSEventStreamContext;
-  Stream: FSEventStreamRef; I: integer; Buffer: array[0..4095] of char; Native: string;
+  Stream: FSEventStreamRef; I: integer; Buffer: array[0..4095] of char; Native, Parent: string;
 begin
   Paths := CFArrayCreateMutable(nil, 0, @kCFTypeArrayCallBacks);
   if Paths = nil then raise Exception.Create('Cannot allocate FSEvents paths');
@@ -506,7 +506,13 @@ begin
     for I := 0 to Roots.Count - 1 do
     begin
       Native := Roots[I];
-      if NativeRealPath(PChar(Native), @Buffer[0]) <> nil then Native := PChar(@Buffer[0]);
+      if NativeRealPath(PChar(Native), @Buffer[0]) <> nil then Native := PChar(@Buffer[0])
+      else
+      begin
+        Parent := ExistingParent(Native);
+        if NativeRealPath(PChar(Parent), @Buffer[0]) <> nil then
+          Native := string(PChar(@Buffer[0])) + Copy(Native, Length(Parent) + 1, MaxInt);
+      end;
       CanonicalRoots.Add(Native);
       Text := CFStringCreateWithCString(nil, PChar(Native), kCFStringEncodingUTF8);
       if Text = nil then raise Exception.Create('Cannot encode FSEvents path');
