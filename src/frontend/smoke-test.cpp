@@ -19,6 +19,7 @@ int ui_bounds(const char*, float*, float*, float*, float*);
 void ui_model_set(const char*, const char*, int);
 void ui_model_array(const char*, int);
 void ui_focus(const char*);
+void ui_reveal(const char*);
 const char* ui_focused_target();
 const char* ui_action_target();
 const char* ui_action();
@@ -173,9 +174,10 @@ int main(int argc, char** argv) {
             ui_model_set("form.fields[1].previous", "0", 2);
             ui_model_set("form.fields[1].next", "0", 2);
             ui_model_set("form.fields[0].inline", "1", 2);
-            ui_model_array("form.fields[0].choices", 2);
-            for (int option = 0; option < 2; ++option) {
+            ui_model_array("form.fields[0].choices", 25);
+            for (int option = 0; option < 25; ++option) {
                 const auto prefix = "form.fields[0].choices[" + std::to_string(option) + "].";
+                ui_model_set((prefix+"id").c_str(), ("choice-0-" + std::to_string(option)).c_str(), 0);
                 ui_model_set((prefix+"label").c_str(), std::to_string(option).c_str(), 0);
                 ui_model_set((prefix+"target").c_str(), ("0:" + std::to_string(option)).c_str(), 0);
                 ui_model_set((prefix+"selected").c_str(), option == 0 ? "1" : "0", 2);
@@ -184,10 +186,24 @@ int main(int argc, char** argv) {
             require(ui_open(recording_document.c_str()) != 0, "Microphone document");
             ui_render(1280, 720, 0);
             ui_clear_action();
-            ui_mouse(1000, 177, 0, 1); ui_mouse(1000, 177, 0, 0);
+            ui_mouse(665, 177, 0, 1); ui_mouse(665, 177, 0, 0);
             require(std::string(ui_action()) == "form.choose" && std::string(ui_action_target()) == "0:1", "Inline choice preserves its field and value");
+            ui_reveal("choice-0-24"); ui_render(1280, 720, 0);
+            require(ui_bounds("choice-0-24", &x, &y, &width, &height) != 0 && x >= 528 && x + width <= 1169, "Last player choice scrolls into the theme viewport");
+            ui_clear_action();
+            ui_mouse(int(x + width/2), int(y + height/2), 0, 1); ui_mouse(int(x + width/2), int(y + height/2), 0, 0);
+            require(std::string(ui_action_target()) == "0:24", "Last player remains clickable");
             require(ui_bounds("field-surface-1", &x, &y, &width, &height) != 0, "Microphone meter surface");
             require(std::abs(x - 528) < 1 && std::abs(y - 247.2f) < 1 && std::abs(width - 640) < 1 && std::abs(height - 13.2f) < 1, "Microphone meter follows its field geometry");
+            const auto about_document = utf8(root / "frontends/modern/about.rml");
+            require(ui_open(about_document.c_str()) != 0, "About document");
+            ui_set("about.text", "Overview <plain text>\nSecond paragraph");
+            ui_render(1280, 720, 0);
+            ui_clear_action(); ui_key(2); ui_key(0);
+            require(std::string(ui_action()) == "navigation.back", "About spatial navigation");
+            ui_clear_action();
+            ui_mouse(1100, 530, 0, 1); ui_mouse(1100, 530, 0, 0);
+            require(std::string(ui_action()) == "credits.open", "About credits action");
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
             glDeleteFramebuffers(1, &framebuffer); glDeleteTextures(1, &texture);
             ui_shutdown();

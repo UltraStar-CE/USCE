@@ -22,7 +22,7 @@
             <button class="form-next" action="form.increment" data-attr-target="field.id" data-class-available="field.next"><svg src="arrow-right.svg" /></button>
           </div>
           <div class="form-choices">
-            <button data-for="choice : field.choices" action="form.choose" data-attr-target="choice.target" data-class-chosen="choice.selected"><span>{{ choice.label }}</span></button>
+            <button data-for="choice : field.choices" action="form.choose" data-attr-id="choice.id" data-attr-target="choice.target" data-class-chosen="choice.selected"><span>{{ choice.label }}</span></button>
           </div>
           <div class="form-surface" data-attr-id="'field-surface-' + field.id" />
         </div>

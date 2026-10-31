@@ -7,6 +7,7 @@ const
   uiLoadingStatus = 'loading.status';
   uiLoadingDiscovery = 'loading.discovery';
   uiLoadingProgress = 'loading.progress';
+  uiAboutText = 'about.text';
   uiGameVersion = 'game.version';
   uiGameSing = 'game.sing';
   uiGameParty = 'game.party';
@@ -68,6 +69,7 @@ type
     procedure SetModel(const Name, Value: UTF8String; ValueType: integer = 0);
     procedure SetArray(const Name: UTF8String; Count: integer);
     procedure Focus(const ID: UTF8String);
+    procedure Reveal(const ID: UTF8String);
     property ActionTarget: UTF8String read LastActionTarget;
   end;
 procedure ShutdownDocumentUI;
@@ -92,7 +94,7 @@ var
   GetActionTarget, GetFocusedTarget: function: PAnsiChar; cdecl;
   SetModelValue: procedure(Name, Value: PAnsiChar; ValueType: integer); cdecl;
   SetModelArray: procedure(Name: PAnsiChar; Count: integer); cdecl;
-  FocusElement: procedure(ID: PAnsiChar); cdecl;
+  FocusElement, RevealElement: procedure(ID: PAnsiChar); cdecl;
   ClearAction, Shutdown: procedure; cdecl;
   GetError: function: PAnsiChar; cdecl;
 
@@ -146,6 +148,7 @@ begin
     @SetModelValue := Symbol('ui_model_set');
     @SetModelArray := Symbol('ui_model_array');
     @FocusElement := Symbol('ui_focus');
+    @RevealElement := Symbol('ui_reveal');
     @ClearAction := Symbol('ui_clear_action');
     @GetError := Symbol('ui_error');
     Result := Initialize(@TranslateKey, @FrontendLog, PAnsiChar(Font), PAnsiChar(BoldFont)) <> 0;
@@ -285,6 +288,11 @@ end;
 procedure TDocumentUI.SetArray(const Name: UTF8String; Count: integer);
 begin
   if Activate then SetModelArray(PAnsiChar(Name), Count);
+end;
+
+procedure TDocumentUI.Reveal(const ID: UTF8String);
+begin
+  if Activate then RevealElement(PAnsiChar(ID));
 end;
 
 procedure TDocumentUI.Focus(const ID: UTF8String);

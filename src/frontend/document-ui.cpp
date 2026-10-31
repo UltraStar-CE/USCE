@@ -118,7 +118,7 @@ static void bind_tree(Rml::Element* element) {
         // SetInnerRML parses markup: translations must be escaped as plain text.
         element->SetInnerRML(Rml::StringUtilities::EncodeRml(translate ? translate(key.c_str()) : key));
     }
-    for (const char* attribute : {"bind-text", "bind-value"}) {
+    for (const char* attribute : {"bind-text", "bind-lines", "bind-value"}) {
         const auto name = element->GetAttribute<Rml::String>(attribute, "");
         if (!name.empty()) bindings[name].push_back({element, attribute});
     }
@@ -182,7 +182,15 @@ UI_EXPORT void ui_set(const char* name, const char* value) {
     const auto found = bindings.find(name);
     if (found == bindings.end()) return; // Optional elements need no game-side defaults.
     for (const auto& binding : found->second) {
-        if (binding.attribute == "bind-text") binding.element->SetInnerRML(Rml::StringUtilities::EncodeRml(value));
+        if (binding.attribute == "bind-lines") {
+            auto markup = Rml::StringUtilities::EncodeRml(value);
+            size_t position = 0;
+            while ((position = markup.find('\n', position)) != Rml::String::npos) {
+                markup.replace(position, 1, "<br/>"); position += 5;
+            }
+            binding.element->SetInnerRML(markup);
+        }
+        else if (binding.attribute == "bind-text") binding.element->SetInnerRML(Rml::StringUtilities::EncodeRml(value));
         else binding.element->SetAttribute("value", value);
     }
 }
@@ -211,6 +219,16 @@ UI_EXPORT void ui_focus(const char* id) {
         if (context->GetFocusElement() == element) return;
         element->Focus();
         element->ScrollIntoView({Rml::ScrollAlignment::Nearest, Rml::ScrollAlignment::Nearest});
+    }
+}
+UI_EXPORT void ui_reveal(const char* id) {
+    if (!document) return;
+    context->Update();
+    if (auto* element = document->GetElementById(id)) {
+        Rml::ScrollIntoViewOptions options;
+        options.vertical = options.horizontal = Rml::ScrollAlignment::Nearest;
+        options.parentage = Rml::ScrollParentage::Closest;
+        element->ScrollIntoView(options);
     }
 }
 UI_EXPORT void ui_mouse(int x, int y, int button, int down) {

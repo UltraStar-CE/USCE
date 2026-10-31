@@ -2524,7 +2524,7 @@ begin
 end;
 
 procedure TOptionsMenu.SyncDocument;
-var I, J, First, Count: integer; Prefix, Choice: UTF8String;
+var I, J, Count: integer; Prefix, Choice: UTF8String;
 begin
   DocumentUI.SetModel(uiFormPreview, IntToStr(Ord(DocumentPreview)), 2);
   DocumentUI.SetArray(uiFormFields, Length(Fields) - 1);
@@ -2534,15 +2534,15 @@ begin
     DocumentUI.SetModel(Prefix + 'id', IntToStr(I), 1);
     DocumentUI.SetModel(Prefix + 'inline', IntToStr(Ord(Fields[I].InlineChoices)), 2);
     Count := 0;
-    if Fields[I].InlineChoices then Count := Min(7, Length(Fields[I].Values));
-    First := Max(0, Min(Fields[I].Selected - Count div 2, Length(Fields[I].Values) - Count));
+    if Fields[I].InlineChoices then Count := Length(Fields[I].Values);
     DocumentUI.SetArray(Prefix + 'choices', Count);
     for J := 0 to Count - 1 do
     begin
       Choice := Prefix + 'choices[' + IntToStr(J) + '].';
-      DocumentUI.SetModel(Choice + 'label', Fields[I].Values[First + J]);
-      DocumentUI.SetModel(Choice + 'target', IntToStr(I) + ':' + IntToStr(First + J));
-      DocumentUI.SetModel(Choice + 'selected', IntToStr(Ord(First + J = Fields[I].Selected)), 2);
+      DocumentUI.SetModel(Choice + 'id', 'choice-' + IntToStr(I) + '-' + IntToStr(J));
+      DocumentUI.SetModel(Choice + 'label', Fields[I].Values[J]);
+      DocumentUI.SetModel(Choice + 'target', IntToStr(I) + ':' + IntToStr(J));
+      DocumentUI.SetModel(Choice + 'selected', IntToStr(Ord(J = Fields[I].Selected)), 2);
     end;
     DocumentUI.SetModel(Prefix + 'label', Language.Translate(Fields[I].Key));
     DocumentUI.SetModel(Prefix + 'value', Fields[I].CurrentText);
@@ -2555,6 +2555,8 @@ begin
   DocumentUI.SetModel('form.backSelected', IntToStr(Ord(Interaction = High(Fields))), 2);
   if Interaction = High(Fields) then DocumentUI.Focus('form-back')
   else DocumentUI.Focus('field-' + IntToStr(Interaction));
+  if (Interaction >= 0) and (Interaction < High(Fields)) and Fields[Interaction].InlineChoices then
+    DocumentUI.Reveal('choice-' + IntToStr(Interaction) + '-' + IntToStr(Fields[Interaction].Selected));
 end;
 
 function TOptionsMenu.Draw: boolean;
