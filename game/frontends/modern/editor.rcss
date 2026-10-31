@@ -1,0 +1,163 @@
+/* Modern's metadata, transport and chrome. Native code draws only named timeline surfaces. */
+.editor-icon { position: absolute; left: 3.75vw; top: 2.5vh; width: 3.125vw; height: 4.166667vh; }
+.editor-title { position: absolute; left: 7.5vw; top: 0.833333vh; font-size: 5.500000vh; }
+.header-panel, .note-panel, .volume-panel, .editor-surface { position: absolute; background-color: #dddddd; border: 2px black; }
+.header-panel { left: 2.5vw; top: 9.333333vh; width: 95vw; height: 37.666667vh; }
+.note-panel { left: 2.5vw; top: 48.333333vh; width: 95vw; height: 4.333333vh; }
+.volume-panel { left: 75vw; top: 0.5vh; width: 22.5vw; height: 8vh; }
+.editor-field { position: absolute; display: flex; height: 3vh; font-size: 2.000000vh; }
+.editor-field button { height: 100%; padding: 0; margin: 0; border: 0; }
+.field-label { height: 100%; padding-left: 0.375vw; color: #777777; background-color: #3c94d0; text-align: left; flex-shrink: 0; }
+.field-value { display: flex; margin-left: 0.25vw; height: 100%; background-color: #3c94d0; overflow: hidden; }
+.field-value .value { flex: 1; height: 100%; color: #777777; background-color: transparent; font-size: 2.000000vh; text-align: left; white-space: nowrap; overflow: hidden; }
+.field-value .value span { padding-left: 0.625vw; }
+.editor-field.selected .field-label { background-color: #7ec5ea; color: black; }
+.editor-field.selected .field-value { background-color: #7ec5ea; }
+.editor-field.selected .value { color: white; }
+.editor-field .previous, .editor-field .next { flex-shrink: 0; width: 2vw; height: 100%; background-color: transparent; }
+.editor-field svg { width: 100%; height: 100%; }
+.editor-field.note .field-label { background-color: #990000; }
+.editor-field.note .field-value { background-color: #dd0000; }
+.editor-field.note.selected .field-label { background-color: #ff7777; }
+.editor-field.volume { height: 2.333333vh; font-size: 1.750000vh; }
+.editor-field.volume .field-label { background-color: transparent; color: black; }
+.editor-field.volume .field-value .value { font-size: 1.750000vh; text-align: center; }
+.editor-field.voice .field-value .value { text-align: center; }
+.editor-command { position: absolute; width: 2.75vw; height: 3.666667vh; background-color: transparent; padding: 0; }
+.editor-command img { width: 100%; height: 100%; }
+.editor-command:focus { background-color: #7ec5ea; }
+#editor-preview { left: 63.25vw; top: 10vh; width: 33vw; height: 33vh; background-color: transparent; border: 0; }
+#editor-notes { left: 2.5vw; top: 54vh; width: 95vw; height: 22.5vh; }
+#editor-notes-inner { position: absolute; left: 2.5vw; right: 2.5vw; top: 0; height: 100%; }
+#editor-lyrics { left: 2.5vw; top: 77.833333vh; width: 95vw; height: 6.333333vh; }
+#editor-overview { left: 2.5vw; top: 85.5vh; width: 95vw; height: 1.666667vh; }
+.editor-microphone { position: absolute; left: 43.75vw; top: 1.666667vh; width: 27.5vw; height: 4vh; font-size: 1.625000vh; background-color: transparent; }
+.editor-microphone.active { color: #ffd000; }
+.editor-footer { position: absolute; left: 0; top: 90.833333vh; width: 100vw; height: 8vh; decorator: image(footer.svg); }
+.editor-counters { position: absolute; left: 2.5vw; top: 91.666667vh; width: 28vw; height: 3.333333vh; font-size: 2.250000vh; display: flex; }
+.editor-counters span { width: 50%; white-space: nowrap; }
+.editor-status { position: absolute; left: 33.125vw; top: 91.833333vh; width: 64vw; height: 3.333333vh; font-size: 2.250000vh; color: black; overflow: hidden; white-space: nowrap; }
+.field-title { left: 3.75vw; top: 10vh; width: 59vw; }
+.field-title .field-label { width: 9.75vw; }
+.field-title .field-value { width: 49vw; }
+.field-artist { left: 3.75vw; top: 13.3333vh; width: 59vw; }
+.field-artist .field-label { width: 9.75vw; }
+.field-artist .field-value { width: 49vw; }
+.field-language { left: 3.75vw; top: 16.6667vh; width: 29.5vw; }
+.field-language .field-label { width: 9.75vw; }
+.field-language .field-value { width: 19.5vw; }
+.field-edition { left: 33.5vw; top: 16.6667vh; width: 29.25vw; }
+.field-edition .field-label { width: 9.5vw; }
+.field-edition .field-value { width: 19.5vw; }
+.field-genre { left: 3.75vw; top: 20vh; width: 19.5vw; }
+.field-genre .field-label { width: 9.75vw; }
+.field-genre .field-value { width: 9.5vw; }
+.field-year { left: 23.5vw; top: 20vh; width: 19.5vw; }
+.field-year .field-label { width: 9.75vw; }
+.field-year .field-value { width: 9.5vw; }
+.field-creator { left: 43.25vw; top: 20vh; width: 19.5vw; }
+.field-creator .field-label { width: 9.75vw; }
+.field-creator .field-value { width: 9.5vw; }
+.field-mp3 { left: 3.75vw; top: 23.3333vh; width: 59vw; }
+.field-mp3 .field-label { width: 9.75vw; }
+.field-mp3 .field-value { width: 49vw; }
+.field-cover { left: 3.75vw; top: 26.6667vh; width: 59vw; }
+.field-cover .field-label { width: 9.75vw; }
+.field-cover .field-value { width: 49vw; }
+.field-background { left: 3.75vw; top: 30vh; width: 59vw; }
+.field-background .field-label { width: 9.75vw; }
+.field-background .field-value { width: 49vw; }
+.field-video { left: 3.75vw; top: 33.3333vh; width: 59vw; }
+.field-video .field-label { width: 9.75vw; }
+.field-video .field-value { width: 49vw; }
+.field-videogap { left: 3.75vw; top: 36.6667vh; width: 19.5vw; }
+.field-videogap .field-label { width: 9.75vw; }
+.field-videogap .field-value { width: 9.5vw; }
+.field-starttag { left: 23.5vw; top: 36.6667vh; width: 19.5vw; }
+.field-starttag .field-label { width: 9.75vw; }
+.field-starttag .field-value { width: 9.5vw; }
+.field-endtag { left: 43.25vw; top: 36.6667vh; width: 19.5vw; }
+.field-endtag .field-label { width: 9.75vw; }
+.field-endtag .field-value { width: 9.5vw; }
+.field-bpm { left: 3.75vw; top: 40vh; width: 19.5vw; }
+.field-bpm .field-label { width: 9.75vw; }
+.field-bpm .field-value { width: 9.5vw; }
+.field-previewstart { left: 23.5vw; top: 40vh; width: 19.5vw; }
+.field-previewstart .field-label { width: 9.75vw; }
+.field-previewstart .field-value { width: 9.5vw; }
+.field-relative { left: 43.25vw; top: 40vh; width: 19.5vw; }
+.field-relative .field-label { width: 9.75vw; }
+.field-relative .field-value { width: 9.5vw; }
+.field-gap { left: 3.75vw; top: 43.3333vh; width: 19.5vw; }
+.field-gap .field-label { width: 9.75vw; }
+.field-gap .field-value { width: 9.5vw; }
+.field-medleystart { left: 23.5vw; top: 43.3333vh; width: 19.5vw; }
+.field-medleystart .field-label { width: 9.75vw; }
+.field-medleystart .field-value { width: 9.5vw; }
+.field-medleyend { left: 43.25vw; top: 43.3333vh; width: 19.5vw; }
+.field-medleyend .field-label { width: 9.75vw; }
+.field-medleyend .field-value { width: 9.5vw; }
+.field-start { left: 3.75vw; top: 49vh; width: 19.5vw; }
+.field-start .field-label { width: 9.75vw; }
+.field-start .field-value { width: 9.5vw; }
+.field-duration { left: 23.5vw; top: 49vh; width: 19.5vw; }
+.field-duration .field-label { width: 9.75vw; }
+.field-duration .field-value { width: 9.5vw; }
+.field-tone { left: 43.25vw; top: 49vh; width: 19.5vw; }
+.field-tone .field-label { width: 9.75vw; }
+.field-tone .field-value { width: 9.5vw; }
+.field-lyric { left: 63.25vw; top: 49vh; width: 33vw; }
+.field-lyric .field-label { width: 9.75vw; }
+.field-lyric .field-value { width: 23vw; }
+.field-volumeaudio { left: 73.75vw; top: 0.833333vh; width: 22.75vw; }
+.field-volumeaudio .field-label { width: 12.5vw; }
+.field-volumeaudio .field-value { width: 10vw; }
+.field-volumemidi { left: 73.75vw; top: 3.33333vh; width: 22.75vw; }
+.field-volumemidi .field-label { width: 12.5vw; }
+.field-volumemidi .field-value { width: 10vw; }
+.field-volumeclick { left: 73.75vw; top: 5.83333vh; width: 22.75vw; }
+.field-volumeclick .field-label { width: 12.5vw; }
+.field-volumeclick .field-value { width: 10vw; }
+.command-undo { left: 64.75vw; top: 43.333333vh; }
+.command-previousseq { left: 69.75vw; top: 43.333333vh; }
+.command-nextseq { left: 73vw; top: 43.333333vh; }
+.command-freestyle { left: 78vw; top: 43.333333vh; }
+.command-gold { left: 81.25vw; top: 43.333333vh; }
+.command-playonly { left: 86.25vw; top: 43.333333vh; }
+.command-playwithnote { left: 89.5vw; top: 43.333333vh; }
+.command-playnote { left: 92.75vw; top: 43.333333vh; }
+
+.editor-screen .hidden { display: none; }
+.editor-screen .form-row { margin: 0; padding: 0; }
+
+.editor-field button { font-size: 2.000000vh; }
+.editor-field button span { margin-top: 0; }
+.editor-field.volume button { font-size: 1.750000vh; }
+.editor-field svg { opacity: 1; }
+
+.preview-score { position: absolute; left: 1.25vw; top: 2vh; font-size: 1.750000vh; font-weight: bold; color: black; }
+.preview-score div { height: 3vh; }
+.preview-score span { display: inline; }
+.detected-tone { position: absolute; left: 59.5vw; top: 49.166667vh; font-size: 2.000000vh; color: yellow; }
+
+.editor-field button:focus { background-color: transparent; }
+
+/* Match Modern's editor: clear labels over opaque panels, colored value cells. */
+.editor-screen .background { width: 100vw; max-width: 100vw; }
+.editor-screen .editor-field .field-label { background-color: transparent; color: #555555; }
+.editor-screen .editor-field.selected .field-label { background-color: transparent; color: black; font-weight: bold; }
+.editor-screen .editor-field .field-value .value { color: white; }
+.editor-screen .editor-field.selected .value { font-weight: bold; }
+.editor-screen .editor-field.volume .value { font-weight: normal; }
+.editor-microphone { background-color: #dddddd; text-align: left; padding-left: 0.5vw; }
+.preview-score > div { display: block; width: 100%; }
+.editor-counters { left: 3.75vw; font-weight: bold; }
+#editor-lyrics-text { position: absolute; left: 0; top: 0; width: 100%; height: 6.666667vh; }
+
+/* Match the legacy renderer's font size and baseline conversion. */
+.editor-screen .editor-field .field-label { padding-left: 0.375vw; }
+.editor-field button span { margin-top: 0.5vh; }
+.editor-microphone { color: black; }
+.editor-screen .editor-field.field-starttag .field-value,
+.editor-screen .editor-field.field-endtag .field-value { background-color: #999999; }
+.header-panel { top: 9vh; left: 2.34375vw; }

@@ -1,0 +1,210 @@
+<rml>
+<head>
+  <title>Modern song editor</title>
+  <link type="text/rcss" href="modern.rcss" />
+  <link type="text/rcss" href="editor.rcss" />
+</head>
+<body class="editor-screen">
+  <div class="background-layer"><div class="background-edge background-edge-left" /><div class="background" /><div class="background-edge background-edge-right" /></div>
+  <div class="foreground" data-model="game">
+    <img class="editor-icon" src="../../themes/Modern/[icon]options.png" />
+    <span class="editor-title" lang="SING_EDIT" />
+    <div class="header-panel" />
+    <div class="note-panel" />
+    <div class="volume-panel" />
+    <div class="editor-field form-row  field-title" data-class-selected="data.editor.fields.title.selected">
+      <button class="field-label form-label" action="editor.field" target="title" focus-target="title"><span lang="EDIT_TITLE" /></button>
+      <div class="field-value form-value">
+        <button id="editor-field-title" class="value" action="editor.field" target="title" focus-target="title"><span>{{ data.editor.fields.title.value }}</span></button>
+      </div>
+    </div>
+    <div class="editor-field form-row  field-artist" data-class-selected="data.editor.fields.artist.selected">
+      <button class="field-label form-label" action="editor.field" target="artist" focus-target="artist"><span lang="EDIT_ARTIST" /></button>
+      <div class="field-value form-value">
+        <button id="editor-field-artist" class="value" action="editor.field" target="artist" focus-target="artist"><span>{{ data.editor.fields.artist.value }}</span></button>
+      </div>
+    </div>
+    <div class="editor-field form-row  field-language" data-class-selected="data.editor.fields.language.selected">
+      <button class="field-label form-label" action="editor.field" target="language" focus-target="language"><span lang="EDIT_LANGUAGE" /></button>
+      <div class="field-value form-value">
+        <button id="editor-field-language" class="value" action="editor.field" target="language" focus-target="language"><span>{{ data.editor.fields.language.value }}</span></button>
+      </div>
+    </div>
+    <div class="editor-field form-row  field-edition" data-class-selected="data.editor.fields.edition.selected">
+      <button class="field-label form-label" action="editor.field" target="edition" focus-target="edition"><span lang="EDIT_EDITION" /></button>
+      <div class="field-value form-value">
+        <button id="editor-field-edition" class="value" action="editor.field" target="edition" focus-target="edition"><span>{{ data.editor.fields.edition.value }}</span></button>
+      </div>
+    </div>
+    <div class="editor-field form-row  field-genre" data-class-selected="data.editor.fields.genre.selected">
+      <button class="field-label form-label" action="editor.field" target="genre" focus-target="genre"><span lang="EDIT_GENRE" /></button>
+      <div class="field-value form-value">
+        <button id="editor-field-genre" class="value" action="editor.field" target="genre" focus-target="genre"><span>{{ data.editor.fields.genre.value }}</span></button>
+      </div>
+    </div>
+    <div class="editor-field form-row  field-year" data-class-selected="data.editor.fields.year.selected">
+      <button class="field-label form-label" action="editor.field" target="year" focus-target="year"><span lang="EDIT_YEAR" /></button>
+      <div class="field-value form-value">
+        <button id="editor-field-year" class="value" action="editor.field" target="year" focus-target="year"><span>{{ data.editor.fields.year.value }}</span></button>
+      </div>
+    </div>
+    <div class="editor-field form-row  field-creator" data-class-selected="data.editor.fields.creator.selected">
+      <button class="field-label form-label" action="editor.field" target="creator" focus-target="creator"><span lang="EDIT_CREATOR" /></button>
+      <div class="field-value form-value">
+        <button id="editor-field-creator" class="value" action="editor.field" target="creator" focus-target="creator"><span>{{ data.editor.fields.creator.value }}</span></button>
+      </div>
+    </div>
+    <div class="editor-field form-row  field-mp3" data-class-selected="data.editor.fields.mp3.selected">
+      <button class="field-label form-label" action="editor.field" target="mp3" focus-target="mp3"><span lang="EDIT_MP3" /></button>
+      <div class="field-value form-value">
+        <button class="previous" action="editor.previous" target="mp3" focus-target="mp3"><svg src="arrow-left.svg" /></button>
+        <button id="editor-field-mp3" class="value" action="editor.field" target="mp3" focus-target="mp3"><span>{{ data.editor.fields.mp3.value }}</span></button>
+        <button class="next" action="editor.next" target="mp3" focus-target="mp3"><svg src="arrow-right.svg" /></button>
+      </div>
+    </div>
+    <div class="editor-field form-row  field-cover" data-class-selected="data.editor.fields.cover.selected">
+      <button class="field-label form-label" action="editor.field" target="cover" focus-target="cover"><span lang="EDIT_COVER" /></button>
+      <div class="field-value form-value">
+        <button class="previous" action="editor.previous" target="cover" focus-target="cover" data-class-hidden="data.editor.fields.cover.count &lt;= 1"><svg src="arrow-left.svg" /></button>
+        <button id="editor-field-cover" class="value" action="editor.field" target="cover" focus-target="cover"><span>{{ data.editor.fields.cover.value }}</span></button>
+        <button class="next" action="editor.next" target="cover" focus-target="cover" data-class-hidden="data.editor.fields.cover.count &lt;= 1"><svg src="arrow-right.svg" /></button>
+      </div>
+    </div>
+    <div class="editor-field form-row  field-background" data-class-selected="data.editor.fields.background.selected">
+      <button class="field-label form-label" action="editor.field" target="background" focus-target="background"><span lang="EDIT_BACKGROUND" /></button>
+      <div class="field-value form-value">
+        <button class="previous" action="editor.previous" target="background" focus-target="background" data-class-hidden="data.editor.fields.background.count &lt;= 1"><svg src="arrow-left.svg" /></button>
+        <button id="editor-field-background" class="value" action="editor.field" target="background" focus-target="background"><span>{{ data.editor.fields.background.value }}</span></button>
+        <button class="next" action="editor.next" target="background" focus-target="background" data-class-hidden="data.editor.fields.background.count &lt;= 1"><svg src="arrow-right.svg" /></button>
+      </div>
+    </div>
+    <div class="editor-field form-row  field-video" data-class-selected="data.editor.fields.video.selected">
+      <button class="field-label form-label" action="editor.field" target="video" focus-target="video"><span lang="EDIT_VIDEO" /></button>
+      <div class="field-value form-value">
+        <button class="previous" action="editor.previous" target="video" focus-target="video" data-class-hidden="data.editor.fields.video.count &lt;= 1"><svg src="arrow-left.svg" /></button>
+        <button id="editor-field-video" class="value" action="editor.field" target="video" focus-target="video"><span>{{ data.editor.fields.video.value }}</span></button>
+        <button class="next" action="editor.next" target="video" focus-target="video" data-class-hidden="data.editor.fields.video.count &lt;= 1"><svg src="arrow-right.svg" /></button>
+      </div>
+    </div>
+    <div class="editor-field form-row  field-videogap" data-class-selected="data.editor.fields.videogap.selected">
+      <button class="field-label form-label" action="editor.field" target="videogap" focus-target="videogap"><span lang="EDIT_VIDEOGAP" /></button>
+      <div class="field-value form-value">
+        <button id="editor-field-videogap" class="value" action="editor.field" target="videogap" focus-target="videogap"><span>{{ data.editor.fields.videogap.value }}</span></button>
+      </div>
+    </div>
+    <div class="editor-field form-row  field-starttag" data-class-selected="data.editor.fields.starttag.selected">
+      <button class="field-label form-label" action="editor.field" target="starttag" focus-target="starttag"><span lang="EDIT_STARTTAG" /></button>
+      <div class="field-value form-value">
+        <button id="editor-field-starttag" class="value" action="editor.field" target="starttag" focus-target="starttag"><span>{{ data.editor.fields.starttag.value }}</span></button>
+      </div>
+    </div>
+    <div class="editor-field form-row  field-endtag" data-class-selected="data.editor.fields.endtag.selected">
+      <button class="field-label form-label" action="editor.field" target="endtag" focus-target="endtag"><span lang="EDIT_ENDTAG" /></button>
+      <div class="field-value form-value">
+        <button id="editor-field-endtag" class="value" action="editor.field" target="endtag" focus-target="endtag"><span>{{ data.editor.fields.endtag.value }}</span></button>
+      </div>
+    </div>
+    <div class="editor-field form-row  field-bpm" data-class-selected="data.editor.fields.bpm.selected">
+      <button class="field-label form-label" action="editor.field" target="bpm" focus-target="bpm"><span lang="EDIT_BPM" /></button>
+      <div class="field-value form-value">
+        <button id="editor-field-bpm" class="value" action="editor.field" target="bpm" focus-target="bpm"><span>{{ data.editor.fields.bpm.value }}</span></button>
+      </div>
+    </div>
+    <div class="editor-field form-row  field-previewstart" data-class-selected="data.editor.fields.previewstart.selected">
+      <button class="field-label form-label" action="editor.field" target="previewstart" focus-target="previewstart"><span lang="EDIT_PREVIEWSTART" /></button>
+      <div class="field-value form-value">
+        <button id="editor-field-previewstart" class="value" action="editor.field" target="previewstart" focus-target="previewstart"><span>{{ data.editor.fields.previewstart.value }}</span></button>
+      </div>
+    </div>
+    <div class="editor-field form-row  field-relative" data-class-selected="data.editor.fields.relative.selected">
+      <button class="field-label form-label" action="editor.field" target="relative" focus-target="relative"><span lang="EDIT_RELATIVE" /></button>
+      <div class="field-value form-value">
+        <button id="editor-field-relative" class="value" action="editor.field" target="relative" focus-target="relative"><span>{{ data.editor.fields.relative.value }}</span></button>
+      </div>
+    </div>
+    <div class="editor-field form-row  field-gap" data-class-selected="data.editor.fields.gap.selected">
+      <button class="field-label form-label" action="editor.field" target="gap" focus-target="gap"><span lang="EDIT_GAP" /></button>
+      <div class="field-value form-value">
+        <button id="editor-field-gap" class="value" action="editor.field" target="gap" focus-target="gap"><span>{{ data.editor.fields.gap.value }}</span></button>
+      </div>
+    </div>
+    <div class="editor-field form-row voice field-medleystart" data-class-selected="data.editor.fields.medleystart.selected">
+      <button class="field-label form-label" action="editor.field" target="medleystart" focus-target="medleystart"><span>P{{ data.editor.voice }}:</span></button>
+      <div class="field-value form-value">
+        <button class="previous" action="editor.previous" target="medleystart" focus-target="medleystart"><svg src="arrow-left.svg" /></button>
+        <button id="editor-field-medleystart" class="value" action="editor.field" target="medleystart" focus-target="medleystart"><span>{{ data.editor.fields.medleystart.value }}</span></button>
+        <button class="next" action="editor.next" target="medleystart" focus-target="medleystart"><svg src="arrow-right.svg" /></button>
+      </div>
+    </div>
+    <div class="editor-field form-row voice field-medleyend" data-class-selected="data.editor.fields.medleyend.selected">
+      <button class="field-label form-label" action="editor.field" target="medleyend" focus-target="medleyend"><span lang="EDIT_VOICE_COUNT" /></button>
+      <div class="field-value form-value">
+        <button class="previous" action="editor.previous" target="medleyend" focus-target="medleyend" data-class-hidden="data.editor.voices &lt;= 1"><svg src="arrow-left.svg" /></button>
+        <button id="editor-field-medleyend" class="value" action="editor.field" target="medleyend" focus-target="medleyend"><span>{{ data.editor.fields.medleyend.value }}</span></button>
+        <button class="next" action="editor.next" target="medleyend" focus-target="medleyend" data-class-hidden="data.editor.voices >= data.editor.maxVoices"><svg src="arrow-right.svg" /></button>
+      </div>
+    </div>
+    <div class="editor-field form-row note field-start" data-class-selected="data.editor.fields.start.selected">
+      <button class="field-label form-label" action="editor.field" target="start" focus-target="start"><span lang="EDIT_START" /></button>
+      <div class="field-value form-value">
+        <button id="editor-field-start" class="value" action="editor.field" target="start" focus-target="start"><span>{{ data.editor.fields.start.value }}</span></button>
+      </div>
+    </div>
+    <div class="editor-field form-row note field-duration" data-class-selected="data.editor.fields.duration.selected">
+      <button class="field-label form-label" action="editor.field" target="duration" focus-target="duration"><span lang="EDIT_DURATION" /></button>
+      <div class="field-value form-value">
+        <button id="editor-field-duration" class="value" action="editor.field" target="duration" focus-target="duration"><span>{{ data.editor.fields.duration.value }}</span></button>
+      </div>
+    </div>
+    <div class="editor-field form-row note field-tone" data-class-selected="data.editor.fields.tone.selected">
+      <button class="field-label form-label" action="editor.field" target="tone" focus-target="tone"><span lang="EDIT_TONE" /></button>
+      <div class="field-value form-value">
+        <button id="editor-field-tone" class="value" action="editor.field" target="tone" focus-target="tone"><span>{{ data.editor.fields.tone.value }}</span></button>
+      </div>
+    </div>
+    <div class="editor-field form-row note field-lyric" data-class-selected="data.editor.fields.lyric.selected">
+      <button class="field-label form-label" action="editor.field" target="lyric" focus-target="lyric"><span lang="EDIT_LYRIC" /></button>
+      <div class="field-value form-value">
+        <button id="editor-field-lyric" class="value" action="editor.field" target="lyric" focus-target="lyric"><span>{{ data.editor.fields.lyric.value }}</span></button>
+      </div>
+    </div>
+    <div class="editor-field form-row volume field-volumeaudio" data-class-selected="data.editor.fields.volumeaudio.selected">
+      <button class="field-label form-label" action="editor.field" target="volumeaudio" focus-target="volumeaudio"><span lang="EDIT_VOLUME_AUDIO" /></button>
+      <div class="field-value form-value">
+        <button id="editor-field-volumeaudio" class="value" action="editor.field" target="volumeaudio" focus-target="volumeaudio"><span>{{ data.editor.fields.volumeaudio.value }}</span></button>
+      </div>
+    </div>
+    <div class="editor-field form-row volume field-volumemidi" data-class-selected="data.editor.fields.volumemidi.selected">
+      <button class="field-label form-label" action="editor.field" target="volumemidi" focus-target="volumemidi"><span lang="EDIT_VOLUME_MIDI" /></button>
+      <div class="field-value form-value">
+        <button id="editor-field-volumemidi" class="value" action="editor.field" target="volumemidi" focus-target="volumemidi"><span>{{ data.editor.fields.volumemidi.value }}</span></button>
+      </div>
+    </div>
+    <div class="editor-field form-row volume field-volumeclick" data-class-selected="data.editor.fields.volumeclick.selected">
+      <button class="field-label form-label" action="editor.field" target="volumeclick" focus-target="volumeclick"><span lang="EDIT_VOLUME_CLICK" /></button>
+      <div class="field-value form-value">
+        <button id="editor-field-volumeclick" class="value" action="editor.field" target="volumeclick" focus-target="volumeclick"><span>{{ data.editor.fields.volumeclick.value }}</span></button>
+      </div>
+    </div>
+    <button class="editor-command command-undo" action="editor.command" target="undo"><img src="../../themes/Modern/[editsub]undo.png" /></button>
+    <button class="editor-command command-previousseq" action="editor.command" target="previousseq"><img src="../../themes/Modern/[editsub]previous-seq.png" /></button>
+    <button class="editor-command command-nextseq" action="editor.command" target="nextseq"><img src="../../themes/Modern/[editsub]next-seq.png" /></button>
+    <button class="editor-command command-freestyle" action="editor.command" target="freestyle"><img src="../../themes/Modern/[editsub]freestyle.png" /></button>
+    <button class="editor-command command-gold" action="editor.command" target="gold"><img src="../../themes/Modern/[editsub]gold.png" /></button>
+    <button class="editor-command command-playonly" action="editor.command" target="playonly"><img src="../../themes/Modern/[editsub]play.png" /></button>
+    <button class="editor-command command-playwithnote" action="editor.command" target="playwithnote"><img src="../../themes/Modern/[editsub]play-with-note.png" /></button>
+    <button class="editor-command command-playnote" action="editor.command" target="playnote"><img src="../../themes/Modern/[editsub]play-note.png" /></button>
+    <button class="editor-microphone" data-class-active="data.editor.microphone" action="editor.command" target="microphone"><span data-class-hidden="!data.editor.microphone" lang="EDIT_MICROPHONE_ON" /><span data-class-hidden="data.editor.microphone" lang="EDIT_MICROPHONE_OFF" /></button>
+    <div id="editor-preview" class="editor-surface">
+      <div class="preview-score"><div><span lang="SING_NOTES" />: {{ data.editor.points.normal }}</div><div><span lang="SING_PHRASE_BONUS" />: {{ data.editor.points.bonus }}</div><div><span lang="SING_GOLDEN_NOTES" />: {{ data.editor.points.golden }}</div></div>
+    </div>
+    <span class="detected-tone" data-class-hidden="!data.editor.microphone">{{ data.editor.detectedTone }}</span>
+    <div id="editor-notes" class="editor-surface"><div id="editor-notes-inner" /></div>
+    <div id="editor-lyrics" class="editor-surface"><div id="editor-lyrics-text" /></div>
+    <div id="editor-overview" class="editor-surface" />
+    <div class="editor-footer" />
+    <div class="editor-counters"><span><span lang="EDIT_INFO_CURRENT_LINE" /> {{ data.editor.line }} / {{ data.editor.lines }}</span><span><span lang="EDIT_INFO_CURRENT_NOTE" /> {{ data.editor.note }} / {{ data.editor.notes }}</span></div>
+    <span class="editor-status">{{ data.editor.status }}</span>
+  </div>
+</body>
+</rml>

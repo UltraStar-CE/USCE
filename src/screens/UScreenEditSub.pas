@@ -33,6 +33,8 @@ interface
 {$I switches.inc}
 
 uses
+  UDocumentUI,
+  UMenuInteract,
   UCommon,
   UEditorLyrics,
   UVoiceParts,
@@ -97,8 +99,30 @@ type
     VoiceCount: integer;
   end;
 
+  TEditorOptions = array of UTF8String;
+  TEditorFieldState = record
+    Name, Value: UTF8String;
+    Options: TEditorOptions;
+    Selection: PInteger;
+  end;
+  TEditorCommandState = record
+    Name, Caption: UTF8String;
+    Bounds: TDocumentRegion;
+  end;
+
   TScreenEditSub = class(TMenu)
     private
+      DocumentUI: TDocumentUI;
+      EditorFields: array of TEditorFieldState;
+      EditorCommands: array of TEditorCommandState;
+      EditorStatusText: UTF8String;
+      PreviewVisible: boolean;
+      DocumentClick: TMouseClickAction;
+      DocumentInteraction: integer;
+      DocumentDispatch: boolean;
+      NotesSurface, LyricsSurface, OverviewSurface, PreviewSurface: TThemeStatic;
+      NotesInset, NoteLineSpacing, LyricsTextSize: real;
+
 
       CurrentBeat:             Integer;
       //Variable is True if no Song is loaded
@@ -465,6 +489,39 @@ type
       procedure UpdateMidiPitchOffset;
       function  GetMidiPitch(NoteTone: Integer): Byte;
 
+
+      function AddEditorField(const Settings: TThemeSelectSlide; var Data: integer;
+        const Values: array of UTF8String; const Name: UTF8String): integer;
+      procedure UpdateEditorFieldOptions(ID: integer; const Values: array of UTF8String; var Data: integer);
+      function GetEditorFieldText(ID: integer): UTF8String;
+      procedure SetEditorFieldText(ID: integer; const Value: UTF8String);
+      function GetEditorFieldIndex(ID: integer): integer;
+      procedure SetEditorFieldIndex(ID, Value: integer);
+      function GetEditorFieldOptions(ID: integer): TEditorOptions;
+      function EditorFieldClick(ID: integer; X, Y: real): TMouseClickAction;
+      function AddEditorCommand(const Settings: TThemeButton; const Name: UTF8String): integer;
+      function AddEditorHit: integer;
+      procedure SetEditorHit(ID: integer; const Axis: char; Value: real);
+      function EditorHit(ID: integer): TDocumentRegion;
+      function EditorInteractAt(X, Y: real): integer;
+      function GetEditorCommandCaption(ID: integer): UTF8String;
+      procedure SetEditorCommandCaption(ID: integer; const Value: UTF8String);
+      procedure SetEditorStatus(const Value: UTF8String);
+      function GetEditorStatus: UTF8String;
+      procedure SetEditorPreviewVisible(Value: boolean);
+      function GetEditorPreviewVisible: boolean;
+      procedure UpdateEditorPreview;
+      procedure SyncEditorDocument;
+      procedure LayoutEditorDocument;
+      function PrepareDocumentMouse(Button: integer; Down: boolean; X, Y: integer): boolean;
+      function EditorFieldByName(const Name: UTF8String): integer;
+      property EditorFieldText[ID: integer]: UTF8String read GetEditorFieldText write SetEditorFieldText;
+      property EditorFieldIndex[ID: integer]: integer read GetEditorFieldIndex write SetEditorFieldIndex;
+      property EditorFieldOptions[ID: integer]: TEditorOptions read GetEditorFieldOptions;
+      property EditorCommandCaption[ID: integer]: UTF8String read GetEditorCommandCaption write SetEditorCommandCaption;
+      property EditorStatus: UTF8String read GetEditorStatus write SetEditorStatus;
+      property EditorPreviewVisible: boolean read GetEditorPreviewVisible write SetEditorPreviewVisible;
+
     public
       Tex_PrevBackground:      TTexture;
       FadeOut:                 boolean;
@@ -472,6 +529,7 @@ type
       constructor Create; override;
       destructor Destroy; override;
       procedure OnShow; override;
+      procedure SetInteraction(Num: integer); override;
       function  ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       function  ParseInputEditText(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
       function  ParseInputEditBPM(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
@@ -494,7 +552,6 @@ uses
   UHelp,
   ULanguage,
   ULog,
-  UMenuInteract,
   UNote,
   USkins,
   UTextEncoding,
@@ -502,11 +559,15 @@ uses
   UText;
 
 const
+  uiEditorField = 'editor.field';
+  uiEditorPrevious = 'editor.previous';
+  uiEditorNext = 'editor.next';
+  uiEditorCommand = 'editor.command';
+  uiEditorSave = 'editor.save';
+  uiEditorHelp = 'editor.help';
   DEFAULT_FADE_IN_TIME  = 8;    //TODO in INI
   DEFAULT_FADE_OUT_TIME = 2;
   NOT_SET = '-';
-  NotesSkipX:  Integer = 20;
-  LineSpacing: Integer = 15;
   EditorMidiToneOffset = 60;
   EditorMidiMinPitch = 0;
   EditorMidiMaxPitch = 127;
@@ -527,7 +588,7 @@ begin
     // create backup file
     FilePath.CopyFile(Path(FilePath.ToUTF8 + '.ansi.bak'), false);
     // store in UTF-8 encoding
-    SResult := SaveSong(CurrentSong, CurrentSong.Tracks, FilePath, boolean(Data));
+    SResult := SaveSong(CurrentSong, CurrentSong.Tracks, FilePath, Data <> nil);
     Success := (SResult = ssrOK);
   end;
 
@@ -560,6 +621,371 @@ begin
     AudioPlayback.Stop;
     Display.FadeTo(@ScreenSong);
   end;
+end;
+
+function TScreenEditSub.AddEditorField(const Settings: TThemeSelectSlide;
+  var Data: integer; const Values: array of UTF8String; const Name: UTF8String): integer;
+var I: integer;
+begin
+  if DocumentUI = nil then Result := AddSelectSlide(Settings, Data, Values)
+  else
+  begin
+    Result := Length(EditorFields);
+    AddInteraction(iSelectS, Result);
+  end;
+  SetLength(EditorFields, Result + 1);
+  EditorFields[Result].Name := Name;
+  EditorFields[Result].Selection := @Data;
+  SetLength(EditorFields[Result].Options, Length(Values));
+  for I := 0 to High(Values) do EditorFields[Result].Options[I] := Values[I];
+  if Length(Values) > 0 then EditorFields[Result].Value := Values[0];
+end;
+
+procedure TScreenEditSub.UpdateEditorFieldOptions(ID: integer;
+  const Values: array of UTF8String; var Data: integer);
+var I: integer;
+begin
+  if DocumentUI = nil then UpdateSelectSlideOptions(ID, Values, Data);
+  EditorFields[ID].Selection := @Data;
+  SetLength(EditorFields[ID].Options, Length(Values));
+  for I := 0 to High(Values) do EditorFields[ID].Options[I] := Values[I];
+  if Length(Values) > 0 then
+    EditorFields[ID].Value := Values[EnsureRange(Data, 0, High(Values))]
+  else EditorFields[ID].Value := '';
+end;
+
+function TScreenEditSub.GetEditorFieldText(ID: integer): UTF8String;
+begin
+  if DocumentUI = nil then Result := SelectsS[ID].TextOpt[0].Text
+  else Result := EditorFields[ID].Value;
+end;
+
+procedure TScreenEditSub.SetEditorFieldText(ID: integer; const Value: UTF8String);
+begin
+  EditorFields[ID].Value := Value;
+  if DocumentUI = nil then SelectsS[ID].TextOpt[0].Text := Value;
+end;
+
+function TScreenEditSub.GetEditorFieldIndex(ID: integer): integer;
+begin
+  if DocumentUI = nil then Result := SelectsS[ID].SelectedOption
+  else if EditorFields[ID].Selection <> nil then Result := EditorFields[ID].Selection^
+  else Result := 0;
+end;
+
+procedure TScreenEditSub.SetEditorFieldIndex(ID, Value: integer);
+begin
+  if DocumentUI = nil then SelectsS[ID].SelectedOption := Value
+  else if EditorFields[ID].Selection <> nil then EditorFields[ID].Selection^ := Value;
+  if (Value >= 0) and (Value < Length(EditorFields[ID].Options)) then
+    EditorFields[ID].Value := EditorFields[ID].Options[Value];
+end;
+
+function TScreenEditSub.GetEditorFieldOptions(ID: integer): TEditorOptions;
+var I: integer;
+begin
+  Result := nil;
+  if DocumentUI = nil then
+  begin
+    SetLength(Result, Length(SelectsS[ID].TextOptT));
+    for I := 0 to High(Result) do Result[I] := SelectsS[ID].TextOptT[I];
+  end
+  else Result := EditorFields[ID].Options;
+end;
+
+function TScreenEditSub.EditorFieldClick(ID: integer; X, Y: real): TMouseClickAction;
+begin
+  if DocumentUI = nil then Result := SelectsS[ID].OnClick(X, Y)
+  else Result := DocumentClick;
+end;
+
+function TScreenEditSub.AddEditorCommand(const Settings: TThemeButton;
+  const Name: UTF8String): integer;
+begin
+  if DocumentUI = nil then Result := AddButton(Settings)
+  else
+  begin
+    Result := Length(EditorCommands);
+    AddInteraction(iButton, Result);
+  end;
+  SetLength(EditorCommands, Result + 1);
+  EditorCommands[Result].Name := Name;
+  if DocumentUI = nil then
+  begin
+    EditorCommands[Result].Bounds.X := Settings.X;
+    EditorCommands[Result].Bounds.Y := Settings.Y;
+    EditorCommands[Result].Bounds.W := Settings.W;
+    EditorCommands[Result].Bounds.H := Settings.H;
+  end;
+end;
+
+function TScreenEditSub.AddEditorHit: integer;
+begin
+  if DocumentUI = nil then Result := AddButton(0, 0, 0, 0, PATH_NONE)
+  else
+  begin
+    Result := Length(EditorCommands);
+    AddInteraction(iButton, Result);
+  end;
+  SetLength(EditorCommands, Result + 1);
+  EditorCommands[Result].Name := '';
+  FillChar(EditorCommands[Result].Bounds, SizeOf(TDocumentRegion), 0);
+end;
+
+procedure TScreenEditSub.SetEditorHit(ID: integer; const Axis: char; Value: real);
+begin
+  case Axis of
+    'X': EditorCommands[ID].Bounds.X := Value;
+    'Y': EditorCommands[ID].Bounds.Y := Value;
+    'W': EditorCommands[ID].Bounds.W := Value;
+    'H': EditorCommands[ID].Bounds.H := Value;
+  end;
+  if DocumentUI = nil then
+    case Axis of
+      'X': Button[ID].SetX(Value);
+      'Y': Button[ID].SetY(Value);
+      'W': Button[ID].SetW(Value);
+      'H': Button[ID].SetH(Value);
+    end;
+end;
+
+function TScreenEditSub.EditorHit(ID: integer): TDocumentRegion;
+begin
+  Result := EditorCommands[ID].Bounds;
+end;
+
+function TScreenEditSub.EditorInteractAt(X, Y: real): integer;
+var I, ID: integer; Bounds: TDocumentRegion;
+begin
+  if DocumentUI = nil then Exit(InteractAt(X, Y));
+  if DocumentDispatch then Exit(DocumentInteraction);
+  Result := -1;
+  for I := 0 to High(Interactions) do
+    if Interactions[I].Typ = iButton then
+    begin
+      ID := Interactions[I].Num;
+      if EditorCommands[ID].Name <> '' then Continue;
+      Bounds := EditorCommands[ID].Bounds;
+      if (Bounds.W > 0) and (Bounds.H > 0) and
+        (X >= Bounds.X) and (X <= Bounds.X + Bounds.W) and
+        (Y >= Bounds.Y) and (Y <= Bounds.Y + Bounds.H) then Result := I;
+    end;
+  if (Result < 0) and (PressedNoteId >= 0) and (PressedNoteId < Length(InteractiveNoteId)) then
+    Result := InteractiveNoteId[PressedNoteId];
+end;
+
+procedure TScreenEditSub.SetInteraction(Num: integer);
+begin
+  if DocumentUI = nil then inherited SetInteraction(Num)
+  else if (Num >= -1) and (Num <= High(Interactions)) then SelInteraction := Num;
+end;
+
+function TScreenEditSub.GetEditorCommandCaption(ID: integer): UTF8String;
+begin
+  if DocumentUI = nil then Result := Button[ID].Text[0].Text
+  else Result := EditorCommands[ID].Caption;
+end;
+
+procedure TScreenEditSub.SetEditorCommandCaption(ID: integer; const Value: UTF8String);
+begin
+  EditorCommands[ID].Caption := Value;
+  if DocumentUI = nil then Button[ID].Text[0].Text := Value;
+end;
+
+procedure TScreenEditSub.SetEditorStatus(const Value: UTF8String);
+begin
+  EditorStatusText := Value;
+  if DocumentUI = nil then Text[TextInfo].Text := Value;
+end;
+
+function TScreenEditSub.GetEditorStatus: UTF8String;
+begin
+  Result := EditorStatusText;
+end;
+
+procedure TScreenEditSub.SetEditorPreviewVisible(Value: boolean);
+begin
+  PreviewVisible := Value;
+  if DocumentUI = nil then Statics[BackgroundImageId].Visible := Value;
+end;
+
+function TScreenEditSub.GetEditorPreviewVisible: boolean;
+begin
+  Result := PreviewVisible;
+end;
+
+procedure TScreenEditSub.UpdateEditorPreview;
+begin
+  if DocumentUI <> nil then Exit;
+  Statics[BackgroundImageId].Texture.Free;
+  Statics[BackgroundImageId].Texture := Tex_PrevBackground.Clone;
+  Statics[BackgroundImageId].Texture.X := PreviewSurface.X;
+  Statics[BackgroundImageId].Texture.Y := PreviewSurface.Y;
+  Statics[BackgroundImageId].Texture.W := PreviewSurface.W;
+  Statics[BackgroundImageId].Texture.H := PreviewSurface.H;
+end;
+
+function TScreenEditSub.EditorFieldByName(const Name: UTF8String): integer;
+var I: integer;
+begin
+  for I := 0 to High(EditorFields) do
+    if EditorFields[I].Name = Name then Exit(I);
+  Result := -1;
+end;
+
+procedure TScreenEditSub.SyncEditorDocument;
+var I: integer; Prefix, FocusName: UTF8String;
+begin
+  if DocumentUI = nil then Exit;
+  FocusName := '';
+  if (Interaction >= 0) and (Interaction <= High(Interactions)) then
+    if Interactions[Interaction].Typ = iSelectS then
+      FocusName := EditorFields[Interactions[Interaction].Num].Name;
+  for I := 0 to High(EditorFields) do
+  begin
+    Prefix := 'editor.fields.' + EditorFields[I].Name;
+    DocumentUI.SetModel(Prefix + '.value', EditorFields[I].Value);
+    DocumentUI.SetModel(Prefix + '.count', IntToStr(Length(EditorFields[I].Options)), 1);
+    DocumentUI.SetModel(Prefix + '.index', IntToStr(EditorFieldIndex[I]), 1);
+    DocumentUI.SetModel(Prefix + '.selected', IntToStr(Ord(FocusName = EditorFields[I].Name)), 2);
+  end;
+  DocumentUI.SetModel('editor.status', EditorStatusText);
+  DocumentUI.SetModel('editor.currentLine', EditorCommandCaption[TextSentence]);
+  DocumentUI.SetModel('editor.currentNote', EditorCommandCaption[TextNote]);
+  DocumentUI.SetModel('editor.microphone', IntToStr(Ord(MicrophoneEnabled)), 2);
+  DocumentUI.SetModel('editor.beat', IntToStr(CurrentBeat), 1);
+  if (CurrentSong <> nil) and (CurrentTrack < Length(CurrentSong.Tracks)) then
+  begin
+    DocumentUI.SetModel('editor.line', IntToStr(CurrentSong.Tracks[CurrentTrack].CurrentLine + 1), 1);
+    DocumentUI.SetModel('editor.lines', IntToStr(CurrentSong.Tracks[CurrentTrack].Number), 1);
+    if CurrentTrack < Length(CurrentNote) then
+    begin
+      DocumentUI.SetModel('editor.note', IntToStr(CurrentNote[CurrentTrack] + 1), 1);
+      DocumentUI.SetModel('editor.notes', IntToStr(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].HighNote + 1), 1);
+    end;
+  end;
+  DocumentUI.SetModel('editor.voice', IntToStr(CurrentTrack + 1), 1);
+  DocumentUI.SetModel('editor.voices', IntToStr(EditorVoiceCount), 1);
+  DocumentUI.SetModel('editor.maxVoices', IntToStr(SupportedSongVoices), 1);
+  DocumentUI.SetModel('editor.playing', IntToStr(Ord(PlaySentence or PlayOne or PlaySentenceMidi or PlayOneMidi)), 2);
+  DocumentUI.SetModel('editor.canUndo', IntToStr(Ord(Length(UndoLines) > 0)), 2);
+end;
+
+procedure TScreenEditSub.LayoutEditorDocument;
+var Inner: TDocumentRegion; I, LineIndex: integer; OldNotes, OldLyrics: TThemeStatic; LyricsMoved, NotesMoved: boolean; OldTextSize: real;
+  procedure ApplyRegion(const Name: UTF8String; var Surface: TThemeStatic);
+  var Bounds: TDocumentRegion;
+  begin
+    if DocumentUI.Region(Name, Bounds) then
+    begin
+      Surface.X := Round(Bounds.X); Surface.Y := Round(Bounds.Y);
+      Surface.W := Round(Bounds.W); Surface.H := Round(Bounds.H);
+    end;
+  end;
+begin
+  if DocumentUI = nil then Exit;
+  OldNotes := NotesSurface;
+  OldLyrics := LyricsSurface;
+  OldTextSize := LyricsTextSize;
+  ApplyRegion('editor-notes', NotesSurface);
+  ApplyRegion('editor-lyrics', LyricsSurface);
+  ApplyRegion('editor-overview', OverviewSurface);
+  ApplyRegion('editor-preview', PreviewSurface);
+  if DocumentUI.Region('editor-lyrics-text', Inner) then LyricsTextSize := Inner.H;
+  if DocumentUI.Region('editor-notes-inner', Inner) then
+    NotesInset := Max(0, Inner.X - NotesSurface.X);
+  NoteLineSpacing := NotesSurface.H / 9;
+  NotesMoved := (OldNotes.X <> NotesSurface.X) or (OldNotes.Y <> NotesSurface.Y) or
+    (OldNotes.W <> NotesSurface.W) or (OldNotes.H <> NotesSurface.H);
+  LyricsMoved := (OldLyrics.X <> LyricsSurface.X) or (OldLyrics.Y <> LyricsSurface.Y) or
+    (OldLyrics.W <> LyricsSurface.W) or (OldLyrics.H <> LyricsSurface.H) or (OldTextSize <> LyricsTextSize);
+  for I := 0 to High(EditorLyrics) do
+  begin
+    EditorLyrics[I].X := LyricsSurface.X + LyricsSurface.W / 2;
+    EditorLyrics[I].Y := LyricsSurface.Y;
+    EditorLyrics[I].Size := LyricsTextSize;
+    if LyricsMoved and (CurrentSong <> nil) and (I < Length(CurrentSong.Tracks)) then
+    begin
+      LineIndex := CurrentSong.Tracks[I].CurrentLine;
+      if (LineIndex >= 0) and (LineIndex < Length(CurrentSong.Tracks[I].Lines)) then
+      begin
+        EditorLyrics[I].AddLine(I, LineIndex);
+        EditorLyrics[I].Selected := CurrentNote[I];
+      end;
+    end;
+  end;
+  if NotesMoved and (CurrentSong <> nil) and (CurrentTrack < Length(CurrentSong.Tracks)) then
+  begin
+    LineIndex := CurrentSong.Tracks[CurrentTrack].CurrentLine;
+    if (LineIndex >= 0) and (LineIndex < Length(CurrentSong.Tracks[CurrentTrack].Lines)) and
+      (Length(CurrentSong.Tracks[CurrentTrack].Lines[LineIndex].Notes) > 0) then
+      ShowInteractiveBackground;
+  end;
+end;
+
+function TScreenEditSub.PrepareDocumentMouse(Button: integer; Down: boolean;
+  X, Y: integer): boolean;
+var Action, Target: UTF8String; I, ID, Kind, Percentage: integer; GX, GY: real; Bounds: TDocumentRegion;
+begin
+  Result := false;
+  if DocumentDispatch then Exit;
+  if Button = SDL_BUTTON_LEFT then DocumentUI.Mouse(X, Y, 0, Down)
+  else DocumentUI.Mouse(X, Y);
+  Action := DocumentUI.TakeAction;
+  Target := DocumentUI.ActionTarget;
+  if Action <> '' then
+  begin
+    Result := true;
+    if Action = uiEditorSave then begin HandleSaveSong(0); Exit; end;
+    if Action = uiEditorHelp then begin ShowPopupHelp(0); Exit; end;
+    if Action = uiNavigationBack then begin LeaveScope(0); Exit; end;
+    ID := -1; Kind := iSelectS;
+    DocumentClick := maReturn;
+    if Action = uiEditorPrevious then DocumentClick := maLeft
+    else if Action = uiEditorNext then DocumentClick := maRight;
+    if (Action = uiEditorField) or (Action = uiEditorPrevious) or (Action = uiEditorNext) then
+      ID := EditorFieldByName(Target)
+    else if Action = uiEditorCommand then
+    begin
+      Kind := iButton;
+      for I := 0 to High(EditorCommands) do
+        if EditorCommands[I].Name = Target then begin ID := I; Break; end;
+    end;
+    if ID < 0 then Exit;
+    if (Kind = iSelectS) and (Action = uiEditorField) and
+      ((ID = VolumeAudioSlideId) or (ID = VolumeMidiSlideId) or (ID = VolumeClickSlideId)) and
+      DocumentUI.Region('editor-field-' + Target, Bounds) and (Bounds.W > 0) then
+    begin
+      Percentage := EnsureRange(Round((X * RenderW / ScreenW - Bounds.X) * 100 / Bounds.W), 0, 100);
+      EditorFieldIndex[ID] := Percentage;
+      if ID = VolumeAudioSlideId then SetAudioVolumePercent(Percentage)
+      else if ID = VolumeClickSlideId then SetSfxVolumePercent(Percentage);
+      SyncEditorDocument;
+      Exit;
+    end;
+    DocumentInteraction := -1;
+    for I := 0 to High(Interactions) do
+      if (Interactions[I].Typ = Kind) and (Interactions[I].Num = ID) then
+      begin DocumentInteraction := I; Break; end;
+    if DocumentInteraction < 0 then Exit;
+    SetInteraction(DocumentInteraction);
+    DocumentDispatch := true;
+    try ParseMouse(SDL_BUTTON_LEFT, true, X, Y);
+    finally DocumentDispatch := false; end;
+    SyncEditorDocument;
+    Exit;
+  end;
+  GX := X * RenderW / ScreenW;
+  GY := Y * RenderH / ScreenH;
+  // Canvas interaction stays with the native timeline engine. Everything else belongs to the document.
+  Result := not (((GX >= NotesSurface.X) and (GX <= NotesSurface.X + NotesSurface.W) and
+    (GY >= NotesSurface.Y) and (GY <= NotesSurface.Y + NotesSurface.H)) or
+    ((GX >= LyricsSurface.X) and (GX <= LyricsSurface.X + LyricsSurface.W) and
+    (GY >= LyricsSurface.Y) and (GY <= LyricsSurface.Y + LyricsSurface.H)) or
+    ((GX >= OverviewSurface.X) and (GX <= OverviewSurface.X + OverviewSurface.W) and
+    (GY >= OverviewSurface.Y) and (GY <= OverviewSurface.Y + OverviewSurface.H)) or
+    (PressedNoteId >= 0));
+  if Down and (Button = SDL_BUTTON_RIGHT) then begin LeaveScope(0); Result := true; end;
 end;
 
 // Method for input parsing. If false is returned, GetNextWindow
@@ -720,7 +1146,7 @@ begin
       CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].IsStartPreview := false;
       CurrentSong.PreviewStart := 0;
       CurrentSong.HasPreview := false;
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_PREVIEW_CLEARED');
+      EditorStatus := Language.Translate('EDIT_INFO_PREVIEW_CLEARED');
     end
     else
     begin
@@ -736,7 +1162,7 @@ begin
         MedleyNotes.Preview.line := CurrentSong.Tracks[CurrentTrack].CurrentLine;
         MedleyNotes.Preview.note := CurrentNote[CurrentTrack];
         CurrentSong.Tracks[MedleyNotes.Preview.track].Lines[MedleyNotes.Preview.line].Notes[MedleyNotes.Preview.note].IsStartPreview := true;
-        Text[TextInfo].Text := Format(Language.Translate('EDIT_INFO_PREVIEW_SET'), [CurrentSong.PreviewStart]);
+        EditorStatus := Format(Language.Translate('EDIT_INFO_PREVIEW_SET'), [CurrentSong.PreviewStart]);
       end
       else
       begin
@@ -754,7 +1180,7 @@ begin
 
       CurrentSong.Tracks[CurrentTrack].CurrentLine := 0; // update lyric
 
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_JUMPTO_PREVIEW_AND_PLAY') + ' (' + FloatToStr(CurrentSong.PreviewStart) + ' s)';
+      EditorStatus := Language.Translate('EDIT_INFO_JUMPTO_PREVIEW_AND_PLAY') + ' (' + FloatToStr(CurrentSong.PreviewStart) + ' s)';
       PlayStopTime := AudioPlayback.Length;
       PlaySentence := true;
       AudioPlayback.Position := CurrentSong.PreviewStart;
@@ -787,11 +1213,11 @@ begin
         EditorLyrics[CurrentTrack].AddLine(CurrentTrack, CurrentSong.Tracks[CurrentTrack].CurrentLine);
         EditorLyrics[CurrentTrack].Selected := 0;
 
-        Text[TextInfo].Text := Language.Translate('EDIT_INFO_JUMPTO_PREVIEW') + ' (' + FloatToStr(CurrentSong.PreviewStart) + ' s)';
+        EditorStatus := Language.Translate('EDIT_INFO_JUMPTO_PREVIEW') + ' (' + FloatToStr(CurrentSong.PreviewStart) + ' s)';
       end;
     end;
   end
-  else Text[TextInfo].Text := Language.Translate('EDIT_INFO_NO_PREVIEW');
+  else EditorStatus := Language.Translate('EDIT_INFO_NO_PREVIEW');
   Exit;
 end;
 
@@ -802,13 +1228,13 @@ begin
   CopyToUndo;
   if CurrentSong.Relative then
   begin
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_MEDLEY_RELATIVE_UNSUPPORTED');
+    EditorStatus := Language.Translate('EDIT_INFO_MEDLEY_RELATIVE_UNSUPPORTED');
     Exit;
   end;
 
   if CurrentSong.isDuet then
   begin
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_MEDLEY_DUET_UNSUPPORTED');
+    EditorStatus := Language.Translate('EDIT_INFO_MEDLEY_DUET_UNSUPPORTED');
     Exit;
   end;
 
@@ -822,7 +1248,7 @@ begin
       begin // current note is medley end, so clear it
         MedleyNotes.isEnd := false;
         CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].IsMedley := false;
-        Text[TextInfo].Text := Language.Translate('EDIT_INFO_MEDLEY_END_CLEARED');
+        EditorStatus := Language.Translate('EDIT_INFO_MEDLEY_END_CLEARED');
       end else // otherwise, clear old medley end flag and set medley end flag to current note
       begin
         if (MedleyNotes.isStart) and
@@ -834,14 +1260,14 @@ begin
             CurrentSong.Tracks[CurrentTrack].Lines[MedleyNotes.end_.line].Notes[MedleyNotes.end_.note].IsMedley := false;
           MedleyNotes.end_.line := CurrentSong.Tracks[CurrentTrack].CurrentLine;
           MedleyNotes.end_.note := CurrentNote[CurrentTrack];
-          Text[TextInfo].Text := Language.Translate('EDIT_INFO_MEDLEY_END_SET') + ' (' + FloatToStr(GetMedleyLength) + ' s)';
+          EditorStatus := Language.Translate('EDIT_INFO_MEDLEY_END_SET') + ' (' + FloatToStr(GetMedleyLength) + ' s)';
         end
         else
         begin
           if (MedleyNotes.isStart) then
-            Text[TextInfo].Text := Language.Translate('EDIT_INFO_MEDLEY_END_AFTER_MEDLEY_START')
+            EditorStatus := Language.Translate('EDIT_INFO_MEDLEY_END_AFTER_MEDLEY_START')
           else
-            Text[TextInfo].Text := Language.Translate('EDIT_INFO_SET_MEDLEY_START_FIRST');
+            EditorStatus := Language.Translate('EDIT_INFO_SET_MEDLEY_START_FIRST');
         end;
       end;
     end else // end is not set yet
@@ -853,14 +1279,14 @@ begin
         CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].IsMedley := true;
         MedleyNotes.end_.line := CurrentSong.Tracks[CurrentTrack].CurrentLine;
         MedleyNotes.end_.note := CurrentNote[CurrentTrack];
-        Text[TextInfo].Text := Language.Translate('EDIT_INFO_MEDLEY_END_SET') + ' (' + FloatToStr(GetMedleyLength) + ' s)';
+        EditorStatus := Language.Translate('EDIT_INFO_MEDLEY_END_SET') + ' (' + FloatToStr(GetMedleyLength) + ' s)';
       end
       else
       begin
         if (MedleyNotes.isStart) then
-          Text[TextInfo].Text := Language.Translate('EDIT_INFO_MEDLEY_END_AFTER_MEDLEY_START')
+          EditorStatus := Language.Translate('EDIT_INFO_MEDLEY_END_AFTER_MEDLEY_START')
         else
-          Text[TextInfo].Text := Language.Translate('EDIT_INFO_SET_MEDLEY_START_FIRST');
+          EditorStatus := Language.Translate('EDIT_INFO_SET_MEDLEY_START_FIRST');
       end;
     end;
   end else
@@ -871,7 +1297,7 @@ begin
       begin
         MedleyNotes.isStart := false;
         CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].IsMedley := false;
-        Text[TextInfo].Text := Language.Translate('EDIT_INFO_MEDLEY_START_CLEARED');
+        EditorStatus := Language.Translate('EDIT_INFO_MEDLEY_START_CLEARED');
       end else
       begin
         CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].IsMedley := true;
@@ -880,7 +1306,7 @@ begin
           CurrentSong.Tracks[CurrentTrack].Lines[MedleyNotes.start.line].Notes[MedleyNotes.start.note].IsMedley := false;
         MedleyNotes.start.line := CurrentSong.Tracks[CurrentTrack].CurrentLine;
         MedleyNotes.start.note := CurrentNote[CurrentTrack];
-        Text[TextInfo].Text := Language.Translate('EDIT_INFO_MEDLEY_START_SET') + ifthen(MedleyNotes.isEnd, '(' + FloatToStr(GetMedleyLength) + ' s)', '');
+        EditorStatus := Language.Translate('EDIT_INFO_MEDLEY_START_SET') + ifthen(MedleyNotes.isEnd, '(' + FloatToStr(GetMedleyLength) + ' s)', '');
       end;
     end else
     begin
@@ -888,7 +1314,7 @@ begin
       MedleyNotes.isStart := true;
       MedleyNotes.start.line := CurrentSong.Tracks[CurrentTrack].CurrentLine;
       MedleyNotes.start.note := CurrentNote[CurrentTrack];
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_MEDLEY_START_SET');
+      EditorStatus := Language.Translate('EDIT_INFO_MEDLEY_START_SET');
     end;
   end;
 
@@ -903,13 +1329,13 @@ var
 begin
   if CurrentSong.Relative then
   begin
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_MEDLEY_RELATIVE_UNSUPPORTED');
+    EditorStatus := Language.Translate('EDIT_INFO_MEDLEY_RELATIVE_UNSUPPORTED');
     Exit;
   end;
 
   if CurrentSong.isDuet then
   begin
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_MEDLEY_DUET_UNSUPPORTED');
+    EditorStatus := Language.Translate('EDIT_INFO_MEDLEY_DUET_UNSUPPORTED');
     Exit;
   end;
 
@@ -930,11 +1356,11 @@ begin
 
         EditorLyrics[CurrentTrack].AddLine(CurrentTrack, CurrentSong.Tracks[CurrentTrack].CurrentLine);
         EditorLyrics[CurrentTrack].Selected := 0;
-        Text[TextInfo].Text := Language.Translate('EDIT_INFO_JUMPTO_MEDLEY_END') + ' (' + Language.Translate('EDIT_DURATION') + ' ' + FloatToStr(GetMedleyLength) + ' s)';
+        EditorStatus := Language.Translate('EDIT_INFO_JUMPTO_MEDLEY_END') + ' (' + Language.Translate('EDIT_DURATION') + ' ' + FloatToStr(GetMedleyLength) + ' s)';
       end;
     end
     else
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_NO_MEDLEY_END');
+      EditorStatus := Language.Translate('EDIT_INFO_NO_MEDLEY_END');
   end;
 
   if (SDL_ModState = 0) then
@@ -953,11 +1379,11 @@ begin
 
         EditorLyrics[CurrentTrack].AddLine(CurrentTrack, CurrentSong.Tracks[CurrentTrack].CurrentLine);
         EditorLyrics[CurrentTrack].Selected := 0;
-        Text[TextInfo].Text := Language.Translate('EDIT_INFO_JUMPTO_MEDLEY_START') + ' (' + Language.Translate('EDIT_DURATION') + ' ' + FloatToStr(GetMedleyLength) + ' s)';
+        EditorStatus := Language.Translate('EDIT_INFO_JUMPTO_MEDLEY_START') + ' (' + Language.Translate('EDIT_DURATION') + ' ' + FloatToStr(GetMedleyLength) + ' s)';
       end;
     end
     else
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_NO_MEDLEY_START');
+      EditorStatus := Language.Translate('EDIT_INFO_NO_MEDLEY_START');
   end;
 
   if (SDL_ModState = KMOD_LALT) then
@@ -983,11 +1409,11 @@ begin
 
         // play video in sync if visible
         if (fCurrentVideo <> nil) then UpdateVideoPosition(AudioPlayback.Position);
-        Text[TextInfo].Text := Language.Translate('EDIT_INFO_JUMPTO_MEDLEY_AND_PLAY');
+        EditorStatus := Language.Translate('EDIT_INFO_JUMPTO_MEDLEY_AND_PLAY');
       end;
     end
     else
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_NO_MEDLEY_SECTION');
+      EditorStatus := Language.Translate('EDIT_INFO_NO_MEDLEY_SECTION');
   end;
 
   Exit;
@@ -1028,7 +1454,7 @@ begin
     Exit;
 
   if IncludeClick and (NoteStart >= StartTime) and (NoteStart < StopTime) then
-    MidiOut.QueueClick(VolumeToVelocity(SelectsS[VolumeClickSlideId].SelectedOption), NoteStart);
+    MidiOut.QueueClick(VolumeToVelocity(EditorFieldIndex[VolumeClickSlideId]), NoteStart);
 
   if IncludeMidi then
   begin
@@ -1038,7 +1464,7 @@ begin
       NoteStop := StopTime;
     if NoteStop > NoteStart then
     begin
-      MidiOut.QueueNoteOn(MidiPitch, VolumeToVelocity(SelectsS[VolumeMidiSlideId].SelectedOption), NoteStart);
+      MidiOut.QueueNoteOn(MidiPitch, VolumeToVelocity(EditorFieldIndex[VolumeMidiSlideId]), NoteStart);
       MidiOut.QueueNoteOff(MidiPitch, NoteStop);
     end;
   end;
@@ -1164,7 +1590,7 @@ begin
   FreeAndNil(MidiOut);
 
   OnShow;
-  Text[TextInfo].Text := Language.Translate('EDIT_INFO_SONG_RELOADED');
+  EditorStatus := Language.Translate('EDIT_INFO_SONG_RELOADED');
 end;
 
       // SDLK_D: HandleDivideBPM; or ToggleDuet;
@@ -1176,7 +1602,7 @@ begin
     CopyToUndo;
     DivideBPM;
     ShowInteractiveBackground;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_DIVIDED_BPM');
+    EditorStatus := Language.Translate('EDIT_INFO_DIVIDED_BPM');
     Exit;
   end;
 end;
@@ -1190,12 +1616,12 @@ begin
     begin
       MakeSolo;
       FixTimings;
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_CONVERTED_TO_SOLO');
+      EditorStatus := Language.Translate('EDIT_INFO_CONVERTED_TO_SOLO');
     end
     else
     begin
       MakeDuet;
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_CONVERTED_TO_DUET');
+      EditorStatus := Language.Translate('EDIT_INFO_CONVERTED_TO_DUET');
     end;
   end;
 end;
@@ -1209,7 +1635,7 @@ begin
     CopyToUndo;
     MultiplyBPM;
     ShowInteractiveBackground;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_MULTIPLIED_BPM');
+    EditorStatus := Language.Translate('EDIT_INFO_MULTIPLIED_BPM');
     Exit;
   end;
 end;
@@ -1224,7 +1650,7 @@ begin
     LyricsCapitalize;
     EditorLyrics[CurrentTrack].AddLine(CurrentTrack, CurrentSong.Tracks[CurrentTrack].CurrentLine);
     EditorLyrics[CurrentTrack].Selected := CurrentNote[CurrentTrack];
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_CAPITALIZATION_CORRECTED');
+    EditorStatus := Language.Translate('EDIT_INFO_CAPITALIZATION_CORRECTED');
     end;
 
   // Correct spaces
@@ -1232,14 +1658,14 @@ begin
     begin
       CopyToUndo;
       LyricsCorrectSpaces;
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_SPACES_CORRECTED');
+      EditorStatus := Language.Translate('EDIT_INFO_SPACES_CORRECTED');
     end;
 
   // Copy sentence
   if SDL_ModState = KMOD_LCTRL then
   begin
     MarkCopySrc;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_MARKED_FOR_COPY');
+    EditorStatus := Language.Translate('EDIT_INFO_MARKED_FOR_COPY');
   end;
 
   Exit;
@@ -1250,7 +1676,7 @@ procedure TScreenEditSub.HandleVideo(SDL_ModState: word);
 begin
   if (SDL_ModState = 0) or (SDL_ModState = KMOD_LALT) then // play current line/remainder of song with video
   begin
-    Statics[BackgroundImageId].Visible := false;
+    EditorPreviewVisible := false;
     StopVideoPreview;
     AudioPlayback.Stop;
     PlayVideo := true;
@@ -1275,10 +1701,10 @@ begin
     AudioPlayback.Play;
     PlayScheduledCue;
     StartVideoPreview();
-    Statics[BackgroundImageId].Visible :=
+    EditorPreviewVisible :=
       (not Assigned(fCurrentVideo)) and
-      (not Statics[BackgroundImageId].Texture.IsEmpty);
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_PLAY_SONG');
+      ((Tex_PrevBackground <> nil) and not Tex_PrevBackground.IsEmpty);
+    EditorStatus := Language.Translate('EDIT_INFO_PLAY_SONG');
   end;
 end;
 
@@ -1289,7 +1715,7 @@ begin
   begin
     CopyToUndo;
     CopySentence(CopySrc.track, CopySrc.line, CurrentTrack, CurrentSong.Tracks[CurrentTrack].CurrentLine, true, true, true);
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_PASTE_SENTENCE');
+    EditorStatus := Language.Translate('EDIT_INFO_PASTE_SENTENCE');
   end;
 
   // paste text only (use minimum of src and dst length)
@@ -1297,7 +1723,7 @@ begin
   begin
     CopyToUndo;
     CopySentence(CopySrc.track, CopySrc.line, CurrentTrack, CurrentSong.Tracks[CurrentTrack].CurrentLine, true, false, false);
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_PASTE_TEXT');
+    EditorStatus := Language.Translate('EDIT_INFO_PASTE_TEXT');
   end;
 
   // paste notes only (use minimum of src and dst length)
@@ -1305,7 +1731,7 @@ begin
   begin
     CopyToUndo;
     CopySentence(CopySrc.track, CopySrc.line, CurrentTrack, CurrentSong.Tracks[CurrentTrack].CurrentLine, false, true, false);
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_PASTE_NOTES');
+    EditorStatus := Language.Translate('EDIT_INFO_PASTE_NOTES');
   end;
 
   // paste notes + text (use minimum of src and dst length)
@@ -1313,7 +1739,7 @@ begin
   begin
     CopyToUndo;
     CopySentence(CopySrc.track, CopySrc.line, CurrentTrack, CurrentSong.Tracks[CurrentTrack].CurrentLine, true, true, false);
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_PASTE_TEXT_NOTES');
+    EditorStatus := Language.Translate('EDIT_INFO_PASTE_TEXT_NOTES');
   end;
 
   GoldenRec.KillAll;
@@ -1326,7 +1752,7 @@ begin
   // Fixes timings between sentences
   CopyToUndo;
   FixTimings;
-  Text[TextInfo].Text := Language.Translate('EDIT_INFO_FIX_TIMINGS');
+  EditorStatus := Language.Translate('EDIT_INFO_FIX_TIMINGS');
   Exit;
 end;
 
@@ -1357,7 +1783,7 @@ begin
       AudioPlayback.Play;
       PlayScheduledCue;
     end;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_PLAY_SENTENCE_AUDIO');
+    EditorStatus := Language.Translate('EDIT_INFO_PLAY_SENTENCE_AUDIO');
   end
   else if SDL_ModState = KMOD_LSHIFT then
   begin
@@ -1373,7 +1799,7 @@ begin
       CurrentSong.Tracks[CurrentTrack].CurrentLine,
       true, false, false);
     PlayScheduledCue;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_PLAY_SENTENCE_MIDI');
+    EditorStatus := Language.Translate('EDIT_INFO_PLAY_SENTENCE_MIDI');
   end
   else if SDL_ModState = KMOD_LSHIFT or KMOD_LCTRL then
   begin
@@ -1394,7 +1820,7 @@ begin
     PlayStopTime := GetTimeFromBeat(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].EndBeat)+0;
     AudioPlayback.Play;
     PlayScheduledCue;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_PLAY_SENTENCE_AUDIO_AND_MIDI');
+    EditorStatus := Language.Translate('EDIT_INFO_PLAY_SENTENCE_AUDIO_AND_MIDI');
   end
   else if (SDL_ModState = KMOD_LALT) or
           (SDL_ModState = (KMOD_LSHIFT or KMOD_LALT)) or
@@ -1428,11 +1854,11 @@ begin
       PlayScheduledCue;
     end;
     if IncludeSynth and IncludeAudio then
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_PLAY_SENTENCE_AUDIO_AND_MIDI_ONWARDS')
+      EditorStatus := Language.Translate('EDIT_INFO_PLAY_SENTENCE_AUDIO_AND_MIDI_ONWARDS')
     else if IncludeSynth then
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_PLAY_SENTENCE_MIDI_ONWARDS')
+      EditorStatus := Language.Translate('EDIT_INFO_PLAY_SENTENCE_MIDI_ONWARDS')
     else
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_PLAY_SENTENCE_AUDIO_ONWARDS');
+      EditorStatus := Language.Translate('EDIT_INFO_PLAY_SENTENCE_AUDIO_ONWARDS');
   end;
   Exit;
 end;
@@ -1445,17 +1871,17 @@ begin
   if (CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType = ntGolden) then
   begin
     CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType := ntRapGolden;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTE_SET_TO_RAPGOLDEN');
+    EditorStatus := Language.Translate('EDIT_INFO_NOTE_SET_TO_RAPGOLDEN');
   end
   else if (CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType = ntRapGolden) then
   begin
     CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType := ntNormal;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTE_SET_TO_NORMAL');
+    EditorStatus := Language.Translate('EDIT_INFO_NOTE_SET_TO_NORMAL');
   end
   else
   begin
     CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType := ntGolden;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTE_SET_TO_GOLDEN');
+    EditorStatus := Language.Translate('EDIT_INFO_NOTE_SET_TO_GOLDEN');
   end;
   GoldenRec.KillAll;
   Exit;
@@ -1469,17 +1895,17 @@ begin
   if (CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType = ntFreestyle) then
   begin
     CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType := ntRap;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTE_SET_TO_RAP');
+    EditorStatus := Language.Translate('EDIT_INFO_NOTE_SET_TO_RAP');
   end
   else if (CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType = ntRap) then
   begin
     CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType := ntNormal;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTE_SET_TO_NORMAL');
+    EditorStatus := Language.Translate('EDIT_INFO_NOTE_SET_TO_NORMAL');
   end
   else
   begin
     CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType := ntFreestyle;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTE_SET_TO_FREESTYLE');
+    EditorStatus := Language.Translate('EDIT_INFO_NOTE_SET_TO_FREESTYLE');
   end;
   GoldenRec.KillAll;
 
@@ -1497,7 +1923,7 @@ begin
   begin
       CopyFromUndo;
       GoldenRec.KillAll;
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_UNDO');
+      EditorStatus := Language.Translate('EDIT_INFO_UNDO');
   end;
   ShowInteractiveBackground;
 end;
@@ -1526,7 +1952,7 @@ begin
   if CurrentNote[CurrentTrack] = CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].HighNote then
   begin
     Inc(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].EndBeat);
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTE_LENGTH_INCREASED');
+    EditorStatus := Language.Translate('EDIT_INFO_NOTE_LENGTH_INCREASED');
   end;
   GoldenRec.KillAll;
   ShowInteractiveBackground;
@@ -1541,17 +1967,17 @@ begin
   if SDL_ModState = 0 then
   begin
     CurrentSong.BPM := Round((CurrentSong.BPM * 5) + 1) / 5; // (1/20)
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_BPM_INCREASED_BY') + ' 0.05';
+    EditorStatus := Language.Translate('EDIT_INFO_BPM_INCREASED_BY') + ' 0.05';
   end;
   if SDL_ModState = KMOD_LSHIFT then
   begin
     CurrentSong.BPM := CurrentSong.BPM + 4; // (1/1)
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_BPM_INCREASED_BY') + ' 1.0';
+    EditorStatus := Language.Translate('EDIT_INFO_BPM_INCREASED_BY') + ' 1.0';
   end;
   if SDL_ModState = KMOD_LCTRL then
   begin
     CurrentSong.BPM := Round((CurrentSong.BPM * 25) + 1) / 25; // (1/100)
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_BPM_INCREASED_BY') + ' 0.01';
+    EditorStatus := Language.Translate('EDIT_INFO_BPM_INCREASED_BY') + ' 0.01';
   end;
 end;
 
@@ -1563,17 +1989,17 @@ begin
   if SDL_ModState = 0 then
   begin
     CurrentSong.BPM := Round((CurrentSong.BPM * 5) - 1) / 5;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_BPM_DECREASED_BY') + ' 0.05';
+    EditorStatus := Language.Translate('EDIT_INFO_BPM_DECREASED_BY') + ' 0.05';
   end;
   if SDL_ModState = KMOD_LSHIFT then
   begin
     CurrentSong.BPM := CurrentSong.BPM - 4;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_BPM_DECREASED_BY') + ' 1.0';
+    EditorStatus := Language.Translate('EDIT_INFO_BPM_DECREASED_BY') + ' 1.0';
   end;
   if SDL_ModState = KMOD_LCTRL then
   begin
     CurrentSong.BPM := Round((CurrentSong.BPM * 25) - 1) / 25;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_BPM_DECREASED_BY') + ' 0.01';
+    EditorStatus := Language.Translate('EDIT_INFO_BPM_DECREASED_BY') + ' 0.01';
   end;
 
   if CurrentSong.BPM < MIN_BPM then
@@ -1603,28 +2029,28 @@ begin
       CopyToUndo;
       // paste notes + text (use src length, ignore dst length)
       CopySentence(CopySrc.track, CopySrc.line + LineCount, DstTrack, DstLine + LineCount, true, true, true);
-      Text[TextInfo].Text := Format(Language.Translate('EDIT_INFO_PASTE_SENTENCE_N'), [NumLines]);
+      EditorStatus := Format(Language.Translate('EDIT_INFO_PASTE_SENTENCE_N'), [NumLines]);
     end;
     if SDL_ModState = KMOD_LCTRL + KMOD_LSHIFT then
     begin
       CopyToUndo;
       // paste text only (use minimum of src and dst length)
       CopySentence(CopySrc.track, CopySrc.line + LineCount, DstTrack, DstLine + LineCount, true, false, false);
-      Text[TextInfo].Text := Format(Language.Translate('EDIT_INFO_PASTE_TEXT_N'), [NumLines]);
+      EditorStatus := Format(Language.Translate('EDIT_INFO_PASTE_TEXT_N'), [NumLines]);
     end;
     if SDL_ModState = KMOD_LCTRL + KMOD_LALT then
     begin
       CopyToUndo;
       // paste notes only (use minimum of src and dst length)
       CopySentence(CopySrc.track, CopySrc.line + LineCount, DstTrack, DstLine + LineCount, false, true, false);
-      Text[TextInfo].Text := Format(Language.Translate('EDIT_INFO_PASTE_NOTES_N'), [NumLines]);
+      EditorStatus := Format(Language.Translate('EDIT_INFO_PASTE_NOTES_N'), [NumLines]);
     end;
     if SDL_ModState = KMOD_LCTRL + KMOD_LSHIFT + KMOD_LALT then
     begin
       CopyToUndo;
       // paste notes + text (use minimum of src and dst length)
       CopySentence(CopySrc.track, CopySrc.line + LineCount, DstTrack, DstLine + LineCount, true, true, false);
-      Text[TextInfo].Text := Format(Language.Translate('EDIT_INFO_PASTE_TEXT_NOTES_N'), [NumLines]);
+      EditorStatus := Format(Language.Translate('EDIT_INFO_PASTE_TEXT_NOTES_N'), [NumLines]);
     end;
   end;
   GoldenRec.KillAll;
@@ -1636,7 +2062,7 @@ begin
     CopyToUndo;
     CopySentences(CopySrc.track, CopySrc.line, CurrentTrack, CurrentSong.Tracks[CurrentTrack].CurrentLine, 4);
     GoldenRec.KillAll;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_COPY_4_SENTENCES');
+    EditorStatus := Language.Translate('EDIT_INFO_COPY_4_SENTENCES');
   end;}
 end;
 
@@ -1648,17 +2074,17 @@ begin
   if SDL_ModState = 0 then
   begin
     CurrentSong.VideoGAP := (round(CurrentSong.VideoGAP*100) - 1) / 100;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_VIDEOGAP_DECREASED_BY') + ' 0.01';
+    EditorStatus := Language.Translate('EDIT_INFO_VIDEOGAP_DECREASED_BY') + ' 0.01';
   end;
   if SDL_ModState = KMOD_LSHIFT then
   begin
     CurrentSong.VideoGAP := (round(CurrentSong.VideoGAP*100) - 10) / 100;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_VIDEOGAP_DECREASED_BY') + ' 0.1';
+    EditorStatus := Language.Translate('EDIT_INFO_VIDEOGAP_DECREASED_BY') + ' 0.1';
   end;
   if SDL_ModState = KMOD_LCTRL then
   begin
     CurrentSong.VideoGAP := (round(CurrentSong.VideoGAP*100) - 100) / 100;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_VIDEOGAP_DECREASED_BY') + ' 1.0';
+    EditorStatus := Language.Translate('EDIT_INFO_VIDEOGAP_DECREASED_BY') + ' 1.0';
   end;
 end;
 
@@ -1670,17 +2096,17 @@ begin
   if SDL_ModState = 0 then
   begin
     CurrentSong.VideoGAP := (round(CurrentSong.VideoGAP*100) + 1) / 100;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_VIDEOGAP_INCREASED_BY') + ' 0.01 s';
+    EditorStatus := Language.Translate('EDIT_INFO_VIDEOGAP_INCREASED_BY') + ' 0.01 s';
   end;
   if SDL_ModState = KMOD_LSHIFT then
   begin
     CurrentSong.VideoGAP := (round(CurrentSong.VideoGAP*100) + 10) / 100;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_VIDEOGAP_INCREASED_BY') + ' 0.1 s';
+    EditorStatus := Language.Translate('EDIT_INFO_VIDEOGAP_INCREASED_BY') + ' 0.1 s';
   end;
   if SDL_ModState = KMOD_LCTRL then
   begin
     CurrentSong.VideoGAP := (round(CurrentSong.VideoGAP*100) + 100) / 100;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_VIDEOGAP_INCREASED_BY') + ' 1.0 s';
+    EditorStatus := Language.Translate('EDIT_INFO_VIDEOGAP_INCREASED_BY') + ' 1.0 s';
   end;
 end;
 
@@ -1692,12 +2118,12 @@ begin
   if SDL_ModState = 0 then
   begin
     CurrentSong.GAP := CurrentSong.GAP - 10;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_GAP_DECREASED_BY') + ' 10 ms';
+    EditorStatus := Language.Translate('EDIT_INFO_GAP_DECREASED_BY') + ' 10 ms';
   end;
   if SDL_ModState = KMOD_LSHIFT then
   begin
     CurrentSong.GAP := CurrentSong.GAP - 1000;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_GAP_DECREASED_BY') + ' 1000 ms';
+    EditorStatus := Language.Translate('EDIT_INFO_GAP_DECREASED_BY') + ' 1000 ms';
   end;
 end;
 
@@ -1709,12 +2135,12 @@ begin
   if SDL_ModState = 0 then
   begin
     CurrentSong.GAP := CurrentSong.GAP + 10;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_GAP_INCREASED_BY') + ' 10 ms';
+    EditorStatus := Language.Translate('EDIT_INFO_GAP_INCREASED_BY') + ' 10 ms';
   end;
   if SDL_ModState = KMOD_LSHIFT then
   begin
     CurrentSong.GAP := CurrentSong.GAP + 1000;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_GAP_INCREASED_BY') + ' 1000 ms';
+    EditorStatus := Language.Translate('EDIT_INFO_GAP_INCREASED_BY') + ' 1000 ms';
   end;
 end;
 
@@ -1726,12 +2152,12 @@ begin
   if SDL_ModState = 0 then
   begin
     ChangeWholeTone(1);
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_ALL_TONES_INCREASED_BY_SEMITONE');
+    EditorStatus := Language.Translate('EDIT_INFO_ALL_TONES_INCREASED_BY_SEMITONE');
   end;
   if SDL_ModState = KMOD_LSHIFT then
   begin
     ChangeWholeTone(12);
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_ALL_TONES_INCREASED_BY_OCTAVE');
+    EditorStatus := Language.Translate('EDIT_INFO_ALL_TONES_INCREASED_BY_OCTAVE');
   end;
   GoldenRec.KillAll;
   ShowInteractiveBackground;
@@ -1745,12 +2171,12 @@ begin
   if SDL_ModState = 0 then
   begin
     ChangeWholeTone(-1);
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_ALL_TONES_DECREASED_BY_SEMITONE');
+    EditorStatus := Language.Translate('EDIT_INFO_ALL_TONES_DECREASED_BY_SEMITONE');
   end;
   if SDL_ModState = KMOD_LSHIFT then
   begin
     ChangeWholeTone(-12);
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_ALL_TONES_DECREASED_BY_OCTAVE');
+    EditorStatus := Language.Translate('EDIT_INFO_ALL_TONES_DECREASED_BY_OCTAVE');
   end;
   GoldenRec.KillAll;
   ShowInteractiveBackground;
@@ -1767,7 +2193,7 @@ begin
     if CurrentNote[CurrentTrack] > 0 then
     begin
       DivideSentence;
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_LINE_DIVIDED');
+      EditorStatus := Language.Translate('EDIT_INFO_LINE_DIVIDED');
     end;
     GoldenRec.KillAll;
   end;
@@ -1778,7 +2204,7 @@ begin
     if CurrentSong.Tracks[CurrentTrack].CurrentLine < CurrentSong.Tracks[CurrentTrack].High then
     begin
       JoinSentence;
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_LINES_JOINED');
+      EditorStatus := Language.Translate('EDIT_INFO_LINES_JOINED');
     end;
     GoldenRec.KillAll;
   end;
@@ -1789,7 +2215,7 @@ begin
     DivideNote(false);
     EditorLyrics[CurrentTrack].AddLine(CurrentTrack, CurrentSong.Tracks[CurrentTrack].CurrentLine);
     EditorLyrics[CurrentTrack].Selected := CurrentNote[CurrentTrack];
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTE_DIVIDED');
+    EditorStatus := Language.Translate('EDIT_INFO_NOTE_DIVIDED');
     GoldenRec.KillAll;
   end;
 ShowInteractiveBackground;
@@ -1858,14 +2284,14 @@ begin
   begin
     AudioPlayback.Position := NoteStart;
     AudioPlayback.Play;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_PLAY_NOTE_AUDIO');
+    EditorStatus := Language.Translate('EDIT_INFO_PLAY_NOTE_AUDIO');
   end;
 
   if PlayOneMidi then
   begin
     ScheduleCueNotePlayback(NoteStart, NoteStop, true, false, IncludeAudio);
     PlayScheduledCue;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_PLAY_NOTE_MIDI');
+    EditorStatus := Language.Translate('EDIT_INFO_PLAY_NOTE_MIDI');
   end;
 end;
 
@@ -2097,7 +2523,7 @@ begin
     begin
       CopyFromUndo;
       GoldenRec.KillAll;
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_UNDO');
+      EditorStatus := Language.Translate('EDIT_INFO_UNDO');
       ShowInteractiveBackground;
     end;
 
@@ -2174,7 +2600,7 @@ begin
         AudioPlayback.Play;
         PlayScheduledCue;
       end;
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_PLAY_SENTENCE');
+      EditorStatus := Language.Translate('EDIT_INFO_PLAY_SENTENCE');
     end;
 
     if (Interactions[Interaction].Typ = iButton) and (Interactions[Interaction].Num = PlayWithNoteButtonID) then
@@ -2196,7 +2622,7 @@ begin
       PlayStopTime := GetTimeFromBeat(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].EndBeat)+0;
       AudioPlayback.Play;
       PlayScheduledCue;
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_PLAY_SENTENCE');
+      EditorStatus := Language.Translate('EDIT_INFO_PLAY_SENTENCE');
     end;
 
     if (Interactions[Interaction].Typ = iButton) and (Interactions[Interaction].Num = PlayNoteButtonID) then
@@ -2214,7 +2640,7 @@ begin
         true, false, false);
       PlayScheduledCue;
 
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_PLAY_SENTENCE');
+      EditorStatus := Language.Translate('EDIT_INFO_PLAY_SENTENCE');
     end;
 
     for LineIndex := 0 to CurrentSong.Tracks[CurrentTrack].High do
@@ -2280,7 +2706,7 @@ begin
     // deletes current note
     CopyToUndo;
     DeleteNote;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_DELETE_NOTE');
+    EditorStatus := Language.Translate('EDIT_INFO_DELETE_NOTE');
     GoldenRec.KillAll;
     ShowInteractiveBackground;
   end;
@@ -2290,7 +2716,7 @@ begin
     // deletes current sentence
     CopyToUndo;
     DeleteSentence;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_DELETE_SENTENCE');
+    EditorStatus := Language.Translate('EDIT_INFO_DELETE_SENTENCE');
     GoldenRec.KillAll;
     ShowInteractiveBackground;
   end;
@@ -2305,7 +2731,7 @@ begin
 
   CopyToUndo;
   MoveTextToRight;
-  Text[TextInfo].Text := Language.Translate('EDIT_INFO_MOVE_TEXT_RIGHT');
+  EditorStatus := Language.Translate('EDIT_INFO_MOVE_TEXT_RIGHT');
 end;
 
       // SDLK_RIGHT: HandleMoveRight
@@ -2315,7 +2741,7 @@ begin
   if SDL_ModState = 0 then
   begin
     // clear debug text
-    Text[TextInfo].Text := '';
+    EditorStatus := '';
     AudioPlayback.Stop;
     PlaySentence := false;
     PlayOne := false;
@@ -2342,7 +2768,7 @@ begin
         Inc(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].StartBeat);
       end;
     end;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTE_SHORTENED_AT_START');
+    EditorStatus := Language.Translate('EDIT_INFO_NOTE_SHORTENED_AT_START');
     GoldenRec.KillAll;
   end;
 
@@ -2357,7 +2783,7 @@ begin
     end;
     if CurrentNote[CurrentTrack] = CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].HighNote then
       Inc(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].EndBeat);
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTE_SHIFTED_RIGHT');
+    EditorStatus := Language.Translate('EDIT_INFO_NOTE_SHIFTED_RIGHT');
     GoldenRec.KillAll;
   end;
 
@@ -2370,7 +2796,7 @@ begin
     begin
       Inc(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].EndBeat);
     end;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTE_LENGTHENED_AT_END');
+    EditorStatus := Language.Translate('EDIT_INFO_NOTE_LENGTHENED_AT_END');
     GoldenRec.KillAll;
   end;
 
@@ -2379,7 +2805,7 @@ begin
   begin
     CopyToUndo;
     MoveAllToEnd(Floor(1+(RepeatCounter/20)));
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTES_SHIFTED_RIGHT');
+    EditorStatus := Language.Translate('EDIT_INFO_NOTES_SHIFTED_RIGHT');
     GoldenRec.KillAll;
   end;
   ShowInteractiveBackground;
@@ -2392,7 +2818,7 @@ begin
   if SDL_ModState = 0 then
   begin
     // clear debug text
-    Text[TextInfo].Text := '';
+    EditorStatus := '';
     AudioPlayback.Stop();
     PlaySentence := false;
     PlayOne := false;
@@ -2415,7 +2841,7 @@ begin
     Inc(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Duration);
     if CurrentNote[CurrentTrack] = 0 then
       Dec(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].StartBeat);
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTE_LENGTHENED_AT_START');
+    EditorStatus := Language.Translate('EDIT_INFO_NOTE_LENGTHENED_AT_START');
     GoldenRec.KillAll;
   end;
 
@@ -2433,7 +2859,7 @@ begin
 
     if CurrentNote[CurrentTrack] = CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].HighNote then
       Dec(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].EndBeat);
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTE_SHIFTED_LEFT');
+    EditorStatus := Language.Translate('EDIT_INFO_NOTE_SHIFTED_LEFT');
     GoldenRec.KillAll;
   end;
 
@@ -2448,7 +2874,7 @@ begin
       begin
         Dec(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].EndBeat);
       end;
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTE_SHORTENED_AT_END');
+      EditorStatus := Language.Translate('EDIT_INFO_NOTE_SHORTENED_AT_END');
     end;
     GoldenRec.KillAll;
   end;
@@ -2458,7 +2884,7 @@ begin
   begin
     CopyToUndo;
     MoveAllToEnd(-Floor(1+(RepeatCounter/20)));
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTES_SHIFTED_LEFT');
+    EditorStatus := Language.Translate('EDIT_INFO_NOTES_SHIFTED_LEFT');
     GoldenRec.KillAll;
   end;
   ShowInteractiveBackground;
@@ -2471,7 +2897,7 @@ begin
   if SDL_ModState = 0 then
   begin
     // clear debug text
-    Text[TextInfo].Text := '';
+    EditorStatus := '';
     NextSentence;
   end;
 
@@ -2482,7 +2908,7 @@ begin
   begin
     CopyToUndo;
     TransposeNote(-1);
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTE_PITCH_DECREASED');
+    EditorStatus := Language.Translate('EDIT_INFO_NOTE_PITCH_DECREASED');
     GoldenRec.KillAll;
   end;
 
@@ -2494,9 +2920,9 @@ begin
   begin
     CopyToUndo;
     if (DuetCopyLine) then
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_LINE_COPIED_TO_TRACK') + ' ' + IntToStr((CurrentTrack + 1) mod EditorVoiceCount + 1)
+      EditorStatus := Language.Translate('EDIT_INFO_LINE_COPIED_TO_TRACK') + ' ' + IntToStr((CurrentTrack + 1) mod EditorVoiceCount + 1)
     else
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_LINE_NOT_COPIED');
+      EditorStatus := Language.Translate('EDIT_INFO_LINE_NOT_COPIED');
   end;
 
   // move line from first to second track
@@ -2504,9 +2930,9 @@ begin
   begin
     CopyToUndo;
     if (DuetMoveLine) then
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_LINE_MOVED_TO_TRACK') + ' ' + IntToStr((CurrentTrack + 1) mod EditorVoiceCount + 1)
+      EditorStatus := Language.Translate('EDIT_INFO_LINE_MOVED_TO_TRACK') + ' ' + IntToStr((CurrentTrack + 1) mod EditorVoiceCount + 1)
     else
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_LINE_NOT_MOVED');
+      EditorStatus := Language.Translate('EDIT_INFO_LINE_NOT_MOVED');
   end;
 
   ShowInteractiveBackground;
@@ -2519,7 +2945,7 @@ begin
   if SDL_ModState = 0 then
   begin
     // clear debug text
-    Text[TextInfo].Text := '';
+    EditorStatus := '';
     PreviousSentence;
   end;
 
@@ -2530,7 +2956,7 @@ begin
   begin
     CopyToUndo;
     TransposeNote(1);
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTE_PITCH_INCREASED');
+    EditorStatus := Language.Translate('EDIT_INFO_NOTE_PITCH_INCREASED');
     GoldenRec.KillAll;
   end;
 
@@ -2542,9 +2968,9 @@ begin
   begin
     CopyToUndo;
     if (DuetCopyLine(-1)) then
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_LINE_COPIED_TO_TRACK') + ' ' + IntToStr((CurrentTrack + EditorVoiceCount - 1) mod EditorVoiceCount + 1)
+      EditorStatus := Language.Translate('EDIT_INFO_LINE_COPIED_TO_TRACK') + ' ' + IntToStr((CurrentTrack + EditorVoiceCount - 1) mod EditorVoiceCount + 1)
     else
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_LINE_NOT_COPIED');
+      EditorStatus := Language.Translate('EDIT_INFO_LINE_NOT_COPIED');
   end;
 
   // move line from second to first track
@@ -2552,9 +2978,9 @@ begin
   begin
     CopyToUndo;
     if (DuetMoveLine(-1)) then
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_LINE_MOVED_TO_TRACK') + ' ' + IntToStr((CurrentTrack + EditorVoiceCount - 1) mod EditorVoiceCount + 1)
+      EditorStatus := Language.Translate('EDIT_INFO_LINE_MOVED_TO_TRACK') + ' ' + IntToStr((CurrentTrack + EditorVoiceCount - 1) mod EditorVoiceCount + 1)
     else
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_LINE_NOT_MOVED');
+      EditorStatus := Language.Translate('EDIT_INFO_LINE_NOT_MOVED');
   end;
 
   ShowInteractiveBackground;
@@ -2598,48 +3024,48 @@ begin
           if TitleEditMode then
           begin
             CurrentSong.Title := BackupEditText;
-            SelectsS[CurrentSlideId].TextOpt[0].Text := BackupEditText;
+            EditorFieldText[CurrentSlideId] := BackupEditText;
           end;
           if ArtistEditMode then
           begin
             CurrentSong.Artist := BackupEditText;
-            SelectsS[CurrentSlideId].TextOpt[0].Text := BackupEditText;
+            EditorFieldText[CurrentSlideId] := BackupEditText;
           end;
           if LanguageEditMode then
           begin
             CurrentSong.Language := ifthen(BackupEditText <> NOT_SET, BackupEditText, 'Unknown');
-            SelectsS[CurrentSlideId].TextOpt[0].Text := BackupEditText;
+            EditorFieldText[CurrentSlideId] := BackupEditText;
           end;
           if EditionEditMode then
           begin
             CurrentSong.Edition := ifthen(BackupEditText <> NOT_SET, BackupEditText, 'Unknown');
-            SelectsS[CurrentSlideId].TextOpt[0].Text := BackupEditText;
+            EditorFieldText[CurrentSlideId] := BackupEditText;
           end;
           if GenreEditMode then
           begin
             CurrentSong.Genre := ifthen(BackupEditText <> NOT_SET, BackupEditText, 'Unknown');
-            SelectsS[CurrentSlideId].TextOpt[0].Text := BackupEditText;
+            EditorFieldText[CurrentSlideId] := BackupEditText;
           end;
           if YearEditMode then
           begin
             if (TryStrToInt(BackupEditText, CurrentSong.Year)) then
-              SelectsS[CurrentSlideId].TextOpt[0].Text := IntToStr(CurrentSong.Year)
+              EditorFieldText[CurrentSlideId] := IntToStr(CurrentSong.Year)
             else
-              SelectsS[CurrentSlideId].TextOpt[0].Text := BackupEditText;
+              EditorFieldText[CurrentSlideId] := BackupEditText;
           end;
           if CreatorEditMode then
           begin
             CurrentSong.Creator := ifthen(BackupEditText <> NOT_SET, BackupEditText, '');
-            SelectsS[CurrentSlideId].TextOpt[0].Text := BackupEditText;
+            EditorFieldText[CurrentSlideId] := BackupEditText;
           end;
           if VoiceNameEditMode then
           begin
             CurrentSong.DuetNames[CurrentTrack] := ifthen(BackupEditText <> NOT_SET, BackupEditText, '');
-            SelectsS[CurrentSlideId].TextOpt[0].Text := BackupEditText;
+            EditorFieldText[CurrentSlideId] := BackupEditText;
           end;
           if VoiceCountEditMode then
           begin
-            SelectsS[CurrentSlideId].TextOpt[0].Text := BackupEditText;
+            EditorFieldText[CurrentSlideId] := BackupEditText;
           end;
           EditorLyrics[CurrentTrack].AddLine(CurrentTrack, CurrentSong.Tracks[CurrentTrack].CurrentLine);
           EditorLyrics[CurrentTrack].Selected := CurrentNote[CurrentTrack];
@@ -2665,83 +3091,99 @@ begin
           begin
             CurrentSong.Title := UTF8Copy(CurrentEditText, 1, TextPosition) + UTF8Copy(CurrentEditText, TextPosition+1, LengthUTF8(CurrentEditText)-TextPosition);
             TitleVal[0] := CurrentSong.Title;
-            SelectsS[CurrentSlideId].TextOpt[0].Text := CurrentEditText;
-            UpdateSelectSlideOptions(TitleSlideId,TitleVal,SlideTitleIndex);
-            SelectsS[TitleSlideId].TextOpt[0].Align := 0;
-            SelectsS[TitleSlideId].TextOpt[0].X := SelectsS[TitleSlideId].TextureSBG.X + 5;
+            EditorFieldText[CurrentSlideId] := CurrentEditText;
+            UpdateEditorFieldOptions(TitleSlideId,TitleVal,SlideTitleIndex);
+            if DocumentUI = nil then
+              SelectsS[TitleSlideId].TextOpt[0].Align := 0;
+            if DocumentUI = nil then
+              SelectsS[TitleSlideId].TextOpt[0].X := SelectsS[TitleSlideId].TextureSBG.X + 5;
           end;
           if ArtistEditMode then
           begin
             CurrentSong.Artist := UTF8Copy(CurrentEditText, 1, TextPosition) + UTF8Copy(CurrentEditText, TextPosition+1, LengthUTF8(CurrentEditText)-TextPosition);
             ArtistVal[0] := CurrentSong.Artist;
-            SelectsS[CurrentSlideId].TextOpt[0].Text := CurrentEditText;
-            UpdateSelectSlideOptions(ArtistSlideId,ArtistVal,SlideArtistIndex);
-            SelectsS[ArtistSlideId].TextOpt[0].Align := 0;
-            SelectsS[ArtistSlideId].TextOpt[0].X := SelectsS[ArtistSlideId].TextureSBG.X + 5;
+            EditorFieldText[CurrentSlideId] := CurrentEditText;
+            UpdateEditorFieldOptions(ArtistSlideId,ArtistVal,SlideArtistIndex);
+            if DocumentUI = nil then
+              SelectsS[ArtistSlideId].TextOpt[0].Align := 0;
+            if DocumentUI = nil then
+              SelectsS[ArtistSlideId].TextOpt[0].X := SelectsS[ArtistSlideId].TextureSBG.X + 5;
           end;
           if LanguageEditMode then
           begin
             CurrentSong.Language := UTF8Copy(CurrentEditText, 1, TextPosition) + UTF8Copy(CurrentEditText, TextPosition+1, LengthUTF8(CurrentEditText)-TextPosition);
             CurrentSong.Language := ifthen(CurrentSong.Language <> '', CurrentSong.Language, 'Unknown');
             LanguageVal[0] := ifthen(CurrentSong.Language <> 'Unknown', CurrentSong.Language, NOT_SET);
-            SelectsS[CurrentSlideId].TextOpt[0].Text := CurrentEditText;
-            UpdateSelectSlideOptions(LanguageSlideId,LanguageVal,SlideLanguageIndex);
-            SelectsS[LanguageSlideId].TextOpt[0].Align := 0;
-            SelectsS[LanguageSlideId].TextOpt[0].X := SelectsS[LanguageSlideId].TextureSBG.X + 5;
+            EditorFieldText[CurrentSlideId] := CurrentEditText;
+            UpdateEditorFieldOptions(LanguageSlideId,LanguageVal,SlideLanguageIndex);
+            if DocumentUI = nil then
+              SelectsS[LanguageSlideId].TextOpt[0].Align := 0;
+            if DocumentUI = nil then
+              SelectsS[LanguageSlideId].TextOpt[0].X := SelectsS[LanguageSlideId].TextureSBG.X + 5;
           end;
           if EditionEditMode then
           begin
             CurrentSong.Edition := UTF8Copy(CurrentEditText, 1, TextPosition) + UTF8Copy(CurrentEditText, TextPosition+1, LengthUTF8(CurrentEditText)-TextPosition);
             CurrentSong.Edition := ifthen(CurrentSong.Edition <> '', CurrentSong.Edition, 'Unknown');
             EditionVal[0] := ifthen(CurrentSong.Edition <> 'Unknown', CurrentSong.Edition, NOT_SET);
-            SelectsS[CurrentSlideId].TextOpt[0].Text := CurrentEditText;
-            UpdateSelectSlideOptions(EditionSlideId,EditionVal,SlideEditionIndex);
-            SelectsS[EditionSlideId].TextOpt[0].Align := 0;
-            SelectsS[EditionSlideId].TextOpt[0].X := SelectsS[EditionSlideId].TextureSBG.X + 5;
+            EditorFieldText[CurrentSlideId] := CurrentEditText;
+            UpdateEditorFieldOptions(EditionSlideId,EditionVal,SlideEditionIndex);
+            if DocumentUI = nil then
+              SelectsS[EditionSlideId].TextOpt[0].Align := 0;
+            if DocumentUI = nil then
+              SelectsS[EditionSlideId].TextOpt[0].X := SelectsS[EditionSlideId].TextureSBG.X + 5;
           end;
           if GenreEditMode then
           begin
             CurrentSong.Genre := UTF8Copy(CurrentEditText, 1, TextPosition) + UTF8Copy(CurrentEditText, TextPosition+1, LengthUTF8(CurrentEditText)-TextPosition);
             CurrentSong.Genre := ifthen(CurrentSong.Genre <> '', CurrentSong.Genre, 'Unknown');
             GenreVal[0] := ifthen(CurrentSong.Genre <> 'Unknown', CurrentSong.Genre, NOT_SET);
-            SelectsS[CurrentSlideId].TextOpt[0].Text := CurrentEditText;
-            UpdateSelectSlideOptions(GenreSlideId,GenreVal,SlideGenreIndex);
-            SelectsS[GenreSlideId].TextOpt[0].Align := 0;
-            SelectsS[GenreSlideId].TextOpt[0].X := SelectsS[GenreSlideId].TextureSBG.X + 5;
+            EditorFieldText[CurrentSlideId] := CurrentEditText;
+            UpdateEditorFieldOptions(GenreSlideId,GenreVal,SlideGenreIndex);
+            if DocumentUI = nil then
+              SelectsS[GenreSlideId].TextOpt[0].Align := 0;
+            if DocumentUI = nil then
+              SelectsS[GenreSlideId].TextOpt[0].X := SelectsS[GenreSlideId].TextureSBG.X + 5;
           end;
           if YearEditMode then
           begin
             if (TryStrToInt(UTF8Copy(CurrentEditText, 1, TextPosition) + UTF8Copy(CurrentEditText, TextPosition+1, LengthUTF8(CurrentEditText)-TextPosition), CurrentSong.Year)) and (CurrentSong.Year <= 2100) and (CurrentSong.Year >= 1900) then
             begin
               YearVal[0] := IntToStr(CurrentSong.Year);
-              SelectsS[CurrentSlideId].TextOpt[0].Text := CurrentEditText;
-              UpdateSelectSlideOptions(YearSlideId,YearVal,SlideYearIndex);
-              SelectsS[YearSlideId].TextOpt[0].Align := 0;
-              SelectsS[YearSlideId].TextOpt[0].X := SelectsS[YearSlideId].TextureSBG.X + 5;
+              EditorFieldText[CurrentSlideId] := CurrentEditText;
+              UpdateEditorFieldOptions(YearSlideId,YearVal,SlideYearIndex);
+              if DocumentUI = nil then
+                SelectsS[YearSlideId].TextOpt[0].Align := 0;
+              if DocumentUI = nil then
+                SelectsS[YearSlideId].TextOpt[0].X := SelectsS[YearSlideId].TextureSBG.X + 5;
             end
             else
             begin
               CurrentSong.Year := 0;
-              SelectsS[CurrentSlideId].TextOpt[0].Text := BackupEditText;
+              EditorFieldText[CurrentSlideId] := BackupEditText;
             end;
           end;
           if CreatorEditMode then
           begin
             CurrentSong.Creator := UTF8Copy(CurrentEditText, 1, TextPosition) + UTF8Copy(CurrentEditText, TextPosition+1, LengthUTF8(CurrentEditText)-TextPosition);
             CreatorVal[0] := ifthen(CurrentSong.Creator <> '', CurrentSong.Creator, NOT_SET);
-            SelectsS[CurrentSlideId].TextOpt[0].Text := CurrentEditText;
-            UpdateSelectSlideOptions(CreatorSlideId,CreatorVal,SlideCreatorIndex);
-            SelectsS[CreatorSlideId].TextOpt[0].Align := 0;
-            SelectsS[CreatorSlideId].TextOpt[0].X := SelectsS[CreatorSlideId].TextureSBG.X + 5;
+            EditorFieldText[CurrentSlideId] := CurrentEditText;
+            UpdateEditorFieldOptions(CreatorSlideId,CreatorVal,SlideCreatorIndex);
+            if DocumentUI = nil then
+              SelectsS[CreatorSlideId].TextOpt[0].Align := 0;
+            if DocumentUI = nil then
+              SelectsS[CreatorSlideId].TextOpt[0].X := SelectsS[CreatorSlideId].TextureSBG.X + 5;
           end;
           if VoiceNameEditMode then
           begin
             CurrentSong.DuetNames[CurrentTrack] := UTF8Copy(CurrentEditText, 1, TextPosition) + UTF8Copy(CurrentEditText, TextPosition+1, LengthUTF8(CurrentEditText)-TextPosition);
             MedleyStartVal[0] := ifthen(CurrentSong.DuetNames[CurrentTrack] <> '', CurrentSong.DuetNames[CurrentTrack], NOT_SET);
-            SelectsS[CurrentSlideId].TextOpt[0].Text := CurrentEditText;
-            UpdateSelectSlideOptions(MedleyStartSlideId,MedleyStartVal,SlideMedleyStartIndex);
-            SelectsS[MedleyStartSlideId].TextOpt[0].Align := 0;
-            SelectsS[MedleyStartSlideId].TextOpt[0].X := SelectsS[MedleyStartSlideId].TextureSBG.X + 5;
+            EditorFieldText[CurrentSlideId] := CurrentEditText;
+            UpdateEditorFieldOptions(MedleyStartSlideId,MedleyStartVal,SlideMedleyStartIndex);
+            if DocumentUI = nil then
+              SelectsS[MedleyStartSlideId].TextOpt[0].Align := 0;
+            if DocumentUI = nil then
+              SelectsS[MedleyStartSlideId].TextOpt[0].X := SelectsS[MedleyStartSlideId].TextureSBG.X + 5;
           end;
           if VoiceCountEditMode then
             SetVoiceCount(StrToIntDef(CurrentEditText, EditorVoiceCount));
@@ -2749,10 +3191,12 @@ begin
           begin
             CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Text := UTF8Copy(CurrentEditText, 1, TextPosition) + UTF8Copy(CurrentEditText, TextPosition+1, LengthUTF8(CurrentEditText)-TextPosition);
             LyricVal[0] := CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Text;
-            SelectsS[CurrentSlideId].TextOpt[0].Text := CurrentEditText;
-            UpdateSelectSlideOptions(LyricSlideId,LyricVal,SlideLyricIndex);
-            SelectsS[LyricSlideId].TextOpt[0].Align := 0;
-            SelectsS[LyricSlideId].TextOpt[0].X := SelectsS[LyricSlideId].TextureSBG.X + 5;
+            EditorFieldText[CurrentSlideId] := CurrentEditText;
+            UpdateEditorFieldOptions(LyricSlideId,LyricVal,SlideLyricIndex);
+            if DocumentUI = nil then
+              SelectsS[LyricSlideId].TextOpt[0].Align := 0;
+            if DocumentUI = nil then
+              SelectsS[LyricSlideId].TextOpt[0].X := SelectsS[LyricSlideId].TextureSBG.X + 5;
             EditorLyrics[CurrentTrack].AddLine(CurrentTrack, CurrentSong.Tracks[CurrentTrack].CurrentLine);
           end;
           EditorLyrics[CurrentTrack].Selected := CurrentNote[CurrentTrack];
@@ -2909,7 +3353,7 @@ begin
       SDLK_ESCAPE:
         begin
           // exit BPM edit mode, restore previous BPM value
-          SelectsS[CurrentSlideId].TextOpt[0].Text := FloatToStr(CurrentSong.BPM / 4);
+          EditorFieldText[CurrentSlideId] := FloatToStr(CurrentSong.BPM / 4);
           BPMEditMode := false;
           StopTextInput;
           editLengthText := 0;
@@ -2927,14 +3371,16 @@ begin
 
             BPMVal[0] := FloatToStr(NewBPM / 4);
             ChangeBPM(NewBPM);
-            SelectsS[CurrentSlideId].TextOpt[0].Text := BPMVal[0];
-            UpdateSelectSlideOptions(BPMSlideId,BPMVal,SlideBPMIndex);
-            SelectsS[BPMSlideId].TextOpt[0].Align := 0;
-            SelectsS[BPMSlideId].TextOpt[0].X := SelectsS[BPMSlideId].TextureSBG.X + 5;
+            EditorFieldText[CurrentSlideId] := BPMVal[0];
+            UpdateEditorFieldOptions(BPMSlideId,BPMVal,SlideBPMIndex);
+            if DocumentUI = nil then
+              SelectsS[BPMSlideId].TextOpt[0].Align := 0;
+            if DocumentUI = nil then
+              SelectsS[BPMSlideId].TextOpt[0].X := SelectsS[BPMSlideId].TextureSBG.X + 5;
           end
           else
           begin
-            SelectsS[CurrentSlideId].TextOpt[0].Text := BackupEditText;
+            EditorFieldText[CurrentSlideId] := BackupEditText;
           end;
 
           BPMEditMode := false;
@@ -3036,7 +3482,7 @@ begin
   for Line := 0 to High(CurrentSong.Tracks[Voice].Lines) do
     if CurrentSong.Tracks[Voice].Lines[Line].StartBeat <= Beat then TargetLine := Line;
   GoToLineAndBeat(Voice, TargetLine, Beat);
-  Text[TextInfo].Text := Language.Translate('EDIT_INFO_SWITCHED_TO_TRACK') + ' P' + IntToStr(CurrentTrack + 1);
+  EditorStatus := Language.Translate('EDIT_INFO_SWITCHED_TO_TRACK') + ' P' + IntToStr(CurrentTrack + 1);
 end;
 
 procedure TScreenEditSub.SetVoiceCount(Count: integer);
@@ -3097,8 +3543,8 @@ begin
     EditorLyrics[I] := TEditorLyrics.Create;
     if I > 0 then
     begin
-      EditorLyrics[I].X := Theme.EditSub.TextSentence.X;
-      EditorLyrics[I].Y := Theme.EditSub.TextSentence.Y;
+      EditorLyrics[I].X := LyricsSurface.X + LyricsSurface.W / 2;
+      EditorLyrics[I].Y := LyricsSurface.Y;
       EditorLyrics[I].Align := Theme.EditSub.TextSentence.Align;
       EditorLyrics[I].Size := EditorLyrics[0].Size;
       EditorLyrics[I].ColR := EditorLyrics[0].ColR;
@@ -3196,6 +3642,8 @@ var
   ToneDelta: Integer;
   SDL_ModState: word;
 begin
+  if (DocumentUI <> nil) and PrepareDocumentMouse(MouseButton, BtnDown, X, Y) then
+    Exit(true);
   // transfer mousecords to the 800x600 raster we use to draw
   X := Round((X / (ScreenW / Screens)) * RenderW);
   if (X > RenderW) then
@@ -3217,8 +3665,8 @@ begin
   if BtnDown and (MouseButton = SDL_BUTTON_LEFT) then
   begin
     if EditorLyrics[CurrentTrack].GetCursorFromPoint(CurrentX, CurrentY,
-      Theme.EditSub.SentenceBackground.Y,
-      Theme.EditSub.SentenceBackground.Y + Theme.EditSub.SentenceBackground.H,
+      LyricsSurface.Y,
+      LyricsSurface.Y + LyricsSurface.H,
       CursorWordIndex, CursorCharIndex) then
     begin
       CancelPendingNoteClick;
@@ -3250,13 +3698,13 @@ begin
     end;
   end;
 
-  nBut := InteractAt(X, Y);
+  nBut := EditorInteractAt(X, Y);
   NoteIndex := GetInteractiveNoteIndex(nBut);
 
   if nBut >= 0 then
   begin
     //select on mouse-over
-    if nBut <> Interaction then
+    if BtnDown and (MouseButton <> 0) and (nBut <> Interaction) then
       SetInteraction(nBut);
   end;
 
@@ -3272,7 +3720,7 @@ begin
     begin
       CopyFromUndo;
       GoldenRec.KillAll;
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_UNDO');
+      EditorStatus := Language.Translate('EDIT_INFO_UNDO');
       ShowInteractiveBackground;
       Exit;
     end;
@@ -3355,12 +3803,12 @@ begin
       ResizeNoteRight := false;
       if (Interactions[nBut].Typ = iButton) then
       begin
-        if CurrentX < Button[Interactions[nBut].Num].X + Button[Interactions[nBut].Num].W * 0.2 then
+        if CurrentX < EditorHit(Interactions[nBut].Num).X + EditorHit(Interactions[nBut].Num).W * 0.2 then
         begin
           ResizeNoteLeft := true;
           MoveNote := false;
         end
-        else if CurrentX > Button[Interactions[nBut].Num].X + Button[Interactions[nBut].Num].W - Button[Interactions[nBut].Num].W * 0.2 then
+        else if CurrentX > EditorHit(Interactions[nBut].Num).X + EditorHit(Interactions[nBut].Num).W - EditorHit(Interactions[nBut].Num).W * 0.2 then
         begin
           ResizeNoteRight := true;
           MoveNote := false;
@@ -3404,10 +3852,10 @@ begin
 
       if DragHasMoved then
       begin
-        TempR := 720 / (CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].EndBeat - CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[0].StartBeat);
+        TempR := (NotesSurface.W - 2 * NotesInset) / (CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].EndBeat - CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[0].StartBeat);
         BeatDelta := Round((CurrentX - LastX) / TempR);
         if MoveNote and (LastPressedMouseType <> SDL_BUTTON_RIGHT) then
-          ToneDelta := -Round((CurrentY - MouseDownY) / (LineSpacing / 2)) - DragAppliedToneDelta
+          ToneDelta := -Round((CurrentY - MouseDownY) / (NoteLineSpacing / 2)) - DragAppliedToneDelta
         else
           ToneDelta := 0;
 
@@ -3421,7 +3869,7 @@ begin
 
           if BeatDelta <> 0 then
           begin
-            NoteXBefore := Theme.EditSub.NotesBackground.X + NotesSkipX +
+            NoteXBefore := NotesSurface.X + NotesInset +
               (CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].StartBeat -
               CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[0].StartBeat) * TempR + 0.5;
             if ResizeNoteRight then
@@ -3470,8 +3918,8 @@ begin
               end;
             end;
 
-            TempR := 720 / (CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].EndBeat - CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[0].StartBeat);
-            NoteXAfter := Theme.EditSub.NotesBackground.X + NotesSkipX +
+            TempR := (NotesSurface.W - 2 * NotesInset) / (CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].EndBeat - CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[0].StartBeat);
+            NoteXAfter := NotesSurface.X + NotesInset +
               (CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].StartBeat -
               CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[0].StartBeat) * TempR + 0.5;
             if ResizeNoteRight then
@@ -3509,7 +3957,7 @@ begin
       //click button or SelectS
       if (Interactions[nBut].Typ = iSelectS) then
       begin
-        Action := SelectsS[Interactions[nBut].Num].OnClick(X, Y);
+        Action := EditorFieldClick(Interactions[nBut].Num, X, Y);
       end
       else
         Action := maReturn;
@@ -3536,96 +3984,88 @@ begin
   end;
 
   // changed cover
-  if ((CoverSlideId = Interactions[nBut].Num) and (Action = maLeft) and (SelectsS[Interactions[nBut].Num].SelectedOption > 0)) then
+  if ((CoverSlideId = Interactions[nBut].Num) and (Action = maLeft) and (EditorFieldIndex[Interactions[nBut].Num] > 0)) then
   begin
     CopyToUndo;
-    SelectsS[Interactions[nBut].Num].SelectedOption := SelectsS[Interactions[nBut].Num].SelectedOption -1;
-    CurrentSong.Cover := Path(SelectsS[Interactions[nBut].Num].TextOptT[SelectsS[Interactions[nBut].Num].SelectedOption]);
+    EditorFieldIndex[Interactions[nBut].Num] := EditorFieldIndex[Interactions[nBut].Num] -1;
+    CurrentSong.Cover := Path(EditorFieldOptions[Interactions[nBut].Num][EditorFieldIndex[Interactions[nBut].Num]]);
   end;
 
-  if ((CoverSlideId = Interactions[nBut].Num) and (Action = maRight) and (SelectsS[Interactions[nBut].Num].SelectedOption < Length(SelectsS[Interactions[nBut].Num].TextOptT)-1)) then
+  if ((CoverSlideId = Interactions[nBut].Num) and (Action = maRight) and (EditorFieldIndex[Interactions[nBut].Num] < Length(EditorFieldOptions[Interactions[nBut].Num])-1)) then
   begin
     CopyToUndo;
-    SelectsS[Interactions[nBut].Num].SelectedOption := SelectsS[Interactions[nBut].Num].SelectedOption +1;
-    CurrentSong.Cover := Path(SelectsS[Interactions[nBut].Num].TextOptT[SelectsS[Interactions[nBut].Num].SelectedOption]);
+    EditorFieldIndex[Interactions[nBut].Num] := EditorFieldIndex[Interactions[nBut].Num] +1;
+    CurrentSong.Cover := Path(EditorFieldOptions[Interactions[nBut].Num][EditorFieldIndex[Interactions[nBut].Num]]);
   end;
 
   // changed background picture
-  if ((BackgroundSlideId = Interactions[nBut].Num) and (Action = maLeft) and (SelectsS[Interactions[nBut].Num].SelectedOption > 0)) then
+  if ((BackgroundSlideId = Interactions[nBut].Num) and (Action = maLeft) and (EditorFieldIndex[Interactions[nBut].Num] > 0)) then
   begin
     CopyToUndo;
-    SelectsS[Interactions[nBut].Num].SelectedOption := SelectsS[Interactions[nBut].Num].SelectedOption -1;
-    CurrentSong.Background := Path(SelectsS[Interactions[nBut].Num].TextOptT[SelectsS[Interactions[nBut].Num].SelectedOption]);
+    EditorFieldIndex[Interactions[nBut].Num] := EditorFieldIndex[Interactions[nBut].Num] -1;
+    CurrentSong.Background := Path(EditorFieldOptions[Interactions[nBut].Num][EditorFieldIndex[Interactions[nBut].Num]]);
     Tex_PrevBackground.Free;
     Tex_PrevBackground := Renderer.LoadTexture(CurrentSong.Path.Append(CurrentSong.Background));
-    Statics[BackgroundImageId].Texture.Free;
-    Statics[BackgroundImageId].Texture := Tex_PrevBackground.Clone;
-    Statics[BackgroundImageId].Texture.X := theme.EditSub.BackgroundImage.X;
-    Statics[BackgroundImageId].Texture.Y := theme.EditSub.BackgroundImage.Y;
-    Statics[BackgroundImageId].Texture.W := theme.EditSub.BackgroundImage.W;
-    Statics[BackgroundImageId].Texture.H := theme.EditSub.BackgroundImage.H;
-    Statics[BackgroundImageId].Visible := false;
+
+    UpdateEditorPreview;
+    EditorPreviewVisible := false;
   end;
 
-  if ((BackgroundSlideId = Interactions[nBut].Num) and (Action = maRight) and (SelectsS[Interactions[nBut].Num].SelectedOption < Length(SelectsS[Interactions[nBut].Num].TextOptT)-1)) then
+  if ((BackgroundSlideId = Interactions[nBut].Num) and (Action = maRight) and (EditorFieldIndex[Interactions[nBut].Num] < Length(EditorFieldOptions[Interactions[nBut].Num])-1)) then
   begin
     CopyToUndo;
-    SelectsS[Interactions[nBut].Num].SelectedOption := SelectsS[Interactions[nBut].Num].SelectedOption +1;
-    CurrentSong.Background := Path(SelectsS[Interactions[nBut].Num].TextOptT[SelectsS[Interactions[nBut].Num].SelectedOption]);
+    EditorFieldIndex[Interactions[nBut].Num] := EditorFieldIndex[Interactions[nBut].Num] +1;
+    CurrentSong.Background := Path(EditorFieldOptions[Interactions[nBut].Num][EditorFieldIndex[Interactions[nBut].Num]]);
     Tex_PrevBackground.Free;
     Tex_PrevBackground := Renderer.LoadTexture(CurrentSong.Path.Append(CurrentSong.Background));
-    Statics[BackgroundImageId].Texture.Free;
-    Statics[BackgroundImageId].Texture := Tex_PrevBackground.Clone;
-    Statics[BackgroundImageId].Texture.X := theme.EditSub.BackgroundImage.X;
-    Statics[BackgroundImageId].Texture.Y := theme.EditSub.BackgroundImage.Y;
-    Statics[BackgroundImageId].Texture.W := theme.EditSub.BackgroundImage.W;
-    Statics[BackgroundImageId].Texture.H := theme.EditSub.BackgroundImage.H;
-    Statics[BackgroundImageId].Visible := false;
+
+    UpdateEditorPreview;
+    EditorPreviewVisible := false;
   end;
 
   // changed video
-  if ((VideoSlideId = Interactions[nBut].Num) and (Action = maLeft) and (SelectsS[Interactions[nBut].Num].SelectedOption > 0)) then
+  if ((VideoSlideId = Interactions[nBut].Num) and (Action = maLeft) and (EditorFieldIndex[Interactions[nBut].Num] > 0)) then
   begin
     CopyToUndo;
-    SelectsS[Interactions[nBut].Num].SelectedOption := SelectsS[Interactions[nBut].Num].SelectedOption -1;
-    CurrentSong.Video := Path(SelectsS[Interactions[nBut].Num].TextOptT[SelectsS[Interactions[nBut].Num].SelectedOption]);
+    EditorFieldIndex[Interactions[nBut].Num] := EditorFieldIndex[Interactions[nBut].Num] -1;
+    CurrentSong.Video := Path(EditorFieldOptions[Interactions[nBut].Num][EditorFieldIndex[Interactions[nBut].Num]]);
   end;
 
-  if ((VideoSlideId = Interactions[nBut].Num) and (Action = maRight) and (SelectsS[Interactions[nBut].Num].SelectedOption < Length(SelectsS[Interactions[nBut].Num].TextOptT)-1)) then
+  if ((VideoSlideId = Interactions[nBut].Num) and (Action = maRight) and (EditorFieldIndex[Interactions[nBut].Num] < Length(EditorFieldOptions[Interactions[nBut].Num])-1)) then
   begin
     CopyToUndo;
-    SelectsS[Interactions[nBut].Num].SelectedOption := SelectsS[Interactions[nBut].Num].SelectedOption +1;
-    CurrentSong.Video := Path(SelectsS[Interactions[nBut].Num].TextOptT[SelectsS[Interactions[nBut].Num].SelectedOption]);
+    EditorFieldIndex[Interactions[nBut].Num] := EditorFieldIndex[Interactions[nBut].Num] +1;
+    CurrentSong.Video := Path(EditorFieldOptions[Interactions[nBut].Num][EditorFieldIndex[Interactions[nBut].Num]]);
   end;
 
-  if ((Mp3SlideId = Interactions[nBut].Num) and (Action = maLeft) and (SelectsS[Interactions[nBut].Num].SelectedOption > 0)) then
+  if ((Mp3SlideId = Interactions[nBut].Num) and (Action = maLeft) and (EditorFieldIndex[Interactions[nBut].Num] > 0)) then
   begin
     CopyToUndo;
-    SelectsS[Interactions[nBut].Num].SelectedOption := SelectsS[Interactions[nBut].Num].SelectedOption -1;
-    CurrentSong.Audio := Path(SelectsS[Interactions[nBut].Num].TextOptT[SelectsS[Interactions[nBut].Num].SelectedOption]);
+    EditorFieldIndex[Interactions[nBut].Num] := EditorFieldIndex[Interactions[nBut].Num] -1;
+    CurrentSong.Audio := Path(EditorFieldOptions[Interactions[nBut].Num][EditorFieldIndex[Interactions[nBut].Num]]);
     AudioPlayback.Close;
     AudioPlayback.Open(CurrentSong.Path.Append(CurrentSong.Audio),nil);
   end;
 
-  if ((Mp3SlideId = Interactions[nBut].Num) and (Action = maRight) and (SelectsS[Interactions[nBut].Num].SelectedOption < Length(SelectsS[Interactions[nBut].Num].TextOptT)-1)) then
+  if ((Mp3SlideId = Interactions[nBut].Num) and (Action = maRight) and (EditorFieldIndex[Interactions[nBut].Num] < Length(EditorFieldOptions[Interactions[nBut].Num])-1)) then
   begin
     CopyToUndo;
-    SelectsS[Interactions[nBut].Num].SelectedOption := SelectsS[Interactions[nBut].Num].SelectedOption +1;
-    CurrentSong.Audio := Path(SelectsS[Interactions[nBut].Num].TextOptT[SelectsS[Interactions[nBut].Num].SelectedOption]);
+    EditorFieldIndex[Interactions[nBut].Num] := EditorFieldIndex[Interactions[nBut].Num] +1;
+    CurrentSong.Audio := Path(EditorFieldOptions[Interactions[nBut].Num][EditorFieldIndex[Interactions[nBut].Num]]);
     AudioPlayback.Close();
     AudioPlayback.Open(CurrentSong.Path.Append(CurrentSong.Audio),nil);
   end;
 
   if (((VolumeAudioSlideId = Interactions[nBut].Num) or (VolumeMidiSlideId = Interactions[nBut].Num) or (VolumeClickSlideId = Interactions[nBut].Num))
-    and (Action = maLeft) and (SelectsS[Interactions[nBut].Num].SelectedOption > 0)) then
+    and (Action = maLeft) and (EditorFieldIndex[Interactions[nBut].Num] > 0)) then
   begin
-    SelectsS[Interactions[nBut].Num].SelectedOption := SelectsS[Interactions[nBut].Num].SelectedOption -1;
+    EditorFieldIndex[Interactions[nBut].Num] := EditorFieldIndex[Interactions[nBut].Num] -1;
   end;
 
   if (((VolumeAudioSlideId = Interactions[nBut].Num) or (VolumeMidiSlideId = Interactions[nBut].Num) or (VolumeClickSlideId = Interactions[nBut].Num))
-    and (Action = maRight) and (SelectsS[Interactions[nBut].Num].SelectedOption < Length(SelectsS[Interactions[nBut].Num].TextOptT)-1)) then
+    and (Action = maRight) and (EditorFieldIndex[Interactions[nBut].Num] < Length(EditorFieldOptions[Interactions[nBut].Num])-1)) then
   begin
-    SelectsS[Interactions[nBut].Num].SelectedOption := SelectsS[Interactions[nBut].Num].SelectedOption +1;
+    EditorFieldIndex[Interactions[nBut].Num] := EditorFieldIndex[Interactions[nBut].Num] +1;
   end;
 
   if (VolumeAudioSlideId = Interactions[nBut].Num) and (VolumeAudioIndex <> PrevAudioIndex) then
@@ -4200,12 +4640,12 @@ begin
   if NoteDuration <= 1 then
     Exit;
 
-  TempR := 720 / (CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].EndBeat - CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[0].StartBeat);
+  TempR := (NotesSurface.W - 2 * NotesInset) / (CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].EndBeat - CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[0].StartBeat);
 
   if (doubleclick) and
      (CurrentNote[CurrentTrack] >= 0) and
      (CurrentNote[CurrentTrack] <= High(TransparentNoteButtonId)) then
-      CutPosition := Round((CurrentX - Button[TransparentNoteButtonId[CurrentNote[CurrentTrack]]].X) / TempR)
+      CutPosition := Round((CurrentX - EditorHit(TransparentNoteButtonId[CurrentNote[CurrentTrack]]).X) / TempR)
   else
       CutPosition := NoteDuration div 2;
 
@@ -4267,7 +4707,7 @@ begin
     else
     if (TextPosition >= 0) and (TextPosition <= LengthUTF8(Notes[CurrentNote[CurrentTrack]].Text)) then
     begin
-      SourceText := SelectsS[LyricSlideId].TextOpt[0].Text;
+      SourceText := EditorFieldText[LyricSlideId];
       SourceTextLen := LengthUTF8(SourceText);
       Notes[CurrentNote[CurrentTrack]+1].Text := UTF8Copy(SourceText, TextPosition + 2, SourceTextLen);
       Notes[CurrentNote[CurrentTrack]].Text := UTF8Copy(SourceText, 1, TextPosition);
@@ -4297,7 +4737,7 @@ begin
           Notes[CurrentNote[CurrentTrack]+1].Text := '~' + Notes[CurrentNote[CurrentTrack]+1].Text;
       end;
 
-      SelectsS[LyricSlideId].TextOpt[0].Text := Notes[CurrentNote[CurrentTrack]].Text;
+      EditorFieldText[LyricSlideId] := Notes[CurrentNote[CurrentTrack]].Text;
       TextPosition := -1;
     end
     else
@@ -4821,13 +5261,13 @@ begin
   UndoHeader[CurrentUndoLines].Year := CurrentSong.Year;
   UndoHeader[CurrentUndoLines].Creator := CurrentSong.Creator;
   UndoHeader[CurrentUndoLines].Mp3 := CurrentSong.Audio;
-  UndoHeader[CurrentUndoLines].Mp3Id := SelectsS[Mp3SlideId].SelectedOption;
+  UndoHeader[CurrentUndoLines].Mp3Id := EditorFieldIndex[Mp3SlideId];
   UndoHeader[CurrentUndoLines].Cover := CurrentSong.Cover;
-  UndoHeader[CurrentUndoLines].CoverId := SelectsS[CoverSlideId].SelectedOption;
+  UndoHeader[CurrentUndoLines].CoverId := EditorFieldIndex[CoverSlideId];
   UndoHeader[CurrentUndoLines].Background := CurrentSong.Background;
-  UndoHeader[CurrentUndoLines].BackgroundId := SelectsS[BackgroundSlideId].SelectedOption;
+  UndoHeader[CurrentUndoLines].BackgroundId := EditorFieldIndex[BackgroundSlideId];
   UndoHeader[CurrentUndoLines].Video := CurrentSong.Video;
-  UndoHeader[CurrentUndoLines].VideoId := SelectsS[VideoSlideId].SelectedOption;
+  UndoHeader[CurrentUndoLines].VideoId := EditorFieldIndex[VideoSlideId];
   UndoHeader[CurrentUndoLines].VideoGAP := CurrentSong.VideoGAP;
   UndoHeader[CurrentUndoLines].BPM := CurrentSong.BPM;
   UndoHeader[CurrentUndoLines].GAP  := CurrentSong.GAP;
@@ -4973,13 +5413,13 @@ begin
   CurrentSong.Year         := Undoheader[CurrentUndoLines].Year;
   CurrentSong.Creator      := Undoheader[CurrentUndoLines].Creator;
   CurrentSong.Audio          := Undoheader[CurrentUndoLines].Mp3;
-  SelectsS[Mp3SlideId].SelectedOption := Undoheader[CurrentUndoLines].Mp3Id;
+  EditorFieldIndex[Mp3SlideId] := Undoheader[CurrentUndoLines].Mp3Id;
   CurrentSong.Cover        := Undoheader[CurrentUndoLines].Cover;
-  SelectsS[CoverSlideId].SelectedOption := Undoheader[CurrentUndoLines].CoverId;
+  EditorFieldIndex[CoverSlideId] := Undoheader[CurrentUndoLines].CoverId;
   CurrentSong.Background   := Undoheader[CurrentUndoLines].Background;
-  SelectsS[BackgroundSlideId].SelectedOption := Undoheader[CurrentUndoLines].BackgroundId;
+  EditorFieldIndex[BackgroundSlideId] := Undoheader[CurrentUndoLines].BackgroundId;
   CurrentSong.Video        := Undoheader[CurrentUndoLines].Video;
-  SelectsS[VideoSlideId].SelectedOption := Undoheader[CurrentUndoLines].VideoId;
+  EditorFieldIndex[VideoSlideId] := Undoheader[CurrentUndoLines].VideoId;
   CurrentSong.VideoGAP     := Undoheader[CurrentUndoLines].VideoGAP;
   CurrentSong.BPM := Undoheader[CurrentUndoLines].BPM;
   CurrentSong.GAP          := Undoheader[CurrentUndoLines].GAP;
@@ -5035,17 +5475,17 @@ begin
   SetLength(UndoStateNote, high(UndoStateNote));
   SetLength(UndoHeader, high(UndoLines));
   SetLength(UndoLines, high(UndoLines));
-  Text[TextInfo].Text := Language.Translate('EDIT_INFO_UNDO');
+  EditorStatus := Language.Translate('EDIT_INFO_UNDO');
 
   // to refresh all headers
-  SelectsS[TitleSlideId].TextOpt[0].Text    := CurrentSong.Title;
-  SelectsS[ArtistSlideId].TextOpt[0].Text   := CurrentSong.Artist;
-  SelectsS[LanguageSlideId].TextOpt[0].Text := CurrentSong.Language;
-  SelectsS[EditionSlideId].TextOpt[0].Text  := CurrentSong.Edition;
-  SelectsS[GenreSlideId].TextOpt[0].Text    := CurrentSong.Genre;
-  SelectsS[YearSlideId].TextOpt[0].Text     := IntToStr(CurrentSong.Year);
-  SelectsS[CreatorSlideId].TextOpt[0].Text  := CurrentSong.Creator;
-  SelectsS[LyricSlideId].TextOpt[0].Text    := CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Text;
+  EditorFieldText[TitleSlideId]    := CurrentSong.Title;
+  EditorFieldText[ArtistSlideId]   := CurrentSong.Artist;
+  EditorFieldText[LanguageSlideId] := CurrentSong.Language;
+  EditorFieldText[EditionSlideId]  := CurrentSong.Edition;
+  EditorFieldText[GenreSlideId]    := CurrentSong.Genre;
+  EditorFieldText[YearSlideId]     := IntToStr(CurrentSong.Year);
+  EditorFieldText[CreatorSlideId]  := CurrentSong.Creator;
+  EditorFieldText[LyricSlideId]    := CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Text;
   EditorLyrics[CurrentTrack].AddLine(CurrentTrack, CurrentSong.Tracks[CurrentTrack].CurrentLine);
   EditorLyrics[CurrentTrack].Selected := CurrentNote[CurrentTrack];
 end; //if CurrentUndoLines
@@ -5059,15 +5499,15 @@ var
   BarWidth: real;
   BarHeight: real;
 begin
-  BarWidth := 16;
-  BarHeight := 16;
-  HalfToneHeight := 7.5;
-  Rec.Right := 40 + 0.5 + Count;
+  BarWidth := NotesSurface.H * 16 / 135;
+  BarHeight := BarWidth;
+  HalfToneHeight := NoteLineSpacing / 2;
+  Rec.Right := NotesSurface.X + NotesInset + 0.5 + Count;
   Rec.Left  := Rec.Right - BarWidth;
 
   scale := Round((CurrentTone - CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote].Tone) / 12);
 
-  Rec.Top := 429 - (CurrentTone - 12*scale - CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].BaseNote) * HalfToneHeight - 0.5 * BarHeight;
+  Rec.Top := NotesSurface.Y + 7 * NoteLineSpacing - (CurrentTone - 12*scale - CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].BaseNote) * HalfToneHeight - 0.5 * BarHeight;
   Rec.Bottom := Rec.Top + BarHeight;
 
   with Tex_Lyric_Help_Bar do
@@ -5083,6 +5523,12 @@ begin
   end;
   Renderer.DrawTexture(Tex_Lyric_Help_Bar);
 
+  if DocumentUI <> nil then
+  begin
+    if DetectedToneAbs >= 0 then DocumentUI.SetModel('editor.detectedTone', ToneAbsToString(DetectedToneAbs))
+    else DocumentUI.SetModel('editor.detectedTone', '-');
+    Exit;
+  end;
   // draw currently recorded tone
   SetFontPos(Theme.EditSub.TextCurrentTone.X, Theme.EditSub.TextCurrentTone.Y);
   SetFontSize(Theme.EditSub.TextCurrentTone.Size);
@@ -5179,17 +5625,17 @@ begin
 
   for i := 0 to High(TransparentLineButtonId) do
   begin
-    Button[TransparentLineButtonId[i]].SetX(0);
-    Button[TransparentLineButtonId[i]].SetY(0);
-    Button[TransparentLineButtonId[i]].SetW(0);
-    Button[TransparentLineButtonId[i]].SetH(0);
+    SetEditorHit(TransparentLineButtonId[i], 'X', 0);
+    SetEditorHit(TransparentLineButtonId[i], 'Y', 0);
+    SetEditorHit(TransparentLineButtonId[i], 'W', 0);
+    SetEditorHit(TransparentLineButtonId[i], 'H', 0);
   end;
 
   while (Length(TransparentLineButtonId) < numLines) do
   begin
     SetLength(InteractiveLineId, Length(InteractiveLineId) + 1);
     SetLength(TransparentLineButtonId, Length(TransparentLineButtonId) + 1);
-    TransparentLineButtonId[Length(TransparentLineButtonId) - 1] := AddButton(0, 0, 0, 0,PATH_NONE);
+    TransparentLineButtonId[Length(TransparentLineButtonId) - 1] := AddEditorHit;
     //TransparentLineButtonId[Length(TransparentLineButtonId) - 1] := AddButton(0, 0, 0, 0, Skin.GetTextureFileName(Theme.Main.Buttonsolo.Tex));
     InteractiveLineId[Length(InteractiveLineId) - 1] := Length(Interactions) - 1;
   end;
@@ -5244,10 +5690,10 @@ begin
     Width := (EndBeat - StartBeat) / SongDuration * W;
 
     // todo: add transparent active button to change current line
-    Button[TransparentLineButtonId[LineIndex]].SetX(X + CurrentPos);
-    Button[TransparentLineButtonId[LineIndex]].SetY(Y);
-    Button[TransparentLineButtonId[LineIndex]].SetW(Width);
-    Button[TransparentLineButtonId[LineIndex]].SetH(H);
+    SetEditorHit(TransparentLineButtonId[LineIndex], 'X', X + CurrentPos);
+    SetEditorHit(TransparentLineButtonId[LineIndex], 'Y', Y);
+    SetEditorHit(TransparentLineButtonId[LineIndex], 'W', Width);
+    SetEditorHit(TransparentLineButtonId[LineIndex], 'H', H);
 
     QuadList[I].X := X + CurrentPos;
     QuadList[I].Y := Y;
@@ -5360,6 +5806,13 @@ begin
   else
     LineBonusPoints := 0;
 
+  if DocumentUI <> nil then
+  begin
+    DocumentUI.SetModel('editor.points.normal', IntToStr(NormalPoints), 1);
+    DocumentUI.SetModel('editor.points.bonus', IntToStr(LineBonusPoints), 1);
+    DocumentUI.SetModel('editor.points.golden', IntToStr(GoldenPoints), 1);
+    Exit;
+  end;
   Lines[0] := Language.Translate('SING_NOTES') + ': ' + IntToStr(NormalPoints);
   Lines[1] := Language.Translate('SING_PHRASE_BONUS') + ': ' + IntToStr(LineBonusPoints);
   Lines[2] := Language.Translate('SING_GOLDEN_NOTES') + ': ' + IntToStr(GoldenPoints);
@@ -5475,10 +5928,10 @@ begin
 
   for NoteIndex := 0 to High(TransparentNoteButtonId) do
   begin
-    Button[TransparentNoteButtonId[NoteIndex]].SetX(0);
-    Button[TransparentNoteButtonId[NoteIndex]].SetY(0);
-    Button[TransparentNoteButtonId[NoteIndex]].SetW(0);
-    Button[TransparentNoteButtonId[NoteIndex]].SetH(0);
+    SetEditorHit(TransparentNoteButtonId[NoteIndex], 'X', 0);
+    SetEditorHit(TransparentNoteButtonId[NoteIndex], 'Y', 0);
+    SetEditorHit(TransparentNoteButtonId[NoteIndex], 'W', 0);
+    SetEditorHit(TransparentNoteButtonId[NoteIndex], 'H', 0);
   end;
 
 // adding transparent buttons
@@ -5486,18 +5939,18 @@ begin
   begin
     SetLength(InteractiveNoteId, Length(InteractiveNoteId) + 1);
     SetLength(TransparentNoteButtonId, Length(TransparentNoteButtonId) + 1);
-    TransparentNoteButtonId[Length(TransparentNoteButtonId) - 1] := AddButton(0, 0, 0, 0, PATH_NONE);
+    TransparentNoteButtonId[Length(TransparentNoteButtonId) - 1] := AddEditorHit;
     // for debug purposes: use some button texture instead of a transparent button (comment out line above, uncomment line below)
     //TransparentNoteButtonId[Length(TransparentNoteButtonId)-1] := AddButton(0, 0, 0, 0, Skin.GetTextureFileName(Theme.Main.Buttonsolo.Tex));
     InteractiveNoteId[Length(InteractiveNoteId) - 1] := Length(Interactions) - 1;
   end;
-  TempR := 720 / (CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].EndBeat - CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[0].StartBeat);
+  TempR := (NotesSurface.W - 2 * NotesInset) / (CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].EndBeat - CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[0].StartBeat);
   for NoteIndex := 0 to CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].HighNote do
   begin
-    Button[TransparentNoteButtonId[NoteIndex]].SetX(Theme.EditSub.NotesBackground.X + NotesSkipX + (CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[NoteIndex].StartBeat - CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[0].StartBeat) * TempR + 0.5);
-    Button[TransparentNoteButtonId[NoteIndex]].SetY(Theme.EditSub.NotesBackground.Y + 7 * LineSpacing - (CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[NoteIndex].Tone - CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].BaseNote) * LineSpacing / 2 - NotesH[0]);
-    Button[TransparentNoteButtonId[NoteIndex]].SetW((CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[NoteIndex].Duration) * TempR - 0.5);
-    Button[TransparentNoteButtonId[NoteIndex]].SetH(2 * NotesH[0]);
+    SetEditorHit(TransparentNoteButtonId[NoteIndex], 'X', NotesSurface.X + NotesInset + (CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[NoteIndex].StartBeat - CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[0].StartBeat) * TempR + 0.5);
+    SetEditorHit(TransparentNoteButtonId[NoteIndex], 'Y', NotesSurface.Y + 7 * NoteLineSpacing - (CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[NoteIndex].Tone - CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].BaseNote) * NoteLineSpacing / 2 - NotesH[0]);
+    SetEditorHit(TransparentNoteButtonId[NoteIndex], 'W', (CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[NoteIndex].Duration) * TempR - 0.5);
+    SetEditorHit(TransparentNoteButtonId[NoteIndex], 'H', 2 * NotesH[0]);
   end;
 end;
 
@@ -5528,7 +5981,7 @@ end;
 procedure TScreenEditSub.StopVideoPreview;
 begin
   // Stop video preview of previous song
-  Statics[BackgroundImageId].Visible := false;
+  EditorPreviewVisible := false;
   if Assigned(fCurrentVideo) then
   begin
     fCurrentVideo.Stop();
@@ -5721,7 +6174,7 @@ begin
   EditorLyrics[CurrentTrack].Selected := CurrentNote[CurrentTrack];
   ShowInteractiveBackground;
   GoldenRec.KillAll;
-  Text[TextInfo].Text := Language.Translate('EDIT_INFO_CURRENT_BEAT') + ' ' + IntToStr(Beat);
+  EditorStatus := Language.Translate('EDIT_INFO_CURRENT_BEAT') + ' ' + IntToStr(Beat);
 end;
 
 procedure TScreenEditSub.GoToFirstTimingError;
@@ -5785,7 +6238,7 @@ begin
     SetLength(CurrentSong.Tracks, EditorVoiceCount);
     SetLength(CurrentSong.DuetNames, Max(2, EditorVoiceCount));
     ResizeEditorVoices;
-    Text[TextInfo].Text := Language.Translate('INFO_FILE_SAVED');
+    EditorStatus := Language.Translate('INFO_FILE_SAVED');
     SetLength(UndoLines, 0, High(CurrentSong.Tracks));
     SetLength(UndoStateNote, 0, Length(CurrentSong.Tracks));
     SetLength(Undoheader, 0);
@@ -5798,7 +6251,16 @@ end;
 constructor TScreenEditSub.Create;
 begin
   inherited Create;
-  LoadFromTheme(Theme.EditSub);
+  DocumentUI := TDocumentUI.Open('editor');
+  if DocumentUI = nil then LoadFromTheme(Theme.EditSub);
+  NotesSurface := Theme.EditSub.NotesBackground;
+  LyricsSurface := Theme.EditSub.SentenceBackground;
+  OverviewSurface := Theme.EditSub.P1InfoBarBackground;
+  PreviewSurface := Theme.EditSub.BackgroundImage;
+  NotesInset := 20;
+  NoteLineSpacing := 15;
+  LyricsTextSize := Theme.EditSub.TextSentence.Size;
+  DocumentInteraction := -1;
 
   //video
   fCurrentVideo := nil;
@@ -5849,140 +6311,189 @@ begin
 
   // file info
   // title header
-  TitleSlideId := AddSelectSlide(Theme.EditSub.SlideTitle, TitleData, TitleVal);
-  SelectsS[TitleSlideId].Text.Align := 0;
-  SelectsS[TitleSlideId].Text.X := SelectsS[TitleSlideId].Texture.X + 3;
+  TitleSlideId := AddEditorField(Theme.EditSub.SlideTitle, TitleData, TitleVal, 'title');
+  if DocumentUI = nil then
+    SelectsS[TitleSlideId].Text.Align := 0;
+  if DocumentUI = nil then
+    SelectsS[TitleSlideId].Text.X := SelectsS[TitleSlideId].Texture.X + 3;
 
   // artist header
-  ArtistSlideId := AddSelectSlide(Theme.EditSub.SlideArtist, ArtistData, ArtistVal);
-  SelectsS[ArtistSlideId].Text.Align := 0;
-  SelectsS[ArtistSlideId].Text.X := SelectsS[ArtistSlideId].Texture.X + 3;
+  ArtistSlideId := AddEditorField(Theme.EditSub.SlideArtist, ArtistData, ArtistVal, 'artist');
+  if DocumentUI = nil then
+    SelectsS[ArtistSlideId].Text.Align := 0;
+  if DocumentUI = nil then
+    SelectsS[ArtistSlideId].Text.X := SelectsS[ArtistSlideId].Texture.X + 3;
 
   // language header
-  LanguageSlideId := AddSelectSlide(Theme.EditSub.SlideLanguage, LanguageData, LanguageVal);
-  SelectsS[LanguageSlideId].Text.Align := 0;
-  SelectsS[LanguageSlideId].Text.X := SelectsS[LanguageSlideId].Texture.X + 3;
+  LanguageSlideId := AddEditorField(Theme.EditSub.SlideLanguage, LanguageData, LanguageVal, 'language');
+  if DocumentUI = nil then
+    SelectsS[LanguageSlideId].Text.Align := 0;
+  if DocumentUI = nil then
+    SelectsS[LanguageSlideId].Text.X := SelectsS[LanguageSlideId].Texture.X + 3;
 
   // edition header
-  EditionSlideId := AddSelectSlide(Theme.EditSub.SlideEdition, EditionData, EditionVal);
-  SelectsS[EditionSlideId].Text.Align := 0;
-  SelectsS[EditionSlideId].Text.X := SelectsS[EditionSlideId].Texture.X + 3;
+  EditionSlideId := AddEditorField(Theme.EditSub.SlideEdition, EditionData, EditionVal, 'edition');
+  if DocumentUI = nil then
+    SelectsS[EditionSlideId].Text.Align := 0;
+  if DocumentUI = nil then
+    SelectsS[EditionSlideId].Text.X := SelectsS[EditionSlideId].Texture.X + 3;
 
   // genre header
-  GenreSlideId := AddSelectSlide(Theme.EditSub.SlideGenre, GenreData, GenreVal);
-  SelectsS[GenreSlideId].Text.Align := 0;
-  SelectsS[GenreSlideId].Text.X := SelectsS[GenreSlideId].Texture.X + 3;
+  GenreSlideId := AddEditorField(Theme.EditSub.SlideGenre, GenreData, GenreVal, 'genre');
+  if DocumentUI = nil then
+    SelectsS[GenreSlideId].Text.Align := 0;
+  if DocumentUI = nil then
+    SelectsS[GenreSlideId].Text.X := SelectsS[GenreSlideId].Texture.X + 3;
 
   // year header
-  YearSlideId := AddSelectSlide(Theme.EditSub.SlideYear, YearData, YearVal);
-  SelectsS[YearSlideId].Text.Align := 0;
-  SelectsS[YearSlideId].Text.X := SelectsS[YearSlideId].Texture.X + 3;
+  YearSlideId := AddEditorField(Theme.EditSub.SlideYear, YearData, YearVal, 'year');
+  if DocumentUI = nil then
+    SelectsS[YearSlideId].Text.Align := 0;
+  if DocumentUI = nil then
+    SelectsS[YearSlideId].Text.X := SelectsS[YearSlideId].Texture.X + 3;
 
   // creator header
-  CreatorSlideId := AddSelectSlide(Theme.EditSub.SlideCreator, CreatorData, CreatorVal);
-  SelectsS[CreatorSlideId].Text.Align := 0;
-  SelectsS[CreatorSlideId].Text.X := SelectsS[CreatorSlideId].Texture.X + 3;
+  CreatorSlideId := AddEditorField(Theme.EditSub.SlideCreator, CreatorData, CreatorVal, 'creator');
+  if DocumentUI = nil then
+    SelectsS[CreatorSlideId].Text.Align := 0;
+  if DocumentUI = nil then
+    SelectsS[CreatorSlideId].Text.X := SelectsS[CreatorSlideId].Texture.X + 3;
 
   // MP3 header
-  MP3SlideId := AddSelectSlide(Theme.EditSub.SlideMP3, MP3Data, MP3Val);
-  SelectsS[MP3SlideId].Text.Align := 0;
-  SelectsS[MP3SlideId].Text.X := SelectsS[MP3SlideId].Texture.X + 3;
+  MP3SlideId := AddEditorField(Theme.EditSub.SlideMP3, MP3Data, MP3Val, 'mp3');
+  if DocumentUI = nil then
+    SelectsS[MP3SlideId].Text.Align := 0;
+  if DocumentUI = nil then
+    SelectsS[MP3SlideId].Text.X := SelectsS[MP3SlideId].Texture.X + 3;
 
   // cover header
-  CoverSlideId := AddSelectSlide(Theme.EditSub.SlideCover, CoverData, CoverVal);
-  SelectsS[CoverSlideId].Text.Align := 0;
-  SelectsS[CoverSlideId].Text.X := SelectsS[CoverSlideId].Texture.X + 3;
+  CoverSlideId := AddEditorField(Theme.EditSub.SlideCover, CoverData, CoverVal, 'cover');
+  if DocumentUI = nil then
+    SelectsS[CoverSlideId].Text.Align := 0;
+  if DocumentUI = nil then
+    SelectsS[CoverSlideId].Text.X := SelectsS[CoverSlideId].Texture.X + 3;
 
   // background header
-  BackgroundSlideId := AddSelectSlide(Theme.EditSub.SlideBackground, BackgroundData, BackgroundVal);
-  SelectsS[BackgroundSlideId].Text.Align := 0;
-  SelectsS[BackgroundSlideId].Text.X := SelectsS[BackgroundSlideId].Texture.X + 3;
+  BackgroundSlideId := AddEditorField(Theme.EditSub.SlideBackground, BackgroundData, BackgroundVal, 'background');
+  if DocumentUI = nil then
+    SelectsS[BackgroundSlideId].Text.Align := 0;
+  if DocumentUI = nil then
+    SelectsS[BackgroundSlideId].Text.X := SelectsS[BackgroundSlideId].Texture.X + 3;
 
   // video header
-  VideoSlideId := AddSelectSlide(Theme.EditSub.SlideVideo, VideoData, VideoVal);
-  SelectsS[VideoSlideId].Text.Align := 0;
-  SelectsS[VideoSlideId].Text.X := SelectsS[VideoSlideId].Texture.X + 3;
+  VideoSlideId := AddEditorField(Theme.EditSub.SlideVideo, VideoData, VideoVal, 'video');
+  if DocumentUI = nil then
+    SelectsS[VideoSlideId].Text.Align := 0;
+  if DocumentUI = nil then
+    SelectsS[VideoSlideId].Text.X := SelectsS[VideoSlideId].Texture.X + 3;
 
   // videogap header
-  VideoGapSlideId := AddSelectSlide(Theme.EditSub.SlideVideoGap, VideoGapData, VideoGapVal);
-  SelectsS[VideoGapSlideId].Text.Align := 0;
-  SelectsS[VideoGapSlideId].Text.X := SelectsS[VideoGapSlideId].Texture.X + 3;
+  VideoGapSlideId := AddEditorField(Theme.EditSub.SlideVideoGap, VideoGapData, VideoGapVal, 'videogap');
+  if DocumentUI = nil then
+    SelectsS[VideoGapSlideId].Text.Align := 0;
+  if DocumentUI = nil then
+    SelectsS[VideoGapSlideId].Text.X := SelectsS[VideoGapSlideId].Texture.X + 3;
 
   // BPM header
-  BPMSlideId := AddSelectSlide(Theme.EditSub.SlideBPM, BPMData, BPMVal);
-  SelectsS[BPMSlideId].Text.Align := 0;
-  SelectsS[BPMSlideId].Text.X := SelectsS[BPMSlideId].Texture.X + 3;
+  BPMSlideId := AddEditorField(Theme.EditSub.SlideBPM, BPMData, BPMVal, 'bpm');
+  if DocumentUI = nil then
+    SelectsS[BPMSlideId].Text.Align := 0;
+  if DocumentUI = nil then
+    SelectsS[BPMSlideId].Text.X := SelectsS[BPMSlideId].Texture.X + 3;
 
   // GAP header
-  GAPSlideId := AddSelectSlide(Theme.EditSub.SlideGAP, GAPData, GAPVal);
-  SelectsS[GAPSlideId].Text.Align := 0;
-  SelectsS[GAPSlideId].Text.X := SelectsS[GAPSlideId].Texture.X + 3;
+  GAPSlideId := AddEditorField(Theme.EditSub.SlideGAP, GAPData, GAPVal, 'gap');
+  if DocumentUI = nil then
+    SelectsS[GAPSlideId].Text.Align := 0;
+  if DocumentUI = nil then
+    SelectsS[GAPSlideId].Text.X := SelectsS[GAPSlideId].Texture.X + 3;
 
   // StartTag header
-  StartTagSlideId := AddSelectSlide(Theme.EditSub.SlideStartTag, StartTagData, StartTagVal);
-  SelectsS[StartTagSlideId].Text.Align := 0;
-  SelectsS[StartTagSlideId].Text.X := SelectsS[StartTagSlideId].Texture.X + 3;
+  StartTagSlideId := AddEditorField(Theme.EditSub.SlideStartTag, StartTagData, StartTagVal, 'starttag');
+  if DocumentUI = nil then
+    SelectsS[StartTagSlideId].Text.Align := 0;
+  if DocumentUI = nil then
+    SelectsS[StartTagSlideId].Text.X := SelectsS[StartTagSlideId].Texture.X + 3;
 
   // EndTag header
-  EndTagSlideId := AddSelectSlide(Theme.EditSub.SlideEndTag, EndTagData, EndTagVal);
-  SelectsS[EndTagSlideId].Text.Align := 0;
-  SelectsS[EndTagSlideId].Text.X := SelectsS[EndTagSlideId].Texture.X + 3;
+  EndTagSlideId := AddEditorField(Theme.EditSub.SlideEndTag, EndTagData, EndTagVal, 'endtag');
+  if DocumentUI = nil then
+    SelectsS[EndTagSlideId].Text.Align := 0;
+  if DocumentUI = nil then
+    SelectsS[EndTagSlideId].Text.X := SelectsS[EndTagSlideId].Texture.X + 3;
 
   // MedleyStart header
-  MedleyStartSlideId := AddSelectSlide(Theme.EditSub.SlideMedleyStart, MedleyStartData, MedleyStartVal);
-  SelectsS[MedleyStartSlideId].Text.Align := 0;
-  SelectsS[MedleyStartSlideId].Text.X := SelectsS[MedleyStartSlideId].Texture.X + 3;
+  MedleyStartSlideId := AddEditorField(Theme.EditSub.SlideMedleyStart, MedleyStartData, MedleyStartVal, 'medleystart');
+  if DocumentUI = nil then
+    SelectsS[MedleyStartSlideId].Text.Align := 0;
+  if DocumentUI = nil then
+    SelectsS[MedleyStartSlideId].Text.X := SelectsS[MedleyStartSlideId].Texture.X + 3;
 
   // MedleyEnd header
-  MedleyEndSlideId := AddSelectSlide(Theme.EditSub.SlideMedleyEnd, MedleyEndData, MedleyEndVal);
-  SelectsS[MedleyEndSlideId].Text.Align := 0;
-  SelectsS[MedleyEndSlideId].Text.X := SelectsS[MedleyEndSlideId].Texture.X + 3;
+  MedleyEndSlideId := AddEditorField(Theme.EditSub.SlideMedleyEnd, MedleyEndData, MedleyEndVal, 'medleyend');
+  if DocumentUI = nil then
+    SelectsS[MedleyEndSlideId].Text.Align := 0;
+  if DocumentUI = nil then
+    SelectsS[MedleyEndSlideId].Text.X := SelectsS[MedleyEndSlideId].Texture.X + 3;
 
   // PreviewStart header
-  PreviewStartSlideId := AddSelectSlide(Theme.EditSub.SlidePreviewStart, PreviewStartData, PreviewStartVal);
-  SelectsS[PreviewStartSlideId].Text.Align := 0;
-  SelectsS[PreviewStartSlideId].Text.X := SelectsS[PreviewStartSlideId].Texture.X + 3;
+  PreviewStartSlideId := AddEditorField(Theme.EditSub.SlidePreviewStart, PreviewStartData, PreviewStartVal, 'previewstart');
+  if DocumentUI = nil then
+    SelectsS[PreviewStartSlideId].Text.Align := 0;
+  if DocumentUI = nil then
+    SelectsS[PreviewStartSlideId].Text.X := SelectsS[PreviewStartSlideId].Texture.X + 3;
 
   // Relative header
-  RelativeSlideId := AddSelectSlide(Theme.EditSub.SlideRelative, RelativeData, RelativeVal);
-  SelectsS[RelativeSlideId].Text.Align := 0;
-  SelectsS[RelativeSlideId].Text.X := SelectsS[RelativeSlideId].Texture.X + 3;
+  RelativeSlideId := AddEditorField(Theme.EditSub.SlideRelative, RelativeData, RelativeVal, 'relative');
+  if DocumentUI = nil then
+    SelectsS[RelativeSlideId].Text.Align := 0;
+  if DocumentUI = nil then
+    SelectsS[RelativeSlideId].Text.X := SelectsS[RelativeSlideId].Texture.X + 3;
 
   // background image & preview
-  BackgroundImageId := AddStatic(Theme.EditSub.BackgroundImage);
-  Statics[BackgroundImageId].Visible := false;
+  if DocumentUI = nil then BackgroundImageId := AddStatic(PreviewSurface);
+  EditorPreviewVisible := false;
 
   // note info
   // start header
-  StartSlideId := AddSelectSlide(Theme.EditSub.SlideStart, StartData, StartVal);
-  SelectsS[StartSlideId].Text.Align := 0;
-  SelectsS[StartSlideId].Text.X := SelectsS[StartSlideId].Texture.X + 3;
+  StartSlideId := AddEditorField(Theme.EditSub.SlideStart, StartData, StartVal, 'start');
+  if DocumentUI = nil then
+    SelectsS[StartSlideId].Text.Align := 0;
+  if DocumentUI = nil then
+    SelectsS[StartSlideId].Text.X := SelectsS[StartSlideId].Texture.X + 3;
 
   // duration header
-  DurationSlideId := AddSelectSlide(Theme.EditSub.SlideDuration, DurationData, DurationVal);
-  SelectsS[DurationSlideId].Text.Align := 0;
-  SelectsS[DurationSlideId].Text.X := SelectsS[DurationSlideId].Texture.X + 3;
+  DurationSlideId := AddEditorField(Theme.EditSub.SlideDuration, DurationData, DurationVal, 'duration');
+  if DocumentUI = nil then
+    SelectsS[DurationSlideId].Text.Align := 0;
+  if DocumentUI = nil then
+    SelectsS[DurationSlideId].Text.X := SelectsS[DurationSlideId].Texture.X + 3;
 
   // tone header
-  ToneSlideId := AddSelectSlide(Theme.EditSub.SlideTone, ToneData, ToneVal);
-  SelectsS[ToneSlideId].Text.Align := 0;
-  SelectsS[ToneSlideId].Text.X := SelectsS[ToneSlideId].Texture.X + 3;
+  ToneSlideId := AddEditorField(Theme.EditSub.SlideTone, ToneData, ToneVal, 'tone');
+  if DocumentUI = nil then
+    SelectsS[ToneSlideId].Text.Align := 0;
+  if DocumentUI = nil then
+    SelectsS[ToneSlideId].Text.X := SelectsS[ToneSlideId].Texture.X + 3;
 
   // lyrics header
-  LyricSlideId := AddSelectSlide(Theme.EditSub.SlideLyric, LyricData, LyricVal);
-  SelectsS[LyricSlideId].Text.Align := 0;
-  SelectsS[LyricSlideId].Text.X := SelectsS[LyricSlideId].Texture.X + 3;
+  LyricSlideId := AddEditorField(Theme.EditSub.SlideLyric, LyricData, LyricVal, 'lyric');
+  if DocumentUI = nil then
+    SelectsS[LyricSlideId].Text.Align := 0;
+  if DocumentUI = nil then
+    SelectsS[LyricSlideId].Text.X := SelectsS[LyricSlideId].Texture.X + 3;
 
   // control buttons
-  UndoButtonId         := AddButton(Theme.EditSub.undo);
-  PreviousSeqButtonID  := AddButton(Theme.EditSub.previousseq);
-  NextSeqButtonID      := AddButton(Theme.EditSub.nextseq);
-  FreestyleButtonID    := AddButton(Theme.EditSub.freestyle);
-  GoldButtonID         := AddButton(Theme.EditSub.gold);
-  PlayOnlyButtonID     := AddButton(Theme.EditSub.PlayOnly);
-  PlayWithNoteButtonID := AddButton(Theme.EditSub.PlayWithNote);
-  PlayNoteButtonID     := AddButton(Theme.EditSub.PlayNote);
-  MicrophoneButtonId := AddButton(Theme.EditSub.Microphone);
+  UndoButtonId := AddEditorCommand(Theme.EditSub.undo, 'undo');
+  PreviousSeqButtonID := AddEditorCommand(Theme.EditSub.previousseq, 'previousseq');
+  NextSeqButtonID := AddEditorCommand(Theme.EditSub.nextseq, 'nextseq');
+  FreestyleButtonID := AddEditorCommand(Theme.EditSub.freestyle, 'freestyle');
+  GoldButtonID := AddEditorCommand(Theme.EditSub.gold, 'gold');
+  PlayOnlyButtonID := AddEditorCommand(Theme.EditSub.PlayOnly, 'playonly');
+  PlayWithNoteButtonID := AddEditorCommand(Theme.EditSub.PlayWithNote, 'playwithnote');
+  PlayNoteButtonID := AddEditorCommand(Theme.EditSub.PlayNote, 'playnote');
+  MicrophoneButtonId := AddEditorCommand(Theme.EditSub.Microphone, 'microphone');
+  if DocumentUI = nil then
   if Length(Button[MicrophoneButtonId].Text) = 0 then
     AddButtonText(4, 0, Theme.EditSub.TextInfo.ColR, Theme.EditSub.TextInfo.ColG,
       Theme.EditSub.TextInfo.ColB, Theme.EditSub.TextInfo.Font,
@@ -5990,32 +6501,35 @@ begin
   SetMicrophoneEnabled(false);
 
   // current line
-  TextSentence := AddButton(Theme.EditSub.ButtonCurrentLine);
+  TextSentence := AddEditorCommand(Theme.EditSub.ButtonCurrentLine, 'textsentence');
 
   // current note
-  TextNote := AddButton(Theme.EditSub.ButtonCurrentNote);
+  TextNote := AddEditorCommand(Theme.EditSub.ButtonCurrentNote, 'textnote');
 
   // Audio Volume
-  VolumeAudioSlideId := AddSelectSlide(Theme.EditSub.SelectVolAudio, VolumeAudioIndex, VolumeAudio);
-  SelectsS[VolumeAudioSlideId].ClickSelectsPosition := true;
+  VolumeAudioSlideId := AddEditorField(Theme.EditSub.SelectVolAudio, VolumeAudioIndex, VolumeAudio, 'volumeaudio');
+  if DocumentUI = nil then
+    SelectsS[VolumeAudioSlideId].ClickSelectsPosition := true;
 
   // Midi Volume
-  VolumeMidiSlideId := AddSelectSlide(Theme.EditSub.SelectVolMidi, VolumeMidiIndex, VolumeMidi);
-  SelectsS[VolumeMidiSlideId].ClickSelectsPosition := true;
+  VolumeMidiSlideId := AddEditorField(Theme.EditSub.SelectVolMidi, VolumeMidiIndex, VolumeMidi, 'volumemidi');
+  if DocumentUI = nil then
+    SelectsS[VolumeMidiSlideId].ClickSelectsPosition := true;
 
   // Click Volume
-  VolumeClickSlideId := AddSelectSlide(Theme.EditSub.SelectVolClick, VolumeClickIndex, VolumeClick);
-  SelectsS[VolumeClickSlideId].ClickSelectsPosition := true;
+  VolumeClickSlideId := AddEditorField(Theme.EditSub.SelectVolClick, VolumeClickIndex, VolumeClick, 'volumeclick');
+  if DocumentUI = nil then
+    SelectsS[VolumeClickSlideId].ClickSelectsPosition := true;
 
   {
 
   }
 
   // info text
-  TextInfo := AddText(Theme.EditSub.TextInfo);
+  if DocumentUI = nil then TextInfo := AddText(Theme.EditSub.TextInfo);
 
   // in notes place -> for move notes by mouse
-  //NotesBackgroundId := AddSelectSlide(Theme.EditSub.NotesBackground, i, Empty);
+  //NotesBackgroundId := AddEditorField(NotesSurface, i, Empty, 'notesbackgroundid');
 
   // Initialize Piano Keys to default values
   PianoKeysLow := Ini.PianoKeysLow;
@@ -6032,6 +6546,7 @@ begin
   Tex_PrevBackground.Free;
   StopMidiPlayback;
   FreeAndNil(MidiOut);
+  FreeAndNil(DocumentUI);
   inherited;
 end;
 
@@ -6053,7 +6568,11 @@ var
     Result := InRange(beat, Note.StartBeat, Note.StartBeat + Note.Duration);
   end;
 begin
-  inherited;
+  if DocumentUI = nil then inherited;
+  if DocumentUI <> nil then
+  begin
+    LayoutEditorDocument;
+  end;
   SoundLib.PauseBgMusic;
   // reset video playback engine
   CurrentTrack := 0;
@@ -6065,7 +6584,7 @@ begin
   PlayOneMidi := false;
   MidiSyncToAudio := false;
   CuePlaybackActive := false;
-  Text[TextInfo].Text := '';
+  EditorStatus := '';
   Log.LogStatus('Initializing', 'TEditScreen.OnShow');
   LoadSingScreenTextures;
   Xmouse := 0;
@@ -6146,57 +6665,71 @@ begin
     SetLength(TitleVal, 1);
     TitleVal[0] := CurrentSong.Title;
     SlideTitleIndex := 1;
-    UpdateSelectSlideOptions(TitleSlideId,TitleVal,SlideTitleIndex);
-    SelectsS[TitleSlideId].TextOpt[0].Align := 0;
-    SelectsS[TitleSlideId].TextOpt[0].X := SelectsS[TitleSlideId].TextureSBG.X + 5;
+    UpdateEditorFieldOptions(TitleSlideId,TitleVal,SlideTitleIndex);
+    if DocumentUI = nil then
+      SelectsS[TitleSlideId].TextOpt[0].Align := 0;
+    if DocumentUI = nil then
+      SelectsS[TitleSlideId].TextOpt[0].X := SelectsS[TitleSlideId].TextureSBG.X + 5;
 
     // Header Artist
     SetLength(ArtistVal, 1);
     ArtistVal[0] := CurrentSong.Artist;
     SlideArtistIndex := 1;
-    UpdateSelectSlideOptions(ArtistSlideId,ArtistVal,SlideArtistIndex);
-    SelectsS[ArtistSlideId].TextOpt[0].Align := 0;
-    SelectsS[ArtistSlideId].TextOpt[0].X := SelectsS[ArtistSlideId].TextureSBG.X + 5;
+    UpdateEditorFieldOptions(ArtistSlideId,ArtistVal,SlideArtistIndex);
+    if DocumentUI = nil then
+      SelectsS[ArtistSlideId].TextOpt[0].Align := 0;
+    if DocumentUI = nil then
+      SelectsS[ArtistSlideId].TextOpt[0].X := SelectsS[ArtistSlideId].TextureSBG.X + 5;
 
     // Header Language
     SetLength(LanguageVal, 1);
     LanguageVal[0] := ifthen(CurrentSong.Language <> 'Unknown', CurrentSong.Language, NOT_SET);
     SlideLanguageIndex := 1;
-    UpdateSelectSlideOptions(LanguageSlideId,LanguageVal,SlideLanguageIndex);
-    SelectsS[LanguageSlideId].TextOpt[0].Align := 0;
-    SelectsS[LanguageSlideId].TextOpt[0].X := SelectsS[LanguageSlideId].TextureSBG.X + 5;
+    UpdateEditorFieldOptions(LanguageSlideId,LanguageVal,SlideLanguageIndex);
+    if DocumentUI = nil then
+      SelectsS[LanguageSlideId].TextOpt[0].Align := 0;
+    if DocumentUI = nil then
+      SelectsS[LanguageSlideId].TextOpt[0].X := SelectsS[LanguageSlideId].TextureSBG.X + 5;
 
     // Header Edition
     SetLength(EditionVal, 1);
     EditionVal[0] := ifthen(CurrentSong.Edition <> 'Unknown', CurrentSong.Edition, NOT_SET);
     SlideEditionIndex := 1;
-    UpdateSelectSlideOptions(EditionSlideId,EditionVal,SlideEditionIndex);
-    SelectsS[EditionSlideId].TextOpt[0].Align := 0;
-    SelectsS[EditionSlideId].TextOpt[0].X := SelectsS[EditionSlideId].TextureSBG.X + 5;
+    UpdateEditorFieldOptions(EditionSlideId,EditionVal,SlideEditionIndex);
+    if DocumentUI = nil then
+      SelectsS[EditionSlideId].TextOpt[0].Align := 0;
+    if DocumentUI = nil then
+      SelectsS[EditionSlideId].TextOpt[0].X := SelectsS[EditionSlideId].TextureSBG.X + 5;
 
     // Header Genre
     SetLength(GenreVal, 1);
     GenreVal[0] := ifthen(CurrentSong.Genre <> 'Unknown', CurrentSong.Genre, NOT_SET);
     SlideGenreIndex := 1;
-    UpdateSelectSlideOptions(GenreSlideId,GenreVal,SlideGenreIndex);
-    SelectsS[GenreSlideId].TextOpt[0].Align := 0;
-    SelectsS[GenreSlideId].TextOpt[0].X := SelectsS[GenreSlideId].TextureSBG.X + 5;
+    UpdateEditorFieldOptions(GenreSlideId,GenreVal,SlideGenreIndex);
+    if DocumentUI = nil then
+      SelectsS[GenreSlideId].TextOpt[0].Align := 0;
+    if DocumentUI = nil then
+      SelectsS[GenreSlideId].TextOpt[0].X := SelectsS[GenreSlideId].TextureSBG.X + 5;
 
     // Header Year
     SetLength(YearVal, 1);
     YearVal[0] := ifthen(CurrentSong.Year <> 0, IntToStr(CurrentSong.Year), NOT_SET);
     SlideYearIndex := 1;
-    UpdateSelectSlideOptions(YearSlideId,YearVal,SlideYearIndex);
-    SelectsS[YearSlideId].TextOpt[0].Align := 0;
-    SelectsS[YearSlideId].TextOpt[0].X := SelectsS[YearSlideId].TextureSBG.X + 5;
+    UpdateEditorFieldOptions(YearSlideId,YearVal,SlideYearIndex);
+    if DocumentUI = nil then
+      SelectsS[YearSlideId].TextOpt[0].Align := 0;
+    if DocumentUI = nil then
+      SelectsS[YearSlideId].TextOpt[0].X := SelectsS[YearSlideId].TextureSBG.X + 5;
 
     // Header Creator
     SetLength(CreatorVal, 1);
     CreatorVal[0] := ifthen(CurrentSong.Creator <> '', CurrentSong.Creator, NOT_SET);
     SlideCreatorIndex := 1;
-    UpdateSelectSlideOptions(CreatorSlideId,CreatorVal,SlideCreatorIndex);
-    SelectsS[CreatorSlideId].TextOpt[0].Align := 0;
-    SelectsS[CreatorSlideId].TextOpt[0].X := SelectsS[CreatorSlideId].TextureSBG.X + 5;
+    UpdateEditorFieldOptions(CreatorSlideId,CreatorVal,SlideCreatorIndex);
+    if DocumentUI = nil then
+      SelectsS[CreatorSlideId].TextOpt[0].Align := 0;
+    if DocumentUI = nil then
+      SelectsS[CreatorSlideId].TextOpt[0].X := SelectsS[CreatorSlideId].TextureSBG.X + 5;
 
     // Header MP3 / AUDIO
     SetLength(MP3Val, 0);
@@ -6213,7 +6746,7 @@ begin
       if (UTF8CompareText(MP3Val[FileIndex],CurrentSong.Audio.ToUTF8) = 0) then
             SlideMP3Index := FileIndex;
     end;
-    UpdateSelectSlideOptions(MP3SlideId,MP3Val,SlideMP3Index);
+    UpdateEditorFieldOptions(MP3SlideId,MP3Val,SlideMP3Index);
 
     // Header Cover
     SetLength(Files, 0);
@@ -6237,7 +6770,7 @@ begin
       CoverVal[0] := CurrentSong.Cover.ToUTF8;
       SlideCoverIndex := 0;
     end;
-    UpdateSelectSlideOptions(CoverSlideId,CoverVal,SlideCoverIndex);
+    UpdateEditorFieldOptions(CoverSlideId,CoverVal,SlideCoverIndex);
 
     // Header Background
     SetLength(Files, 0);
@@ -6261,7 +6794,7 @@ begin
       BackgroundVal[0] := CurrentSong.Background.ToUTF8;
       SlideBackgroundIndex := 0;
     end;
-    UpdateSelectSlideOptions(BackgroundSlideId,BackgroundVal,SlideBackgroundIndex);
+    UpdateEditorFieldOptions(BackgroundSlideId,BackgroundVal,SlideBackgroundIndex);
 
     // Header Video
     SetLength(Files, 0);
@@ -6284,110 +6817,136 @@ begin
       VideoVal[0] := CurrentSong.Video.ToUTF8;
       SlideVideoIndex := 0;
     end;
-    UpdateSelectSlideOptions(VideoSlideId,VideoVal,SlideVideoIndex);
+    UpdateEditorFieldOptions(VideoSlideId,VideoVal,SlideVideoIndex);
 
     // Header VideoGap
     SetLength(VideoGapVal, 1);
     VideoGapVal[0] := '';
     SlideVideoGapIndex := 1;
-    UpdateSelectSlideOptions(VideoGapSlideId,VideoGapVal,SlideVideoGapIndex);
-    SelectsS[VideoGapSlideId].TextOpt[0].Align := 0;
-    SelectsS[VideoGapSlideId].TextOpt[0].X := SelectsS[VideoGapSlideId].TextureSBG.X + 5;
+    UpdateEditorFieldOptions(VideoGapSlideId,VideoGapVal,SlideVideoGapIndex);
+    if DocumentUI = nil then
+      SelectsS[VideoGapSlideId].TextOpt[0].Align := 0;
+    if DocumentUI = nil then
+      SelectsS[VideoGapSlideId].TextOpt[0].X := SelectsS[VideoGapSlideId].TextureSBG.X + 5;
 
     // Header BPM
     SetLength(BPMVal, 1);
     BPMVal[0] := '';
     SlideBPMIndex := 1;
-    UpdateSelectSlideOptions(BPMSlideId,BPMVal,SlideBPMIndex);
-    SelectsS[BPMSlideId].TextOpt[0].Align := 0;
-    SelectsS[BPMSlideId].TextOpt[0].X := SelectsS[BPMSlideId].TextureSBG.X + 5;
+    UpdateEditorFieldOptions(BPMSlideId,BPMVal,SlideBPMIndex);
+    if DocumentUI = nil then
+      SelectsS[BPMSlideId].TextOpt[0].Align := 0;
+    if DocumentUI = nil then
+      SelectsS[BPMSlideId].TextOpt[0].X := SelectsS[BPMSlideId].TextureSBG.X + 5;
 
     // Header GAP
     SetLength(GAPVal, 1);
     GAPVal[0] := '';
     SlideGAPIndex := 1;
-    UpdateSelectSlideOptions(GAPSlideId,GAPVal,SlideGAPIndex);
-    SelectsS[GAPSlideId].TextOpt[0].Align := 0;
-    SelectsS[GAPSlideId].TextOpt[0].X := SelectsS[GAPSlideId].TextureSBG.X + 5;
+    UpdateEditorFieldOptions(GAPSlideId,GAPVal,SlideGAPIndex);
+    if DocumentUI = nil then
+      SelectsS[GAPSlideId].TextOpt[0].Align := 0;
+    if DocumentUI = nil then
+      SelectsS[GAPSlideId].TextOpt[0].X := SelectsS[GAPSlideId].TextureSBG.X + 5;
 
     // Header StartTag
     SetLength(StartTagVal, 1);
     StartTagVal[0] := '';
     SlideStartTagIndex := 1;
-    UpdateSelectSlideOptions(StartTagSlideId,StartTagVal,SlideStartTagIndex);
-    SelectsS[StartTagSlideId].TextOpt[0].Align := 0;
-    SelectsS[StartTagSlideId].TextOpt[0].X := SelectsS[StartTagSlideId].TextureSBG.X + 5;
+    UpdateEditorFieldOptions(StartTagSlideId,StartTagVal,SlideStartTagIndex);
+    if DocumentUI = nil then
+      SelectsS[StartTagSlideId].TextOpt[0].Align := 0;
+    if DocumentUI = nil then
+      SelectsS[StartTagSlideId].TextOpt[0].X := SelectsS[StartTagSlideId].TextureSBG.X + 5;
 
     // Header EndTag
     SetLength(EndTagVal, 1);
     EndTagVal[0] := '';
     SlideEndTagIndex := 1;
-    UpdateSelectSlideOptions(EndTagSlideId,EndTagVal,SlideEndTagIndex);
-    SelectsS[EndTagSlideId].TextOpt[0].Align := 0;
-    SelectsS[EndTagSlideId].TextOpt[0].X := SelectsS[EndTagSlideId].TextureSBG.X + 5;
+    UpdateEditorFieldOptions(EndTagSlideId,EndTagVal,SlideEndTagIndex);
+    if DocumentUI = nil then
+      SelectsS[EndTagSlideId].TextOpt[0].Align := 0;
+    if DocumentUI = nil then
+      SelectsS[EndTagSlideId].TextOpt[0].X := SelectsS[EndTagSlideId].TextureSBG.X + 5;
 
     // Header MedleyStart
     SetLength(MedleyStartVal, 1);
     MedleyStartVal[0] := '';
     SlideMedleyStartIndex := 1;
-    UpdateSelectSlideOptions(MedleyStartSlideId,MedleyStartVal,SlideMedleyStartIndex);
-    SelectsS[MedleyStartSlideId].TextOpt[0].Align := 0;
-    SelectsS[MedleyStartSlideId].TextOpt[0].X := SelectsS[MedleyStartSlideId].TextureSBG.X + 5;
+    UpdateEditorFieldOptions(MedleyStartSlideId,MedleyStartVal,SlideMedleyStartIndex);
+    if DocumentUI = nil then
+      SelectsS[MedleyStartSlideId].TextOpt[0].Align := 0;
+    if DocumentUI = nil then
+      SelectsS[MedleyStartSlideId].TextOpt[0].X := SelectsS[MedleyStartSlideId].TextureSBG.X + 5;
 
     // Header MedleyEnd
     SetLength(MedleyEndVal, 1);
     MedleyEndVal[0] := '';
     SlideMedleyEndIndex := 1;
-    UpdateSelectSlideOptions(MedleyEndSlideId,MedleyEndVal,SlideMedleyEndIndex);
-    SelectsS[MedleyEndSlideId].TextOpt[0].Align := 0;
-    SelectsS[MedleyEndSlideId].TextOpt[0].X := SelectsS[MedleyEndSlideId].TextureSBG.X + 5;
+    UpdateEditorFieldOptions(MedleyEndSlideId,MedleyEndVal,SlideMedleyEndIndex);
+    if DocumentUI = nil then
+      SelectsS[MedleyEndSlideId].TextOpt[0].Align := 0;
+    if DocumentUI = nil then
+      SelectsS[MedleyEndSlideId].TextOpt[0].X := SelectsS[MedleyEndSlideId].TextureSBG.X + 5;
 
     // Header PreviewStart
     SetLength(PreviewStartVal, 1);
     PreviewStartVal[0] := '';
     SlidePreviewStartIndex := 1;
-    UpdateSelectSlideOptions(PreviewStartSlideId,PreviewStartVal,SlidePreviewStartIndex);
-    SelectsS[PreviewStartSlideId].TextOpt[0].Align := 0;
-    SelectsS[PreviewStartSlideId].TextOpt[0].X := SelectsS[PreviewStartSlideId].TextureSBG.X + 5;
+    UpdateEditorFieldOptions(PreviewStartSlideId,PreviewStartVal,SlidePreviewStartIndex);
+    if DocumentUI = nil then
+      SelectsS[PreviewStartSlideId].TextOpt[0].Align := 0;
+    if DocumentUI = nil then
+      SelectsS[PreviewStartSlideId].TextOpt[0].X := SelectsS[PreviewStartSlideId].TextureSBG.X + 5;
 
     // Header Relative
     SetLength(RelativeVal, 1);
     RelativeVal[0] := '';
-    UpdateSelectSlideOptions(RelativeSlideId,RelativeVal,SlideRelativeIndex);
-    SelectsS[RelativeSlideId].TextOpt[0].Align := 0;
-    SelectsS[RelativeSlideId].TextOpt[0].X := SelectsS[RelativeSlideId].TextureSBG.X + 5;
+    UpdateEditorFieldOptions(RelativeSlideId,RelativeVal,SlideRelativeIndex);
+    if DocumentUI = nil then
+      SelectsS[RelativeSlideId].TextOpt[0].Align := 0;
+    if DocumentUI = nil then
+      SelectsS[RelativeSlideId].TextOpt[0].X := SelectsS[RelativeSlideId].TextureSBG.X + 5;
 
     // Header Start
     SetLength(StartVal, 1);
     StartVal[0] := '';
     SlideStartIndex := 1;
-    UpdateSelectSlideOptions(StartSlideId,StartVal,SlideStartIndex);
-    SelectsS[StartSlideId].TextOpt[0].Align := 0;
-    SelectsS[StartSlideId].TextOpt[0].X := SelectsS[StartSlideId].TextureSBG.X + 5;
+    UpdateEditorFieldOptions(StartSlideId,StartVal,SlideStartIndex);
+    if DocumentUI = nil then
+      SelectsS[StartSlideId].TextOpt[0].Align := 0;
+    if DocumentUI = nil then
+      SelectsS[StartSlideId].TextOpt[0].X := SelectsS[StartSlideId].TextureSBG.X + 5;
 
     // Header Duration
     SetLength(DurationVal, 1);
     DurationVal[0] := '';
     SlideDurationIndex := 1;
-    UpdateSelectSlideOptions(DurationSlideId,DurationVal,SlideDurationIndex);
-    SelectsS[DurationSlideId].TextOpt[0].Align := 0;
-    SelectsS[DurationSlideId].TextOpt[0].X := SelectsS[DurationSlideId].TextureSBG.X + 5;
+    UpdateEditorFieldOptions(DurationSlideId,DurationVal,SlideDurationIndex);
+    if DocumentUI = nil then
+      SelectsS[DurationSlideId].TextOpt[0].Align := 0;
+    if DocumentUI = nil then
+      SelectsS[DurationSlideId].TextOpt[0].X := SelectsS[DurationSlideId].TextureSBG.X + 5;
 
     // Header Tone
     SetLength(ToneVal, 1);
     ToneVal[0] := '';
     SlideDurationIndex := 1;
-    UpdateSelectSlideOptions(ToneSlideId,ToneVal,SlideToneIndex);
-    SelectsS[ToneSlideId].TextOpt[0].Align := 0;
-    SelectsS[ToneSlideId].TextOpt[0].X := SelectsS[ToneSlideId].TextureSBG.X + 5;
+    UpdateEditorFieldOptions(ToneSlideId,ToneVal,SlideToneIndex);
+    if DocumentUI = nil then
+      SelectsS[ToneSlideId].TextOpt[0].Align := 0;
+    if DocumentUI = nil then
+      SelectsS[ToneSlideId].TextOpt[0].X := SelectsS[ToneSlideId].TextureSBG.X + 5;
 
     // Header Lyric
     SetLength(LyricVal, 1);
     LyricVal[0] := '';
     SlideLyricIndex := 1;
-    UpdateSelectSlideOptions(LyricSlideId,LyricVal,SlideLyricIndex);
-    SelectsS[LyricSlideId].TextOpt[0].Align := 0;
-    SelectsS[LyricSlideId].TextOpt[0].X := SelectsS[LyricSlideId].TextureSBG.X + 5;
+    UpdateEditorFieldOptions(LyricSlideId,LyricVal,SlideLyricIndex);
+    if DocumentUI = nil then
+      SelectsS[LyricSlideId].TextOpt[0].Align := 0;
+    if DocumentUI = nil then
+      SelectsS[LyricSlideId].TextOpt[0].X := SelectsS[LyricSlideId].TextureSBG.X + 5;
 
     // volume slides
     SetLength(VolumeAudio, 0);
@@ -6405,9 +6964,9 @@ begin
     VolumeAudioIndex := EnsureRange(Ini.AudioVolume, 0, 100);
     VolumeMidiIndex  := 100;
     VolumeClickIndex := EnsureRange(Ini.SfxVolume, 0, 100);
-    UpdateSelectSlideOptions(VolumeAudioSlideId, VolumeAudio, VolumeAudioIndex);
-    UpdateSelectSlideOptions(VolumeMidiSlideId,  VolumeMidi,  VolumeMidiIndex);
-    UpdateSelectSlideOptions(VolumeClickSlideId, VolumeClick, VolumeClickIndex);
+    UpdateEditorFieldOptions(VolumeAudioSlideId, VolumeAudio, VolumeAudioIndex);
+    UpdateEditorFieldOptions(VolumeMidiSlideId,  VolumeMidi,  VolumeMidiIndex);
+    UpdateEditorFieldOptions(VolumeClickSlideId, VolumeClick, VolumeClickIndex);
 
     for TrackIndex := 0 to High(CurrentSong.Tracks) do
     begin
@@ -6440,10 +6999,11 @@ begin
     begin
       EditorLyrics[TrackIndex].Clear;
 
-      EditorLyrics[TrackIndex].X     := Theme.EditSub.TextSentence.X;
-      EditorLyrics[TrackIndex].Y     := Theme.EditSub.TextSentence.Y;
+      EditorLyrics[TrackIndex].X     := LyricsSurface.X + LyricsSurface.W / 2;
+      EditorLyrics[TrackIndex].Y     := LyricsSurface.Y;
       EditorLyrics[TrackIndex].Align := Theme.EditSub.TextSentence.Align;
-      EditorLyrics[TrackIndex].Size  := Theme.EditSub.TextSentence.Size;
+      if DocumentUI = nil then EditorLyrics[TrackIndex].Size := Theme.EditSub.TextSentence.Size
+      else EditorLyrics[TrackIndex].Size := LyricsTextSize;
       EditorLyrics[TrackIndex].ColR  := Theme.EditSub.TextSentence.ColR;
       EditorLyrics[TrackIndex].ColG  := Theme.EditSub.TextSentence.ColG;
       EditorLyrics[TrackIndex].ColB  := Theme.EditSub.TextSentence.ColB;
@@ -6477,13 +7037,9 @@ begin
     begin
       Tex_PrevBackground.Free;
       Tex_PrevBackground := Renderer.LoadTexture(CurrentSong.Path.Append(CurrentSong.Background));
-      Statics[BackgroundImageId].Texture.Free;
-      Statics[BackgroundImageId].Texture   := Tex_PrevBackground.Clone;
-      Statics[BackgroundImageId].Texture.X := Theme.EditSub.BackgroundImage.X;
-      Statics[BackgroundImageId].Texture.Y := Theme.EditSub.BackgroundImage.Y;
-      Statics[BackgroundImageId].Texture.W := Theme.EditSub.BackgroundImage.W;
-      Statics[BackgroundImageId].Texture.H := Theme.EditSub.BackgroundImage.H;
-      Statics[BackgroundImageId].Visible := false;
+
+    UpdateEditorPreview;
+    EditorPreviewVisible := false;
     end;
   except
     Log.LogError('Background could not be loaded: ' + CurrentSong.Background.ToNative);
@@ -6518,7 +7074,7 @@ begin
      (VolumeAudioSlideId >= 0) and (VolumeAudioSlideId <= High(SelectsS)) then
   begin
     VolumeAudioIndex := NewAudio;
-    SelectsS[VolumeAudioSlideId].SelectedOption := VolumeAudioIndex;
+    EditorFieldIndex[VolumeAudioSlideId] := VolumeAudioIndex;
   end;
 
   NewClick := EnsureRange(Ini.SfxVolume, 0, 100);
@@ -6526,7 +7082,7 @@ begin
      (VolumeClickSlideId >= 0) and (VolumeClickSlideId <= High(SelectsS)) then
   begin
     VolumeClickIndex := NewClick;
-    SelectsS[VolumeClickSlideId].SelectedOption := VolumeClickIndex;
+    EditorFieldIndex[VolumeClickSlideId] := VolumeClickIndex;
   end;
 end;
 
@@ -6552,7 +7108,7 @@ begin
 
     // click
     CurrentBeat := Floor(GetMidBeat(MidiPos - CurrentSong.GAP / 1000));
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_CURRENT_BEAT') + ' ' + IntToStr(CurrentBeat);
+    EditorStatus := Language.Translate('EDIT_INFO_CURRENT_BEAT') + ' ' + IntToStr(CurrentBeat);
   end; // if PlaySentenceMidi
 
   // move "cursor"
@@ -6561,7 +7117,7 @@ begin
     if (PlaySentence or PlayVideo) then
     begin
       CurrentBeat := Floor(GetMidBeat(AudioPlayback.Position - (CurrentSong.GAP) / 1000));
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_CURRENT_BEAT') + ' ' + IntToStr(CurrentBeat);
+      EditorStatus := Language.Translate('EDIT_INFO_CURRENT_BEAT') + ' ' + IntToStr(CurrentBeat);
     end;
 
     // store current line, find next line to given beat
@@ -6621,79 +7177,95 @@ begin
 
     // click
     CurrentBeat := Floor(GetMidBeat(MidiPos - CurrentSong.GAP / 1000));
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_CURRENT_BEAT') + ' ' + IntToStr(CurrentBeat);
+    EditorStatus := Language.Translate('EDIT_INFO_CURRENT_BEAT') + ' ' + IntToStr(CurrentBeat);
   end; // if PlayOneNoteMidi
 
-  Button[TextSentence].Text[0].Text := Language.Translate('EDIT_INFO_CURRENT_LINE') + ' ' + IntToStr(CurrentSong.Tracks[CurrentTrack].CurrentLine + 1) + ' / ' + IntToStr(CurrentSong.Tracks[CurrentTrack].Number);
-  Button[TextNote].Text[0].Text :=  Language.Translate('EDIT_INFO_CURRENT_NOTE') + ' ' + IntToStr(CurrentNote[CurrentTrack] + 1) + ' / ' + IntToStr(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].HighNote + 1);
+  EditorCommandCaption[TextSentence] := Language.Translate('EDIT_INFO_CURRENT_LINE') + ' ' + IntToStr(CurrentSong.Tracks[CurrentTrack].CurrentLine + 1) + ' / ' + IntToStr(CurrentSong.Tracks[CurrentTrack].Number);
+  EditorCommandCaption[TextNote] :=  Language.Translate('EDIT_INFO_CURRENT_NOTE') + ' ' + IntToStr(CurrentNote[CurrentTrack] + 1) + ' / ' + IntToStr(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].HighNote + 1);
 
   // Song info
   // VideoGap
   VideoGapVal[0] := ifthen(CurrentSong.VideoGAP <> 0, FloatToStr(CurrentSong.VideoGAP) + ' s', NOT_SET);
-  SelectsS[VideoGapSlideId].TextOpt[0].Text := VideoGapVal[0];
+  EditorFieldText[VideoGapSlideId] := VideoGapVal[0];
   // BPM
   if not BPMEditMode then
   begin
     BPMVal[0] := FloatToStr(CurrentSong.BPM / 4);
-    SelectsS[BPMSlideId].TextOpt[0].Text := BPMVal[0];
+    EditorFieldText[BPMSlideId] := BPMVal[0];
   end;
   // GAP
   GAPVal[0] := FloatToStr(CurrentSong.GAP) + ' ms';
-  SelectsS[GAPSlideId].TextOpt[0].Text := GAPVal[0];
+  EditorFieldText[GAPSlideId] := GAPVal[0];
   // StartTag
   StartTagVal[0] := ifthen(CurrentSong.Start <> 0.0, FloatToStr(CurrentSong.Start) + ' s', NOT_SET);
-  SelectsS[StartTagSlideId].TextOpt[0].Text := StartTagVal[0];
+  EditorFieldText[StartTagSlideId] := StartTagVal[0];
   // EndTag
   EndTagVal[0] := ifthen(CurrentSong.Finish > 0.0, FloatToStr(CurrentSong.Finish) + ' ms', NOT_SET);
-  SelectsS[EndTagSlideId].TextOpt[0].Text := EndTagVal[0];
-  SelectsS[MedleyStartSlideId].Text.Text := 'P' + IntToStr(CurrentTrack + 1) + ':';
+  EditorFieldText[EndTagSlideId] := EndTagVal[0];
+  if DocumentUI = nil then
+    SelectsS[MedleyStartSlideId].Text.Text := 'P' + IntToStr(CurrentTrack + 1) + ':';
   MedleyStartVal[0] := CurrentSong.DuetNames[CurrentTrack];
-  SelectsS[MedleyStartSlideId].TextOpt[0].Text := MedleyStartVal[0];
-  SelectsS[MedleyStartSlideId].TextOpt[0].Writable := true;
-  SelectsS[MedleyStartSlideId].TextOpt[0].Align := 1;
-  SelectsS[MedleyStartSlideId].TextOpt[0].X := SelectsS[MedleyStartSlideId].TextureSBG.X + SelectsS[MedleyStartSlideId].TextureSBG.W / 2;
-  SelectsS[MedleyStartSlideId].TextOpt[0].W := Max(1, SelectsS[MedleyStartSlideId].TextureSBG.W -
+  EditorFieldText[MedleyStartSlideId] := MedleyStartVal[0];
+  if DocumentUI = nil then
+    SelectsS[MedleyStartSlideId].TextOpt[0].Writable := true;
+  if DocumentUI = nil then
+    SelectsS[MedleyStartSlideId].TextOpt[0].Align := 1;
+  if DocumentUI = nil then
+    SelectsS[MedleyStartSlideId].TextOpt[0].X := SelectsS[MedleyStartSlideId].TextureSBG.X + SelectsS[MedleyStartSlideId].TextureSBG.W / 2;
+  if DocumentUI = nil then
+    SelectsS[MedleyStartSlideId].TextOpt[0].W := Max(1, SelectsS[MedleyStartSlideId].TextureSBG.W -
     2 * (Max(SelectsS[MedleyStartSlideId].Tex_SelectS_ArrowL.W,
       SelectsS[MedleyStartSlideId].Tex_SelectS_ArrowR.W) + Theme.EditSub.VoiceFieldPadding));
-  SelectsS[MedleyStartSlideId].ShowArrows := true;
-  SelectsS[MedleyStartSlideId].Tex_SelectS_ArrowL.Alpha := 1;
-  SelectsS[MedleyStartSlideId].Tex_SelectS_ArrowR.Alpha := 1;
-  SelectsS[MedleyEndSlideId].Text.Text := Language.Translate('EDIT_VOICE_COUNT') + ':';
+  if DocumentUI = nil then
+    SelectsS[MedleyStartSlideId].ShowArrows := true;
+  if DocumentUI = nil then
+    SelectsS[MedleyStartSlideId].Tex_SelectS_ArrowL.Alpha := 1;
+  if DocumentUI = nil then
+    SelectsS[MedleyStartSlideId].Tex_SelectS_ArrowR.Alpha := 1;
+  if DocumentUI = nil then
+    SelectsS[MedleyEndSlideId].Text.Text := Language.Translate('EDIT_VOICE_COUNT') + ':';
   MedleyEndVal[0] := IntToStr(EditorVoiceCount);
-  SelectsS[MedleyEndSlideId].TextOpt[0].Text := MedleyEndVal[0];
-  SelectsS[MedleyEndSlideId].TextOpt[0].Writable := true;
-  SelectsS[MedleyEndSlideId].TextOpt[0].Align := 1;
-  SelectsS[MedleyEndSlideId].TextOpt[0].X := SelectsS[MedleyEndSlideId].TextureSBG.X + SelectsS[MedleyEndSlideId].TextureSBG.W / 2;
-  SelectsS[MedleyEndSlideId].TextOpt[0].W := Max(1, SelectsS[MedleyEndSlideId].TextureSBG.W -
+  EditorFieldText[MedleyEndSlideId] := MedleyEndVal[0];
+  if DocumentUI = nil then
+    SelectsS[MedleyEndSlideId].TextOpt[0].Writable := true;
+  if DocumentUI = nil then
+    SelectsS[MedleyEndSlideId].TextOpt[0].Align := 1;
+  if DocumentUI = nil then
+    SelectsS[MedleyEndSlideId].TextOpt[0].X := SelectsS[MedleyEndSlideId].TextureSBG.X + SelectsS[MedleyEndSlideId].TextureSBG.W / 2;
+  if DocumentUI = nil then
+    SelectsS[MedleyEndSlideId].TextOpt[0].W := Max(1, SelectsS[MedleyEndSlideId].TextureSBG.W -
     2 * (Max(SelectsS[MedleyEndSlideId].Tex_SelectS_ArrowL.W,
       SelectsS[MedleyEndSlideId].Tex_SelectS_ArrowR.W) + Theme.EditSub.VoiceFieldPadding));
-  SelectsS[MedleyEndSlideId].ShowArrows := true;
-  SelectsS[MedleyEndSlideId].Tex_SelectS_ArrowL.Alpha := Ord(EditorVoiceCount > 1);
-  SelectsS[MedleyEndSlideId].Tex_SelectS_ArrowR.Alpha := Ord(EditorVoiceCount < SupportedSongVoices);
+  if DocumentUI = nil then
+    SelectsS[MedleyEndSlideId].ShowArrows := true;
+  if DocumentUI = nil then
+    SelectsS[MedleyEndSlideId].Tex_SelectS_ArrowL.Alpha := Ord(EditorVoiceCount > 1);
+  if DocumentUI = nil then
+    SelectsS[MedleyEndSlideId].Tex_SelectS_ArrowR.Alpha := Ord(EditorVoiceCount < SupportedSongVoices);
   // PreviewStart
   if (CurrentSong.HasPreview) then
     PreviewStartVal[0] := FloatToStr(CurrentSong.PreviewStart) + ' s'
   else
     PreviewStartVal[0] := NOT_SET;
-  SelectsS[PreviewStartSlideId].TextOpt[0].Text := PreviewStartVal[0];
+  EditorFieldText[PreviewStartSlideId] := PreviewStartVal[0];
   if (CurrentSong.Relative) then
     RelativeVal[0] := Language.Translate('SONG_MENU_YES')
   else
     RelativeVal[0] := NOT_SET + ' (' + Language.Translate('SONG_MENU_NO') + ')';
-  SelectsS[RelativeSlideId].TextOpt[0].Text := RelativeVal[0];
+  EditorFieldText[RelativeSlideId] := RelativeVal[0];
 
   //Error reading variables when no song is loaded
   if not (Error or TitleEditMode or TextEditMode) then
   begin
     // Note info
     StartVal[0] := IntToStr(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].StartBeat);
-    SelectsS[StartSlideId].TextOpt[0].Text := StartVal[0];
+    EditorFieldText[StartSlideId] := StartVal[0];
     DurationVal[0] := IntToStr(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Duration);
-    SelectsS[DurationSlideId].TextOpt[0].Text := DurationVal[0];
+    EditorFieldText[DurationSlideId] := DurationVal[0];
     ToneVal[0] := IntToStr(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Tone) + ' (' + GetNoteName(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Tone) + ')';
-    SelectsS[ToneSlideId].TextOpt[0].Text := ToneVal[0];
+    EditorFieldText[ToneSlideId] := ToneVal[0];
     LyricVal[0] := CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Text;
-    SelectsS[LyricSlideId].TextOpt[0].Text := LyricVal[0];
+    EditorFieldText[LyricSlideId] := LyricVal[0];
   end;
 
   // Text Edit Mode
@@ -6710,11 +7282,20 @@ begin
      BPMEditMode then
   begin
     if TextPosition >= 0 then
-    SelectsS[CurrentSlideId].TextOpt[0].Text :=
+    EditorFieldText[CurrentSlideId] :=
       UTF8Copy(CurrentEditText, 1, TextPosition) + '|' + UTF8Copy(CurrentEditText, TextPosition+1, LengthUTF8(CurrentEditText)-TextPosition);
-    editLengthText := LengthUTF8(SelectsS[CurrentSlideId].TextOpt[0].Text);
+    editLengthText := LengthUTF8(EditorFieldText[CurrentSlideId]);
   end;
 
+  if DocumentUI <> nil then
+  begin
+    DrawMaxScoreInfo(PreviewSurface.X, PreviewSurface.Y, PreviewSurface.W, PreviewSurface.H, CurrentTrack);
+    SyncEditorDocument;
+    DocumentUI.Draw;
+    LayoutEditorDocument;
+  end
+  else
+  begin
   // draw static menu
   DrawBG;
 
@@ -6727,16 +7308,17 @@ begin
   // volume slider background
   EditDrawBorderedBox(Theme.EditSub.VolumeSliderBackground.X, Theme.EditSub.VolumeSliderBackground.Y, Theme.EditSub.VolumeSliderBackground.W, Theme.EditSub.VolumeSliderBackground.H, Theme.EditSub.VolumeSliderBackground.ColR, Theme.EditSub.VolumeSliderBackground.ColG, Theme.EditSub.VolumeSliderBackground.ColB, Theme.EditSub.VolumeSliderBackground.Alpha);
 
-  DrawInfoBar(Theme.EditSub.P1InfoBarBackground.X, Theme.EditSub.P1InfoBarBackground.Y,
-    Theme.EditSub.P1InfoBarBackground.W, Theme.EditSub.P1InfoBarBackground.H,
-    Theme.EditSub.P1InfoBarBackground.ColR, Theme.EditSub.P1InfoBarBackground.ColG,
-    Theme.EditSub.P1InfoBarBackground.ColB, Theme.EditSub.P1InfoBarBackground.Alpha, CurrentTrack);
-
   // sentence background
-  EditDrawBorderedBox(Theme.EditSub.SentenceBackground.X, Theme.EditSub.SentenceBackground.Y, Theme.EditSub.SentenceBackground.W, Theme.EditSub.SentenceBackground.H, Theme.EditSub.SentenceBackground.ColR, Theme.EditSub.SentenceBackground.ColG, Theme.EditSub.SentenceBackground.ColB, Theme.EditSub.SentenceBackground.Alpha);
+  EditDrawBorderedBox(LyricsSurface.X, LyricsSurface.Y, LyricsSurface.W, LyricsSurface.H, LyricsSurface.ColR, LyricsSurface.ColG, LyricsSurface.ColB, LyricsSurface.Alpha);
 
   //inherited Draw;
   DrawFG;
+  end;
+  DrawInfoBar(OverviewSurface.X, OverviewSurface.Y,
+    OverviewSurface.W, OverviewSurface.H,
+    OverviewSurface.ColR, OverviewSurface.ColG,
+    OverviewSurface.ColB, OverviewSurface.Alpha, CurrentTrack);
+
   // draw notes
 
   //Error Drawing when no Song is loaded
@@ -6745,38 +7327,40 @@ begin
     if Xmouse < 0 then
     begin
       // notes background
-      EditDrawBorderedBox(Theme.EditSub.NotesBackground.X, Theme.EditSub.NotesBackground.Y, Theme.EditSub.NotesBackground.W + Xmouse, Theme.EditSub.NotesBackground.H, Theme.EditSub.NotesBackground.ColR, Theme.EditSub.NotesBackground.ColG, Theme.EditSub.NotesBackground.ColB, Theme.EditSub.NotesBackground.Alpha);
+      if DocumentUI = nil then
+        EditDrawBorderedBox(NotesSurface.X, NotesSurface.Y, NotesSurface.W + Xmouse, NotesSurface.H, NotesSurface.ColR, NotesSurface.ColG, NotesSurface.ColB, NotesSurface.Alpha);
       // horizontal lines
-      SingDrawNoteLines(Theme.EditSub.NotesBackground.X, Theme.EditSub.NotesBackground.Y, Theme.EditSub.NotesBackground.X + Theme.EditSub.NotesBackground.W + Xmouse, 15, 2);
+      SingDrawNoteLines(NotesSurface.X, NotesSurface.Y, NotesSurface.X + NotesSurface.W + Xmouse, Round(NoteLineSpacing), 2);
       // vertical lines
-      EditDrawBeatDelimiters(Theme.EditSub.NotesBackground.X + NotesSkipX, Theme.EditSub.NotesBackground.Y, Theme.EditSub.NotesBackground.W - 2 * NotesSkipX + Xmouse, Theme.EditSub.NotesBackground.H, CurrentTrack);
+      EditDrawBeatDelimiters(NotesSurface.X + NotesInset, NotesSurface.Y, NotesSurface.W - 2 * NotesInset + Xmouse, NotesSurface.H, CurrentTrack);
       // Inactive song voices use the same axes behind the selected voice.
-      EditDrawBackgroundVoices(Theme.EditSub.NotesBackground.X + NotesSkipX + Max(0, Xmouse),
-        Theme.EditSub.NotesBackground.Y + (7/9) * Theme.EditSub.NotesBackground.H,
-        Theme.EditSub.NotesBackground.W - 2 * NotesSkipX + Min(0, Xmouse),
-        Theme.EditSub.NotesBackground.H, CurrentTrack, EditorVoiceCount);
+      EditDrawBackgroundVoices(NotesSurface.X + NotesInset + Max(0, Xmouse),
+        NotesSurface.Y + (7/9) * NotesSurface.H,
+        NotesSurface.W - 2 * NotesInset + Min(0, Xmouse),
+        NotesSurface.H, CurrentTrack, EditorVoiceCount);
       // draw notes
-      EditDrawLine(Theme.EditSub.NotesBackground.X + NotesSkipX, Theme.EditSub.NotesBackground.Y + 7 * LineSpacing, Theme.EditSub.NotesBackground.W - 2 * NotesSkipX + Xmouse, Theme.EditSub.NotesBackground.W, CurrentTrack);
+      EditDrawLine(NotesSurface.X + NotesInset, NotesSurface.Y + 7 * NoteLineSpacing, NotesSurface.W - 2 * NotesInset + Xmouse, NotesSurface.H, CurrentTrack);
       // draw text on notes
-      DrawText(Theme.EditSub.NotesBackground.X + NotesSkipX, Theme.EditSub.NotesBackground.Y + 7 * LineSpacing, Theme.EditSub.NotesBackground.W - 2 * NotesSkipX + Xmouse, Theme.EditSub.NotesBackground.H, CurrentTrack);
+      DrawText(NotesSurface.X + NotesInset, NotesSurface.Y + 7 * NoteLineSpacing, NotesSurface.W - 2 * NotesInset + Xmouse, NotesSurface.H, CurrentTrack);
     end
     else
     begin
       // notes background
-      EditDrawBorderedBox(Theme.EditSub.NotesBackground.X + Xmouse, Theme.EditSub.NotesBackground.Y, Theme.EditSub.NotesBackground.W - Xmouse, Theme.EditSub.NotesBackground.H, Theme.EditSub.NotesBackground.ColR, Theme.EditSub.NotesBackground.ColG, Theme.EditSub.NotesBackground.ColB, Theme.EditSub.NotesBackground.Alpha);
+      if DocumentUI = nil then
+        EditDrawBorderedBox(NotesSurface.X + Xmouse, NotesSurface.Y, NotesSurface.W - Xmouse, NotesSurface.H, NotesSurface.ColR, NotesSurface.ColG, NotesSurface.ColB, NotesSurface.Alpha);
       // horizontal lines
-      SingDrawNoteLines(Theme.EditSub.NotesBackground.X + Xmouse, Theme.EditSub.NotesBackground.Y, Theme.EditSub.NotesBackground.X + Theme.EditSub.NotesBackground.W, 15, 2);
+      SingDrawNoteLines(NotesSurface.X + Xmouse, NotesSurface.Y, NotesSurface.X + NotesSurface.W, Round(NoteLineSpacing), 2);
       // vertical lines
-      EditDrawBeatDelimiters(Theme.EditSub.NotesBackground.X + NotesSkipX + Xmouse, Theme.EditSub.NotesBackground.Y, Theme.EditSub.NotesBackground.W - 2 * NotesSkipX, Theme.EditSub.NotesBackground.H, CurrentTrack);
+      EditDrawBeatDelimiters(NotesSurface.X + NotesInset + Xmouse, NotesSurface.Y, NotesSurface.W - 2 * NotesInset, NotesSurface.H, CurrentTrack);
       // Inactive song voices use the same axes behind the selected voice.
-      EditDrawBackgroundVoices(Theme.EditSub.NotesBackground.X + NotesSkipX + Max(0, Xmouse),
-        Theme.EditSub.NotesBackground.Y + (7/9) * Theme.EditSub.NotesBackground.H,
-        Theme.EditSub.NotesBackground.W - 2 * NotesSkipX + Min(0, Xmouse),
-        Theme.EditSub.NotesBackground.H, CurrentTrack, EditorVoiceCount);
+      EditDrawBackgroundVoices(NotesSurface.X + NotesInset + Max(0, Xmouse),
+        NotesSurface.Y + (7/9) * NotesSurface.H,
+        NotesSurface.W - 2 * NotesInset + Min(0, Xmouse),
+        NotesSurface.H, CurrentTrack, EditorVoiceCount);
       // draw notes
-      EditDrawLine(Theme.EditSub.NotesBackground.X + NotesSkipX + Xmouse, Theme.EditSub.NotesBackground.Y + (7/9) * Theme.EditSub.NotesBackground.H, Theme.EditSub.NotesBackground.W - 2 * NotesSkipX, Theme.EditSub.NotesBackground.H, CurrentTrack);
+      EditDrawLine(NotesSurface.X + NotesInset + Xmouse, NotesSurface.Y + (7/9) * NotesSurface.H, NotesSurface.W - 2 * NotesInset, NotesSurface.H, CurrentTrack);
       // draw text on notes
-      DrawText(Theme.EditSub.NotesBackground.X + NotesSkipX + Xmouse, Theme.EditSub.NotesBackground.Y + (7/9) * Theme.EditSub.NotesBackground.H, Theme.EditSub.NotesBackground.W - 2 * NotesSkipX, Theme.EditSub.NotesBackground.H, CurrentTrack);
+      DrawText(NotesSurface.X + NotesInset + Xmouse, NotesSurface.Y + (7/9) * NotesSurface.H, NotesSurface.W - 2 * NotesInset, NotesSurface.H, CurrentTrack);
     end;
 
     if Xmouse <> 0 then
@@ -6788,7 +7372,7 @@ begin
   if MicrophoneEnabled and (CurrentSound.ToneString <> '-') and
      CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].HasLength() then
   begin
-    Count := trunc((720 / (GetTimeFromBeat(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].EndBeat) - GetTimeFromBeat(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[0].StartBeat)))*(AudioPlayback.Position - GetTimeFromBeat(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[0].StartBeat)));
+    Count := trunc(((NotesSurface.W - 2 * NotesInset) / (GetTimeFromBeat(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].EndBeat) - GetTimeFromBeat(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[0].StartBeat)))*(AudioPlayback.Position - GetTimeFromBeat(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[0].StartBeat)));
     DrawPlayerTrack(CurrentSound.Tone, Count, CurrentNote[CurrentTrack], CurrentSound.ToneAbs);
   end;
 
@@ -6801,12 +7385,21 @@ begin
     EditorLyrics[CurrentTrack].ClearCursor;
   EditorLyrics[CurrentTrack].Draw;
 
-  DrawMaxScoreInfo(
-    Theme.EditSub.BackgroundImage.X,
-    Theme.EditSub.BackgroundImage.Y,
-    Theme.EditSub.BackgroundImage.W,
-    Theme.EditSub.BackgroundImage.H,
+  if DocumentUI = nil then DrawMaxScoreInfo(
+    PreviewSurface.X,
+    PreviewSurface.Y,
+    PreviewSurface.W,
+    PreviewSurface.H,
     CurrentTrack);
+
+  if (DocumentUI <> nil) and PreviewVisible and (Tex_PrevBackground <> nil) then
+  begin
+    Tex_PrevBackground.X := PreviewSurface.X;
+    Tex_PrevBackground.Y := PreviewSurface.Y;
+    Tex_PrevBackground.W := PreviewSurface.W;
+    Tex_PrevBackground.H := PreviewSurface.H;
+    Renderer.DrawTexture(Tex_PrevBackground);
+  end;
 
   //video
   if Assigned(fCurrentVideo) then
@@ -6814,9 +7407,9 @@ begin
     fCurrentVideo.GetFrame(CurrentSong.VideoGAP + AudioPlayback.Position);
     fCurrentVideo.SetScreen(1);
     fCurrentVideo.Alpha := 1;
-    fCurrentVideo.SetScreenPosition(theme.EditSub.BackgroundImage.X, theme.EditSub.BackgroundImage.Y, 1);
-    fCurrentVideo.Width := theme.EditSub.BackgroundImage.W;
-    fCurrentVideo.Height := theme.EditSub.BackgroundImage.H;
+    fCurrentVideo.SetScreenPosition(PreviewSurface.X, PreviewSurface.Y, 1);
+    fCurrentVideo.Width := PreviewSurface.W;
+    fCurrentVideo.Height := PreviewSurface.H;
     fCurrentVideo.ReflectionSpacing := 1;
     fCurrentVideo.AspectCorrection := acoLetterBox;
     fCurrentVideo.Draw;
@@ -6840,9 +7433,9 @@ begin
   end;
   MicrophoneEnabled := Enabled;
   if Enabled then
-    Button[MicrophoneButtonId].Text[0].Text := Language.Translate('EDIT_MICROPHONE_ON')
+    EditorCommandCaption[MicrophoneButtonId] := Language.Translate('EDIT_MICROPHONE_ON')
   else
-    Button[MicrophoneButtonId].Text[0].Text := Language.Translate('EDIT_MICROPHONE_OFF');
+    EditorCommandCaption[MicrophoneButtonId] := Language.Translate('EDIT_MICROPHONE_OFF');
 end;
 
 procedure TScreenEditSub.OnHide;
