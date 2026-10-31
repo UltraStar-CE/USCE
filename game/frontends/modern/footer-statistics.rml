@@ -1,0 +1,9 @@
+<template name="footer-statistics"><head></head><body>
+  <span class="where" lang="STAT_MAIN_WHEREAMI" />
+  <img class="legend-icon navigation-icon" src="../../themes/Modern/[button]navi.png" />
+  <span class="legend navigation" lang="SING_LEGEND_NAVIGATE" />
+  <img class="legend-icon statistics-period-icon" src="../../themes/Modern/[button]t.png" />
+  <span class="legend statistics-period" lang="STAT_PERIOD" />
+  <img class="legend-icon statistics-back-icon" src="../../themes/Modern/[button]esc.png" />
+  <span class="legend statistics-back" lang="SING_LEGEND_ESC" />
+</body></template>

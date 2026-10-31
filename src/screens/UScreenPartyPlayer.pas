@@ -36,6 +36,8 @@ interface
 uses
   UCommon,
   UDisplay,
+  UDocumentUI,
+  URecentNames,
   UFiles,
   UMenu,
   UMusic,
@@ -60,6 +62,16 @@ type
       FCachedSetupValid: boolean;
       FCachedTeamNames: array[0..Party_Teams_Max-1] of UTF8String;
       FCachedPlayerNames: array[0..Party_Teams_Max-1, 0..Party_Players_Max-1] of UTF8String;
+      DocumentUI: TDocumentUI;
+      DocumentNames: array[0..Party_Teams_Max * (Party_Players_Max + 1)-1] of TNameEntryState;
+      DocumentInteraction: integer;
+      function GetSetupName(Index: integer): UTF8String;
+      procedure SetSetupName(Index: integer; const Value: UTF8String);
+      function DocumentNameIndex(Index: integer): integer;
+      function DocumentFieldVisible(Index: integer): boolean;
+      procedure FocusDocumentField(const Target: UTF8String);
+      procedure SyncDocument;
+      function DocumentInput(Key: cardinal; CharCode: UCS4Char): boolean;
     public
       Team1Name: cardinal;
       Player1Name: cardinal;
@@ -80,6 +92,9 @@ type
       Player12Name: cardinal;
 
       constructor Create; override;
+      destructor Destroy; override;
+      function DrawBG: boolean; override;
+      function DrawFG: boolean; override;
       function ShouldHandleInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; out SuppressKey: boolean): boolean; override;
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
@@ -99,6 +114,12 @@ type
   end;
 
 const
+  uiPartyPlayersRole = 'party-players';
+  uiPartyPlayersData = 'partyPlayers';
+  uiPartyPlayersPrevious = 'party.players.previous';
+  uiPartyPlayersNext = 'party.players.next';
+  uiPartyPlayersActivate = 'party.players.activate';
+  uiPartyPlayersContinue = 'party.players.continue';
   ID='ID_031';   //for help system
 
 implementation
@@ -113,7 +134,8 @@ uses
   UMain,
   UScreenPartyOptions,
   USkins,
-  UUnicodeUtils;
+  UUnicodeUtils,
+  Math;
 
 var
   Num: array[0..2] of integer;
@@ -138,6 +160,206 @@ begin
     (Name = ULanguage.Language.Translate('OPTION_VALUE_TEAM') + ' ' + IntToStr(Team));
 end;
 
+function TScreenPartyPlayer.GetSetupName(Index: integer): UTF8String;
+begin
+  if DocumentUI <> nil then Result := DocumentNames[Index].Value
+  else Result := Button[Index].Text[0].Text;
+end;
+
+procedure TScreenPartyPlayer.SetSetupName(Index: integer; const Value: UTF8String);
+begin
+  if DocumentUI <> nil then DocumentNames[Index].Assign(Value)
+  else Button[Index].Text[0].Text := Value;
+end;
+
+function TScreenPartyPlayer.DocumentNameIndex(Index: integer): integer;
+var Team, Offset: integer;
+begin
+  Result := -1;
+  if (Index < 1) or (Index > Party_Teams_Max * (Party_Players_Max + 2)) then Exit;
+  Team := (Index - 1) div (Party_Players_Max + 2);
+  Offset := (Index - 1) mod (Party_Players_Max + 2);
+  if Offset = 0 then Result := Team * (Party_Players_Max + 1)
+  else if Offset >= 2 then Result := Team * (Party_Players_Max + 1) + Offset - 1;
+end;
+
+function TScreenPartyPlayer.DocumentFieldVisible(Index: integer): boolean;
+var Team, Offset: integer;
+begin
+  Result := Index = 0;
+  if (Index < 1) or (Index > Party_Teams_Max * (Party_Players_Max + 2)) then Exit;
+  Team := (Index - 1) div (Party_Players_Max + 2);
+  Offset := (Index - 1) mod (Party_Players_Max + 2);
+  Result := (Team < CountTeams + 2) and ((Offset < 2) or (Offset - 2 <= CountPlayer[Team]));
+end;
+
+procedure TScreenPartyPlayer.FocusDocumentField(const Target: UTF8String);
+var Index, NameIndex: integer;
+begin
+  if not TryStrToInt(Target, Index) or not DocumentFieldVisible(Index) or (Index = DocumentInteraction) then Exit;
+  NameIndex := DocumentNameIndex(DocumentInteraction);
+  if NameIndex >= 0 then DocumentNames[NameIndex].Finish;
+  DocumentInteraction := Index;
+  SetTextInput(DocumentNameIndex(Index) >= 0);
+end;
+
+function TScreenPartyPlayer.DocumentInput(Key: cardinal; CharCode: UCS4Char): boolean;
+var NameIndex, TemplateIndex, Team, Offset, I, J, Count, Direction: integer;
+  Modifiers: word;
+  RandomNames: array of UTF8String;
+begin
+  Result := true;
+  Modifiers := SDL_GetModState and (KMOD_LSHIFT + KMOD_RSHIFT + KMOD_LCTRL + KMOD_RCTRL + KMOD_LALT + KMOD_RALT);
+  NameIndex := DocumentNameIndex(DocumentInteraction);
+  if NameIndex >= 0 then
+  begin
+    if (Key = SDLK_ESCAPE) and DocumentNames[NameIndex].Cancel then Exit;
+    if (Key = SDLK_RETURN) and DocumentNames[NameIndex].Accept then Exit;
+    if IsPrintableChar(CharCode) then
+    begin
+      DocumentNames[NameIndex].TypeText(UCS4ToUTF8String(CharCode));
+      if NameIndex mod (Party_Players_Max + 1) = 0 then
+        DocumentNames[NameIndex].Suggest(Ini.RecentTeamNames, Theme.NameSuggestionAlpha > 0)
+      else DocumentNames[NameIndex].Suggest(Ini.RecentNames, Theme.NameSuggestionAlpha > 0);
+      Exit;
+    end;
+    if Key = SDLK_BACKSPACE then
+    begin
+      DocumentNames[NameIndex].Backspace;
+      if NameIndex mod (Party_Players_Max + 1) = 0 then
+        DocumentNames[NameIndex].Suggest(Ini.RecentTeamNames, Theme.NameSuggestionAlpha > 0)
+      else DocumentNames[NameIndex].Suggest(Ini.RecentNames, Theme.NameSuggestionAlpha > 0);
+      Exit;
+    end;
+    TemplateIndex := GetNameTemplateIndexFromKey(Key);
+    if (TemplateIndex >= 0) and (TemplateIndex <= High(Ini.NameTemplate)) then
+    begin
+      if (Modifiers = KMOD_LSHIFT) or (Modifiers = KMOD_RSHIFT) or (Modifiers = KMOD_LALT) then
+        Ini.NameTemplate[TemplateIndex] := GetSetupName(NameIndex)
+      else SetSetupName(NameIndex, Ini.NameTemplate[TemplateIndex]);
+      Exit;
+    end;
+  end;
+  case Key of
+    SDLK_UP, SDLK_DOWN:
+      if (DocumentInteraction > 0) and (((DocumentInteraction - 1) mod (Party_Players_Max + 2)) = 0) and (Modifiers = KMOD_LCTRL) then
+      begin
+        Team := (DocumentInteraction - 1) div (Party_Players_Max + 2);
+        if Key = SDLK_UP then Direction := 1 else Direction := -1;
+        Num[Team] := NoRepeatColors(Num[Team] + Direction, Team, Direction);
+      end
+      else
+      begin
+        if Key = SDLK_UP then DocumentUI.Key(uiKeyPrevious) else DocumentUI.Key(uiKeyNext);
+        FocusDocumentField(DocumentUI.FocusedTarget);
+      end;
+    SDLK_LEFT, SDLK_RIGHT:
+      if NameIndex < 0 then
+      begin
+        if Key = SDLK_RIGHT then Direction := 1 else Direction := -1;
+        AudioPlayback.PlaySound(SoundLib.Option);
+        if DocumentInteraction = 0 then
+        begin
+          CountTeams := EnsureRange(CountTeams + Direction, 0, Party_Teams_Max - 2);
+          Num[2] := NoRepeatColors(Num[2], 2, Direction);
+        end
+        else
+        begin
+          Team := (DocumentInteraction - 1) div (Party_Players_Max + 2);
+          CountPlayer[Team] := EnsureRange(CountPlayer[Team] + Direction, 0, Party_Players_Max - 1);
+        end;
+      end;
+    SDLK_RETURN: UpdateParty;
+    SDLK_ESCAPE:
+      begin
+        SaveCurrentSetup;
+        Ini.SaveNames;
+        FadeTo(@ScreenPartyOptions, SoundLib.Back);
+      end;
+    SDLK_TAB: ScreenPopupHelp.ShowPopup;
+    SDLK_Q: if NameIndex < 0 then Result := false;
+    SDLK_R:
+      if Modifiers = KMOD_LCTRL then
+      begin
+        AudioPlayback.PlaySound(SoundLib.Option);
+        SetLength(RandomNames, Party_Teams_Max * Party_Players_Max);
+        Count := 0;
+        for I := 0 to CountTeams + 1 do
+          for J := 0 to CountPlayer[I] do
+          begin
+            RandomNames[Count] := GetSetupName(I * (Party_Players_Max + 1) + J + 1); Inc(Count);
+          end;
+        SetLength(RandomNames, Count);
+        ShuffleNames(RandomNames);
+        Dec(Count);
+        for I := 0 to CountTeams + 1 do
+          for J := 0 to CountPlayer[I] do
+          begin
+            SetSetupName(I * (Party_Players_Max + 1) + J + 1, RandomNames[Count]); Dec(Count);
+          end;
+      end;
+  end;
+end;
+
+procedure TScreenPartyPlayer.SyncDocument;
+var Team, Player, Index, Field: integer; Prefix, Child: UTF8String;
+  function ColorText(const Color: TRGB): UTF8String;
+  begin
+    Result := '#' + IntToHex(EnsureRange(Round(Color.R * 255), 0, 255), 2) +
+      IntToHex(EnsureRange(Round(Color.G * 255), 0, 255), 2) + IntToHex(EnsureRange(Round(Color.B * 255), 0, 255), 2);
+  end;
+begin
+  DocumentUI.SetModel(uiPartyPlayersData + '.count', IntToStr(CountTeams + 2), 1);
+  DocumentUI.SetModel(uiPartyPlayersData + '.focus', IntToStr(DocumentInteraction), 1);
+  DocumentUI.SetModel(uiPartyPlayersData + '.previous', IntToStr(Ord(CountTeams > 0)), 2);
+  DocumentUI.SetModel(uiPartyPlayersData + '.next', IntToStr(Ord(CountTeams < Party_Teams_Max - 2)), 2);
+  DocumentUI.SetArray(uiPartyPlayersData + '.teams', Party_Teams_Max);
+  for Team := 0 to Party_Teams_Max - 1 do
+  begin
+    Prefix := uiPartyPlayersData + '.teams[' + IntToStr(Team) + '].';
+    Index := Team * (Party_Players_Max + 1);
+    Field := Team * (Party_Players_Max + 2) + 1;
+    DocumentUI.SetModel(Prefix + 'id', IntToStr(Team), 1);
+    DocumentUI.SetModel(Prefix + 'visible', IntToStr(Ord(Team < CountTeams + 2)), 2);
+    DocumentUI.SetModel(Prefix + 'nameId', IntToStr(Field), 1);
+    DocumentUI.SetModel(Prefix + 'countId', IntToStr(Field + 1), 1);
+    DocumentUI.SetModel(Prefix + 'name', DocumentNames[Index].Value);
+    DocumentUI.SetModel(Prefix + 'suffix', DocumentNames[Index].Suffix);
+    DocumentUI.SetModel(Prefix + 'count', IntToStr(CountPlayer[Team] + 1), 1);
+    DocumentUI.SetModel(Prefix + 'previous', IntToStr(Ord(CountPlayer[Team] > 0)), 2);
+    DocumentUI.SetModel(Prefix + 'next', IntToStr(Ord(CountPlayer[Team] < Party_Players_Max - 1)), 2);
+    DocumentUI.SetModel(Prefix + 'color', ColorText(GetPlayerColor(Num[Team])));
+    DocumentUI.SetModel(Prefix + 'light', ColorText(GetPlayerLightColor(Num[Team])));
+    DocumentUI.SetArray(Prefix + 'players', Party_Players_Max);
+    for Player := 0 to Party_Players_Max - 1 do
+    begin
+      Child := Prefix + 'players[' + IntToStr(Player) + '].';
+      DocumentUI.SetModel(Child + 'id', IntToStr(Field + 2 + Player), 1);
+      DocumentUI.SetModel(Child + 'visible', IntToStr(Ord(Player <= CountPlayer[Team])), 2);
+      DocumentUI.SetModel(Child + 'name', DocumentNames[Index + Player + 1].Value);
+      DocumentUI.SetModel(Child + 'suffix', DocumentNames[Index + Player + 1].Suffix);
+    end;
+  end;
+  DocumentUI.Focus('party-player-' + IntToStr(DocumentInteraction));
+end;
+
+destructor TScreenPartyPlayer.Destroy;
+begin
+  DocumentUI.Free;
+  inherited;
+end;
+
+function TScreenPartyPlayer.DrawBG: boolean;
+begin
+  if DocumentUI <> nil then Result := DocumentUI.Draw(true) else Result := inherited;
+end;
+
+function TScreenPartyPlayer.DrawFG: boolean;
+begin
+  if DocumentUI <> nil then begin SyncDocument; Exit(DocumentUI.Draw(false, true)); end;
+  Result := inherited;
+end;
+
 procedure TScreenPartyPlayer.CacheCurrentSetup;
 var
   Team, Player: integer;
@@ -145,7 +367,7 @@ var
 begin
   for Team := 0 to Party_Teams_Max - 1 do
   begin
-    TeamName := Button[Team * 5].Text[0].Text;
+    TeamName := GetSetupName(Team * 5);
     if IsDefaultTeamName(TeamName, Team + 1) then
       FCachedTeamNames[Team] := 'Team' + IntToStr(Team + 1)
     else
@@ -153,7 +375,7 @@ begin
 
     for Player := 0 to Party_Players_Max - 1 do
     begin
-      PlayerName := Button[Team * 5 + Player + 1].Text[0].Text;
+      PlayerName := GetSetupName(Team * 5 + Player + 1);
       if IsDefaultPlayerName(PlayerName, Team * Party_Players_Max + Player + 1) then
         FCachedPlayerNames[Team, Player] :=
           'Player' + IntToStr(Team * Party_Players_Max + Player + 1)
@@ -173,18 +395,17 @@ begin
   begin
     TeamName := FCachedTeamNames[Team];
     if IsDefaultTeamName(TeamName, Team + 1) then
-      Button[Team * 5].Text[0].Text := ITeamTranslated[Team]
+      SetSetupName(Team * 5, ITeamTranslated[Team])
     else
-      Button[Team * 5].Text[0].Text := TeamName;
+      SetSetupName(Team * 5, TeamName);
 
     for Player := 0 to Party_Players_Max - 1 do
     begin
       PlayerName := FCachedPlayerNames[Team, Player];
       if IsDefaultPlayerName(PlayerName, Team * Party_Players_Max + Player + 1) then
-        Button[Team * 5 + Player + 1].Text[0].Text :=
-          IPlayerTranslated[Team * Party_Players_Max + Player]
+        SetSetupName(Team * 5 + Player + 1, IPlayerTranslated[Team * Party_Players_Max + Player])
       else
-        Button[Team * 5 + Player + 1].Text[0].Text := PlayerName;
+        SetSetupName(Team * 5 + Player + 1, PlayerName);
     end;
   end;
 end;
@@ -196,29 +417,29 @@ begin
   // Save team names
   for I := 0 to 2 do
   begin
-    if IsDefaultTeamName(Button[I * 5].Text[0].Text, I + 1) then
+    if IsDefaultTeamName(GetSetupName(I * 5), I + 1) then
       Ini.NameTeam[I] := 'Team' + IntToStr(I + 1)
     else
-      Ini.NameTeam[I] := Button[I * 5].Text[0].Text;
+      Ini.NameTeam[I] := GetSetupName(I * 5);
   end;
 
   // Save player names
   for I := 0 to 3 do
   begin
-    if IsDefaultPlayerName(Button[I + 1].Text[0].Text, I + 1) then
+    if IsDefaultPlayerName(GetSetupName(I + 1), I + 1) then
       Ini.Name[I] := 'Player' + IntToStr(I + 1)
     else
-      Ini.Name[I] := Button[I + 1].Text[0].Text;
+      Ini.Name[I] := GetSetupName(I + 1);
 
-    if IsDefaultPlayerName(Button[I + 6].Text[0].Text, I + 5) then
+    if IsDefaultPlayerName(GetSetupName(I + 6), I + 5) then
       Ini.Name[I + 4] := 'Player' + IntToStr(I + 5)
     else
-      Ini.Name[I + 4] := Button[I + 6].Text[0].Text;
+      Ini.Name[I + 4] := GetSetupName(I + 6);
 
-    if IsDefaultPlayerName(Button[I + 11].Text[0].Text, I + 9) then
+    if IsDefaultPlayerName(GetSetupName(I + 11), I + 9) then
       Ini.Name[I + 8] := 'Player' + IntToStr(I + 9)
     else
-      Ini.Name[I + 8] := Button[I + 11].Text[0].Text;
+      Ini.Name[I + 8] := GetSetupName(I + 11);
   end;
 end;
 
@@ -227,6 +448,7 @@ procedure TScreenPartyPlayer.UpdateInterface;
     I: integer;
     Btn: integer;
 begin
+  if DocumentUI <> nil then Exit;
   SelectsS[SelectPlayers[2]].Visible := (CountTeams = 1);
 
   Btn := 0;
@@ -260,6 +482,8 @@ var
     Col: TRGB;
 begin
 
+  if (DocumentUI <> nil) and (DocumentNameIndex(DocumentInteraction) >= 0) then
+    DocumentNames[DocumentNameIndex(DocumentInteraction)].Finish;
   CacheCurrentSetup;
 
   // add teams to party
@@ -269,10 +493,10 @@ begin
     Ini.SingColor[I] := Num[I];
     Ini.TeamColor[I] := Num[I];
     
-    Party.AddTeam(Button[I * 5].Text[0].Text);
+    Party.AddTeam(GetSetupName(I * 5));
 
     for J := 0 to CountPlayer[I] do
-      Party.AddPlayer(I, Button[I * 5 + 1 + J].Text[0].Text);
+      Party.AddPlayer(I, GetSetupName(I * 5 + 1 + J));
 
     // no avatar on Party
     AvatarPlayerTextures[I + 1] := DefaultAvatarTexture(I);
@@ -314,8 +538,8 @@ begin
     for I := CountTeams + 1 downto 0 do
     begin
       for J := CountPlayer[I] downto 0 do
-        Ini.RememberUsedNames([Button[I * 5 + 1 + J].Text[0].Text]);
-      Ini.RememberUsedTeamNames([Button[I * 5].Text[0].Text]);
+        Ini.RememberUsedNames([GetSetupName(I * 5 + 1 + J)]);
+      Ini.RememberUsedTeamNames([GetSetupName(I * 5)]);
     end;
     SaveCurrentSetup;
     Ini.SaveNames;
@@ -331,6 +555,11 @@ end;
 
 function TScreenPartyPlayer.ShouldHandleInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; out SuppressKey: boolean): boolean;
 begin
+  if DocumentUI <> nil then
+  begin
+    SuppressKey := (DocumentNameIndex(DocumentInteraction) >= 0) and (GetNameTemplateIndexFromKey(PressedKey) <> -1);
+    Exit((GetNameTemplateIndexFromKey(PressedKey) = -1) or (DocumentNameIndex(DocumentInteraction) >= 0));
+  end;
   Result := inherited;
   // only suppress special keys for now
   if GetNameTemplateIndexFromKey(PressedKey) <> -1 then
@@ -371,8 +600,8 @@ function TScreenPartyPlayer.ParseInput(PressedKey: cardinal; CharCode: UCS4Char;
     isAlternate := (SDL_ModState = KMOD_LSHIFT) or (SDL_ModState = KMOD_RSHIFT);
     isAlternate := isAlternate or (SDL_ModState = KMOD_LALT); // legacy key combination
 
-    if isAlternate then Ini.NameTemplate[index] := Button[Interactions[Interaction].Num].Text[0].Text
-    else Button[Interactions[Interaction].Num].Text[0].Text := Ini.NameTemplate[index];
+    if isAlternate then Ini.NameTemplate[index] := GetSetupName(Interactions[Interaction].Num)
+    else SetSetupName(Interactions[Interaction].Num, Ini.NameTemplate[index]);
   end;
   procedure HandleTemplateHotkey;
   var
@@ -385,6 +614,7 @@ function TScreenPartyPlayer.ParseInput(PressedKey: cardinal; CharCode: UCS4Char;
 begin
   Result := true;
   if not PressedDown then Exit;
+  if DocumentUI <> nil then Exit(DocumentInput(PressedKey, CharCode));
   if HandleNameSuggestionKey(PressedKey) then Exit;
 
   if (PressedDown) then
@@ -476,7 +706,7 @@ begin
             13: Team := 2;
           end;
 
-          //Button[Team * 5].Text[0].Text := 'BUTTON ' + IntTostr(Team);
+          //SetSetupName(Team * 5, 'BUTTON ' + IntTostr(Team));
 
           Num[Team] := Num[Team] + 1;
           Num[Team] := NoRepeatColors(Num[Team], Team, 1);
@@ -540,7 +770,7 @@ begin
           for I := 0 to self.CountTeams+1 do
             for J := 0 to CountPlayer[I] do
             begin
-              randomNames[count] := Button[5*I+J+1].Text[0].Text;
+              randomNames[count] := GetSetupName(5*I+J+1);
               inc(count);
             end;
 
@@ -553,7 +783,7 @@ begin
           for I := 0 to self.CountTeams+1 do
             for J := 0 to CountPlayer[I] do
             begin
-              Button[5*I+J+1].Text[0].Text := randomNames[count];
+              SetSetupName(5*I+J+1, randomNames[count]);
               dec(count);
             end;
         end;
@@ -562,7 +792,21 @@ begin
 end;
 
 function TScreenPartyPlayer.ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
+var Action: UTF8String;
 begin
+  if DocumentUI <> nil then
+  begin
+    if RightMbESC and (MouseButton = SDL_BUTTON_RIGHT) and BtnDown then Exit(DocumentInput(SDLK_ESCAPE, 0));
+    if MouseButton = SDL_BUTTON_LEFT then DocumentUI.Mouse(X, Y, 0, BtnDown) else DocumentUI.Mouse(X, Y);
+    FocusDocumentField(DocumentUI.FocusedTarget);
+    Action := DocumentUI.TakeAction;
+    if Action = uiPartyPlayersPrevious then begin FocusDocumentField(DocumentUI.ActionTarget); DocumentInput(SDLK_LEFT, 0); end
+    else if Action = uiPartyPlayersNext then begin FocusDocumentField(DocumentUI.ActionTarget); DocumentInput(SDLK_RIGHT, 0); end
+    else if Action = uiPartyPlayersActivate then begin FocusDocumentField(DocumentUI.ActionTarget); DocumentInput(SDLK_RETURN, 0); end
+    else if Action = uiPartyPlayersContinue then UpdateParty
+    else if Action = uiNavigationBack then DocumentInput(SDLK_ESCAPE, 0);
+    Exit(true);
+  end;
   Result := true;
   inherited ParseMouse(MouseButton, BtnDown, X, Y);
   SetTextInput(Interactions[Interaction].Typ = iButton);
@@ -575,6 +819,9 @@ var
   PlayerOptions: TUTF8StringArray;
 begin
   inherited Create;
+
+  DocumentUI := TDocumentUI.Open(uiPartyPlayersRole);
+  if DocumentUI <> nil then Exit;
 
   LoadFromTheme(Theme.PartyPlayer);
 
@@ -682,7 +929,7 @@ procedure TScreenPartyPlayer.OnShow;
 var
   I:    integer;
 begin
-  inherited;
+  if DocumentUI = nil then inherited;
 
   if not Help.SetHelpID(ID) then
     Log.LogWarn('No Entry for Help-ID ' + ID, 'ScreenPartyPlayer');
@@ -700,33 +947,33 @@ begin
     for I := 1 to 4 do
     begin
       if IsDefaultPlayerName(Ini.Name[I-1], I) then
-        Button[I].Text[0].Text := IPlayerTranslated[I-1]
+        SetSetupName(I, IPlayerTranslated[I-1])
       else
-        Button[I].Text[0].Text := Ini.Name[I-1];
+        SetSetupName(I, Ini.Name[I-1]);
     end;
 
     for I := 6 to 9 do
     begin
       if IsDefaultPlayerName(Ini.Name[I-2], I-1) then
-        Button[I].Text[0].Text := IPlayerTranslated[I-2]
+        SetSetupName(I, IPlayerTranslated[I-2])
       else
-        Button[I].Text[0].Text := Ini.Name[I-2];
+        SetSetupName(I, Ini.Name[I-2]);
     end;
 
     for I := 11 to 14 do
     begin
       if IsDefaultPlayerName(Ini.Name[I-3], I-2) then
-        Button[I].Text[0].Text := IPlayerTranslated[I-3]
+        SetSetupName(I, IPlayerTranslated[I-3])
       else
-        Button[I].Text[0].Text := Ini.Name[I-3];
+        SetSetupName(I, Ini.Name[I-3]);
     end;
 
     for I := 0 to 2 do
     begin
       if IsDefaultTeamName(Ini.NameTeam[I], I + 1) then
-        Button[I * 5].Text[0].Text := ITeamTranslated[I]
+        SetSetupName(I * 5, ITeamTranslated[I])
       else
-        Button[I * 5].Text[0].Text := Ini.NameTeam[I];
+        SetSetupName(I * 5, Ini.NameTeam[I]);
     end;
     // Templates for Names Mod end
   end;
@@ -734,7 +981,13 @@ begin
   Party.Clear;
 
   UpdateInterface;
-  SetTextInput((Interaction >= 0) and (Interaction <= High(Interactions)) and
+  if DocumentUI <> nil then
+  begin
+    if not DocumentFieldVisible(DocumentInteraction) then DocumentInteraction := 0;
+    SyncDocument;
+    SetTextInput(DocumentNameIndex(DocumentInteraction) >= 0);
+  end
+  else SetTextInput((Interaction >= 0) and (Interaction <= High(Interactions)) and
       (Interactions[Interaction].Typ = iButton));
 end;
 
@@ -768,6 +1021,7 @@ var
   I: integer;
 begin
 
+  if DocumentUI <> nil then Exit;
   Col := GetPlayerLightColor(K);
   DesCol := GetPlayerColor(K);
 

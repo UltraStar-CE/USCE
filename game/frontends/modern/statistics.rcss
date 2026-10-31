@@ -1,0 +1,21 @@
+.statistics-screen .heading { left: 8.75vw; top: 1.5vh; font-size: 7.5vh; }
+.statistics-screen .heading-icon { left: 5vw; top: 4.166667vh; width: 3.125vw; height: 4.166667vh; }
+.statistics-screen .description { left: 8.75vw; top: 10.466667vh; color: white; }
+.statistics-screen .where { font-size: 2.25vh; }
+.statistics-panel { position: absolute; left: 5vw; top: 16.666667vh; width: 65vw; height: 73.333333vh; border-top-right-radius: 3.333333vh; border-bottom-left-radius: 3.333333vh; overflow: hidden; }
+.statistics-panel div { position: absolute; left: 0; width: 100%; }
+.statistics-panel .panel-top { top: 0; height: 3.333333vh; }
+.statistics-panel .panel-center { top: 3.333333vh; height: 66.666667vh; }
+.statistics-panel .panel-bottom { top: 70vh; height: 3.333333vh; }
+.statistics-overview { position: absolute; left: 5.625vw; top: 21vh; width: 63.75vw; height: 65vh; font-size: 3.25vh; line-height: 1.15; overflow: hidden; }
+.statistics-overview b { font-weight: bold; }
+.statistics-buttons { position: absolute; left: 73.625vw; top: 16.666667vh; }
+.statistics-buttons button { width: 23.75vw; height: 8.333333vh; margin-bottom: 1.666667vh; font-size: 3.75vh; }
+.statistics-buttons span { margin-top: 1.666667vh; }
+.statistics-buttons .smaller { font-size: 3vh; }
+.statistics-buttons .smaller span { margin-top: 2.166667vh; }
+.statistics-back-icon { left: 90.75vw; }
+.statistics-back { left: 93.75vw; }
+
+.statistics-period-icon { left: 56.25vw; }
+.statistics-period { left: 58.75vw; }

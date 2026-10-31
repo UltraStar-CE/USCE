@@ -36,6 +36,7 @@ interface
 uses
   UCommon,
   UDisplay,
+  UDocumentUI,
   UFiles,
   UMenu,
   UMusic,
@@ -57,19 +58,41 @@ type
 
       IModeNames: array of UTF8String;
       IModeIDs: array of integer;
+      DocumentUI: TDocumentUI;
+      DocumentRound: integer;
+      DocumentDirty: boolean;
+      DocumentNeedsReveal: boolean;
+      DocumentRevealRound: integer;
 
+      procedure SyncDocument;
+      procedure ReadDocumentSelection;
+      procedure MoveDocumentSelection(Direction: integer);
+      procedure ChangeDocumentValue(Delta: integer);
+      procedure ChooseDocumentValue(const Target: UTF8String);
       procedure UpdateInterface;
       procedure StartParty;
     public
       constructor Create; override;
+      destructor Destroy; override;
+      function DrawBG: boolean; override;
+      function DrawFG: boolean; override;
+      function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       procedure OnShow; override;
+      procedure OnWindowResized; override;
       procedure InteractNext; override;
       procedure InteractPrev; override;
   end;
 
 const
   ID='ID_032';   //for help system
+  uiPartyRoundsRole = 'party-rounds';
+  uiPartyRoundsData = 'partyRounds';
+  uiPartyRoundsPrevious = 'party.rounds.previous';
+  uiPartyRoundsNext = 'party.rounds.next';
+  uiPartyRoundsChoose = 'party.rounds.choose';
+  uiPartyRoundsSelect = 'party.rounds.select';
+  uiPartyRoundsStart = 'party.rounds.start';
 
 implementation
 
@@ -85,12 +108,198 @@ uses
   UPlaylist,
   USong,
   USongs,
-  UUnicodeUtils;
+  UUnicodeUtils,
+  Math;
+
+destructor TScreenPartyRounds.Destroy;
+begin
+  DocumentUI.Free;
+  inherited;
+end;
+
+function TScreenPartyRounds.DrawBG: boolean;
+begin
+  if DocumentUI <> nil then Result := DocumentUI.Draw(true) else Result := inherited;
+end;
+
+function TScreenPartyRounds.DrawFG: boolean;
+begin
+  if DocumentUI <> nil then
+  begin
+    SyncDocument;
+    Exit(DocumentUI.Draw(false, true));
+  end;
+  Result := inherited;
+end;
+
+procedure TScreenPartyRounds.OnWindowResized;
+begin
+  inherited;
+  if DocumentUI <> nil then DocumentNeedsReveal := true;
+end;
+
+procedure TScreenPartyRounds.ReadDocumentSelection;
+var Target: UTF8String; Index: integer;
+begin
+  Target := DocumentUI.FocusedTarget;
+  if Target = 'count' then Index := -1
+  else if not TryStrToInt(Target, Index) then Exit;
+  if (Index < -1) or (Index >= RoundCount + 2) then Exit;
+  if DocumentRound <> Index then
+  begin
+    DocumentDirty := true;
+    DocumentNeedsReveal := true;
+  end;
+  DocumentRound := Index;
+  if Index >= 0 then DocumentRevealRound := Index;
+end;
+
+procedure TScreenPartyRounds.MoveDocumentSelection(Direction: integer);
+var I, Index: integer; Target: UTF8String;
+begin
+  // Skip optional theme commands while walking the round fields in document order.
+  for I := 0 to RoundCount + 3 do
+  begin
+    DocumentUI.Key(Direction);
+    Target := DocumentUI.FocusedTarget;
+    if (Target = 'count') or (TryStrToInt(Target, Index) and
+       (Index >= 0) and (Index < RoundCount + 2)) then
+    begin
+      ReadDocumentSelection;
+      Exit;
+    end;
+  end;
+end;
+
+procedure TScreenPartyRounds.ChangeDocumentValue(Delta: integer);
+begin
+  DocumentDirty := true;
+  if DocumentRound = -1 then
+    RoundCount := EnsureRange(RoundCount + Delta, 0, High(RoundMode) - 1)
+  else if (DocumentRound >= 0) and (DocumentRound < RoundCount + 2) and (Length(IModeIDs) > 0) then
+    RoundMode[DocumentRound] := EnsureRange(RoundMode[DocumentRound] + Delta, 0, High(IModeIDs));
+end;
+
+procedure TScreenPartyRounds.ChooseDocumentValue(const Target: UTF8String);
+var Separator, Index, Choice: integer;
+begin
+  Separator := Pos(':', Target);
+  if (Separator <= 0) or not TryStrToInt(Copy(Target, Separator + 1, MaxInt), Choice) then Exit;
+  if Copy(Target, 1, Separator - 1) = 'count' then
+  begin
+    if (Choice < 2) or (Choice > Length(RoundMode)) then Exit;
+    RoundCount := Choice - 2;
+    DocumentRound := -1;
+    DocumentDirty := true;
+    Exit;
+  end;
+  if not TryStrToInt(Copy(Target, 1, Separator - 1), Index) then Exit;
+  if (Index < 0) or (Index >= RoundCount + 2) or
+    (Choice < 0) or (Choice >= Length(IModeIDs)) then Exit;
+  DocumentRound := Index;
+  DocumentRevealRound := Index;
+  DocumentNeedsReveal := true;
+  RoundMode[Index] := Choice;
+  DocumentDirty := true;
+end;
+
+procedure TScreenPartyRounds.SyncDocument;
+var I, Selection: integer; Prefix: UTF8String;
+begin
+  if DocumentDirty then
+  begin
+    DocumentUI.SetModel(uiPartyRoundsData + '.count', IntToStr(RoundCount + 2), 1);
+    DocumentUI.SetModel(uiPartyRoundsData + '.focus', IntToStr(DocumentRound), 1);
+    DocumentUI.SetModel(uiPartyRoundsData + '.previousCount', IntToStr(Ord(RoundCount > 0)), 2);
+    DocumentUI.SetModel(uiPartyRoundsData + '.nextCount', IntToStr(Ord(RoundCount < High(RoundMode) - 1)), 2);
+    DocumentUI.SetModel(uiPartyRoundsData + '.minimumCount', '2', 1);
+    DocumentUI.SetModel(uiPartyRoundsData + '.maximumCount', IntToStr(Length(RoundMode)), 1);
+    DocumentUI.SetArray(uiPartyRoundsData + '.counts', Length(RoundMode) - 1);
+    for I := 2 to Length(RoundMode) do
+      DocumentUI.SetModel(uiPartyRoundsData + '.counts[' + IntToStr(I - 2) + '].value', IntToStr(I), 1);
+    DocumentUI.SetArray(uiPartyRoundsData + '.modes', Length(IModeNames));
+    for I := 0 to High(IModeNames) do
+    begin
+      Prefix := uiPartyRoundsData + '.modes[' + IntToStr(I) + '].';
+      DocumentUI.SetModel(Prefix + 'id', IntToStr(I), 1);
+      DocumentUI.SetModel(Prefix + 'name', IModeNames[I]);
+    end;
+    DocumentUI.SetArray(uiPartyRoundsData + '.rounds', RoundCount + 2);
+    for I := 0 to RoundCount + 1 do
+    begin
+      Prefix := uiPartyRoundsData + '.rounds[' + IntToStr(I) + '].';
+      Selection := EnsureRange(RoundMode[I], 0, Max(0, High(IModeNames)));
+      DocumentUI.SetModel(Prefix + 'id', IntToStr(I), 1);
+      DocumentUI.SetModel(Prefix + 'label', Format(Language.Translate('PARTY_SELECTMODE'), [I + 1]));
+      if Length(IModeNames) > 0 then DocumentUI.SetModel(Prefix + 'name', IModeNames[Selection])
+      else DocumentUI.SetModel(Prefix + 'name', '');
+      DocumentUI.SetModel(Prefix + 'mode', IntToStr(Selection), 1);
+      DocumentUI.SetModel(Prefix + 'previous', IntToStr(Ord(Selection > 0)), 2);
+      DocumentUI.SetModel(Prefix + 'next', IntToStr(Ord(Selection < High(IModeIDs))), 2);
+    end;
+    DocumentDirty := false;
+  end;
+  if DocumentRound = -1 then DocumentUI.Focus('round-count')
+  else DocumentUI.Focus('round-mode-' + IntToStr(DocumentRound));
+  if DocumentNeedsReveal then
+  begin
+    DocumentRevealRound := EnsureRange(DocumentRevealRound, 0, RoundCount + 1);
+    DocumentUI.Reveal('round-row-' + IntToStr(DocumentRevealRound));
+    DocumentNeedsReveal := false;
+  end;
+end;
+
+function TScreenPartyRounds.ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
+var Action, Target: UTF8String; Selection: integer;
+begin
+  if DocumentUI = nil then Exit(inherited);
+  if RightMbESC and (MouseButton = SDL_BUTTON_RIGHT) and BtnDown then
+    Exit(ParseInput(SDLK_ESCAPE, 0, true));
+  if MouseButton = SDL_BUTTON_LEFT then DocumentUI.Mouse(X, Y, 0, BtnDown)
+  else DocumentUI.Mouse(X, Y);
+  if BtnDown then
+  begin
+    if MouseButton = SDL_BUTTON_WHEELUP then DocumentUI.Scroll(-1)
+    else if MouseButton = SDL_BUTTON_WHEELDOWN then DocumentUI.Scroll(1);
+  end;
+  ReadDocumentSelection;
+  Action := DocumentUI.TakeAction;
+  if (Action = uiPartyRoundsPrevious) or (Action = uiPartyRoundsNext) or (Action = uiPartyRoundsSelect) then
+  begin
+    Target := DocumentUI.ActionTarget;
+    if Target = 'count' then Selection := -1
+    else if not TryStrToInt(Target, Selection) then Selection := -2;
+    if (Selection >= -1) and (Selection < RoundCount + 2) then
+    begin
+      DocumentNeedsReveal := DocumentRound <> Selection;
+      DocumentRound := Selection;
+      if Selection >= 0 then DocumentRevealRound := Selection;
+      DocumentDirty := true;
+    end
+    else Exit(true);
+  end;
+  if Action = uiPartyRoundsPrevious then
+    ParseInput(SDLK_LEFT, 0, true)
+  else if Action = uiPartyRoundsNext then
+    ParseInput(SDLK_RIGHT, 0, true)
+  else if Action = uiPartyRoundsChoose then
+    ChooseDocumentValue(DocumentUI.ActionTarget)
+  else if Action = uiPartyRoundsStart then
+    StartParty
+  else if Action = uiNavigationBack then
+    Exit(ParseInput(SDLK_ESCAPE, 0, true));
+  Result := true;
+end;
 
 procedure TScreenPartyRounds.InteractNext;
 var
   I: integer;
 begin
+  if DocumentUI <> nil then
+  begin
+    MoveDocumentSelection(uiKeyNext);
+    Exit;
+  end;
 
   if (Interaction = high(Theme.PartyRounds.SelectRound) + 1) and (Actual + high(Theme.PartyRounds.SelectRound) <= RoundCount) then
   begin
@@ -113,6 +322,11 @@ procedure TScreenPartyRounds.InteractPrev;
 var
   I: integer;
 begin
+  if DocumentUI <> nil then
+  begin
+    MoveDocumentSelection(uiKeyPrevious);
+    Exit;
+  end;
 
   if (Interaction = 1) and (Actual > 0) then
   begin
@@ -137,6 +351,11 @@ procedure TScreenPartyRounds.UpdateInterface;
     ActualRounds: integer;
 begin
   ActualRounds := RoundCount + 2;
+  if DocumentUI <> nil then
+  begin
+    if DocumentRound >= ActualRounds then DocumentRound := -1;
+    Exit;
+  end;
 
   for I := 0 to High(SelectRound) do
     SelectsS[SelectRound[I]].Visible := (I < ActualRounds);
@@ -147,6 +366,7 @@ procedure TScreenPartyRounds.StartParty;
     GameRounds: ARounds;
     I: integer;
 begin
+  if Length(IModeIDs) = 0 then Exit;
   SetLength(GameRounds, RoundCount + 2);
 
   for I := 0 to High(GameRounds) do
@@ -202,6 +422,11 @@ begin
       SDLK_RIGHT:
         begin
           AudioPlayback.PlaySound(SoundLib.Option);
+          if DocumentUI <> nil then
+          begin
+            ChangeDocumentValue(1);
+            Exit;
+          end;
           InteractInc;
 
           if Interaction = 0 then
@@ -212,6 +437,11 @@ begin
       SDLK_LEFT:
         begin
           AudioPlayback.PlaySound(SoundLib.Option);
+          if DocumentUI <> nil then
+          begin
+            ChangeDocumentValue(-1);
+            Exit;
+          end;
           InteractDec;
 
           if Interaction = 0 then
@@ -230,6 +460,14 @@ var
 begin
   inherited Create;
   RoundCount := 5;
+  DocumentRound := -1;
+  DocumentDirty := true;
+  DocumentNeedsReveal := true;
+  for I := 0 to High(RoundMode) do RoundMode[I] := 0;
+  SetLength(IModeNames, 1);
+  IModeNames[0] := '---';
+  DocumentUI := TDocumentUI.Open(uiPartyRoundsRole);
+  if DocumentUI <> nil then Exit;
 
   for I := 0 to 97 do
     IRoundCount[I] := IntToStr(I + 2);
@@ -264,7 +502,7 @@ procedure TScreenPartyRounds.OnShow;
     temp: TParty_RoundList;
     I, J: integer;
 begin
-  inherited;
+  if DocumentUI = nil then inherited;
 
   if not Help.SetHelpID(ID) then
     Log.LogError('No Entry for Help-ID ' + ID + ' (ScreenPartyRounds)');
@@ -298,8 +536,17 @@ begin
       IModeIds[I]   := ModeList[I].Index;
     end;
 
-    for I := 0 to High(SelectRound) do
-      UpdateSelectSlideOptions(SelectRound[I], IModeNames, Round[I]);
+    for I := 0 to High(RoundMode) do
+      RoundMode[I] := EnsureRange(RoundMode[I], 0, High(IModeIDs));
+    if DocumentUI <> nil then
+    begin
+      DocumentDirty := true;
+      DocumentNeedsReveal := true;
+      SyncDocument;
+    end
+    else
+      for I := 0 to High(SelectRound) do
+        UpdateSelectSlideOptions(SelectRound[I], IModeNames, Round[I]);
   end
   else
   begin

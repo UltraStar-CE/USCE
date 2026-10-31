@@ -1,0 +1,7 @@
+<template name="party-rounds-footer"><head></head><body>
+  <span class="where" lang="PARTY_ROUNDS_WHEREAMI" />
+  <img class="legend-icon navigation-icon" src="../../themes/Modern/[button]navi.png" />
+  <span class="legend navigation" lang="SING_LEGEND_NAVIGATE" />
+  <img class="legend-icon rounds-continue-icon" src="../../themes/Modern/[button]enter.png" />
+  <span class="legend rounds-continue" lang="PARTY_ROUNDS_LEGEND_CONTINUE" />
+</body></template>

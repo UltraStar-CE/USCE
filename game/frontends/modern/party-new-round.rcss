@@ -1,0 +1,38 @@
+/* Round history and team layout belong to the theme, not the game controller. */
+.party-new-round-screen .heading { left: 8.75vw; top: 1.5vh; font-size: 7.5vh; }
+.party-new-round-screen .heading-icon { left: 5vw; top: 3.666667vh; width: 3.375vw; height: 4.5vh; }
+.party-new-round-screen .description { left: 8.75vw; top: 10.466667vh; color: white; }
+.party-new-round-screen .where { font-size: 2.25vh; }
+.new-round-continue-area, .new-round-continue-area:focus { position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; background-color: transparent; }
+.party-new-round-screen .heading, .party-new-round-screen .heading-icon, .party-new-round-screen .description,
+.new-round-teams, .new-round-history-heading, .new-round-banner, .new-round-next-players, .new-round-bottom,
+.party-new-round-screen .footer, .party-new-round-screen .footer-labels, .party-new-round-screen .reflection-clip { pointer-events: none; }
+.new-round-teams { position: absolute; left: 2.5vw; top: 18.333333vh; width: 50vw; }
+.new-round-team { display: block; position: relative; width: 50vw; height: 13.5vh; }
+.new-round-team-background { position: absolute; left: 0; top: 0; width: 50vw; height: 8.333333vh; }
+.new-round-team-name { position: absolute; left: 1.25vw; top: -0.333333vh; width: 37.5vw; height: 5.5vh; font-size: 4.5vh; white-space: nowrap; overflow: hidden; }
+.new-round-team-score { position: absolute; left: 41.25vw; top: 0; width: 10vw; height: 7.5vh; text-align: center; font-size: 6.375vh; white-space: nowrap; }
+.new-round-team-players { position: absolute; left: 1.25vw; top: 4.5vh; width: 47.5vw; height: 3.5vh; font-size: 2.625vh; white-space: nowrap; overflow: hidden; }
+.new-round-history-heading { position: absolute; left: 56.25vw; top: 17.166667vh; width: 41.25vw; height: 4vh; border-top-right-radius: 1.666667vh; }
+.new-round-history-heading span { position: absolute; top: -0.5vh; height: 5vh; font-size: 3.75vh; }
+.round-title { position: absolute; left: 1.25vw; width: 17.5vw; white-space: nowrap; overflow: hidden; }
+.round-winner { position: absolute; left: 18.75vw; width: 22.5vw; white-space: nowrap; overflow: hidden; }
+.new-round-rounds { position: absolute; left: 56.25vw; top: 22.166667vh; width: 41.25vw; height: 33.833333vh; overflow-x: hidden; overflow-y: auto; }
+.new-round-rounds scrollbarvertical { width: 0; }
+.new-round-rounds scrollbarhorizontal { height: 0; }
+.new-round-row { display: block; position: relative; width: 41.25vw; height: 4.833333vh; }
+.new-round-row-background { position: absolute; left: 0; top: 0.333333vh; width: 41.25vw; height: 3.333333vh; opacity: 0.7; }
+.new-round-row span { top: 0; height: 4.5vh; font-size: 2.75vh; }
+.new-round-banner { position: absolute; left: 31.25vw; top: 58.333333vh; width: 37.5vw; height: 8.333333vh; border-top-right-radius: 2.5vh; }
+.new-round-banner-label { position: absolute; right: 12.75vw; top: 0; height: 8vh; font-size: 6.75vh; white-space: nowrap; }
+.new-round-banner-number { position: absolute; left: 25.875vw; top: 0; height: 8vh; font-size: 6.75vh; }
+.new-round-next-players { position: absolute; left: 19.375vw; top: 69.166667vh; width: 63.75vw; display: flex; }
+.new-round-next-player { position: relative; width: 21.25vw; height: 13vh; }
+.new-round-next-background { position: absolute; left: 0; top: 0; width: 18.75vw; height: 8.333333vh; }
+.new-round-next-name { position: absolute; left: 0; top: 1.666667vh; width: 18.75vw; height: 5vh; font-size: 3.75vh; text-align: center; white-space: nowrap; overflow: hidden; }
+.new-round-next-reflection-clip { position: absolute; left: 0; top: 8.666667vh; width: 18.75vw; height: 4.166667vh; overflow: hidden; opacity: 0.7; mask-image: vertical-gradient(#000f #0000); }
+.new-round-next-reflection { position: absolute; left: 0; top: 0; width: 18.75vw; height: 8.333333vh; transform: scaleY(-1); }
+.new-round-bottom { position: absolute; left: 6.25vw; top: 82.5vh; width: 87.5vw; height: 5vh; border-bottom-left-radius: 2.5vh; }
+.new-round-bottom span { position: absolute; left: 0; top: 0; width: 100%; height: 5vh; text-align: center; font-size: 3.75vh; white-space: nowrap; overflow: hidden; }
+.new-round-continue-icon { left: 34.5vw; }
+.new-round-continue { left: 37.5vw; }

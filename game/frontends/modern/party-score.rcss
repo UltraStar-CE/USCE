@@ -1,0 +1,31 @@
+/* Modern party results. Team data is supplied by the game; layout belongs here. */
+.party-score-screen .heading { left: 8.75vw; top: 1.5vh; font-size: 7.5vh; }
+.party-score-screen .heading-icon { left: 5vw; top: 3.666667vh; width: 3.375vw; height: 4.5vh; }
+.party-score-screen .description { left: 8.75vw; top: 10.466667vh; color: white; }
+.party-score-screen .where { font-size: 2.25vh; }
+.party-score-continue-area, .party-score-continue-area:focus { position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; background-color: transparent; }
+.party-score-screen .heading, .party-score-screen .heading-icon, .party-score-screen .description,
+.party-score-banner, .party-score-teams, .party-score-bottom, .party-score-screen .footer,
+.party-score-screen .footer-labels, .party-score-screen .reflection-clip { pointer-events: none; }
+.party-score-banner { position: absolute; left: 6.25vw; top: 16.666667vh; width: 87.5vw; height: 13.333333vh; border-top-right-radius: 2.5vh; }
+.party-score-winner { position: absolute; left: 0; top: -0.333333vh; width: 100%; height: 7vh; text-align: center; font-size: 6.75vh; white-space: nowrap; overflow: hidden; }
+.party-score-subtitle { position: absolute; left: 0; top: 6vh; width: 100%; height: 6vh; text-align: center; font-size: 5.625vh; }
+.party-score-teams { position: absolute; left: 22.25vw; top: 33.333333vh; width: 50vw; }
+.party-score-team { display: block; position: relative; width: 50vw; height: 16.666667vh; }
+.party-score-team-background { position: absolute; left: 0; top: 0; width: 50vw; height: 8.333333vh; }
+.party-score-team-points { position: absolute; left: 1.25vw; top: 5vh; width: 47.5vw; height: 2.666667vh; }
+.party-score-team-name { position: absolute; left: 1.25vw; top: -0.333333vh; width: 32vw; height: 6vh; font-size: 4.5vh; white-space: nowrap; overflow: hidden; }
+.party-score-team-value { position: absolute; right: 1.25vw; top: -0.333333vh; width: 15vw; height: 6vh; font-size: 4.5vh; text-align: right; white-space: nowrap; }
+.party-score-team-reflection-clip { position: absolute; left: 0; top: 8.666667vh; width: 50vw; height: 4.166667vh; overflow: hidden; opacity: 0.7; mask-image: vertical-gradient(#000f #0000); }
+.party-score-team-background-reflection { position: absolute; left: 0; top: 0; width: 50vw; height: 8.333333vh; transform: scaleY(-1); }
+.party-score-points-reflection-clip { position: absolute; left: 1.25vw; top: 9.666667vh; width: 47.5vw; height: 1.333333vh; overflow: hidden; opacity: 0.7; mask-image: vertical-gradient(#000f #0000); }
+.party-score-points-reflection { position: absolute; left: 0; top: 0; width: 47.5vw; height: 2.666667vh; transform: scaleY(-1); }
+.party-score-rank { position: absolute; left: 48.125vw; top: -1.5vh; width: 8vw; height: 10.666667vh; background-color: #ffdf1f; }
+.party-score-team[rank="2"] .party-score-rank { background-color: #dfdfdf; }
+.party-score-team[rank="3"] .party-score-rank { background-color: #cd7f32; }
+.party-score-rank-reflection-clip { position: absolute; left: 48.125vw; top: 8.333333vh; width: 8vw; height: 5.333333vh; overflow: hidden; opacity: 0.7; mask-image: vertical-gradient(#000f #0000); }
+.party-score-rank-reflection { left: 0; top: 0; transform: scaleY(-1); }
+.party-score-bottom { position: absolute; left: 6.25vw; top: 82.5vh; width: 87.5vw; height: 3.333333vh; border-bottom-left-radius: 2.5vh; }
+.party-score-screen .hidden { display: none; }
+.party-score-continue-icon { left: 34.5vw; }
+.party-score-continue { left: 37.5vw; }

@@ -35,6 +35,7 @@ interface
 
 uses
   UDisplay,
+  UDocumentUI,
   UMenu,
   UMusic,
   UThemes,
@@ -43,6 +44,9 @@ uses
 
 type
   TScreenPartyWin = class(TMenu)
+    private
+      DocumentUI: TDocumentUI;
+      procedure SetDocumentResults;
     public
       TextScoreTeam1:    cardinal;
       TextScoreTeam2:    cardinal;
@@ -62,23 +66,98 @@ type
       TextWinner:        cardinal;
 
       constructor Create; override;
+      destructor Destroy; override;
+      function DrawBG: boolean; override;
+      function DrawFG: boolean; override;
+      function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       procedure OnShow; override;
   end;
 
 const
   ID='ID_035';   //for help system
+  uiPartyWinRole = 'party-win';
+  uiPartyWinData = 'partyWin';
+  uiPartyWinContinue = 'party.win.continue';
 
 implementation
 
 uses
+  UCommon,
   UGraphic,
   UHelp,
   ULanguage,
   ULog,
   UMain,
   UParty,
-  UUnicodeUtils;
+  UUnicodeUtils,
+  Math;
+
+procedure TScreenPartyWin.SetDocumentResults;
+var
+  Ranking: AParty_TeamRanking;
+  Position, Team, TeamColor: integer;
+  Prefix: UTF8String;
+  Col: TRGB;
+  function ColorText(const Value: TRGB): UTF8String;
+  begin
+    Result := '#' + IntToHex(EnsureRange(Round(Value.R * 255), 0, 255), 2) +
+      IntToHex(EnsureRange(Round(Value.G * 255), 0, 255), 2) +
+      IntToHex(EnsureRange(Round(Value.B * 255), 0, 255), 2);
+  end;
+begin
+  Ranking := Party.GetTeamRanking;
+  if Length(Ranking) > 0 then
+    DocumentUI.SetValue(uiPartyWinData + '.winner',
+      Format(Language.Translate('PARTY_SCORE_WINS'), [Party.GetWinnerString(-1)]))
+  else DocumentUI.SetValue(uiPartyWinData + '.winner', '');
+  DocumentUI.SetArray(uiPartyWinData + '.teams', Length(Ranking));
+  for Position := 0 to High(Ranking) do
+  begin
+    Team := Ranking[Position].Team;
+    Prefix := uiPartyWinData + '.teams[' + IntToStr(Position) + '].';
+    DocumentUI.SetModel(Prefix + 'id', IntToStr(Team), 1);
+    DocumentUI.SetModel(Prefix + 'position', IntToStr(Position + 1), 1);
+    DocumentUI.SetModel(Prefix + 'rank', IntToStr(Ranking[Position].Rank), 1);
+    DocumentUI.SetModel(Prefix + 'name', UTF8String(Party.Teams[Team].Name));
+    DocumentUI.SetModel(Prefix + 'score', IntToStr(Party.Teams[Team].Score), 1);
+    // The same resolved team color used by the native winner screen.
+    TeamColor := ColorExists('P' + IntToStr(Team + 1) + 'Dark');
+    Col.R := 1; Col.G := 1; Col.B := 1;
+    if TeamColor <> -1 then Col := Color[TeamColor].RGB;
+    DocumentUI.SetModel(Prefix + 'color', ColorText(Col));
+  end;
+end;
+
+function TScreenPartyWin.DrawBG: boolean;
+begin
+  if DocumentUI <> nil then Result := DocumentUI.Draw(true) else Result := inherited;
+end;
+
+function TScreenPartyWin.DrawFG: boolean;
+begin
+  if DocumentUI <> nil then Result := DocumentUI.Draw(false, true) else Result := inherited;
+end;
+
+destructor TScreenPartyWin.Destroy;
+begin
+  DocumentUI.Free;
+  inherited;
+end;
+
+function TScreenPartyWin.ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
+var Action: UTF8String;
+begin
+  if DocumentUI = nil then Exit(inherited);
+  if RightMbESC and (MouseButton = SDL_BUTTON_RIGHT) and BtnDown then
+    Exit(ParseInput(SDLK_ESCAPE, 0, true));
+  if MouseButton = SDL_BUTTON_LEFT then DocumentUI.Mouse(X, Y, 0, BtnDown)
+  else DocumentUI.Mouse(X, Y);
+  Action := DocumentUI.TakeAction;
+  Result := true;
+  if (Action = uiPartyWinContinue) or (Action = uiNavigationBack) then
+    Result := ParseInput(SDLK_RETURN, 0, true);
+end;
 
 function TScreenPartyWin.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
 begin
@@ -114,6 +193,9 @@ end;
 constructor TScreenPartyWin.Create;
 begin
   inherited Create;
+
+  DocumentUI := TDocumentUI.Open(uiPartyWinRole);
+  if DocumentUI <> nil then Exit;
 
   TextScoreTeam1 := AddText (Theme.PartyWin.TextScoreTeam1);
   TextScoreTeam2 := AddText (Theme.PartyWin.TextScoreTeam2);
@@ -152,10 +234,16 @@ var
   end;
 
 begin
-  inherited;
+  if DocumentUI = nil then inherited;
 
   if not Help.SetHelpID(ID) then
     Log.LogWarn('No Entry for Help-ID ' + ID, 'ScreenPartyWin');
+
+  if DocumentUI <> nil then
+  begin
+    SetDocumentResults;
+    Exit;
+  end;
 
   // get team ranking
   // Ranking is sorted by score

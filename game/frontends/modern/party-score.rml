@@ -1,0 +1,34 @@
+<rml>
+<head>
+  <title>Modern party round results</title>
+  <link type="text/rcss" href="modern.rcss" />
+  <link type="text/rcss" href="party-score.rcss" />
+  <link type="text/template" href="party-score-footer.rml" />
+</head>
+<body class="party-score-screen">
+  <div class="background-layer"><div class="background-edge background-edge-left" /><div class="background" /><div class="background-edge background-edge-right" /></div>
+  <div data-model="game"><div class="foreground">
+    <button class="party-score-continue-area" action="party.score.continue" target="continue" />
+    <img class="heading-icon" src="../../themes/Modern/[icon]party.png" />
+    <span class="heading" lang="PARTY_MODE" />
+    <span class="description" lang="PARTY_SCORE_DESC" />
+    <div class="party-score-banner form-label"><span class="party-score-winner" bind-text="partyScore.winner" /><span class="party-score-subtitle" lang="PARTY_SCORE_WINS2" /></div>
+    <div class="party-score-teams">
+      <div data-for="team : data.partyScore.teams" class="party-score-team" data-attr-rank="team.rank">
+        <img class="party-score-team-background" src="../../themes/Modern/[party]playerTeamButton.png" data-style-image-color="team.color" />
+        <img class="party-score-team-points" src="../../themes/Modern/[party]teamPoints.png" data-style-image-color="team.color" />
+        <div class="party-score-team-reflection-clip"><img class="party-score-team-background-reflection" src="../../themes/Modern/[party]playerTeamButton.png" data-style-image-color="team.color" /></div>
+        <div class="party-score-points-reflection-clip"><img class="party-score-points-reflection" src="../../themes/Modern/[party]teamPoints.png" data-style-image-color="team.color" /></div>
+        <span class="party-score-team-name">{{ team.name }}</span>
+        <span class="party-score-team-value">{{ team.score }}</span>
+        <div class="party-score-rank" data-class-hidden="team.rank &lt; 1 || team.rank > 3" />
+        <div class="party-score-rank-reflection-clip"><div class="party-score-rank party-score-rank-reflection" data-class-hidden="team.rank &lt; 1 || team.rank > 3" /></div>
+      </div>
+    </div>
+    <div class="party-score-bottom form-value" />
+    <div class="footer" />
+    <div class="footer-labels"><template src="party-score-footer" /></div>
+    <div class="reflection-clip"><div class="footer-labels"><template src="party-score-footer" /></div></div>
+  </div></div>
+</body>
+</rml>

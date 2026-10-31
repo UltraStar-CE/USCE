@@ -1,0 +1,46 @@
+<rml>
+<head>
+  <title>Modern statistics detail</title>
+  <link type="text/rcss" href="modern.rcss" />
+  <link type="text/rcss" href="statistics-detail.rcss" />
+  <link type="text/template" href="statistics-detail-footer.rml" />
+</head>
+<body class="statistics-detail-screen">
+  <div class="background-layer"><div class="background-edge background-edge-left" /><div class="background" /><div class="background-edge background-edge-right" /></div>
+  <div data-model="game"><div class="foreground">
+    <img class="heading-icon" src="../../themes/Modern/[icon]stats.png" />
+    <span class="heading" lang="STAT_DETAIL" />
+    <span class="description" bind-text="statisticsDetail.description" />
+    <div class="statistics-detail-panel about-panel"><div class="about-panel-top" /><div class="about-panel-bottom" /></div>
+    <div id="statistics-detail-table" class="statistics-detail-table" adaptive-table="" max-columns="2" split-min-rows="20" table-gap="2.666667" min-font-ratio="0.395833" min-layout-rows="5" padding-rows="2" first-row-offset="1" data-attr-density-count="data.statisticsDetail.pageSize">
+      <div id="statistics-detail-left" class="table-panel"><div class="table-header">
+        <span data-for="column : data.statisticsDetail.columns" class="table-cell" data-class-numeric="column.numeric" data-attr-column-min="data.statisticsDetail.kind == 0 ? (column.id == 2 ? 0.15 : (column.id == 5 ? 0.395 : 0)) : (column.id == 1 ? (data.statisticsDetail.kind == 1 ? 0.48 : 0.54) : 0)" data-attr-column-flex="data.statisticsDetail.kind == 0 ? (column.id == 5 ? 1 : 0) : (column.id == 1 ? 1 : 0)" data-attr-column-gap="column.id == 0 ? 0 : (column.id == 1 ? 0.02 : (data.statisticsDetail.kind == 0 ? 0.01 : 0.04))">{{ column.header }}</span>
+      </div>
+      <div class="table-rows">
+        <div data-for="row : data.statisticsDetail.rows" class="data-row">
+          <span data-for="cell : row.cells" class="table-cell" data-class-numeric="cell.numeric">{{ cell.value }}</span>
+        </div>
+      </div></div>
+      <div id="statistics-detail-right" class="table-panel"><div class="table-header">
+        <span data-for="column : data.statisticsDetail.columns" class="table-cell" data-class-numeric="column.numeric" data-attr-column-min="data.statisticsDetail.kind == 0 ? (column.id == 2 ? 0.15 : (column.id == 5 ? 0.395 : 0)) : (column.id == 1 ? (data.statisticsDetail.kind == 1 ? 0.48 : 0.54) : 0)" data-attr-column-flex="data.statisticsDetail.kind == 0 ? (column.id == 5 ? 1 : 0) : (column.id == 1 ? 1 : 0)" data-attr-column-gap="column.id == 0 ? 0 : (column.id == 1 ? 0.02 : (data.statisticsDetail.kind == 0 ? 0.01 : 0.04))">{{ column.header }}</span>
+      </div>
+      <div class="table-rows">
+        <div data-for="row : data.statisticsDetail.rows" class="data-row">
+          <span data-for="cell : row.cells" class="table-cell" data-class-numeric="cell.numeric">{{ cell.value }}</span>
+        </div>
+      </div></div>
+    </div>
+    <span class="statistics-detail-page" bind-text="statisticsDetail.page" />
+    <div class="footer" />
+    <div class="footer-labels"><template src="statistics-detail-footer" /></div>
+    <div class="reflection-clip"><div class="footer-labels"><template src="statistics-detail-footer" /></div></div>
+    <button class="footer-hit page-previous" action="statistics.page.previous" data-class-unavailable="!data.statisticsDetail.previousPage" />
+    <button class="footer-hit page-next" action="statistics.page.next" data-class-unavailable="!data.statisticsDetail.nextPage" />
+    <button class="footer-hit entries-fewer" action="statistics.entries.fewer" />
+    <button class="footer-hit entries-more" action="statistics.entries.more" />
+    <button class="footer-hit period-hit" action="statistics.period.next" />
+    <button class="footer-hit median-hit" action="statistics.median.toggle" data-class-hidden="!data.statisticsDetail.medianAvailable" />
+    <button class="footer-hit back-hit" action="navigation.back" />
+  </div></div>
+</body>
+</rml>

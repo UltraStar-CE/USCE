@@ -1,0 +1,28 @@
+<rml>
+<head>
+  <title>Modern tournament round result</title>
+  <link type="text/rcss" href="modern.rcss" />
+  <link type="text/rcss" href="tournament-win.rcss" />
+  <link type="text/template" href="tournament-win-footer.rml" />
+</head>
+<body class="tournament-win-screen">
+  <div class="background-layer"><div class="background-edge background-edge-left" /><div class="background" /><div class="background-edge background-edge-right" /></div>
+  <div data-model="game"><div class="foreground">
+    <button class="tournament-win-continue-area" action="tournament.win.continue" target="continue" />
+    <img class="heading-icon" src="../../themes/Modern/[icon]party.png" />
+    <span class="heading" lang="PARTY_MODE" />
+    <span class="description" lang="PARTY_MODE_TOURNAMENT_WIN_DESC" />
+    <div class="tournament-results">
+      <div data-for="player : data.tournamentWin.players" class="tournament-player">
+        <img class="player-background" src="../../themes/Modern/[party]winTeamButton1.png" data-style-image-color="player.color" />
+        <div class="player-reflection-clip"><img class="player-background-reflection" src="../../themes/Modern/[party]winTeamButton1.png" data-style-image-color="player.color" /></div>
+        <span class="player-name">{{ player.name }}</span>
+        <span class="player-score">{{ player.score }}</span>
+      </div>
+    </div>
+    <div class="footer" />
+    <div class="footer-labels"><template src="tournament-win-footer" /></div>
+    <div class="reflection-clip"><div class="footer-labels"><template src="tournament-win-footer" /></div></div>
+  </div></div>
+</body>
+</rml>

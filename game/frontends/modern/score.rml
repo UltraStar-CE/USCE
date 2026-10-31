@@ -1,0 +1,48 @@
+<rml>
+<head>
+  <title>Modern score results</title>
+  <link type="text/rcss" href="modern.rcss" />
+  <link type="text/rcss" href="score.rcss" />
+  <link type="text/template" href="score-footer.rml" />
+</head>
+<body class="score-screen">
+  <div class="background-layer"><div class="background-edge background-edge-left" /><div class="background" /><div class="background-edge background-edge-right" /></div>
+  <div data-model="game"><div class="foreground" data-attr-class="'foreground score-count-' + data.score.count">
+    <img class="heading-icon" src="../../themes/Modern/[icon]score.png" />
+    <span class="heading" lang="SONG_SCORE" />
+    <span class="description" bind-text="score.song" />
+    <button id="score-stage" class="score-stage" action="score.continue" target="continue">
+      <div class="score-grid">
+        <div data-for="player : data.score.players" class="score-slot">
+          <div class="score-card">
+            <div class="score-avatar"><img data-attr-src="player.avatar" /></div>
+            <div class="score-avatar-frame"><img src="../../themes/Modern/[score]frame.png" data-style-image-color="player.color" /></div>
+            <div class="score-player-name">{{ player.name }}</div>
+            <div class="score-rating" data-class-hidden="!player.ratingVisible" data-style-transform="'scale(' + player.ratingScale + ')'">
+              <div class="score-rating-image"><img data-attr-src="player.ratingImage" /></div>
+              <span>{{ player.rating }}</span>
+            </div>
+            <div class="score-breakdown notes" data-style-opacity="player.noteAlpha"><div class="score-square" data-style-background-color="player.color" /><span class="score-label" lang="SING_NOTES" /><span class="score-value">{{ player.notes }}</span></div>
+            <div class="score-rule score-rule-one" />
+            <div class="score-breakdown phrase" data-style-opacity="player.phraseAlpha"><div class="score-square" data-style-background-color="player.light" /><span class="score-label" lang="SING_PHRASE_BONUS" /><span class="score-value">{{ player.phrase }}</span></div>
+            <div class="score-rule score-rule-two" />
+            <div class="score-breakdown golden" data-style-opacity="player.goldenAlpha"><div class="score-square" data-style-background-color="player.lightest" /><span class="score-label" lang="SING_GOLDEN_NOTES" /><span class="score-value">{{ player.golden }}</span></div>
+            <div class="score-total" data-style-opacity="player.noteAlpha"><span class="score-badge" data-style-background-color="player.color">{{ player.id }}</span><span class="score-total-label" lang="SING_TOTAL" /><span class="score-total-value">{{ player.total }}</span></div>
+            <div class="score-total-reflection" data-style-opacity="player.noteAlpha * 0.3"><span class="score-badge" data-style-background-color="player.color">{{ player.id }}</span><span class="score-total-label" lang="SING_TOTAL" /><span class="score-total-value">{{ player.total }}</span></div>
+            <div class="score-level-background" data-style-background-color="player.lightest" />
+            <div class="score-level-stack"><div class="score-level-note" data-style-height="player.noteHeight + '%'" data-style-background-color="player.color" /><div class="score-level-phrase" data-style-height="player.phraseHeight + '%'" data-style-background-color="player.light" /><div class="score-level-golden" data-style-height="player.goldenHeight + '%'" data-style-background-color="player.lightest" /></div>
+            <img class="score-level-glass" src="../../themes/Modern/[score]glass_box.png" />
+            <div class="score-level-cap" data-style-background-color="player.color" />
+            <div class="score-level-cap-reflection" data-style-background-color="player.color" />
+          </div>
+        </div>
+      </div>
+      <span class="score-empty" data-class-hidden="data.score.count != 0" lang="CONTINUOUS_ZERO_PLAYERS" />
+    </button>
+    <button id="score-send" class="score-send secondary" action="score.send" target="send" data-class-hidden="!data.score.canSend" data-class-selected="data.score.sendSelected"><span lang="SCORE_SEND_DESC" /></button>
+    <div class="footer" />
+    <div class="footer-labels"><template src="score-footer" /></div>
+    <div class="reflection-clip"><div class="footer-labels"><template src="score-footer" /></div></div>
+  </div></div>
+</body>
+</rml>

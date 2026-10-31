@@ -1,0 +1,39 @@
+<rml>
+<head>
+  <title>Modern party rounds</title>
+  <link type="text/rcss" href="modern.rcss" />
+  <link type="text/rcss" href="party-options.rcss" />
+  <link type="text/rcss" href="party-rounds.rcss" />
+  <link type="text/template" href="party-rounds-footer.rml" />
+</head>
+<body class="party-options party-rounds-screen">
+  <div class="background-layer"><div class="background-edge background-edge-left" /><div class="background" /><div class="background-edge background-edge-right" /></div>
+  <div data-model="game"><div class="foreground">
+    <img class="heading-icon" src="../../themes/Modern/[icon]party.png" />
+    <span class="heading" lang="PARTY_MODE" />
+    <span class="description" lang="PARTY_ROUNDS_DESC" />
+    <div class="round-count form-row" data-class-selected="data.partyRounds.focus == -1">
+      <button id="round-count" class="form-label" action="party.rounds.select" target="count"><span lang="PARTY_ROUNDCOUNT" /></button>
+      <div class="form-value">
+        <button class="form-previous" action="party.rounds.previous" target="count" data-class-available="data.partyRounds.previousCount"><svg src="arrow-left.svg" /></button>
+        <button class="form-current" action="party.rounds.select" target="count"><span>{{ data.partyRounds.count }}</span></button>
+        <button class="form-next" action="party.rounds.next" target="count" data-class-available="data.partyRounds.nextCount"><svg src="arrow-right.svg" /></button>
+      </div>
+    </div>
+    <div class="round-modes">
+      <div data-for="round : data.partyRounds.rounds" class="form-row" data-attr-id="'round-row-' + round.id" data-class-selected="data.partyRounds.focus == round.id">
+        <button class="form-label" data-attr-id="'round-mode-' + round.id" action="party.rounds.select" data-attr-target="round.id"><span>{{ round.label }}</span></button>
+        <div class="form-value">
+          <button class="form-previous" action="party.rounds.previous" data-attr-target="round.id" data-class-available="round.previous"><svg src="arrow-left.svg" /></button>
+          <button class="form-current" action="party.rounds.select" data-attr-target="round.id"><span>{{ round.name }}</span></button>
+          <button class="form-next" action="party.rounds.next" data-attr-target="round.id" data-class-available="round.next"><svg src="arrow-right.svg" /></button>
+        </div>
+      </div>
+    </div>
+    <div class="footer" />
+    <div class="footer-labels"><template src="party-rounds-footer" /></div>
+    <div class="reflection-clip"><div class="footer-labels"><template src="party-rounds-footer" /></div></div>
+    <button class="rounds-continue-hit" action="party.rounds.start" target="start" />
+  </div></div>
+</body>
+</rml>

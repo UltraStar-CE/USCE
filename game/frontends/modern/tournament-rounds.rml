@@ -1,0 +1,35 @@
+<rml>
+<head>
+  <title>Modern tournament bracket</title>
+  <link type="text/rcss" href="modern.rcss" />
+  <link type="text/rcss" href="party-options.rcss" />
+  <link type="text/rcss" href="tournament-rounds.rcss" />
+  <link type="text/template" href="tournament-rounds-footer.rml" />
+</head>
+<body class="party-options tournament-rounds-screen">
+  <div class="background-layer"><div class="background-edge background-edge-left" /><div class="background" /><div class="background-edge background-edge-right" /></div>
+  <div data-model="game"><div class="foreground">
+    <img class="heading-icon" src="../../themes/Modern/[icon]party.png" />
+    <span class="heading" lang="PARTY_MODE" />
+    <span class="description" lang="PARTY_MODE_TOURNAMENT_ROUNDS_DESC" />
+    <div class="bracket">
+      <div data-for="node : data.tournament.nodes" class="bracket-node" data-attr-side="node.side" data-attr-phase="node.phase" data-attr-group="node.group">
+        <div class="connector-horizontal" data-style-background-color="node.active ? node.color : '#ffffff66'" />
+        <div class="connector-vertical" data-style-background-color="node.active ? node.color : '#ffffff66'" />
+      </div>
+      <div data-for="player : data.tournament.players" class="bracket-player" data-attr-side="player.side" data-attr-slot="player.slot" data-class-hidden="!player.visible" data-class-eliminated="player.eliminated" data-class-active="player.active" data-class-selected="player.selected">
+        <button data-attr-id="'player-' + player.id" action="tournament.select-player" data-attr-target="player.id" data-style-background-color="player.active ? player.color : '#b3e5fc'"><span>{{ player.name }}</span></button>
+        <span class="player-marker">{{ player.mark }}</span>
+      </div>
+      <span data-for="score : data.tournament.scores" class="bracket-score" data-attr-phase="score.phase" data-attr-side="score.side" data-attr-group="score.group">{{ score.value }}</span>
+    </div>
+    <img class="trophy" src="../../themes/Modern/[tournament]trophy.png" />
+    <img class="winner-ribbon" src="../../themes/Modern/[tournament]winner.png" />
+    <span class="tournament-winner">{{ data.tournament.winner }}</span>
+    <div class="footer" />
+    <div class="footer-labels"><template src="tournament-rounds-footer" /></div>
+    <div class="reflection-clip"><div class="footer-labels"><template src="tournament-rounds-footer" /></div></div>
+    <button class="tournament-continue" action="tournament.continue" target="continue" />
+  </div></div>
+</body>
+</rml>

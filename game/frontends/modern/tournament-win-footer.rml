@@ -1,0 +1,4 @@
+<template name="tournament-win-footer"><head></head><body>
+  <img class="legend-icon tournament-win-continue-icon" src="../../themes/Modern/[button]enter.png" />
+  <span class="legend tournament-win-continue" lang="SING_LEGEND_CONTINUE" />
+</body></template>

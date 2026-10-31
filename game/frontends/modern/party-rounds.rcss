@@ -1,0 +1,8 @@
+/* All round rows are data; the theme chooses the viewport and visible count. */
+.party-rounds-screen .round-count { position: absolute; left: 8.75vw; top: 16.666667vh; margin-top: 0; }
+.round-modes { position: absolute; left: 8.75vw; top: 25.833333vh; width: 80vw; height: 61.666667vh; overflow-y: auto; overflow-x: hidden; }
+.round-modes scrollbarvertical { width: 0; }
+.party-rounds-screen .rounds-continue-icon { left: 50.5vw; }
+.party-rounds-screen .rounds-continue { left: 53.5vw; }
+.rounds-continue-hit { position: absolute; left: 48.5vw; top: 90.833333vh; width: 30vw; height: 5vh; background-color: transparent; }
+.rounds-continue-hit:focus { background-color: transparent; }

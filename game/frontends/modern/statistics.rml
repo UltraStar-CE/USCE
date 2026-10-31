@@ -1,0 +1,28 @@
+<rml>
+<head>
+  <title>Modern statistics overview</title>
+  <link type="text/rcss" href="modern.rcss" />
+  <link type="text/rcss" href="statistics.rcss" />
+  <link type="text/template" href="footer-statistics.rml" />
+</head>
+<body class="statistics-screen">
+  <div class="background-layer"><div class="background-edge background-edge-left" /><div class="background" /><div class="background-edge background-edge-right" /></div>
+  <div class="foreground">
+    <img class="heading-icon" src="../../themes/Modern/[icon]stats.png" />
+    <span class="heading" lang="STAT_MAIN" />
+    <span class="description" lang="STAT_MAIN_DESC" />
+    <div class="statistics-panel"><div class="panel-top" /><div class="panel-bottom" /></div>
+    <div class="statistics-overview" bind-emphasis="statistics.overview" fit-text="1" />
+    <div class="statistics-buttons">
+      <button id="stats-0" action="statistics.detail.open" target="0"><span lang="STAT_DESC_SCORES" /></button>
+      <button id="stats-1" action="statistics.detail.open" target="1"><span lang="STAT_DESC_SINGERS" /></button>
+      <button class="smaller" id="stats-2" action="statistics.detail.open" target="2"><span lang="STAT_DESC_SONGS" /></button>
+      <button class="smaller" id="stats-3" action="statistics.detail.open" target="3"><span lang="STAT_DESC_BANDS" /></button>
+      <button id="stats-4" action="navigation.back" target="back"><span lang="SING_OPTIONS_EXIT" /></button>
+    </div>
+    <div class="footer" />
+    <div class="footer-labels"><template src="footer-statistics" /></div>
+    <div class="reflection-clip"><div class="footer-labels"><template src="footer-statistics" /></div></div>
+  </div>
+</body>
+</rml>

@@ -1,0 +1,34 @@
+<rml>
+<head>
+  <title>Modern party winner</title>
+  <link type="text/rcss" href="modern.rcss" />
+  <link type="text/rcss" href="party-win.rcss" />
+  <link type="text/template" href="party-win-footer.rml" />
+</head>
+<body class="party-win-screen">
+  <div class="background-layer"><div class="background-edge background-edge-left" /><div class="background" /><div class="background-edge background-edge-right" /></div>
+  <div data-model="game"><div class="foreground">
+    <button class="party-win-continue-area" action="party.win.continue" target="continue" />
+    <img class="heading-icon" src="../../themes/Modern/[icon]party.png" />
+    <span class="heading" lang="PARTY_MODE" />
+    <span class="description" lang="PARTY_WIN_DESC" />
+    <div class="party-win-teams">
+      <div data-for="team : data.partyWin.teams" class="party-win-team" data-attr-position="team.position">
+        <img class="team-background first-background" src="../../themes/Modern/[party]winTeamButton1.png" data-style-image-color="team.color" />
+        <img class="team-background second-background" src="../../themes/Modern/[party]winTeamButton2.png" data-style-image-color="team.color" />
+        <img class="team-background third-background" src="../../themes/Modern/[party]winTeamButton3.png" data-style-image-color="team.color" />
+        <img class="team-points" src="../../themes/Modern/[party]teamPoints.png" data-style-image-color="team.color" />
+        <img class="team-decoration" src="../../themes/Modern/[party]winDecoration.png" />
+        <div class="background-reflection-clip"><img class="team-background-reflection first-background" src="../../themes/Modern/[party]winTeamButton1.png" data-style-image-color="team.color" /><img class="team-background-reflection second-background" src="../../themes/Modern/[party]winTeamButton2.png" data-style-image-color="team.color" /><img class="team-background-reflection third-background" src="../../themes/Modern/[party]winTeamButton3.png" data-style-image-color="team.color" /></div>
+        <div class="points-reflection-clip"><img class="team-points-reflection" src="../../themes/Modern/[party]teamPoints.png" data-style-image-color="team.color" /></div>
+        <div class="decoration-reflection-clip"><img class="team-decoration-reflection" src="../../themes/Modern/[party]winDecoration.png" /></div>
+        <span class="team-name">{{ team.name }}</span>
+        <span class="team-score">{{ team.score }}</span>
+      </div>
+    </div>
+    <div class="footer" />
+    <div class="footer-labels"><template src="party-win-footer" /></div>
+    <div class="reflection-clip"><div class="footer-labels"><template src="party-win-footer" /></div></div>
+  </div></div>
+</body>
+</rml>

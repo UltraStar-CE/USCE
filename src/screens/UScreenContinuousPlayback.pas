@@ -24,6 +24,7 @@ type
     function CanShowHighScores: boolean;
   protected
     procedure LoadWidgets; override;
+    procedure OptionChanged(SelectNum: integer); override;
   public
     Enabled: integer;
     SongDisplay, SingingDisplay: integer;
@@ -51,6 +52,7 @@ uses SysUtils, UNote, UGraphic, ULanguage, UHelp, ULog, UMusic, UPlaylist,
   USongs, USong, UIni, ULyrics, UDisplay, UCommandLine, ULibraryLockdown;
 
 const
+  uiContinuousConfigurationRole = 'continuous-configuration';
   DisplaySeconds: array[0..8] of integer = (-1, 0, 5, 10, 20, 30, 40, 50, 60);
 
 constructor TScreenContinuousPlayback.Create;
@@ -71,6 +73,7 @@ begin
     if Params.PlaybackSingingDisplay >= 0 then SingingDisplay := Params.PlaybackSingingDisplay;
     RepeatSelection := 1;
   end;
+  DocumentRole := uiContinuousConfigurationRole;
   Description := Language.Translate('SING_CONFIGURATION');
   WhereAmI := Description;
   Load;
@@ -126,13 +129,13 @@ begin
     Self.SongDisplay := SongDisplay;
     Self.SingingDisplay := SingingDisplay;
   end;
-  if Length(SelectsS) >= 6 then
+  if OptionCount(5) > 0 then
   begin
-    SelectsS[1].SelectedOption := RepeatSelection;
-    SelectsS[2].SelectedOption := ResultTime;
-    SelectsS[3].SelectedOption := HighScoreTime;
-    SelectsS[4].SelectedOption := SongDisplay;
-    SelectsS[5].SelectedOption := SingingDisplay;
+    SetOptionSelected(1, RepeatSelection);
+    SetOptionSelected(2, ResultTime);
+    SetOptionSelected(3, HighScoreTime);
+    SetOptionSelected(4, SongDisplay);
+    SetOptionSelected(5, SingingDisplay);
   end;
 end;
 
@@ -142,10 +145,10 @@ begin
   begin
     Enabled := 1;
     RepeatSelection := 1;
-    if Length(SelectsS) >= 2 then
+    if OptionCount(1) > 0 then
     begin
-      SelectsS[0].SelectedOption := Enabled;
-      SelectsS[1].SelectedOption := RepeatSelection;
+      SetOptionSelected(0, Enabled);
+      SetOptionSelected(1, RepeatSelection);
     end;
   end;
   Ini.ContinuousMode := Enabled;
@@ -153,6 +156,12 @@ begin
   SaveProfile;
   ActiveProfile := Enabled;
   LoadProfile;
+end;
+
+procedure TScreenContinuousPlayback.OptionChanged(SelectNum: integer);
+begin
+  // Inline document choices use the same profile switch as keyboard arrows.
+  SyncProfile;
 end;
 
 procedure TScreenContinuousPlayback.OnHide;
@@ -180,8 +189,8 @@ procedure TScreenContinuousPlayback.OnShow;
 begin
   inherited;
   SyncProfile;
-  SelectsS[0].SelectedOption := Enabled;
-  SelectsS[SingingSlide].Visible := not ScreenName.LyricsOnly;
+  SetOptionSelected(0, Enabled);
+  SetOptionVisible(SingingSlide, not ScreenName.LyricsOnly);
   Interaction := 0;
   Help.SetHelpID('ID_082');
 end;

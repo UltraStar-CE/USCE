@@ -1,0 +1,45 @@
+<rml>
+<head>
+  <title>Modern party next round</title>
+  <link type="text/rcss" href="modern.rcss" />
+  <link type="text/rcss" href="party-new-round.rcss" />
+  <link type="text/template" href="party-new-round-footer.rml" />
+</head>
+<body class="party-new-round-screen">
+  <div class="background-layer"><div class="background-edge background-edge-left" /><div class="background" /><div class="background-edge background-edge-right" /></div>
+  <div data-model="game"><div class="foreground">
+    <button class="new-round-continue-area" action="party.new-round.continue" target="continue" />
+    <img class="heading-icon" src="../../themes/Modern/[icon]party.png" />
+    <span class="heading" lang="PARTY_MODE" />
+    <span class="description" lang="PARTY_ROUND_DESC" />
+    <div class="new-round-teams">
+      <div data-for="team : data.partyNewRound.teams" class="new-round-team">
+        <img class="new-round-team-background" src="../../themes/Modern/[party]roundTeamButton.png" data-style-image-color="team.color" />
+        <span class="new-round-team-name">{{ team.name }}</span>
+        <span class="new-round-team-score">{{ team.score }}</span>
+        <span class="new-round-team-players">{{ team.players }}</span>
+      </div>
+    </div>
+    <div class="new-round-history-heading form-label"><span class="round-title" lang="PARTY_ROUND" /><span class="round-winner" lang="PARTY_ROUND_WINNER" /></div>
+    <div id="party-new-round-rounds" class="new-round-rounds" action="party.new-round.continue" target="history">
+      <div data-for="round : data.partyNewRound.rounds" data-attr-id="'party-new-round-row-' + round.id" reveal-align="start" class="new-round-row" data-class-current="round.current">
+        <div class="new-round-row-background form-value" />
+        <span class="round-title">{{ round.title }}</span>
+        <span class="round-winner">{{ round.winner }}</span>
+      </div>
+    </div>
+    <div class="new-round-banner form-value"><span class="new-round-banner-label" lang="PARTY_ROUND" /><span class="new-round-banner-number">{{ data.partyNewRound.current }}</span></div>
+    <div class="new-round-next-players">
+      <div data-for="team : data.partyNewRound.teams" class="new-round-next-player">
+        <img class="new-round-next-background" src="../../themes/Modern/[party]playerButton.png" data-style-image-color="team.nextColor" />
+        <div class="new-round-next-reflection-clip"><img class="new-round-next-reflection" src="../../themes/Modern/[party]playerButton.png" data-style-image-color="team.nextColor" /></div>
+        <span class="new-round-next-name">{{ team.next }}</span>
+      </div>
+    </div>
+    <div class="new-round-bottom form-value"><span bind-text="partyNewRound.description" /></div>
+    <div class="footer" />
+    <div class="footer-labels"><template src="party-new-round-footer" /></div>
+    <div class="reflection-clip"><div class="footer-labels"><template src="party-new-round-footer" /></div></div>
+  </div></div>
+</body>
+</rml>

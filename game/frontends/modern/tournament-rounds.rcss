@@ -1,0 +1,90 @@
+/* Bracket slot, round and group coordinates belong to this theme. */
+.bracket { position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; }
+.bracket-player { position: absolute; width: 15vw; height: 5vh; }
+.bracket-player[side="0"] { left: 2.5vw; }
+.bracket-player[side="1"] { right: 2.5vw; }
+.bracket-player button, .bracket-player button:focus { position: absolute; width: 15vw; height: 5vh; padding: 0; border: none; border-radius: 0.8vh; color: white; font-size: 3.333333vh; }
+.bracket-player button span { display: block; margin-top: 0.5vh; text-align: center; white-space: nowrap; overflow: hidden; }
+.bracket-player:not(.active) { pointer-events: none; }
+.bracket-player.eliminated { opacity: 0.1; }
+.bracket-player.hidden { display: none; }
+.bracket-player.selected button { font-weight: bold; }
+.player-marker { position: absolute; left: 15.625vw; top: 0.5vh; font-size: 2vh; color: white; pointer-events: none; }
+.bracket-player[side="1"] .player-marker { left: -3.125vw; width: 2.5vw; text-align: right; }
+.bracket-node { position: absolute; pointer-events: none; }
+.connector-horizontal { position: absolute; left: 0; top: 0; width: 6.25vw; height: 0.833333vh; }
+.connector-vertical { position: absolute; left: 6.25vw; top: 0; width: 0.625vw; }
+.bracket-node[side="1"] .connector-vertical { left: -0.625vw; }
+.bracket-node[phase="3"] .connector-vertical { display: none; }
+.bracket-score { position: absolute; font-size: 2vh; color: white; width: 6.25vw; height: 2.5vh; text-align: center; pointer-events: none; }
+.trophy { position: absolute; left: 38.75vw; top: 30vh; width: 33.75vw; height: 45vh; pointer-events: none; }
+.winner-ribbon { position: absolute; left: 37.5vw; top: 75vh; width: 25vw; height: 13.333333vh; pointer-events: none; }
+.tournament-winner { position: absolute; left: 37.5vw; top: 77.5vh; width: 25vw; text-align: center; color: white; font-size: 3.333333vh; pointer-events: none; }
+.tournament-continue, .tournament-continue:focus { position: absolute; left: 32vw; top: 93vh; width: 40vw; height: 7vh; background-color: transparent; }
+.tournament-continue-icon { left: 34.5vw; }
+.tournament-continue-label { left: 37.5vw; }
+.bracket-player[slot="0"] { top: 21.666667vh; }
+.bracket-player[slot="1"] { top: 30.000000vh; }
+.bracket-player[slot="2"] { top: 38.333333vh; }
+.bracket-player[slot="3"] { top: 46.666667vh; }
+.bracket-player[slot="4"] { top: 55.000000vh; }
+.bracket-player[slot="5"] { top: 63.333333vh; }
+.bracket-player[slot="6"] { top: 71.666667vh; }
+.bracket-player[slot="7"] { top: 80.000000vh; }
+.bracket-node[phase="0"][side="0"] { left: 17.500000vw; }
+.bracket-score[phase="0"][side="0"] { left: 20.625000vw; }
+.bracket-node[phase="0"][side="1"] { left: 76.250000vw; }
+.bracket-score[phase="0"][side="1"] { left: 73.125000vw; }
+.bracket-node[phase="0"][group="0"] { top: 23.750000vh; }
+.bracket-node[phase="0"][group="0"] .connector-vertical { top: 0.000000vh; height: 5.000000vh; }
+.bracket-score[phase="0"][group="0"] { top: 22.083333vh; }
+.bracket-node[phase="0"][group="1"] { top: 32.083333vh; }
+.bracket-node[phase="0"][group="1"] .connector-vertical { top: -4.166667vh; height: 5.000000vh; }
+.bracket-score[phase="0"][group="1"] { top: 32.416667vh; }
+.bracket-node[phase="0"][group="2"] { top: 40.416667vh; }
+.bracket-node[phase="0"][group="2"] .connector-vertical { top: 0.000000vh; height: 5.000000vh; }
+.bracket-score[phase="0"][group="2"] { top: 38.750000vh; }
+.bracket-node[phase="0"][group="3"] { top: 48.750000vh; }
+.bracket-node[phase="0"][group="3"] .connector-vertical { top: -4.166667vh; height: 5.000000vh; }
+.bracket-score[phase="0"][group="3"] { top: 49.083333vh; }
+.bracket-node[phase="0"][group="4"] { top: 57.083333vh; }
+.bracket-node[phase="0"][group="4"] .connector-vertical { top: 0.000000vh; height: 5.000000vh; }
+.bracket-score[phase="0"][group="4"] { top: 55.416667vh; }
+.bracket-node[phase="0"][group="5"] { top: 65.416667vh; }
+.bracket-node[phase="0"][group="5"] .connector-vertical { top: -4.166667vh; height: 5.000000vh; }
+.bracket-score[phase="0"][group="5"] { top: 65.750000vh; }
+.bracket-node[phase="0"][group="6"] { top: 73.750000vh; }
+.bracket-node[phase="0"][group="6"] .connector-vertical { top: 0.000000vh; height: 5.000000vh; }
+.bracket-score[phase="0"][group="6"] { top: 72.083333vh; }
+.bracket-node[phase="0"][group="7"] { top: 82.083333vh; }
+.bracket-node[phase="0"][group="7"] .connector-vertical { top: -4.166667vh; height: 5.000000vh; }
+.bracket-score[phase="0"][group="7"] { top: 82.416667vh; }
+.bracket-node[phase="1"][side="0"] { left: 23.750000vw; }
+.bracket-score[phase="1"][side="0"] { left: 26.875000vw; }
+.bracket-node[phase="1"][side="1"] { left: 70.000000vw; }
+.bracket-score[phase="1"][side="1"] { left: 66.875000vw; }
+.bracket-node[phase="1"][group="0"] { top: 27.916667vh; }
+.bracket-node[phase="1"][group="0"] .connector-vertical { top: 0.000000vh; height: 9.166667vh; }
+.bracket-score[phase="1"][group="0"] { top: 26.250000vh; }
+.bracket-node[phase="1"][group="1"] { top: 44.583333vh; }
+.bracket-node[phase="1"][group="1"] .connector-vertical { top: -8.333333vh; height: 9.166667vh; }
+.bracket-score[phase="1"][group="1"] { top: 44.916667vh; }
+.bracket-node[phase="1"][group="2"] { top: 61.250000vh; }
+.bracket-node[phase="1"][group="2"] .connector-vertical { top: 0.000000vh; height: 9.166667vh; }
+.bracket-score[phase="1"][group="2"] { top: 59.583333vh; }
+.bracket-node[phase="1"][group="3"] { top: 77.916667vh; }
+.bracket-node[phase="1"][group="3"] .connector-vertical { top: -8.333333vh; height: 9.166667vh; }
+.bracket-score[phase="1"][group="3"] { top: 78.250000vh; }
+.bracket-node[phase="2"][side="0"] { left: 30.000000vw; }
+.bracket-score[phase="2"][side="0"] { left: 33.125000vw; }
+.bracket-node[phase="2"][side="1"] { left: 63.750000vw; }
+.bracket-score[phase="2"][side="1"] { left: 60.625000vw; }
+.bracket-node[phase="2"][group="0"] { top: 36.250000vh; }
+.bracket-node[phase="2"][group="0"] .connector-vertical { top: 0.000000vh; height: 17.500000vh; }
+.bracket-score[phase="2"][group="0"] { top: 34.583333vh; }
+.bracket-node[phase="2"][group="1"] { top: 69.583333vh; }
+.bracket-node[phase="2"][group="1"] .connector-vertical { top: -16.666667vh; height: 17.500000vh; }
+.bracket-score[phase="2"][group="1"] { top: 69.916667vh; }
+.bracket-node[phase="3"][side="0"] { left: 36.250000vw; }
+.bracket-node[phase="3"][side="1"] { left: 57.500000vw; }
+.bracket-node[phase="3"][group="0"] { top: 52.916667vh; }

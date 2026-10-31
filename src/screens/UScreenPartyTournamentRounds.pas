@@ -36,6 +36,7 @@ interface
 uses
   UCommon,
   UDisplay,
+  UDocumentUI,
   UIni,
   UMenu,
   UMusic,
@@ -57,6 +58,13 @@ type
   end;
 
   TScreenPartyTournamentRounds = class(TMenu)
+    private
+      DocumentUI: TDocumentUI;
+      DocumentSelection: integer;
+      function ParticipantVisible(Id: integer): boolean;
+      function ParticipantName(Id: integer): UTF8String;
+      procedure PrepareMatch;
+      procedure SyncDocument;
     public
 
       TextNamePlayer: array[0..1, 0..7] of cardinal;
@@ -88,6 +96,10 @@ type
       Num: array[0..1]of integer;
 
       constructor Create; override;
+      destructor Destroy; override;
+      function DrawBG: boolean; override;
+      function DrawFG: boolean; override;
+      function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       procedure OnShow; override;
       function Draw: boolean; override;
@@ -128,6 +140,186 @@ uses
   UUnicodeUtils;
 
 
+
+procedure TScreenPartyTournamentRounds.PrepareMatch;
+begin
+  if (PartyTournament.Phase = 0) then
+    PartyTournament.Next := GetPlayers8Final();
+
+  if (PartyTournament.Next.Player1 = PartyTournament.Next.Player2) and (ExistPlayers(PartyTournament.Phase)) then
+  begin
+    PartyTournament.LastPlayer := -1;
+    PartyTournament.Next := GetPlayers8Final();
+  end;
+
+  if (PartyTournament.Phase = 0) and (PartyTournament.Next.Player1 = PartyTournament.Next.Player2) then
+    PartyTournament.Phase := 1;
+
+  if (PartyTournament.Phase = 1) then
+    PartyTournament.Next := GetPlayers4Final();
+
+  if (PartyTournament.Next.Player1 = PartyTournament.Next.Player2) and (ExistPlayers(PartyTournament.Phase)) then
+  begin
+    PartyTournament.LastPlayer := -1;
+    PartyTournament.Next := GetPlayers4Final();
+  end;
+
+  if (PartyTournament.Phase = 1) and (PartyTournament.Next.Player1 = PartyTournament.Next.Player2) then
+    PartyTournament.Phase := 2;
+
+  if (PartyTournament.Phase = 2) then
+    PartyTournament.Next := GetPlayers2Final();
+
+  if (PartyTournament.Next.Player1 = PartyTournament.Next.Player2) and (ExistPlayers(PartyTournament.Phase)) then
+  begin
+    PartyTournament.LastPlayer := -1;
+    PartyTournament.Next := GetPlayers2Final();
+  end;
+
+  if (PartyTournament.Phase = 2) and (PartyTournament.Next.Player1 = PartyTournament.Next.Player2) then
+    PartyTournament.Phase := 3;
+
+  if (PartyTournament.Phase = 3) then
+    PartyTournament.Next := GetPlayersFinal();
+
+end;
+
+function TScreenPartyTournamentRounds.ParticipantVisible(Id: integer): boolean;
+const MinimumPlayers: array[0..15] of integer = (2,9,13,5,3,11,15,7,2,10,14,6,4,12,16,8);
+begin
+  Result := (Id >= 0) and (Id <= 15);
+  if not Result then Exit;
+  if DocumentUI = nil then Result := Button[Id].Visible
+  else Result := PartyTournament.PlayersCount >= MinimumPlayers[Id];
+end;
+
+function TScreenPartyTournamentRounds.ParticipantName(Id: integer): UTF8String;
+var I, N: integer;
+begin
+  Result := '';
+  if not ParticipantVisible(Id) then Exit;
+  N := 0;
+  for I := 0 to Id - 1 do if ParticipantVisible(I) then Inc(N);
+  Result := ScreenPartyTournamentPlayer.PlayersName[N];
+end;
+
+procedure TScreenPartyTournamentRounds.SyncDocument;
+var I, Side, Phase, Group, Count, Index, P, ActivePlayer: integer;
+    Prefix, ColorText, Mark: UTF8String; Col: TRGB;
+  function ColorString(const C: TRGB): UTF8String;
+  begin
+    Result := '#' + IntToHex(Round(C.R * 255), 2) +
+      IntToHex(Round(C.G * 255), 2) + IntToHex(Round(C.B * 255), 2);
+  end;
+begin
+  DocumentUI.SetModel('tournament.winner', PartyTournament.Winner);
+  DocumentUI.SetModel('tournament.phase', IntToStr(PartyTournament.Phase), 1);
+  DocumentUI.SetModel('tournament.finished', IntToStr(Ord(PartyTournament.TournamentFinish)), 2);
+  DocumentUI.SetArray('tournament.players', 16);
+  for I := 0 to 15 do
+  begin
+    Prefix := 'tournament.players[' + IntToStr(I) + '].';
+    DocumentUI.SetModel(Prefix + 'id', IntToStr(I), 1);
+    DocumentUI.SetModel(Prefix + 'side', IntToStr(I div 8), 1);
+    DocumentUI.SetModel(Prefix + 'slot', IntToStr(I mod 8), 1);
+    DocumentUI.SetModel(Prefix + 'name', ParticipantName(I));
+    DocumentUI.SetModel(Prefix + 'visible', IntToStr(Ord(ParticipantVisible(I))), 2);
+    DocumentUI.SetModel(Prefix + 'eliminated', IntToStr(Ord(EliminatedPlayer(I))), 2);
+    Mark := '';
+    ActivePlayer := -1;
+    if I = PartyTournament.Next.Player1 then begin Mark := 'P1'; ActivePlayer := 0; end;
+    if I = PartyTournament.Next.Player2 then begin Mark := 'P2'; ActivePlayer := 1; end;
+    DocumentUI.SetModel(Prefix + 'mark', Mark);
+    DocumentUI.SetModel(Prefix + 'active', IntToStr(Ord((ActivePlayer >= 0) and not PartyTournament.TournamentFinish)), 2);
+    DocumentUI.SetModel(Prefix + 'selected', IntToStr(Ord(I = DocumentSelection)), 2);
+    ColorText := '';
+    if ActivePlayer >= 0 then
+    begin
+      if I = DocumentSelection then Col := GetPlayerColor(Num[ActivePlayer])
+      else Col := GetPlayerLightColor(Num[ActivePlayer]);
+      ColorText := ColorString(Col);
+    end;
+    DocumentUI.SetModel(Prefix + 'color', ColorText);
+  end;
+  DocumentUI.SetArray('tournament.nodes', 30);
+  Index := 0;
+  for Side := 0 to 1 do
+    for Phase := 0 to 3 do
+    begin
+      Count := 8 shr Phase;
+      for Group := 0 to Count - 1 do
+      begin
+        Prefix := 'tournament.nodes[' + IntToStr(Index) + '].';
+        DocumentUI.SetModel(Prefix + 'side', IntToStr(Side), 1);
+        DocumentUI.SetModel(Prefix + 'phase', IntToStr(Phase), 1);
+        DocumentUI.SetModel(Prefix + 'group', IntToStr(Group), 1);
+        ColorText := '';
+        for P := 0 to 1 do
+        begin
+          if P = 0 then I := PartyTournament.Next.Player1 else I := PartyTournament.Next.Player2;
+          if (Phase <= PartyTournament.Phase) and (I div 8 = Side) and
+             ((I mod 8) shr Phase = Group) then
+          begin
+            if I = DocumentSelection then Col := GetPlayerColor(Num[P])
+            else Col := GetPlayerLightColor(Num[P]);
+            ColorText := ColorString(Col);
+          end;
+        end;
+        DocumentUI.SetModel(Prefix + 'color', ColorText);
+        DocumentUI.SetModel(Prefix + 'active', IntToStr(Ord(ColorText <> '')), 2);
+        Inc(Index);
+      end;
+    end;
+  DocumentUI.SetArray('tournament.scores', 48);
+  for Phase := 0 to 2 do
+    for I := 0 to 15 do
+    begin
+      Prefix := 'tournament.scores[' + IntToStr(Phase * 16 + I) + '].';
+      DocumentUI.SetModel(Prefix + 'phase', IntToStr(Phase), 1);
+      DocumentUI.SetModel(Prefix + 'side', IntToStr(I div 8), 1);
+      DocumentUI.SetModel(Prefix + 'group', IntToStr((I mod 8) shr Phase), 1);
+      DocumentUI.SetModel(Prefix + 'value', PartyTournament.ResultPlayer[Phase, I].Text);
+    end;
+end;
+
+destructor TScreenPartyTournamentRounds.Destroy;
+begin
+  DocumentUI.Free;
+  inherited;
+end;
+
+function TScreenPartyTournamentRounds.DrawBG: boolean;
+begin
+  if DocumentUI <> nil then Result := DocumentUI.Draw(true) else Result := inherited;
+end;
+
+function TScreenPartyTournamentRounds.DrawFG: boolean;
+begin
+  if DocumentUI <> nil then Result := DocumentUI.Draw(false, true) else Result := inherited;
+end;
+
+function TScreenPartyTournamentRounds.ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
+var Action, Target: UTF8String; Selected: integer;
+begin
+  if DocumentUI = nil then Exit(inherited);
+  if RightMbESC and (MouseButton = SDL_BUTTON_RIGHT) and BtnDown then
+    Exit(ParseInput(SDLK_ESCAPE, 0, true));
+  if MouseButton = SDL_BUTTON_LEFT then DocumentUI.Mouse(X, Y, 0, BtnDown)
+  else DocumentUI.Mouse(X, Y);
+  Action := DocumentUI.TakeAction;
+  Target := DocumentUI.ActionTarget;
+  if Action = 'tournament.continue' then Exit(ParseInput(SDLK_RETURN, 0, true));
+  if Action = uiNavigationBack then Exit(ParseInput(SDLK_ESCAPE, 0, true));
+  if (Action = 'tournament.select-player') and TryStrToInt(Target, Selected) and
+     not PartyTournament.TournamentFinish then
+    if (Selected = PartyTournament.Next.Player1) or (Selected = PartyTournament.Next.Player2) then
+      begin
+        DocumentSelection := Selected;
+        SyncDocument;
+      end;
+  Result := true;
+end;
+
 procedure OnFinish(Value: boolean; Data: Pointer);
 begin
   if (Value) then
@@ -156,6 +348,27 @@ begin
 
     SDL_ModState := SDL_GetModState and (KMOD_LSHIFT + KMOD_RSHIFT
     + KMOD_LCTRL + KMOD_RCTRL + KMOD_LALT  + KMOD_RALT);
+
+    if (DocumentUI <> nil) and not PartyTournament.TournamentFinish and
+       ((PressedKey = SDLK_UP) or (PressedKey = SDLK_DOWN) or
+        (PressedKey = SDLK_LEFT) or (PressedKey = SDLK_RIGHT)) then
+    begin
+      if (SDL_ModState = KMOD_LCTRL) and
+         ((PressedKey = SDLK_UP) or (PressedKey = SDLK_DOWN)) then
+      begin
+        if DocumentSelection = PartyTournament.Next.Player1 then Player := 0 else Player := 1;
+        if PressedKey = SDLK_UP then Inc(Num[Player]) else Dec(Num[Player]);
+        if PressedKey = SDLK_UP then Num[Player] := NoRepeatColors(Num[Player], Player, 1)
+        else Num[Player] := NoRepeatColors(Num[Player], Player, -1);
+        PlayerColorButton(Num[Player], DocumentSelection);
+      end
+      else if DocumentSelection = PartyTournament.Next.Player1 then
+        DocumentSelection := PartyTournament.Next.Player2
+      else DocumentSelection := PartyTournament.Next.Player1;
+      SyncDocument;
+      DocumentUI.Focus('player-' + IntToStr(DocumentSelection));
+      Exit;
+    end;
 
     // check special keys
     case PressedKey of
@@ -271,15 +484,23 @@ begin
 
   Col := GetPlayerColor(K);
 
+  if DocumentUI = nil then
+  begin
   Button[Interact].SelectColR:= Col.R;
   Button[Interact].SelectColG:= Col.G;
   Button[Interact].SelectColB:= Col.B;
 
+  end;
+
   DesCol := GetPlayerLightColor(K);
 
+  if DocumentUI = nil then
+  begin
   Button[Interact].DeselectColR:= DesCol.R;
   Button[Interact].DeselectColG:= DesCol.G;
   Button[Interact].DeselectColB:= DesCol.B;
+
+  end;
 
   If (Interact = PartyTournament.Next.Player1) then
   begin
@@ -306,7 +527,8 @@ begin
     Ini.SingColor[1] := K;
   end;
 
-  Interaction := Interact;
+  if DocumentUI = nil then Interaction := Interact
+  else DocumentSelection := Interact;
 
 end;
 
@@ -318,6 +540,15 @@ var
   X, Y: integer;
 begin
   inherited Create;
+
+  Num[0] := 1;
+  Num[1] := 2;
+  DocumentUI := TDocumentUI.Open('tournament-rounds');
+  if DocumentUI <> nil then
+  begin
+    DocumentSelection := -1;
+    Exit;
+  end;
 
   LoadFromTheme(Theme.PartyTournamentRounds);
 
@@ -397,7 +628,23 @@ var
   I, J, Count: integer;
   CountPlayer: integer;
 begin
-  inherited;
+  if DocumentUI = nil then inherited;
+
+  if DocumentUI <> nil then
+  begin
+    Help.SetHelpID(ID);
+    PrepareMatch;
+    PartyTournament.Next.NamePlayer1 := ParticipantName(PartyTournament.Next.Player1);
+    PartyTournament.Next.NamePlayer2 := ParticipantName(PartyTournament.Next.Player2);
+    DocumentSelection := PartyTournament.Next.Player1;
+    PlayerColorButton(Num[1], PartyTournament.Next.Player2);
+    PlayerColorButton(Num[0], PartyTournament.Next.Player1);
+    if PartyTournament.TournamentFinish then
+      ScreenPopupInfo.ShowPopup(Format(Language.Translate('PARTY_MODE_TOURNAMENT_CHAMPION'), [PartyTournament.Winner]));
+    SyncDocument;
+    DocumentUI.Focus('player-' + IntToStr(DocumentSelection));
+    Exit;
+  end;
 
   if not Help.SetHelpID(ID) then
     Log.LogError('No Entry for Help-ID ' + ID + ' (ScreenPartyTournamentRounds)');
@@ -472,44 +719,7 @@ begin
 
   Count := 0;
 
-  if (PartyTournament.Phase = 0) then
-    PartyTournament.Next := GetPlayers8Final();
-
-  if (PartyTournament.Next.Player1 = PartyTournament.Next.Player2) and (ExistPlayers(PartyTournament.Phase)) then
-  begin
-    PartyTournament.LastPlayer := -1;
-    PartyTournament.Next := GetPlayers8Final();
-  end;
-
-  if (PartyTournament.Phase = 0) and (PartyTournament.Next.Player1 = PartyTournament.Next.Player2) then
-    PartyTournament.Phase := 1;
-
-  if (PartyTournament.Phase = 1) then
-    PartyTournament.Next := GetPlayers4Final();
-
-  if (PartyTournament.Next.Player1 = PartyTournament.Next.Player2) and (ExistPlayers(PartyTournament.Phase)) then
-  begin
-    PartyTournament.LastPlayer := -1;
-    PartyTournament.Next := GetPlayers4Final();
-  end;
-
-  if (PartyTournament.Phase = 1) and (PartyTournament.Next.Player1 = PartyTournament.Next.Player2) then
-    PartyTournament.Phase := 2;
-
-  if (PartyTournament.Phase = 2) then
-    PartyTournament.Next := GetPlayers2Final();
-
-  if (PartyTournament.Next.Player1 = PartyTournament.Next.Player2) and (ExistPlayers(PartyTournament.Phase)) then
-  begin
-    PartyTournament.LastPlayer := -1;
-    PartyTournament.Next := GetPlayers2Final();
-  end;
-
-  if (PartyTournament.Phase = 2) and (PartyTournament.Next.Player1 = PartyTournament.Next.Player2) then
-    PartyTournament.Phase := 3;
-
-  if (PartyTournament.Phase = 3) then
-    PartyTournament.Next := GetPlayersFinal();
+  PrepareMatch;
 
   for I := 0 to 15 do
   begin
@@ -619,10 +829,11 @@ var
   I, CountV, CountE, Total, Valor: integer;
 begin
   CountV := 0;
+  Valor := 16;
 
   for I := 0 to 15 do
   begin
-    if not(Button[I].Visible) then
+    if not(ParticipantVisible(I)) then
         CountV := CountV + 1;
   end;
 
@@ -657,7 +868,7 @@ begin
   while (Count < 15) and (Find = false) do
   begin
 
-    if (Count > PartyTournament.LastPlayer) and (Button[Count].Visible) and (Button[Count + 1].Visible)
+    if (Count > PartyTournament.LastPlayer) and (ParticipantVisible(Count)) and (ParticipantVisible(Count + 1))
       and not(EliminatedPlayer(Count)) and not(EliminatedPlayer(Count + 1)) then
     begin
       _Next.Player1 := Count;
@@ -684,19 +895,19 @@ begin
 
   if (PartyTournament.LastPlayer < 1) then
   begin
-    if (Button[0].Visible) and not EliminatedPlayer(0) then
+    if (ParticipantVisible(0)) and not EliminatedPlayer(0) then
       _Next.Player1 := 0;
 
-    if (Button[1].Visible) and not EliminatedPlayer(1) then
+    if (ParticipantVisible(1)) and not EliminatedPlayer(1) then
       _Next.Player1 := 1;
   end;
 
   if (PartyTournament.LastPlayer < 3) then
   begin
-    if (Button[2].Visible) and not EliminatedPlayer(2) then
+    if (ParticipantVisible(2)) and not EliminatedPlayer(2) then
       _Next.Player2 := 2;
 
-    if (Button[3].Visible) and not EliminatedPlayer(3) then
+    if (ParticipantVisible(3)) and not EliminatedPlayer(3) then
       _Next.Player2 := 3;
   end;
 
@@ -710,19 +921,19 @@ begin
 
     if (PartyTournament.LastPlayer < 5) then
     begin
-      if (Button[4].Visible) and not EliminatedPlayer(4) then
+      if (ParticipantVisible(4)) and not EliminatedPlayer(4) then
         _Next.Player1 := 4;
 
-      if (Button[5].Visible) and not EliminatedPlayer(5) then
+      if (ParticipantVisible(5)) and not EliminatedPlayer(5) then
         _Next.Player1 := 5;
     end;
 
     if (PartyTournament.LastPlayer < 7) then
     begin
-      if (Button[6].Visible) and not EliminatedPlayer(6) then
+      if (ParticipantVisible(6)) and not EliminatedPlayer(6) then
         _Next.Player2 := 6;
 
-      if (Button[7].Visible) and not EliminatedPlayer(7) then
+      if (ParticipantVisible(7)) and not EliminatedPlayer(7) then
         _Next.Player2 := 7;
     end;
 
@@ -737,19 +948,19 @@ begin
 
     if (PartyTournament.LastPlayer < 9) then
     begin
-      if (Button[8].Visible) and not EliminatedPlayer(8) then
+      if (ParticipantVisible(8)) and not EliminatedPlayer(8) then
         _Next.Player1 := 8;
 
-      if (Button[9].Visible) and not EliminatedPlayer(9) then
+      if (ParticipantVisible(9)) and not EliminatedPlayer(9) then
         _Next.Player1 := 9;
     end;
 
     if (PartyTournament.LastPlayer < 11) then
     begin
-      if (Button[10].Visible) and not EliminatedPlayer(10) then
+      if (ParticipantVisible(10)) and not EliminatedPlayer(10) then
         _Next.Player2 := 10;
 
-      if (Button[11].Visible) and not EliminatedPlayer(11) then
+      if (ParticipantVisible(11)) and not EliminatedPlayer(11) then
         _Next.Player2 := 11;
     end;
 
@@ -764,19 +975,19 @@ begin
 
     if (PartyTournament.LastPlayer < 13) then
     begin
-      if (Button[12].Visible) and not EliminatedPlayer(12) then
+      if (ParticipantVisible(12)) and not EliminatedPlayer(12) then
         _Next.Player1 := 12;
 
-      if (Button[13].Visible) and not EliminatedPlayer(13) then
+      if (ParticipantVisible(13)) and not EliminatedPlayer(13) then
         _Next.Player1 := 13;
     end;
 
     if (PartyTournament.LastPlayer < 15) then
     begin
-      if (Button[14].Visible) and not EliminatedPlayer(14) then
+      if (ParticipantVisible(14)) and not EliminatedPlayer(14) then
         _Next.Player2 := 14;
 
-      if (Button[15].Visible) and not EliminatedPlayer(15) then
+      if (ParticipantVisible(15)) and not EliminatedPlayer(15) then
         _Next.Player2 := 15;
     end;
 
@@ -806,31 +1017,31 @@ begin
 
   if (PartyTournament.LastPlayer < 3) then
   begin
-    if (Button[0].Visible) and not EliminatedPlayer(0) then
+    if (ParticipantVisible(0)) and not EliminatedPlayer(0) then
       _Next.Player1 := 0;
 
-    if (Button[1].Visible) and not EliminatedPlayer(1) then
+    if (ParticipantVisible(1)) and not EliminatedPlayer(1) then
       _Next.Player1 := 1;
 
-    if (Button[2].Visible) and not EliminatedPlayer(2) then
+    if (ParticipantVisible(2)) and not EliminatedPlayer(2) then
       _Next.Player1 := 2;
 
-    if (Button[3].Visible) and not EliminatedPlayer(3) then
+    if (ParticipantVisible(3)) and not EliminatedPlayer(3) then
       _Next.Player1 := 3;
   end;
 
   if (PartyTournament.LastPlayer < 7) then
   begin
-    if (Button[4].Visible) and not EliminatedPlayer(4)  then
+    if (ParticipantVisible(4)) and not EliminatedPlayer(4)  then
       _Next.Player2 := 4;
 
-    if (Button[5].Visible) and not EliminatedPlayer(5) then
+    if (ParticipantVisible(5)) and not EliminatedPlayer(5) then
       _Next.Player2 := 5;
 
-    if (Button[6].Visible) and not EliminatedPlayer(6) then
+    if (ParticipantVisible(6)) and not EliminatedPlayer(6) then
       _Next.Player2 := 6;
 
-    if (Button[7].Visible) and not EliminatedPlayer(7) then
+    if (ParticipantVisible(7)) and not EliminatedPlayer(7) then
       _Next.Player2 := 7;
   end;
 
@@ -844,31 +1055,31 @@ begin
 
     if (PartyTournament.LastPlayer < 11) then
     begin
-      if (Button[8].Visible) and not EliminatedPlayer(8) then
+      if (ParticipantVisible(8)) and not EliminatedPlayer(8) then
         _Next.Player1 := 8;
 
-      if (Button[9].Visible) and not EliminatedPlayer(9) then
+      if (ParticipantVisible(9)) and not EliminatedPlayer(9) then
         _Next.Player1 := 9;
 
-      if (Button[10].Visible) and not EliminatedPlayer(10) then
+      if (ParticipantVisible(10)) and not EliminatedPlayer(10) then
         _Next.Player1 := 10;
 
-      if (Button[11].Visible) and not EliminatedPlayer(11) then
+      if (ParticipantVisible(11)) and not EliminatedPlayer(11) then
         _Next.Player1 := 11;
     end;
 
     if (PartyTournament.LastPlayer < 15) then
     begin
-      if (Button[12].Visible) and not EliminatedPlayer(12) then
+      if (ParticipantVisible(12)) and not EliminatedPlayer(12) then
         _Next.Player2 := 12;
 
-      if (Button[13].Visible) and not EliminatedPlayer(13) then
+      if (ParticipantVisible(13)) and not EliminatedPlayer(13) then
         _Next.Player2 := 13;
 
-      if (Button[14].Visible) and not EliminatedPlayer(14) then
+      if (ParticipantVisible(14)) and not EliminatedPlayer(14) then
         _Next.Player2 := 14;
 
-      if (Button[15].Visible) and not EliminatedPlayer(15) then
+      if (ParticipantVisible(15)) and not EliminatedPlayer(15) then
         _Next.Player2 := 15;
     end;
 
@@ -894,52 +1105,52 @@ begin
   _Next.Player1 := -1;
   _Next.Player2 := -1;
 
-  if (Button[0].Visible) and not EliminatedPlayer(0) then
+  if (ParticipantVisible(0)) and not EliminatedPlayer(0) then
       _Next.Player1 := 0;
 
-  if (Button[1].Visible) and not EliminatedPlayer(1) then
+  if (ParticipantVisible(1)) and not EliminatedPlayer(1) then
       _Next.Player1 := 1;
 
-  if (Button[2].Visible) and not EliminatedPlayer(2) then
+  if (ParticipantVisible(2)) and not EliminatedPlayer(2) then
       _Next.Player1 := 2;
 
-  if (Button[3].Visible) and not EliminatedPlayer(3) then
+  if (ParticipantVisible(3)) and not EliminatedPlayer(3) then
       _Next.Player1 := 3;
 
-  if (Button[4].Visible) and not EliminatedPlayer(4) then
+  if (ParticipantVisible(4)) and not EliminatedPlayer(4) then
       _Next.Player1 := 4;
 
-  if (Button[5].Visible) and not EliminatedPlayer(5) then
+  if (ParticipantVisible(5)) and not EliminatedPlayer(5) then
       _Next.Player1 := 5;
 
-  if (Button[6].Visible) and not EliminatedPlayer(6) then
+  if (ParticipantVisible(6)) and not EliminatedPlayer(6) then
       _Next.Player1 := 6;
 
-  if (Button[7].Visible) and not EliminatedPlayer(7) then
+  if (ParticipantVisible(7)) and not EliminatedPlayer(7) then
       _Next.Player1 := 7;
 
-  if (Button[8].Visible) and not EliminatedPlayer(8) then
+  if (ParticipantVisible(8)) and not EliminatedPlayer(8) then
       _Next.Player2 := 8;
 
-  if (Button[9].Visible) and not EliminatedPlayer(9) then
+  if (ParticipantVisible(9)) and not EliminatedPlayer(9) then
       _Next.Player2 := 9;
 
-  if (Button[10].Visible) and not EliminatedPlayer(10) then
+  if (ParticipantVisible(10)) and not EliminatedPlayer(10) then
       _Next.Player2 := 10;
 
-  if (Button[11].Visible) and not EliminatedPlayer(11) then
+  if (ParticipantVisible(11)) and not EliminatedPlayer(11) then
       _Next.Player2 := 11;
 
-  if (Button[12].Visible) and not EliminatedPlayer(12) then
+  if (ParticipantVisible(12)) and not EliminatedPlayer(12) then
       _Next.Player2 := 12;
 
-  if (Button[13].Visible) and not EliminatedPlayer(13) then
+  if (ParticipantVisible(13)) and not EliminatedPlayer(13) then
       _Next.Player2 := 13;
 
-  if (Button[14].Visible) and not EliminatedPlayer(14) then
+  if (ParticipantVisible(14)) and not EliminatedPlayer(14) then
       _Next.Player2 := 14;
 
-  if (Button[15].Visible) and not EliminatedPlayer(15) then
+  if (ParticipantVisible(15)) and not EliminatedPlayer(15) then
       _Next.Player2 := 15;
 
   Result := _Next;
@@ -948,6 +1159,10 @@ end;
 
 function TScreenPartyTournamentRounds.Draw: boolean;
 begin
+  if DocumentUI <> nil then
+  begin
+    Exit(DocumentUI.Draw);
+  end;
   DrawBG;
   DrawGrid();
   Result := DrawFG;

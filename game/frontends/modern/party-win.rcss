@@ -1,0 +1,53 @@
+/* Modern's overall party podium. Ranking and team data come from the game. */
+.party-win-screen .heading { left: 8.75vw; top: 1.5vh; font-size: 7.5vh; }
+.party-win-screen .heading-icon { left: 5vw; top: 3.666667vh; width: 3.375vw; height: 4.5vh; }
+.party-win-screen .description { left: 8.75vw; top: 10.466667vh; color: white; }
+.party-win-screen .where { font-size: 2.25vh; }
+.party-win-continue-area, .party-win-continue-area:focus { position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; background-color: transparent; }
+.party-win-screen .heading, .party-win-screen .heading-icon, .party-win-screen .description,
+.party-win-teams, .party-win-screen .footer, .party-win-screen .footer-labels, .party-win-screen .reflection-clip { pointer-events: none; }
+.party-win-teams, .party-win-team { position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; }
+.party-win-team { display: none; }
+.party-win-team[position="1"], .party-win-team[position="2"], .party-win-team[position="3"] { display: block; }
+.team-background, .team-points, .team-decoration, .team-name, .team-score { position: absolute; }
+.team-name, .team-score { color: white; white-space: nowrap; overflow: hidden; height: 10vh; }
+.team-score { text-align: right; }
+.team-background, .team-background-reflection { display: none; }
+.party-win-team[position="1"] .first-background, .party-win-team[position="2"] .second-background, .party-win-team[position="3"] .third-background { display: block; }
+.background-reflection-clip, .points-reflection-clip, .decoration-reflection-clip { position: absolute; overflow: hidden; opacity: 0.7; mask-image: vertical-gradient(#000f #0000); }
+.team-background-reflection, .team-points-reflection, .team-decoration-reflection { position: absolute; left: 0; top: 0; width: 100%; transform: scaleY(-1); }
+.party-win-team[position="1"] .team-background { left: 19.875vw; top: 30.833333vh; width: 68.75vw; height: 10.833333vh; }
+.party-win-team[position="1"] .team-points { left: 21.125vw; top: 38.333333vh; width: 66.25vw; height: 2.666667vh; }
+.party-win-team[position="1"] .team-name { left: 21.125vw; top: 30.5vh; width: 50vw; font-size: 7.125vh; }
+.party-win-team[position="1"] .team-score { right: 12.625vw; top: 30.5vh; width: 18.75vw; font-size: 7.125vh; }
+.party-win-team[position="1"] .team-decoration { left: 11.375vw; top: 29.333333vh; width: 9.875vw; height: 13.166667vh; image-color: #ffdf1f; }
+.party-win-team[position="1"] .background-reflection-clip { left: 19.875vw; top: 42vh; width: 68.75vw; height: 5.416667vh; }
+.party-win-team[position="1"] .team-background-reflection { height: 10.833333vh; }
+.party-win-team[position="1"] .points-reflection-clip { left: 21.125vw; top: 43vh; width: 66.25vw; height: 1.333333vh; }
+.party-win-team[position="1"] .team-points-reflection { height: 2.666667vh; }
+.party-win-team[position="1"] .decoration-reflection-clip { left: 11.375vw; top: 43vh; width: 9.875vw; height: 6.583333vh; }
+.party-win-team[position="1"] .team-decoration-reflection { height: 13.166667vh; image-color: #ffdf1f; }
+.party-win-team[position="2"] .team-background { left: 34.875vw; top: 50vh; width: 50vw; height: 8.333333vh; }
+.party-win-team[position="2"] .team-points { left: 36.125vw; top: 55vh; width: 47.5vw; height: 2.5vh; }
+.party-win-team[position="2"] .team-name { left: 36.125vw; top: 49.666667vh; width: 32.5vw; font-size: 4.5vh; }
+.party-win-team[position="2"] .team-score { right: 16.375vw; top: 49.666667vh; width: 15vw; font-size: 4.5vh; }
+.party-win-team[position="2"] .team-decoration { left: 28.25vw; top: 48.5vh; width: 8vw; height: 10.666667vh; image-color: #dfdfdf; }
+.party-win-team[position="2"] .background-reflection-clip { left: 34.875vw; top: 58.666667vh; width: 50vw; height: 4.166667vh; }
+.party-win-team[position="2"] .team-background-reflection { height: 8.333333vh; }
+.party-win-team[position="2"] .points-reflection-clip { left: 36.125vw; top: 59.5vh; width: 47.5vw; height: 1.25vh; }
+.party-win-team[position="2"] .team-points-reflection { height: 2.5vh; }
+.party-win-team[position="2"] .decoration-reflection-clip { left: 28.25vw; top: 59.666667vh; width: 8vw; height: 5.333333vh; }
+.party-win-team[position="2"] .team-decoration-reflection { height: 10.666667vh; image-color: #dfdfdf; }
+.party-win-team[position="3"] .team-background { left: 44.875vw; top: 66.666667vh; width: 37.5vw; height: 6.666667vh; }
+.party-win-team[position="3"] .team-points { left: 46.125vw; top: 70vh; width: 35vw; height: 2.5vh; }
+.party-win-team[position="3"] .team-name { left: 46.125vw; top: 66.333333vh; width: 25vw; font-size: 3.375vh; }
+.party-win-team[position="3"] .team-score { right: 18.875vw; top: 66.333333vh; width: 12.5vw; font-size: 3.375vh; }
+.party-win-team[position="3"] .team-decoration { left: 39.5vw; top: 65.166667vh; width: 6.75vw; height: 9vh; image-color: #cd7f32; }
+.party-win-team[position="3"] .background-reflection-clip { left: 44.875vw; top: 73.666667vh; width: 37.5vw; height: 3.333333vh; }
+.party-win-team[position="3"] .team-background-reflection { height: 6.666667vh; }
+.party-win-team[position="3"] .points-reflection-clip { left: 46.125vw; top: 74.5vh; width: 35vw; height: 1.25vh; }
+.party-win-team[position="3"] .team-points-reflection { height: 2.5vh; }
+.party-win-team[position="3"] .decoration-reflection-clip { left: 39.5vw; top: 74.666667vh; width: 6.75vw; height: 4.5vh; }
+.party-win-team[position="3"] .team-decoration-reflection { height: 9vh; image-color: #cd7f32; }
+.party-win-continue-icon { left: 34.5vw; }
+.party-win-continue { left: 37.5vw; }

@@ -1,0 +1,7 @@
+<template name="song-highscores-footer"><head></head><body>
+  <span class="where" bind-text="highscores.whereami" />
+  <img class="legend-icon highscores-continue-icon" src="../../themes/Modern/[button]enter.png" />
+  <span class="legend highscores-continue" lang="SING_HIGH_SCORES_CONTINUE" />
+  <img class="legend-icon highscores-navigate-icon" src="../../themes/Modern/[button]navi.png" />
+  <span class="legend highscores-navigate" lang="SING_HIGH_SCORES_NAVIGATE" />
+</body></template>

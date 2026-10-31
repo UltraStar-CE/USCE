@@ -27,6 +27,10 @@ const
   uiGameSing = 'game.sing';
   uiGameParty = 'game.party';
   uiStatisticsOpen = 'statistics.open';
+  uiScreenStatistics = 'statistics';
+  uiStatisticsOverview = 'statistics.overview';
+  uiStatisticsDetail = 'statistics.detail.open';
+  uiStatisticsPeriod = 'statistics.period.next';
   uiSettingsOpen = 'settings.open';
   uiAboutOpen = 'about.open';
   uiCreditsOpen = 'credits.open';
@@ -266,6 +270,7 @@ end;
 
 function TDocumentUI.Draw(BackgroundOnly, ForegroundOnly: boolean): boolean;
 begin
+  if BackgroundOnly and TMenuBackground.SuppressDrawing then Exit(true);
   Result := Activate;
   if Result then
   begin

@@ -35,6 +35,7 @@ interface
 
 uses
   UDisplay,
+  UDocumentUI,
   UIni,
   UMenu,
   UMusic,
@@ -45,6 +46,9 @@ uses
 
 type
   TScreenPartyScore = class(TMenu)
+    private
+      DocumentUI: TDocumentUI;
+      procedure SetDocumentResults;
     public
       TextScoreTeam1:    cardinal;
       TextScoreTeam2:    cardinal;
@@ -72,16 +76,23 @@ type
       
       constructor Create; override;
       destructor Destroy; override;
+      function DrawBG: boolean; override;
+      function DrawFG: boolean; override;
+      function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       procedure OnShow; override;
   end;
 
 const
   ID='ID_034';   //for help system
+  uiPartyScoreRole = 'party-score';
+  uiPartyScoreData = 'partyScore';
+  uiPartyScoreContinue = 'party.score.continue';
 
 implementation
 
 uses
+  UCommon,
   UGraphic,
   UHelp,
   ULanguage,
@@ -90,7 +101,71 @@ uses
   UParty,
   USkins,
   USong,
-  UUnicodeUtils;
+  UUnicodeUtils,
+  Math;
+
+procedure TScreenPartyScore.SetDocumentResults;
+var
+  I, Rank, TeamColor: integer;
+  Prefix: UTF8String;
+  Ranking: AParty_TeamRanking;
+  Col: TRGB;
+  function ColorText(const Value: TRGB): UTF8String;
+  begin
+    Result := '#' + IntToHex(EnsureRange(Round(Value.R * 255), 0, 255), 2) +
+      IntToHex(EnsureRange(Round(Value.G * 255), 0, 255), 2) +
+      IntToHex(EnsureRange(Round(Value.B * 255), 0, 255), 2);
+  end;
+begin
+  Ranking := nil;
+  if (Party.CurrentRound >= 0) and (Party.CurrentRound <= High(Party.Rounds)) then
+    Ranking := Party.Rounds[Party.CurrentRound].Ranking;
+  DocumentUI.SetValue(uiPartyScoreData + '.winner',
+    Format(Language.Translate('PARTY_SCORE_WINS'), [Party.GetWinnerString(Party.CurrentRound)]));
+  DocumentUI.SetModel(uiPartyScoreData + '.count', IntToStr(Length(Party.Teams)), 1);
+  DocumentUI.SetArray(uiPartyScoreData + '.teams', Length(Party.Teams));
+  for I := 0 to High(Party.Teams) do
+  begin
+    Prefix := uiPartyScoreData + '.teams[' + IntToStr(I) + '].';
+    Rank := 0;
+    // Round rankings are normalized by team in TPartyGame.SetRanking.
+    if I <= High(Ranking) then Rank := Ranking[I].Rank;
+    TeamColor := I + 1;
+    if I <= High(Ini.TeamColor) then TeamColor := Ini.TeamColor[I];
+    Col := GetPlayerColor(TeamColor);
+    DocumentUI.SetModel(Prefix + 'id', IntToStr(I), 1);
+    DocumentUI.SetModel(Prefix + 'name', UTF8String(Party.Teams[I].Name));
+    DocumentUI.SetModel(Prefix + 'score', IntToStr(Party.Teams[I].Score), 1);
+    DocumentUI.SetModel(Prefix + 'rank', IntToStr(Rank), 1);
+    DocumentUI.SetModel(Prefix + 'color', ColorText(Col));
+  end;
+end;
+
+function TScreenPartyScore.DrawBG: boolean;
+begin
+  if DocumentUI <> nil then Result := DocumentUI.Draw(true)
+  else Result := inherited;
+end;
+
+function TScreenPartyScore.DrawFG: boolean;
+begin
+  if DocumentUI <> nil then Result := DocumentUI.Draw(false, true)
+  else Result := inherited;
+end;
+
+function TScreenPartyScore.ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
+var Action: UTF8String;
+begin
+  if DocumentUI = nil then Exit(inherited);
+  if RightMbESC and (MouseButton = SDL_BUTTON_RIGHT) and BtnDown then
+    Exit(ParseInput(SDLK_ESCAPE, 0, true));
+  if MouseButton = SDL_BUTTON_LEFT then DocumentUI.Mouse(X, Y, 0, BtnDown)
+  else DocumentUI.Mouse(X, Y);
+  Action := DocumentUI.TakeAction;
+  Result := true;
+  if (Action = uiPartyScoreContinue) or (Action = uiNavigationBack) then
+    Result := ParseInput(SDLK_RETURN, 0, true);
+end;
 
 function TScreenPartyScore.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
 begin
@@ -139,6 +214,9 @@ var
   Color: integer;
 begin
   inherited Create;
+
+  DocumentUI := TDocumentUI.Open(uiPartyScoreRole);
+  if DocumentUI <> nil then Exit;
 
   TextScoreTeam1 := AddText (Theme.PartyScore.TextScoreTeam1);
   TextScoreTeam2 := AddText (Theme.PartyScore.TextScoreTeam2);
@@ -198,6 +276,7 @@ end;
 
 destructor TScreenPartyScore.Destroy();
 begin
+  DocumentUI.Free;
   DecoTex[0].Free;
   DecoTex[1].Free;
   Decotex[2].Free;
@@ -208,7 +287,7 @@ procedure TScreenPartyScore.OnShow;
 var
   Ranking: AParty_TeamRanking;
 begin
-  inherited;
+  if DocumentUI = nil then inherited;
 
   if not Help.SetHelpID(ID) then
     Log.LogWarn('No Entry for Help-ID ' + ID, 'ScreenPartyScore');
@@ -219,6 +298,12 @@ begin
 
   // indicate that round is finished
   Party.RoundPlayed;
+  if DocumentUI <> nil then
+  begin
+    SetDocumentResults;
+    SoundLib.StartBgMusic;
+    Exit;
+  end;
 
   // get rankings for current round
   Ranking := Party.Rounds[Party.CurrentRound].Ranking;

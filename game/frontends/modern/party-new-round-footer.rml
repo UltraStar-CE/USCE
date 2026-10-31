@@ -1,0 +1,5 @@
+<template name="party-new-round-footer"><head></head><body>
+  <span class="where" lang="PARTY_ROUND_WHEREAMI" />
+  <img class="legend-icon new-round-continue-icon" src="../../themes/Modern/[button]enter.png" />
+  <span class="legend new-round-continue" lang="PARTY_ROUND_LEGEND_CONTINUE" />
+</body></template>

@@ -35,6 +35,7 @@ uses
   UCommon,
   UDataBase,
   UDisplay,
+  UDocumentUI,
   UDLLManager,
   UIni,
   UMenu,
@@ -97,6 +98,7 @@ type
 
   TScreenScore = class(TMenu)
     private
+      DocumentUI: TDocumentUI;
       { holds position and screen of players(index)
         set by calling MapPlayerstoPosition() }
       PlayerPositionMap: APlayerPositionMap;
@@ -195,6 +197,9 @@ type
       { for player static texture swapping }
       procedure LoadSwapTextures;
       procedure SwapToScreen(Screen: integer);
+      procedure SyncDocument;
+      procedure RefreshDocumentTexts;
+      function CanSendScore: boolean;
     public
       constructor Create; override;
       destructor Destroy; override;
@@ -203,10 +208,15 @@ type
       procedure OnShow; override;
       procedure OnShowFinish; override;
       function Draw: boolean; override;
+      function DrawBG: boolean; override;
+      procedure SetInteraction(Num: integer); override;
   end;
 
 const
   ID='ID_023';   //for help system
+  uiScreenScore = 'score';
+  uiScoreContinue = 'score.continue';
+  uiScoreSend = 'score.send';
 
 implementation
 
@@ -561,6 +571,112 @@ begin
   end;
 end;
 
+function TScreenScore.CanSendScore: boolean;
+begin
+  Result := false;
+  if (PlayersPlay <= 0) or not Assigned(ScreenSing) then Exit;
+  Result := ScreenSing.SungToEnd and not CurrentSong.isDuet and (Length(DllMan.Websites) > 0);
+end;
+
+procedure TScreenScore.SetInteraction(Num: integer);
+begin
+  if DocumentUI = nil then begin inherited; Exit; end;
+  // The document exposes capabilities rather than constructing hidden buttons.
+  if (Num >= 0) and CanSendScore then
+  begin SelInteraction := 0; DocumentUI.Focus('score-send'); end
+  else begin SelInteraction := -1; DocumentUI.Focus('score-stage'); end;
+end;
+
+function TScreenScore.DrawBG: boolean;
+begin
+  if DocumentUI <> nil then Result := DocumentUI.Draw(true) else Result := inherited;
+end;
+
+procedure TScreenScore.RefreshDocumentTexts;
+var ArtistTitle: UTF8String; P: integer;
+begin
+  ArtistTitle := CurrentSong.Artist + ' - ' + CurrentSong.Title;
+  if (CurrentRound >= 0) and (CurrentRound < Length(PlaylistMedley.Stats)) then
+  begin
+    if CurrentRound < Length(PlaylistMedley.Stats) - 1 then
+      ArtistTitle := IntToStr(CurrentRound + 1) + '/' + IntToStr(Length(PlaylistMedley.Stats) - 1) + ': ' +
+        PlaylistMedley.Stats[CurrentRound].SongArtist + ' - ' + PlaylistMedley.Stats[CurrentRound].SongTitle
+    else if ScreenSong.Mode = smMedley then ArtistTitle := Language.Translate('SING_TOTAL');
+    if ScreenSong.Mode = smMedley then
+      for P := 0 to Min(PlayersPlay, Length(PlaylistMedley.Stats[CurrentRound].Player)) - 1 do
+        Player[P] := PlaylistMedley.Stats[CurrentRound].Player[P];
+  end;
+  DocumentUI.SetValue('score.song', ArtistTitle);
+  ResetScores;
+end;
+
+procedure TScreenScore.SyncDocument;
+const RatingKeys: array[0..7] of UTF8String = (
+  'SING_SCORE_TONE_DEAF', 'SING_SCORE_AMATEUR', 'SING_SCORE_WANNABE',
+  'SING_SCORE_HOPEFUL', 'SING_SCORE_RISING_STAR', 'SING_SCORE_LEAD_SINGER',
+  'SING_SCORE_SUPERSTAR', 'SING_SCORE_ULTRASTAR');
+var
+  P, Rating: integer;
+  Prefix, Avatar: UTF8String;
+  Fmt: TFormatSettings;
+  Col, Light, Lightest: TRGB;
+  function Number(Value: double): UTF8String;
+  begin Result := FloatToStr(Value, Fmt); end;
+  function Color(const Value: TRGB): UTF8String;
+  begin
+    Result := '#' + IntToHex(EnsureRange(Round(Value.R * 255), 0, 255), 2) +
+      IntToHex(EnsureRange(Round(Value.G * 255), 0, 255), 2) +
+      IntToHex(EnsureRange(Round(Value.B * 255), 0, 255), 2);
+  end;
+  procedure Value(const Name, Text: UTF8String; Kind: integer = 0);
+  begin DocumentUI.SetModel(Prefix + Name, Text, Kind); end;
+begin
+  Fmt := DefaultFormatSettings; Fmt.DecimalSeparator := '.';
+  DocumentUI.SetModel('score.count', IntToStr(PlayersPlay), 1);
+  DocumentUI.SetModel('score.canSend', IntToStr(Ord(CanSendScore)), 2);
+  DocumentUI.SetModel('score.sendSelected', IntToStr(Ord(Interaction >= 0)), 2);
+  DocumentUI.SetModel('score.medley', IntToStr(Ord(ScreenSong.Mode = smMedley)), 2);
+  DocumentUI.SetArray('score.players', PlayersPlay);
+  for P := 0 to PlayersPlay - 1 do
+  begin
+    Prefix := 'score.players[' + IntToStr(P) + '].';
+    Col := GetPlayerColor(Ini.PlayerColor[P]);
+    Light := GetPlayerLightColor(Ini.PlayerColor[P]);
+    Lightest := ColorSqrt(Light);
+    Avatar := DefaultAvatarFile(P).ToUTF8(false);
+    if Assigned(AvatarPlayerTextures[P + 1]) and Assigned(AvatarPlayerTextures[P + 1].Name) then
+      Avatar := AvatarPlayerTextures[P + 1].Name.ToUTF8(false);
+    case Player[P].ScoreTotalInt of
+      2010..4009: Rating := 1;
+      4010..5009: Rating := 2;
+      5010..6009: Rating := 3;
+      6010..7509: Rating := 4;
+      7510..8509: Rating := 5;
+      8510..9009: Rating := 6;
+      9010..10000: Rating := 7;
+      else Rating := 0;
+    end;
+    Value('id', IntToStr(P + 1), 1);
+    Value('name', Player[P].Name);
+    Value('avatar', Avatar);
+    Value('color', Color(Col)); Value('light', Color(Light)); Value('lightest', Color(Lightest));
+    Value('notes', IntToStr(TextScore_ActualValue[P + 1]), 1);
+    Value('phrase', IntToStr(TextPhrase_ActualValue[P + 1]), 1);
+    Value('golden', IntToStr(TextGolden_ActualValue[P + 1]), 1);
+    Value('total', IntToStr(TextScore_ActualValue[P + 1] + TextPhrase_ActualValue[P + 1] + TextGolden_ActualValue[P + 1]), 1);
+    Value('noteAlpha', Number(BarScore_EaseOut_Step / 100), 3);
+    Value('phraseAlpha', Number(BarPhrase_EaseOut_Step / 100), 3);
+    Value('goldenAlpha', Number(BarGolden_EaseOut_Step / 100), 3);
+    Value('noteHeight', Number(TextScore_ActualValue[P + 1] / MAX_SONG_SCORE * 100), 3);
+    Value('phraseHeight', Number(TextPhrase_ActualValue[P + 1] / MAX_SONG_SCORE * 100), 3);
+    Value('goldenHeight', Number(TextGolden_ActualValue[P + 1] / MAX_SONG_SCORE * 100), 3);
+    Value('rating', Language.Translate(RatingKeys[Rating]));
+    Value('ratingImage', Skin.GetTextureFileName('Rating_' + IntToStr(Rating)).ToUTF8(false));
+    Value('ratingVisible', IntToStr(Ord(BarGolden_EaseOut_Step >= 100)), 2);
+    Value('ratingScale', Number(aPlayerScoreScreenRatings[P + 1].RateEaseValue / 100), 3);
+  end;
+end;
+
 function TScreenScore.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
 begin
   Result := true;
@@ -650,8 +766,9 @@ begin
           end
           else
           begin
-            if (ScreenSing.SungToEnd) and (Length(DllMan.Websites) > 0) then
-              InteractNext;
+            if DocumentUI <> nil then
+            begin if CanSendScore then Interaction := 0; end
+            else if (ScreenSing.SungToEnd) and (Length(DllMan.Websites) > 0) then InteractNext;
           end;
         end;
 
@@ -675,8 +792,9 @@ begin
           end
           else
           begin
-            if (ScreenSing.SungToEnd) and (Length(DllMan.Websites) > 0) then
-              InteractPrev;
+            if DocumentUI <> nil then
+            begin if CanSendScore then Interaction := 0; end
+            else if (ScreenSing.SungToEnd) and (Length(DllMan.Websites) > 0) then InteractPrev;
           end;
 
         end;
@@ -690,6 +808,15 @@ var
   button_s: integer;
 begin
   Result := True;
+  if DocumentUI <> nil then
+  begin
+    if MouseButton = SDL_BUTTON_LEFT then DocumentUI.Mouse(X, Y, 0, BtnDown)
+    else DocumentUI.Mouse(X, Y);
+    DocumentUI.TakeAction;
+    if DocumentUI.FocusedTarget = 'send' then Interaction := 0 else Interaction := -1;
+    if (MouseButton = SDL_BUTTON_LEFT) and BtnDown then Result := ParseInput(SDLK_RETURN, 0, true);
+    Exit;
+  end;
 
   button_s := ButtonSend[GetScoreButtonLayout(PlayersPlay, Screens)];
 
@@ -714,6 +841,7 @@ var
   P:    integer;
 
 begin
+  if DocumentUI <> nil then begin RefreshDocumentTexts; Exit; end;
   if (CurrentRound < Length(PlaylistMedley.Stats)-1) then
   begin
     Text[TextArtist].Text      := IntToStr(CurrentRound+1) + '/' +
@@ -898,6 +1026,9 @@ var
 begin
   inherited Create;
 
+  DocumentUI := TDocumentUI.Open(uiScreenScore, 'score.players');
+  if DocumentUI <> nil then Exit;
+
   LoadFromTheme(Theme.Score);
 
   // These two texts arn't used in the deluxe skin
@@ -1006,6 +1137,12 @@ destructor TScreenScore.Destroy;
 var
   P, I, S: integer;
 begin
+  if DocumentUI <> nil then
+  begin
+    DocumentUI.Free;
+    inherited;
+    Exit;
+  end;
   for I := 1 to UIni.IMaxPlayerCount do
   begin
     Tex_Score_NoteBarLevel_Dark[I].Free;
@@ -1057,6 +1194,18 @@ var
   I: integer;
 begin
   CurrentTime := SDL_GetTicks();
+  if (DocumentUI <> nil) and ((BarTime = 0) or (PlayersPlay = 0)) then
+  begin
+    BarScore_EaseOut_Step := 100; BarPhrase_EaseOut_Step := 100; BarGolden_EaseOut_Step := 100;
+    for I := 1 to PlayersPlay do
+    begin
+      aPlayerScoreScreenRatings[I].RateEaseStep := 100;
+      aPlayerScoreScreenRatings[I].RateEaseValue := 100;
+    end;
+    FinishScreenDraw := true;
+    BarTime := CurrentTime + BarRaiseSpeed;
+    Exit;
+  end;
 
   if (ScreenAct = 1) and ShowFinish then
     while (CurrentTime >= BarTime) do
@@ -1123,6 +1272,17 @@ begin
 
   FinishScreenDraw := false;
   PreviewEnd := 0;
+  if DocumentUI <> nil then
+  begin
+    CurrentRound := Max(0, Length(PlaylistMedley.Stats) - 1);
+    MapPlayersToPosition;
+    Interaction := -1;
+    RefreshTexts;
+    SyncDocument;
+    if not (Ini.SavePlayback = 1) then StartPreview
+    else begin Voice := -1; StartVoice; end;
+    Exit;
+  end;
 
   {**
    * Turn backgroundmusic on
@@ -1208,7 +1368,8 @@ begin
   for P := 1 to PlayersPlay do
   begin
     // data
-    aPlayerScoreScreenDatas[P].Bar_Y            := Theme.Score.StaticBackLevel[PlayerPositionMap[P-1].Position].Y;
+    if DocumentUI = nil then
+      aPlayerScoreScreenDatas[P].Bar_Y := Theme.Score.StaticBackLevel[PlayerPositionMap[P-1].Position].Y;
 
     // ratings
     aPlayerScoreScreenRatings[P].RateEaseStep   := 1;
@@ -1220,8 +1381,8 @@ begin
     TextGolden_ActualValue[P] := 0;
   end;
 
-  for P := 1 to UIni.IMaxPlayerCount do
-    SetScoreSlotScoreAlpha(Self, P, 0);
+  if DocumentUI = nil then
+    for P := 1 to UIni.IMaxPlayerCount do SetScoreSlotScoreAlpha(Self, P, 0);
 
   BarScore_EaseOut_Step  := 1;
   BarPhrase_EaseOut_Step := 1;
@@ -1252,6 +1413,23 @@ begin
   begin
     AudioPlayback.Stop;
     PreviewEnd := 0;
+  end;
+
+  if DocumentUI <> nil then
+  begin
+    if ScreenSong.Mode = smMedley then BarTime := 0;
+    UpdateAnimation;
+    if ShowFinish then
+      for PlayerCounter := 1 to PlayersPlay do
+      begin
+        EaseScoreIn(PlayerCounter, sbtScore);
+        if BarScore_EaseOut_Step >= 100 then EaseScoreIn(PlayerCounter, sbtLine);
+        if BarPhrase_EaseOut_Step >= 100 then EaseScoreIn(PlayerCounter, sbtGolden);
+      end;
+    SyncDocument;
+    Result := DocumentUI.Draw;
+    ScreenContinuousPlayback.Update;
+    Exit;
   end;
 
 {
@@ -1471,7 +1649,8 @@ begin
   SlotIndex := PlayerPositionMap[PlayerNumber-1].Position;
 
   EaseOut_Step  := aPlayerScoreScreenRatings[PlayerNumber].RateEaseStep;
-  MaxVal        := Theme.Score.StaticRatings[SlotIndex].W;
+  if DocumentUI <> nil then MaxVal := 100
+  else MaxVal := Theme.Score.StaticRatings[SlotIndex].W;
 
   RaiseStep     := EaseOut_Step;
 

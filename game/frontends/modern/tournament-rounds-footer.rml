@@ -1,0 +1,5 @@
+<template name="tournament-rounds-footer"><head></head><body>
+  <span class="where" lang="PARTY_MODE_TOURNAMENT_ROUNDS_WHEREAMI" />
+  <img class="legend-icon tournament-continue-icon" src="../../themes/Modern/[button]enter.png" />
+  <span class="legend tournament-continue-label" lang="SING_LEGEND_CONTINUE" />
+</body></template>

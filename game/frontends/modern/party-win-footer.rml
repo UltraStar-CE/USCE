@@ -1,0 +1,5 @@
+<template name="party-win-footer"><head></head><body>
+  <span class="where" lang="PARTY_WIN_WHEREAMI" />
+  <img class="legend-icon party-win-continue-icon" src="../../themes/Modern/[button]enter.png" />
+  <span class="legend party-win-continue" lang="PARTY_WIN_LEGEND_CONTINUE" />
+</body></template>

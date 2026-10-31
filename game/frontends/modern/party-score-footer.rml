@@ -1,0 +1,5 @@
+<template name="party-score-footer"><head></head><body>
+  <span class="where" lang="PARTY_SCORE_WHEREAMI" />
+  <img class="legend-icon party-score-continue-icon" src="../../themes/Modern/[button]enter.png" />
+  <span class="legend party-score-continue" lang="PARTY_LEGEND_CONTINUE" />
+</body></template>

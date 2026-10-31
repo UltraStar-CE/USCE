@@ -1,0 +1,46 @@
+<rml>
+<head>
+  <title>Modern song highscores</title>
+  <link type="text/rcss" href="modern.rcss" />
+  <link type="text/rcss" href="song-highscores.rcss" />
+  <link type="text/template" href="song-highscores-footer.rml" />
+</head>
+<body class="song-highscores-screen">
+  <div class="background-layer"><div class="background-edge background-edge-left" /><div class="background" /><div class="background-edge background-edge-right" /></div>
+  <div data-model="game"><div class="foreground">
+    <button class="highscores-continue-area" action="navigation.back" target="continue" />
+    <img class="heading-icon" src="../../themes/Modern/[icon]score.png" />
+    <span class="heading" bind-text="highscores.title" />
+    <span class="highscores-song" bind-text="highscores.song" />
+    <span class="highscores-difficulty-label" lang="SING_OPTIONS_GAME_DIFFICULTY" />
+    <span class="highscores-difficulty" bind-text="highscores.difficulty" />
+    <div class="song-highscores-table" adaptive-table="1" max-columns="2" split-min-rows="14" split-min-gain="0" table-gap="2.666667" min-font-ratio="0.333333" min-layout-rows="5" padding-rows="2" first-row-offset="1">
+      <div id="highscores-panel-left" class="table-panel">
+        <div class="table-header"><div class="rank-cell" column-min-em="1.75" /><div class="name-cell" column-min="0.25" column-gap="0.015" column-flex="1" column-measure-max="0.4" /><div class="score-cell" column-gap="0.02" /><div class="date-cell" column-gap="0.04" /></div>
+        <div class="table-rows">
+          <div data-for="entry : data.highscores.rows" class="data-row">
+            <div class="rank-cell"><span class="highscore-rank form-label">{{ entry.rank }}</span></div>
+            <div class="name-cell">{{ entry.name }}</div>
+            <div class="score-cell">{{ entry.score }}</div>
+            <div class="date-cell">{{ entry.date }}</div>
+          </div>
+        </div>
+      </div>
+      <div id="highscores-panel-right" class="table-panel">
+        <div class="table-header"><div class="rank-cell" column-min-em="1.75" /><div class="name-cell" column-min="0.25" column-gap="0.015" column-flex="1" column-measure-max="0.4" /><div class="score-cell" column-gap="0.02" /><div class="date-cell" column-gap="0.04" /></div>
+        <div class="table-rows">
+          <div data-for="entry : data.highscores.rows" class="data-row">
+            <div class="rank-cell"><span class="highscore-rank form-label">{{ entry.rank }}</span></div>
+            <div class="name-cell">{{ entry.name }}</div>
+            <div class="score-cell">{{ entry.score }}</div>
+            <div class="date-cell">{{ entry.date }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="footer" />
+    <div class="footer-labels"><template src="song-highscores-footer" /></div>
+    <div class="reflection-clip"><div class="footer-labels"><template src="song-highscores-footer" /></div></div>
+  </div></div>
+</body>
+</rml>

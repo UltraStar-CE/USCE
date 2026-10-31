@@ -1,0 +1,116 @@
+/* Modern's score card is composed by the theme, independently of native widgets. */
+.score-screen .heading { left: 8.75vw; top: 1vh; font-size: 7.5vh; }
+.score-screen .heading-icon { left: 5vw; top: 4.166667vh; width: 3.125vw; height: 4.166667vh; }
+.score-screen .description { left: 8.75vw; top: 9.833333vh; width: 87.5vw; height: 6vh; overflow: hidden; white-space: nowrap; color: white; }
+.score-screen .where { font-size: 2.25vh; }
+.score-screen .hidden { display: none; }
+.score-stage, .score-stage:focus { background-color: transparent; text-align: left; }
+.score-stage { position: absolute; left: 0; top: 17vh; width: 100vw; height: 73vh; }
+.score-grid { position: absolute; left: 50vw; display: flex; flex-direction: column; flex-wrap: wrap; align-content: flex-start; transform: translateX(-50%); }
+.score-slot { position: relative; flex-shrink: 0; }
+.score-card { position: relative; width: 52.125vw; height: 61.666667vh; transform-origin: 0 0; }
+.score-avatar { position: absolute; left: 1vw; top: 5vh; width: 13vw; height: 17.333333vh; }
+.score-avatar img { position: absolute; left: 50%; top: 0; width: 17.333333vh; height: 17.333333vh; transform: translateX(-50%); }
+.score-avatar-frame { position: absolute; left: 0; top: 3.666667vh; width: 15vw; height: 20vh; pointer-events: none; }
+.score-avatar-frame img { position: absolute; left: 50%; top: 0; width: 20vh; height: 20vh; transform: translateX(-50%); }
+.score-player-name { position: absolute; left: 0.25vw; top: 23.666667vh; width: 36.25vw; height: 6.666667vh; font-size: 5vh; font-weight: bold; overflow: hidden; white-space: nowrap; }
+.score-rating { position: absolute; left: 22.75vw; top: 4.5vh; width: 11.875vw; height: 18vh; transform-origin: 50% 50%; text-align: center; }
+.score-rating-image { position: relative; left: 0; width: 100%; height: 12.5vh; }
+.score-rating-image img { position: absolute; left: 50%; top: 0; width: 12.5vh; height: 12.5vh; transform: translateX(-50%); }
+.score-rating span { position: absolute; left: 0; top: 12.5vh; width: 100%; display: block; font-size: 3.375vh; white-space: nowrap; }
+.score-breakdown { position: absolute; left: 0.625vw; width: 35.875vw; height: 5vh; font-size: 3.75vh; }
+.notes { top: 30.666667vh; } .phrase { top: 35.666667vh; } .golden { top: 40.833333vh; }
+.score-square { position: absolute; left: 0; top: 0.833333vh; width: 2.75vw; height: 3.333333vh; }
+.score-label { position: absolute; left: 3.375vw; top: 0; }
+.score-value { position: absolute; right: 0; top: 0; }
+.score-rule { position: absolute; left: 0.625vw; width: 35.875vw; height: 1px; background-color: white; }
+.score-rule-one { top: 35.5vh; } .score-rule-two { top: 40.666667vh; }
+.score-total, .score-total-reflection { position: absolute; left: 0.625vw; top: 51vh; width: 35.875vw; height: 7vh; }
+.score-badge { position: absolute; left: 0; top: 1.833333vh; width: 3.25vw; height: 3.833333vh; text-align: center; font-size: 2.25vh; font-weight: bold; }
+.score-total-label { position: absolute; left: 4.625vw; top: 1.666667vh; font-size: 3.75vh; }
+.score-total-value { position: absolute; right: 0; top: 0; font-size: 5.25vh; }
+.score-total-reflection { top: 61vh; transform: scaleY(-1); opacity: 0.3; mask-image: vertical-gradient(#0000 #000c); }
+.score-level-background { position: absolute; left: 38.5vw; top: 5vh; width: 11.875vw; height: 51.666667vh; opacity: 0.25; }
+.score-level-stack { position: absolute; left: 38.5vw; top: 5vh; width: 11.875vw; height: 51.666667vh; display: flex; flex-direction: column-reverse; }
+.score-level-stack div { position: relative; width: 100%; flex-shrink: 0; }
+.score-level-glass { position: absolute; left: 38vw; top: 1.666667vh; width: 14.125vw; height: 55.166667vh; }
+.score-level-cap { position: absolute; left: 38vw; top: 56.666667vh; width: 13.75vw; height: 5vh; }
+.score-level-cap-reflection { position: absolute; left: 38vw; top: 61.666667vh; width: 13.75vw; height: 2.5vh; opacity: 0.3; mask-image: vertical-gradient(#0009 #0000); }
+.score-empty { position: absolute; left: 0; top: 30vh; width: 100%; font-size: 4vh; text-align: center; }
+.score-send { position: absolute; left: 38.75vw; top: 16.666667vh; width: 22.5vw; height: 5vh; font-size: 3vh; }
+.score-send span { margin-top: 0.666667vh; }
+.score-send.selected { font-weight: bold; }
+.score-count-1 .score-send { left: 25vw; top: 84.166667vh; }
+.score-medley-icon { left: 57vw; } .score-medley-legend { left: 60vw; }
+.score-count-1 .score-grid { top: 5.500000vh; width: 52.125000vw; height: 61.666667vh; }
+.score-count-1 .score-slot { width: 52.125000vw; height: 61.666667vh; }
+.score-count-1 .score-card { transform: scale(1.00000000); }
+.score-count-2 .score-grid { top: 8.235811vh; width: 95.000000vw; height: 56.195044vh; }
+.score-count-2 .score-slot { width: 47.500000vw; height: 56.195044vh; }
+.score-count-2 .score-card { transform: scale(0.91127098); }
+.score-count-3 .score-grid { top: 17.601652vh; width: 95.000000vw; height: 37.463363vh; }
+.score-count-3 .score-slot { width: 31.666667vw; height: 37.463363vh; }
+.score-count-3 .score-card { transform: scale(0.60751399); }
+.score-count-4 .score-grid { top: 1.333333vh; width: 59.168919vw; height: 70.000000vh; }
+.score-count-4 .score-slot { width: 29.584459vw; height: 35.000000vh; }
+.score-count-4 .score-card { transform: scale(0.56756757); }
+.score-count-5 .score-grid { top: 1.333333vh; width: 88.753378vw; height: 70.000000vh; }
+.score-count-5 .score-slot { width: 29.584459vw; height: 35.000000vh; }
+.score-count-5 .score-card { transform: scale(0.56756757); }
+.score-count-6 .score-grid { top: 1.333333vh; width: 88.753378vw; height: 70.000000vh; }
+.score-count-6 .score-slot { width: 29.584459vw; height: 35.000000vh; }
+.score-count-6 .score-card { transform: scale(0.56756757); }
+.score-count-7 .score-grid { top: 8.235811vh; width: 95.000000vw; height: 56.195044vh; }
+.score-count-7 .score-slot { width: 23.750000vw; height: 28.097522vh; }
+.score-count-7 .score-card { transform: scale(0.45563549); }
+.score-count-8 .score-grid { top: 8.235811vh; width: 95.000000vw; height: 56.195044vh; }
+.score-count-8 .score-slot { width: 23.750000vw; height: 28.097522vh; }
+.score-count-8 .score-card { transform: scale(0.45563549); }
+.score-count-9 .score-grid { top: 1.333333vh; width: 59.168919vw; height: 70.000000vh; }
+.score-count-9 .score-slot { width: 19.722973vw; height: 23.333333vh; }
+.score-count-9 .score-card { transform: scale(0.37837838); }
+.score-count-10 .score-grid { top: 13.855316vh; width: 95.000000vw; height: 44.956035vh; }
+.score-count-10 .score-slot { width: 19.000000vw; height: 22.478018vh; }
+.score-count-10 .score-card { transform: scale(0.36450839); }
+.score-count-11 .score-grid { top: 1.333333vh; width: 78.891892vw; height: 70.000000vh; }
+.score-count-11 .score-slot { width: 19.722973vw; height: 23.333333vh; }
+.score-count-11 .score-card { transform: scale(0.37837838); }
+.score-count-12 .score-grid { top: 1.333333vh; width: 78.891892vw; height: 70.000000vh; }
+.score-count-12 .score-slot { width: 19.722973vw; height: 23.333333vh; }
+.score-count-12 .score-card { transform: scale(0.37837838); }
+.score-count-13 .score-grid { top: 2.616307vh; width: 95.000000vw; height: 67.434053vh; }
+.score-count-13 .score-slot { width: 19.000000vw; height: 22.478018vh; }
+.score-count-13 .score-card { transform: scale(0.36450839); }
+.score-count-14 .score-grid { top: 2.616307vh; width: 95.000000vw; height: 67.434053vh; }
+.score-count-14 .score-slot { width: 19.000000vw; height: 22.478018vh; }
+.score-count-14 .score-card { transform: scale(0.36450839); }
+.score-count-15 .score-grid { top: 2.616307vh; width: 95.000000vw; height: 67.434053vh; }
+.score-count-15 .score-slot { width: 19.000000vw; height: 22.478018vh; }
+.score-count-15 .score-card { transform: scale(0.36450839); }
+.score-count-16 .score-grid { top: 1.333333vh; width: 59.168919vw; height: 70.000000vh; }
+.score-count-16 .score-slot { width: 14.792230vw; height: 17.500000vh; }
+.score-count-16 .score-card { transform: scale(0.28378378); }
+.score-count-17 .score-grid { top: 8.235811vh; width: 95.000000vw; height: 56.195044vh; }
+.score-count-17 .score-slot { width: 15.833333vw; height: 18.731681vh; }
+.score-count-17 .score-card { transform: scale(0.30375699); }
+.score-count-18 .score-grid { top: 8.235811vh; width: 95.000000vw; height: 56.195044vh; }
+.score-count-18 .score-slot { width: 15.833333vw; height: 18.731681vh; }
+.score-count-18 .score-card { transform: scale(0.30375699); }
+.score-count-19 .score-grid { top: 1.333333vh; width: 73.961149vw; height: 70.000000vh; }
+.score-count-19 .score-slot { width: 14.792230vw; height: 17.500000vh; }
+.score-count-19 .score-card { transform: scale(0.28378378); }
+.score-count-20 .score-grid { top: 1.333333vh; width: 73.961149vw; height: 70.000000vh; }
+.score-count-20 .score-slot { width: 14.792230vw; height: 17.500000vh; }
+.score-count-20 .score-card { transform: scale(0.28378378); }
+.score-count-21 .score-grid { top: 1.333333vh; width: 88.753378vw; height: 70.000000vh; }
+.score-count-21 .score-slot { width: 14.792230vw; height: 17.500000vh; }
+.score-count-21 .score-card { transform: scale(0.28378378); }
+.score-count-22 .score-grid { top: 1.333333vh; width: 88.753378vw; height: 70.000000vh; }
+.score-count-22 .score-slot { width: 14.792230vw; height: 17.500000vh; }
+.score-count-22 .score-card { transform: scale(0.28378378); }
+.score-count-23 .score-grid { top: 1.333333vh; width: 88.753378vw; height: 70.000000vh; }
+.score-count-23 .score-slot { width: 14.792230vw; height: 17.500000vh; }
+.score-count-23 .score-card { transform: scale(0.28378378); }
+.score-count-24 .score-grid { top: 1.333333vh; width: 88.753378vw; height: 70.000000vh; }
+.score-count-24 .score-slot { width: 14.792230vw; height: 17.500000vh; }
+.score-count-24 .score-card { transform: scale(0.28378378); }

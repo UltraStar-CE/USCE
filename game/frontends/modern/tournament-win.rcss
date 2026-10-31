@@ -1,0 +1,17 @@
+/* Modern tournament result: two match participants, with theme-owned geometry. */
+.tournament-win-screen .heading { left: 8.75vw; top: 1.5vh; font-size: 7.5vh; }
+.tournament-win-screen .heading-icon { left: 5vw; top: 3.666667vh; width: 3.375vw; height: 4.5vh; }
+.tournament-win-screen .description { left: 8.75vw; top: 10.466667vh; color: white; }
+.tournament-win-continue-area, .tournament-win-continue-area:focus { position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; background-color: transparent; }
+.tournament-win-screen .heading, .tournament-win-screen .heading-icon, .tournament-win-screen .description,
+.tournament-results, .tournament-win-screen .footer, .tournament-win-screen .footer-labels,
+.tournament-win-screen .reflection-clip { pointer-events: none; }
+.tournament-results { position: absolute; left: 17.5vw; top: 28.333333vh; width: 65vw; }
+.tournament-player { display: block; position: relative; width: 65vw; height: 25vh; }
+.player-background { position: absolute; left: 0; top: 0; width: 65vw; height: 13vh; }
+.player-name { position: absolute; left: 3.75vw; top: 1.666667vh; width: 48.75vw; height: 10vh; font-size: 7.125vh; white-space: nowrap; overflow: hidden; }
+.player-score { position: absolute; right: 5vw; top: 1.666667vh; width: 12.5vw; height: 10vh; font-size: 7.125vh; text-align: right; white-space: nowrap; }
+.player-reflection-clip { position: absolute; left: 0; top: 13.333333vh; width: 65vw; height: 6.5vh; overflow: hidden; opacity: 0.7; mask-image: vertical-gradient(#000f #0000); }
+.player-background-reflection { position: absolute; left: 0; top: 0; width: 65vw; height: 13vh; transform: scaleY(-1); }
+.tournament-win-continue-icon { left: 34.5vw; }
+.tournament-win-continue { left: 37.5vw; }

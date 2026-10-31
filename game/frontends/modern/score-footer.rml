@@ -1,0 +1,7 @@
+<template name="score-footer"><head></head><body>
+  <span class="where" lang="SONG_SCORE_WHEREAMI" />
+  <img class="legend-icon navigation-icon" src="../../themes/Modern/[button]enter.png" />
+  <span class="legend navigation" lang="SING_LEGEND_CONTINUE" />
+  <img class="legend-icon score-medley-icon" src="../../themes/Modern/[button]navi.png" data-class-hidden="!data.score.medley" />
+  <span class="legend score-medley-legend" lang="SING_LEGEND_NAVIGATE" data-class-hidden="!data.score.medley" />
+</body></template>

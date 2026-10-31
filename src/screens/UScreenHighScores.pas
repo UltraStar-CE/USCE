@@ -35,6 +35,7 @@ interface
 
 uses
   UDisplay,
+  UDocumentUI,
   UMenu,
   UMenuList,
   UMusic,
@@ -47,9 +48,13 @@ uses
 type
   TScreenHighScores = class(TMenu)
     private
+      DocumentUI: TDocumentUI;
       EntryColumns: array[0..2] of TListColumn;
       EntryRowsPerColumn: integer;
       EntryColumnOffset, EntryColumnWidth: real;
+      procedure SyncDocument;
+      function DocumentIsSplit: boolean;
+      function RunDocumentAction(const Action: UTF8String): boolean;
       function ColumnForEntry(Column, Entry: integer): TListColumn;
       function TryTwoColumns(var Layout: TTextListLayout): boolean;
       procedure AddThemedFrame;
@@ -90,6 +95,9 @@ type
       IsFadingOut:    boolean;
 
       constructor Create; override;
+      destructor Destroy; override;
+      function DrawBG: boolean; override;
+      function DrawFG: boolean; override;
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
       procedure OnShow; override;
@@ -100,11 +108,18 @@ type
 
 const
   HighScoresHelpID = 'ID_024';
+  uiScreenSongHighScores = 'song-highscores';
+  uiSongHighScoreRows = 'highscores.rows';
+  uiHighScoresPreviousDifficulty = 'highscores.difficulty.previous';
+  uiHighScoresNextDifficulty = 'highscores.difficulty.next';
+  uiHighScoresPreviousCount = 'highscores.entries.previous';
+  uiHighScoresNextCount = 'highscores.entries.next';
 
 implementation
 
 uses
   USong,
+  ULanguage,
   UDataBase,
   UGraphic,
   UHelp,
@@ -125,6 +140,73 @@ begin
     TrackMask := TrackMask shr 1;
     Inc(Result);
   end;
+end;
+
+procedure TScreenHighScores.SyncDocument;
+var I, Track, Count: integer; Prefix, Name: UTF8String;
+begin
+  UpdateHeaderText;
+  Count := 0;
+  if CurrentSong <> nil then
+  begin
+    DocumentUI.SetValue('highscores.song', CurrentSong.Artist + ' - ' + CurrentSong.Title);
+    Count := Min(EntryCount, Length(CurrentSong.Score[VisibleDifficulty]));
+  end
+  else DocumentUI.SetValue('highscores.song', '');
+  DocumentUI.SetValue('highscores.difficulty', IDifficultyTranslated[VisibleDifficulty]);
+  DocumentUI.SetModel('highscores.entryLimit', IntToStr(EntryCount), 1);
+  DocumentUI.SetArray(uiSongHighScoreRows, Count);
+  for I := 0 to Count - 1 do
+  begin
+    Prefix := uiSongHighScoreRows + '[' + IntToStr(I) + '].';
+    Name := CurrentSong.Score[VisibleDifficulty, I].Name;
+    Track := TrackNumber(CurrentSong.Score[VisibleDifficulty, I].TrackMask);
+    if CurrentSong.IsDuet and (Track > 0) then Name := Name + ' (P' + IntToStr(Track) + ')';
+    DocumentUI.SetModel(Prefix + 'id', IntToStr(I), 1);
+    DocumentUI.SetModel(Prefix + 'rank', IntToStr(I + 1), 1);
+    DocumentUI.SetModel(Prefix + 'name', Name);
+    DocumentUI.SetModel(Prefix + 'score', IntToStr(CurrentSong.Score[VisibleDifficulty, I].Score), 1);
+    DocumentUI.SetModel(Prefix + 'date', CurrentSong.Score[VisibleDifficulty, I].Date);
+  end;
+end;
+
+function TScreenHighScores.DocumentIsSplit: boolean;
+var Bounds: TDocumentRegion;
+begin
+  // The theme decides when its table splits. Entry controls follow the visible
+  // arrangement rather than duplicating that presentation policy in the game.
+  Result := DocumentUI.Region('highscores-panel-right', Bounds);
+end;
+
+function TScreenHighScores.RunDocumentAction(const Action: UTF8String): boolean;
+begin
+  Result := true;
+  if Action = uiNavigationBack then Result := ParseInput(SDLK_RETURN, 0, true)
+  else if Action = uiHighScoresPreviousDifficulty then Result := ParseInput(SDLK_LEFT, 0, true)
+  else if Action = uiHighScoresNextDifficulty then Result := ParseInput(SDLK_RIGHT, 0, true)
+  else if Action = uiHighScoresPreviousCount then Result := ParseInput(SDLK_UP, 0, true)
+  else if Action = uiHighScoresNextCount then Result := ParseInput(SDLK_DOWN, 0, true);
+end;
+
+destructor TScreenHighScores.Destroy;
+begin
+  DocumentUI.Free;
+  inherited;
+end;
+
+function TScreenHighScores.DrawBG: boolean;
+begin
+  if DocumentUI <> nil then Result := DocumentUI.Draw(true) else Result := inherited;
+end;
+
+function TScreenHighScores.DrawFG: boolean;
+begin
+  if DocumentUI <> nil then
+  begin
+    SyncDocument;
+    Exit(DocumentUI.Draw(false, true));
+  end;
+  Result := inherited;
 end;
 
 procedure TScreenHighScores.AddThemedFrame;
@@ -193,8 +275,8 @@ procedure TScreenHighScores.ChangeEntryCount(Delta: integer);
 var
   NewEntryCount: integer;
 begin
-  if EntryColumnOffset > 0 then
-    Delta := Delta * 2;
+  if ((DocumentUI <> nil) and DocumentIsSplit) or
+     ((DocumentUI = nil) and (EntryColumnOffset > 0)) then Delta := Delta * 2;
   NewEntryCount := EntryCount + Delta;
   if (NewEntryCount < 5) then
     NewEntryCount := 5
@@ -332,6 +414,7 @@ var
   LayoutRows: integer;
   Layout: TTextListLayout;
 begin
+  if DocumentUI <> nil then Exit;
   EntryRowsPerColumn := Max(1, LayoutEntryCount);
   EntryColumnOffset := 0;
   EntryColumnWidth := 0;
@@ -459,6 +542,12 @@ end;
 
 procedure TScreenHighScores.UpdateHeaderText;
 begin
+  if DocumentUI <> nil then
+  begin
+    DocumentUI.SetValue('highscores.title', FormatEntryCountText(Language.Translate('SING_HIGH_SCORES_TITLE')));
+    DocumentUI.SetValue('highscores.whereami', FormatEntryCountText(Language.Translate('SING_HIGH_SCORES_WHEREAMI')));
+    Exit;
+  end;
   Text[TextTitle].Text := FormatEntryCountText(Theme.HighScores.TextTitle.Text);
   Text[TextWhereAmI].Text := FormatEntryCountText(Theme.HighScores.TextWhereAmI.Text);
 end;
@@ -534,7 +623,16 @@ end;
 function TScreenHighScores.ParseMouse(MouseButton: integer;
                                       BtnDown: boolean;
                                       X, Y: integer): boolean;
+var Action: UTF8String;
 begin
+  if DocumentUI <> nil then
+  begin
+    if RightMbESC and (MouseButton = SDL_BUTTON_RIGHT) and BtnDown then Exit(ParseInput(SDLK_ESCAPE, 0, true));
+    if MouseButton = SDL_BUTTON_LEFT then DocumentUI.Mouse(X, Y, 0, BtnDown) else DocumentUI.Mouse(X, Y);
+    Action := DocumentUI.TakeAction;
+    if Action <> '' then Exit(RunDocumentAction(Action));
+    Exit(true);
+  end;
   Result := true;
   if (MouseButton = SDL_BUTTON_LEFT) and BtnDown then
     //left-click anywhere sends return
@@ -549,6 +647,8 @@ begin
   inherited Create;
   EntryCount := EnsureRange(Ini.HighScoreScreenEntries, 5, Theme.HighScores.List.MaxEntries);
   LayoutEntryCount := 5;
+  DocumentUI := TDocumentUI.Open(uiScreenSongHighScores, uiSongHighScoreRows);
+  if DocumentUI <> nil then Exit;
   SetLength(EntryNumberStatic, Theme.HighScores.List.MaxEntries);
   SetLength(EntryNumberText, Theme.HighScores.List.MaxEntries);
   SetLength(EntryNameText, Theme.HighScores.List.MaxEntries);
@@ -591,7 +691,7 @@ end;
 procedure TScreenHighScores.OnShow;
 var PreviewEnd: real;
 begin
-  inherited;
+  if DocumentUI = nil then inherited;
   ScreenSong.StartFinishedSong(CurrentSong, PreviewEnd);
   AudioPlayback.SetVolume(EnsureRange(Ini.PreviewVolume, 0, 100) / 100);
 
@@ -599,14 +699,15 @@ begin
     Log.LogWarn('No Entry for Help-ID ' + HighScoresHelpID, 'ScreenHighScores');
 
   IsFadingOut := false;
-  VisibleDifficulty := Player[0].Level;
+  if Length(Player) > 0 then VisibleDifficulty := Player[0].Level
+  else VisibleDifficulty := Ini.Difficulty;
   if ScreenSong.Mode in [smPartyClassic, smPartyFree] then VisibleDifficulty := Ini.Difficulty;
 
   UpdateEntryLayout;
   UpdateHeaderText;
   LoadCurrentSongScores;
 
-  Text[TextArtistTitle].Text := CurrentSong.Artist + ' - ' + CurrentSong.Title;
+  if DocumentUI = nil then Text[TextArtistTitle].Text := CurrentSong.Artist + ' - ' + CurrentSong.Title;
 
   // An explicitly timed continuous-mode screen also stays visible when this
   // difficulty has no saved scores yet.
@@ -614,7 +715,7 @@ begin
      not ScreenContinuousPlayback.Session.Active then
   begin
     // Redirecting from OnShow replaces the pending screen before OnHide runs.
-    Background.OnFinish;
+    if Background <> nil then Background.OnFinish;
     ReturnFromScores;
   end;
 
@@ -628,6 +729,11 @@ var
   Name: UTF8String;
 begin
   VisibleDifficulty := difficulty;
+  if DocumentUI <> nil then
+  begin
+    SyncDocument;
+    Exit;
+  end;
   LayoutEntryCount := EnsureRange(Length(CurrentSong.Score[difficulty]), 5, EntryCount);
   UpdateEntryLayout;
   UpdateColumnLayout;

@@ -36,6 +36,7 @@ interface
 uses
   UDataBase,
   UDisplay,
+  UDocumentUI,
   UIni,
   UMenu,
   UMenuList,
@@ -61,6 +62,7 @@ type
 
   TScreenStatDetail = class(TMenu)
     private
+      DocumentUI: TDocumentUI;
       TextHeader: array[0..STAT_DETAIL_MAX_COLUMNS - 1] of integer;
       TextHeaderRight: array[0..STAT_DETAIL_MAX_COLUMNS - 1] of integer;
       RowsPerColumn: integer;
@@ -73,6 +75,9 @@ type
       TextMinMedian: integer;
       EntriesPerPage: integer;
       MinMedianFilter: boolean;
+
+      procedure SetDocumentPage(StatList: TList; VisibleEntries: integer; const PageText: UTF8String);
+      function DocumentAction(const Action: UTF8String): boolean;
 
       procedure ChangeEntriesPerPage(Delta: integer);
       procedure ClearRows;
@@ -92,6 +97,10 @@ type
       TotPages:  cardinal;
 
       constructor Create; override;
+      destructor Destroy; override;
+      function DrawBG: boolean; override;
+      function DrawFG: boolean; override;
+      function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       procedure OnShow; override;
       procedure OnWindowResized; override;
@@ -101,11 +110,20 @@ type
   end;
 
 const
+  uiStatDetailRole = 'statistics-detail';
+  uiStatDetailData = 'statisticsDetail';
+  uiStatPreviousPage = 'statistics.page.previous';
+  uiStatNextPage = 'statistics.page.next';
+  uiStatFewerEntries = 'statistics.entries.fewer';
+  uiStatMoreEntries = 'statistics.entries.more';
+  uiStatCyclePeriod = 'statistics.period.next';
+  uiStatMedianFilter = 'statistics.median.toggle';
   ID='ID_051';   //for help system
 
 implementation
 
 uses
+  UCommon,
   UGraphic,
   UHelp,
   ULanguage,
@@ -174,6 +192,94 @@ begin
   Result := IntToStr(Count);
 end;
 
+function TScreenStatDetail.DocumentAction(const Action: UTF8String): boolean;
+begin
+  Result := true;
+  if Action = uiNavigationBack then Exit(ParseInput(SDLK_ESCAPE, 0, true));
+  if Action = uiStatPreviousPage then Exit(ParseInput(SDLK_LEFT, 0, true));
+  if Action = uiStatNextPage then Exit(ParseInput(SDLK_RIGHT, 0, true));
+  if Action = uiStatFewerEntries then Exit(ParseInput(SDLK_UP, 0, true));
+  if Action = uiStatMoreEntries then Exit(ParseInput(SDLK_DOWN, 0, true));
+  if Action = uiStatCyclePeriod then Exit(ParseInput(SDLK_T, 0, true));
+  if Action = uiStatMedianFilter then Exit(ParseInput(SDLK_M, 0, true));
+end;
+
+function TScreenStatDetail.ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
+begin
+  if DocumentUI = nil then Exit(inherited);
+  if RightMbESC and (MouseButton = SDL_BUTTON_RIGHT) and BtnDown then Exit(ParseInput(SDLK_ESCAPE, 0, true));
+  if MouseButton = SDL_BUTTON_LEFT then DocumentUI.Mouse(X, Y, 0, BtnDown) else DocumentUI.Mouse(X, Y);
+  if BtnDown and (MouseButton = SDL_BUTTON_WHEELUP) then Exit(ParseInput(SDLK_UP, 0, true));
+  if BtnDown and (MouseButton = SDL_BUTTON_WHEELDOWN) then Exit(ParseInput(SDLK_DOWN, 0, true));
+  Result := DocumentAction(DocumentUI.TakeAction);
+end;
+
+destructor TScreenStatDetail.Destroy;
+begin
+  DocumentUI.Free;
+  inherited;
+end;
+
+function TScreenStatDetail.DrawBG: boolean;
+begin
+  if DocumentUI <> nil then Result := DocumentUI.Draw(true) else Result := inherited;
+end;
+
+function TScreenStatDetail.DrawFG: boolean;
+begin
+  if DocumentUI <> nil then Result := DocumentUI.Draw(false, true) else Result := inherited;
+end;
+
+procedure TScreenStatDetail.SetDocumentPage(StatList: TList; VisibleEntries: integer; const PageText: UTF8String);
+const
+  Titles: array[TStatType] of UTF8String = ('STAT_DESC_SCORES', 'STAT_DESC_SINGERS', 'STAT_DESC_SONGS', 'STAT_DESC_BANDS');
+var
+  Definitions: TStatDetailColumnDefinitions;
+  Column, Row, Count: integer;
+  Prefix, CellPrefix, Header: UTF8String;
+begin
+  case Typ of
+    stBestScores: Definitions := BEST_SCORE_COLUMNS;
+    stBestSingers: Definitions := BEST_SINGER_COLUMNS;
+    stMostSungSong: Definitions := POPULAR_SONG_COLUMNS;
+    stMostPopBand: Definitions := POPULAR_BAND_COLUMNS;
+  end;
+  Count := Length(Definitions);
+  while (Count > 0) and (Definitions[Count - 1].Value = scvNone) do Dec(Count);
+  DocumentUI.SetModel(uiStatDetailData + '.kind', IntToStr(Ord(Typ)), 1);
+  DocumentUI.SetModel(uiStatDetailData + '.pageSize', IntToStr(EntriesPerPage), 1);
+  DocumentUI.SetModel(uiStatDetailData + '.previousPage', IntToStr(Ord(Page > 0)), 2);
+  DocumentUI.SetModel(uiStatDetailData + '.nextPage', IntToStr(Ord(Page + 1 < TotPages)), 2);
+  DocumentUI.SetModel(uiStatDetailData + '.medianAvailable', IntToStr(Ord(Typ = stBestSingers)), 2);
+  DocumentUI.SetModel(uiStatDetailData + '.medianActive', IntToStr(Ord(MinMedianFilter)), 2);
+  DocumentUI.SetValue(uiStatDetailData + '.description', Language.Translate(Titles[Typ]) + ' - ' + StatPeriodText);
+  DocumentUI.SetValue(uiStatDetailData + '.page', PageText);
+  DocumentUI.SetArray(uiStatDetailData + '.columns', Count);
+  for Column := 0 to Count - 1 do
+  begin
+    Prefix := uiStatDetailData + '.columns[' + IntToStr(Column) + '].';
+    Header := Definitions[Column].Header;
+    if (StatSinceDate > 0) and (Header = 'STAT_DETAIL_HEADER_SUNG') then Header := 'STAT_DETAIL_HEADER_SCORES';
+    DocumentUI.SetModel(Prefix + 'id', IntToStr(Column), 1);
+    DocumentUI.SetModel(Prefix + 'header', Language.Translate(Header));
+    DocumentUI.SetModel(Prefix + 'numeric', IntToStr(Ord(Definitions[Column].Value in [scvRank, scvScore, scvAverageScore, scvSingCount])), 2);
+    DocumentUI.SetModel(Prefix + 'flexible', IntToStr(Ord(Definitions[Column].Value in [scvPlayer, scvSong, scvArtist])), 2);
+  end;
+  DocumentUI.SetArray(uiStatDetailData + '.rows', VisibleEntries);
+  for Row := 0 to VisibleEntries - 1 do
+  begin
+    Prefix := uiStatDetailData + '.rows[' + IntToStr(Row) + '].';
+    DocumentUI.SetArray(Prefix + 'cells', Count);
+    for Column := 0 to Count - 1 do
+    begin
+      CellPrefix := Prefix + 'cells[' + IntToStr(Column) + '].';
+      DocumentUI.SetModel(CellPrefix + 'id', IntToStr(Column), 1);
+      DocumentUI.SetModel(CellPrefix + 'value', StatCellText(StatList, Row, Definitions[Column].Value));
+      DocumentUI.SetModel(CellPrefix + 'numeric', IntToStr(Ord(Definitions[Column].Value in [scvRank, scvScore, scvAverageScore, scvSingCount])), 2);
+    end;
+  end;
+end;
+
 function TScreenStatDetail.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
 begin
   Result := true;
@@ -240,6 +346,13 @@ var
 begin
   inherited Create;
 
+  EntriesPerPage := EnsureRange(Ini.StatDetailCount, Theme.StatDetail.MinEntries, Theme.StatDetail.MaxEntries);
+  if Ini.StatDetailCount <= 0 then EntriesPerPage := Theme.StatDetail.DefaultEntries;
+  MinMedianFilter := false;
+  Typ := TStatType(0);
+  DocumentUI := TDocumentUI.Open(uiStatDetailRole);
+  if DocumentUI <> nil then Exit;
+
   SetLength(TextList, Theme.StatDetail.MaxEntries, STAT_DETAIL_MAX_COLUMNS);
 
   for Row := 0 to High(TextList) do
@@ -270,7 +383,7 @@ end;
 
 procedure TScreenStatDetail.OnShow;
 begin
-  inherited;
+  if DocumentUI = nil then inherited;
 
   if not Help.SetHelpID(ID) then
     Log.LogWarn('No Entry for Help-ID ' + ID, 'ScreenStatDetail');
@@ -297,6 +410,7 @@ end;
 
 procedure TScreenStatDetail.SetTitle;
 begin
+  if DocumentUI <> nil then Exit;
   Text[TextDescription].Text := Theme.StatDetail.Description[Ord(Typ)] +
       ' - ' + StatPeriodText;
 end;
@@ -319,6 +433,7 @@ procedure TScreenStatDetail.UpdateMinMedianHint;
 var
   ShowHint: boolean;
 begin
+  if DocumentUI <> nil then Exit;
   ShowHint := (Typ = stBestSingers);
   Statics[StaticMinMedian].Visible := ShowHint;
   Text[TextMinMedian].Visible := ShowHint;
@@ -706,6 +821,7 @@ var
   Column: integer;
   PerPage: integer;
   VisibleEntries: integer;
+  PageText: UTF8String;
 begin
   if (NewPage >= TotPages) then
     NewPage := TotPages - 1;
@@ -719,15 +835,19 @@ begin
     PerPage := EntriesPerPage;
 
   try
-    Text[TextPage].Text := StringReplace(Format(Theme.StatDetail.PageStr,
+    if DocumentUI <> nil then
+      PageText := StringReplace(Format(Language.Translate('STAT_PAGE'), [Page + 1, TotPages, PerPage, TotEntrys]), '\n', ' ', [rfReplaceAll])
+    else PageText := StringReplace(Format(Theme.StatDetail.PageStr,
         [Page + 1, TotPages, PerPage, TotEntrys]), '\n', ' ', [rfReplaceAll]);
   except
     on E: EConvertError do
     begin
-      Text[TextPage].Text := '';
+      PageText := '';
       Log.LogError('Error Parsing FormatString in UScreenStatDetail: ' + E.Message);
     end;
   end;
+
+  if DocumentUI = nil then Text[TextPage].Text := PageText;
 
   // fetch statistics
   StatList := Database.GetStats(Typ, EntriesPerPage, NewPage, ActiveFilters, StatSinceDate);
@@ -735,6 +855,16 @@ begin
     VisibleEntries := Min(StatList.Count, EntriesPerPage)
   else
     VisibleEntries := 0;
+
+  if DocumentUI <> nil then
+  begin
+    try
+      SetDocumentPage(StatList, VisibleEntries, PageText);
+    finally
+      Database.FreeStats(StatList);
+    end;
+    Exit;
+  end;
 
   UpdateListLayout(StatList, VisibleEntries);
 

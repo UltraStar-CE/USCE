@@ -1,0 +1,47 @@
+<rml>
+<head>
+  <title>Modern party team setup</title>
+  <link type="text/rcss" href="modern.rcss" />
+  <link type="text/rcss" href="party-options.rcss" />
+  <link type="text/rcss" href="party-players.rcss" />
+  <link type="text/template" href="party-players-footer.rml" />
+</head>
+<body class="party-options party-players-screen">
+  <div class="background-layer"><div class="background-edge background-edge-left" /><div class="background" /><div class="background-edge background-edge-right" /></div>
+  <div data-model="game"><div class="foreground">
+    <img class="heading-icon" src="../../themes/Modern/[icon]party.png" />
+    <span class="heading" lang="PARTY_MODE" />
+    <span class="description" lang="PARTY_PLAYER_DESC" />
+    <div class="team-count form-row" data-class-selected="data.partyPlayers.focus == 0">
+      <button id="party-player-0" class="count-label form-label" action="party.players.next" target="0"><span lang="PARTY_TEAMS" /></button>
+      <div class="count-value form-value">
+        <button class="previous" action="party.players.previous" target="0" data-class-unavailable="!data.partyPlayers.previous"><svg src="arrow-left.svg" /></button>
+        <button class="current" action="party.players.next" target="0"><span>{{ data.partyPlayers.count }}</span></button>
+        <button class="next" action="party.players.next" target="0" data-class-unavailable="!data.partyPlayers.next"><svg src="arrow-right.svg" /></button>
+      </div>
+    </div>
+    <div class="party-teams">
+      <div data-for="team : data.partyPlayers.teams" class="party-team" data-class-hidden="!team.visible">
+        <button class="team-name name-input" data-attr-id="'party-player-' + team.nameId" action="party.players.activate" data-attr-target="team.nameId" data-class-selected="data.partyPlayers.focus == team.nameId" data-style-background-color="data.partyPlayers.focus == team.nameId ? team.light : team.color"><div class="name-text"><span>{{ team.name }}</span><span data-class-hidden="data.partyPlayers.focus != team.nameId">|</span><span class="name-suggestion">{{ team.suffix }}</span></div></button>
+        <div class="team-player-count" data-class-selected="data.partyPlayers.focus == team.countId" data-style-background-color="data.partyPlayers.focus == team.countId ? team.light : team.color">
+          <button class="count-label" data-attr-id="'party-player-' + team.countId" action="party.players.next" data-attr-target="team.countId"><span data-class-hidden="team.id != 0" lang="PARTY_TEAMS_PLAYER1" /><span data-class-hidden="team.id != 1" lang="PARTY_TEAMS_PLAYER2" /><span data-class-hidden="team.id != 2" lang="PARTY_TEAMS_PLAYER3" /></button>
+          <div class="count-value">
+            <button class="previous" action="party.players.previous" data-attr-target="team.countId" data-class-unavailable="!team.previous"><svg src="arrow-left.svg" /></button>
+            <button class="current" action="party.players.next" data-attr-target="team.countId"><span>{{ team.count }}</span></button>
+            <button class="next" action="party.players.next" data-attr-target="team.countId" data-class-unavailable="!team.next"><svg src="arrow-right.svg" /></button>
+          </div>
+        </div>
+        <div class="team-players">
+          <div data-for="player : team.players" class="player-slot" data-class-hidden="!player.visible">
+            <button class="player-name name-input" data-attr-id="'party-player-' + player.id" action="party.players.activate" data-attr-target="player.id" data-class-selected="data.partyPlayers.focus == player.id" data-style-background-color="data.partyPlayers.focus == player.id ? team.light : team.color"><div class="name-text"><span>{{ player.name }}</span><span data-class-hidden="data.partyPlayers.focus != player.id">|</span><span class="name-suggestion">{{ player.suffix }}</span></div></button>
+            <div class="name-reflection" data-style-background-color="data.partyPlayers.focus == player.id ? team.light : team.color" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="footer" />
+    <div class="footer-labels"><template src="party-players-footer" /></div>
+    <div class="reflection-clip"><div class="footer-labels"><template src="party-players-footer" /></div></div>
+  </div></div>
+</body>
+</rml>

@@ -1,0 +1,26 @@
+/* The game exports score records; this document owns row fitting and columns. */
+.song-highscores-screen .heading { left: 8.75vw; top: 1vh; font-size: 7.5vh; pointer-events: none; }
+.song-highscores-screen .heading-icon { left: 5vw; top: 4.166667vh; width: 3.125vw; height: 4.166667vh; pointer-events: none; }
+.song-highscores-screen .where { font-size: 2.25vh; }
+.highscores-song, .highscores-difficulty-label, .highscores-difficulty { position: absolute; font-size: 3.75vh; white-space: nowrap; overflow: hidden; pointer-events: none; }
+.highscores-song { left: 8.75vw; top: 9.833333vh; width: 86.25vw; }
+.highscores-difficulty-label { left: 8.75vw; top: 13.833333vh; width: 20vw; }
+.highscores-difficulty { left: 25vw; top: 13.833333vh; width: 17.5vw; text-align: center; }
+.highscores-continue-area { position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; background-color: transparent; }
+.highscores-continue-area:focus { background-color: transparent; }
+.song-highscores-table { position: absolute; left: 12.5vw; top: 25vh; width: 82.5vw; height: 58.333333vh; font-size: 5.25vh; pointer-events: none; }
+.song-highscores-table .table-panel { position: absolute; top: 0; height: 100%; }
+.song-highscores-table .table-header { height: 0; overflow: hidden; }
+.song-highscores-table .table-rows { position: relative; width: 100%; height: 100%; }
+.song-highscores-table .data-row { position: absolute; width: 100%; white-space: nowrap; }
+.song-highscores-table .data-row > div { white-space: nowrap; overflow: hidden; }
+.song-highscores-table .rank-cell { text-align: center; }
+.song-highscores-table .score-cell, .song-highscores-table .date-cell { text-align: right; }
+.song-highscores-table .name-cell { text-align: left; }
+.song-highscores-table .highscore-rank { display: block; box-sizing: border-box; padding: 0; max-width: 100%; margin-left: auto; margin-right: auto; width: 2.666667em; height: 2em; font-size: 64.285714%; font-weight: bold; border-top-right-radius: 0.4em; text-align: center; line-height: 1.9; }
+.highscores-continue-icon { left: 34.5vw; }
+.highscores-continue { left: 37.5vw; }
+.highscores-navigate-icon { left: 60.125vw; }
+.highscores-navigate { left: 63.125vw; }
+
+.song-highscores-screen .footer { pointer-events: none; }

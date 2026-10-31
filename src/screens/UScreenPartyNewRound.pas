@@ -35,6 +35,7 @@ interface
 
 uses
   UDisplay,
+  UDocumentUI,
   UFiles,
   UMenu,
   UMusic,
@@ -46,6 +47,9 @@ type
   TScreenPartyNewRound = class(TMenu)
     private
       VisibleRound:  Integer;
+      DocumentUI: TDocumentUI;
+      procedure SetDocumentState;
+      procedure ScrollDocumentRounds(Delta: integer);
 
     public
       //Texts:
@@ -84,17 +88,27 @@ type
 
 
       constructor Create; override;
+      destructor Destroy; override;
+      function DrawBG: boolean; override;
+      function DrawFG: boolean; override;
+      function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       procedure OnShow; override;
       procedure Refresh;
   end;
 
 const
+  uiPartyNewRoundRole = 'party-new-round';
+  uiPartyNewRoundData = 'partyNewRound';
+  uiPartyNewRoundContinue = 'party.new-round.continue';
+  uiPartyNewRoundPrevious = 'party.new-round.previous';
+  uiPartyNewRoundNext = 'party.new-round.next';
   ID='ID_033';   //for help system
 
 implementation
 
 uses
+  UCommon,
   UGraphic,
   UHelp,
   UIni,
@@ -103,13 +117,127 @@ uses
   UMain,
   UParty,
   USong,
-  UUnicodeUtils;
+  UUnicodeUtils,
+  USkins,
+  Math;
+
+procedure TScreenPartyNewRound.SetDocumentState;
+var I, J, ColorIndex, ModeIndex, NextPlayer: integer; Prefix, ModeName: UTF8String;
+    Players: array of UTF8String; Col: TRGB;
+  function ColorText(const Value: TRGB): UTF8String;
+  begin
+    Result := '#' + IntToHex(EnsureRange(Round(Value.R * 255), 0, 255), 2) +
+      IntToHex(EnsureRange(Round(Value.G * 255), 0, 255), 2) +
+      IntToHex(EnsureRange(Round(Value.B * 255), 0, 255), 2);
+  end;
+  function TeamColor(Team: integer): UTF8String;
+  begin
+    Col.R := 1; Col.G := 1; Col.B := 1;
+    ColorIndex := ColorExists('P' + IntToStr(Team + 1) + 'Dark');
+    if ColorIndex <> -1 then Col := Color[ColorIndex].RGB;
+    Result := ColorText(Col);
+  end;
+begin
+  DocumentUI.SetModel(uiPartyNewRoundData + '.current', IntToStr(Party.CurrentRound + 1), 1);
+  ModeName := '';
+  if (Party.CurrentRound >= 0) and (Party.CurrentRound <= High(Party.Rounds)) then
+  begin
+    ModeIndex := Party.Rounds[Party.CurrentRound].Mode;
+    if (ModeIndex >= 0) and (ModeIndex <= High(Party.Modes)) then
+      ModeName := Language.Translate('MODE_' + UpperCase(Party.Modes[ModeIndex].Name) + '_DESC');
+  end;
+  DocumentUI.SetValue(uiPartyNewRoundData + '.description', ModeName);
+  DocumentUI.SetArray(uiPartyNewRoundData + '.teams', Length(Party.Teams));
+  for I := 0 to High(Party.Teams) do
+  begin
+    Prefix := uiPartyNewRoundData + '.teams[' + IntToStr(I) + '].';
+    DocumentUI.SetModel(Prefix + 'id', IntToStr(I), 1);
+    DocumentUI.SetModel(Prefix + 'name', UTF8String(Party.Teams[I].Name));
+    DocumentUI.SetModel(Prefix + 'score', IntToStr(Party.Teams[I].Score), 1);
+    DocumentUI.SetModel(Prefix + 'color', TeamColor(I));
+    // Modern's next-player cards all inherit the first card's color.
+    DocumentUI.SetModel(Prefix + 'nextColor', TeamColor(0));
+    SetLength(Players, Length(Party.Teams[I].Players));
+    for J := 0 to High(Party.Teams[I].Players) do Players[J] := UTF8String(Party.Teams[I].Players[J].Name);
+    DocumentUI.SetModel(Prefix + 'players', Language.Implode(Players));
+    NextPlayer := Party.Teams[I].NextPlayer;
+    if (NextPlayer >= 0) and (NextPlayer <= High(Party.Teams[I].Players)) then
+      DocumentUI.SetModel(Prefix + 'next', UTF8String(Party.Teams[I].Players[NextPlayer].Name))
+    else DocumentUI.SetModel(Prefix + 'next', '');
+  end;
+  DocumentUI.SetArray(uiPartyNewRoundData + '.rounds', Length(Party.Rounds));
+  for I := 0 to High(Party.Rounds) do
+  begin
+    Prefix := uiPartyNewRoundData + '.rounds[' + IntToStr(I) + '].';
+    ModeName := '';
+    ModeIndex := Party.Rounds[I].Mode;
+    if (ModeIndex >= 0) and (ModeIndex <= High(Party.Modes)) then
+      ModeName := Language.Translate('MODE_' + UpperCase(Party.Modes[ModeIndex].Name) + '_NAME');
+    DocumentUI.SetModel(Prefix + 'id', IntToStr(I), 1);
+    DocumentUI.SetModel(Prefix + 'title', IntToStr(I + 1) + ') ' + ModeName);
+    DocumentUI.SetModel(Prefix + 'winner', Party.GetWinnerString(I));
+    DocumentUI.SetModel(Prefix + 'current', IntToStr(Ord(I = Party.CurrentRound)), 2);
+  end;
+end;
+
+procedure TScreenPartyNewRound.ScrollDocumentRounds(Delta: integer);
+var Viewport, FirstRow: TDocumentRegion;
+begin
+  if Length(Party.Rounds) = 0 then Exit;
+  VisibleRound := EnsureRange(VisibleRound + Delta, 0, High(Party.Rounds));
+  DocumentUI.Reveal('party-new-round-row-' + IntToStr(VisibleRound));
+  // The document defines row pitch and viewport capacity. Retain the actual
+  // clamped scroll position rather than a game-side fixed visible-row count.
+  if DocumentUI.Region('party-new-round-rounds', Viewport) and
+     DocumentUI.Region('party-new-round-row-0', FirstRow) and (FirstRow.H > 0) then
+    VisibleRound := EnsureRange(Round((Viewport.Y - FirstRow.Y) / FirstRow.H), 0, High(Party.Rounds));
+end;
+
+destructor TScreenPartyNewRound.Destroy;
+begin
+  DocumentUI.Free;
+  inherited;
+end;
+
+function TScreenPartyNewRound.DrawBG: boolean;
+begin
+  if DocumentUI <> nil then Result := DocumentUI.Draw(true) else Result := inherited;
+end;
+
+function TScreenPartyNewRound.DrawFG: boolean;
+begin
+  if DocumentUI <> nil then Result := DocumentUI.Draw(false, true) else Result := inherited;
+end;
+
+function TScreenPartyNewRound.ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
+var Action: UTF8String;
+begin
+  if DocumentUI = nil then Exit(inherited);
+  if RightMbESC and (MouseButton = SDL_BUTTON_RIGHT) and BtnDown then Exit(ParseInput(SDLK_ESCAPE, 0, true));
+  if MouseButton = SDL_BUTTON_LEFT then DocumentUI.Mouse(X, Y, 0, BtnDown) else DocumentUI.Mouse(X, Y);
+  if BtnDown then
+  begin
+    if MouseButton = SDL_BUTTON_WHEELUP then ScrollDocumentRounds(-1)
+    else if MouseButton = SDL_BUTTON_WHEELDOWN then ScrollDocumentRounds(1);
+  end;
+  Action := DocumentUI.TakeAction;
+  Result := true;
+  if Action = uiPartyNewRoundContinue then Result := ParseInput(SDLK_RETURN, 0, true)
+  else if Action = uiPartyNewRoundPrevious then ScrollDocumentRounds(-1)
+  else if Action = uiPartyNewRoundNext then ScrollDocumentRounds(1)
+  else if Action = uiNavigationBack then Result := ParseInput(SDLK_ESCAPE, 0, true);
+end;
 
 function TScreenPartyNewRound.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
 begin
   Result := true;
   if (PressedDown) then
   begin // Key Down
+    if DocumentUI <> nil then
+      case PressedKey of
+        SDLK_UP: begin ScrollDocumentRounds(-1); Exit; end;
+        SDLK_DOWN: begin ScrollDocumentRounds(1); Exit; end;
+      end;
     // check normal keys
     case PressedKey of
       SDLK_Q:
@@ -165,6 +293,12 @@ var
   N, I: Integer;
   NumRounds: Integer;
 begin
+  if DocumentUI <> nil then
+  begin
+    SetDocumentState;
+    ScrollDocumentRounds(0);
+    Exit;
+  end;
   //Set Visibility of Round Infos
   NumRounds := Length(Party.Rounds);
 
@@ -207,6 +341,8 @@ end;
 constructor TScreenPartyNewRound.Create;
 begin
   inherited Create;
+  DocumentUI := TDocumentUI.Open(uiPartyNewRoundRole);
+  if DocumentUI <> nil then Exit;
 
   TextRound[0] := AddText (Theme.PartyNewRound.TextRound1);
   TextRound[1] := AddText (Theme.PartyNewRound.TextRound2);
@@ -279,7 +415,7 @@ procedure TScreenPartyNewRound.OnShow;
     Result := Language.Implode(Players);
   end;
 begin
-  inherited;
+  if DocumentUI = nil then inherited;
 
   if not Help.SetHelpID(ID) then
     Log.LogWarn('No Entry for Help-ID ' + ID, 'ScreenPartyNewRound');
@@ -293,6 +429,7 @@ begin
   end;
 
   Refresh;
+  if DocumentUI <> nil then Exit;
 
   //Display Scores
   if (Length(Party.Teams) >= 1) then

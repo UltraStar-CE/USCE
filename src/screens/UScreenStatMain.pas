@@ -35,6 +35,7 @@ interface
 
 uses
   UDisplay,
+  UDocumentUI,
   UIni,
   UMenu,
   UMusic,
@@ -58,6 +59,10 @@ type
 
   TScreenStatMain = class(TMenu)
     private
+      DocumentUI: TDocumentUI;
+      DocumentSelection: integer;
+      procedure ReadDocumentSelection;
+      function DocumentAction(const Action: UTF8String): boolean;
       procedure AppendOverviewLine(var Overview: UTF8String; const Line: UTF8String);
       procedure AppendOverviewSection(var Overview: UTF8String; const Header: RawByteString);
       procedure AppendOverviewSectionText(var Overview: UTF8String; const Header: UTF8String);
@@ -87,6 +92,10 @@ type
     public
       TextOverview:    integer;
       constructor Create; override;
+      destructor Destroy; override;
+      function DrawBG: boolean; override;
+      function DrawFG: boolean; override;
+      function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       procedure OnShow; override;
 
@@ -110,9 +119,61 @@ uses
   Classes,
   DateUtils;
 
+procedure TScreenStatMain.ReadDocumentSelection;
+var Target: UTF8String; Index: integer;
+begin
+  Target := DocumentUI.FocusedTarget;
+  if Target = 'back' then DocumentSelection := 4
+  else if TryStrToInt(Target, Index) and (Index >= 0) and (Index <= 3) then DocumentSelection := Index;
+end;
+
+function TScreenStatMain.DocumentAction(const Action: UTF8String): boolean;
+var Index: integer;
+begin
+  Result := true;
+  if Action = uiNavigationBack then Exit(ParseInput(SDLK_ESCAPE, 0, true));
+  if Action = uiStatisticsPeriod then Exit(ParseInput(SDLK_T, 0, true));
+  if (Action = uiStatisticsDetail) and TryStrToInt(DocumentUI.ActionTarget, Index) and (Index >= 0) and (Index <= 3) then
+  begin
+    ScreenStatDetail.Typ := TStatType(Index);
+    FadeTo(@ScreenStatDetail, SoundLib.Back);
+  end;
+end;
+
+function TScreenStatMain.ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
+begin
+  if DocumentUI = nil then Exit(inherited);
+  if RightMbESC and (MouseButton = SDL_BUTTON_RIGHT) and BtnDown then Exit(ParseInput(SDLK_ESCAPE, 0, true));
+  if MouseButton = SDL_BUTTON_LEFT then DocumentUI.Mouse(X, Y, 0, BtnDown) else DocumentUI.Mouse(X, Y);
+  ReadDocumentSelection;
+  Result := DocumentAction(DocumentUI.TakeAction);
+end;
+
+function TScreenStatMain.DrawBG: boolean;
+begin
+  if DocumentUI <> nil then Result := DocumentUI.Draw(true) else Result := inherited;
+end;
+
+function TScreenStatMain.DrawFG: boolean;
+begin
+  if DocumentUI <> nil then Result := DocumentUI.Draw(false, true) else Result := inherited;
+end;
+
+destructor TScreenStatMain.Destroy;
+begin
+  DocumentUI.Free;
+  inherited;
+end;
+
 function TScreenStatMain.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
 begin
   Result := true;
+  if (DocumentUI <> nil) and PressedDown then
+    case PressedKey of
+      SDLK_RETURN: begin DocumentUI.Key(0); Exit(DocumentAction(DocumentUI.TakeAction)); end;
+      SDLK_LEFT, SDLK_UP: begin DocumentUI.Key(uiKeyPrevious); ReadDocumentSelection; Exit; end;
+      SDLK_RIGHT, SDLK_DOWN: begin DocumentUI.Key(uiKeyNext); ReadDocumentSelection; Exit; end;
+    end;
   if (PressedDown) then
   begin // Key Down
     // check normal keys
@@ -181,6 +242,9 @@ constructor TScreenStatMain.Create;
 begin
   inherited Create;
 
+  DocumentUI := TDocumentUI.Open(uiScreenStatistics);
+  if DocumentUI <> nil then Exit;
+
   TextOverview := AddText(Theme.StatMain.TextOverview);
   Text[TextOverview].InlineMarkup := true;
 
@@ -211,7 +275,7 @@ end;
 
 procedure TScreenStatMain.OnShow;
 begin
-  inherited;
+  if DocumentUI = nil then inherited;
 
   if not Help.SetHelpID(ID) then
     Log.LogWarn('No Entry for Help-ID ' + ID, 'ScreenStatMain');
@@ -220,6 +284,7 @@ begin
 
   //Set Overview Text:
   SetOverview;
+  if DocumentUI <> nil then DocumentUI.Focus('stats-' + IntToStr(DocumentSelection));
 end;
 
 procedure TScreenStatMain.AppendOverviewLine(var Overview: UTF8String; const Line: UTF8String);
@@ -561,7 +626,9 @@ begin
   end;
   AppendFunFacts(Overview);
 
-  Text[TextOverview].Text := Overview;
+  if DocumentUI <> nil then
+    DocumentUI.SetValue(uiStatisticsOverview, StringReplace(Overview, '\n', #10, [rfReplaceAll]))
+  else Text[TextOverview].Text := Overview;
 end;
 
 end.

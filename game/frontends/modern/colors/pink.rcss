@@ -22,3 +22,7 @@ button { background-color: #eea3e7e6; }
 
 .participant-name { background-color: #eea3e7e6; }
 .participant-name.selected, .participant-name:focus { background-color: #eec5eae6; }
+
+.statistics-panel .panel-top, .statistics-panel .panel-bottom { background-color: #ff00e8; }
+.statistics-panel { background-color: #ff00e67b; }
+.statistics-buttons button:focus { background-color: #eec5eae6; }
