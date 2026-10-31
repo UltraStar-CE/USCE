@@ -5760,6 +5760,7 @@ begin
     FAnalysisProgressPct := 0;
     FAnalysisFailed := false;
     FAnalysisError := '';
+    RefreshPreviewScoreMetadata(Track);
     RunIncrementalVocalsAnalysis(false, Track);
     Exit;
   end;
