@@ -1,0 +1,7 @@
+<template name="footer-loading">
+<head></head>
+<body>
+  <span class="status" lang="SING_LOADING" bind-text="loading.status" />
+  <span class="version" lang="US_VERSION" bind-text="game.version" />
+</body>
+</template>

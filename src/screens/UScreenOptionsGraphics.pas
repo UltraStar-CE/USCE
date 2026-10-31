@@ -74,6 +74,7 @@ implementation
 
 uses
   UGraphic,
+  UDocumentUI,
   UHelp,
   ULanguage,
   ULog,
@@ -170,6 +171,7 @@ end;
 constructor TScreenOptionsGraphics.Create;
 begin
   inherited Create;
+  DocumentRole := uiScreenSettingsGraphics;
   ResolutionEmpty := 0;
   SetLength(IResolutionEmpty, 1);
   IResolutionEmpty[0] := '---';

@@ -1,0 +1,17 @@
+<rml>
+<head><title>Modern loading</title><link type="text/rcss" href="modern.rcss" /><link type="text/template" href="footer-loading.rml" /></head>
+<body class="loading-screen">
+  <div class="background-layer">
+    <div class="background-edge background-edge-left" />
+    <div class="background" />
+    <div class="background-edge background-edge-right" />
+  </div>
+  <div class="foreground">
+  <div class="footer" />
+  <progress class="discovery" bind-value="loading.discovery" value="0" />
+  <progress class="loading" bind-value="loading.progress" value="0" />
+  <div class="footer-labels"><template src="footer-loading" /></div>
+  <div class="reflection-clip"><div class="footer-labels"><template src="footer-loading" /></div></div>
+  </div>
+</body>
+</rml>

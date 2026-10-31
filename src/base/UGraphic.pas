@@ -314,6 +314,7 @@ uses
   UCommandLine,
   UPathUtils,
   UMenuBackgroundVideo,
+  UDocumentUI,
   UThemes;
 
 var
@@ -647,6 +648,8 @@ end;
 procedure Finalize3D;
 begin
   UnloadScreens;
+  FreeAndNil(ScreenLoading);
+  ShutdownDocumentUI;
   UnloadFontTextures;
   Renderer.Free;
   SDL_QuitSubSystem(SDL_INIT_VIDEO);

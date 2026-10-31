@@ -1,0 +1,18 @@
+/* Modern black color variant. */
+button { background-color: #000000e6; }
+.buttons button:focus, .buttons button:hover, .secondary:focus, .secondary:hover, .option-cell button:focus, .option-cell button:hover, .about-credits:focus, .about-credits:hover, .about-back:focus, .about-back:hover { background-color: #000000e6; }
+.form-label { background-color: #000000; }
+.form-value, .form-row.inline .form-choices { background-color: #000000; }
+.form-row.selected .form-label { background-color: #000000; }
+.form-row.selected .form-value, .form-row.selected .form-choices { background-color: #000000; }
+.form-back, .form-extra-command { background-color: #000000e6; }
+.form-back.selected, .form-extra-command.selected { background-color: #000000e6; }
+.form-back-reflection { decorator: vertical-gradient(#00000080 #00000000); }
+.form-back-reflection.selected { decorator: vertical-gradient(#00000080 #00000000); }
+.description, .where { color: #000000; }
+.about-screen .description { color: white; }
+.about-panel { background-color: #ff00007b; }
+.about-panel-top, .about-panel-bottom { background-color: #ff0000; }
+.footer { decorator: image(black-footer.svg); }
+.discovery fill { decorator: image(black-bar-left.svg); }
+.loading fill { decorator: image(black-bar-right.svg); }

@@ -1,0 +1,17 @@
+.background { decorator: image("../../../themes/Modern/[bg-main]winter.jpg"); }
+.background-edge-left { decorator: image(winter-main-left flip-horizontal); }
+.background-edge-right { decorator: image(winter-main-right flip-horizontal); }
+.loading-screen .background { decorator: image("../../../themes/Modern/[bg-load]winter.png"); }
+.loading-screen .background-edge-left { decorator: image(winter-load-left flip-horizontal); }
+.loading-screen .background-edge-right { decorator: image(winter-load-right flip-horizontal); }
+
+@spritesheet winter-main-edges {
+  src: "../../../themes/Modern/[bg-main]winter.jpg";
+  winter-main-left: 0.5px 0px 15.5px 600px;
+  winter-main-right: 784px 0px 15.5px 600px;
+}
+@spritesheet winter-load-edges {
+  src: "../../../themes/Modern/[bg-load]winter.png";
+  winter-load-left: 0.5px 0px 15.5px 600px;
+  winter-load-right: 784px 0px 15.5px 600px;
+}

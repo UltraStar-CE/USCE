@@ -1,0 +1,18 @@
+/* Modern violet color variant. */
+button { background-color: #c642e7e6; }
+.buttons button:focus, .buttons button:hover, .secondary:focus, .secondary:hover, .option-cell button:focus, .option-cell button:hover, .about-credits:focus, .about-credits:hover, .about-back:focus, .about-back:hover { background-color: #d97eeae6; }
+.form-label { background-color: #b33cd0; }
+.form-value, .form-row.inline .form-choices { background-color: #c642e7; }
+.form-row.selected .form-label { background-color: #c471d4; }
+.form-row.selected .form-value, .form-row.selected .form-choices { background-color: #d97eea; }
+.form-back, .form-extra-command { background-color: #b33cd0e6; }
+.form-back.selected, .form-extra-command.selected { background-color: #c471d4e6; }
+.form-back-reflection { decorator: vertical-gradient(#b33cd080 #b33cd000); }
+.form-back-reflection.selected { decorator: vertical-gradient(#c471d480 #c471d400); }
+.description, .where { color: #f3b9fd; }
+.about-screen .description { color: white; }
+.about-panel { background-color: #cc00ff7b; }
+.about-panel-top, .about-panel-bottom { background-color: #d700ff; }
+.footer { decorator: image(violet-footer.svg); }
+.discovery fill { decorator: image(violet-bar-left.svg); }
+.loading fill { decorator: image(violet-bar-right.svg); }

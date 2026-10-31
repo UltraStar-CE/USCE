@@ -75,6 +75,7 @@ type
       procedure UpdateUsernameSettings;
       procedure UpdateSettings;
       procedure DeleteUser;
+      procedure ShowInsertWarning(Value: boolean);
 
     protected
       procedure LoadLegend; override;
@@ -88,6 +89,7 @@ implementation
 
 uses
   UGraphic,
+  UDocumentUI,
   UHelp,
   ULanguage,
   ULog,
@@ -136,11 +138,11 @@ var
 begin
   if (Value) then
   begin
-    DataBase.NewUser(ScreenOptionsNetwork.SelectsS[0].TextOpt[0].Text, ScreenOptionsNetwork.NewUser_Username, ScreenOptionsNetwork.EncryptPassword);
+    DataBase.NewUser(ScreenOptionsNetwork.IWebsite[ScreenOptionsNetwork.CurrentWebsiteIndex], ScreenOptionsNetwork.NewUser_Username, ScreenOptionsNetwork.EncryptPassword);
     ScreenPopupInsertUser.Visible := false;
-    ScreenOptionsNetwork.SelectsS[1].Visible := true;
-    ScreenOptionsNetwork.SelectsS[2].Visible := true;
-    ScreenOptionsNetwork.SelectsS[3].Visible := true;
+    ScreenOptionsNetwork.SetOptionVisible(1, true);
+    ScreenOptionsNetwork.SetOptionVisible(2, true);
+    ScreenOptionsNetwork.SetOptionVisible(3, true);
 
     DataBase.ReadUsers;
 
@@ -236,11 +238,11 @@ begin
 
         if (CorrectLogin = true) then
         begin
-          DataBase.NewUser(ScreenOptionsNetwork.SelectsS[0].TextOpt[0].Text, ScreenOptionsNetwork.NewUser_Username, ScreenOptionsNetwork.EncryptPassword);
+          DataBase.NewUser(ScreenOptionsNetwork.IWebsite[ScreenOptionsNetwork.CurrentWebsiteIndex], ScreenOptionsNetwork.NewUser_Username, ScreenOptionsNetwork.EncryptPassword);
           ScreenPopupInsertUser.Visible := false;
-          ScreenOptionsNetwork.SelectsS[1].Visible := true;
-          ScreenOptionsNetwork.SelectsS[2].Visible := true;
-          ScreenOptionsNetwork.SelectsS[3].Visible := true;
+          ScreenOptionsNetwork.SetOptionVisible(1, true);
+          ScreenOptionsNetwork.SetOptionVisible(2, true);
+          ScreenOptionsNetwork.SetOptionVisible(3, true);
 
           DataBase.ReadUsers;
 
@@ -342,23 +344,23 @@ begin
           begin
             DataBase.NetworkUser[CurrentWebsiteIndex].UserList[CurrentUserIndex].Save := true;
 
-            if (SDL_ModState and (KMOD_LSHIFT or KMOD_RSHIFT) <> 0) and (SelectsS[SelInteraction].SelectOptInt + 999 < 9999) then
+            if (SDL_ModState and (KMOD_LSHIFT or KMOD_RSHIFT) <> 0) and (OptionSelected(SelInteraction) + 999 < 9999) then
             begin
-              SelectsS[SelInteraction].SelectOptInt := SelectsS[SelInteraction].SelectOptInt + 999;
+              SetOptionSelected(SelInteraction, OptionSelected(SelInteraction) + 999);
               InteractInc;
             end
             else
             begin
-              if (SDL_ModState and (KMOD_LCTRL or KMOD_RCTRL) <> 0) and (SelectsS[SelInteraction].SelectOptInt + 99 < 9999) then
+              if (SDL_ModState and (KMOD_LCTRL or KMOD_RCTRL) <> 0) and (OptionSelected(SelInteraction) + 99 < 9999) then
               begin
-                SelectsS[SelInteraction].SelectOptInt := SelectsS[SelInteraction].SelectOptInt + 99;
+                SetOptionSelected(SelInteraction, OptionSelected(SelInteraction) + 99);
                 InteractInc;
               end
               else
               begin
-                if (SelectsS[SelInteraction].SelectOptInt + 9 < 9999) then
+                if (OptionSelected(SelInteraction) + 9 < 9999) then
                 begin
-                  SelectsS[SelInteraction].SelectOptInt := SelectsS[SelInteraction].SelectOptInt + 9;
+                  SetOptionSelected(SelInteraction, OptionSelected(SelInteraction) + 9);
                   InteractInc;
                 end;
               end;
@@ -396,23 +398,23 @@ begin
           begin
             DataBase.NetworkUser[CurrentWebsiteIndex].UserList[CurrentUserIndex].Save := true;
 
-            if (SDL_ModState and (KMOD_LSHIFT or KMOD_RSHIFT) <> 0) and (SelectsS[SelInteraction].SelectOptInt - 999 > 0) then
+            if (SDL_ModState and (KMOD_LSHIFT or KMOD_RSHIFT) <> 0) and (OptionSelected(SelInteraction) - 999 > 0) then
             begin
-              SelectsS[SelInteraction].SelectOptInt := SelectsS[SelInteraction].SelectOptInt - 999;
+              SetOptionSelected(SelInteraction, OptionSelected(SelInteraction) - 999);
               InteractDec;
             end
             else
             begin
-              if (SDL_ModState and (KMOD_LCTRL or KMOD_RCTRL) <> 0) and (SelectsS[SelInteraction].SelectOptInt - 99 > 0) then
+              if (SDL_ModState and (KMOD_LCTRL or KMOD_RCTRL) <> 0) and (OptionSelected(SelInteraction) - 99 > 0) then
               begin
-                SelectsS[SelInteraction].SelectOptInt := SelectsS[SelInteraction].SelectOptInt - 99;
+                SetOptionSelected(SelInteraction, OptionSelected(SelInteraction) - 99);
                 InteractDec;
               end
               else
               begin
-                if (SelectsS[SelInteraction].SelectOptInt - 9 >= 0) then
+                if (OptionSelected(SelInteraction) - 9 >= 0) then
                 begin
-                  SelectsS[SelInteraction].SelectOptInt := SelectsS[SelInteraction].SelectOptInt - 9;
+                  SetOptionSelected(SelInteraction, OptionSelected(SelInteraction) - 9);
                   InteractDec;
                 end;
               end
@@ -435,6 +437,7 @@ var
   But: TThemeButton;
 begin
   inherited Create;
+  DocumentRole := 'settings-network';
   Description := Language.Translate('SING_OPTIONS_NETWORK_DESC');
   WhereAmI := Language.Translate('SING_OPTIONS_NETWORK_WHEREAMI');
   CurrentUserIndex := 0;
@@ -446,6 +449,12 @@ begin
   CurrentUserScoreMediumIndex := 0;
   CurrentUserScoreHardIndex := 0;
   Load;
+  if HasDocumentUI then
+  begin
+    AddDocumentCommand('SING_OPTIONS_NETWORK_LEGEND_INSERT');
+    Interaction := 0;
+    Exit;
+  end;
 
   But := Theme.OptionsSub.Button;
   with But do
@@ -473,6 +482,16 @@ begin
   Interaction := 0;
 end;
 
+procedure TScreenOptionsNetwork.ShowInsertWarning(Value: boolean);
+begin
+  if HasDocumentUI then
+  begin
+    if Value then SetDocumentNotice(Language.Translate('SING_OPTIONS_NETWORK_INSERT_USER_INFO'))
+    else SetDocumentNotice('');
+  end
+  else Text[TextInsertUser_Warning].Visible := Value;
+end;
+
 procedure TScreenOptionsNetwork.OnShow;
 var
   I, J: integer;
@@ -488,10 +507,10 @@ begin
   if (High(DataBase.NetworkUser[CurrentWebsiteIndex].UserList) > -1) then
   begin
     // Not Show Text Insert User
-    Text[TextInsertUser_Warning].Visible := false;
+    ShowInsertWarning(false);
 
-    SelectsS[0].SetSelectOpt(CurrentWebsiteIndex);
-    SelectsS[1].SetSelectOpt(CurrentUserIndex);
+    SetOptionSelected(0, CurrentWebsiteIndex);
+    SetOptionSelected(1, CurrentUserIndex);
     UpdateUsernameList(true);
 
     // reset save
@@ -505,12 +524,12 @@ begin
   else
   begin
     // no users in database for current website
-    SelectsS[0].SetSelectOpt(CurrentWebsiteIndex);
+    SetOptionSelected(0, CurrentWebsiteIndex);
     for I := 1 to 7 do
-      SelectsS[I].Visible := false;
+      SetOptionVisible(I, false);
 
     // Text Insert User
-    Text[TextInsertUser_Warning].Visible := true;
+    ShowInsertWarning(true);
   end;
 
   Interaction := 0;
@@ -535,28 +554,28 @@ begin
   end;
 
   if (High(IUsername) > 0) then
-    SelectsS[1].ShowArrows := true
+    SetOptionArrows(1, true)
   else
-    SelectsS[1].ShowArrows := false;
+    SetOptionArrows(1, false);
   UpdateSelectSlideOptions(1, IUsername, CurrentUserIndex);
   //UpdateSelectSlideOptions(2, IPassword, CurrentUserIndex);
 
   if (High(IUsername) > -1) then
   begin
     // Not Show Text Insert User
-    Text[TextInsertUser_Warning].Visible := false;
+    ShowInsertWarning(false);
 
     for I := 1 to 7 do
-      SelectsS[I].Visible := true;
+      SetOptionVisible(I, true);
     UpdateUsernameSettings;
   end
   else
   begin
     // Show Text Insert User
-    Text[TextInsertUser_Warning].Visible := true;
+    ShowInsertWarning(true);
 
     for I := 1 to 7 do
-      SelectsS[I].Visible := false;
+      SetOptionVisible(I, false);
   end;
 
 end;
@@ -564,12 +583,12 @@ end;
 procedure TScreenOptionsNetwork.UpdateUsernameSettings;
 begin
 
-  SelectsS[2].SetSelectOpt(DataBase.NetworkUser[CurrentWebsiteIndex].UserList[CurrentUserIndex].SendSavePlayer);
-  SelectsS[3].SetSelectOpt(DataBase.NetworkUser[CurrentWebsiteIndex].UserList[CurrentUserIndex].AutoMode);
-  SelectsS[4].SetSelectOpt(DataBase.NetworkUser[CurrentWebsiteIndex].UserList[CurrentUserIndex].AutoPlayer);
-  SelectsS[5].SetSelectOpt(DataBase.NetworkUser[CurrentWebsiteIndex].UserList[CurrentUserIndex].AutoScoreEasy);
-  SelectsS[6].SetSelectOpt(DataBase.NetworkUser[CurrentWebsiteIndex].UserList[CurrentUserIndex].AutoScoreMedium);
-  SelectsS[7].SetSelectOpt(DataBase.NetworkUser[CurrentWebsiteIndex].UserList[CurrentUserIndex].AutoScoreHard);
+  SetOptionSelected(2, DataBase.NetworkUser[CurrentWebsiteIndex].UserList[CurrentUserIndex].SendSavePlayer);
+  SetOptionSelected(3, DataBase.NetworkUser[CurrentWebsiteIndex].UserList[CurrentUserIndex].AutoMode);
+  SetOptionSelected(4, DataBase.NetworkUser[CurrentWebsiteIndex].UserList[CurrentUserIndex].AutoPlayer);
+  SetOptionSelected(5, DataBase.NetworkUser[CurrentWebsiteIndex].UserList[CurrentUserIndex].AutoScoreEasy);
+  SetOptionSelected(6, DataBase.NetworkUser[CurrentWebsiteIndex].UserList[CurrentUserIndex].AutoScoreMedium);
+  SetOptionSelected(7, DataBase.NetworkUser[CurrentWebsiteIndex].UserList[CurrentUserIndex].AutoScoreHard);
 
   UpdateSettings;
 end;
@@ -577,27 +596,27 @@ end;
 procedure TScreenOptionsNetwork.UpdateSettings;
 begin
 
-  DataBase.NetworkUser[CurrentWebsiteIndex].UserList[CurrentUserIndex].SendSavePlayer := SelectsS[2].SelectOptInt;
-  DataBase.NetworkUser[CurrentWebsiteIndex].UserList[CurrentUserIndex].AutoMode := SelectsS[3].SelectOptInt;
-  DataBase.NetworkUser[CurrentWebsiteIndex].UserList[CurrentUserIndex].AutoPlayer := SelectsS[4].SelectOptInt;
-  DataBase.NetworkUser[CurrentWebsiteIndex].UserList[CurrentUserIndex].AutoScoreEasy := SelectsS[5].SelectOptInt;
-  DataBase.NetworkUser[CurrentWebsiteIndex].UserList[CurrentUserIndex].AutoScoreMedium := SelectsS[6].SelectOptInt;
-  DataBase.NetworkUser[CurrentWebsiteIndex].UserList[CurrentUserIndex].AutoScoreHard := SelectsS[7].SelectOptInt;
+  DataBase.NetworkUser[CurrentWebsiteIndex].UserList[CurrentUserIndex].SendSavePlayer := OptionSelected(2);
+  DataBase.NetworkUser[CurrentWebsiteIndex].UserList[CurrentUserIndex].AutoMode := OptionSelected(3);
+  DataBase.NetworkUser[CurrentWebsiteIndex].UserList[CurrentUserIndex].AutoPlayer := OptionSelected(4);
+  DataBase.NetworkUser[CurrentWebsiteIndex].UserList[CurrentUserIndex].AutoScoreEasy := OptionSelected(5);
+  DataBase.NetworkUser[CurrentWebsiteIndex].UserList[CurrentUserIndex].AutoScoreMedium := OptionSelected(6);
+  DataBase.NetworkUser[CurrentWebsiteIndex].UserList[CurrentUserIndex].AutoScoreHard := OptionSelected(7);
 
   // Hide SelectS Auto Score when Auto Mode is OFF
-  if (SelectsS[3].SelectedOption = 0) then
+  if (OptionSelected(3) = 0) then
   begin
-    SelectsS[4].Visible := false;
-    SelectsS[5].Visible := false;
-    SelectsS[6].Visible := false;
-    SelectsS[7].Visible := false;
+    SetOptionVisible(4, false);
+    SetOptionVisible(5, false);
+    SetOptionVisible(6, false);
+    SetOptionVisible(7, false);
   end
   else
   begin
-    SelectsS[4].Visible := true;
-    SelectsS[5].Visible := true;
-    SelectsS[6].Visible := true;
-    SelectsS[7].Visible := true;
+    SetOptionVisible(4, true);
+    SetOptionVisible(5, true);
+    SetOptionVisible(6, true);
+    SetOptionVisible(7, true);
   end
 
 end;
@@ -630,7 +649,7 @@ begin
   if (High(IUsername) > -1) then
   begin
     if (High(IUsername) = 0) then
-      SelectsS[1].ShowArrows := false;
+      SetOptionArrows(1, false);
 
     UpdateSelectSlideOptions(1, IUsername, CurrentUserIndex);
     //UpdateSelectSlideOptions(2, IPassword, CurrentUserIndex);
@@ -639,11 +658,11 @@ begin
   else
   begin
     // Show Text Insert User
-    Text[TextInsertUser_Warning].Visible := true;
+    ShowInsertWarning(true);
 
-    SelectsS[1].ShowArrows := false;
+    SetOptionArrows(1, false);
     for I := 1 to 7 do
-      SelectsS[I].Visible := false;
+      SetOptionVisible(I, false);
     Interaction := 0;
   end;
 
@@ -689,15 +708,15 @@ begin
     // when editing this, also update the InteractionID enum declaration
     AddSelectSlide('SING_OPTIONS_NETWORK_WEBSITE', CurrentWebsiteIndex, IWebsite);
     if (High(IWebsite) > 0) then
-      SelectsS[High(SelectsS)].showArrows := true
+      SetOptionArrows(High(Interactions), true)
     else
-      SelectsS[High(SelectsS)].showArrows := false;
+      SetOptionArrows(High(Interactions), false);
 
     AddSelectSlide('SING_OPTIONS_NETWORK_USERNAME', CurrentUserIndex, IUsername);
     if (High(IUsername) > 0) then
-      SelectsS[High(SelectsS)].showArrows := true
+      SetOptionArrows(High(Interactions), true)
     else
-      SelectsS[High(SelectsS)].showArrows := false;
+      SetOptionArrows(High(Interactions), false);
 
     AddSelectSlide('SING_OPTIONS_NETWORK_SEND_SAVE_PLAYER_NAME', CurrentUserSendNameIndex, ISendNameTranslated);
     AddSelectSlide('SING_OPTIONS_NETWORK_AUTO_MODE', CurrentUserModeIndex, IAutoModeTranslated);
