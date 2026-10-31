@@ -1127,30 +1127,8 @@ begin
                 I2 := Random(High(CatSongs.Song) + 1);
               until (not CatSongs.Song[I2].Main);
 
-              // search cat
-              for I := I2 downto 0 do
-              begin
-              if CatSongs.Song[I].Main then
-                break;
-              end;
-
-              // in I is now the categorie in I2 the song
-
-              // choose cat
-              CatSongs.ShowCategoryList;
-
-              // show cat in top left mod
-              ShowCatTL (I);
-
-              CatSongs.ClickCategoryButton(I);
-              SelectNext;
-
-              // Fix: not existing song selected:
-              //if (I + 1 = I2) then
-                Inc(I2);
-
-              // choose song
-              SkipTo(I2 - I);
+              ScreenSongJumpto.SetFolderFilter(CatSongs.Song[I2].FolderPath);
+              SkipTo(CatSongs.VisibleIndex(I2), I2, CatSongs.VisibleSongs);
             end
             else // random in one category
             begin
@@ -2505,6 +2483,16 @@ begin
     Text[TextTitle].Text  := '';
     Text[TextYear].Text  := '';
 
+    for B := 0 to High(ListTextArtist) do
+    begin
+      Text[ListTextArtist[B]].Text := '';
+      Text[ListTextTitle[B]].Text := '';
+      Text[ListTextYear[B]].Text := '';
+      Statics[ListVideoIcon[B]].Visible := false;
+      Statics[ListDuetIcon[B]].Visible := false;
+    end;
+    Statics[StaticActual].Visible := false;
+    Statics[DuetIcon].Visible := false;
     Statics[VideoIcon].Visible := false;
 
     SetDuetSingerVisibility(0);
@@ -2887,6 +2875,7 @@ var
   SongID: array of integer;
   Alpha: real;
 begin
+  Statics[StaticActual].Visible := true;
   Statics[StaticActual].Texture.Free;
   if (Button[Interaction].Texture.Name.IsUnset) then
     Statics[StaticActual].Texture := Renderer.GetTexture(Skin.GetTextureFileName('SongCover'), TEXTURE_TYPE_PLAIN)
