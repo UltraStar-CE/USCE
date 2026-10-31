@@ -48,12 +48,13 @@ begin
   until GetTickCount64 - Start > 8000;
   raise Exception.Create('missing event: ' + Target);
 end;
-procedure Quiet;
+procedure Quiet(const Phase: string);
 var Start: QWord;
 begin
   Start := GetTickCount64;
   repeat
-    Check(not Watch.TakeChanges(Changes, Full, Error), 'idle watcher generated another scan: ' + Changes.Text + ' full=' + BoolToStr(Full, true));
+    if Watch.TakeChanges(Changes, Full, Error) then
+      raise Exception.Create('idle watcher generated another scan ' + Phase + ': ' + Changes.Text + ' full=' + BoolToStr(Full, true));
     Check(Error = '', Error);
     Sleep(20);
   until GetTickCount64 - Start > 650;
@@ -72,7 +73,7 @@ begin
   {$ENDIF}
   Watch := TLibraryWatch.Create(Roots);
   try
-    WaitChange(Root, true); Quiet;
+    WaitChange(Root, true); Quiet('after startup');
     {$IFDEF LINUX}
     WriteFile(Root + '/Artist/song.txt', 'upper directory'); WaitChange(Root + '/Artist/song.txt');
     WriteFile(Root + '/artist/song.txt', 'lower directory'); WaitChange(Root + '/artist/song.txt');
@@ -83,7 +84,7 @@ begin
     {$ENDIF}
     WriteFile(Root + PathDelim + 'song.txt', 'first'); WaitChange(Root);
     WriteFile(Root + PathDelim + 'song.txt', 'updated'); WaitChange(Root);
-    Changes.LoadFromFile(Root + PathDelim + 'song.txt'); Quiet; // reading is not a mutation
+    Changes.LoadFromFile(Root + PathDelim + 'song.txt'); Quiet('after reading'); // reading is not a mutation
     ForceDirectories(Sub);
     WriteFile(Sub + PathDelim + 'duet.txt', 'copied with nested directory'); WaitChange(Sub);
     WriteFile(Sub + PathDelim + 'duet.txt', 'later modification'); WaitChange(Sub);
@@ -92,9 +93,9 @@ begin
     WriteFile(Sub + PathDelim + 'duet.txt', 'after rename'); WaitChange(Sub);
     Check(DeleteFile(Sub + PathDelim + 'duet.txt'), 'delete failed'); WaitChange(Sub);
     Check(RemoveDir(Sub), 'rmdir failed'); WaitChange(ExtractFileDir(Sub));
-    WriteFile(Other + PathDelim + 'not-a-song.txt', 'outside library'); Quiet;
-    ForceDirectories(Other + '-sibling'); Quiet;
-    Check(RemoveDir(Other + '-sibling'), 'outside sibling remove failed'); Quiet;
+    WriteFile(Other + PathDelim + 'not-a-song.txt', 'outside library'); Quiet('after outside file');
+    ForceDirectories(Other + '-sibling'); Quiet('after outside directory creation');
+    Check(RemoveDir(Other + '-sibling'), 'outside sibling remove failed'); Quiet('after outside directory removal');
     Check(DeleteFile(Root + PathDelim + 'song.txt'), 'root file delete failed'); WaitChange(Root);
     Check(RemoveDir(ExtractFileDir(Sub)), 'nested parent remove failed'); WaitChange(Root);
     Check(RemoveDir(Root), 'root remove failed'); WaitChange(Root, true);
@@ -103,8 +104,8 @@ begin
     Check(RenameFile(Root, Root + '-moved'), 'root rename failed'); WaitChange(Root, true);
     ForceDirectories(Root); WaitChange(Root, true);
     WriteFile(Root + PathDelim + 'fresh.txt', 'new inode at configured root'); WaitChange(Root);
-    WriteFile(Root + '-moved' + PathDelim + 'old-root.txt', 'no longer in library'); Quiet;
-    Quiet;
+    WriteFile(Root + '-moved' + PathDelim + 'old-root.txt', 'no longer in library'); Quiet('after moved-root file');
+    Quiet('at shutdown');
     Writeln('PASS native add/change/rename/delete, new nested watches, root recreation, idle and outside-library isolation');
   finally Watch.Free; Roots.Free; Changes.Free; end;
 end.
