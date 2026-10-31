@@ -5,6 +5,7 @@ uses Classes;
 
 // Paths are relative to a configured SongDir. A leading slash anchors a query.
 function NormalizeFolderPath(const Value: UTF8String): UTF8String;
+function FolderQueryValue(const Value: UTF8String): UTF8String;
 function MatchesFolderPath(const Folder, Query: UTF8String): boolean;
 procedure AddFolderChoices(const Folder: UTF8String; Depth: integer; Choices: TStrings);
 
@@ -28,16 +29,28 @@ end;
 function Fold(const Value: UTF8String): UTF8String;
 begin Result := UTF8Encode(UnicodeLowerCase(UTF8Decode(Value))); end;
 
+function FolderQueryValue(const Value: UTF8String): UTF8String;
+begin
+  Result := Value;
+  if (Pos(',', Value) > 0) or (Pos(';', Value) > 0) or (Pos('"', Value) > 0) then
+    Result := '"' + StringReplace(Value, '"', '""', [rfReplaceAll]) + '"';
+end;
+
 function MatchesFolderPath(const Folder, Query: UTF8String): boolean;
-var I, Start: integer; Term, Needle, Haystack: UTF8String; Anchored: boolean;
+var I, Start: integer; Term, Needle, Haystack: UTF8String; Anchored, Quoted: boolean;
 begin
   if Trim(Query) = '' then Exit(true);
-  Result := false; Start := 1;
+  Result := false; Start := 1; Quoted := false;
   Haystack := Fold(NormalizeFolderPath(Folder));
   for I := 1 to Length(Query) + 1 do
-    if (I > Length(Query)) or (Query[I] in [',', ';']) then
+  begin
+    if (I <= Length(Query)) and (Query[I] = '"') then Quoted := not Quoted;
+    if (I > Length(Query)) or (not Quoted and (Query[I] in [',', ';'])) then
     begin
       Term := Trim(Copy(Query, Start, I - Start)); Start := I + 1;
+      if Term = '' then Continue;
+      if (Length(Term) >= 2) and (Term[1] = '"') and (Term[Length(Term)] = '"') then
+        Term := StringReplace(Copy(Term, 2, Length(Term) - 2), '""', '"', [rfReplaceAll]);
       if Term = '' then Continue;
       Anchored := Term[1] in ['/', '\'];
       Needle := Fold(NormalizeFolderPath(Term));
@@ -45,6 +58,7 @@ begin
       else Result := Pos(Needle, Haystack) > 0;
       if Result then Exit;
     end;
+  end;
 end;
 
 procedure AddFolderChoices(const Folder: UTF8String; Depth: integer; Choices: TStrings);
