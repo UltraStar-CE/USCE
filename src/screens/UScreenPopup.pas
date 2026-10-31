@@ -82,6 +82,7 @@ type
   TScreenPopupInsertUser = class(TMenu)
     private
       fPasswordOnly, fTextOnly: boolean;
+      fRestoreTextInput: boolean;
       fNameCaption: UTF8String;
       fHandler: TPopupInsertUserHandler;
       fHandlerData: Pointer;
@@ -457,7 +458,6 @@ begin
         begin
           Value := false;
           Visible := false;
-          StopTextInput;
           Result := false;
         end;
 
@@ -488,7 +488,6 @@ begin
 
           Value := (Interaction = 2);
           Visible := false;
-          StopTextInput;
           Result := false;
         end;
 
@@ -504,6 +503,7 @@ begin
 
   if (not Result) then
   begin
+    SetTextInput(fRestoreTextInput);
     if (@fHandler <> nil) then
       fHandler(Value, fHandlerData);
   end;
@@ -558,6 +558,7 @@ procedure TScreenPopupInsertUser.ShowPopup(const Title: UTF8String; Msg: UTF8Str
     HandlerData: Pointer);
 begin
 
+  fRestoreTextInput := SDL_IsTextInputActive = SDL_TRUE;
   Visible := true;  //Set Visible
   StartTextInput;
   fHandler := Handler;
