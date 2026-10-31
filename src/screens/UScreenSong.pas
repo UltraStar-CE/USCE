@@ -3499,11 +3499,9 @@ var
   X, Y, W, H, TX, TY, TW, TH, FontSize: real;
   Panel: TThemeStatic; Bounds: TBoundsDbl;
   LowChar, HighChar, MidChar, Count: integer;
-  KeepEnd: boolean;
   function Abbreviated(Chars: integer): UTF8String;
   begin
-    if KeepEnd then Result := '...' + UTF8Copy(Query, Count - Chars + 1, Chars)
-    else Result := UTF8Copy(Query, 1, Chars) + '...';
+    Result := '...' + UTF8Copy(Query, Count - Chars + 1, Chars);
   end;
 begin
   if not ModernKeyboard or CoverFull or ScreenSongJumpto.Visible or ScreenSongMenu.Visible then Exit;
@@ -3513,8 +3511,7 @@ begin
   Renderer.DrawQuad(X, Y, Panel.Z, W, H, Panel.ColR, Panel.ColG, Panel.ColB, Panel.Alpha);
   Renderer.DrawLine(X, Y+H, X+W, Y+H, Panel.Z+0.001, 1, 1, 1, 1, 0.5);
   Query := ScreenSongJumpto.TypingQuery;
-  KeepEnd := Query <> '';
-  if KeepEnd then Query := Language.Translate('SONG_TYPING_SEARCH') + ': ' + Query
+  if Query <> '' then Query := Language.Translate('SONG_TYPING_SEARCH') + ': ' + Query
   else if CatSongs.CatNumShow = -2 then Query := ScreenSongJumpto.SearchSummary;
   if Query = '' then Query := Language.Translate('SONG_TYPING_SEARCH_HINT');
   Query := StringReplace(StringReplace(Query, #13, ' ', [rfReplaceAll]), #10, ' ', [rfReplaceAll]);
