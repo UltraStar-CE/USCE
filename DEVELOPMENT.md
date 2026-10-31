@@ -6,8 +6,8 @@ This guide introduces the inherited USDX codebase. For the USCE contribution and
 
 ## Document frontend experiment
 
-The optional RmlUi frontend currently reproduces Modern Blue's loading screen
-and main menu. Other screens retain their existing implementation. Build with
+The optional RmlUi frontend currently reproduces Modern Blue's loading screen,
+main menu and settings menu. Other screens retain their existing implementation. Build with
 `python3 tools/build-document-ui.py` in a CMake/C++ build environment with
 FreeType, SDL2 and SDL2_image. This downloads pinned RmlUi and LunaSVG sources;
 extra CMake options can follow `--`. The shared library and its runtime

@@ -25,7 +25,7 @@ add_library(usce-document-ui SHARED document-ui.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/embedded-renderer.cpp)
 target_compile_features(usce-document-ui PRIVATE cxx_std_17)
 target_include_directories(usce-document-ui PRIVATE ${rmlui_SOURCE_DIR}/Backends ${SDL2_INCLUDE_DIR})
-target_link_libraries(usce-document-ui PRIVATE RmlUi::Core ${SDL2_LIBRARY} ${SDL2_IMAGE_LIBRARY} OpenGL::GL)
+target_link_libraries(usce-document-ui PRIVATE RmlUi::Core lunasvg::lunasvg ${SDL2_LIBRARY} ${SDL2_IMAGE_LIBRARY} OpenGL::GL)
 set_target_properties(usce-document-ui PROPERTIES PREFIX "")
 option(USCE_FRONTEND_TESTS "Build app-only OpenGL integration tests" OFF)
 if(USCE_FRONTEND_TESTS)

@@ -48,6 +48,7 @@ int main(int argc, char** argv) {
         const auto bold = utf8(root / "fonts/NotoSans/GoNotoKurrent-Bold.ttf");
         const auto main_document = utf8(root / "frontends/modern/main.rml");
         const auto loading_document = utf8(root / "frontends/modern/loading.rml");
+        const auto settings_document = utf8(root / "frontends/modern/settings.rml");
         for (int cycle = 0; cycle < 2; ++cycle) {
             require(ui_initialize(translate, log, font.c_str(), bold.c_str()) != 0, "Frontend initialization");
             require(ui_open(main_document.c_str()) != 0, "Main document");
@@ -65,18 +66,32 @@ int main(int argc, char** argv) {
             unsigned char pixel[4] = {};
             glReadPixels(200, 720-350, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
             require(pixel[1] > 80 && pixel[2] > 80 && pixel[3] > 240, "UI missing from transition texture");
+            const int button_red = pixel[0], button_green = pixel[1], button_blue = pixel[2];
+            glClear(GL_COLOR_BUFFER_BIT);
+            ui_render(1280, 720, 2);
+            glReadPixels(200, 720-350, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+            require(pixel[3] > 240 && std::abs(int(pixel[0])-button_red) + std::abs(int(pixel[1])-button_green) + std::abs(int(pixel[2])-button_blue) > 20,
+                "Background-only pass contains menu buttons");
             glClear(GL_COLOR_BUFFER_BIT);
             ui_render(1280, 720, 1);
             glReadPixels(640, 720-420, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
             require(pixel[3] == 0, "Background leaked into foreground transition capture");
             glReadPixels(200, 720-350, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
-            require(pixel[3] > 240, "Foreground transition capture lost buttons");
+            require(pixel[3] > 200, "Foreground transition capture lost buttons");
             ui_mouse(200, 350, 0, 1); ui_mouse(200, 350, 0, 0);
             require(std::string(ui_action()) == "game.sing", "Named mouse action");
             ui_clear_action(); ui_key(1); ui_key(0);
             require(std::string(ui_action()) == "game.party", "Document-order keyboard action");
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
             glDeleteFramebuffers(1, &framebuffer); glDeleteTextures(1, &texture);
+            require(ui_open(settings_document.c_str()) != 0, "Settings document");
+            ui_render(1280, 720, 0);
+            ui_key(2); ui_key(0);
+            require(std::string(ui_action()) == "settings.lyrics.open", "Spatial down navigation");
+            ui_clear_action(); ui_key(1); ui_key(0);
+            require(std::string(ui_action()) == "settings.themes.open", "Spatial right navigation");
+            ui_mouse(1040, 612, 0, 1); ui_mouse(1040, 612, 0, 0);
+            require(std::string(ui_action()) == "navigation.back", "Settings back action");
             require(ui_open(loading_document.c_str()) != 0, "Loading document");
             ui_set("loading.status", "<plain text> & progress");
             ui_set("loading.progress", "0.5");

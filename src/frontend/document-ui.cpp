@@ -4,11 +4,14 @@
 #include "RmlUi_Renderer_GL3.h"
 #include <SDL.h>
 #include <SDL_image.h>
+#include <lunasvg.h>
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <limits>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -37,6 +40,16 @@ public:
 };
 class Renderer final : public RenderInterface_GL3 {
     Rml::TextureHandle LoadTexture(Rml::Vector2i& dimensions, const Rml::String& source) override {
+        if (Rml::StringUtilities::ToLower(std::filesystem::u8path(source).extension().string()) == ".svg") {
+            auto svg = lunasvg::Document::loadFromFile(source);
+            if (!svg) return 0;
+            auto bitmap = svg->renderToBitmap();
+            if (bitmap.isNull()) return 0;
+            dimensions = {bitmap.width(), bitmap.height()};
+            const size_t size = size_t(dimensions.x) * dimensions.y * 4;
+            for (size_t i = 0; i < size; i += 4) std::swap(bitmap.data()[i], bitmap.data()[i+2]);
+            return GenerateTexture({bitmap.data(), size}, dimensions);
+        }
         SDL_Surface* loaded = IMG_Load(source.c_str());
         if (!loaded) return 0;
         SDL_Surface* rgba = SDL_ConvertSurfaceFormat(loaded, SDL_PIXELFORMAT_RGBA32, 0);
@@ -77,6 +90,8 @@ public:
             if (event.GetId() == Rml::EventId::Click)
                 pending_action = element->GetAttribute<Rml::String>("action", "");
             else {
+                if (event.GetId() == Rml::EventId::Mouseover && context->GetFocusElement() != element)
+                    element->Focus();
                 const auto target = element->GetAttribute<Rml::String>("focus-text-target", "");
                 const auto key = element->GetAttribute<Rml::String>("focus-text-lang", "");
                 if (document && !target.empty()) {
@@ -180,11 +195,28 @@ UI_EXPORT void ui_mouse(int x, int y, int button, int down) {
 }
 UI_EXPORT void ui_key(int key) {
     if (!document || controls.empty()) return;
-    // Generic document-order navigation; no assumption about a screen's button count.
+    // Navigate actual document geometry, independent of screen roles or button counts.
+    context->Update();
     auto it = std::find(controls.begin(), controls.end(), context->GetFocusElement());
     int index = it == controls.end() ? 0 : int(it - controls.begin());
-    if (key == 1 || key == -1) {
-        index = (index + int(controls.size()) + key) % int(controls.size());
-        controls[index]->Focus();
+    if (key != 0) {
+        const bool vertical = std::abs(key) == 2;
+        const int direction = key > 0 ? 1 : -1;
+        const auto center = [](Rml::Element* e) {
+            return e->GetAbsoluteOffset(Rml::BoxArea::Border) + e->GetBox().GetSize(Rml::BoxArea::Border) * 0.5f;
+        };
+        const auto from = center(controls[index]);
+        float best = std::numeric_limits<float>::max();
+        Rml::Element* next = nullptr;
+        for (auto* candidate : controls) {
+            if (candidate == controls[index] || !candidate->IsVisible(true) || candidate->HasAttribute("disabled")) continue;
+            const auto delta = center(candidate) - from;
+            const float forward = (vertical ? delta.y : delta.x) * direction;
+            if (forward < 1) continue;
+            const float sideways = vertical ? delta.x : delta.y;
+            const float score = forward * forward + 4 * sideways * sideways;
+            if (score < best) { best = score; next = candidate; }
+        }
+        if (next) next->Focus();
     } else if (key == 0) pending_action = controls[index]->GetAttribute<Rml::String>("action", "");
 }

@@ -6,10 +6,13 @@ body { margin: 0; width: 100%; height: 100%; font-family: ui; color: white; }
 .background-only .foreground { visibility: hidden; }
 .footer { position: absolute; left: 0; top: 90.833333vh; width: 100%; height: 8vh; }
 .where { position: absolute; right: 70.25vw; top: 91.666667vh; font-size: 3vh; white-space: nowrap; color: #bfe8f5; }
-.version { position: absolute; right: 1.25vw; top: 91.333333vh; font-size: 3vh; color: black; }
-.status { position: absolute; right: 70.25vw; top: 91.666667vh; font-size: 3vh; white-space: nowrap; }
+.version { position: absolute; right: 1.25vw; top: 91.611111vh; font-size: 3vh; color: black; }
+.status { position: absolute; right: 70.25vw; top: 91.944444vh; font-size: 3vh; white-space: pre; }
 progress { position: absolute; top: 90.833333vh; height: 5vh; background-color: transparent; }
-progress fill { background-color: #ffffff28; }
+progress fill { background-color: transparent; }
+.discovery fill { decorator: image(bar-left.svg); }
+.loading fill { decorator: image(bar-right.svg); }
+.loading-screen .footer { opacity: 0.5; }
 .discovery { left: 0; width: 31.25vw; }
 .loading { left: 31.25vw; width: 68.75vw; }
 .heading { position: absolute; left: 11.875vw; top: 31.4vh; font-size: 6.75vh; }
@@ -17,9 +20,10 @@ progress fill { background-color: #ffffff28; }
 .heading-icon { position: absolute; left: 8.125vw; top: 34.166667vh; width: 3.125vw; height: 3.833333vh; }
 .buttons { position: absolute; left: 11.875vw; top: 45vh; display: flex; width: 76.875vw; }
 button { position: relative; display: block; box-sizing: border-box; border-width: 0; padding: 0; text-align: center;
-  color: white; font-family: ui; background-color: #399ed3; }
+  color: white; font-family: ui; background-color: #42a3e7e6; }
 button svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; }
-button:focus svg, button:hover svg { opacity: 1; }
+button:focus svg, button:hover svg { opacity: 0.9; }
+button:focus, button:hover { background-color: transparent; }
 button span { position: relative; display: block; }
 .buttons button { flex-shrink: 0; width: 18.75vw; height: 8.333333vh; margin-right: 0.625vw; font-size: 3.75vh; }
 .buttons button span { margin-top: 1.944444vh; }
@@ -27,11 +31,30 @@ button span { position: relative; display: block; }
 .secondary span { margin-top: 1.333333vh; }
 .about { left: 58.125vw; }
 .exit { left: 73.75vw; }
-.legend-icon { position: absolute; top: 90.833333vh; width: 4vw; height: 5vh; }
-.legend { position: absolute; top: 91.333333vh; font-size: 3vh; color: black; }
-.navigation-icon { left: 32.5vw; } .navigation { left: 37.5vw; }
-.select-icon { left: 67.75vw; } .select { left: 72.75vw; }
-.credits-icon { left: 50vw; } .credits { left: 55vw; }
+.legend-icon { position: absolute; top: 90.833333vh; width: 5.333333vh; height: 5vh; transform: translateX(-50%); }
+.legend { position: absolute; top: 91.611111vh; font-size: 3vh; color: black; }
+.navigation-icon { left: 34.5vw; } .navigation { left: 37.5vw; }
+.select-icon { left: 69.75vw; } .select { left: 72.75vw; }
+.credits-icon { left: 52vw; } .credits { left: 55vw; }
 
 button:focus span { font-weight: bold; }
 .buttons button:last-child { margin-right: 0; }
+.settings .heading { top: 7.9vh; }
+.settings .heading-icon { top: 10vh; height: 4.166667vh; }
+.settings .description { top: 16.3vh; }
+.selection-description { position: absolute; left: 11.875vw; top: 21.3vh; font-size: 3.75vh; }
+.settings-grid { position: absolute; left: 11.875vw; top: 27.5vh; display: flex; flex-wrap: wrap; width: 77.5vw; }
+.option-cell { width: 19.375vw; height: 18.333333vh; flex-shrink: 0; }
+.option-cell button { width: 18.75vw; height: 8.333333vh; font-size: 3.75vh; transition: height 0.128s; }
+.option-cell button span { margin-top: 1.666667vh; transition: margin-top 0.128s; }
+.option-cell button:focus { height: 16.666667vh; }
+.option-cell button:focus span { margin-top: 10vh; }
+.settings-select-icon { left: 52vw; } .settings-select { left: 55vw; }
+.settings-back-icon { left: 70.75vw; } .settings-back { left: 73.75vw; }
+.settings .where { font-size: 2.25vh; }
+.footer-labels { position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; pointer-events: none; }
+.reflection-clip { position: absolute; left: 0; top: 96.388889vh; width: 100vw; height: 3.333333vh; overflow: hidden; pointer-events: none; mask-image: vertical-gradient(#000b #0000); }
+.reflection-clip .footer-labels { top: 0; }
+.reflection-clip .legend, .reflection-clip .status, .reflection-clip .version { top: 0.555556vh; height: 3vh; transform: scaleY(-1); }
+.reflection-clip .legend-icon { top: 0; transform: translateX(-50%) scaleY(-1); }
+.reflection-clip .where { visibility: hidden; }

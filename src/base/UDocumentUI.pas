@@ -15,6 +15,17 @@ const
   uiAboutOpen = 'about.open';
   uiCreditsOpen = 'credits.open';
   uiGameExit = 'game.exit';
+  uiSettingsGame = 'settings.game.open';
+  uiSettingsGraphics = 'settings.graphics.open';
+  uiSettingsSound = 'settings.sound.open';
+  uiSettingsInput = 'settings.input.open';
+  uiSettingsLyrics = 'settings.lyrics.open';
+  uiSettingsThemes = 'settings.themes.open';
+  uiSettingsRecording = 'settings.recording.open';
+  uiSettingsAdvanced = 'settings.advanced.open';
+  uiSettingsNetwork = 'settings.network.open';
+  uiSettingsWebcam = 'settings.webcam.open';
+  uiNavigationBack = 'navigation.back';
 type
   TDocumentUI = class
   private

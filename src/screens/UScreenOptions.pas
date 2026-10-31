@@ -38,6 +38,7 @@ uses
   UFiles,
   UIni,
   UMenu,
+  UDocumentUI,
   UMusic,
   USongs,
   UThemes,
@@ -47,6 +48,7 @@ uses
 type
   TScreenOptions = class(TMenu)
     private
+      DocumentUI: TDocumentUI;
       ButtonGameIID,
       ButtonGraphicsIID,
       ButtonSoundIID,
@@ -61,12 +63,17 @@ type
 
       MapIIDtoDescID: array of integer;
 
+      function RunAction(const Action: UTF8String): boolean;
       procedure UpdateTextDescriptionFor(IID: integer); virtual;
       procedure OpenRecordOptions;
 
     public
       TextDescription:    integer;
       constructor Create; override;
+      destructor Destroy; override;
+      function Draw: boolean; override;
+      function DrawBG: boolean; override;
+      function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       procedure OnShow; override;
       procedure SetInteraction(Num: integer); override;
@@ -95,180 +102,103 @@ begin
   FadeTo(@ScreenOptionsRecord, SoundLib.Start);
 end;
 
-function TScreenOptions.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
+function TScreenOptions.RunAction(const Action: UTF8String): boolean;
 begin
   Result := true;
-  if (PressedDown) then
-  begin // Key Down
-    // check normal keys
-    case PressedKey of
-      SDLK_G:
-        begin
-          FadeTo(@ScreenOptionsGame, SoundLib.Start);
-          Exit;
-        end;
+  if Action = uiSettingsGame then FadeTo(@ScreenOptionsGame, SoundLib.Start)
+  else if Action = uiSettingsGraphics then FadeTo(@ScreenOptionsGraphics, SoundLib.Start)
+  else if Action = uiSettingsSound then FadeTo(@ScreenOptionsSound, SoundLib.Start)
+  else if Action = uiSettingsInput then FadeTo(@ScreenOptionsInput, SoundLib.Start)
+  else if Action = uiSettingsLyrics then FadeTo(@ScreenOptionsLyrics, SoundLib.Start)
+  else if Action = uiSettingsThemes then FadeTo(@ScreenOptionsThemes, SoundLib.Start)
+  else if Action = uiSettingsRecording then OpenRecordOptions
+  else if Action = uiSettingsAdvanced then FadeTo(@ScreenOptionsAdvanced, SoundLib.Start)
+  else if Action = uiSettingsNetwork then
+  begin
+    if High(DataBase.NetworkUser) = -1 then
+      ScreenPopupError.ShowPopup(Language.Translate('SING_OPTIONS_NETWORK_NO_DLL'))
+    else FadeTo(@ScreenOptionsNetwork, SoundLib.Back);
+  end
+  else if Action = uiSettingsWebcam then FadeTo(@ScreenOptionsWebcam, SoundLib.Back)
+  else if Action = uiNavigationBack then
+  begin
+    Ini.Save;
+    FadeTo(@ScreenMain, SoundLib.Back);
+  end
+  else if Action = uiGameExit then Result := false
+  else if Action <> '' then Log.LogWarn('Unknown action: ' + Action, 'ScreenOptions');
+end;
 
-      SDLK_H:
-        begin
-          FadeTo(@ScreenOptionsGraphics, SoundLib.Start);
-          Exit;
-        end;
-
-      SDLK_S:
-        begin
-          FadeTo(@ScreenOptionsSound, SoundLib.Start);
-          Exit;
-        end;
-
-      SDLK_I:
-        begin
-          FadeTo(@ScreenOptionsInput, SoundLib.Start);
-          Exit;
-        end;
-
-      SDLK_L:
-        begin
-          FadeTo(@ScreenOptionsLyrics, SoundLib.Start);
-          Exit;
-        end;
-
-      SDLK_T:
-        begin
-          FadeTo(@ScreenOptionsThemes, SoundLib.Start);
-          Exit;
-        end;
-
-      SDLK_R:
-        begin
-          OpenRecordOptions;
-          Exit;
-        end;
-
-      SDLK_A:
-        begin
-          FadeTo(@ScreenOptionsAdvanced, SoundLib.Start);
-          Exit;
-        end;
-
-      SDLK_N:
-        begin
-          if (High(DataBase.NetworkUser) = -1) then
-            ScreenPopupError.ShowPopup(Language.Translate('SING_OPTIONS_NETWORK_NO_DLL'))
-          else
-          begin
-            AudioPlayback.PlaySound(SoundLib.Back);
-            FadeTo(@ScreenOptionsNetwork);
-          end;
-          Exit;
-        end;
-
-      SDLK_W:
-        begin
-          FadeTo(@ScreenOptionsWebcam, SoundLib.Start);
-          Exit;
-        end;
-
-      SDLK_Q:
-        begin
-          Result := false;
-          Exit;
-        end;
-    end;
-
-    // check special keys
-    case PressedKey of
-      SDLK_ESCAPE,
-      SDLK_BACKSPACE :
-        begin
-          Ini.Save;
-          AudioPlayback.PlaySound(SoundLib.Back);
-          FadeTo(@ScreenMain);
-        end;
-
-      SDLK_TAB:
-        begin
-          ScreenPopupHelp.ShowPopup();
-        end;
-
-      SDLK_RETURN:
-        begin
-          if Interaction = ButtonGameIID then
-          begin
-            AudioPlayback.PlaySound(SoundLib.Start);
-            FadeTo(@ScreenOptionsGame);
-          end;
-
-          if Interaction = ButtonGraphicsIID then
-          begin
-            AudioPlayback.PlaySound(SoundLib.Start);
-            FadeTo(@ScreenOptionsGraphics);
-          end;
-
-          if Interaction = ButtonSoundIID then
-          begin
-            AudioPlayback.PlaySound(SoundLib.Start);
-            FadeTo(@ScreenOptionsSound);
-          end;
-
-          if Interaction = ButtonInputIID then
-          begin
-            AudioPlayback.PlaySound(SoundLib.Start);
-            FadeTo(@ScreenOptionsInput);
-          end;
-
-          if Interaction = ButtonLyricsIID then
-          begin
-            AudioPlayback.PlaySound(SoundLib.Start);
-            FadeTo(@ScreenOptionsLyrics);
-          end;
-
-          if Interaction = ButtonThemesIID then
-          begin
-            AudioPlayback.PlaySound(SoundLib.Start);
-            FadeTo(@ScreenOptionsThemes);
-          end;
-
-          if Interaction = ButtonRecordIID then
-          begin
-            OpenRecordOptions;
-          end;
-
-          if Interaction = ButtonAdvancedIID then
-          begin
-            AudioPlayback.PlaySound(SoundLib.Start);
-            FadeTo(@ScreenOptionsAdvanced);
-          end;
-
-          if Interaction = ButtonNetworkIID then
-          begin
-            if ((High(DataBase.NetworkUser) = -1)) then
-              ScreenPopupError.ShowPopup(Language.Translate('SING_OPTIONS_NETWORK_NO_DLL'))
-            else
-            begin
-              AudioPlayback.PlaySound(SoundLib.Back);
-              FadeTo(@ScreenOptionsNetwork);
-            end;
-          end;
-
-          if Interaction = ButtonWebcamIID then
-          begin
-            AudioPlayback.PlaySound(SoundLib.Back);
-            FadeTo(@ScreenOptionsWebcam);
-          end;
-
-          if Interaction = ButtonExitIID then
-          begin
-            Ini.Save;
-            AudioPlayback.PlaySound(SoundLib.Back);
-            FadeTo(@ScreenMain);
-          end;
-        end;
-      SDLK_DOWN:    InteractNextRow;
-      SDLK_UP:      InteractPrevRow;
-      SDLK_RIGHT:   InteractNext;
-      SDLK_LEFT:    InteractPrev;
-    end;
+function TScreenOptions.ParseInput(PressedKey: cardinal; CharCode: UCS4Char;
+  PressedDown: boolean; Repeated: boolean = false): boolean;
+begin
+  Result := true;
+  if not PressedDown then Exit;
+  case PressedKey of
+    SDLK_G: Result := RunAction(uiSettingsGame);
+    SDLK_H: Result := RunAction(uiSettingsGraphics);
+    SDLK_S: Result := RunAction(uiSettingsSound);
+    SDLK_I: Result := RunAction(uiSettingsInput);
+    SDLK_L: Result := RunAction(uiSettingsLyrics);
+    SDLK_T: Result := RunAction(uiSettingsThemes);
+    SDLK_R: Result := RunAction(uiSettingsRecording);
+    SDLK_A: Result := RunAction(uiSettingsAdvanced);
+    SDLK_N: Result := RunAction(uiSettingsNetwork);
+    SDLK_W: Result := RunAction(uiSettingsWebcam);
+    SDLK_Q: Result := RunAction(uiGameExit);
+    SDLK_ESCAPE, SDLK_BACKSPACE: Result := RunAction(uiNavigationBack);
+    SDLK_TAB: ScreenPopupHelp.ShowPopup();
+    SDLK_RETURN:
+      if DocumentUI <> nil then
+      begin
+        DocumentUI.Key(0);
+        Result := RunAction(DocumentUI.TakeAction);
+      end
+      else
+      begin
+        if Interaction = ButtonGameIID then Result := RunAction(uiSettingsGame)
+        else if Interaction = ButtonGraphicsIID then Result := RunAction(uiSettingsGraphics)
+        else if Interaction = ButtonSoundIID then Result := RunAction(uiSettingsSound)
+        else if Interaction = ButtonInputIID then Result := RunAction(uiSettingsInput)
+        else if Interaction = ButtonLyricsIID then Result := RunAction(uiSettingsLyrics)
+        else if Interaction = ButtonThemesIID then Result := RunAction(uiSettingsThemes)
+        else if Interaction = ButtonRecordIID then Result := RunAction(uiSettingsRecording)
+        else if Interaction = ButtonAdvancedIID then Result := RunAction(uiSettingsAdvanced)
+        else if Interaction = ButtonNetworkIID then Result := RunAction(uiSettingsNetwork)
+        else if Interaction = ButtonWebcamIID then Result := RunAction(uiSettingsWebcam)
+        else if Interaction = ButtonExitIID then Result := RunAction(uiNavigationBack);
+      end;
+    SDLK_DOWN: if DocumentUI <> nil then DocumentUI.Key(2) else InteractNextRow;
+    SDLK_UP: if DocumentUI <> nil then DocumentUI.Key(-2) else InteractPrevRow;
+    SDLK_RIGHT: if DocumentUI <> nil then DocumentUI.Key(1) else InteractNext;
+    SDLK_LEFT: if DocumentUI <> nil then DocumentUI.Key(-1) else InteractPrev;
   end;
+end;
+
+function TScreenOptions.ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
+begin
+  if DocumentUI = nil then Exit(inherited ParseMouse(MouseButton, BtnDown, X, Y));
+  if MouseButton = SDL_BUTTON_LEFT then DocumentUI.Mouse(X, Y, 0, BtnDown)
+  else DocumentUI.Mouse(X, Y);
+  Result := RunAction(DocumentUI.TakeAction);
+end;
+
+destructor TScreenOptions.Destroy;
+begin
+  DocumentUI.Free;
+  inherited;
+end;
+
+function TScreenOptions.Draw: boolean;
+begin
+  if DocumentUI <> nil then Result := DocumentUI.Draw
+  else Result := inherited Draw;
+end;
+
+function TScreenOptions.DrawBG: boolean;
+begin
+  if DocumentUI <> nil then Result := DocumentUI.Draw(true)
+  else Result := inherited DrawBG;
 end;
 
 constructor TScreenOptions.Create;
@@ -294,6 +224,9 @@ constructor TScreenOptions.Create;
   end;
 begin
   inherited Create;
+
+  DocumentUI := TDocumentUI.Open('settings');
+  if DocumentUI <> nil then Exit;
 
   TextDescription := AddText(Theme.Options.TextDescription);
 
@@ -331,12 +264,14 @@ end;
 
 procedure TScreenOptions.SetInteraction(Num: integer);
 begin
+  if DocumentUI <> nil then Exit;
   inherited SetInteraction(Num);
   UpdateTextDescriptionFor(Interaction);
 end;
 
 procedure TScreenOptions.UpdateTextDescriptionFor(IID: integer);
 begin
+  if DocumentUI <> nil then Exit;
   // Sanity check
   if (IID < 0 ) or (IID >= Length(MapIIDtoDescID)) then
     Exit;

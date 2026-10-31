@@ -1,5 +1,5 @@
 <rml>
-<head><title>Modern main menu</title><link type="text/rcss" href="modern.rcss" /></head>
+<head><title>Modern main menu</title><link type="text/rcss" href="modern.rcss" /><link type="text/template" href="footer-main.rml" /></head>
 <body>
   <svg class="background-edge" src="edge-main.svg" />
   <img class="background" src="../../themes/Modern/[bg-main]blue.jpg" />
@@ -16,13 +16,8 @@
   <button class="secondary about" action="about.open" focus-text-target="description" focus-text-lang="SING_ABOUT_DESC"><svg src="button.svg" /><span lang="SING_ABOUT" /></button>
   <button class="secondary exit" action="game.exit" focus-text-target="description" focus-text-lang="SING_EXIT_DESC"><svg src="button.svg" /><span lang="SING_EXIT" /></button>
   <svg class="footer" src="footer.svg" />
-  <span class="where" lang="SING_MENU" />
-  <img class="legend-icon navigation-icon" src="../../themes/Modern/[button]navi.png" />
-  <span class="legend navigation" lang="SING_LEGEND_NAVIGATE" />
-  <img class="legend-icon credits-icon" src="../../themes/Modern/[button]c.png" />
-  <span class="legend credits" lang="SING_SONG_CREDITS" />
-  <img class="legend-icon select-icon" src="../../themes/Modern/[button]enter.png" />
-  <span class="legend select" lang="SING_LEGEND_SELECT" />
+  <div class="footer-labels"><template src="footer-main" /></div>
+  <div class="reflection-clip"><div class="footer-labels"><template src="footer-main" /></div></div>
   </div>
 </body>
 </rml>

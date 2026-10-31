@@ -1,0 +1,29 @@
+<rml>
+<head><title>Modern settings</title><link type="text/rcss" href="modern.rcss" /><link type="text/template" href="footer-settings.rml" /></head>
+<body class="settings">
+  <svg class="background-edge" src="edge-main.svg" />
+  <img class="background" src="../../themes/Modern/[bg-main]blue.jpg" />
+  <div class="foreground">
+    <img class="heading-icon" src="../../themes/Modern/[icon]options.png" />
+    <span class="heading" lang="SING_OPTIONS" />
+    <span class="description" lang="SING_OPTIONS_DESC" />
+    <span id="description" class="selection-description" lang="SING_OPTIONS_GAME_DESC" />
+    <div class="settings-grid">
+      <div class="option-cell"><button action="settings.game.open" focus-text-target="description" focus-text-lang="SING_OPTIONS_GAME_DESC"><svg src="button.svg" /><span lang="SING_OPTIONS_GAME" /></button></div>
+      <div class="option-cell"><button action="settings.graphics.open" focus-text-target="description" focus-text-lang="SING_OPTIONS_GRAPHICS_DESC"><svg src="button.svg" /><span lang="SING_OPTIONS_GRAPHICS" /></button></div>
+      <div class="option-cell"><button action="settings.sound.open" focus-text-target="description" focus-text-lang="SING_OPTIONS_SOUND_DESC"><svg src="button.svg" /><span lang="SING_OPTIONS_SOUND" /></button></div>
+      <div class="option-cell"><button action="settings.input.open" focus-text-target="description" focus-text-lang="SING_OPTIONS_INPUT_DESC"><svg src="button.svg" /><span lang="SING_OPTIONS_INPUT" /></button></div>
+      <div class="option-cell"><button action="settings.lyrics.open" focus-text-target="description" focus-text-lang="SING_OPTIONS_LYRICS_DESC"><svg src="button.svg" /><span lang="SING_OPTIONS_LYRICS" /></button></div>
+      <div class="option-cell"><button action="settings.themes.open" focus-text-target="description" focus-text-lang="SING_OPTIONS_THEMES_DESC"><svg src="button.svg" /><span lang="SING_OPTIONS_THEMES" /></button></div>
+      <div class="option-cell"><button action="settings.recording.open" focus-text-target="description" focus-text-lang="SING_OPTIONS_RECORD_DESC"><svg src="button.svg" /><span lang="SING_OPTIONS_RECORD" /></button></div>
+      <div class="option-cell"><button action="settings.advanced.open" focus-text-target="description" focus-text-lang="SING_OPTIONS_ADVANCED_DESC"><svg src="button.svg" /><span lang="SING_OPTIONS_ADVANCED" /></button></div>
+      <div class="option-cell"><button action="settings.network.open" focus-text-target="description" focus-text-lang="SING_OPTIONS_NETWORK_DESC"><svg src="button.svg" /><span lang="SING_OPTIONS_NETWORK" /></button></div>
+      <div class="option-cell"><button action="settings.webcam.open" focus-text-target="description" focus-text-lang="SING_OPTIONS_WEBCAM_DESC"><svg src="button.svg" /><span lang="SING_OPTIONS_WEBCAM" /></button></div>
+    </div>
+    <button class="secondary exit" action="navigation.back" focus-text-target="description" focus-text-lang="SING_OPTIONS_EXIT"><svg src="button.svg" /><span lang="SING_OPTIONS_EXIT" /></button>
+    <svg class="footer" src="footer.svg" />
+    <div class="footer-labels"><template src="footer-settings" /></div>
+    <div class="reflection-clip"><div class="footer-labels"><template src="footer-settings" /></div></div>
+  </div>
+</body>
+</rml>
