@@ -5,6 +5,7 @@ interface
 uses Classes, SysUtils;
 const
   uiScreenPartyOptions = 'party-options';
+  uiScreenTournamentOptions = 'tournament-options';
   uiScreenPlayers = 'players';
   uiPlayersContinue = 'players.continue';
   uiPlayersPrevious = 'players.previous';

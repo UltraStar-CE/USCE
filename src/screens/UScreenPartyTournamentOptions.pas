@@ -43,7 +43,7 @@ uses
   SysUtils;
 
 type
-  TScreenPartyTournamentOptions = class(TMenu)
+  TScreenPartyTournamentOptions = class(TOptionsMenu)
     private
       SelectRoundsFinal: cardinal;
       SelectRounds2Final: cardinal;
@@ -55,6 +55,8 @@ type
       Round4FinalCount: integer;
       Round8FinalCount: integer;
 
+    protected
+      procedure LoadWidgets; override;
     public
       constructor Create; override;
       procedure UpdateTournament;
@@ -70,6 +72,7 @@ implementation
 
 uses
   UGraphic,
+  UDocumentUI,
   UHelp,
   UIni,
   ULanguage,
@@ -85,13 +88,13 @@ uses
 procedure TScreenPartyTournamentOptions.UpdateTournament();
 begin
 
-  if (SelectsS[SelectRounds8Final].Visible) then
+  if PartyTournament.PlayersCount > 8 then
     PartyTournament.Rounds[0] := StrToInt(IRoundCount[Round8FinalCount]);
 
-  if (SelectsS[SelectRounds4Final].Visible) then
+  if PartyTournament.PlayersCount > 4 then
     PartyTournament.Rounds[1] := StrToInt(IRoundCount[Round4FinalCount]);
 
-  if (SelectsS[SelectRounds2Final].Visible) then
+  if PartyTournament.PlayersCount > 2 then
     PartyTournament.Rounds[2] := StrToInt(IRoundCount[Round2FinalCount]);
 
   PartyTournament.Rounds[3] := StrToInt(IRoundCount[RoundFinalCount]);
@@ -157,6 +160,15 @@ constructor TScreenPartyTournamentOptions.Create;
 begin
   inherited Create;
 
+  DocumentRole := uiScreenTournamentOptions;
+  Description := Language.Translate('PARTY_MODE_TOURNAMENT_OPTIONS_DESC');
+  WhereAmI := Language.Translate('PARTY_MODE_TOURNAMENT_OPTIONS_WHEREAMI');
+  if TryLoadDocument then
+  begin
+    SetOptionVisible(DocumentBackField, false);
+    Exit;
+  end;
+
   //Load Screen From Theme
   LoadFromTheme(Theme.PartyTournamentOptions);
 
@@ -179,6 +191,14 @@ begin
   Interaction := 0;
 end;
 
+procedure TScreenPartyTournamentOptions.LoadWidgets;
+begin
+  SelectRoundsFinal := AddSelectSlide('PARTY_MODE_TOURNAMENT_ROUNDS_FINAL', RoundFinalCount, IRoundCount);
+  SelectRounds2Final := AddSelectSlide('PARTY_MODE_TOURNAMENT_ROUNDS_2FINAL', Round2FinalCount, IRoundCount);
+  SelectRounds4Final := AddSelectSlide('PARTY_MODE_TOURNAMENT_ROUNDS_4FINAL', Round4FinalCount, IRoundCount);
+  SelectRounds8Final := AddSelectSlide('PARTY_MODE_TOURNAMENT_ROUNDS_8FINAL', Round8FinalCount, IRoundCount);
+end;
+
 procedure TScreenPartyTournamentOptions.OnShow;
 begin
   inherited;
@@ -186,18 +206,11 @@ begin
   if not Help.SetHelpID(ID) then
     Log.LogError('No Entry for Help-ID ' + ID + ' (ScreenPartyTournamentOptions)');
 
-  SelectsS[SelectRounds2Final].Visible := false;
-  SelectsS[SelectRounds4Final].Visible := false;
-  SelectsS[SelectRounds8Final].Visible := false;
-
-  if (PartyTournament.PlayersCount > 2) then
-    SelectsS[SelectRounds2Final].Visible := true;
-
-  if (PartyTournament.PlayersCount > 4) then
-    SelectsS[SelectRounds4Final].Visible := true;
-
-  if (PartyTournament.PlayersCount > 8) then
-    SelectsS[SelectRounds8Final].Visible := true;
+  SetOptionVisible(SelectRounds2Final, PartyTournament.PlayersCount > 2);
+  SetOptionVisible(SelectRounds4Final, PartyTournament.PlayersCount > 4);
+  SetOptionVisible(SelectRounds8Final, PartyTournament.PlayersCount > 8);
+  // Returning from a larger bracket may leave focus on a now-hidden field.
+  if HasDocumentUI then Interaction := SelectRoundsFinal;
 
 end;
 
