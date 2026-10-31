@@ -73,6 +73,7 @@ type
     FileName, ArrayBinding: UTF8String;
     ColorStyle, SkinStyle: UTF8String;
     Values: TStringList;
+    ValuesDirty: boolean;
     LastActionTarget: UTF8String;
     function Activate: boolean;
   public
@@ -259,7 +260,15 @@ begin
   if DocumentHandle <> 0 then
   begin
     Result := SelectDocument(DocumentHandle) <> 0;
-    if Result then begin Current := Self; Exit; end;
+    if Result then
+    begin
+      Current := Self;
+      if ValuesDirty then
+        for I := 0 to Values.Count - 1 do
+          SetBinding(PAnsiChar(UTF8String(Values.Names[I])), PAnsiChar(UTF8String(Values.ValueFromIndex[I])));
+      ValuesDirty := false;
+      Exit;
+    end;
     DocumentHandle := 0;
   end;
   DocumentHandle := CreateDocument(PAnsiChar(FileName), PAnsiChar(ArrayBinding));
@@ -276,13 +285,15 @@ begin
   Current := Self;
   for I := 0 to Values.Count - 1 do
     SetBinding(PAnsiChar(UTF8String(Values.Names[I])), PAnsiChar(UTF8String(Values.ValueFromIndex[I])));
+  ValuesDirty := false;
 end;
 
 procedure TDocumentUI.SetValue(const Name, Value: UTF8String);
 begin
   if Values.Values[Name] = Value then Exit;
   Values.Values[Name] := Value;
-  if Current = Self then SetBinding(PAnsiChar(Name), PAnsiChar(Value));
+  if Current = Self then SetBinding(PAnsiChar(Name), PAnsiChar(Value))
+  else ValuesDirty := true;
 end;
 
 function TDocumentUI.Draw(BackgroundOnly, ForegroundOnly: boolean): boolean;
