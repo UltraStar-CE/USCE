@@ -714,7 +714,7 @@ begin
     Text[0].Text := Format(Theme.SongJumpto.SongsFound, [CatSongs.VisibleSongs]);
   end;
 
-  fFocus := EnsureRange(TypingFocus, 0, High(fRows)); fFirst := 0;
+  fFocus := High(fRows); fFirst := 0;
   fLastPlayed := ScreenSong.Interaction;
   // Reopening reevaluates flags and keeps the selection inside the results.
   if CatSongs.CatNumShow = -2 then
