@@ -8,25 +8,28 @@ interface
 function MatchesFilterTerms(const Value, Query: UTF8String; ExactYears: boolean): boolean;
 
 // Last editable choice; spaces separate years, but remain part of names.
-function FilterTermStart(const Query: UTF8String; SpaceSeparates: boolean): integer;
-function CompleteFilterTerm(const Query, Value: UTF8String; SpaceSeparates: boolean): UTF8String;
+function FilterTermStart(const Query: UTF8String; SpaceSeparates: boolean; QuotedTerms: boolean = false): integer;
+function CompleteFilterTerm(const Query, Value: UTF8String; SpaceSeparates: boolean; QuotedTerms: boolean = false): UTF8String;
 
 implementation
 
 uses SysUtils;
 
-function FilterTermStart(const Query: UTF8String; SpaceSeparates: boolean): integer;
-var I: integer;
+function FilterTermStart(const Query: UTF8String; SpaceSeparates: boolean; QuotedTerms: boolean = false): integer;
+var I: integer; Quoted: boolean;
 begin
-  Result := 1;
+  Result := 1; Quoted := false;
   for I := 1 to Length(Query) do
-    if (Query[I] in [',', ';']) or (SpaceSeparates and (Query[I] = ' ')) then Result := I + 1;
+  begin
+    if QuotedTerms and (Query[I] = '"') then Quoted := not Quoted;
+    if not Quoted and ((Query[I] in [',', ';']) or (SpaceSeparates and (Query[I] = ' '))) then Result := I + 1;
+  end;
   while (Result <= Length(Query)) and (Query[Result] = ' ') do Inc(Result);
 end;
 
-function CompleteFilterTerm(const Query, Value: UTF8String; SpaceSeparates: boolean): UTF8String;
+function CompleteFilterTerm(const Query, Value: UTF8String; SpaceSeparates: boolean; QuotedTerms: boolean = false): UTF8String;
 begin
-  Result := Copy(Query, 1, FilterTermStart(Query, SpaceSeparates) - 1) + Value + ', ';
+  Result := Copy(Query, 1, FilterTermStart(Query, SpaceSeparates, QuotedTerms) - 1) + Value + ', ';
 end;
 
 function MatchesWords(const Value, Query: UTF8String): boolean;

@@ -15,7 +15,7 @@ class FolderFilterTests(unittest.TestCase):
         source = Path(__file__).resolve().parents[1] / 'src/base'
         harness = r'''program FolderProbe;
 {$mode Delphi}{$H+}{$codepage utf8}
-uses {$IFDEF UNIX}cwstring,{$ENDIF} SysUtils, Classes, UFolderFilter;
+uses {$IFDEF UNIX}cwstring,{$ENDIF} SysUtils, Classes, UFolderFilter, UFilterTerms;
 procedure Check(OK: boolean; const Msg: string);
 begin if not OK then raise Exception.Create(Msg); end;
 var Choices: TStringList;
@@ -38,6 +38,9 @@ begin
   Check(not MatchesFolderPath('/Rock/', FolderQueryValue('/Rock, Pop/')), 'literal path not alternatives');
   Check(MatchesFolderPath('/Rock; Pop/', FolderQueryValue('/Rock; Pop/')), 'literal semicolon');
   Check(MatchesFolderPath('/Rock"n"Roll/', FolderQueryValue('/Rock"n"Roll/')), 'literal quotes');
+  Check(CompleteFilterTerm('"/Rock, Pop/"', '"/Rock, Pop/"', false, true) = '"/Rock, Pop/", ', 'complete quoted comma');
+  Check(CompleteFilterTerm('/Jazz/, "/Rock; Pop/"', '"/Rock; Pop/"', false, true) = '/Jazz/, "/Rock; Pop/", ', 'keep earlier alternatives');
+  Check(FilterTermStart('"/Rock""n, Roll/"', false, true) = 1, 'doubled quotes preserve separators');
   Choices := TStringList.Create;
   try
     AddFolderChoices('/Denglish/Kids/GanzKlein/', 0, Choices);

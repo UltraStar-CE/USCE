@@ -732,7 +732,12 @@ begin
       Card.OrderNum := I + 1;
       Card.CatNumber := PtrInt(Folders.Objects[I]);
       if Folders[I] = '/' then Card.CatNumber := Songs.SongList.Count;
-      Card.Cover := CatCovers.GetCover(sFolder, Folders[I]);
+      if CatCovers.CoverExists(sFolder, Folders[I]) then
+        Card.Cover := CatCovers.GetCover(sFolder, Folders[I])
+      else if CatCovers.CoverExists(sFolder, Caption) then
+        Card.Cover := CatCovers.GetCover(sFolder, Caption)
+      else
+        Card.Cover := CatCovers.GetCover(sFolder, Copy(Caption, 1, Pos('/', Caption + '/') - 1));
       Song[I] := Card;
     end;
     for I := 0 to Songs.SongList.Count - 1 do
