@@ -16,7 +16,7 @@ class LibraryWatchTests(unittest.TestCase):
         harness = r'''program WatchProbe;
 {$mode Delphi}{$H+}
 uses {$IFDEF UNIX}cthreads,{$ENDIF} SysUtils, Classes, ULibraryWatch;
-var Watch: TLibraryWatch; Roots, Changes: TStringList; Root, Sub, Other: string;
+var Watch: TLibraryWatch; Roots, Changes: TStringList; Root, Sub, Other, Missing: string;
   Full: boolean; Error: string;
 procedure Check(OK: boolean; const Msg: string);
 begin if not OK then raise Exception.Create(Msg); end;
@@ -122,6 +122,17 @@ begin
     WriteFile(Root + '-moved' + PathDelim + 'old-root.txt', 'no longer in library'); Quiet('after moved-root file');
     Quiet('at shutdown');
     Writeln('PASS native add/change/rename/delete, new nested watches, root recreation, idle and outside-library isolation');
+  finally Watch.Free; Roots.Free; Changes.Free; end;
+  Missing := ExtractFileDir(Root) + PathDelim + 'absent-parent' + PathDelim + 'nested' + PathDelim + 'songs';
+  Roots := TStringList.Create; Changes := TStringList.Create; Roots.Add(Missing);
+  Watch := TLibraryWatch.Create(Roots);
+  try
+    WaitChange(Missing, true); SettleStartup; Quiet('before absent hierarchy creation');
+    ForceDirectories(Missing);
+    WriteFile(Missing + PathDelim + 'new.txt', 'root and parent were absent');
+    WaitChange(Missing, true);
+    WriteFile(Missing + PathDelim + 'new.txt', 'watch remains active'); WaitChange(Missing);
+    Writeln('PASS absent ancestor hierarchy recovery');
   finally Watch.Free; Roots.Free; Changes.Free; end;
 end.
 '''
