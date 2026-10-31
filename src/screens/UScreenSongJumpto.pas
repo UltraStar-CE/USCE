@@ -926,7 +926,7 @@ begin
   SetLength(fMatches, 0);
   fSuggestionFirst := 0;
   fSuggestionIndex := 0;
-  Query := Copy(Query, FilterTermStart(Query, Kind = fltYear), MaxInt);
+  Query := Copy(Query, FilterTermStart(Query, Kind = fltYear, Kind = fltFolder), MaxInt);
   if Kind = fltAge then Delete(Query, 1, Length(SuggestionPrefix));
   Query := LowerCase(TransliterateToASCII(Trim(Query)));
   SetLength(fMatches, fValues.Count);
@@ -934,7 +934,8 @@ begin
   for I := 0 to fValues.Count - 1 do
   begin
     Key := fValueKeys[I];
-    if MatchesFilterTerms(Key, Query, false) then
+    if ((Kind = fltFolder) and (Pos(Query, Key) > 0)) or
+       ((Kind <> fltFolder) and MatchesFilterTerms(Key, Query, false)) then
     begin
       fMatches[K] := I;
       Inc(K);
@@ -950,7 +951,7 @@ begin
   if (fFocus >= Length(fRows)) or (fSuggestionIndex < 0) or
     (fSuggestionIndex >= Length(fMatches)) then Exit;
   fRows[fFocus].Query := CompleteFilterTerm(fRows[fFocus].Query,
-    SuggestionPrefix + fValues[fMatches[fSuggestionIndex]], fRows[fFocus].Kind = fltYear);
+    SuggestionPrefix + fValues[fMatches[fSuggestionIndex]], fRows[fFocus].Kind = fltYear, fRows[fFocus].Kind = fltFolder);
   Changed;
   FlushChanges;
 end;
