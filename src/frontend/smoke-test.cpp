@@ -19,6 +19,9 @@ void ui_destroy(uint64_t);
 int ui_style(const char*);
 void ui_set(const char*, const char*);
 void ui_render(int, int, int);
+void ui_prepare(int, int);
+void ui_scroll_to(const char*, float);
+float ui_scroll_position(const char*);
 void ui_mouse(int, int, int, int);
 void ui_key(int);
 int ui_bounds(const char*, float*, float*, float*, float*);
@@ -452,7 +455,7 @@ int main(int argc, char** argv) {
             require(ui_bounds("profile-frame-23", &player_x, &player_y, &player_w, &player_h) != 0,
                 "Player setup must display all 24 profiles");
             require(player_y > 270 && player_y < 320, "Compact player grid second row must remain above the avatar editor");
-            // ui_bounds exposes the layout box; pointer hit testing includes CSS transforms.
+            // Bounds and pointer hit testing both include CSS transforms.
             ui_mouse(1190, 305, 0, 1); ui_mouse(1190, 305, 0, 0);
             require(std::string(ui_action()) == "players.select" && std::string(ui_action_target()) == "23",
                 "The last compact profile must be reachable inside the viewport");
@@ -497,9 +500,9 @@ int main(int argc, char** argv) {
             require(pixel[0] < 100 && pixel[2] > pixel[0] && pixel[3] > 240,
                 "Animating carousel items must preserve the screen background");
             require(ui_bounds("avatar-item-50", &player_x, &player_y, &player_w, &player_h) != 0, "Moving avatar keeps its identity");
-            require(player_x < before_x - 1 && player_x > 410, "Avatar must animate between positions instead of swapping images");
+            require(player_x + player_w / 2 < before_x + before_w / 2 - 1 && player_x + player_w / 2 > 410, "Avatar must animate between positions instead of swapping images");
             for (int frame = 0; frame < 33; ++frame) { SDL_Delay(30); ui_render(1280, 720, 0); }
-            require(ui_bounds("avatar-item-50", &player_x, &player_y, &player_w, &player_h) != 0 && std::abs(player_x - 404.4f) < 2,
+            require(ui_bounds("avatar-item-50", &player_x, &player_y, &player_w, &player_h) != 0 && std::abs(player_x + player_w / 2 - 404.4f) < 2,
                 "Avatar must settle in its theme-defined neighboring slot");
             for (int i : {0, 1, 2, 3, 97, 98, 99, 100}) {
                 const auto path = "players.avatars[" + std::to_string(i) + "].image";
@@ -509,14 +512,14 @@ int main(int argc, char** argv) {
             for (int frame = 0; frame < 33; ++frame) { SDL_Delay(30); ui_render(1280, 720, 0); }
             ui_model_set("players.avatarSelected", "0", 1);
             for (int frame = 0; frame < 33; ++frame) { SDL_Delay(30); ui_render(1280, 720, 0); }
-            require(ui_bounds("avatar-item-100", &player_x, &player_y, &player_w, &player_h) != 0 && std::abs(player_x - 404.4f) < 2,
+            require(ui_bounds("avatar-item-100", &player_x, &player_y, &player_w, &player_h) != 0 && std::abs(player_x + player_w / 2 - 404.4f) < 2,
                 "Last avatar must wrap to the neighboring slot when the first is selected");
-            require(ui_bounds("avatar-item-0", &player_x, &player_y, &player_w, &player_h) != 0 && std::abs(player_x - 644.8f) < 2,
+            require(ui_bounds("avatar-item-0", &player_x, &player_y, &player_w, &player_h) != 0 && std::abs(player_x + player_w / 2 - 644.8f) < 2,
                 "Wrapped selection must settle on the first avatar");
             ui_model_set("players.avatarCount", "1", 1);
             ui_model_array("players.avatars", 1);
             ui_render(1280, 720, 0);
-            require(ui_bounds("avatar-item-0", &player_x, &player_y, &player_w, &player_h) != 0 && std::abs(player_x - 644.8f) < 2,
+            require(ui_bounds("avatar-item-0", &player_x, &player_y, &player_w, &player_h) != 0 && std::abs(player_x + player_w / 2 - 644.8f) < 2,
                 "A single-avatar list must remain centered without duplicate items");
             ui_model_set("players.count", "0", 1);
             ui_model_set("players.active", "0", 2);
@@ -570,21 +573,54 @@ int main(int argc, char** argv) {
                 "Theme math responds to model updates");
             {
                 std::ofstream fixture(language_fixture);
+                fixture << R"(<rml><head><style>body{font-family:ui;} .fit{display:block;width:80px;height:30px;font-size:20px;white-space:nowrap;} span{display:inline-block;}</style></head>
+<body><div data-model="game"><div class="fit" fit-text="1"><span id="fitted-glyphs">{{ data.fit.caption }}</span></div></div></body></rml>)";
+            }
+            ui_model_set("fit.caption", "A", 0);
+            require(ui_open(utf8(language_fixture).c_str()) != 0, "Model text-fit fixture"); ui_render(1280,720,0);
+            ui_model_set("fit.caption", std::string(60,'B').c_str(), 0); ui_prepare(1280,720);
+            require(ui_bounds("fitted-glyphs", &player_x,&player_y,&player_w,&player_h) != 0 && player_w <= 81,
+                "Longer model text must refit to its container width");
+            ui_model_set("fit.caption", "A", 0); ui_prepare(1280,720);
+            require(ui_bounds("fitted-glyphs", &player_x,&player_y,&player_w,&player_h) != 0 && player_h > 18,
+                "Shorter model text must restore the theme font size");
+            {
+                std::ofstream fixture(language_fixture);
+                fixture << R"(<rml><head><style>.parent{position:absolute;left:100px;top:70px;width:200px;height:100px;transform-origin:0% 0%;transform:translate(30px,20px) scale(1.5);} button{position:absolute;left:10px;top:20px;width:80px;height:40px;border-width:0;padding:0;}</style></head>
+<body><div class="parent"><button id="transformed-region" action="transformed" target="hit" /></div></body></rml>)";
+            }
+            require(ui_open(utf8(language_fixture).c_str()) != 0, "Transformed Region fixture");
+            ui_prepare(1280,720);
+            require(ui_bounds("transformed-region", &player_x,&player_y,&player_w,&player_h) != 0 &&
+                std::abs(player_x-145)<1 && std::abs(player_y-120)<1 && std::abs(player_w-120)<1 && std::abs(player_h-60)<1,
+                "Native Region bounds must include ancestor translation and scale");
+            ui_mouse(205,150,0,1); ui_mouse(205,150,0,0);
+            require(std::string(ui_action()) == "transformed", "Transformed Region center must match pointer input"); ui_clear_action();
+            {
+                std::ofstream fixture(language_fixture);
                 fixture << R"(<rml><head><style>body{font-family:ui;} button{display:block;width:100px;height:25px;} .rows{display:block;width:500px;height:80px;overflow-y:auto;} .row{display:block;width:500px;height:25px;}</style></head>
 <body><button id="retained-a" action="choose" target="a">A</button><button id="retained-b" action="choose" target="b">B</button>
-<div data-model="game"><div class="rows"><div class="row" data-for="row : data.retained.rows" data-attr-id="'retained-row-' + row.id">{{ row.id }}</div></div></div></body></rml>)";
+<div data-model="game"><div id="retained-scroll" class="rows"><div class="row" data-for="row : data.retained.rows" data-attr-id="'retained-row-' + row.id">{{ row.id }}</div></div></div></body></rml>)";
             }
             const auto base_handle = ui_create(utf8(language_fixture).c_str(), "retained.rows");
             require(base_handle != 0, "Retained base creation");
             ui_model_array("retained.rows", 30);
             for (int i=0; i<30; ++i) ui_model_set(("retained.rows[" + std::to_string(i) + "].id").c_str(), std::to_string(i).c_str(), 1);
-            ui_render(1280,720,0); ui_focus("retained-b"); ui_reveal("retained-row-20");
+            ui_render(1280,720,0); ui_focus("retained-b");
+            ui_scroll_to("retained-scroll", 0.5f);
+            require(std::abs(ui_scroll_position("retained-scroll") - 0.5f) < 0.01f, "Named scrolling uses actual DOM overflow");
+            ui_scroll_to("retained-scroll", 2.f);
+            require(ui_scroll_position("retained-scroll") > 0.99f, "Named scrolling clamps to the content end");
+            ui_reveal("retained-row-20");
             float retained_x, retained_y, retained_w, retained_h;
             require(ui_bounds("retained-row-20", &retained_x,&retained_y,&retained_w,&retained_h) != 0, "Retained base row");
             const auto popup_handle = ui_create(utf8(language_fixture).c_str(), "retained.rows");
             require(popup_handle != 0 && popup_handle != base_handle, "Independent popup creation");
             ui_model_array("retained.rows", 1); ui_model_set("retained.rows[0].id", "90", 1);
             ui_render(1280,720,0); ui_focus("retained-a");
+            ui_scroll_to("retained-scroll", 0.5f);
+            require(ui_scroll_position("retained-scroll") == 0 && ui_scroll_position("missing-scroll") == 0,
+                "Short or missing content has no normalized scroll extent");
             require(ui_select(base_handle) != 0 && std::string(ui_focused_target()) == "b", "Popup must preserve base focus");
             require(ui_bounds("retained-row-20", &player_x,&player_y,&player_w,&player_h) != 0 && std::abs(player_y-retained_y)<0.5f,
                 "Popup must preserve base scroll and array content");

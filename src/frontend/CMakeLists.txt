@@ -14,6 +14,7 @@ FetchContent_Declare(rmlui GIT_REPOSITORY https://github.com/mikke89/RmlUi.git
 FetchContent_MakeAvailable(rmlui)
 include(embed-effects.cmake)
 include(embed-data-views.cmake)
+include(embed-layout-transforms.cmake)
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/document-ui-licenses")
 configure_file("${rmlui_SOURCE_DIR}/LICENSE.txt" "${CMAKE_CURRENT_BINARY_DIR}/document-ui-licenses/RmlUi.txt" COPYONLY)
 configure_file("${lunasvg_SOURCE_DIR}/LICENSE" "${CMAKE_CURRENT_BINARY_DIR}/document-ui-licenses/LunaSVG.txt" COPYONLY)

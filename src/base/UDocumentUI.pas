@@ -83,9 +83,12 @@ type
     procedure SetValue(const Name, Value: UTF8String);
     procedure SetNumber(const Name: UTF8String; Value: double);
     function Draw(BackgroundOnly: boolean = false; ForegroundOnly: boolean = false): boolean;
+    procedure PrepareLayout;
     procedure Mouse(X, Y: integer; Button: integer = -1; Down: boolean = false);
     procedure Key(Direction: integer);
     procedure Scroll(Delta: single);
+    procedure ScrollTo(const ID: UTF8String; Position: Single);
+    function ScrollPosition(const ID: UTF8String): Single;
     function Region(const ID: UTF8String; out Bounds: TDocumentRegion): boolean;
     function TakeAction: UTF8String;
     function FocusedTarget: UTF8String;
@@ -113,9 +116,12 @@ var
   DestroyDocument: procedure(Handle: QWord); cdecl;
   SetBinding: procedure(Name, Value: PAnsiChar); cdecl;
   Render: procedure(Width, Height, ForegroundOnly: integer); cdecl;
+  Prepare: procedure(Width, Height: integer); cdecl;
   ProcessMouse: procedure(X, Y, Button, Down: integer); cdecl;
   ProcessKey: procedure(Direction: integer); cdecl;
   ProcessScroll: procedure(Delta: single); cdecl;
+  SetScrollPosition: procedure(ID: PAnsiChar; Position: Single); cdecl;
+  GetScrollPosition: function(ID: PAnsiChar): Single; cdecl;
   GetBounds: function(ID: PAnsiChar; out X, Y, W, H: single): integer; cdecl;
   GetAction: function: PAnsiChar; cdecl;
   GetActionTarget, GetFocusedTarget: function: PAnsiChar; cdecl;
@@ -168,9 +174,12 @@ begin
     @ApplyStyle := Symbol('ui_style');
     @SetBinding := Symbol('ui_set');
     @Render := Symbol('ui_render');
+    @Prepare := Symbol('ui_prepare');
     @ProcessMouse := Symbol('ui_mouse');
     @ProcessKey := Symbol('ui_key');
     @ProcessScroll := Symbol('ui_scroll');
+    @SetScrollPosition := Symbol('ui_scroll_to');
+    @GetScrollPosition := Symbol('ui_scroll_position');
     @GetBounds := Symbol('ui_bounds');
     @GetAction := Symbol('ui_action');
     @GetActionTarget := Symbol('ui_action_target');
@@ -288,10 +297,19 @@ begin
   ValuesDirty := false;
 end;
 
-procedure TDocumentUI.SetValue(const Name, Value: UTF8String);
+procedure TDocumentUI.PrepareLayout;
 begin
-  if Values.Values[Name] = Value then Exit;
-  Values.Values[Name] := Value;
+  if Activate then Prepare(ScreenW, ScreenH);
+end;
+
+procedure TDocumentUI.SetValue(const Name, Value: UTF8String);
+var Index: integer;
+begin
+  Index := Values.IndexOfName(Name);
+  if (Index >= 0) and (Values.ValueFromIndex[Index] = Value) then Exit;
+  // Preserve empty entries too: an inactive document may need old text cleared.
+  if Index < 0 then Values.Add(Name + '=' + Value)
+  else Values.Strings[Index] := Name + '=' + Value;
   if Current = Self then SetBinding(PAnsiChar(Name), PAnsiChar(Value))
   else ValuesDirty := true;
 end;
@@ -332,6 +350,25 @@ begin
     Bounds.Y := Bounds.Y * RenderH / ScreenH;
     Bounds.W := Bounds.W * RenderW / ScreenW;
     Bounds.H := Bounds.H * RenderH / ScreenH;
+  end;
+end;
+
+procedure TDocumentUI.ScrollTo(const ID: UTF8String; Position: Single);
+begin
+  if Activate then
+  begin
+    Prepare(ScreenW, ScreenH);
+    SetScrollPosition(PAnsiChar(ID), Position);
+  end;
+end;
+
+function TDocumentUI.ScrollPosition(const ID: UTF8String): Single;
+begin
+  Result := 0;
+  if Activate then
+  begin
+    Prepare(ScreenW, ScreenH);
+    Result := GetScrollPosition(PAnsiChar(ID));
   end;
 end;
 

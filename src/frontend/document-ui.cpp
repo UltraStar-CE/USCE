@@ -2,6 +2,7 @@
 // The C boundary keeps RmlUi's C++ objects out of the Pascal game.
 #include <RmlUi/Core.h>
 #include <RmlUi/Core/Factory.h>
+#include <RmlUi/Core/ElementUtilities.h>
 #include <RmlUi/Core/StyleSheetContainer.h>
 #include "RmlUi_Renderer_GL3.h"
 #include "document-model.h"
@@ -85,13 +86,15 @@ public:
     explicit Actions(DocumentState* state) : owner(state) {}
     void ProcessEvent(Rml::Event& event) override;
 };
+struct FittedText { Rml::ObserverPtr<Rml::Element> element; Rml::String text; float width, height, font; };
 struct DocumentState {
     Rml::Context* context = nullptr;
     Rml::ElementDocument* document = nullptr;
     std::unordered_map<std::string, std::vector<Binding>> bindings;
     std::vector<Rml::Element*> controls;
+    std::unordered_map<Rml::Element*, FittedText> fitted_text;
     std::string pending_action, pending_target, focused_target;
-    bool text_fit_dirty = true, table_layout_dirty = true;
+    bool text_fit_dirty = true, table_layout_dirty = true, layout_dirty = true;
     int last_width = 0, last_height = 0;
     Actions actions{this};
 };
@@ -102,7 +105,7 @@ static uint64_t next_document_id = 1;
 static bool pointer_known = false;
 static int pointer_x = 0, pointer_y = 0;
 static bool initialized;
-static void update_document_layout();
+static void update_document_layout(bool force = false);
 static std::vector<Rml::byte> font_data, bold_font_data;
 void Actions::ProcessEvent(Rml::Event& event) {
         // Queue actions. Never destroy a document while RmlUi is dispatching an event.
@@ -143,7 +146,7 @@ static void bind_tree(Rml::Element* element) {
 
 UI_EXPORT const char* ui_error() { return last_error.c_str(); }
 UI_EXPORT void ui_close_document() {
-    DocumentTables::ClearCache(); active->table_layout_dirty = true;
+    DocumentTables::ClearCache(); active->fitted_text.clear(); active->table_layout_dirty = true;
     active->bindings.clear(); active->controls.clear(); active->pending_action.clear(); active->pending_target.clear();
     if (active->document) { active->document->Close(); active->document = nullptr; active->context->Update(); }
 }
@@ -246,13 +249,13 @@ UI_EXPORT int ui_style(const char* filename) {
     if (!sheet) { last_error = std::string("Cannot load frontend stylesheet: ") + filename; return 0; }
     if (const auto* current = active->document->GetStyleSheetContainer())
         sheet = current->CombineStyleSheetContainer(*sheet);
-    active->text_fit_dirty = true; active->table_layout_dirty = true; DocumentTables::ClearCache();
+    active->text_fit_dirty = true; active->table_layout_dirty = true; active->fitted_text.clear(); DocumentTables::ClearCache();
     active->document->SetStyleSheetContainer(std::move(sheet));
     active->context->Update();
     return 1;
 }
 UI_EXPORT void ui_set(const char* name, const char* value) {
-    if (DocumentModel::Set(name, value)) active->table_layout_dirty = true;
+    if (DocumentModel::Set(name, value)) { active->table_layout_dirty = true; active->text_fit_dirty = true; }
     const auto found = active->bindings.find(name);
     if (found == active->bindings.end()) return; // Optional elements need no game-side defaults.
     active->text_fit_dirty = true; active->table_layout_dirty = true;
@@ -286,23 +289,41 @@ UI_EXPORT void ui_set(const char* name, const char* value) {
     }
 }
 static void fit_text() {
-    std::vector<Rml::Element*> elements;
+    Rml::ElementList elements, changed;
     active->document->QuerySelectorAll(elements, "[fit-text]");
-    for (auto* element : elements) element->RemoveProperty(Rml::PropertyId::FontSize);
-    active->context->Update();
+    for (auto it = active->fitted_text.begin(); it != active->fitted_text.end();) {
+        if (!it->second.element) it = active->fitted_text.erase(it); else ++it;
+    }
     for (auto* element : elements) {
-        const float maximum = element->GetComputedValues().font_size();
-        float low = element->GetAttribute<float>("fit-text", 1.0f), high = maximum;
-        const auto fits = [&]() { return element->GetScrollHeight() <= element->GetClientHeight() + 0.5f; };
-        if (fits()) continue;
-        for (int step = 0; step < 10 && high - low > 0.25f; ++step) {
-            const float middle = (low + high) * 0.5f;
-            element->SetProperty(Rml::PropertyId::FontSize, Rml::Property(middle, Rml::Unit::PX));
-            active->context->Update();
-            if (fits()) low = middle; else high = middle;
+        const auto found = active->fitted_text.find(element);
+        if (found != active->fitted_text.end()) {
+            const auto& previous = found->second;
+            if (previous.element.get() == element && previous.text == element->GetInnerRML() &&
+                std::abs(previous.width - element->GetClientWidth()) < 0.5f &&
+                std::abs(previous.height - element->GetClientHeight()) < 0.5f &&
+                std::abs(previous.font - element->GetComputedValues().font_size()) < 0.01f) continue;
         }
-        element->SetProperty(Rml::PropertyId::FontSize, Rml::Property(low, Rml::Unit::PX));
-        active->context->Update();
+        element->RemoveProperty(Rml::PropertyId::FontSize);
+        changed.push_back(element);
+    }
+    if (!changed.empty()) active->context->Update();
+    for (auto* element : changed) {
+        const float maximum = element->GetComputedValues().font_size();
+        float low = std::min(maximum, std::max(1.0f, element->GetAttribute<float>("fit-text", 1.0f))), high = maximum;
+        const auto fits = [&]() { return element->GetScrollHeight() <= element->GetClientHeight() + 0.5f &&
+            element->GetScrollWidth() <= element->GetClientWidth() + 0.5f; };
+        if (!fits()) {
+            for (int step = 0; step < 10 && high - low > 0.25f; ++step) {
+                const float middle = (low + high) * 0.5f;
+                element->SetProperty(Rml::PropertyId::FontSize, Rml::Property(middle, Rml::Unit::PX));
+                active->context->Update();
+                if (fits()) low = middle; else high = middle;
+            }
+            element->SetProperty(Rml::PropertyId::FontSize, Rml::Property(low, Rml::Unit::PX));
+            active->context->Update();
+        }
+        active->fitted_text[element] = {element->GetObserverPtr(), element->GetInnerRML(),
+            element->GetClientWidth(), element->GetClientHeight(), element->GetComputedValues().font_size()};
     }
     active->text_fit_dirty = false;
 }
@@ -327,7 +348,8 @@ static void translate_dynamic_elements() {
         }
     }
 }
-static void update_document_layout() {
+static void update_document_layout(bool force) {
+    if (!force && !active->layout_dirty && !active->text_fit_dirty && !active->table_layout_dirty) return;
     active->context->Update();
     if (active->table_layout_dirty) {
         translate_dynamic_elements();
@@ -335,14 +357,27 @@ static void update_document_layout() {
     }
     if (active->text_fit_dirty) fit_text();
     if (active->table_layout_dirty) { DocumentTables::Layout(active->document, active->context); active->table_layout_dirty = false; }
+    active->layout_dirty = false;
+}
+static void set_viewport(int width, int height) {
+    if (width != active->last_width || height != active->last_height) {
+        active->text_fit_dirty = true; active->table_layout_dirty = true; active->fitted_text.clear();
+    }
+    active->last_width = width; active->last_height = height;
+    active->context->SetDimensions({width, height});
+}
+UI_EXPORT void ui_prepare(int width, int height) {
+    if (!active->document || width <= 0 || height <= 0) return;
+    active->document->SetClass("foreground-only", false);
+    active->document->SetClass("background-only", false);
+    set_viewport(width, height);
+    update_document_layout(true);
 }
 UI_EXPORT void ui_render(int width, int height, int foreground_only) {
     if (!active->document || width <= 0 || height <= 0) return;
     active->document->SetClass("foreground-only", foreground_only == 1);
     active->document->SetClass("background-only", foreground_only == 2);
-    if (width != active->last_width || height != active->last_height) { active->text_fit_dirty = true; active->table_layout_dirty = true; }
-    active->last_width = width; active->last_height = height;
-    active->context->SetDimensions({width, height}); update_document_layout();
+    set_viewport(width, height); update_document_layout(true);
     renderer->SetViewport(width, height);
     renderer->BeginFrame(); active->context->Render(); renderer->EndFrame();
 }
@@ -354,8 +389,8 @@ UI_EXPORT const char* ui_focused_target() {
     return active->focused_target.c_str();
 }
 UI_EXPORT void ui_clear_action() { active->pending_action.clear(); active->pending_target.clear(); }
-UI_EXPORT void ui_model_set(const char* name, const char* value, int type) { if (DocumentModel::Set(name, value, type)) active->table_layout_dirty = true; }
-UI_EXPORT void ui_model_array(const char* name, int count) { if (DocumentModel::Array(name, count)) active->table_layout_dirty = true; }
+UI_EXPORT void ui_model_set(const char* name, const char* value, int type) { if (DocumentModel::Set(name, value, type)) { active->table_layout_dirty = true; active->text_fit_dirty = true; } }
+UI_EXPORT void ui_model_array(const char* name, int count) { if (DocumentModel::Array(name, count)) { active->table_layout_dirty = true; active->text_fit_dirty = true; } }
 UI_EXPORT void ui_focus(const char* id) {
     if (!active->document) return;
     update_document_layout();
@@ -363,6 +398,7 @@ UI_EXPORT void ui_focus(const char* id) {
         if (active->context->GetFocusElement() == element) return;
         element->Focus();
         element->ScrollIntoView({Rml::ScrollAlignment::Nearest, Rml::ScrollAlignment::Nearest});
+        active->layout_dirty = true;
     }
 }
 UI_EXPORT void ui_reveal(const char* id) {
@@ -375,6 +411,7 @@ UI_EXPORT void ui_reveal(const char* id) {
             Rml::ScrollAlignment::Start : Rml::ScrollAlignment::Nearest;
         options.parentage = Rml::ScrollParentage::Closest;
         element->ScrollIntoView(options);
+        active->layout_dirty = true;
     }
 }
 UI_EXPORT void ui_mouse(int x, int y, int button, int down) {
@@ -388,6 +425,7 @@ UI_EXPORT void ui_mouse(int x, int y, int button, int down) {
         while (hovered && !hovered->HasAttribute("action")) hovered = hovered->GetParentNode();
         if (hovered && !hovered->HasAttribute("disabled")) hovered->Focus();
     }
+    if (moved || button >= 0) active->layout_dirty = true;
     if (button >= 0) {
         if (down) active->context->ProcessMouseButtonDown(button, 0);
         else active->context->ProcessMouseButtonUp(button, 0);
@@ -398,13 +436,36 @@ UI_EXPORT int ui_bounds(const char* id, float* x, float* y, float* width, float*
     update_document_layout();
     auto* element = active->document->GetElementById(id);
     if (!element || !element->IsVisible(true)) return 0;
-    const auto offset = element->GetAbsoluteOffset(Rml::BoxArea::Content);
-    const auto size = element->GetBox().GetSize(Rml::BoxArea::Content);
+    Rml::Rectanglef bounds;
+    if (!Rml::ElementUtilities::GetBoundingBox(bounds, element, Rml::BoxArea::Content)) return 0;
+    const auto offset = bounds.Position();
+    const auto size = bounds.Size();
     *x = offset.x; *y = offset.y; *width = size.x; *height = size.y;
     return size.x > 0 && size.y > 0;
 }
+UI_EXPORT void ui_scroll_to(const char* id, float position) {
+    if (!active || !active->document || !id || !std::isfinite(position)) return;
+    update_document_layout();
+    if (auto* element = active->document->GetElementById(id)) {
+        const float extent = std::max(0.f, element->GetScrollHeight() - element->GetClientHeight());
+        const float top = std::clamp(position, 0.f, 1.f) * extent;
+        if (std::abs(element->GetScrollTop() - top) > 0.01f) {
+            element->SetScrollTop(top);
+            active->layout_dirty = true;
+        }
+    }
+}
+UI_EXPORT float ui_scroll_position(const char* id) {
+    if (!active || !active->document || !id) return 0.f;
+    update_document_layout();
+    if (auto* element = active->document->GetElementById(id)) {
+        const float extent = element->GetScrollHeight() - element->GetClientHeight();
+        if (extent > 0.f) return std::clamp(element->GetScrollTop() / extent, 0.f, 1.f);
+    }
+    return 0.f;
+}
 UI_EXPORT void ui_scroll(float delta) {
-    if (active->context) active->context->ProcessMouseWheel(delta, 0);
+    if (active->context) { active->context->ProcessMouseWheel(delta, 0); active->layout_dirty = true; }
 }
 UI_EXPORT void ui_key(int key) {
     if (!active->document) return;
@@ -432,22 +493,25 @@ UI_EXPORT void ui_key(int key) {
     } else if (key != 0) {
         const bool vertical = std::abs(key) == 2;
         const int direction = key > 0 ? 1 : -1;
-        const auto center = [](Rml::Element* e) {
-            return e->GetAbsoluteOffset(Rml::BoxArea::Border) + e->GetBox().GetSize(Rml::BoxArea::Border) * 0.5f;
+        const auto box = [](Rml::Element* e) {
+            Rml::Rectanglef bounds;
+            if (!Rml::ElementUtilities::GetBoundingBox(bounds, e, Rml::BoxArea::Border))
+                bounds = Rml::Rectanglef::FromPositionSize(e->GetAbsoluteOffset(Rml::BoxArea::Border), e->GetBox().GetSize(Rml::BoxArea::Border));
+            return bounds;
         };
-        const auto from = center(active->controls[index]);
+        const auto from = box(active->controls[index]).Center();
         float best = std::numeric_limits<float>::max();
         Rml::Element* next = nullptr;
         for (auto* candidate : active->controls) {
             if (candidate == active->controls[index] || !candidate->IsVisible(true) || candidate->HasAttribute("disabled")) continue;
             if (!vertical) {
-                const auto origin_top = active->controls[index]->GetAbsoluteOffset(Rml::BoxArea::Border).y;
-                const auto origin_bottom = origin_top + active->controls[index]->GetBox().GetSize(Rml::BoxArea::Border).y;
-                const auto target_top = candidate->GetAbsoluteOffset(Rml::BoxArea::Border).y;
-                const auto target_bottom = target_top + candidate->GetBox().GetSize(Rml::BoxArea::Border).y;
+                const auto origin_top = box(active->controls[index]).Top();
+                const auto origin_bottom = box(active->controls[index]).Bottom();
+                const auto target_top = box(candidate).Top();
+                const auto target_bottom = box(candidate).Bottom();
                 if (std::min(origin_bottom, target_bottom) <= std::max(origin_top, target_top)) continue;
             }
-            const auto delta = center(candidate) - from;
+            const auto delta = box(candidate).Center() - from;
             const float forward = (vertical ? delta.y : delta.x) * direction;
             if (forward < 1) continue;
             const float sideways = vertical ? delta.x : delta.y;
@@ -459,4 +523,5 @@ UI_EXPORT void ui_key(int key) {
         active->pending_action = active->controls[index]->GetAttribute<Rml::String>("action", "");
         active->pending_target = active->controls[index]->GetAttribute<Rml::String>("target", "");
     }
+    active->layout_dirty = true;
 }
