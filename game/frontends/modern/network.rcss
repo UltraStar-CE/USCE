@@ -1,0 +1,6 @@
+.settings-select-icon, .settings-select { display: none; }
+.network-insert-icon { left: 52vw; } .network-insert { left: 55vw; }
+.network-delete-icon { left: 68.25vw; } .network-delete { left: 71.25vw; }
+.network-back-icon { left: 84.5vw; } .network-back { left: 87.5vw; }
+
+.footer-labels, .reflection-clip { z-index: 1; }

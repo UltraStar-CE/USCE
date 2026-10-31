@@ -1,0 +1,26 @@
+<rml>
+<head>
+  <link type="text/rcss" href="network.rcss" />
+  <title>Modern network settings</title>
+  <link type="text/template" href="settings-form-template.rml" />
+</head>
+<body template="settings-form">
+  <div class="network-notice" data-if="data.form.notice != ''">{{ data.form.notice }}</div>
+<div class="footer-labels">
+  <img class="legend-icon network-insert-icon" src="../../themes/Modern/[button]ins.png" />
+  <span class="legend network-insert" lang="SING_OPTIONS_NETWORK_LEGEND_INSERT" />
+  <img class="legend-icon network-delete-icon" src="../../themes/Modern/[button]del.png" />
+  <span class="legend network-delete" lang="SING_OPTIONS_NETWORK_LEGEND_DELETE" />
+  <img class="legend-icon network-back-icon" src="../../themes/Modern/[button]esc.png" />
+  <span class="legend network-back" lang="SING_LEGEND_ESC" />
+</div>
+<div class="reflection-clip"><div class="footer-labels">
+  <img class="legend-icon network-insert-icon" src="../../themes/Modern/[button]ins.png" />
+  <span class="legend network-insert" lang="SING_OPTIONS_NETWORK_LEGEND_INSERT" />
+  <img class="legend-icon network-delete-icon" src="../../themes/Modern/[button]del.png" />
+  <span class="legend network-delete" lang="SING_OPTIONS_NETWORK_LEGEND_DELETE" />
+  <img class="legend-icon network-back-icon" src="../../themes/Modern/[button]esc.png" />
+  <span class="legend network-back" lang="SING_LEGEND_ESC" />
+</div></div>
+</body>
+</rml>

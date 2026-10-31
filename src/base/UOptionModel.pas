@@ -14,6 +14,7 @@ type
     Kind: TOptionKind;
     Visible: boolean;
     InlineChoices: boolean;
+    Arrows: boolean;
     Values: array of UTF8String;
     constructor Create(const AKey: UTF8String; AKind: TOptionKind);
     procedure Bind(var AData: integer; const AValues: array of UTF8String);
@@ -28,6 +29,7 @@ begin
   Key := AKey;
   Kind := AKind;
   Visible := true;
+  Arrows := true;
 end;
 procedure TOptionModel.Bind(var AData: integer; const AValues: array of UTF8String);
 var I: integer;

@@ -27,8 +27,11 @@
           <div class="form-surface" data-attr-id="'field-surface-' + field.id" />
         </div>
       </div>
+      <div class="form-footer">
       <button id="form-back" class="form-back" action="navigation.back" data-class-selected="data.form.backSelected"><span lang="SING_OPTIONS_EXIT" /></button>
-      <div class="form-back-reflection" data-class-selected="data.form.backSelected" />
+      <button data-for="command : data.form.commands" class="form-extra-command" action="form.activate" data-attr-id="'command-' + command.id" data-attr-target="command.id" data-class-selected="command.selected"><span>{{ command.label }}</span></button>
+      </div>
+      <div id="form-back-reflection" class="form-back-reflection" data-class-selected="data.form.backSelected" />
     </div>
     <div id="form-components" />
     <svg class="footer" src="footer.svg" />

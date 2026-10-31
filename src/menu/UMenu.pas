@@ -231,6 +231,8 @@ TOptionsMenu = class(TMenu)
     DocumentUI: TDocumentUI;
     Fields: array of TOptionModel;
     DocumentPreview: boolean;
+    DocumentBack: integer;
+    DocumentNotice: UTF8String;
     function AddField(const Key: UTF8String; Kind: TOptionKind): integer;
     procedure SyncDocument;
   protected
@@ -244,6 +246,9 @@ TOptionsMenu = class(TMenu)
     procedure SetOptionLabel(InteractionID: integer; const Key: UTF8String);
     procedure SetOptionVisible(SelectNum: integer; Value: boolean);
     procedure SetOptionInline(SelectNum: integer);
+    procedure SetOptionArrows(SelectNum: integer; Value: boolean);
+    function AddDocumentCommand(const Key: UTF8String): integer;
+    procedure SetDocumentNotice(const Value: UTF8String);
     procedure OptionChanged(SelectNum: integer); virtual;
     procedure Load;
     procedure LoadWidgets; virtual; abstract;
@@ -2295,7 +2300,7 @@ begin
     DocumentUI.SetValue(uiFormDescription, Description);
     DocumentUI.SetValue(uiFormWhereAmI, WhereAmI);
     LoadWidgets;
-    AddField('SING_OPTIONS_EXIT', okButton);
+    DocumentBack := AddField('SING_OPTIONS_EXIT', okButton);
     Interaction := 0;
     Exit;
   end;
@@ -2431,6 +2436,22 @@ begin
     Button[Interactions[InteractionID].Num].Text[0].Text := Language.Translate(Key);
 end;
 
+function TOptionsMenu.AddDocumentCommand(const Key: UTF8String): integer;
+begin
+  Result := AddField(Key, okButton);
+end;
+
+procedure TOptionsMenu.SetDocumentNotice(const Value: UTF8String);
+begin
+  DocumentNotice := Value;
+end;
+
+procedure TOptionsMenu.SetOptionArrows(SelectNum: integer; Value: boolean);
+begin
+  if DocumentUI <> nil then Fields[SelectNum].Arrows := Value
+  else SelectsS[SelectNum].ShowArrows := Value;
+end;
+
 procedure TOptionsMenu.SetOptionInline(SelectNum: integer);
 begin
   if DocumentUI <> nil then Fields[SelectNum].InlineChoices := true;
@@ -2527,8 +2548,9 @@ procedure TOptionsMenu.SyncDocument;
 var I, J, Count: integer; Prefix, Choice: UTF8String;
 begin
   DocumentUI.SetModel(uiFormPreview, IntToStr(Ord(DocumentPreview)), 2);
-  DocumentUI.SetArray(uiFormFields, Length(Fields) - 1);
-  for I := 0 to High(Fields) - 1 do
+  DocumentUI.SetModel('form.notice', DocumentNotice);
+  DocumentUI.SetArray(uiFormFields, DocumentBack);
+  for I := 0 to DocumentBack - 1 do
   begin
     Prefix := uiFormFields + '[' + IntToStr(I) + '].';
     DocumentUI.SetModel(Prefix + 'id', IntToStr(I), 1);
@@ -2549,13 +2571,22 @@ begin
     DocumentUI.SetModel(Prefix + 'visible', IntToStr(Ord(Fields[I].Visible)), 2);
     DocumentUI.SetModel(Prefix + 'kind', IntToStr(Ord(Fields[I].Kind)), 1);
     DocumentUI.SetModel(Prefix + 'selected', IntToStr(Ord(I = Interaction)), 2);
-    DocumentUI.SetModel(Prefix + 'previous', IntToStr(Ord(Fields[I].Selected > 0)), 2);
-    DocumentUI.SetModel(Prefix + 'next', IntToStr(Ord(Fields[I].Selected < High(Fields[I].Values))), 2);
+    DocumentUI.SetModel(Prefix + 'previous', IntToStr(Ord(Fields[I].Arrows and (Fields[I].Selected > 0))), 2);
+    DocumentUI.SetModel(Prefix + 'next', IntToStr(Ord(Fields[I].Arrows and (Fields[I].Selected < High(Fields[I].Values)))), 2);
   end;
-  DocumentUI.SetModel('form.backSelected', IntToStr(Ord(Interaction = High(Fields))), 2);
-  if Interaction = High(Fields) then DocumentUI.Focus('form-back')
+  DocumentUI.SetArray('form.commands', Length(Fields) - DocumentBack - 1);
+  for I := DocumentBack + 1 to High(Fields) do
+  begin
+    Prefix := 'form.commands[' + IntToStr(I - DocumentBack - 1) + '].';
+    DocumentUI.SetModel(Prefix + 'id', IntToStr(I), 1);
+    DocumentUI.SetModel(Prefix + 'label', Language.Translate(Fields[I].Key));
+    DocumentUI.SetModel(Prefix + 'selected', IntToStr(Ord(I = Interaction)), 2);
+  end;
+  DocumentUI.SetModel('form.backSelected', IntToStr(Ord(Interaction = DocumentBack)), 2);
+  if Interaction = DocumentBack then DocumentUI.Focus('form-back')
+  else if Interaction > DocumentBack then DocumentUI.Focus('command-' + IntToStr(Interaction))
   else DocumentUI.Focus('field-' + IntToStr(Interaction));
-  if (Interaction >= 0) and (Interaction < High(Fields)) and Fields[Interaction].InlineChoices then
+  if (Interaction >= 0) and (Interaction < DocumentBack) and Fields[Interaction].InlineChoices then
     DocumentUI.Reveal('choice-' + IntToStr(Interaction) + '-' + IntToStr(Fields[Interaction].Selected));
 end;
 

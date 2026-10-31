@@ -67,8 +67,8 @@ button:focus span { font-weight: bold; }
 .form-fields scrollbarvertical { width: 1vw; }
 .form-fields scrollbarvertical sliderbar { background-color: #dfdfdf; }
 .form-fields scrollbarvertical slidertrack { background-color: transparent; }
-.form-row { position: relative; display: flex; width: 82.5vw; height: 5.833333vh; margin-left: 2.625vw; margin-bottom: 0.833333vh; }
-.form-row:last-child { margin-bottom: 0; }
+.form-row { position: relative; display: flex; width: 82.5vw; height: 5.833333vh; margin-left: 2.625vw; margin-top: 0.833333vh; }
+.form-row:first-child { margin-top: 0; }
 .form-row button { height: 5.833333vh; font-size: 3.75vh; flex-shrink: 0; }
 .form-row button span { margin-top: 0.5vh; white-space: nowrap; overflow: hidden; }
 .form-label { white-space: nowrap; overflow: hidden; width: 31.25vw; text-align: left; padding-left: 2.5vw; }
@@ -87,7 +87,7 @@ button:focus span { font-weight: bold; }
 .form-back span { margin-top: 0.5vh; }
 .form-back.selected { background-color: #7ec5eae6; font-weight: bold; }
 
-.form-back-reflection { width: 31.25vw; height: 2.777778vh; margin-left: 2.625vw; margin-top: 0.277778vh; pointer-events: none; decorator: vertical-gradient(#42a3e780 #42a3e700); }
+.form-back-reflection { display: block; width: 31.25vw; height: 2.777778vh; margin-left: 2.625vw; margin-top: 0.277778vh; pointer-events: none; decorator: vertical-gradient(#42a3e780 #42a3e700); }
 .form-back-reflection.selected { decorator: vertical-gradient(#7ec5ea80 #7ec5ea00); }
 
 .lyrics-preview { position: absolute; left: 10vw; width: 80vw; height: 6.666667vh; pointer-events: none; }
@@ -116,3 +116,10 @@ button:focus span { font-weight: bold; }
 .about-credits, .about-back { position: absolute; left: 73.625vw; width: 23.75vw; height: 8.333333vh; font-size: 3.75vh; }
 .about-credits { top: 69.166667vh; } .about-back { top: 80vh; }
 .about-credits span, .about-back span { margin-top: 1.666667vh; }
+
+.form-footer { display: flex; width: 100%; }
+.form-footer button { flex-shrink: 0; }
+.form-extra-command { position: relative; margin-left: 28.75vw; margin-top: 2.083333vh; width: 22.5vw; height: 5.833333vh; font-size: 3.75vh; }
+.form-extra-command span { margin-top: 0.5vh; }
+.form-extra-command.selected { background-color: #7ec5eae6; font-weight: bold; }
+.network-notice { position: absolute; left: 26.25vw; top: 35.833333vh; width: 47.5vw; text-align: center; font-size: 3vh; }
