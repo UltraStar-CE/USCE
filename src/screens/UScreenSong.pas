@@ -37,6 +37,7 @@ uses
   UVoiceAssignments,
   Classes,
 
+  ULibraryRefresh,
   UCatCovers,
   UCommon,
   UDataBase,
@@ -113,11 +114,11 @@ type
       procedure DrawSearchField;
       procedure LayoutSearchHeader;
 
+      function HasSelection: boolean;
       procedure SchedulePreview(SelectionSettled: boolean = false);
       procedure StartMusicPreview();
       procedure StartVideoPreview();
       function GetSongButtonMouseOverArea(ButtonIndex: integer): TMouseOverRect;
-      function HasSelection: boolean;
       function ReloadCurrentPlaylist(ForceCheck: boolean): boolean;
     public
       TextConfiguration, StaticContinuousKey, StaticContinuousStatus: integer;
@@ -270,6 +271,7 @@ type
       procedure ClearSelection;
       procedure GenerateThumbnails();
       procedure SyncCoversToSongs();
+      procedure ApplyLibraryRefresh;
       procedure OnShow; override;
       destructor Destroy; override;
       procedure OnWindowResized; override;
@@ -422,6 +424,12 @@ begin
   end;
 
   Result := CatSongs.Song[SongIndex].Medley.Source >= msCalculated;
+end;
+
+function TScreenSong.HasSelection: boolean;
+begin
+  Result := (Interaction >= 0) and (Interaction <= High(CatSongs.Song)) and
+    CatSongs.Song[Interaction].Visible;
 end;
 
 function TScreenSong.FreeListMode: boolean;
@@ -626,12 +634,6 @@ end;
 procedure TScreenSong.ClearSelection;
 begin
   SelInteraction := -1;
-end;
-
-function TScreenSong.HasSelection: boolean;
-begin
-  Result := (Interaction >= 0) and (Interaction < Length(CatSongs.Song)) and
-    CatSongs.Song[Interaction].Visible;
 end;
 
 procedure TScreenSong.ParseInputNextHorizontal(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean);
@@ -1175,7 +1177,7 @@ begin
 
       SDLK_P: //Show Playlist Menu
         begin
-          if (Songs.SongList.Count > 0) and (FreeListMode) then
+          if HasSelection and FreeListMode then
           begin
             ScreenSongMenu.OnShow;
             ScreenSongMenu.MenuShow(SM_Playlist_Load);
@@ -1677,7 +1679,7 @@ begin
             Exit;
           end;
 
-          if (Mode = smNormal) and (CatSongs.Song[Interaction].isDuet) then
+          if HasSelection and (Mode = smNormal) and (CatSongs.Song[Interaction].isDuet) then
             begin
               VoiceAssignments.SelectSong(CatSongs.Song[Interaction]);
               VoiceAssignments.Rotate(CatSongs.Song[Interaction].VoiceCount);
@@ -2457,6 +2459,7 @@ begin
       CoverFile := Skin.GetTextureFileName('SongCover');
 
     CoverButton.Texture.Name := CoverFile;
+    Song.CoverTex.Free;
     Song.CoverTex := CoverButton.Texture.Clone();
     CoverButton.Selected := False;
   end;
@@ -2964,6 +2967,7 @@ end;
 
 procedure TScreenSong.SetChessboardScrollRefresh;
 begin
+  if (Interaction < 0) or (Interaction > High(Button)) then Exit;
   Statics[StaticActual].Visible := true;
   Statics[StaticActual].Texture.Free;
   if (Button[Interaction].Texture.Name.IsUnset) then
@@ -3080,6 +3084,7 @@ var
   Alpha: real;
 begin
   UpdateListSelectedText;
+  if (Interaction < 0) or (Interaction > High(Button)) then Exit;
 
   Statics[StaticActual].Visible := true;
   Statics[StaticActual].Texture.Free;
@@ -3733,6 +3738,7 @@ var
   end;
 
 begin
+  ApplyLibraryRefresh;
   UpdateTransitionPreview;
 
   FadeMessage();
@@ -4054,7 +4060,8 @@ var
   NextInt: integer;
   OriginalInteraction: integer;
 begin
-  if (Interaction < 0) or (Interaction >= Length(CatSongs.Song)) then Exit;
+  if (Interaction < 0) or (Interaction >= Length(Interactions)) or
+     (Interaction > High(CatSongs.Song)) then Exit;
   VS := CatSongs.VisibleSongs;
 
   if VS > 0 then
@@ -4109,7 +4116,7 @@ var
   PrevInt: integer;
   OriginalInteraction: integer;
 begin
-  if (Interaction < 0) or (Interaction >= Length(CatSongs.Song)) then Exit;
+  if not HasSelection then Exit;
   VS := CatSongs.VisibleSongs;
 
   if (VS > 0) then
@@ -4545,7 +4552,10 @@ var
 begin
   if (TSongMenuMode(Ini.SongMenu) = smRoulette) then
   begin
-    Interaction := High(CatSongs.Song);
+    if CatSongs.VisibleSongs = 0 then begin SelInteraction := -1; Exit; end;
+    // SelectNext requires a visible starting selection, including in playlists.
+    for i := High(CatSongs.Song) downto 0 do
+      if CatSongs.Song[i].Visible then begin Interaction := i; Break; end;
     SongTarget  := 0;
 
     for i := 1 to Target+1 do
@@ -5010,6 +5020,211 @@ begin
     Tex.CornerRadius := Theme.Song.Cover.CornerRadius;
     Button[NumberOfButtonInArray].Texture.Free;
     Button[NumberOfButtonInArray].Texture := Tex;
+  end;
+end;
+
+procedure TScreenSong.ApplyLibraryRefresh;
+var
+  Retired: TList;
+  SelectedPath, Category: UTF8String;
+  OldCategory, P, Item, I, Index, NewIndex: integer;
+  OldPosition, ListOffset, GridOffset, Candidate: integer;
+  PlaylistPaths, NewIds, VisiblePaths: TStringList;
+  Song: TSong;
+  EmptyMainMenu: boolean;
+  function SelectionKey(const Entry: TSong): UTF8String;
+  begin
+    if Entry.Main then Result := '#category:' + Entry.Artist
+    else Result := TLibraryRefresh.Key(Entry.Path.Append(Entry.FileName));
+  end;
+  function VisiblePathIndex(const Key: UTF8String): integer;
+  var Found: integer;
+  begin
+    Result := -1;
+    Found := NewIds.IndexOf(Key);
+    if Found < 0 then Exit;
+    Found := PtrInt(NewIds.Objects[Found]) - 1;
+    if CatSongs.Song[Found].Visible then Result := Found;
+  end;
+begin
+  EmptyMainMenu := (Display.CurrentScreen = @ScreenMain) and (Songs.SongList.Count = 0);
+  if EmptyMainMenu then
+  begin
+    if not ScreenMain.ShowFinish then Exit;
+  end
+  else if not ShowFinish or (Display.CurrentScreen <> @ScreenSong) then Exit;
+  if (Display.NextScreen <> nil) or (Display.NextScreenWithCheck <> nil) or
+     (Mode <> smNormal) or (isScrolling and (CatSongs.VisibleSongs > 0)) or
+     MakeMedley or ScreenSongMenu.Visible or
+     ScreenPopupError.Visible or ScreenPopupCheck.Visible or
+     ScreenPopupHelp.Visible or ScreenPopupInfo.Visible or
+     ScreenSongJumpto.Visible or ScreenContinuousPlayback.Session.Active or
+     not Songs.RefreshReady then Exit;
+  SelectedPath := '';
+  Category := '';
+  OldCategory := CatSongs.CatNumShow;
+  OldPosition := 0;
+  if (Interaction >= 0) and (Interaction < Length(CatSongs.Song)) then
+  begin
+    Song := CatSongs.Song[Interaction];
+    SelectedPath := SelectionKey(Song);
+    OldPosition := Max(0, CatSongs.VisibleIndex(Interaction));
+  end;
+  ListOffset := EnsureRange(OldPosition - ListMinLine, 0, Max(0, Theme.Song.ListCover.Rows - 1));
+  GridOffset := EnsureRange(OldPosition div Max(1, Theme.Song.Cover.Cols) - ChessboardMinLine,
+    0, Max(0, Theme.Song.Cover.Rows - 1));
+  if OldCategory >= 0 then
+    for I := 0 to High(CatSongs.Song) do
+      if CatSongs.Song[I].Main and (CatSongs.Song[I].OrderNum = OldCategory) then
+        Category := CatSongs.Song[I].Artist;
+  PlaylistPaths := TStringList.Create;
+  NewIds := TStringList.Create;
+  VisiblePaths := TStringList.Create;
+  try
+    for I := 0 to High(CatSongs.Song) do
+      if CatSongs.Song[I].Visible then VisiblePaths.Add(SelectionKey(CatSongs.Song[I]));
+    for P := 0 to High(PlaylistMan.Playlists) do
+      for Item := 0 to High(PlaylistMan.Playlists[P].Items) do
+      begin
+        I := PlaylistMan.Playlists[P].Items[Item].SongID;
+        if (I >= 0) and (I < Length(CatSongs.Song)) then
+          PlaylistPaths.Add(TLibraryRefresh.Key(CatSongs.Song[I].Path.Append(CatSongs.Song[I].FileName)))
+        else PlaylistPaths.Add('');
+      end;
+    if not Songs.PublishRefresh(Retired) then
+    begin
+      WriteMessage(Language.Translate('LIBRARY_REFRESH_FAILED'));
+      Exit;
+    end;
+    try
+      // No running song/editor is changed. Release only the selection preview now.
+      StopMusicPreview;
+      StopVideoPreview;
+      AudioPlayback.Close;
+      TransitionSong := nil;
+      CurrentSong := nil;
+      VoiceAssignments.Reset;
+      KeepPreviewPositionOnShow := false;
+      for I := 0 to High(CatSongs.Song) do
+        if CatSongs.Song[I].Main then CatSongs.Song[I].Free;
+      SetLength(CatSongs.Song, 0);
+      CatSongs.Refresh;
+      GenerateThumbnails;
+      if Length(Button) = 0 then SelInteraction := -1;
+      NewIds.Sorted := true;
+      NewIds.CaseSensitive := true;
+      for I := 0 to High(CatSongs.Song) do
+        if not CatSongs.Song[I].Main then
+          NewIds.AddObject(TLibraryRefresh.Key(CatSongs.Song[I].Path.Append(CatSongs.Song[I].FileName)), TObject(PtrInt(I + 1)));
+      Index := 0;
+      for P := 0 to High(PlaylistMan.Playlists) do
+        for Item := 0 to High(PlaylistMan.Playlists[P].Items) do
+        begin
+          I := NewIds.IndexOf(PlaylistPaths[Index]);
+          if I >= 0 then
+          begin
+            NewIndex := PtrInt(NewIds.Objects[I]) - 1;
+            PlaylistMan.Playlists[P].Items[Item].SongID := NewIndex;
+            PlaylistMan.Playlists[P].Items[Item].Artist := CatSongs.Song[NewIndex].Artist;
+            PlaylistMan.Playlists[P].Items[Item].Title := CatSongs.Song[NewIndex].Title;
+          end;
+          Inc(Index);
+        end;
+      PlaylistMan.ReindexAllPlaylists;
+      if not EmptyMainMenu then OnShow;
+      if (OldCategory = -3) and (PlaylistMan.CurPlaylist >= 0) then
+        PlaylistMan.ApplyPlayList(PlaylistMan.CurPlaylist)
+      else if Category <> '' then
+      begin
+        for I := 0 to High(CatSongs.Song) do
+          if CatSongs.Song[I].Main and (CatSongs.Song[I].Artist = Category) then
+          begin CatSongs.ShowCategory(CatSongs.Song[I].OrderNum); Break; end;
+      end;
+      ScreenSongJumpto.LibraryChanged(OldCategory);
+      // Playlist order/filter application can reorder category indices.
+      NewIds.Clear;
+      for I := 0 to High(CatSongs.Song) do
+        NewIds.AddObject(SelectionKey(CatSongs.Song[I]), TObject(PtrInt(I + 1)));
+      NewIndex := VisiblePathIndex(SelectedPath);
+      // Keep a surviving neighbour in the old visible order, not the first song.
+      if NewIndex < 0 then
+        for Candidate := OldPosition + 1 to VisiblePaths.Count - 1 do
+        begin
+          NewIndex := VisiblePathIndex(VisiblePaths[Candidate]);
+          if NewIndex >= 0 then Break;
+        end;
+      if NewIndex < 0 then
+        for Candidate := Min(OldPosition - 1, VisiblePaths.Count - 1) downto 0 do
+        begin
+          NewIndex := VisiblePathIndex(VisiblePaths[Candidate]);
+          if NewIndex >= 0 then Break;
+        end;
+      if NewIndex < 0 then
+      begin
+        Index := 0;
+        for I := 0 to High(CatSongs.Song) do
+          if CatSongs.Song[I].Visible then
+          begin
+            NewIndex := I;
+            if Index >= OldPosition then Break;
+            Inc(Index);
+          end;
+      end;
+      if NewIndex >= 0 then Interaction := NewIndex else SelInteraction := -1;
+      if Interaction >= 0 then
+      begin
+        I := CatSongs.VisibleIndex(Interaction);
+        ListMinLine := I - ListOffset;
+        ChessboardMinLine := I div Max(1, Theme.Song.Cover.Cols) - GridOffset;
+        FixSelected;
+        if TSongMenuMode(Ini.SongMenu) = smRoulette then
+        begin
+          isScrolling := false;
+          OnSongSelect;
+        end
+        else SkipTo(CatSongs.VisibleIndex(Interaction), Interaction);
+        CatSongs.Selected := Interaction;
+        SetScrollRefresh;
+      end;
+      ResetRandomSongState;
+      if Interaction < 0 then
+      begin
+        CatSongs.Selected := -1;
+        isScrolling := false;
+        SongCurrent := 0;
+        SongTarget := 0;
+        ListMinLine := 0;
+        ChessboardMinLine := 0;
+        PreviewEnd := 0;
+        PreviewOpened := -1;
+        LastPreviewStartTime := 0;
+        PreviewSettledTime := 0;
+        SetDuetSingerVisibility(0);
+        for I := 0 to High(ListTextArtist) do
+        begin
+          Text[ListTextArtist[I]].Visible := false;
+          Text[ListTextTitle[I]].Visible := false;
+          Text[ListTextYear[I]].Visible := false;
+          Statics[ListVideoIcon[I]].Visible := false;
+          Statics[ListDuetIcon[I]].Visible := false;
+        end;
+        Statics[VideoIcon].Visible := false;
+        Statics[DuetIcon].Visible := false;
+        Statics[StaticActual].Visible := false;
+        Text[TextArtist].Text := '';
+        Text[TextTitle].Text := '';
+        Text[TextYear].Text := '';
+        SongScore;
+      end;
+      WriteMessage(Language.Translate('LIBRARY_REFRESH_FINISHED'));
+    finally
+      for I := 0 to Retired.Count - 1 do TObject(Retired[I]).Free;
+      Retired.Free;
+    end;
+  finally
+    NewIds.Free;
+    PlaylistPaths.Free;
+    VisiblePaths.Free;
   end;
 end;
 
