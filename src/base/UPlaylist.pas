@@ -1020,7 +1020,7 @@ end;
 procedure TPlayListManager.MoveSongIndex(const OldIndex, NewIndex: Integer);
 var
   SongRef: TSong;
-  I: Integer;
+  I, P, Item, SongID: Integer;
 begin
   if (OldIndex < 0) or (OldIndex > High(CatSongs.Song)) or
      (NewIndex < 0) or (NewIndex > High(CatSongs.Song)) or
@@ -1041,12 +1041,23 @@ begin
   end;
 
   CatSongs.Song[NewIndex] := SongRef;
+  for P := 0 to High(Playlists) do
+    for Item := 0 to High(Playlists[P].Items) do
+    begin
+      SongID := Playlists[P].Items[Item].SongID;
+      if SongID = OldIndex then SongID := NewIndex
+      else if (OldIndex > NewIndex) and (SongID >= NewIndex) and (SongID < OldIndex) then Inc(SongID)
+      else if (OldIndex < NewIndex) and (SongID > OldIndex) and (SongID <= NewIndex) then Dec(SongID);
+      Playlists[P].Items[Item].SongID := SongID;
+    end;
 end;
 
 procedure TPlayListManager.ReindexAllPlaylists;
 var
   P, I, NewIndex: Integer;
 begin
+  // The caller has rebuilt the catalog in its normal order.
+  SongOrderDirty := False;
   for P := 0 to High(Playlists) do
   begin
     for I := 0 to High(Playlists[P].Items) do
@@ -1072,13 +1083,11 @@ begin
 
   for I := High(Playlists[Index].Items) downto 0 do
   begin
-    SongIdx := FindSongIndexByNames(Playlists[Index].Items[I].Artist,
-                                    Playlists[Index].Items[I].Title);
+    SongIdx := Playlists[Index].Items[I].SongID;
     if SongIdx <> -1 then
       MoveSongIndex(SongIdx, 0);
   end;
 
-  ReindexAllPlaylists;
   SongOrderDirty := True;
 end;
 
