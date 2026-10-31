@@ -34,6 +34,7 @@ interface
 {$I switches.inc}
 
 uses
+  UDocumentUI,
   UVoiceAssignments,
   UCatCovers,
   UCommon,
@@ -62,6 +63,30 @@ uses
 type
   TVisArr = array of integer;
   TScreenSong = class(TMenu)
+    private
+      LibraryUI: TDocumentUI;
+      LibraryVisible: array of integer;
+      LibraryMouseX, LibraryMouseY: integer;
+      LibraryColumns, LibraryRows, LibraryOrdinal: integer;
+      LibraryBoundColumns, LibraryBoundRows: integer;
+      LibraryCategory, LibraryMessage: UTF8String;
+      LibraryScoreSong, LibraryMetadataSong: TSong;
+      LibraryScoreMode: TSingMode;
+      LibraryScoreLevel, LibraryScoreWebsite, LibraryScoreVisibility: integer;
+      LibraryFFT: TFFTData;
+      LibraryBands: array of single;
+      LibraryFFTRefresh: cardinal;
+      LibraryDirty: boolean;
+      LibraryWindowStart, LibraryWindowSize, LibraryLastSelection: integer;
+      procedure SyncLibrarySpectrum;
+      procedure SyncLibraryScores;
+      procedure SyncLibraryModes;
+      procedure StepLibrary(Delta: integer; Wrap: boolean);
+      procedure MeasureLibrary;
+      procedure RebuildLibraryIndex;
+      procedure SyncLibraryDocument;
+      function ParseLibraryDocumentMouse(MouseButton: integer; Down: boolean; X, Y: integer): boolean;
+      function DrawLibraryDocument: boolean;
     private
       Equalizer: Tms_Equalizer;
 
@@ -229,6 +254,9 @@ type
       NextRandomSearchIdx: cardinal;
 
       constructor Create; override;
+      destructor Destroy; override;
+      procedure SetInteraction(Num: integer); override;
+      function DrawBG: boolean; override;
       procedure SetScroll;
       procedure SetScrollRefresh;
 
@@ -356,8 +384,426 @@ begin
   Result := GetPlayerColor(Ini.SingColor[PlayerIndex]);
 end;
 
+destructor TScreenSong.Destroy;
+begin LibraryUI.Free; inherited; end;
+
+procedure TScreenSong.SetInteraction(Num: integer);
+begin
+  if LibraryUI <> nil then SelInteraction := Num else inherited SetInteraction(Num);
+end;
+
+function TScreenSong.DrawBG: boolean;
+begin
+  if LibraryUI <> nil then Result := LibraryUI.Draw(true) else Result := inherited DrawBG;
+end;
+
+{ Document layout and action targets are theme-owned; video is the only native surface. }
+procedure TScreenSong.RebuildLibraryIndex;
+var I, N: integer;
+begin
+  N := 0;
+  SetLength(LibraryVisible, Length(CatSongs.Song));
+  for I := 0 to High(CatSongs.Song) do
+    if CatSongs.Song[I].Visible then
+    begin LibraryVisible[N] := I; Inc(N); end;
+  SetLength(LibraryVisible, N);
+  LibraryDirty := false;
+  LibraryLastSelection := -1; LibraryOrdinal := -1;
+  LibraryMetadataSong := nil; LibraryScoreSong := nil;
+end;
+
+procedure TScreenSong.SyncLibraryDocument;
+var
+  View, Cell: TDocumentRegion;
+  I, N, Index, Ordinal, Columns, Rows, Count, First, Voice: integer; Relative: double;
+  Prefix, Layout, CoverName: UTF8String;
+  Song: TSong;
+  CoverFile: IPath;
+  Color: TRGB;
+  function Number(Value: double): UTF8String;
+  var Settings: TFormatSettings;
+  begin Settings := DefaultFormatSettings; Settings.DecimalSeparator := '.';
+    Result := FloatToStr(Value, Settings); end;
+  procedure Put(const Name, Value: UTF8String; Kind: integer = 0);
+  begin LibraryUI.SetModel('library.' + Name, Value, Kind); end;
+  function CoverPath(S: TSong): UTF8String;
+  begin
+    if S.Cover.IsSet then CoverFile := S.Path.Append(S.Cover)
+    else CoverFile := Skin.GetTextureFileName('SongCover');
+    if not CoverFile.IsFile then CoverFile := Skin.GetTextureFileName('SongCover');
+    Result := CoverFile.ToUTF8(false);
+  end;
+begin
+  if LibraryDirty then RebuildLibraryIndex;
+  case TSongMenuMode(Ini.SongMenu) of
+    smList: Layout := 'list'; smChessboard: Layout := 'chessboard';
+    else Layout := 'roulette';
+  end;
+  Put('layout', Layout);
+  Put('selected', IntToStr(Interaction), 1);
+  Put('total', IntToStr(Length(LibraryVisible)), 1);
+  Put('current', Number(SongCurrent), 3);
+  Put('aspect', Number(ScreenW / ScreenH), 3);
+  if LibraryLastSelection <> Interaction then
+  begin
+    LibraryOrdinal := -1;
+    for I := 0 to High(LibraryVisible) do
+      if LibraryVisible[I] = Interaction then begin LibraryOrdinal := I; Break; end;
+  end;
+  Ordinal := LibraryOrdinal;
+  Put('position', IntToStr(Ordinal + 1), 1);
+  Columns := 1; Rows := 1;
+  if LibraryUI.Region('library-window', View) and LibraryUI.Region('library-measure', Cell) then
+  begin
+    if Cell.W > 0 then Columns := Max(1, Floor(View.W / Cell.W + 0.01));
+    if Cell.H > 0 then Rows := Max(1, Floor(View.H / Cell.H + 0.01));
+  end;
+  Count := Max(1, Columns * Rows);
+  if Layout = 'roulette' then begin Count := Min(5, Length(LibraryVisible)); First := Ordinal - Count div 2; end
+  else
+  begin
+    First := Max(0, LibraryWindowStart);
+    if Ordinal < First then First := Max(0, (Ordinal div Columns) * Columns)
+    else if Ordinal >= First + Count then First := Max(0, ((Ordinal div Columns) - Rows + 1) * Columns);
+  end;
+  if Layout <> 'roulette' then First := Min(First, Max(0, Length(LibraryVisible) - Count));
+  if Layout = 'roulette' then N := Count else N := Min(Count, Length(LibraryVisible) - First);
+  { A bounded viewport prevents thousands of offscreen cover images being decoded. }
+  if (LibraryLastSelection <> Interaction) or (LibraryWindowStart <> First) or
+     (LibraryWindowSize <> N) or (LibraryBoundColumns <> Columns) or
+     (LibraryBoundRows <> Rows) then
+  begin
+    LibraryUI.SetArray('library.songs', N);
+    for I := 0 to N - 1 do
+    begin
+      Index := LibraryVisible[((First + I) mod Length(LibraryVisible) + Length(LibraryVisible)) mod Length(LibraryVisible)]; Song := CatSongs.Song[Index];
+      Prefix := 'songs[' + IntToStr(I) + '].';
+      Put(Prefix + 'id', IntToStr(Index), 1);
+      Put(Prefix + 'ordinal', IntToStr(((First + I) mod Length(LibraryVisible) + Length(LibraryVisible)) mod Length(LibraryVisible)), 1);
+      Put(Prefix + 'artist', Song.Artist); Put(Prefix + 'title', Song.Title);
+      if Song.Year > 0 then Put(Prefix + 'year', IntToStr(Song.Year))
+      else Put(Prefix + 'year', '');
+      Put(Prefix + 'cover', CoverPath(Song));
+      Put(Prefix + 'video', IntToStr(Ord(Song.Video.IsSet)), 2);
+      Put(Prefix + 'duet', IntToStr(Ord(Song.isDuet)), 2);
+      Put(Prefix + 'category', IntToStr(Ord(Song.Main)), 2);
+      Put(Prefix + 'row', Number((I div Columns) * 100 / Rows), 3);
+      Put(Prefix + 'column', Number((I mod Columns) * 100 / Columns), 3);
+    end;
+    LibraryWindowStart := First; LibraryWindowSize := N;
+    LibraryBoundColumns := Columns; LibraryBoundRows := Rows;
+    LibraryLastSelection := Interaction;
+  end;
+  if Layout = 'roulette' then
+    for I := 0 to N - 1 do
+    begin
+      Relative := ((First + I) mod Length(LibraryVisible) + Length(LibraryVisible)) mod Length(LibraryVisible) - SongCurrent;
+      if Relative < -Length(LibraryVisible) / 2 then Relative := Relative + Length(LibraryVisible);
+      if Relative > Length(LibraryVisible) / 2 then Relative := Relative - Length(LibraryVisible);
+      Put('songs[' + IntToStr(I) + '].relative', Number(Relative), 3);
+    end;
+  if (Interaction < 0) or (Interaction > High(CatSongs.Song)) then
+  begin
+    Put('artist', ''); Put('title', ''); Put('year', ''); Put('cover', '');
+    LibraryUI.SetArray('library.players', 0); Exit;
+  end;
+  Song := CatSongs.Song[Interaction];
+  if LibraryMetadataSong <> Song then
+  begin
+    Put('artist', Song.Artist);
+    if Song.Main then
+    begin
+      if Song.CatNumber = 1 then Put('title', '(' + IntToStr(Song.CatNumber) + ' ' + Language.Translate('SING_SONG_IN_CAT') + ')')
+      else Put('title', '(' + IntToStr(Song.CatNumber) + ' ' + Language.Translate('SING_SONGS_IN_CAT') + ')');
+    end
+    else Put('title', Song.Title);
+    if Song.Year > 0 then Put('year', IntToStr(Song.Year)) else Put('year', '');
+    Put('cover', CoverPath(Song)); LibraryMetadataSong := Song;
+  end;
+  Put('previewVideo', IntToStr(Ord(Assigned(fCurrentVideo))), 2);
+  if Assigned(fCurrentVideo) then
+  begin
+    if Layout = 'roulette' then Put('previewAlpha', Number(EnsureRange(CoverTime - 1, 0, 1)), 3)
+    else Put('previewAlpha', Number(EnsureRange((CoverTime - 1) * 1.5, 0, 1)), 3);
+  end
+  else Put('previewAlpha', '0', 3);
+  Put('video', IntToStr(Ord(Song.Video.IsSet)), 2);
+  Put('duet', IntToStr(Ord(Song.isDuet)), 2);
+
+  if Song.isDuet then Count := PlayersPlay else Count := 0;
+  LibraryUI.SetArray('library.players', Count);
+  if Count > 0 then VoiceAssignments.SelectSong(Song);
+  for I := 0 to Count - 1 do
+  begin
+    Prefix := 'players[' + IntToStr(I) + '].';
+    Voice := VoiceAssignments.VoiceForPlayer(I, Song.VoiceCount);
+    Put(Prefix + 'id', IntToStr(I), 1);
+    Put(Prefix + 'voice', Song.DuetNames[Voice]);
+    Color := GetSongPlayerColor(I);
+    Put(Prefix + 'tint', '#' + IntToHex(Round(Color.R * 255), 2) +
+      IntToHex(Round(Color.G * 255), 2) + IntToHex(Round(Color.B * 255), 2));
+  end;
+end;
+
+function TScreenSong.ParseLibraryDocumentMouse(MouseButton: integer; Down: boolean; X, Y: integer): boolean;
+var Action: UTF8String; Target, Voice: integer; Moved: boolean;
+begin
+  Result := true;
+  if Down and (MouseButton = SDL_BUTTON_RIGHT) and RightMbESC then
+  begin Result := ParseInput(SDLK_ESCAPE, 0, true); Exit; end;
+  if Down and (MouseButton = SDL_BUTTON_WHEELUP) then
+  begin
+    if TSongMenuMode(Ini.SongMenu) = smRoulette then Result := ParseInput(SDLK_LEFT, 0, true)
+    else Result := ParseInput(SDLK_UP, 0, true); Exit;
+  end;
+  if Down and (MouseButton = SDL_BUTTON_WHEELDOWN) then
+  begin
+    if TSongMenuMode(Ini.SongMenu) = smRoulette then Result := ParseInput(SDLK_RIGHT, 0, true)
+    else Result := ParseInput(SDLK_DOWN, 0, true); Exit;
+  end;
+  Moved := (X <> LibraryMouseX) or (Y <> LibraryMouseY);
+  LibraryMouseX := X; LibraryMouseY := Y;
+  if MouseButton = SDL_BUTTON_LEFT then LibraryUI.Mouse(X, Y, 0, Down)
+  else LibraryUI.Mouse(X, Y);
+  if (TSongMenuMode(Ini.SongMenu) <> smRoulette) and Moved and not Down and
+     TryStrToInt(LibraryUI.FocusedTarget, Target) and
+     (Target >= 0) and (Target <= High(CatSongs.Song)) and
+     CatSongs.Song[Target].Visible and (Target <> Interaction) then
+  begin
+    OnSongDeselect; Interaction := Target; FixSelected;
+    isScrolling := false; OnSongSelect; SchedulePreview(true);
+    SyncLibraryDocument;
+  end;
+  Action := LibraryUI.TakeAction;
+  if Action = 'library.activate' then
+  begin
+    Target := StrToIntDef(LibraryUI.ActionTarget, -1);
+    if (Target < 0) or (Target > High(CatSongs.Song)) or not CatSongs.Song[Target].Visible then Exit;
+    if Target <> Interaction then
+    begin
+      OnSongDeselect; Interaction := Target; FixSelected;
+      isScrolling := false; OnSongSelect; SchedulePreview(true);
+      SyncLibraryDocument;
+    end
+    else Result := ParseInput(SDLK_RETURN, 0, true);
+  end
+  else if Action = 'library.voice.next' then
+  begin
+    Target := StrToIntDef(LibraryUI.ActionTarget, -1);
+    if (Target < 0) or (Target >= PlayersPlay) or
+       (Interaction < 0) or (Interaction > High(CatSongs.Song)) or
+       not CatSongs.Song[Interaction].isDuet then Exit;
+    VoiceAssignments.SelectSong(CatSongs.Song[Interaction]);
+    Voice := VoiceAssignments.VoiceForPlayer(Target, CatSongs.Song[Interaction].VoiceCount);
+    VoiceAssignments.SetVoice(Target, (Voice + 1) mod CatSongs.Song[Interaction].VoiceCount,
+      CatSongs.Song[Interaction].VoiceCount);
+    SyncLibraryDocument;
+  end
+  else if Action = 'library.joker' then
+  begin
+    Target := StrToIntDef(LibraryUI.ActionTarget, -1);
+    if (Target >= 0) and (Target < Length(Party.Teams)) then DoJoker(Target, SDL_GetModState);
+  end
+  else if Action = 'library.previous' then Result := ParseInput(SDLK_LEFT, 0, true)
+  else if Action = 'library.next' then Result := ParseInput(SDLK_RIGHT, 0, true)
+  else if Action = 'library.configure' then OpenContinuousPlayback
+  else if Action = 'library.playlists' then Result := ParseInput(SDLK_P, 0, true)
+  else if Action = 'library.search' then Result := ParseInput(SDLK_J, 0, true)
+  else if Action = 'library.menu' then Result := ParseInput(SDLK_M, 0, true)
+  else if Action = 'navigation.back' then Result := ParseInput(SDLK_ESCAPE, 0, true);
+end;
+
+function TScreenSong.DrawLibraryDocument: boolean;
+var Bounds, ReflectionBounds: TDocumentRegion; Position: real; PreviewRegion, Reflect: boolean;
+  procedure DrawVideo(Full: boolean);
+  begin
+    fCurrentVideo.SetScreen(ScreenAct);
+    if Full then
+    begin
+      fCurrentVideo.SetScreenPosition(0, 0, 1);
+      fCurrentVideo.Width := RenderW; fCurrentVideo.Height := RenderH;
+      fCurrentVideo.Reflection := false; fCurrentVideo.ReflectionSpacing := 0;
+      fCurrentVideo.AspectCorrection := acoLetterBox;
+    end
+    else
+    begin
+      fCurrentVideo.SetScreenPosition(Bounds.X, Bounds.Y, 1);
+      fCurrentVideo.Width := Bounds.W; fCurrentVideo.Height := Bounds.H;
+      fCurrentVideo.Reflection := Reflect;
+      if Reflect then fCurrentVideo.ReflectionSpacing := ReflectionBounds.Y - Bounds.Y - Bounds.H
+      else fCurrentVideo.ReflectionSpacing := 0;
+      fCurrentVideo.AspectCorrection := acoCrop;
+    end;
+    fCurrentVideo.Alpha := 1; fCurrentVideo.Draw;
+  end;
+begin
+  if Assigned(fCurrentVideo) then CoverTime := CoverTime + TimeSkip;
+  SyncLibraryDocument; SyncLibraryScores; SyncLibraryModes; SyncLibrarySpectrum;
+  PreviewRegion := LibraryUI.Region('library-preview', Bounds);
+  Reflect := LibraryUI.Region('library-preview-reflection', ReflectionBounds);
+  Result := LibraryUI.Draw(true);
+  if Assigned(fCurrentVideo) and (Interaction >= 0) and (Interaction <= High(CatSongs.Song)) then
+  begin
+    Position := AudioPlayback.Position;
+    if ScreenAct = 1 then fCurrentVideo.GetFrame(CatSongs.Song[Interaction].VideoGAP + Position);
+    if PreviewRegion and not CoverFull then DrawVideo(false);
+  end;
+  Result := LibraryUI.Draw(false, true) and Result;
+  DrawExtensions;
+  if CoverFull and Assigned(fCurrentVideo) then DrawVideo(true);
+end;
+
+procedure TScreenSong.SyncLibraryScores;
+var Song: TSong; Count, Maximum, Average: integer; WebsiteID: cardinal;
+    Singer, SourceName, Prefix: UTF8String;
+  procedure AddScore(const Name: UTF8String; Best, Mean: integer; const User: UTF8String);
+  begin
+    Prefix := 'library.scores[' + IntToStr(Count) + '].';
+    LibraryUI.SetModel(Prefix + 'source', Name);
+    LibraryUI.SetModel(Prefix + 'best', IntToStr(Best), 1);
+    LibraryUI.SetModel(Prefix + 'average', IntToStr(Mean), 1);
+    LibraryUI.SetModel(Prefix + 'singer', User);
+    Inc(Count);
+  end;
+begin
+  if (Interaction < 0) or (Interaction > High(CatSongs.Song)) or
+     (Length(Player) = 0) then begin LibraryUI.SetArray('library.scores', 0); Exit; end;
+  Song := CatSongs.Song[Interaction];
+  if (LibraryScoreSong = Song) and (LibraryScoreLevel = Player[0].Level) and
+     (LibraryScoreWebsite = Ini.ShowWebScore) and (LibraryScoreVisibility = Ini.ShowScores) and
+     (LibraryScoreMode = Mode) then Exit;
+  LibraryScoreMode := Mode; LibraryScoreSong := Song; LibraryScoreLevel := Player[0].Level;
+  LibraryScoreWebsite := Ini.ShowWebScore; LibraryScoreVisibility := Ini.ShowScores;
+  Count := 0;
+  LibraryUI.SetArray('library.scores', 2);
+  if (Mode = smNormal) and (Ini.ShowScores <> 0) and (Song.Edition <> '') and not Song.Main then
+  begin
+    Maximum := DataBase.ReadMax_ScoreLocal(Song, Player[0].Level);
+    Average := DataBase.ReadMedia_ScoreLocal(Song, Player[0].Level);
+    Singer := DataBase.ReadUser_ScoreLocal(Song, Player[0].Level);
+    if (Ini.ShowScores <> 1) or (Maximum > 0) then AddScore('', Maximum, Average, Singer);
+    if (Ini.ShowWebScore >= 0) and (Ini.ShowWebScore <= High(DLLMan.Websites)) then
+    begin
+      WebsiteID := DLLMan.Websites[Ini.ShowWebScore].ID;
+      SourceName := UTF8Encode(DLLMan.Websites[Ini.ShowWebScore].Name);
+      Maximum := DataBase.ReadMax_Score(Song.Artist, Song.Title, WebsiteID, Player[0].Level);
+      Average := DataBase.ReadMedia_Score(Song.Artist, Song.Title, WebsiteID, Player[0].Level);
+      Singer := DataBase.ReadUser_Score(Song.Artist, Song.Title, WebsiteID, Player[0].Level);
+      if (Ini.ShowScores <> 1) or (Maximum > 0) then AddScore(SourceName, Maximum, Average, Singer);
+    end;
+  end;
+  LibraryUI.SetArray('library.scores', Count);
+end;
+
+procedure TScreenSong.SyncLibraryModes;
+var I, Index, Count: integer; Prefix: UTF8String;
+  procedure Flag(const Name: UTF8String; Value: boolean);
+  begin LibraryUI.SetModel('library.' + Name, IntToStr(Ord(Value)), 2); end;
+begin
+  Flag('normal', Mode = smNormal);
+  Flag('party', Mode = smPartyClassic);
+  Flag('medley', MakeMedley);
+  Flag('continuous', ScreenContinuousPlayback.Enabled = 1);
+  Flag('searching', ScreenSongJumpto.Visible);
+  Flag('playlist', CatSongs.CatNumShow = -3);
+  Flag('marked', (CatSongs.CatNumShow = -3) and (MarkedPlaylistSong = Interaction));
+  Flag('empty', Length(LibraryVisible) = 0);
+  LibraryUI.SetModel('library.category', LibraryCategory);
+  LibraryUI.SetModel('library.message', LibraryMessage);
+  if Mode = smPartyClassic then Count := Length(Party.Teams) else Count := 0;
+  LibraryUI.SetArray('library.teams', Count);
+  for I := 0 to Count - 1 do
+  begin
+    Prefix := 'library.teams[' + IntToStr(I) + '].';
+    LibraryUI.SetModel(Prefix + 'id', IntToStr(I), 1);
+    LibraryUI.SetModel(Prefix + 'name', Party.Teams[I].Name);
+    LibraryUI.SetModel(Prefix + 'jokers', IntToStr(Party.Teams[I].JokersLeft), 1);
+  end;
+  if MakeMedley then Count := Length(PlaylistMedley.Song) else Count := 0;
+  LibraryUI.SetArray('library.medleySongs', Count);
+  for I := 0 to Count - 1 do
+  begin
+    Index := PlaylistMedley.Song[I];
+    if (Index < 0) or (Index > High(CatSongs.Song)) then Continue;
+    Prefix := 'library.medleySongs[' + IntToStr(I) + '].';
+    LibraryUI.SetModel(Prefix + 'number', IntToStr(I + 1), 1);
+    LibraryUI.SetModel(Prefix + 'artist', CatSongs.Song[Index].Artist);
+    LibraryUI.SetModel(Prefix + 'title', CatSongs.Song[Index].Title);
+  end;
+end;
+
+procedure TScreenSong.MeasureLibrary;
+var View, Cell: TDocumentRegion;
+begin
+  LibraryColumns := 1; LibraryRows := 1;
+  if LibraryUI.Region('library-window', View) and LibraryUI.Region('library-measure', Cell) then
+  begin
+    if Cell.W > 0 then LibraryColumns := Max(1, Floor(View.W / Cell.W + 0.01));
+    if Cell.H > 0 then LibraryRows := Max(1, Floor(View.H / Cell.H + 0.01));
+  end;
+end;
+
+procedure TScreenSong.StepLibrary(Delta: integer; Wrap: boolean);
+var Target, Previous, N: integer;
+begin
+  if LibraryDirty then RebuildLibraryIndex;
+  N := Length(LibraryVisible);
+  if N = 0 then Exit;
+  Previous := CatSongs.VisibleIndex(Interaction);
+  Target := Previous + Delta;
+  if Wrap then Target := ((Target mod N) + N) mod N
+  else Target := EnsureRange(Target, 0, N - 1);
+  if LibraryVisible[Target] = Interaction then Exit;
+  OnSongDeselect;
+  Interaction := LibraryVisible[Target];
+  if TSongMenuMode(Ini.SongMenu) = smRoulette then
+  begin
+    if Wrap and (Delta > 0) and (Target < Previous) then SongCurrent := SongCurrent - N;
+    if Wrap and (Delta < 0) and (Target > Previous) then SongCurrent := SongCurrent + N;
+    SongTarget := Target; isScrolling := true;
+  end
+  else begin FixSelected; isScrolling := false; OnSongSelect; end;
+end;
+
+procedure TScreenSong.SyncLibrarySpectrum;
+var View, Cell: TDocumentRegion; Bands, Steps, Channels, I, J: integer;
+    Value, Peak: single; Prefix: UTF8String; Settings: TFormatSettings;
+begin
+  LibraryUI.SetModel('library.previewPlaying', IntToStr(Ord(not AudioPlayback.Finished)), 2);
+  if AudioPlayback.Finished or (SDL_GetTicks < LibraryFFTRefresh) then Exit;
+  if not LibraryUI.Region('library-spectrum', View) or
+     not LibraryUI.Region('library-spectrum-cell', Cell) or
+     (Cell.W <= 0) or (Cell.H <= 0) then Exit;
+  Bands := EnsureRange(Floor(View.W / Cell.W + 0.01), 1, 92);
+  Steps := Max(1, Floor(View.H / Cell.H + 0.01));
+  SetLength(LibraryBands, Bands);
+  LibraryUI.SetModel('library.spectrumCount', IntToStr(Bands), 1);
+  LibraryUI.SetArray('library.spectrum', Bands);
+  Channels := Ceil(92 / Bands);
+  AudioPlayback.GetFFTData(LibraryFFT);
+  Settings := DefaultFormatSettings; Settings.DecimalSeparator := '.';
+  for I := 0 to Bands - 1 do
+  begin
+    Peak := 0;
+    for J := I * Channels to Min(High(LibraryFFT), (I + 1) * Channels - 1) do
+    begin
+      Value := LibraryFFT[J];
+      if J > 35 then Value := Value * 8
+      else if J > 11 then Value := Value * 4.5 else Value := Value * 1.1;
+      Peak := Max(Peak, EnsureRange(Value, 0, 1));
+    end;
+    if LibraryBands[I] > Peak then LibraryBands[I] := Max(Peak, LibraryBands[I] - 1 / Steps)
+    else LibraryBands[I] := Peak;
+    Prefix := 'library.spectrum[' + IntToStr(I) + '].';
+    LibraryUI.SetModel(Prefix + 'index', IntToStr(I), 1);
+    LibraryUI.SetModel(Prefix + 'level', FloatToStr(LibraryBands[I], Settings), 3);
+  end;
+  LibraryFFTRefresh := SDL_GetTicks + 44;
+end;
+
 procedure TScreenSong.SyncDuetSingerTheme;
 begin
+  if LibraryUI <> nil then Exit;
   DuetSingerBaseStatic := Theme.Song.Static2PlayersDuetSingerP1;
   DuetSingerBaseText := Theme.Song.Text2PlayersDuetSingerP1;
 end;
@@ -451,6 +897,8 @@ end;
 
 procedure TScreenSong.ShowCatTLCustom(Caption: UTF8String);// Show Custom Text in Top left
 begin
+  LibraryCategory := Caption;
+  if LibraryUI <> nil then Exit;
   Text[TextCat].Text := Caption;
   Text[TextCat].Visible := true;
   Statics[StaticCat].Visible := false;
@@ -459,6 +907,8 @@ end;
 //Show Cat in Top Left Mod
 procedure TScreenSong.ShowCatTL(Cat: integer);
 begin
+  if (Cat >= 0) and (Cat <= High(CatSongs.Song)) then LibraryCategory := CatSongs.Song[Cat].Artist;
+  if LibraryUI <> nil then Exit;
   //Change
   Text[TextCat].Text := CatSongs.Song[Cat].Artist;
   //Statics[StaticCat].Texture := Renderer.GetTexture(Button[Cat].Texture.Name, TEXTURE_TYPE_PLAIN, true);
@@ -470,6 +920,8 @@ end;
 
 procedure TScreenSong.HideCatTL;
 begin
+  LibraryCategory := Language.Translate('SING_SONG_SELECTION_DESC');
+  if LibraryUI <> nil then Exit;
   //Hide
   //Text[TextCat].Visible := false;
   Statics[StaticCat].Visible := false;
@@ -1558,8 +2010,9 @@ end;
 
 function TScreenSong.ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
 var
-  PointerScreen, FirstPlayer, PlayerCount, I, Voice: integer;
+  PointerScreen, FirstPlayer, PlayerCount, I, Voice, PhysicalX, PhysicalY: integer;
 begin
+  PhysicalX := X; PhysicalY := Y;
   PointerScreen := EnsureRange(Trunc(X / (ScreenW / Screens)) + 1, 1, Screens);
   // Convert mouse coordinates to the virtual render coordinate space.
   X := Round((X / (ScreenW / Screens)) * RenderW);
@@ -1579,6 +2032,7 @@ begin
   end
   else // no extension visible
   begin
+    if LibraryUI <> nil then Exit(ParseLibraryDocumentMouse(MouseButton, BtnDown, PhysicalX, PhysicalY));
     if (Mode = smNormal) and (Interaction >= 0) and
       (Interaction < Length(CatSongs.Song)) and CatSongs.Song[Interaction].isDuet then
     begin
@@ -1864,6 +2318,7 @@ var
   Col: TRGB;
   JokerTyp: TTextureType;
 begin
+  if LibraryUI <> nil then Exit;
 
   StartJoker := StaticTeam1Joker1;
 
@@ -1905,6 +2360,19 @@ begin
 
   MarkedPlaylistSong := -1;
 
+  LibraryUI := TDocumentUI.Open('library');
+  LibraryDirty := true; LibraryLastSelection := -1;
+  LibraryCategory := Language.Translate('SING_SONG_SELECTION_DESC');
+  LibraryMouseX := -1; LibraryMouseY := -1;
+  if LibraryUI <> nil then
+  begin
+    CatSongs.Refresh; RebuildLibraryIndex; Randomize;
+    if Length(LibraryVisible) > 0 then Interaction := LibraryVisible[0];
+    PreviewOpened := -1; PreviewEnd := 0; isScrolling := false;
+    fCurrentVideo := nil;
+  end
+  else
+  begin
   LoadFromTheme(Theme.Song);
 
   TextArtist := AddText(Theme.Song.TextArtist);
@@ -2089,6 +2557,8 @@ begin
 
   end;
 
+  end;
+
   MainChessboardMinLine := 0;
   MainListMinLine := 0;
 
@@ -2127,6 +2597,7 @@ var
     Statics[static].Texture.ColB := color.B;
   end;
 begin
+  if LibraryUI <> nil then Exit;
   if Screens > 1 then
   begin
     LocalPlayerCount := GetScreenPlayerCount(PlayersPlay, Screens, ScreenAct);
@@ -2217,6 +2688,12 @@ var
   Song: TSong;
   Event: TSDL_Event;
 begin
+  if LibraryUI <> nil then
+  begin
+    LibraryDirty := true; RebuildLibraryIndex;
+    if Length(LibraryVisible) > 0 then Interaction := LibraryVisible[0] else Interaction := -1;
+    Exit;
+  end;
   for I := 0 to High(Button) do Button[I].Free;
   SetLength(Button, 0);
   SetLength(Interactions, 0);
@@ -2272,6 +2749,7 @@ var
   B: integer;
   CoverFile: IPath;
 begin
+  if LibraryUI <> nil then begin LibraryDirty := true; RebuildLibraryIndex; Exit; end;
   if (Length(Button) = 0) or (Length(CatSongs.Song) = 0) then
     Exit;
 
@@ -2337,6 +2815,7 @@ end;
 
 procedure TScreenSong.SetScrollRefresh;
 begin
+  if LibraryUI <> nil then begin LibraryDirty := true; SchedulePreview; Exit; end;
   SchedulePreview;
   case TSongMenuMode(Ini.SongMenu) of
     smRoulette: SetRouletteScrollRefresh;
@@ -2360,6 +2839,7 @@ var
   BaseNameIndex: integer;
   VisibleCount: integer;
 begin
+  if LibraryUI <> nil then begin SyncLibraryDocument; Exit; end;
   VS := CatSongs.VisibleSongs;
   UpdateListSelectedText;
   if VS > 0 then
@@ -2966,7 +3446,7 @@ var
   KeepPreview: boolean;
   TransitionCandidate: TSong;
 begin
-  inherited;
+  if LibraryUI = nil then inherited;
   SyncDuetSingerTheme;
   AltJumpPrefix := '';
   AltJumpLastTick := 0;
@@ -2976,6 +3456,8 @@ begin
 
   CloseMessage();
 
+  if LibraryUI = nil then
+  begin
   if (TSongMenuMode(Ini.SongMenu) in [smChessboard, smList]) then
   begin
     Statics[StaticActual].Texture.X := Theme.Song.Cover.SelectX;
@@ -3032,6 +3514,9 @@ begin
     Statics[VideoIcon].Visible  := false;
     Statics[DuetIcon].Visible := false;
   end;
+
+  end;
+  LibraryDirty := true; LibraryScoreSong := nil;
 
   {**
    * Pause background music
@@ -3469,6 +3954,16 @@ begin
   //Log.BenchmarkStart(5);
 
   // Song Menu Style
+  if LibraryUI <> nil then
+  begin
+    if AudioPlayback.Finished then
+    begin
+      if (PreviewOpened <> -1) and not PreviewEndReloaded then
+      begin PreviewEndReloaded := true; ReloadCurrentPlaylist(true); end;
+      CoverTime := 0;
+    end;
+    Exit(DrawLibraryDocument);
+  end;
   SetScroll;
 
   //Log.BenchmarkEnd(5);
@@ -3720,6 +4215,7 @@ var
   NextInt: integer;
   OriginalInteraction: integer;
 begin
+  if LibraryUI <> nil then begin MeasureLibrary; StepLibrary(1, TSongMenuMode(Ini.SongMenu) = smRoulette); Exit; end;
   VS := CatSongs.VisibleSongs;
 
   if VS > 0 then
@@ -3733,10 +4229,10 @@ begin
     Skip := 1;
 
     // this 1 could be changed by CatSongs.FindNextVisible
-    while (not CatSongs.Song[(Interaction + Skip) mod Length(Interactions)].Visible) do
+    while (not CatSongs.Song[(Interaction + Skip) mod Length(CatSongs.Song)].Visible) do
       Inc(Skip);
 
-    NextInt := (Interaction + Skip) mod Length(Interactions);
+    NextInt := (Interaction + Skip) mod Length(CatSongs.Song);
     OriginalInteraction := Interaction;
 
     if not ((TSongMenuMode(Ini.SongMenu) in [smChessboard, smList]) and (NextInt < Interaction)) then
@@ -3774,6 +4270,7 @@ var
   PrevInt: integer;
   OriginalInteraction: integer;
 begin
+  if LibraryUI <> nil then begin MeasureLibrary; StepLibrary(-1, TSongMenuMode(Ini.SongMenu) = smRoulette); Exit; end;
   VS := CatSongs.VisibleSongs;
 
   if (VS > 0) then
@@ -3786,10 +4283,10 @@ begin
 
     Skip := 1;
 
-    while (not CatSongs.Song[(Interaction - Skip + Length(Interactions)) mod Length(Interactions)].Visible) do
+    while (not CatSongs.Song[(Interaction - Skip + Length(CatSongs.Song)) mod Length(CatSongs.Song)].Visible) do
       Inc(Skip);
 
-    PrevInt := (Interaction - Skip + Length(Interactions)) mod Length(Interactions);
+    PrevInt := (Interaction - Skip + Length(CatSongs.Song)) mod Length(CatSongs.Song);
     OriginalInteraction := Interaction;
 
     if not ((TSongMenuMode(Ini.SongMenu) in [smChessboard, smList]) and (PrevInt > Interaction)) then
@@ -3820,6 +4317,12 @@ var
   MaxLine: real;
   OriginalInteraction: integer;
 begin
+  if LibraryUI <> nil then
+  begin
+    if SDL_GetTicks - LastChangeSoundTime >= CHANGE_SOUND_THROTTLE_MS then
+    begin AudioPlayback.PlaySound(SoundLib.Change); LastChangeSoundTime := SDL_GetTicks; end;
+    MeasureLibrary; StepLibrary(LibraryColumns, false); Exit;
+  end;
   VS := CatSongs.VisibleSongs;
 
   if (SDL_GetTicks - LastChangeSoundTime >= CHANGE_SOUND_THROTTLE_MS) then
@@ -3886,6 +4389,12 @@ var
   VS:   integer;
   OriginalInteraction: integer;
 begin
+  if LibraryUI <> nil then
+  begin
+    if SDL_GetTicks - LastChangeSoundTime >= CHANGE_SOUND_THROTTLE_MS then
+    begin AudioPlayback.PlaySound(SoundLib.Change); LastChangeSoundTime := SDL_GetTicks; end;
+    MeasureLibrary; StepLibrary(-LibraryColumns, false); Exit;
+  end;
   VS := CatSongs.VisibleSongs;
 
   if (SDL_GetTicks - LastChangeSoundTime >= CHANGE_SOUND_THROTTLE_MS) then
@@ -3942,6 +4451,7 @@ end;
 
 procedure TScreenSong.SelectNextListRow;
 begin
+  if LibraryUI <> nil then begin AudioPlayback.PlaySound(SoundLib.Change); MeasureLibrary; StepLibrary(1, false); Exit; end;
   AudioPlayback.PlaySound(SoundLib.Change);
   SelectNext;
 
@@ -3954,6 +4464,7 @@ end;
 
 procedure TScreenSong.SelectPrevListRow;
 begin
+  if LibraryUI <> nil then begin AudioPlayback.PlaySound(SoundLib.Change); MeasureLibrary; StepLibrary(-1, false); Exit; end;
   AudioPlayback.PlaySound(SoundLib.Change);
   SelectPrev;
 
@@ -4188,6 +4699,15 @@ var
   MaxLine: integer;
   TargetLine: integer;
 begin
+  if LibraryUI <> nil then
+  begin
+    LibraryDirty := true; RebuildLibraryIndex;
+    if Length(LibraryVisible) = 0 then Exit;
+    if (TargetInteraction < 0) or (TargetInteraction > High(CatSongs.Song)) then
+      TargetInteraction := LibraryVisible[EnsureRange(integer(Target), 0, High(LibraryVisible))];
+    OnSongDeselect; Interaction := TargetInteraction;
+    FixSelected; isScrolling := false; OnSongSelect; Exit;
+  end;
   if (TSongMenuMode(Ini.SongMenu) = smRoulette) then
   begin
     Interaction := High(CatSongs.Song);
@@ -4388,6 +4908,7 @@ end;
 
 procedure TScreenSong.SetJoker;
 begin
+  if LibraryUI <> nil then Exit;
   // If Party Mode
   if Mode = smPartyClassic then //Show Joker that are available
   begin
@@ -4500,6 +5021,7 @@ var
   I:       integer;
   Visible: boolean;
 begin
+  if LibraryUI <> nil then Exit;
   //Set Visibility of Party Statics and Text
   Visible := (Mode = smPartyClassic);
 
@@ -4622,6 +5144,7 @@ end;
 //Detailed Cover Unloading. Unloads the Detailed, uncached Cover of the Song Button
 procedure TScreenSong.UnloadCover(NumberOfButtonInArray: integer);
 begin
+  if LibraryUI <> nil then Exit;
   // background texture (garbage disposal)
   if ((not Button[NumberOfButtonInArray].Texture.IsEmpty) and (Button[NumberOfButtonInArray].Texture.Name <> Skin.GetTextureFileName('SongCover'))) then
     Button[NumberOfButtonInArray].Texture.Release();
@@ -4632,6 +5155,7 @@ procedure TScreenSong.LoadCover(NumberOfButtonInArray: integer);
 var
   Tex: TTexture;
 begin
+  if LibraryUI <> nil then Exit;
   If (Button[NumberOfButtonInArray].Texture.IsEmpty) and Assigned(Button[NumberOfButtonInArray].Texture.Name) then
   begin
     Tex := Renderer.LoadTexture(Button[NumberOfButtonInArray].Texture.Name);
@@ -4815,6 +5339,7 @@ procedure TScreenSong.SongScore;
     setVisible(elements, true);
   end;
 begin
+  if LibraryUI <> nil then begin LibraryScoreSong := nil; SyncLibraryScores; Exit; end;
 
   if ((Mode <> smNormal) or (Ini.ShowScores = 0) or (CatSongs.Song[Interaction].Edition = '') or ((Ini.ShowScores = 1) and ((Text[TextMaxScore2].Text = '0') and (Text[TextMaxScoreLocal].Text = '0')))) then
   begin
@@ -4874,6 +5399,8 @@ end;
 
 procedure TScreenSong.WriteMessage(msg: UTF8String);
 begin
+  LibraryMessage := msg;
+  if LibraryUI <> nil then begin MessageTime := SDL_GetTicks; Exit; end;
 
   MessageTime := SDL_GetTicks();
 
@@ -4890,6 +5417,11 @@ procedure TScreenSong.FadeMessage();
 var
   factor: real;
 begin
+  if LibraryUI <> nil then
+  begin
+    if SDL_GetTicks - MessageTime > MAX_MESSAGE * 1000 + 2000 then LibraryMessage := '';
+    Exit;
+  end;
 
   if ((SDL_GetTicks - MessageTime)/1000 > MAX_MESSAGE) then
   begin
@@ -4910,6 +5442,8 @@ end;
 
 procedure TScreenSong.CloseMessage();
 begin
+  LibraryMessage := '';
+  if LibraryUI <> nil then Exit;
   Statics[InfoMessageBG].Visible := false;
   Text[InfoMessageText].Visible := false;
 end;

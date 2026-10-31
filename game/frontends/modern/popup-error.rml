@@ -1,0 +1,20 @@
+<rml>
+<head>
+  <title>Modern error dialog</title>
+  <link type="text/rcss" href="modern.rcss" />
+  <link type="text/rcss" href="popup-error.rcss" />
+</head>
+<body class="popup-error-screen">
+  <div class="popup-shade" />
+  <div data-model="game" class="popup-positioner">
+    <div id="popup-panel" class="popup-dialog">
+      <div id="popup-reflection" class="popup-dialog-reflection" />
+      <span class="popup-error-title description" lang="MSG_ERROR_TITLE" />
+      <div id="popup-message" class="popup-error-message" bind-lines="popup.message" />
+      <div class="popup-error-actions">
+        <button data-for="choice : data.popup.buttons" data-attr-id="'popup-button-' + choice.id" class="popup-choice secondary" action="popup.choose" data-attr-target="choice.id"><span>{{ choice.caption }}</span></button>
+      </div>
+    </div>
+  </div>
+</body>
+</rml>

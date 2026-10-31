@@ -1,0 +1,14 @@
+/* The error dialog keeps Modern's artwork; its geometry and flow belong here. */
+.popup-error-screen { overflow: hidden; background-color: transparent; }
+.popup-shade { position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; background-color: #0006; }
+.popup-positioner { position: absolute; left: 0; top: 0; width: 100vw; height: 83.333333vh; display: flex; align-items: center; justify-content: center; }
+.popup-dialog { position: relative; width: 50vw; min-height: 33.333333vh; max-height: 80vh; box-sizing: border-box; padding: 1.666667vh 1.25vw 2.5vh; display: flex; flex-direction: column; decorator: image("../../themes/Modern/[interface]dialog_background.png"); }
+.popup-dialog-reflection { position: absolute; left: 0; right: 0; top: 0; bottom: 0; width: auto; height: auto; transform: translateY(100%) translateY(2.5vh) scaleY(-1); opacity: 0.3; pointer-events: none; decorator: image("../../themes/Modern/[interface]dialog_background.png"); mask-image: vertical-gradient(#0000 #000b); }
+.popup-error-title { position: relative; left: auto; top: auto; display: block; width: 100%; height: 5vh; font-size: 3.75vh; text-align: center; flex-shrink: 0; }
+.popup-error-message { position: relative; width: 100%; min-height: 16.666667vh; max-height: 60vh; flex-grow: 1; margin-top: 3.333333vh; white-space: normal; overflow-x: hidden; overflow-y: auto; font-size: 3.75vh; line-height: 1.2; text-align: center; }
+.popup-error-message scrollbarvertical { width: 0.75vw; }
+.popup-error-message scrollbarvertical sliderbar { background-color: #dfdfdf; }
+.popup-error-message scrollbarvertical slidertrack { background-color: transparent; }
+.popup-error-actions { position: relative; display: flex; flex-shrink: 0; flex-wrap: wrap; justify-content: center; width: 100%; }
+.popup-error-actions .popup-choice { position: relative; left: auto; top: auto; width: auto; min-width: 12.5vw; max-width: 100%; min-height: 4.166667vh; height: auto; margin: 0 0.625vw; padding: 0 1.25vw; display: flex; align-items: center; justify-content: center; font-size: 3vh; line-height: 1.166667; }
+.popup-error-actions .popup-choice span { position: relative; display: block; margin-top: 0; white-space: normal; }

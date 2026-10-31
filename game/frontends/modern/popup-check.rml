@@ -1,0 +1,21 @@
+<rml>
+<head>
+  <title>Modern confirmation dialog</title>
+  <link type="text/rcss" href="modern.rcss" />
+  <link type="text/rcss" href="popup-error.rcss" />
+</head>
+<body class="popup-error-screen popup-check-screen">
+  <div class="popup-shade" />
+  <div data-model="game" class="popup-positioner">
+    <div class="popup-dialog">
+      <div class="popup-dialog-reflection" />
+      <span class="popup-error-title description" lang="MSG_QUESTION_TITLE" />
+      <div id="popup-message" class="popup-error-message" bind-lines="popup.message" />
+      <div class="popup-error-actions">
+        <button id="popup-button-0" class="popup-choice secondary" action="popup.choose" target="0"><span lang="SONG_MENU_YES" /></button>
+        <button id="popup-button-1" class="popup-choice secondary" action="popup.choose" target="1"><span lang="SONG_MENU_NO" /></button>
+      </div>
+    </div>
+  </div>
+</body>
+</rml>

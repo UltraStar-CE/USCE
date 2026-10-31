@@ -1,0 +1,25 @@
+/* Help content is semantic data; wrapping, table borders and controls live here. */
+.popup-help-screen { background-color: transparent; overflow: hidden; }
+.help-volumes { position: absolute; display: flex; flex-wrap: wrap; column-gap: 6.25vw; row-gap: 0.666667vh; left: 17.5vw; top: 4.333333vh; width: 71.25vw; }
+.help-volume, .help-volume:focus { position: relative; flex-shrink: 0; width: 32.5vw; height: 4.666667vh; background-color: #333338bf; border: 2px #0d0d0de6; color: white; text-align: center; font-size: 3vh; padding: 0; }
+.help-volume.selected span { font-weight: bold; }
+.help-volume-fill { position: absolute; left: 0; top: 0; height: 100%; background-color: #8c8c97e6; pointer-events: none; }
+.help-volume span { position: absolute; left: 0; top: 0.5vh; width: 100%; height: 100%; pointer-events: none; }
+.help-panel { position: absolute; left: 2.5vw; top: 19.166667vh; width: 96.25vw; height: 77.5vh; background-color: #333c; }
+.help-viewport { position: absolute; left: 3.125vw; top: 20vh; width: 94.375vw; height: 75.833333vh; overflow-x: hidden; overflow-y: auto; }
+.help-viewport scrollbarvertical { width: 1.25vw; margin-left: 0.625vw; }
+.help-viewport scrollbarvertical sliderbar { background-color: #fffc; }
+.help-viewport scrollbarvertical slidertrack { background-color: transparent; }
+.help-content { display: block; width: 93.125vw; }
+.help-row { display: flex; width: 100%; min-height: 3.666667vh; border-left: 2px white; border-right: 2px white; box-sizing: border-box; font-size: 2.5vh; font-weight: bold; line-height: 3.666667vh; }
+.help-left, .help-right { display: block; box-sizing: border-box; padding: 0.333333vh 0.625vw; white-space: pre-line; }
+.help-left { width: 100%; }
+.help-right { display: none; }
+.help-row[kind="0"] { font-size: 4.5vh; line-height: 7.333333vh; border-top: 2px white; border-bottom: 2px white; padding-top: 0.916667vh; padding-bottom: 0.916667vh; }
+.help-row[kind="1"] { font-size: 3vh; padding-top: 0.916667vh; padding-bottom: 0.916667vh; }
+.help-row[kind="2"] { font-size: 3vh; padding-top: 1.833333vh; }
+.help-row[kind="4"] { font-size: 3.5vh; text-align: center; padding-top: 1.833333vh; padding-bottom: 1.833333vh; border-bottom: 2px white; }
+.help-row[kind="5"] { border-bottom: 1px white; }
+.help-row[kind="5"] .help-left { width: 40%; }
+.help-row[kind="5"] .help-right { display: block; width: 60%; border-left: 2px white; }
+.help-row:last-child { border-bottom: 2px white; }

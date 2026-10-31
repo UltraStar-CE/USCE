@@ -37,6 +37,7 @@ uses
   sdl2,
   SysUtils,
   UDataBase,
+  UDocumentUI,
   UDLLManager,
   ULog,
   UMenu,
@@ -62,13 +63,17 @@ type
 
   TScreenPopupCheck = class(TMenu)
     private
+      DocumentUI: TDocumentUI;
       fHandler: TPopupCheckHandler;
       fHandlerData: Pointer;
+      procedure ReadDocumentSelection;
 
     public
       Visible: boolean; // whether the menu should be drawn
 
       constructor Create; override;
+      destructor Destroy; override;
+      function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       procedure OnShow; override;
       procedure ShowPopup(const Msg: UTF8String; Handler: TPopupCheckHandler;
@@ -81,10 +86,13 @@ type
 
   TScreenPopupInsertUser = class(TMenu)
     private
+      DocumentUI: TDocumentUI;
       fPasswordOnly, fTextOnly: boolean;
       fNameCaption: UTF8String;
       fHandler: TPopupInsertUserHandler;
       fHandlerData: Pointer;
+      procedure SyncDocument;
+      procedure ReadDocumentSelection;
 
     public
       Visible: boolean; // whether the menu should be drawn
@@ -93,6 +101,11 @@ type
       InteractionTmp: integer;
 
       procedure SetInteraction(Num: integer); override;
+      procedure SetMessage(const Msg: UTF8String);
+      procedure InteractNext; override;
+      procedure InteractPrev; override;
+      destructor Destroy; override;
+      function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
       procedure ShowPasswordPrompt(const Title, Msg: UTF8String;
         Handler: TPopupInsertUserHandler; HandlerData: Pointer);
 
@@ -145,6 +158,9 @@ type
 type
   TScreenPopup = class(TMenu)
     private
+      DocumentUI: TDocumentUI;
+      procedure ReadDocumentSelection;
+    private
       fHandler: TPopupErrorHandler;
       fHandlerData: Pointer;
       fCancelValue: integer;
@@ -157,11 +173,15 @@ type
       function ButtonWidth(const Caption: UTF8String): real;
       function MeasureLineCount(const Msg: UTF8String; MaxWidth: real): integer;
       procedure LayoutPopup(const Msg: UTF8String; const Captions: array of UTF8String);
+    protected
+      function DocumentRole: UTF8String; virtual;
     public
       Visible: boolean; //Whether the Menu should be Drawn
 
       constructor Create; override;
+      destructor Destroy; override;
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
+      function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
       procedure OnShow; override;
       procedure OnHide; override;
       procedure ShowPopup(const Msg: UTF8String); overload;
@@ -172,11 +192,15 @@ type
   end;
 
   TScreenPopupError = class(TScreenPopup)
+    protected
+      function DocumentRole: UTF8String; override;
     public
       constructor Create; override;
   end;
 
   TScreenPopupInfo = class(TScreenPopup)
+    protected
+      function DocumentRole: UTF8String; override;
     public
       constructor Create; override;
   end;
@@ -250,6 +274,7 @@ type
 
   TScreenPopupHelp = class(TMenu)
   private
+    DocumentUI: TDocumentUI;
     TextsGFX:   array of TResLine;
     msg:        TTextResult;
     Rect:       TRect;
@@ -271,6 +296,14 @@ type
     ResumeSingAfterPopup: boolean;
     VolumeSettingsDirty: boolean;
     DraggingVolumeSelectId: integer;
+    procedure SyncDocument;
+    procedure BuildDocumentHelp;
+    procedure LoadDocumentVolumes;
+    function DocumentVolume(Index: integer): integer;
+    procedure SetDocumentVolume(Index, Value: integer);
+    function ParseDocumentInput(Key: cardinal; Down: boolean): boolean;
+    function ParseDocumentMouse(MouseButton: integer; Down: boolean; X, Y: integer): boolean;
+    procedure ReadDocumentSelection;
 
     procedure   BuildVolumeOptions;
     procedure   SyncVolumeSliders;
@@ -298,6 +331,8 @@ type
     Visible:    Boolean; //Whether the Menu should be Drawn
 
     constructor Create; override;
+    destructor Destroy; override;
+    procedure SetInteraction(Num: integer); override;
     function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
     function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
     procedure onShow; override;
@@ -315,6 +350,7 @@ var
 implementation
 
 uses
+  UCommon,
   UGraphic,
   UMain,
   UIni,
@@ -326,13 +362,72 @@ uses
   UPathUtils,
   UUnicodeUtils;
 
+const
+  uiPopupChoose = 'popup.choose';
+  uiPopupButtons = 'popup.buttons';
+  uiPopupMessage = 'popup.message';
+  uiScreenPopupError = 'popup-error';
+  uiScreenPopupHelp = 'popup-help';
+  uiHelpRows = 'help.rows';
+  uiHelpViewport = 'help-viewport';
+  uiScreenPopupInput = 'popup-input';
+  uiPopupInputFocus = 'popup.input.focus';
+  uiPopupInputAccept = 'popup.input.accept';
+  uiPopupInputCancel = 'popup.input.cancel';
+  uiScreenPopupCheck = 'popup-check';
+
 { TScreenPopupCheck }
+
+procedure TScreenPopupCheck.ReadDocumentSelection;
+var Selected: integer;
+begin
+  if TryStrToInt(DocumentUI.FocusedTarget, Selected) then
+    SelInteraction := EnsureRange(Selected, 0, 1);
+end;
+
+destructor TScreenPopupCheck.Destroy;
+begin
+  DocumentUI.Free;
+  inherited;
+end;
+
+function TScreenPopupCheck.ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
+var Action: UTF8String; Selected: integer;
+begin
+  if DocumentUI = nil then Exit(inherited ParseMouse(MouseButton, BtnDown, X, Y));
+  if RightMbESC and (MouseButton = SDL_BUTTON_RIGHT) and BtnDown then
+    Exit(ParseInput(SDLK_ESCAPE, 0, true));
+  if MouseButton = SDL_BUTTON_LEFT then DocumentUI.Mouse(X, Y, 0, BtnDown)
+  else DocumentUI.Mouse(X, Y);
+  ReadDocumentSelection;
+  Action := DocumentUI.TakeAction;
+  Result := true;
+  if (Action = uiPopupChoose) and TryStrToInt(DocumentUI.ActionTarget, Selected) and
+      (Selected >= 0) and (Selected <= 1) then
+  begin
+    SelInteraction := Selected;
+    Result := ParseInput(SDLK_RETURN, 0, true);
+  end;
+end;
 
 function TScreenPopupCheck.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
 var
   Value: boolean;
 begin
   Result := true;
+  if DocumentUI <> nil then
+  begin
+    if not PressedDown then Exit;
+    ReadDocumentSelection;
+    case PressedKey of
+      SDLK_ESCAPE, SDLK_BACKSPACE: begin Value := false; Visible := false; Result := false; end;
+      SDLK_RETURN: begin Value := Interaction = 0; Visible := false; Result := false; end;
+      SDLK_DOWN, SDLK_RIGHT: begin DocumentUI.Key(uiKeyNext); ReadDocumentSelection; end;
+      SDLK_UP, SDLK_LEFT: begin DocumentUI.Key(uiKeyPrevious); ReadDocumentSelection; end;
+    end;
+    if not Result and Assigned(fHandler) then fHandler(Value, fHandlerData);
+    Exit;
+  end;
   if (PressedDown) then
   begin // Key Down
     // check special keys
@@ -374,6 +469,9 @@ begin
   fHandler := nil;
   fHandlerData := nil;
 
+  DocumentUI := TDocumentUI.Open(uiScreenPopupCheck);
+  if DocumentUI <> nil then begin SelInteraction := 0; Exit; end;
+
   AddText(Theme.CheckPopup.TextCheck);
   
   LoadFromTheme(Theme.CheckPopup);
@@ -392,17 +490,29 @@ end;
 function TScreenPopupCheck.Draw: boolean;
 begin
   Renderer.ClearFrameBuffer(CLEAR_DEPTH);
+  if DocumentUI <> nil then Exit(DocumentUI.Draw(false, true));
   Result := inherited Draw;
 end;
 
 procedure TScreenPopupCheck.OnShow;
 begin
+  if DocumentUI <> nil then Exit;
   inherited;
 end;
 
 procedure TScreenPopupCheck.ShowPopup(const Msg: UTF8String; Handler: TPopupCheckHandler;
     HandlerData: Pointer; DefaultValue: boolean);
 begin
+  if DocumentUI <> nil then
+  begin
+    SelInteraction := Ord(not DefaultValue);
+    Visible := true;
+    fHandler := Handler;
+    fHandlerData := HandlerData;
+    DocumentUI.SetValue(uiPopupMessage, StringReplace(Language.Translate(Msg), '\n', #10, [rfReplaceAll]));
+    DocumentUI.Focus('popup-button-' + IntToStr(Interaction));
+    Exit;
+  end;
   if (DefaultValue) then
     Interaction := 0
   else
@@ -424,13 +534,91 @@ end;
 
 { TScreenPopupInsertUser }
 
+procedure TScreenPopupInsertUser.SetMessage(const Msg: UTF8String);
+begin
+  if DocumentUI <> nil then
+    DocumentUI.SetValue(uiPopupMessage, StringReplace(Msg, '\n', #10, [rfReplaceAll]))
+  else Text[0].Text := Msg;
+end;
+
+procedure TScreenPopupInsertUser.SyncDocument;
+begin
+  DocumentUI.SetModel('popupInput.username', Username);
+  DocumentUI.SetModel('popupInput.password', StringOfChar('*', LengthUTF8(Password)));
+  DocumentUI.SetModel('popupInput.passwordOnly', IntToStr(Ord(fPasswordOnly)), 2);
+  DocumentUI.SetModel('popupInput.textOnly', IntToStr(Ord(fTextOnly)), 2);
+  DocumentUI.SetModel('popupInput.selection', IntToStr(Interaction), 1);
+  DocumentUI.Focus('popup-input-' + IntToStr(Interaction));
+  if Interaction in [0, 1] then DocumentUI.Reveal('popup-input-caret-' + IntToStr(Interaction));
+end;
+
+procedure TScreenPopupInsertUser.ReadDocumentSelection;
+var Selected: integer;
+begin
+  if TryStrToInt(DocumentUI.FocusedTarget, Selected) then
+    SetInteraction(Selected);
+end;
+
+destructor TScreenPopupInsertUser.Destroy;
+begin
+  DocumentUI.Free;
+  inherited;
+end;
+
+procedure TScreenPopupInsertUser.InteractNext;
+var Next: integer;
+begin
+  if DocumentUI = nil then begin inherited; Exit; end;
+  Next := Interaction;
+  repeat Next := (Next + 1) mod 4;
+  until not ((fPasswordOnly and (Next = 0)) or (fTextOnly and (Next = 1)));
+  Interaction := Next;
+end;
+
+procedure TScreenPopupInsertUser.InteractPrev;
+var Previous: integer;
+begin
+  if DocumentUI = nil then begin inherited; Exit; end;
+  Previous := Interaction;
+  repeat Previous := (Previous + 3) mod 4;
+  until not ((fPasswordOnly and (Previous = 0)) or (fTextOnly and (Previous = 1)));
+  Interaction := Previous;
+end;
+
+function TScreenPopupInsertUser.ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
+var Action: UTF8String; Selected: integer;
+begin
+  if DocumentUI = nil then Exit(inherited ParseMouse(MouseButton, BtnDown, X, Y));
+  if RightMbESC and (MouseButton = SDL_BUTTON_RIGHT) and BtnDown then
+    Exit(ParseInput(SDLK_ESCAPE, 0, true));
+  if MouseButton = SDL_BUTTON_LEFT then DocumentUI.Mouse(X, Y, 0, BtnDown)
+  else DocumentUI.Mouse(X, Y);
+  ReadDocumentSelection;
+  Action := DocumentUI.TakeAction;
+  Result := true;
+  if Action = uiPopupInputFocus then
+  begin
+    if TryStrToInt(DocumentUI.ActionTarget, Selected) then Interaction := Selected;
+  end
+  else if Action = uiPopupInputAccept then
+  begin
+    Interaction := 2; Result := ParseInput(SDLK_RETURN, 0, true);
+  end
+  else if Action = uiPopupInputCancel then
+  begin
+    Interaction := 3; Result := ParseInput(SDLK_RETURN, 0, true);
+  end;
+  if Visible then SyncDocument;
+end;
+
+
 function TScreenPopupInsertUser.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
 var
   Value: boolean;
   I: integer;
-  Password_TMP: UTF8String;
 begin
   Result := true;
+  if DocumentUI <> nil then ReadDocumentSelection;
   if (PressedDown) then
   begin // Key Down
     // check normal keys
@@ -440,13 +628,13 @@ begin
       begin
         if (Interaction = 0) then
         begin
-          Button[0].Text[0].Text := Button[0].Text[0].Text + UCS4ToUTF8String(CharCode);
           Username := Username + UCS4ToUTF8String(CharCode);
+          if DocumentUI = nil then Button[0].Text[0].Text := Username;
         end
         else
         begin
           Password := Password + UCS4ToUTF8String(CharCode);
-          Button[1].Text[0].Text := Button[1].Text[0].Text + '*';
+          if DocumentUI = nil then Button[1].Text[0].Text := Button[1].Text[0].Text + '*';
         end;
       end;
     end;
@@ -465,16 +653,18 @@ begin
       begin
         if (Interaction = 0) or (Interaction = 1) then
         begin
-          Button[Interaction].Text[0].DeleteLastLetter();
-
           if (Interaction = 0) then
-            Username := Button[Interaction].Text[0].Text;
+          begin
+            Username := UTF8Copy(Username, 1, LengthUTF8(Username) - 1);
+            if DocumentUI = nil then Button[0].Text[0].Text := Username;
+          end;
 
           if (Interaction = 1) then
           begin
             I := Length(Password);
             while (I > 1) and ((Ord(Password[I]) and $C0) = $80) do Dec(I);
             if I > 0 then Delete(Password, I, MaxInt);
+            if DocumentUI = nil then Button[1].Text[0].DeleteLastLetter;
           end;
         end;
       end;
@@ -502,6 +692,7 @@ begin
     end;
   end;
 
+  if (DocumentUI <> nil) and Visible then SyncDocument;
   if (not Result) then
   begin
     if (@fHandler <> nil) then
@@ -515,6 +706,13 @@ begin
 
   fHandler := nil;
   fHandlerData := nil;
+  DocumentUI := TDocumentUI.Open(uiScreenPopupInput);
+  if DocumentUI <> nil then
+  begin
+    fNameCaption := Language.Translate('SING_OPTIONS_NETWORK_USERNAME');
+    SelInteraction := 0;
+    Exit;
+  end;
 
   AddText(Theme.InsertUserPopup.TextInsertUser);
 
@@ -546,11 +744,13 @@ end;
 function TScreenPopupInsertUser.Draw: boolean;
 begin
   Renderer.ClearFrameBuffer(CLEAR_DEPTH);
+  if DocumentUI <> nil then begin SyncDocument; Exit(DocumentUI.Draw(false, true)); end;
   Result := inherited Draw;
 end;
 
 procedure TScreenPopupInsertUser.OnShow;
 begin
+  if DocumentUI <> nil then Exit;
   inherited;
 end;
 
@@ -564,6 +764,16 @@ begin
   fHandlerData := HandlerData;
   fPasswordOnly := false;
   fTextOnly := false;
+  if DocumentUI <> nil then
+  begin
+    Password := ''; Username := ''; SelInteraction := 0;
+    DocumentUI.SetValue('popup.title', Title);
+    DocumentUI.SetValue(uiPopupMessage, StringReplace(Language.Translate(Msg), '\n', #10, [rfReplaceAll]));
+    DocumentUI.SetValue('popup.nameCaption', fNameCaption);
+    DocumentUI.SetValue('popup.confirmCaption', Language.Translate('MSG_INSERT_USER_ADD'));
+    SyncDocument;
+    Exit;
+  end;
   if Length(Button[0].Text) > 1 then Button[0].Text[1].Text := fNameCaption;
 
   Text[0].Text := Language.Translate(Msg);
@@ -592,7 +802,15 @@ begin
   if fPasswordOnly and (Num = 0) then Num := 1;
   if fTextOnly and (Num = 1) then
     if Interaction = 0 then Num := 2 else Num := 0;
-  inherited SetInteraction(Num);
+  if DocumentUI <> nil then
+  begin
+    if (Num >= 0) and (Num <= 3) then
+    begin
+      SelInteraction := Num;
+      if Visible then DocumentUI.Focus('popup-input-' + IntToStr(Num));
+    end;
+  end
+  else inherited SetInteraction(Num);
 end;
 
 procedure TScreenPopupInsertUser.ShowPasswordPrompt(const Title, Msg: UTF8String;
@@ -600,6 +818,12 @@ procedure TScreenPopupInsertUser.ShowPasswordPrompt(const Title, Msg: UTF8String
 begin
   ShowPopup(Title, Msg, Handler, HandlerData);
   fPasswordOnly := true;
+  if DocumentUI <> nil then
+  begin
+    Interaction := 1;
+    DocumentUI.SetValue('popup.confirmCaption', Language.Translate('SONG_MENU_YES'));
+    SyncDocument; Exit;
+  end;
   Button[0].Visible := false;
   Button[2].Text[0].Text := Language.Translate('SONG_MENU_YES');
   Interaction := 1;
@@ -610,6 +834,13 @@ procedure TScreenPopupInsertUser.ShowTextPrompt(const Title, Msg, Caption: UTF8S
 begin
   ShowPopup(Title, Msg, Handler, Data);
   fTextOnly := true;
+  if DocumentUI <> nil then
+  begin
+    Interaction := 0;
+    DocumentUI.SetValue('popup.nameCaption', Language.Translate('FILTER_PRESET_NAME'));
+    DocumentUI.SetValue('popup.confirmCaption', Caption);
+    SyncDocument; Exit;
+  end;
   Button[1].Visible := false;
   if Length(Button[0].Text) > 1 then
     Button[0].Text[1].Text := Language.Translate('FILTER_PRESET_NAME');
@@ -1511,11 +1742,57 @@ end;
 
 { TScreenPopup }
 
+function TScreenPopup.DocumentRole: UTF8String;
+begin
+  Result := '';
+end;
+
+procedure TScreenPopup.ReadDocumentSelection;
+var Selection: integer;
+begin
+  if TryStrToInt(DocumentUI.FocusedTarget, Selection) then
+    SelInteraction := EnsureRange(Selection, 0, fButtonCount - 1);
+end;
+
+destructor TScreenPopup.Destroy;
+begin
+  DocumentUI.Free;
+  inherited;
+end;
+
+function TScreenPopup.ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
+var Action: UTF8String; Selection: integer;
+begin
+  if DocumentUI = nil then Exit(inherited ParseMouse(MouseButton, BtnDown, X, Y));
+  if RightMbESC and (MouseButton = SDL_BUTTON_RIGHT) and BtnDown then
+    Exit(ParseInput(SDLK_ESCAPE, 0, true));
+  if MouseButton = SDL_BUTTON_LEFT then DocumentUI.Mouse(X, Y, 0, BtnDown)
+  else DocumentUI.Mouse(X, Y);
+  ReadDocumentSelection;
+  Action := DocumentUI.TakeAction;
+  Result := true;
+  if (Action = uiPopupChoose) and TryStrToInt(DocumentUI.ActionTarget, Selection) and
+      (Selection >= 0) and (Selection < fButtonCount) then HideAndHandle(Selection, Result);
+end;
+
 function TScreenPopup.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
 var
   Selection: integer;
 begin
   Result := true;
+  if DocumentUI <> nil then
+  begin
+    if not PressedDown then Exit;
+    ReadDocumentSelection;
+    case PressedKey of
+      SDLK_Q: Result := false;
+      SDLK_ESCAPE, SDLK_BACKSPACE: HideAndHandle(fCancelValue, Result);
+      SDLK_RETURN: HideAndHandle(EnsureRange(Interaction, 0, fButtonCount - 1), Result);
+      SDLK_DOWN, SDLK_RIGHT: begin DocumentUI.Key(uiKeyNext); ReadDocumentSelection; end;
+      SDLK_UP, SDLK_LEFT: begin DocumentUI.Key(uiKeyPrevious); ReadDocumentSelection; end;
+    end;
+    Exit;
+  end;
   if (PressedDown) then
   begin // Key Down
 
@@ -1555,6 +1832,12 @@ begin
   fCancelValue := 0;
   fButtonCount := 1;
 
+  if DocumentRole <> '' then
+  begin
+    DocumentUI := TDocumentUI.Open(DocumentRole, uiPopupButtons);
+    if DocumentUI <> nil then begin SelInteraction := 0; Exit; end;
+  end;
+
   AddText(Theme.ErrorPopup.TextError);
 
   LoadFromTheme(Theme.ErrorPopup);
@@ -1580,17 +1863,20 @@ end;
 function TScreenPopup.Draw: boolean;
 begin
   Renderer.ClearFrameBuffer(CLEAR_DEPTH);
+  if DocumentUI <> nil then Exit(DocumentUI.Draw(false, true));
   Result := inherited Draw;
 end;
 
 procedure TScreenPopup.OnShow;
 begin
+  if DocumentUI <> nil then Exit;
   inherited;
 
 end;
 
 procedure TScreenPopup.OnHide;
 begin
+  if DocumentUI <> nil then Exit;
   inherited;
 end;
 
@@ -1644,7 +1930,23 @@ var
   PopupScaleX: real;
   PopupX: real;
   PopupW: real;
+  Prefix, Caption: UTF8String;
 begin
+  if DocumentUI <> nil then
+  begin
+    fButtonCount := EnsureRange(Length(Captions), 1, 3);
+    DocumentUI.SetArray(uiPopupButtons, fButtonCount);
+    for ButtonIndex := 0 to fButtonCount - 1 do
+    begin
+      Prefix := uiPopupButtons + '[' + IntToStr(ButtonIndex) + '].';
+      if Length(Captions) > 0 then Caption := Captions[ButtonIndex] else Caption := 'OK';
+      DocumentUI.SetModel(Prefix + 'id', IntToStr(ButtonIndex), 1);
+      DocumentUI.SetModel(Prefix + 'caption', Language.Translate(Caption));
+    end;
+    SelInteraction := EnsureRange(DefaultInteraction, 0, fButtonCount - 1);
+    DocumentUI.Focus('popup-button-' + IntToStr(SelInteraction));
+    Exit;
+  end;
   ButtonCount := Length(Captions);
   if ButtonCount <= 0 then
     ButtonCount := 1;
@@ -1839,10 +2141,16 @@ procedure TScreenPopup.ShowPopup(const Msg: UTF8String; const Captions: array of
     CancelValue: integer); overload;
 begin
   Visible := true;
-  Background.OnShow;
   fHandler := Handler;
   fHandlerData := HandlerData;
   fCancelValue := CancelValue;
+  if DocumentUI <> nil then
+  begin
+    DocumentUI.SetValue(uiPopupMessage, StringReplace(Msg, '\n', #10, [rfReplaceAll]));
+    ConfigureButtons(Captions, DefaultInteraction);
+    Exit;
+  end;
+  Background.OnShow;
 
   LayoutPopup(Msg, Captions);
   Text[0].Text := Msg;
@@ -1852,21 +2160,187 @@ end;
 
 { TScreenPopupError }
 
+function TScreenPopupError.DocumentRole: UTF8String;
+begin
+  Result := uiScreenPopupError;
+end;
+
 constructor TScreenPopupError.Create;
 begin
   inherited;
+  if DocumentUI <> nil then Exit;
   Text[1].Text := Language.Translate('MSG_ERROR_TITLE');
 end;
 
 { TScreenPopupInfo }
 
+function TScreenPopupInfo.DocumentRole: UTF8String;
+begin
+  Result := 'popup-info';
+end;
+
 constructor TScreenPopupInfo.Create;
 begin
   inherited;
+  if DocumentUI <> nil then Exit;
   Text[1].Text := Language.Translate('MSG_INFO_TITLE');
 end;
 
 // Help popup
+
+procedure TScreenPopupHelp.SetInteraction(Num: integer);
+begin
+  if DocumentUI = nil then inherited SetInteraction(Num)
+  else if (Num >= 0) and (Num <= 3) then SelInteraction := Num;
+end;
+
+destructor TScreenPopupHelp.Destroy;
+begin DocumentUI.Free; inherited; end;
+
+procedure TScreenPopupHelp.LoadDocumentVolumes;
+begin
+  VolumeAudioIndex := EnsureRange(Ini.AudioVolume,0,100);
+  VolumeVocalsIndex := EnsureRange(Ini.VocalsVolume,0,100);
+  VolumeSfxIndex := EnsureRange(Ini.SfxVolume,0,100);
+  VolumePreviewIndex := EnsureRange(Ini.PreviewVolume,0,100);
+end;
+
+function TScreenPopupHelp.DocumentVolume(Index: integer): integer;
+begin
+  case Index of
+    0: Result:=VolumeAudioIndex; 1: Result:=VolumeVocalsIndex;
+    2: Result:=VolumeSfxIndex; 3: Result:=VolumePreviewIndex;
+    else Result:=0;
+  end;
+end;
+
+procedure TScreenPopupHelp.SetDocumentVolume(Index,Value: integer);
+begin
+  Value:=EnsureRange(Value,0,100);
+  case Index of
+    0: VolumeAudioIndex:=Value; 1: VolumeVocalsIndex:=Value;
+    2: VolumeSfxIndex:=Value; 3: VolumePreviewIndex:=Value;
+  end;
+end;
+
+procedure TScreenPopupHelp.ReadDocumentSelection;
+var Selected:integer;
+begin
+  if TryStrToInt(DocumentUI.FocusedTarget,Selected) and (Selected>=0) and (Selected<=3) then SelInteraction:=Selected;
+end;
+
+procedure TScreenPopupHelp.SyncDocument;
+const Labels:array[0..3] of string=('HELP_VOLUME_AUDIO','HELP_VOLUME_VOCALS','HELP_VOLUME_SFX','HELP_VOLUME_PREVIEW');
+var I:integer; Prefix:UTF8String; Bounds:TDocumentRegion;
+begin
+  DocumentUI.SetArray('help.volumes',4);
+  for I:=0 to 3 do begin
+    Prefix:='help.volumes['+IntToStr(I)+'].';
+    DocumentUI.SetModel(Prefix+'id',IntToStr(I),1);
+    DocumentUI.SetModel(Prefix+'label',Language.Translate(Labels[I]));
+    DocumentUI.SetModel(Prefix+'value',IntToStr(DocumentVolume(I)),1);
+    DocumentUI.SetModel(Prefix+'width',IntToStr(DocumentVolume(I))+'%');
+    DocumentUI.SetModel(Prefix+'selected',IntToStr(Ord(Interaction=I)),2);
+  end;
+  DocumentUI.PrepareLayout;
+  if not DocumentUI.Region('help-volume-'+IntToStr(Interaction),Bounds) then
+    for I:=0 to 3 do if DocumentUI.Region('help-volume-'+IntToStr(I),Bounds) then begin SelInteraction:=I; Break; end;
+  DocumentUI.Focus('help-volume-'+IntToStr(Interaction));
+end;
+
+procedure TScreenPopupHelp.BuildDocumentHelp;
+var I,J,K,Count,Row:integer; Prefix,Keys:UTF8String;
+  procedure AddRow(Kind:integer;const Left,Right:UTF8String);
+  begin
+    Prefix:=uiHelpRows+'['+IntToStr(Row)+'].';
+    DocumentUI.SetModel(Prefix+'kind',IntToStr(Kind),1);
+    DocumentUI.SetModel(Prefix+'left',Left); DocumentUI.SetModel(Prefix+'right',Right);
+    Inc(Row);
+  end;
+begin
+  msg:=Help.GetHelpStr;
+  Count:=1+Ord(msg.Description<>'');
+  for I:=0 to High(msg.Subs) do Inc(Count,1+Length(msg.Subs[I].Text));
+  for I:=0 to High(msg.Sections) do Inc(Count,1+Length(msg.Sections[I].Keys));
+  DocumentUI.SetArray(uiHelpRows,Count); Row:=0;
+  AddRow(0,Language.Translate('MSG_HELP_TITLE')+': '+msg.Title,'');
+  if msg.Description<>'' then AddRow(1,msg.Description,'');
+  for I:=0 to High(msg.Subs) do begin
+    AddRow(2,msg.Subs[I].Title+':','');
+    for J:=0 to High(msg.Subs[I].Text) do AddRow(3,msg.Subs[I].Text[J],'');
+  end;
+  for I:=0 to High(msg.Sections) do begin
+    AddRow(4,msg.Sections[I].Name,'');
+    for J:=0 to High(msg.Sections[I].Keys) do begin
+      Keys:='';
+      for K:=0 to High(msg.Sections[I].Keys[J].Key) do begin
+        if K>0 then Keys:=Keys+'+'; Keys:=Keys+msg.Sections[I].Keys[J].Key[K];
+      end;
+      if J<=High(msg.Sections[I].KeyDescription) then AddRow(5,Keys,msg.Sections[I].KeyDescription[J]) else AddRow(5,Keys,'');
+    end;
+  end;
+end;
+
+function TScreenPopupHelp.ParseDocumentInput(Key:cardinal;Down:boolean):boolean;
+var PrevAudio,PrevVocals,PrevSfx,PrevPreview,Current,Target,I,Next:integer;
+    Position,Fraction:double; Viewport,Content:TDocumentRegion;
+begin
+  Result:=true; if not Down then Exit;
+  ReadDocumentSelection;
+  PrevAudio:=VolumeAudioIndex; PrevVocals:=VolumeVocalsIndex; PrevSfx:=VolumeSfxIndex; PrevPreview:=VolumePreviewIndex;
+  Position:=DocumentUI.ScrollPosition(uiHelpViewport); Fraction:=1;
+  if DocumentUI.Region(uiHelpViewport,Viewport) and DocumentUI.Region('help-content',Content) and (Content.H>0) then Fraction:=Sqr(Min(1,Viewport.H/Content.H));
+  case Key of
+    SDLK_TAB,SDLK_ESCAPE,SDLK_BACKSPACE,SDLK_RETURN:begin ClosePopup; Exit(false); end;
+    SDLK_K:begin
+      ToggleVocalsVolume; LoadDocumentVolumes;
+      if ScreenOptionsSound<>nil then ScreenOptionsSound.SyncVolumeSlidersFromIni;
+    end;
+    SDLK_DOWN:begin
+      Next:=-1;
+      for I:=Interaction+1 to 3 do if DocumentUI.Region('help-volume-'+IntToStr(I),Viewport) then begin Next:=I; Break; end;
+      if Next>=0 then SelInteraction:=Next else Position:=Min(1,Position+Fraction);
+    end;
+    SDLK_UP:if Position>0 then Position:=Max(0,Position-Fraction) else begin
+      for I:=Interaction-1 downto 0 do if DocumentUI.Region('help-volume-'+IntToStr(I),Viewport) then begin SelInteraction:=I; Break; end;
+    end;
+    SDLK_RIGHT,SDLK_LEFT:begin
+      Current:=DocumentVolume(Interaction);
+      if Key=SDLK_RIGHT then Target:=((Current div 10)+1)*10 else Target:=((Current+9) div 10-1)*10;
+      if DocumentUI.Region('help-volume-'+IntToStr(Interaction),Viewport) then SetDocumentVolume(Interaction,Target);
+    end;
+  end;
+  ApplyVolumeChanges(PrevAudio,PrevVocals,PrevSfx,PrevPreview);
+  SyncDocument; DocumentUI.ScrollTo(uiHelpViewport,Position);
+  Help.SetScrollPos(DocumentUI.ScrollPosition(uiHelpViewport));
+end;
+
+function TScreenPopupHelp.ParseDocumentMouse(MouseButton:integer;Down:boolean;X,Y:integer):boolean;
+var PrevAudio,PrevVocals,PrevSfx,PrevPreview,RenderX,RenderY,I:integer; Bounds:TDocumentRegion;
+begin
+  if RightMbESC and (MouseButton=SDL_BUTTON_RIGHT) and Down then Exit(ParseDocumentInput(SDLK_ESCAPE,true));
+  PrevAudio:=VolumeAudioIndex; PrevVocals:=VolumeVocalsIndex; PrevSfx:=VolumeSfxIndex; PrevPreview:=VolumePreviewIndex;
+  ConvertMouseToRenderCoords(X,Y,RenderX,RenderY);
+  if (MouseButton=SDL_BUTTON_LEFT) and Down then begin
+    DraggingVolumeSelectId:=-1;
+    for I:=0 to 3 do if DocumentUI.Region('help-volume-'+IntToStr(I),Bounds) and
+        (RenderX>=Bounds.X) and (RenderX<=Bounds.X+Bounds.W) and
+        (RenderY>=Bounds.Y) and (RenderY<=Bounds.Y+Bounds.H) then DraggingVolumeSelectId:=I;
+  end;
+  if DraggingVolumeSelectId>=0 then begin
+    if DocumentUI.Region('help-volume-'+IntToStr(DraggingVolumeSelectId),Bounds) and (Bounds.W>0) then
+      SetDocumentVolume(DraggingVolumeSelectId,Round(100*EnsureRange((RenderX-Bounds.X)/Bounds.W,0.0,1.0)));
+    SelInteraction:=DraggingVolumeSelectId;
+  end;
+  if not Down then DraggingVolumeSelectId:=-1;
+  if MouseButton=SDL_BUTTON_LEFT then DocumentUI.Mouse(X,Y,0,Down) else DocumentUI.Mouse(X,Y);
+  ReadDocumentSelection; DocumentUI.TakeAction;
+  if Down then if MouseButton=SDL_BUTTON_WHEELUP then DocumentUI.Scroll(-1) else if MouseButton=SDL_BUTTON_WHEELDOWN then DocumentUI.Scroll(1);
+  Help.SetScrollPos(DocumentUI.ScrollPosition(uiHelpViewport));
+  ApplyVolumeChanges(PrevAudio,PrevVocals,PrevSfx,PrevPreview); SyncDocument;
+  Result:=true;
+end;
+
 
 function TScreenPopupHelp.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
 var
@@ -1877,6 +2351,7 @@ var
   PrevPreview: integer;
   PrevInteractionIndex: integer;
 begin
+  if DocumentUI<>nil then Exit(ParseDocumentInput(PressedKey,PressedDown));
   Result := true;
   if (PressedDown) then
   begin // Key Down
@@ -1974,6 +2449,7 @@ var
   PrevSfx: integer;
   PrevPreview: integer;
 begin
+  if DocumentUI<>nil then Exit(ParseDocumentMouse(MouseButton,BtnDown,X,Y));
   PrevAudio := VolumeAudioIndex;
   PrevVocals := VolumeVocalsIndex;
   PrevSfx := VolumeSfxIndex;
@@ -1998,6 +2474,9 @@ begin
   ResumeSingAfterPopup := false;
   VolumeSettingsDirty := false;
   DraggingVolumeSelectId := -1;
+
+  DocumentUI:=TDocumentUI.Open(uiScreenPopupHelp,uiHelpRows);
+  if DocumentUI<>nil then begin LoadDocumentVolumes; SelInteraction:=0; Exit; end;
 
   BuildVolumeOptions;
 
@@ -2442,6 +2921,10 @@ function TScreenPopupHelp.Draw: boolean;
 var
   abs:  real;
 begin
+  if DocumentUI<>nil then begin
+    SyncDocument; DocumentUI.ScrollTo(uiHelpViewport,Help.GetScrollPos);
+    Renderer.ClearFrameBuffer(CLEAR_DEPTH); Exit(DocumentUI.Draw(false,true));
+  end;
 //inherited Draw; TODO: FIX
   Renderer.ClearFrameBuffer(CLEAR_DEPTH);
   if step<1 then
@@ -2579,6 +3062,10 @@ begin
     VolumeSettingsDirty := false;
   Visible := True;  //Set Visible
 
+  if DocumentUI<>nil then begin
+    LoadDocumentVolumes; ForceCursorVisibleForSing; SelInteraction:=0;
+    BuildDocumentHelp; SyncDocument; DocumentUI.ScrollTo(uiHelpViewport,Help.GetScrollPos); Exit;
+  end;
   SyncVolumeSliders;
   ForceCursorVisibleForSing;
   FocusVolumeSlider;

@@ -175,7 +175,7 @@ begin
 
     if (ScreenOptionsNetwork.NewUser_Username = '') or (NewUser_Password = '') then
     begin
-      ScreenPopupInsertUser.Text[0].Text := Language.Translate('WEBSITE_BLANK_LOGIN');
+      ScreenPopupInsertUser.SetMessage(Language.Translate('WEBSITE_BLANK_LOGIN'));
       ScreenPopupInsertUser.Interaction := ScreenPopupInsertUser.InteractionTmp;
     end
     else
@@ -189,7 +189,7 @@ begin
 
       if (ExistUser = true) then
       begin
-        ScreenPopupInsertUser.Text[0].Text := Language.Translate('WEBSITE_EXIST_USER');
+        ScreenPopupInsertUser.SetMessage(Language.Translate('WEBSITE_EXIST_USER'));
         ScreenPopupInsertUser.Interaction := ScreenPopupInsertUser.InteractionTmp;
       end
       else
@@ -231,7 +231,7 @@ begin
           end
           else
           begin
-            ScreenPopupInsertUser.Text[0].Text := Language.Translate('WEBSITE_LOGIN_ERROR');
+            ScreenPopupInsertUser.SetMessage(Language.Translate('WEBSITE_LOGIN_ERROR'));
             ScreenPopupInsertUser.Interaction := ScreenPopupInsertUser.InteractionTmp;
           end;
         end;

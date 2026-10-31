@@ -1,0 +1,32 @@
+<rml>
+<head>
+  <title>Modern text entry dialog</title>
+  <link type="text/rcss" href="modern.rcss" />
+  <link type="text/rcss" href="popup-error.rcss" />
+  <link type="text/rcss" href="popup-input.rcss" />
+</head>
+<body class="popup-error-screen popup-input-screen">
+  <div class="popup-shade" />
+  <div data-model="game" class="popup-positioner">
+    <div id="popup-panel" class="popup-dialog">
+      <div id="popup-reflection" class="popup-dialog-reflection" />
+      <span class="popup-error-title description" bind-text="popup.title" />
+      <div id="popup-message" class="popup-error-message" bind-lines="popup.message" />
+      <div class="popup-input-fields">
+        <div class="popup-input-row" data-class-hidden="data.popupInput.passwordOnly">
+          <span class="popup-input-caption" bind-text="popup.nameCaption" />
+          <button id="popup-input-0" class="popup-input-field" action="popup.input.focus" target="0" data-class-selected="data.popupInput.selection == 0"><span>{{ data.popupInput.username }}</span><span id="popup-input-caret-0" class="popup-input-caret" data-class-hidden="data.popupInput.selection != 0">|</span></button>
+        </div>
+        <div class="popup-input-row" data-class-hidden="data.popupInput.textOnly">
+          <span class="popup-input-caption" lang="SING_OPTIONS_NETWORK_PASSWORD" />
+          <button id="popup-input-1" class="popup-input-field" action="popup.input.focus" target="1" data-class-selected="data.popupInput.selection == 1"><span>{{ data.popupInput.password }}</span><span id="popup-input-caret-1" class="popup-input-caret" data-class-hidden="data.popupInput.selection != 1">|</span></button>
+        </div>
+      </div>
+      <div class="popup-error-actions">
+        <button id="popup-input-2" class="popup-choice secondary" action="popup.input.accept" target="2"><span bind-text="popup.confirmCaption" /></button>
+        <button id="popup-input-3" class="popup-choice secondary" action="popup.input.cancel" target="3"><span lang="MSG_INSERT_USER_CANCEL" /></button>
+      </div>
+    </div>
+  </div>
+</body>
+</rml>

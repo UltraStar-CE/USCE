@@ -1,0 +1,8 @@
+<template name="library-footer"><head></head><body><span class="where" lang="SING_SONG_SELECTION_WHEREAMI"/>
+<button class="library-config" action="library.configure" data-class-hidden="!data.library.normal || data.library.searching"><img src="../../themes/Modern/[button]c.png"/><span lang="SING_CONFIGURATION"/></button>
+<div class="library-goto" data-class-hidden="data.library.party"><img src="../../themes/Modern/[button]alt.png"/><span>+</span><img src="../../themes/Modern/[button]az.png"/><span lang="SING_SONG_SELECTION_GOTO"/></div>
+<button class="library-menu" action="library.menu"><img src="../../themes/Modern/[button]m.png"/><span lang="SING_SONG_SELECTION_MENU"/></button>
+<button class="library-search" action="library.search" data-class-hidden="data.library.party"><img src="../../themes/Modern/[button]j.png"/><span lang="SONG_JUMPTO_DESC"/></button>
+<button class="library-playlists" action="library.playlists" data-class-hidden="data.library.party"><img src="../../themes/Modern/[button]p.png"/><span lang="SING_SONG_SELECTION_PLAYLIST"/></button>
+<div class="library-jokers" data-class-hidden="!data.library.party"><img src="../../themes/Modern/[button]13.png"/><span lang="SONG_MENU_NAME_PARTY_JOKER"/></div>
+</body></template>

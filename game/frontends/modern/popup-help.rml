@@ -1,0 +1,18 @@
+<rml>
+<head><title>Modern help</title><link type="text/rcss" href="modern.rcss" /><link type="text/rcss" href="popup-help.rcss" /></head>
+<body class="popup-help-screen">
+  <div data-model="game">
+    <div class="help-volumes">
+      <button data-for="volume : data.help.volumes" class="help-volume" data-attr-id="'help-volume-' + volume.id" action="help.volume" data-attr-target="volume.id" data-class-selected="volume.selected">
+        <div class="help-volume-fill" data-style-width="volume.width" /><span>{{ volume.label }}</span>
+      </button>
+    </div>
+    <div class="help-panel" />
+    <div id="help-viewport" class="help-viewport">
+      <div id="help-content" class="help-content">
+        <div data-for="row : data.help.rows" class="help-row" data-attr-kind="row.kind"><span class="help-left">{{ row.left }}</span><span class="help-right">{{ row.right }}</span></div>
+      </div>
+    </div>
+  </div>
+</body>
+</rml>

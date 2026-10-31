@@ -1,0 +1,16 @@
+/* Text entry keeps native field semantics; the document owns its composition. */
+.popup-input-screen .popup-positioner { height: 86.666667vh; }
+.popup-input-screen .popup-dialog { min-height: 36.666667vh; }
+.popup-input-screen .popup-error-message { min-height: 0; max-height: 40vh; margin-top: 2vh; flex-grow: 0; font-size: 3vh; }
+.popup-input-fields { display: block; position: relative; width: 100%; margin-top: 1.666667vh; }
+.popup-input-row { display: flex; width: 100%; min-height: 5vh; align-items: flex-start; }
+.popup-input-caption { display: block; position: relative; box-sizing: border-box; padding-left: 15%; width: 45%; font-size: 3vh; white-space: nowrap; }
+.popup-input-field { position: relative; display: flex; width: 40%; height: 4.166667vh; padding-left: 0.625vw; background-color: #3f3f3f; color: black; text-align: left; overflow-x: auto; overflow-y: hidden; }
+.popup-input-field.selected, .popup-input-field:focus { background-color: #bfbfbf; }
+.popup-input-field span { display: inline-block; margin-top: 0; font-size: 3vh; white-space: pre; flex-shrink: 0; }
+.popup-input-caret { animation: 0.5s linear-in-out alternate infinite popup-input-blink; }
+.popup-input-screen .hidden { display: none; }
+.popup-input-screen .popup-error-actions { margin-top: auto; }
+@keyframes popup-input-blink { from { opacity: 1; } to { opacity: 0; } }
+
+.popup-input-field scrollbarhorizontal { height: 0; }

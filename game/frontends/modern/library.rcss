@@ -1,0 +1,121 @@
+/* Modern's song-library geometry, with game state supplied as raw data. */
+.library-screen .hidden { display: none; }
+.library-heading { position: absolute; left: 8.75vw; top: 0.833333vh; font-size: 7.5vh; z-index: 200; }
+.library-icon { position: absolute; left: 5.375vw; top: 3.611111vh; width: 4.5vh; height: 4.5vh; z-index: 200; }
+.library-category { position: absolute; left: 9vw; top: 10vh; width: 85vw; font-size: 3.75vh; z-index: 200; }
+.library-window { position: absolute; overflow: hidden; }
+.library-measure { position: absolute; opacity: 0; pointer-events: none; }
+.song-slot { position: absolute; }
+.song-card { position: relative; display: block; width: 100%; height: 100%; overflow: hidden; border-radius: 0; color: white; }
+.song-cover { position: absolute; left: 0; top: 0; width: 100%; height: 100%; filter: brightness(0.5); }
+.song-slot.selected .song-cover { filter: brightness(1); }
+.song-reflection { filter: brightness(0.5); }
+.song-slot.selected .song-reflection { filter: brightness(1); }
+.song-artist, .song-title, .song-year { position: absolute; white-space: nowrap; overflow: hidden; }
+.song-video, .song-duet { position: absolute; right: 0.5vw; top: 0.5vh; width: 3vh; height: 3vh; }
+.song-duet { right: 3vw; }
+.library-preview { position: absolute; }
+.selected-cover { position: absolute; display: block; left: 0; top: 0; width: 100%; height: 100%; }
+.selected-song { position: absolute; color: white; z-index: 200; }
+.selected-artist { height: 8vh; overflow: hidden; font-size: 3vh; font-weight: bold; }
+.selected-title { height: 12vh; overflow: hidden; font-size: 3vh; }
+.selected-year { font-size: 2.5vh; }
+.selected-video, .selected-duet { position: absolute; left: 1.25vw; top: 20.833333vh; width: 3.75vh; height: 3.75vh; }
+.selected-duet { left: 4.375vw; }
+.library-count { position: absolute; color: white; font-size: 1.75vh; z-index: 210; }
+.library-message { position: absolute; left: 25vw; top: 80vh; width: 70vw; font-size: 3vh; z-index: 210; }
+.voices { position: absolute; left: 56.25vw; top: 68.333333vh; width: 42.5vw; display: flex; flex-wrap: wrap; z-index: 210; }
+.voice { display: inline-block; min-width: 5vw; height: 3vh; margin-right: 0.5vw; color: white; font-size: 2vh; }
+.library-list .library-window { left: 5vw; top: 18.333333vh; width: 57.5vw; height: 68.333333vh; }
+.library-list .library-measure, .library-list .song-slot { width: 100%; height: 20%; }
+.library-list .song-card { text-align: left; width: 100%; height: 97.56%; opacity: 0.65; border-radius: 0.5vh; }
+.library-list .song-slot.selected .song-card { opacity: 1; }
+.library-list .song-cover { left: 0.5vw; top: 0.833333vh; width: 9.375vw; height: 11.666667vh; }
+.library-list .song-artist { left: 11.25vw; top: 1.666667vh; font-weight: bold; width: 44vw; font-size: 3.5vh; }
+.library-list .song-title { left: 11.25vw; top: 6.666667vh; font-weight: normal; width: 41.25vw; font-size: 3.25vh; }
+.library-list .song-year { right: 1.25vw; font-weight: normal; bottom: 0.5vh; font-size: 2.25vh; }
+.library-list .library-preview { left: 65.625vw; top: 56.666667vh; width: 26.875vw; height: 31.666667vh; }
+.library-list .selected-song { display: none; }
+.library-list .library-count { left: 35vw; top: 86.333333vh; transform: translateX(-50%); }
+.library-list .voices { left: 65.625vw; top: 18.333333vh; width: 32.5vw; }
+.library-chessboard .library-window { left: 33.75vw; top: 16.666667vh; width: 63.75vw; height: 51vh; overflow: visible; }
+.library-chessboard .library-measure, .library-chessboard .song-slot { width: 20%; height: 33.333333%; }
+.library-chessboard .song-card { width: 98%; height: 98%; }
+.library-chessboard .song-slot.selected { z-index: 5; }
+.library-chessboard .song-slot.selected .song-card { transform: scale(1.2); }
+.library-chessboard .song-artist, .library-chessboard .song-title, .library-chessboard .song-year, .library-chessboard .song-video, .library-chessboard .song-duet { display: none; }
+.library-chessboard .library-preview { left: 3.125vw; top: 20vh; width: 25vw; height: 33.333333vh; }
+.library-chessboard .selected-song { left: 3.125vw; top: 53.333333vh; width: 25vw; height: 26.666667vh; text-align: center; }
+.library-chessboard .selected-artist { position: absolute; left: 0; top: 1.333333vh; width: 100%; }
+.library-chessboard .selected-title { position: absolute; left: 0; top: 12.333333vh; width: 100%; }
+.library-chessboard .selected-year { position: absolute; left: 0; top: 21.166667vh; width: 100%; }
+.library-chessboard .library-count { left: 23.125vw; top: 76.166667vh; }
+.library-roulette .library-window { left: 0; top: 0; width: 100vw; height: 75vh; overflow: visible; }
+.library-roulette .library-measure { width: 20%; height: 100%; }
+.library-roulette .song-slot { width: 25vw; height: 25vw; overflow: visible; }
+.library-roulette .song-card { width: 100%; height: 100%; overflow: visible; background-color: transparent; }
+.library-roulette .song-artist, .library-roulette .song-title, .library-roulette .song-year, .library-roulette .song-video, .library-roulette .song-duet { display: none; }
+.library-roulette .selected-song { left: 37.5vw; top: 53.333333vh; width: 25vw; height: 26.666667vh; text-align: center; }
+.library-roulette .selected-artist { position: absolute; left: 0; top: 1.333333vh; width: 100%; }
+.library-roulette .selected-title { position: absolute; left: 0; top: 12.333333vh; width: 100%; }
+.library-roulette .selected-year { position: absolute; left: 0; top: 21.166667vh; width: 100%; }
+.library-roulette .library-preview { left: 37.5vw; top: auto; bottom: 46.666667vh; width: 25vw; height: 25vw; }
+.library-roulette .selected-cover { display: none; }
+.library-roulette .library-count { left: 59.5vw; top: 76.166667vh; }
+.song-reflection-clip { display: none; }
+.library-roulette .song-reflection-clip { display: block; position: absolute; left: 0; top: 107.5%; width: 100%; height: 50%; overflow: hidden; mask-image: vertical-gradient(#0008 #0000); pointer-events: none; }
+.library-roulette .song-reflection { position: absolute; left: 0; top: 0; width: 100%; height: 200%; transform: scaleY(-1); }
+.library-preview-reflection { display: none; }
+.library-roulette .library-preview-reflection { display: block; position: absolute; left: 37.5vw; top: 53.666667vh; width: 25vw; height: 10vh; pointer-events: none; }
+.library-previous, .library-next { display: none; }
+.library-roulette .library-previous, .library-roulette .library-next { display: block; position: absolute; left: 34.75vw; top: 34.333333vh; width: 2.3vw; height: 4.166667vh; border-radius: 1vh 0 0 1vh; background-color: #7ec5ea77; z-index: 205; }
+.library-roulette .library-next { left: 63vw; border-radius: 0 1vh 1vh 0; }
+.library-previous svg, .library-next svg { opacity: 0.35; }
+.library-scores { position: absolute; left: 66.25vw; top: 70vh; width: 32.5vw; height: 15vh; font-size: 2.75vh; z-index: 200; }
+.library-chessboard .library-scores { left: 33.75vw; top: 72.5vh; width: 60vw; }
+.library-list .library-scores { left: 65.625vw; top: 39.166667vh; width: 32.5vw; }
+.score-label-best, .score-label-average { position: absolute; left: 0; top: 5vh; }
+.score-label-average { top: 11.666667vh; }
+.library-score { position: absolute; left: 18.75vw; top: 0; width: 14vw; height: 15vh; }
+.library-score.web { left: 10vw; width: 7.5vw; text-align: right; }
+.score-source, .score-best, .score-singer, .score-average { position: absolute; left: 0; top: 0; width: 100%; white-space: nowrap; }
+.score-best { top: 5vh; }
+.score-singer { top: 8vh; font-size: 2.5vh; }
+.score-average { top: 11.666667vh; }
+.library-score.web .score-source { left: -10vw; width: 17.5vw; text-align: left; }
+.library-teams { position: absolute; left: 5vw; top: 73vh; width: 90vw; font-size: 3vh; z-index: 210; }
+.library-teams div { display: inline-block; margin-right: 4vw; }
+.library-teams button { color: white; background-color: transparent; }
+.library-medley { position: absolute; left: 5vw; top: 70vh; width: 90vw; max-height: 16vh; overflow: auto; font-size: 2.5vh; z-index: 210; }
+.library-continuous { position: absolute; left: 26.25vw; top: 90.833333vh; width: 4vw; height: 5vh; z-index: 310; }
+.library-continuous img { width: 100%; height: 100%; }
+.library-empty { position: absolute; left: 5vw; top: 40vh; width: 90vw; text-align: center; font-size: 4vh; color: white; z-index: 210; }
+.library-spectrum { position: absolute; left: 29.375vw; top: 64.333333vh; width: 3.125vw; height: 15vh; z-index: 210; }
+.library-spectrum-cell { position: absolute; opacity: 0; pointer-events: none; width: 20%; height: 6.666667%; }
+.spectrum-band { position: absolute; bottom: 0; background-color: white; }
+.library-roulette .library-spectrum { left: 33.125vw; }
+.library-list .library-spectrum { left: 64.375vw; }
+.library-screen .footer, .library-screen .footer-labels, .library-screen .reflection-clip { z-index: 300; }
+.library-screen .where { font-size: 2.25vh; }
+.library-screen .footer-labels button { position: absolute; top: 90.833333vh; height: 5vh; color: black; background-color: transparent; font-size: 3vh; pointer-events: auto; }
+.library-screen .footer-labels button span { position: absolute; left: 5vw; top: 0.777778vh; display: inline; white-space: nowrap; }
+.library-screen .footer-labels button img { position: absolute; left: 2vw; top: 0; width: 5.333333vh; height: 5vh; transform: translateX(-50%); }
+.library-screen .footer-labels .library-config { left: 1.875vw; color: white; font-size: 2.5vh; }
+.library-screen .footer-labels .library-config span { left: 4.375vw; }
+.library-goto, .library-jokers { position: absolute; left: 32.5vw; top: 90.833333vh; font-size: 3vh; color: black; }
+.library-goto img, .library-jokers img { position: absolute; left: 2vw; top: 0; width: 5.333333vh; height: 5vh; transform: translateX(-50%); }
+.library-goto span { position: absolute; left: 4vw; top: 0.777778vh; white-space: nowrap; }
+.library-goto img:nth-child(3) { left: 7vw; }
+.library-goto span:last-child { left: 10vw; }
+.library-jokers span { position: absolute; left: 5vw; top: 0.777778vh; white-space: nowrap; }
+.library-screen .footer-labels .library-menu { left: 53.125vw; width: 11.25vw; }
+.library-screen .footer-labels .library-search { left: 64.375vw; width: 20.625vw; }
+.library-screen .footer-labels .library-playlists { left: 85vw; width: 15vw; }
+.library-screen .reflection-clip .footer-labels button, .library-screen .reflection-clip .library-goto, .library-screen .reflection-clip .library-jokers { top: 0; transform: scaleY(-1); pointer-events: none; }
+
+.selected-count { position: absolute; right: 1vw; top: 22.833333vh; font-size: 1.75vh; }
+.library-roulette .library-count, .library-chessboard .library-count { display: none; }
+.selected-panel-reflection-clip { display: none; }
+.library-chessboard .selected-panel-reflection-clip, .library-roulette .selected-panel-reflection-clip { display: block; position: absolute; left: 3.125vw; top: 80.333333vh; width: 25vw; height: 13.333333vh; overflow: hidden; mask-image: vertical-gradient(#0008 #0000); pointer-events: none; z-index: 190; }
+.library-roulette .selected-panel-reflection-clip { left: 37.5vw; }
+.selected-panel-reflection { position: absolute; left: 0; top: 0; width: 100%; height: 26.666667vh; transform: scaleY(-1); }

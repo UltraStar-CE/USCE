@@ -3,7 +3,7 @@
 .bracket-player { position: absolute; width: 15vw; height: 5vh; }
 .bracket-player[side="0"] { left: 2.5vw; }
 .bracket-player[side="1"] { right: 2.5vw; }
-.bracket-player button, .bracket-player button:focus { position: absolute; width: 15vw; height: 5vh; padding: 0; border: none; border-radius: 0.8vh; color: white; font-size: 3.333333vh; }
+.bracket-player button, .bracket-player button:focus { position: absolute; width: 15vw; height: 5vh; padding: 0; border-width: 0; border-radius: 0.8vh; color: white; font-size: 3.333333vh; }
 .bracket-player button span { display: block; margin-top: 0.5vh; text-align: center; white-space: nowrap; overflow: hidden; }
 .bracket-player:not(.active) { pointer-events: none; }
 .bracket-player.eliminated { opacity: 0.1; }
