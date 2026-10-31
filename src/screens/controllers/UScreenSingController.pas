@@ -657,6 +657,7 @@ begin
   if ResetScoring then
   begin
     PlaybackSeeked := true;
+    RemoteInputProcessor.ClearFrames;
     for I := 0 to High(Player) do
     begin
       Player[I].ResetScores;
