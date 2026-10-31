@@ -5116,6 +5116,8 @@ begin
       for I := 0 to High(CatSongs.Song) do
         if not CatSongs.Song[I].Main then
           NewIds.AddObject(TLibraryRefresh.Key(CatSongs.Song[I].Path.Append(CatSongs.Song[I].FileName)), TObject(PtrInt(I + 1)));
+      // Resolve missing paths by name first, then retain exact surviving files.
+      PlaylistMan.ReindexAllPlaylists;
       Index := 0;
       for P := 0 to High(PlaylistMan.Playlists) do
         for Item := 0 to High(PlaylistMan.Playlists[P].Items) do
@@ -5130,7 +5132,6 @@ begin
           end;
           Inc(Index);
         end;
-      PlaylistMan.ReindexAllPlaylists;
       if not EmptyMainMenu then OnShow;
       if (OldCategory = -3) and (PlaylistMan.CurPlaylist >= 0) then
         PlaylistMan.ApplyPlayList(PlaylistMan.CurPlaylist)
