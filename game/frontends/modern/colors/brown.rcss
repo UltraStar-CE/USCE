@@ -26,3 +26,8 @@ button { background-color: #b3771de6; }
 .statistics-panel .panel-top, .statistics-panel .panel-bottom { background-color: #ffaf00; }
 .statistics-panel { background-color: #ff98007b; }
 .statistics-buttons button:focus { background-color: #cfa853e6; }
+
+/* Modern song-menu selected row and ColorLight heading. */
+.song-menu-screen .song-menu-heading { color: #ddb459; }
+.song-menu-screen .song-menu-entry.selected .entry-action,
+.song-menu-screen .song-menu-entry.selected .entry-choice { background-color: #ffaf00e6; }

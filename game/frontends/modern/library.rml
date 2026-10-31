@@ -18,7 +18,7 @@
 <div class="library-teams" data-class-hidden="!data.library.party"><div data-for="team : data.library.teams"><span>{{ team.name }}</span><button data-attr-id="'library-joker-' + team.id" action="library.joker" data-attr-target="team.id">{{ team.jokers }}</button></div></div>
 <div class="library-medley" data-class-hidden="!data.library.medley"><div data-for="song : data.library.medleySongs">{{ song.number }} {{ song.artist }} - {{ song.title }}</div></div>
 <div class="library-empty" data-class-hidden="!data.library.empty"><span lang="SONG_JUMPTO_NOSONGSFOUND"/></div>
-<div id="library-spectrum" class="library-spectrum" data-class-hidden="!data.library.previewPlaying"><div id="library-spectrum-cell" class="library-spectrum-cell"/><div data-for="band : data.library.spectrum" class="spectrum-band" data-style-width="(70 / (data.library.spectrumCount | max(1))) + '%'" data-style-left="(band.index * 100 / (data.library.spectrumCount | max(1))) + '%'" data-style-height="(band.level * 100) + '%'"/></div>
+<div id="library-spectrum" class="library-spectrum" data-class-hidden="!data.library.previewPlaying"><div id="library-spectrum-cell" class="library-spectrum-cell"/><div data-for="band : data.library.spectrum" class="spectrum-band" data-style-width="(70 / (data.library.spectrumCount | max(1))) + '%'" data-style-left="(band.index * 100 / (data.library.spectrumCount | max(1))) + '%'" data-style-height="(band.level * 100) + '%'"></div></div>
 <div class="library-count">{{ data.library.position }} / {{ data.library.total }}</div>
 <div class="library-continuous" data-class-hidden="!data.library.continuous"><img src="../../themes/Modern/[song]continuous.png"/></div>
 <div class="library-message">{{ data.library.message }}</div>

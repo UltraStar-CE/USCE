@@ -34,6 +34,7 @@ interface
 {$I switches.inc}
 
 uses
+  UDocumentUI,
   UDisplay,
   UFiles,
   UIni,
@@ -44,7 +45,23 @@ uses
   SysUtils;
 
 type
+  TSongMenuEntry = record
+    Caption: UTF8String;
+    Visible, Enabled: boolean;
+    Options: array of UTF8String;
+  end;
   TScreenSongMenu = class(TMenu)
+    private
+      MenuUI: TDocumentUI;
+      MenuHeading: UTF8String;
+      Entries: array[0..7] of TSongMenuEntry;
+      procedure SyncDocument;
+      procedure ApplyNativeState;
+      procedure SetChoiceOptions(Index: integer; const Values: array of UTF8String; var Value: integer);
+      function ChoiceValue(Index: integer): integer;
+      procedure ChangeChoice(Index, Delta: integer);
+      procedure StepFocus(Delta: integer);
+      function DocumentInput(Key: cardinal; CharCode: UCS4Char; Down: boolean): boolean;
     private
       CurMenu: byte; // num of the cur. shown menu
       ID:       String; //for help-system
@@ -52,6 +69,9 @@ type
       Visible: boolean; // whether the menu should be drawn
 
       constructor Create; override;
+      destructor Destroy; override;
+      procedure SetInteraction(Num: integer); override;
+      function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       procedure OnShow; override;
       function Draw: boolean; override;
@@ -96,6 +116,7 @@ var
 implementation
 
 uses
+  Math,
   UDatabase,
   UGraphic,
   UHelp,
@@ -110,11 +131,170 @@ uses
   USongs,
   UUnicodeUtils;
 
+destructor TScreenSongMenu.Destroy;
+begin MenuUI.Free; inherited; end;
+
+procedure TScreenSongMenu.SetInteraction(Num: integer);
+begin
+  if MenuUI <> nil then SelInteraction := Num else inherited SetInteraction(Num);
+end;
+
+procedure TScreenSongMenu.SetChoiceOptions(Index: integer; const Values: array of UTF8String; var Value: integer);
+var I: integer;
+begin
+  SetLength(Entries[Index + 3].Options, Length(Values));
+  for I := 0 to High(Values) do Entries[Index + 3].Options[I] := Values[I];
+  if Length(Values) = 0 then Value := 0
+  else Value := EnsureRange(Value, 0, High(Values));
+end;
+
+function TScreenSongMenu.ChoiceValue(Index: integer): integer;
+begin
+  case Index of 3: Result := SelectValue1; 4: Result := SelectValue2; else Result := SelectValue3; end;
+end;
+
+procedure TScreenSongMenu.ChangeChoice(Index, Delta: integer);
+var Value: integer;
+begin
+  if (Index < 3) or (Index > 5) or not Entries[Index].Visible or not Entries[Index].Enabled then Exit;
+  Value := ChoiceValue(Index);
+  if Length(Entries[Index].Options) > 0 then Value := EnsureRange(Value + Delta, 0, High(Entries[Index].Options));
+  case Index of 3: SelectValue1 := Value; 4: SelectValue2 := Value; 5: SelectValue3 := Value; end;
+  SyncDocument;
+end;
+
+procedure TScreenSongMenu.StepFocus(Delta: integer);
+var I, Next: integer;
+begin
+  Next := Interaction;
+  if (Delta = 0) and (Next >= 0) and (Next <= High(Entries)) and
+     Entries[Next].Visible and Entries[Next].Enabled then Exit;
+  if Delta = 0 then Delta := 1;
+  for I := 0 to High(Entries) do
+  begin
+    Next := (Next + Delta + Length(Entries)) mod Length(Entries);
+    if Entries[Next].Visible and Entries[Next].Enabled then
+    begin
+      Interaction := Next; SetTextInput((CurMenu = SM_Playlist_New) and (Next = 1)); Exit;
+    end;
+  end;
+end;
+
+procedure TScreenSongMenu.ApplyNativeState;
+const ButtonEntry: array[0..4] of integer = (0, 1, 2, 6, 7);
+var I, Index: integer;
+begin
+  Text[0].Text := MenuHeading;
+  for I := 0 to High(ButtonEntry) do
+  begin
+    Index := ButtonEntry[I];
+    Button[I].Visible := Entries[Index].Visible;
+    Button[I].Selectable := Entries[Index].Enabled;
+    Button[I].Text[0].Text := Entries[Index].Caption;
+  end;
+  for I := 0 to 2 do SelectsS[I].Visible := Entries[I + 3].Visible;
+  UpdateSelectSlideOptions(0, Entries[3].Options, SelectValue1);
+  UpdateSelectSlideOptions(1, Entries[4].Options, SelectValue2);
+  UpdateSelectSlideOptions(2, Entries[5].Options, SelectValue3);
+end;
+
+procedure TScreenSongMenu.SyncDocument;
+var I, Count, Slot, Value: integer; Prefix, Kind, Caption: UTF8String;
+begin
+  if MenuUI = nil then Exit;
+  MenuUI.SetModel('songMenu.heading', MenuHeading);
+  Count := 0;
+  for I := 0 to High(Entries) do if Entries[I].Visible then Inc(Count);
+  MenuUI.SetArray('songMenu.entries', Count); Count := 0;
+  for I := 0 to High(Entries) do
+    if Entries[I].Visible then
+    begin
+      Prefix := 'songMenu.entries[' + IntToStr(Count) + '].';
+      if I < 3 then Slot := I else Slot := I - 3;
+      Kind := 'action'; Caption := Entries[I].Caption;
+      if (I >= 3) and (I <= 5) then
+      begin
+        Kind := 'choice'; Value := ChoiceValue(I);
+        if (Value >= 0) and (Value < Length(Entries[I].Options)) then Caption := Entries[I].Options[Value];
+        MenuUI.SetModel(Prefix + 'previous', IntToStr(Ord(Value > 0)), 2);
+        MenuUI.SetModel(Prefix + 'next', IntToStr(Ord(Value < High(Entries[I].Options))), 2);
+      end;
+      if (CurMenu = SM_Playlist_New) and (I = 1) then Kind := 'name';
+      MenuUI.SetModel(Prefix + 'id', IntToStr(I), 1);
+      MenuUI.SetModel(Prefix + 'slot', IntToStr(Slot), 1);
+      MenuUI.SetModel(Prefix + 'kind', Kind);
+      MenuUI.SetModel(Prefix + 'caption', Caption);
+      MenuUI.SetModel(Prefix + 'enabled', IntToStr(Ord(Entries[I].Enabled)), 2);
+      MenuUI.SetModel(Prefix + 'selected', IntToStr(Ord(I = Interaction)), 2);
+      Inc(Count);
+    end;
+  if (Interaction >= 3) and (Interaction <= 5) then MenuUI.Focus('song-menu-choice-' + IntToStr(Interaction))
+  else MenuUI.Focus('song-menu-entry-' + IntToStr(Interaction));
+end;
+
+function TScreenSongMenu.DocumentInput(Key: cardinal; CharCode: UCS4Char; Down: boolean): boolean;
+var Modifiers: word;
+begin
+  Result := true;
+  if not Down then Exit;
+  if (CurMenu = SM_Playlist_New) and (Interaction = 1) then
+  begin
+    if IsAlphaNumericChar(CharCode) or (CharCode in [32, 45, 95, 33, 44, 60, 47, 42, 63, 39, 34]) then
+    begin Entries[1].Caption := Entries[1].Caption + UCS4ToUTF8String(CharCode); SyncDocument; Exit; end;
+    if Key = SDLK_BACKSPACE then
+    begin
+      if LengthUTF8(Entries[1].Caption) > 0 then UTF8Delete(Entries[1].Caption, LengthUTF8(Entries[1].Caption), 1);
+      SyncDocument; Exit;
+    end;
+  end
+  else if Key = SDLK_Q then Exit(false);
+  Modifiers := SDL_GetModState and (KMOD_LSHIFT + KMOD_RSHIFT + KMOD_LCTRL + KMOD_RCTRL + KMOD_LALT + KMOD_RALT);
+  case Key of
+    SDLK_ESCAPE, SDLK_BACKSPACE: begin StopTextInput; AudioPlayback.PlaySound(SoundLib.Back); Visible := false; end;
+    SDLK_TAB: begin Help.SetHelpID(ID); ScreenPopupHelp.ShowPopup; end;
+    SDLK_RETURN: begin StopTextInput; if Entries[Interaction].Enabled then HandleReturn; end;
+    SDLK_DOWN: StepFocus(1);
+    SDLK_UP: StepFocus(-1);
+    SDLK_LEFT: ChangeChoice(Interaction, -1);
+    SDLK_RIGHT: ChangeChoice(Interaction, 1);
+    SDLK_1: if CurMenu = SM_Party_Main then ScreenSong.DoJoker(0, Modifiers);
+    SDLK_2: if CurMenu = SM_Party_Main then ScreenSong.DoJoker(1, Modifiers);
+    SDLK_3: if CurMenu = SM_Party_Main then ScreenSong.DoJoker(2, Modifiers);
+  end;
+  if Visible then SyncDocument;
+end;
+
+function TScreenSongMenu.ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
+var Action: UTF8String; Target: integer;
+begin
+  if MenuUI = nil then Exit(inherited ParseMouse(MouseButton, BtnDown, X, Y));
+  Result := true;
+  if BtnDown and RightMbESC and (MouseButton = SDL_BUTTON_RIGHT) then
+    Exit(DocumentInput(SDLK_ESCAPE, 0, true));
+  if MouseButton = SDL_BUTTON_LEFT then MenuUI.Mouse(X, Y, 0, BtnDown)
+  else MenuUI.Mouse(X, Y);
+  if TryStrToInt(MenuUI.FocusedTarget, Target) and (Target >= 0) and (Target <= High(Entries)) and
+     Entries[Target].Enabled and Entries[Target].Visible then
+  begin Interaction := Target; SetTextInput((CurMenu = SM_Playlist_New) and (Target = 1)); end;
+  Action := MenuUI.TakeAction;
+  Target := StrToIntDef(MenuUI.ActionTarget, -1);
+  if (Target >= 0) and (Target <= High(Entries)) and Entries[Target].Enabled and Entries[Target].Visible then
+  begin
+    Interaction := Target;
+    if Action = 'song-menu.previous' then ChangeChoice(Target, -1)
+    else if Action = 'song-menu.next' then ChangeChoice(Target, 1)
+    else if (Action = 'song-menu.activate') and not ((CurMenu = SM_Playlist_New) and (Target = 1)) then
+    begin StopTextInput; HandleReturn; end;
+  end;
+  if Visible then SyncDocument;
+end;
+
 function TScreenSongMenu.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
 var
   SDL_ModState:  Word;
 
 begin
+  if MenuUI <> nil then Exit(DocumentInput(PressedKey, CharCode, PressedDown));
   Result := true;
   if (PressedDown) then
   begin // key down
@@ -238,6 +418,7 @@ begin
 end;
 
 constructor TScreenSongMenu.Create;
+var I: integer;
 begin
   inherited Create;
 
@@ -250,6 +431,15 @@ begin
 
   SetLength(ISelections3, 1);
   ISelections3[0] := 'Dummy';
+
+  for I := 0 to High(Entries) do
+  begin Entries[I].Visible := true; Entries[I].Enabled := true; end;
+  Entries[7].Caption := Language.Translate('SONG_MENU_CANCEL');
+  SetChoiceOptions(0, ISelections1, SelectValue1);
+  SetChoiceOptions(1, ISelections2, SelectValue2);
+  SetChoiceOptions(2, ISelections3, SelectValue3);
+  MenuUI := TDocumentUI.Open('song-menu');
+  if MenuUI <> nil then begin SelInteraction := 0; Exit; end;
 
   AddText(Theme.SongMenu.TextMenu);
 
@@ -284,13 +474,14 @@ end;
 
 function TScreenSongMenu.Draw: boolean;
 begin
+  if MenuUI <> nil then begin SyncDocument; Exit(MenuUI.Draw(false, true)); end;
   Renderer.ClearFrameBuffer(CLEAR_DEPTH);
   Result := inherited Draw;
 end;
 
 procedure TScreenSongMenu.OnShow;
 begin
-  inherited;
+  if MenuUI = nil then inherited;
 end;
 
 function TScreenSongMenu.CountMedleySongs: integer;
@@ -326,46 +517,46 @@ begin
         ID := 'ID_017';
         CurMenu := sMenu;
 
-        Text[0].Text := Language.Translate('SONG_MENU_NAME_MAIN');
+        MenuHeading := Language.Translate('SONG_MENU_NAME_MAIN');
 
-        Button[0].Visible := true;
-        Button[1].Visible := (Length(PlaylistMedley.Song) > 0) or
+        Entries[0].Visible := true;
+        Entries[1].Visible := (Length(PlaylistMedley.Song) > 0) or
           not CatSongs.Song[ScreenSong.Interaction].Main;
-        Button[2].Visible := (CatSongs.CatNumShow = -2);
-        Button[3].Visible := true;
-        Button[4].Visible := (ScreenSong.Mode = smNormal) and not Party.bPartyGame;
+        Entries[2].Visible := (CatSongs.CatNumShow = -2);
+        Entries[6].Visible := true;
+        Entries[7].Visible := (ScreenSong.Mode = smNormal) and not Party.bPartyGame;
 
-        SelectsS[0].Visible := false;
-        SelectsS[1].Visible := false;
-        SelectsS[2].Visible := false;
+        Entries[3].Visible := false;
+        Entries[4].Visible := false;
+        Entries[5].Visible := false;
 
-        Button[0].Text[0].Text := Language.Translate('SONG_MENU_SONG');
-        Button[1].Text[0].Text := Language.Translate('SONG_MENU_MEDLEY');
-        Button[2].Text[0].Text := Language.Translate('SONG_MENU_PLAYLIST_ADD_SHOWN');
-        Button[3].Text[0].Text := Language.Translate('SONG_MENU_REFRESH_SCORES');
-        Button[4].Text[0].Text := Language.Translate('CONTINUOUS_TITLE');
+        Entries[0].Caption := Language.Translate('SONG_MENU_SONG');
+        Entries[1].Caption := Language.Translate('SONG_MENU_MEDLEY');
+        Entries[2].Caption := Language.Translate('SONG_MENU_PLAYLIST_ADD_SHOWN');
+        Entries[6].Caption := Language.Translate('SONG_MENU_REFRESH_SCORES');
+        Entries[7].Caption := Language.Translate('CONTINUOUS_TITLE');
       end;
     SM_Song:
       begin
         ID := 'ID_017';
         CurMenu := sMenu;
-        Text[0].Text := Language.Translate('SONG_MENU_NAME_SONG');
+        MenuHeading := Language.Translate('SONG_MENU_NAME_SONG');
 
-        Button[0].Visible := true;
-        Button[1].Visible := true;
-        Button[2].Visible := true;
-        Button[3].Visible := true;
-        Button[4].Visible := true;
+        Entries[0].Visible := true;
+        Entries[1].Visible := true;
+        Entries[2].Visible := true;
+        Entries[6].Visible := true;
+        Entries[7].Visible := true;
 
-        SelectsS[0].Visible := false;
-        SelectsS[1].Visible := false;
-        SelectsS[2].Visible := false;
+        Entries[3].Visible := false;
+        Entries[4].Visible := false;
+        Entries[5].Visible := false;
 
-        Button[0].Text[0].Text := Language.Translate('SONG_MENU_PLAY');
-        Button[1].Text[0].Text := Language.Translate('SONG_MENU_CHANGEPLAYERS');
-        Button[2].Text[0].Text := Language.Translate('SONG_MENU_PLAYLIST_ADD');
-        Button[3].Text[0].Text := Language.Translate('SONG_MENU_EDIT');
-        Button[4].Text[0].Text := Language.Translate('SONG_MENU_CANCEL');
+        Entries[0].Caption := Language.Translate('SONG_MENU_PLAY');
+        Entries[1].Caption := Language.Translate('SONG_MENU_CHANGEPLAYERS');
+        Entries[2].Caption := Language.Translate('SONG_MENU_PLAYLIST_ADD');
+        Entries[6].Caption := Language.Translate('SONG_MENU_EDIT');
+        Entries[7].Caption := Language.Translate('SONG_MENU_CANCEL');
       end;
 
     SM_Medley:
@@ -374,47 +565,47 @@ begin
         CurMenu := sMenu;
         MSongs := CountMedleySongs;
 
-        Text[0].Text := Language.Translate('SONG_MENU_NAME_MEDLEY');
+        MenuHeading := Language.Translate('SONG_MENU_NAME_MEDLEY');
 
-        Button[0].Visible := not CatSongs.Song[ScreenSong.Interaction].Main;
-        Button[1].Visible := (Length(PlaylistMedley.Song)>0);
-        Button[2].Visible := (Length(PlaylistMedley.Song)>0) or
+        Entries[0].Visible := not CatSongs.Song[ScreenSong.Interaction].Main;
+        Entries[1].Visible := (Length(PlaylistMedley.Song)>0);
+        Entries[2].Visible := (Length(PlaylistMedley.Song)>0) or
           not CatSongs.Song[ScreenSong.Interaction].Main;
-        Button[3].Visible := (not ScreenSong.MakeMedley) and (MSongs > 1);
-        Button[4].Visible := true;
+        Entries[6].Visible := (not ScreenSong.MakeMedley) and (MSongs > 1);
+        Entries[7].Visible := true;
 
-        SelectsS[0].Visible := false;
-        SelectsS[1].Visible := false;
-        SelectsS[2].Visible := false;
+        Entries[3].Visible := false;
+        Entries[4].Visible := false;
+        Entries[5].Visible := false;
 
-        Button[0].Text[0].Text := Language.Translate('SONG_MENU_ADD_SONG');
-        Button[1].Text[0].Text := Language.Translate('SONG_MENU_DELETE_SONG');
-        Button[2].Text[0].Text := Language.Translate('SONG_MENU_START_MEDLEY');
-        Button[3].Text[0].Text := Format(Language.Translate('SONG_MENU_START_5_MEDLEY'), [MSongs]);
-        Button[4].Text[0].Text := Language.Translate('SONG_MENU_CANCEL');
+        Entries[0].Caption := Language.Translate('SONG_MENU_ADD_SONG');
+        Entries[1].Caption := Language.Translate('SONG_MENU_DELETE_SONG');
+        Entries[2].Caption := Language.Translate('SONG_MENU_START_MEDLEY');
+        Entries[6].Caption := Format(Language.Translate('SONG_MENU_START_5_MEDLEY'), [MSongs]);
+        Entries[7].Caption := Language.Translate('SONG_MENU_CANCEL');
       end;
 
     SM_PlayList:
       begin
         ID := 'ID_017';
         CurMenu := sMenu;
-        Text[0].Text := Language.Translate('SONG_MENU_NAME_PLAYLIST');
+        MenuHeading := Language.Translate('SONG_MENU_NAME_PLAYLIST');
 
-        Button[0].Visible := true;
-        Button[1].Visible := true;
-        Button[2].Visible := true;
-        Button[3].Visible := true;
-        Button[4].Visible := true;
+        Entries[0].Visible := true;
+        Entries[1].Visible := true;
+        Entries[2].Visible := true;
+        Entries[6].Visible := true;
+        Entries[7].Visible := true;
 
-        SelectsS[0].Visible := false;
-        SelectsS[1].Visible := false;
-        SelectsS[2].Visible := false;
+        Entries[3].Visible := false;
+        Entries[4].Visible := false;
+        Entries[5].Visible := false;
 
-        Button[0].Text[0].Text := Language.Translate('SONG_MENU_PLAY');
-        Button[1].Text[0].Text := Language.Translate('SONG_MENU_CHANGEPLAYERS');
-        Button[2].Text[0].Text := Language.Translate('SONG_MENU_PLAYLIST_DEL');
-        Button[3].Text[0].Text := Language.Translate('SONG_MENU_PLAYLIST_SORT');
-        Button[4].Text[0].Text := Language.Translate('SONG_MENU_PLAYLIST_DEL_SHOWN');
+        Entries[0].Caption := Language.Translate('SONG_MENU_PLAY');
+        Entries[1].Caption := Language.Translate('SONG_MENU_CHANGEPLAYERS');
+        Entries[2].Caption := Language.Translate('SONG_MENU_PLAYLIST_DEL');
+        Entries[6].Caption := Language.Translate('SONG_MENU_PLAYLIST_SORT');
+        Entries[7].Caption := Language.Translate('SONG_MENU_PLAYLIST_DEL_SHOWN');
       end;
 
     SM_Playlist_Add:
@@ -422,39 +613,39 @@ begin
         ID := 'ID_017';
         CurMenu := sMenu;
         if PlaylistAddVisible then
-          Text[0].Text := Language.Translate('SONG_MENU_NAME_PLAYLIST_ADD_SHOWN')
+          MenuHeading := Language.Translate('SONG_MENU_NAME_PLAYLIST_ADD_SHOWN')
         else
-          Text[0].Text := Language.Translate('SONG_MENU_NAME_PLAYLIST_ADD');
+          MenuHeading := Language.Translate('SONG_MENU_NAME_PLAYLIST_ADD');
 
-        Button[0].Visible := true;
-        Button[1].Visible := false;
-        Button[2].Visible := false;
-        Button[3].Visible := true;
-        Button[4].Visible := true;
+        Entries[0].Visible := true;
+        Entries[1].Visible := false;
+        Entries[2].Visible := false;
+        Entries[6].Visible := true;
+        Entries[7].Visible := true;
 
-        SelectsS[0].Visible := false;
-        SelectsS[1].Visible := false;
-        SelectsS[2].Visible := true;
+        Entries[3].Visible := false;
+        Entries[4].Visible := false;
+        Entries[5].Visible := true;
 
-        Button[0].Text[0].Text := Language.Translate('SONG_MENU_PLAYLIST_ADD_NEW');
-        Button[3].Text[0].Text := Language.Translate('SONG_MENU_PLAYLIST_ADD_EXISTING');
-        Button[4].Text[0].Text := Language.Translate('SONG_MENU_CANCEL');
+        Entries[0].Caption := Language.Translate('SONG_MENU_PLAYLIST_ADD_NEW');
+        Entries[6].Caption := Language.Translate('SONG_MENU_PLAYLIST_ADD_EXISTING');
+        Entries[7].Caption := Language.Translate('SONG_MENU_CANCEL');
 
         SetLength(ISelections3, Length(PlaylistMan.Playlists));
         PlaylistMan.GetNames(ISelections3);
 
         if (Length(ISelections3)>=1) then
         begin
-          UpdateSelectSlideOptions(2, ISelections3, SelectValue3);
+          SetChoiceOptions(2, ISelections3, SelectValue3);
         end
         else
         begin
-          Button[3].Visible := false;
-          SelectsS[0].Visible := false;
-          SelectsS[1].Visible := false;
-          SelectsS[2].Visible := false;
-          Button[2].Visible := true;
-          Button[2].Text[0].Text := Language.Translate('SONG_MENU_PLAYLIST_NOEXISTING');
+          Entries[6].Visible := false;
+          Entries[3].Visible := false;
+          Entries[4].Visible := false;
+          Entries[5].Visible := false;
+          Entries[2].Visible := true;
+          Entries[2].Caption := Language.Translate('SONG_MENU_PLAYLIST_NOEXISTING');
         end;
       end;
 
@@ -462,21 +653,21 @@ begin
       begin
         ID := 'ID_017';
         CurMenu := sMenu;
-        Text[0].Text := Language.Translate('SONG_MENU_NAME_PLAYLIST_NEW');
+        MenuHeading := Language.Translate('SONG_MENU_NAME_PLAYLIST_NEW');
 
-        Button[0].Visible := false;
-        Button[1].Visible := true;
-        Button[2].Visible := false;
-        Button[3].Visible := true;
-        Button[4].Visible := true;
+        Entries[0].Visible := false;
+        Entries[1].Visible := true;
+        Entries[2].Visible := false;
+        Entries[6].Visible := true;
+        Entries[7].Visible := true;
 
-        SelectsS[0].Visible := false;
-        SelectsS[1].Visible := false;
-        SelectsS[2].Visible := false;
+        Entries[3].Visible := false;
+        Entries[4].Visible := false;
+        Entries[5].Visible := false;
 
-        Button[1].Text[0].Text := Language.Translate('SONG_MENU_PLAYLIST_NEW_UNNAMED');
-        Button[3].Text[0].Text := Language.Translate('SONG_MENU_PLAYLIST_NEW_CREATE');
-        Button[4].Text[0].Text := Language.Translate('SONG_MENU_CANCEL');
+        Entries[1].Caption := Language.Translate('SONG_MENU_PLAYLIST_NEW_UNNAMED');
+        Entries[6].Caption := Language.Translate('SONG_MENU_PLAYLIST_NEW_CREATE');
+        Entries[7].Caption := Language.Translate('SONG_MENU_CANCEL');
 
         Interaction := 1;
         // button 1 = a text field and pre-selected
@@ -488,60 +679,60 @@ begin
       begin
         ID := 'ID_017';
         CurMenu := sMenu;
-        Text[0].Text := Language.Translate('SONG_MENU_NAME_PLAYLIST_DELITEM');
+        MenuHeading := Language.Translate('SONG_MENU_NAME_PLAYLIST_DELITEM');
 
-        Button[0].Visible := true;
-        Button[1].Visible := false;
-        Button[2].Visible := false;
-        Button[3].Visible := true;
-        Button[4].Visible := false;
+        Entries[0].Visible := true;
+        Entries[1].Visible := false;
+        Entries[2].Visible := false;
+        Entries[6].Visible := true;
+        Entries[7].Visible := false;
 
-        SelectsS[0].Visible := false;
-        SelectsS[1].Visible := false;
-        SelectsS[2].Visible := false;
+        Entries[3].Visible := false;
+        Entries[4].Visible := false;
+        Entries[5].Visible := false;
 
-        Button[0].Text[0].Text := Language.Translate('SONG_MENU_YES');
-        Button[3].Text[0].Text := Language.Translate('SONG_MENU_CANCEL');
+        Entries[0].Caption := Language.Translate('SONG_MENU_YES');
+        Entries[6].Caption := Language.Translate('SONG_MENU_CANCEL');
       end;
 
     SM_Playlist_DelVisibleItems:
       begin
         ID := 'ID_017';
         CurMenu := sMenu;
-        Text[0].Text := Language.Translate('SONG_MENU_NAME_PLAYLIST_DEL_SHOWN');
+        MenuHeading := Language.Translate('SONG_MENU_NAME_PLAYLIST_DEL_SHOWN');
 
-        Button[0].Visible := true;
-        Button[1].Visible := false;
-        Button[2].Visible := false;
-        Button[3].Visible := true;
-        Button[4].Visible := false;
+        Entries[0].Visible := true;
+        Entries[1].Visible := false;
+        Entries[2].Visible := false;
+        Entries[6].Visible := true;
+        Entries[7].Visible := false;
 
-        SelectsS[0].Visible := false;
-        SelectsS[1].Visible := false;
-        SelectsS[2].Visible := false;
+        Entries[3].Visible := false;
+        Entries[4].Visible := false;
+        Entries[5].Visible := false;
 
-        Button[0].Text[0].Text := Language.Translate('SONG_MENU_YES');
-        Button[3].Text[0].Text := Language.Translate('SONG_MENU_CANCEL');
+        Entries[0].Caption := Language.Translate('SONG_MENU_YES');
+        Entries[6].Caption := Language.Translate('SONG_MENU_CANCEL');
       end;
 
     SM_Playlist_Sort:
       begin
         ID := 'ID_017';
         CurMenu := sMenu;
-        Text[0].Text := Language.Translate('SONG_MENU_NAME_PLAYLIST_SORT');
+        MenuHeading := Language.Translate('SONG_MENU_NAME_PLAYLIST_SORT');
 
-        Button[0].Visible := false;
-        Button[1].Visible := false;
-        Button[2].Visible := false;
-        Button[3].Visible := true;
-        Button[4].Visible := true;
+        Entries[0].Visible := false;
+        Entries[1].Visible := false;
+        Entries[2].Visible := false;
+        Entries[6].Visible := true;
+        Entries[7].Visible := true;
 
-        SelectsS[0].Visible := false;
-        SelectsS[1].Visible := false;
-        SelectsS[2].Visible := true;
+        Entries[3].Visible := false;
+        Entries[4].Visible := false;
+        Entries[5].Visible := true;
 
-        Button[3].Text[0].Text := Language.Translate('SONG_MENU_PLAYLIST_SORT');
-        Button[4].Text[0].Text := Language.Translate('SONG_MENU_CANCEL');
+        Entries[6].Caption := Language.Translate('SONG_MENU_PLAYLIST_SORT');
+        Entries[7].Caption := Language.Translate('SONG_MENU_CANCEL');
 
         SetLength(ISelections3, 6);
         ISelections3[0] := Language.Translate('OPTION_VALUE_ARTIST');
@@ -551,7 +742,7 @@ begin
         ISelections3[4] := Language.Translate('OPTION_VALUE_LANGUAGE');
         ISelections3[5] := Language.Translate('OPTION_VALUE_RANDOM');
         SelectValue3 := 0;
-        UpdateSelectSlideOptions(2, ISelections3, SelectValue3);
+        SetChoiceOptions(2, ISelections3, SelectValue3);
         Interaction := 4;
       end;
 
@@ -559,39 +750,39 @@ begin
       begin
         ID := 'ID_017';
         CurMenu := sMenu;
-        Text[0].Text := Language.Translate('SONG_MENU_NAME_PLAYLIST_LOAD');
+        MenuHeading := Language.Translate('SONG_MENU_NAME_PLAYLIST_LOAD');
 
         // show delete curent playlist button when playlist is opened
-        Button[0].Visible := (CatSongs.CatNumShow = -3);
+        Entries[0].Visible := (CatSongs.CatNumShow = -3);
 
-        Button[1].Visible := false;
-        Button[2].Visible := false;
-        Button[3].Visible := true;
-        Button[4].Visible := false;
+        Entries[1].Visible := false;
+        Entries[2].Visible := false;
+        Entries[6].Visible := true;
+        Entries[7].Visible := false;
 
-        SelectsS[0].Visible := false;
-        SelectsS[1].Visible := false;
-        SelectsS[2].Visible := true;
+        Entries[3].Visible := false;
+        Entries[4].Visible := false;
+        Entries[5].Visible := true;
 
-        Button[0].Text[0].Text := Language.Translate('SONG_MENU_PLAYLIST_DELCURRENT');
-        Button[3].Text[0].Text := Language.Translate('SONG_MENU_PLAYLIST_LOAD');
+        Entries[0].Caption := Language.Translate('SONG_MENU_PLAYLIST_DELCURRENT');
+        Entries[6].Caption := Language.Translate('SONG_MENU_PLAYLIST_LOAD');
 
         SetLength(ISelections3, Length(PlaylistMan.Playlists));
         PlaylistMan.GetNames(ISelections3);
 
         if (Length(ISelections3)>=1) then
         begin
-          UpdateSelectSlideOptions(2, ISelections3, SelectValue3);
+          SetChoiceOptions(2, ISelections3, SelectValue3);
           Interaction := 3;
         end
         else
         begin
-          Button[3].Visible := false;
-          SelectsS[0].Visible := false;
-          SelectsS[1].Visible := false;
-          SelectsS[2].Visible := false;
-          Button[2].Visible := true;
-          Button[2].Text[0].Text := Language.Translate('SONG_MENU_PLAYLIST_NOEXISTING');
+          Entries[6].Visible := false;
+          Entries[3].Visible := false;
+          Entries[4].Visible := false;
+          Entries[5].Visible := false;
+          Entries[2].Visible := true;
+          Entries[2].Caption := Language.Translate('SONG_MENU_PLAYLIST_NOEXISTING');
           Interaction := 2;
         end;
       end;
@@ -600,74 +791,74 @@ begin
       begin
         ID := 'ID_017';
         CurMenu := sMenu;
-        Text[0].Text := Language.Translate('SONG_MENU_NAME_PLAYLIST_DEL');
+        MenuHeading := Language.Translate('SONG_MENU_NAME_PLAYLIST_DEL');
 
-        Button[0].Visible := true;
-        Button[1].Visible := false;
-        Button[2].Visible := false;
-        Button[3].Visible := true;
-        Button[4].Visible := false;
+        Entries[0].Visible := true;
+        Entries[1].Visible := false;
+        Entries[2].Visible := false;
+        Entries[6].Visible := true;
+        Entries[7].Visible := false;
 
-        SelectsS[0].Visible := false;
-        SelectsS[1].Visible := false;
-        SelectsS[2].Visible := false;
+        Entries[3].Visible := false;
+        Entries[4].Visible := false;
+        Entries[5].Visible := false;
 
-        Button[0].Text[0].Text := Language.Translate('SONG_MENU_YES');
-        Button[3].Text[0].Text := Language.Translate('SONG_MENU_CANCEL');
+        Entries[0].Caption := Language.Translate('SONG_MENU_YES');
+        Entries[6].Caption := Language.Translate('SONG_MENU_CANCEL');
       end;
 
     SM_Party_Main:
       begin
         ID := 'ID_018';
         CurMenu := sMenu;
-        Text[0].Text := Language.Translate('SONG_MENU_NAME_PARTY_MAIN');
+        MenuHeading := Language.Translate('SONG_MENU_NAME_PARTY_MAIN');
 
-        Button[0].Visible := true;
-        Button[1].Visible := false;
-        Button[2].Visible := false;
-        Button[3].Visible := true;
-        Button[4].Visible := false;
+        Entries[0].Visible := true;
+        Entries[1].Visible := false;
+        Entries[2].Visible := false;
+        Entries[6].Visible := true;
+        Entries[7].Visible := false;
 
-        SelectsS[0].Visible := false;
-        SelectsS[1].Visible := false;
-        SelectsS[2].Visible := false;
+        Entries[3].Visible := false;
+        Entries[4].Visible := false;
+        Entries[5].Visible := false;
 
-        Button[0].Text[0].Text := Language.Translate('SONG_MENU_PLAY');
-        //Button[1].Text[0].Text := Language.Translate('SONG_MENU_JOKER');
-        //Button[2].Text[0].Text := Language.Translate('SONG_MENU_PLAYMODI');
-        Button[3].Text[0].Text := Language.Translate('SONG_MENU_JOKER');
+        Entries[0].Caption := Language.Translate('SONG_MENU_PLAY');
+        //Entries[1].Caption := Language.Translate('SONG_MENU_JOKER');
+        //Entries[2].Caption := Language.Translate('SONG_MENU_PLAYMODI');
+        Entries[6].Caption := Language.Translate('SONG_MENU_JOKER');
       end;
 
     SM_Party_Joker:
       begin
         ID := 'ID_018';
         CurMenu := sMenu;
-        Text[0].Text := Language.Translate('SONG_MENU_NAME_PARTY_JOKER');
+        MenuHeading := Language.Translate('SONG_MENU_NAME_PARTY_JOKER');
         // to-do : Party
-        Button[0].Visible := (Length(Party.Teams) >= 1) AND (Party.Teams[0].JokersLeft > 0);
-        Button[1].Visible := (Length(Party.Teams) >= 2) AND (Party.Teams[1].JokersLeft > 0);
-        Button[2].Visible := (Length(Party.Teams) >= 3) AND (Party.Teams[2].JokersLeft > 0);
-        Button[3].Visible := True;
-        Button[4].Visible := false;
+        Entries[0].Visible := (Length(Party.Teams) >= 1) AND (Party.Teams[0].JokersLeft > 0);
+        Entries[1].Visible := (Length(Party.Teams) >= 2) AND (Party.Teams[1].JokersLeft > 0);
+        Entries[2].Visible := (Length(Party.Teams) >= 3) AND (Party.Teams[2].JokersLeft > 0);
+        Entries[6].Visible := True;
+        Entries[7].Visible := false;
 
-        SelectsS[0].Visible := False;
-        SelectsS[1].Visible := False;
-        SelectsS[2].Visible := False;
+        Entries[3].Visible := False;
+        Entries[4].Visible := False;
+        Entries[5].Visible := False;
 
-        if (Button[0].Visible) then
-          Button[0].Text[0].Text := UTF8String(Party.Teams[0].Name);
-        if (Button[1].Visible) then
-          Button[1].Text[0].Text := UTF8String(Party.Teams[1].Name);
-        if (Button[2].Visible) then
-          Button[2].Text[0].Text := UTF8String(Party.Teams[2].Name);
-        Button[3].Text[0].Text := Language.Translate('SONG_MENU_CANCEL');
+        if (Entries[0].Visible) then
+          Entries[0].Caption := UTF8String(Party.Teams[0].Name);
+        if (Entries[1].Visible) then
+          Entries[1].Caption := UTF8String(Party.Teams[1].Name);
+        if (Entries[2].Visible) then
+          Entries[2].Caption := UTF8String(Party.Teams[2].Name);
+        Entries[6].Caption := Language.Translate('SONG_MENU_CANCEL');
 
         // set right interaction
-        if (not Button[0].Visible) then
+        if (not Entries[0].Visible) then
         begin
-          if (not Button[1].Visible) then
+          if (not Entries[1].Visible) then
           begin
-            if (not Button[2].Visible) then
+            if (not Entries[2].Visible) then
               Interaction := 4
             else
               Interaction := 2;
@@ -682,19 +873,19 @@ begin
       begin
         ID := 'ID_019';
         CurMenu := sMenu;
-        Text[0].Text := Language.Translate('SONG_MENU_REFRESH_SCORES_TITLE');
+        MenuHeading := Language.Translate('SONG_MENU_REFRESH_SCORES_TITLE');
 
-        Button[0].Visible := false;
-        Button[1].Visible := false;
-        Button[2].Visible := false;
-        Button[3].Visible := false;
-        Button[4].Visible := true;
+        Entries[0].Visible := false;
+        Entries[1].Visible := false;
+        Entries[2].Visible := false;
+        Entries[6].Visible := false;
+        Entries[7].Visible := true;
 
-        SelectsS[0].Visible := true;
-        SelectsS[1].Visible := true;
-        SelectsS[2].Visible := true;
+        Entries[3].Visible := true;
+        Entries[4].Visible := true;
+        Entries[5].Visible := true;
 
-        Button[4].Text[0].Text := Language.Translate('SONG_MENU_REFRESH_SCORES_REFRESH');
+        Entries[7].Caption := Language.Translate('SONG_MENU_REFRESH_SCORES_REFRESH');
 
         if (High(DataBase.NetworkUser) > 0) then
           SetLength(ISelections3, Length(DataBase.NetworkUser) + 1)
@@ -715,22 +906,22 @@ begin
               ISelections3[I] := DataBase.NetworkUser[I].Website;
           end;
 
-          UpdateSelectSlideOptions(0, [Language.Translate('SONG_MENU_REFRESH_SCORES_ONLINE'), Language.Translate('SONG_MENU_REFRESH_SCORES_FILE')], SelectValue1);
-          UpdateSelectSlideOptions(1, [Language.Translate('SONG_MENU_REFRESH_SCORES_ONLY_SONG'), Language.Translate('SONG_MENU_REFRESH_SCORES_ALL_SONGS')], SelectValue2);
-          UpdateSelectSlideOptions(2, ISelections3, SelectValue3);
+          SetChoiceOptions(0, [Language.Translate('SONG_MENU_REFRESH_SCORES_ONLINE'), Language.Translate('SONG_MENU_REFRESH_SCORES_FILE')], SelectValue1);
+          SetChoiceOptions(1, [Language.Translate('SONG_MENU_REFRESH_SCORES_ONLY_SONG'), Language.Translate('SONG_MENU_REFRESH_SCORES_ALL_SONGS')], SelectValue2);
+          SetChoiceOptions(2, ISelections3, SelectValue3);
 
           Interaction := 3;
         end
         else
         begin
-          Button[3].Visible := false;
-          SelectsS[0].Visible := false;
-          SelectsS[1].Visible := false;
-          SelectsS[2].Visible := false;
-          Button[2].Visible := true;
-          Button[2].Text[0].Text := Language.Translate('SONG_MENU_REFRESH_SCORES_NO_WEB');
-          Button[2].Selectable := false;
-          Button[3].Text[0].Text := Theme.Options.Description[OPTIONS_DESC_INDEX_NETWORK];
+          Entries[6].Visible := false;
+          Entries[3].Visible := false;
+          Entries[4].Visible := false;
+          Entries[5].Visible := false;
+          Entries[2].Visible := true;
+          Entries[2].Caption := Language.Translate('SONG_MENU_REFRESH_SCORES_NO_WEB');
+          Entries[2].Enabled := false;
+          Entries[6].Caption := Theme.Options.Description[OPTIONS_DESC_INDEX_NETWORK];
           Interaction := 7;
         end;
       end;
@@ -739,22 +930,28 @@ begin
       begin
         ID := 'ID_017';
         CurMenu := sMenu;
-        Text[0].Text := Language.Translate('SONG_MENU_NAME_PARTY_MAIN');
+        MenuHeading := Language.Translate('SONG_MENU_NAME_PARTY_MAIN');
 
-        Button[0].Visible := true;
-        Button[1].Visible := false;
-        Button[2].Visible := false;
-        Button[3].Visible := false;
+        Entries[0].Visible := true;
+        Entries[1].Visible := false;
+        Entries[2].Visible := false;
+        Entries[6].Visible := false;
 
-        SelectsS[0].Visible := false;
-        SelectsS[1].Visible := false;
-        SelectsS[2].Visible := false;
+        Entries[3].Visible := false;
+        Entries[4].Visible := false;
+        Entries[5].Visible := false;
 
-        Button[0].Text[0].Text := Language.Translate('SONG_MENU_PLAY');
+        Entries[0].Caption := Language.Translate('SONG_MENU_PLAY');
       end;
   end;
   if not Help.SetHelpID(ID) then
     Log.LogWarn('No Entry for Help-ID ' + ID, 'ScreenSongMenu');
+  if MenuUI <> nil then
+  begin
+    if not Entries[Interaction].Visible or not Entries[Interaction].Enabled then StepFocus(0);
+    SyncDocument;
+  end
+  else ApplyNativeState;
 end;
 
 procedure TScreenSongMenu.HandleReturn;
@@ -762,6 +959,7 @@ var
   I: integer;
   SDL_ModState:  Word;
 begin
+  if MenuUI = nil then Entries[1].Caption := Button[1].Text[0].Text;
   SDL_ModState := SDL_GetModState and (KMOD_LSHIFT + KMOD_RSHIFT
     + KMOD_LCTRL + KMOD_RCTRL + KMOD_LALT  + KMOD_RALT);
   case CurMenu of
@@ -1029,7 +1227,7 @@ begin
             begin
               if PlaylistAddVisible then
               begin
-                if PlaylistMan.AddVisibleItems(PlaylistMan.AddPlaylist(Button[1].Text[0].Text)) = 0 then
+                if PlaylistMan.AddVisibleItems(PlaylistMan.AddPlaylist(Entries[1].Caption)) = 0 then
                   ScreenPopupInfo.ShowPopup(Language.Translate('SONG_MENU_PLAYLIST_NO_NEW_SONGS'));
               end
               else
@@ -1037,7 +1235,7 @@ begin
                 // create playlist and add song
                 if not PlaylistMan.AddItem(
                   ScreenSong.Interaction,
-                  PlaylistMan.AddPlaylist(Button[1].Text[0].Text)) then
+                  PlaylistMan.AddPlaylist(Entries[1].Caption)) then
                   ScreenPopupInfo.ShowPopup(Language.Translate('SONG_MENU_PLAYLIST_ALREADY_EXISTS'));
               end;
               Visible := false;
@@ -1218,7 +1416,7 @@ begin
               end
               else
               begin
-                Button[2].Selectable := true;
+                Entries[2].Enabled := true;
                 MenuShow(SM_Main);
               end;
             end;

@@ -1,0 +1,10 @@
+<rml><head><title>Modern song menu</title><link type="text/rcss" href="modern.rcss"/><link type="text/rcss" href="song-menu.rcss"/></head>
+<body class="song-menu-screen"><div class="song-menu-shade"/>
+<div data-model="game" class="song-menu-panel"><img class="song-menu-icon" src="../../themes/Modern/[icon]song_menu.png"/><span class="song-menu-heading" fit-text="12">{{ data.songMenu.heading }}</span>
+<div data-for="entry : data.songMenu.entries" class="song-menu-entry form-row" data-attr-slot="entry.slot" data-class-selected="entry.selected" data-class-disabled="!entry.enabled" data-class-choice="entry.kind == 'choice'" data-class-name="entry.kind == 'name'">
+<button class="entry-action form-value" data-attr-id="'song-menu-entry-' + entry.id" action="song-menu.activate" data-attr-target="entry.id" data-attr-focus-target="entry.id" data-class-hidden="entry.kind == 'choice'"><span fit-text="10">{{ entry.caption }}<span class="entry-caret" data-class-hidden="entry.kind != 'name' || !entry.selected">|</span></span></button>
+<div class="entry-choice form-value" data-class-hidden="entry.kind != 'choice'">
+<button class="entry-previous" action="song-menu.previous" data-attr-target="entry.id" data-attr-focus-target="entry.id" data-class-unavailable="!entry.previous"><svg src="arrow-left.svg"/></button>
+<button class="entry-value" data-attr-id="'song-menu-choice-' + entry.id" action="song-menu.focus" data-attr-target="entry.id" data-attr-focus-target="entry.id"><span fit-text="10">{{ entry.caption }}</span></button>
+<button class="entry-next" action="song-menu.next" data-attr-target="entry.id" data-attr-focus-target="entry.id" data-class-unavailable="!entry.next"><svg src="arrow-right.svg"/></button>
+</div></div></div></body></rml>

@@ -2022,7 +2022,7 @@ begin
 
   if (ScreenSongMenu.Visible) then
   begin
-    Result := ScreenSongMenu.ParseMouse(MouseButton, BtnDown, X, Y);
+    Result := ScreenSongMenu.ParseMouse(MouseButton, BtnDown, PhysicalX, PhysicalY);
     exit;
   end
   else if (ScreenSongJumpTo.Visible) then
