@@ -670,7 +670,6 @@ begin
     fPending := true;
     FlushChanges;
   end;
-  fFocus := 0; fFirst := 0;
   RefreshRows;
 end;
 
