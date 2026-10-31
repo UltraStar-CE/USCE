@@ -156,6 +156,7 @@ type
       PlaybackProfiles: TPlaybackProfiles;
       Language:       integer;
       SongMenu:       integer;
+      FolderFiltering, FolderDisplay: integer;
       Tabs:           integer;
       TabsAtStartup:  integer; // Tabs at Startup fix
       Sorting:        integer;
@@ -328,6 +329,8 @@ var
 
 const
   IDifficulty:  array[0..2] of UTF8String = ('Easy', 'Medium', 'Hard');
+  IFolderModes: array[0..2] of UTF8String = ('Off', 'Root folders', 'All folders');
+  IFolderModesTranslated: array[0..2] of UTF8String = ('Off', 'Root folders', 'All folders');
   ITabs:        array[0..1] of UTF8String = ('Off', 'On');
 
 const
@@ -844,6 +847,10 @@ begin
   IDifficultyTranslated[0]            := ULanguage.Language.Translate('OPTION_VALUE_EASY');
   IDifficultyTranslated[1]            := ULanguage.Language.Translate('OPTION_VALUE_MEDIUM');
   IDifficultyTranslated[2]            := ULanguage.Language.Translate('OPTION_VALUE_HARD');
+
+  IFolderModesTranslated[0] := ULanguage.Language.Translate('OPTION_VALUE_OFF');
+  IFolderModesTranslated[1] := ULanguage.Language.Translate('OPTION_VALUE_ROOT_FOLDERS');
+  IFolderModesTranslated[2] := ULanguage.Language.Translate('OPTION_VALUE_ALL_FOLDERS');
 
   ITabsTranslated[0]                  := ULanguage.Language.Translate('OPTION_VALUE_OFF');
   ITabsTranslated[1]                  := ULanguage.Language.Translate('OPTION_VALUE_ON');
@@ -1729,6 +1736,9 @@ begin
 
   // Tabs
   Tabs := ReadArrayIndex(ITabs, IniFile, 'Game', 'Tabs', 0);
+  FolderFiltering := ReadArrayIndex(IFolderModes, IniFile, 'Game', 'FolderFiltering', 2);
+  FolderDisplay := ReadArrayIndex(IFolderModes, IniFile, 'Game', 'FolderDisplay', Tabs);
+  Tabs := Ord(FolderDisplay > 0);
   TabsAtStartup := Tabs;	//Tabs at Startup fix
 
   // Song Sorting
@@ -1998,7 +2008,8 @@ begin
     IniFile.WriteString('Game', 'Language', ILanguage[Language]);
 
     // Tabs
-    IniFile.WriteString('Game', 'Tabs', ITabs[Tabs]);
+    IniFile.WriteString('Game', 'FolderFiltering', IFolderModes[FolderFiltering]);
+    IniFile.WriteString('Game', 'FolderDisplay', IFolderModes[FolderDisplay]);
 
     // SongMenu
     IniFile.WriteString('Game', 'SongMenu', ISongMenuMode[Ord(SongMenu)]);
