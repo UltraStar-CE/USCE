@@ -1,5 +1,9 @@
 unit ULibraryWatch;
 {$mode Delphi}{$H+}{$pointermath on}
+{$IFDEF DARWIN}
+{$linkframework CoreFoundation}
+{$linkframework CoreServices}
+{$ENDIF}
 
 interface
 
