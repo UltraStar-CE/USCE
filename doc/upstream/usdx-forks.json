@@ -77,9 +77,33 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "assessed",
+        "assessedAgainst": "e42382b48c2ca6fc947376f4c936b1a89c509199",
+        "assessedAt": "2026-10-31",
+        "scope": "Source-diff and current-USCE comparison, with linked concrete outputs. Assessment is not runtime acceptance or adoption of the fork.",
+        "items": [
+          {
+            "area": "Upstream synchronization",
+            "decision": "already-covered",
+            "reason": "The listed new commits sync USDX SungToEnd, sound-revert and issue-form history, not new fork behavior. USCE completion adaptations and upstream ancestry are already recorded, and the newer sound path supersedes the old revert. The scanner now removes commits reachable from the current USDX head before opening fork work.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/pull/243",
+              "https://github.com/UltraStar-CE/USCE/pull/244",
+              "https://github.com/UltraStar-CE/USCE/pull/245",
+              "https://github.com/UltraStar-CE/USCE/pull/155",
+              "https://github.com/UltraStar-CE/USCE/pull/160"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/243",
+          "https://github.com/UltraStar-CE/USCE/pull/244",
+          "https://github.com/UltraStar-CE/USCE/pull/245",
+          "https://github.com/UltraStar-CE/USCE/pull/155",
+          "https://github.com/UltraStar-CE/USCE/pull/160"
+        ],
+        "reason": "Upstream synchronization: The listed new commits sync USDX SungToEnd, sound-revert and issue-form history, not new fork behavior. USCE completion adaptations and upstream ancestry are already recorded, and the newer sound path supersedes the old revert. The scanner now removes commits reachable from the current USDX head before opening fork work.",
+        "reviewedCommitCount": 4
       },
       "previousHead": "6260736f964df2dd67188d57c82edaab1866186c",
       "previousAssessment": {
@@ -283,9 +307,29 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "assessed",
+        "assessedAgainst": "e42382b48c2ca6fc947376f4c936b1a89c509199",
+        "assessedAt": "2026-10-31",
+        "scope": "Source-diff and current-USCE comparison, with linked concrete outputs. Assessment is not runtime acceptance or adoption of the fork.",
+        "items": [
+          {
+            "area": "Generator alignment, video acquisition and still extraction",
+            "decision": "not-adopted",
+            "reason": "All five new commits were inspected. Three change the declined chart-generation/Whisper alignment pipeline. Two add media download/search and destructive video-to-still replacement through the same generator process runner. These do not reverse the existing decision to exclude chart/stem generation and music/media acquisition from this project.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/202",
+              "https://github.com/UltraStar-CE/USCE/issues/203",
+              "https://github.com/UltraStar-CE/USCE/issues/183"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/202",
+          "https://github.com/UltraStar-CE/USCE/issues/203",
+          "https://github.com/UltraStar-CE/USCE/issues/183"
+        ],
+        "reason": "Generator alignment, video acquisition and still extraction: All five new commits were inspected. Three change the declined chart-generation/Whisper alignment pipeline. Two add media download/search and destructive video-to-still replacement through the same generator process runner. These do not reverse the existing decision to exclude chart/stem generation and music/media acquisition from this project.",
+        "reviewedCommitCount": 5
       },
       "previousHead": "c3efe4c57914f54cc481acf555afde2e858d98e0",
       "previousAssessment": {
@@ -5690,9 +5734,40 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "assessed",
+        "assessedAgainst": "e42382b48c2ca6fc947376f4c936b1a89c509199",
+        "assessedAt": "2026-10-31",
+        "scope": "Source-diff and current-USCE comparison, with linked concrete outputs. Assessment is not runtime acceptance or adoption of the fork.",
+        "items": [
+          {
+            "area": "Single singer on a duet request",
+            "decision": "already-covered",
+            "reason": "The two source queue edits stop manufacturing a second singer for duets in the fork-specific UKaraokeQueue. USCE already supports independent player/voice assignments, including one singer on multipart songs, through the native API/companion route; this fork server is not imported.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/pull/142",
+              "https://github.com/UltraStar-CE/USCE/pull/143",
+              "https://github.com/UltraStar-CE/USCE/pull/319",
+              "https://github.com/UltraStar-CE/usrelay/issues/16"
+            ]
+          },
+          {
+            "area": "Optional/missing NSIS installer",
+            "decision": "not-adopted",
+            "reason": "The third commit turns installer creation/upload failures into successful CI. USCE already reuses verified cached installers; suppressing required packaging failures would hide missing release artifacts.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/blob/e42382b48c2ca6fc947376f4c936b1a89c509199/.github/workflows/platform-builds.yml"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/142",
+          "https://github.com/UltraStar-CE/USCE/pull/143",
+          "https://github.com/UltraStar-CE/USCE/pull/319",
+          "https://github.com/UltraStar-CE/usrelay/issues/16",
+          "https://github.com/UltraStar-CE/USCE/blob/e42382b48c2ca6fc947376f4c936b1a89c509199/.github/workflows/platform-builds.yml"
+        ],
+        "reason": "Single singer on a duet request: The two source queue edits stop manufacturing a second singer for duets in the fork-specific UKaraokeQueue. USCE already supports independent player/voice assignments, including one singer on multipart songs, through the native API/companion route; this fork server is not imported. Optional/missing NSIS installer: The third commit turns installer creation/upload failures into successful CI. USCE already reuses verified cached installers; suppressing required packaging failures would hide missing release artifacts.",
+        "reviewedCommitCount": 3
       },
       "previousHead": "dbd976ac681df34f9c7d3fbcab361efcfbd32bc4",
       "previousAssessment": {
@@ -7177,9 +7252,29 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "assessed",
+        "assessedAgainst": "e42382b48c2ca6fc947376f4c936b1a89c509199",
+        "assessedAt": "2026-10-31",
+        "scope": "Source-diff and current-USCE comparison, with linked concrete outputs. Assessment is not runtime acceptance or adoption of the fork.",
+        "items": [
+          {
+            "area": "Mapped-buffer driver experiment",
+            "decision": "implemented-experiment",
+            "reason": "The one-line source test is ported with original authorship in #327, and the actual GL3 main menu rendered 120 frames without GL errors. This is not a production-default change or a measured performance improvement. Target Intel-driver comparison remains in that draft.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/pull/327",
+              "https://github.com/UltraStar-CE/USCE/issues/165",
+              "https://github.com/UltraStar-CE/USCE/pull/309"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/327",
+          "https://github.com/UltraStar-CE/USCE/issues/165",
+          "https://github.com/UltraStar-CE/USCE/pull/309"
+        ],
+        "reason": "Mapped-buffer driver experiment: The one-line source test is ported with original authorship in #327, and the actual GL3 main menu rendered 120 frames without GL errors. This is not a production-default change or a measured performance improvement. Target Intel-driver comparison remains in that draft.",
+        "reviewedCommitCount": 1
       }
     },
     {
@@ -7762,10 +7857,36 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
-      }
+        "decision": "assessed",
+        "assessedAgainst": "e42382b48c2ca6fc947376f4c936b1a89c509199",
+        "assessedAt": "2026-10-31",
+        "scope": "Source-diff and current-USCE comparison, with linked concrete outputs. Assessment is not runtime acceptance or adoption of the fork.",
+        "items": [
+          {
+            "area": "Previously assessed Midnight/Karaoke ancestry",
+            "decision": "already-tracked",
+            "reason": "master is an ancestor of 6f756edb, the immutable aveiver snapshot already assessed in #211. ui-v2 has only two commits after that snapshot, not 99 new changes. Existing theme ports, shared controls and native companion work cover the agreed direction. Global Helvetica/default-theme changes and local kiosk deployment scripts are not a second game port.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/211",
+              "https://github.com/UltraStar-CE/Themes/pull/27",
+              "https://github.com/UltraStar-CE/Themes/pull/28",
+              "https://github.com/UltraStar-CE/USCE/pull/314",
+              "https://github.com/UltraStar-CE/USCE/pull/225"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/211",
+          "https://github.com/UltraStar-CE/Themes/pull/27",
+          "https://github.com/UltraStar-CE/Themes/pull/28",
+          "https://github.com/UltraStar-CE/USCE/pull/314",
+          "https://github.com/UltraStar-CE/USCE/pull/225"
+        ],
+        "reason": "Previously assessed Midnight/Karaoke ancestry: master is an ancestor of 6f756edb, the immutable aveiver snapshot already assessed in #211. ui-v2 has only two commits after that snapshot, not 99 new changes. Existing theme ports, shared controls and native companion work cover the agreed direction. Global Helvetica/default-theme changes and local kiosk deployment scripts are not a second game port.",
+        "reviewedCommitCount": 47,
+        "newCommitsBeyondPreviouslyAssessedSource": 0
+      },
+      "previouslyAssessedSourceHead": "6f756edb2d91aaa552c46516c22300d6116fc2eb"
     },
     {
       "repository": "aveiver/USDX",
@@ -8689,10 +8810,58 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
-      }
+        "decision": "assessed",
+        "assessedAgainst": "e42382b48c2ca6fc947376f4c936b1a89c509199",
+        "assessedAt": "2026-10-31",
+        "scope": "Source-diff and current-USCE comparison, with linked concrete outputs. Assessment is not runtime acceptance or adoption of the fork.",
+        "items": [
+          {
+            "area": "Previously assessed Midnight/Karaoke ancestry",
+            "decision": "already-tracked",
+            "reason": "master is an ancestor of 6f756edb, the immutable aveiver snapshot already assessed in #211. ui-v2 has only two commits after that snapshot, not 99 new changes. Existing theme ports, shared controls and native companion work cover the agreed direction. Global Helvetica/default-theme changes and local kiosk deployment scripts are not a second game port.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/211",
+              "https://github.com/UltraStar-CE/Themes/pull/27",
+              "https://github.com/UltraStar-CE/Themes/pull/28",
+              "https://github.com/UltraStar-CE/USCE/pull/314",
+              "https://github.com/UltraStar-CE/USCE/pull/225"
+            ]
+          },
+          {
+            "area": "Drawable size on scaled/external displays",
+            "decision": "not-pursued",
+            "reason": "The source report and adaptation risks were recorded in #326. Daniel closed it as unlikely to apply to USCE. Respect that decision: do not reopen, port the source patch, or present this as pending work without new evidence.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/326"
+            ]
+          },
+          {
+            "area": "Requester names in Up Next",
+            "decision": "already-tracked",
+            "reason": "The other new commit adds requester attribution to the fork-specific phone queue, queue.txt and replacement UI. Use existing usrelay Up Next/native-capability work, not another embedded server or queue parser.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/pull/319",
+              "https://github.com/UltraStar-CE/usrelay/pull/23",
+              "https://github.com/UltraStar-CE/usrelay/issues/16"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/211",
+          "https://github.com/UltraStar-CE/Themes/pull/27",
+          "https://github.com/UltraStar-CE/Themes/pull/28",
+          "https://github.com/UltraStar-CE/USCE/pull/314",
+          "https://github.com/UltraStar-CE/USCE/pull/225",
+          "https://github.com/UltraStar-CE/USCE/issues/326",
+          "https://github.com/UltraStar-CE/USCE/pull/319",
+          "https://github.com/UltraStar-CE/usrelay/pull/23",
+          "https://github.com/UltraStar-CE/usrelay/issues/16"
+        ],
+        "reason": "Previously assessed Midnight/Karaoke ancestry: master is an ancestor of 6f756edb, the immutable aveiver snapshot already assessed in #211. ui-v2 has only two commits after that snapshot, not 99 new changes. Existing theme ports, shared controls and native companion work cover the agreed direction. Global Helvetica/default-theme changes and local kiosk deployment scripts are not a second game port. Drawable size on scaled/external displays: The source report and adaptation risks were recorded in #326. Daniel closed it as unlikely to apply to USCE. Respect that decision: do not reopen, port the source patch, or present this as pending work without new evidence. Requester names in Up Next: The other new commit adds requester attribution to the fork-specific phone queue, queue.txt and replacement UI. Use existing usrelay Up Next/native-capability work, not another embedded server or queue parser.",
+        "reviewedCommitCount": 52,
+        "newCommitsBeyondPreviouslyAssessedSource": 2
+      },
+      "previouslyAssessedSourceHead": "6f756edb2d91aaa552c46516c22300d6116fc2eb"
     },
     {
       "repository": "dgruss/USDX",
@@ -8722,9 +8891,25 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "assessed",
+        "assessedAgainst": "e42382b48c2ca6fc947376f4c936b1a89c509199",
+        "assessedAt": "2026-10-31",
+        "scope": "Source-diff and current-USCE comparison, with linked concrete outputs. Assessment is not runtime acceptance or adoption of the fork.",
+        "items": [
+          {
+            "area": "AnyASCII index ranges",
+            "decision": "already-covered",
+            "reason": "Current AnyASCII uses SizeInt for table and output indices in 0cbc71c2. It builds in the current compiler mode; replacing MODESWITCH OUT with Delphi mode is not needed to solve the native-index issue.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/commit/0cbc71c2"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/commit/0cbc71c2"
+        ],
+        "reason": "AnyASCII index ranges: Current AnyASCII uses SizeInt for table and output indices in 0cbc71c2. It builds in the current compiler mode; replacing MODESWITCH OUT with Delphi mode is not needed to solve the native-index issue.",
+        "reviewedCommitCount": 1
       }
     },
     {
@@ -8767,9 +8952,25 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "assessed",
+        "assessedAgainst": "e42382b48c2ca6fc947376f4c936b1a89c509199",
+        "assessedAt": "2026-10-31",
+        "scope": "Source-diff and current-USCE comparison, with linked concrete outputs. Assessment is not runtime acceptance or adoption of the fork.",
+        "items": [
+          {
+            "area": "16-bit GLES2 indices and batch splitting",
+            "decision": "not-adopted",
+            "reason": "This is an alternative renderer index-range policy, not an unapplied fix to the current supported backend: current GLES2 explicitly requires GL_OES_element_index_uint. The proposal changes every draw path and adds chunking to compensate for its smaller index range. No affected supported device or measured benefit has been established; retain the working backend and the existing renderer-performance follow-up rather than import the historical rewrite.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/165"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/165"
+        ],
+        "reason": "16-bit GLES2 indices and batch splitting: This is an alternative renderer index-range policy, not an unapplied fix to the current supported backend: current GLES2 explicitly requires GL_OES_element_index_uint. The proposal changes every draw path and adds chunking to compensate for its smaller index range. No affected supported device or measured benefit has been established; retain the working backend and the existing renderer-performance follow-up rather than import the historical rewrite.",
+        "reviewedCommitCount": 2
       }
     },
     {
@@ -8800,9 +9001,25 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "assessed",
+        "assessedAgainst": "e42382b48c2ca6fc947376f4c936b1a89c509199",
+        "assessedAt": "2026-10-31",
+        "scope": "Source-diff and current-USCE comparison, with linked concrete outputs. Assessment is not runtime acceptance or adoption of the fork.",
+        "items": [
+          {
+            "area": "VBO quad alignment",
+            "decision": "already-covered",
+            "reason": "GetArrayBuffer already rounds up with QUAD_STRIDE_BYTES * Max(1, (Bytes + QUAD_STRIDE_BYTES - 1) div QUAD_STRIDE_BYTES). Confirmed in current URenderer_OpenGL.pas; no duplicate patch.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/blob/e42382b48c2ca6fc947376f4c936b1a89c509199/src/base/URenderer_OpenGL.pas"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/blob/e42382b48c2ca6fc947376f4c936b1a89c509199/src/base/URenderer_OpenGL.pas"
+        ],
+        "reason": "VBO quad alignment: GetArrayBuffer already rounds up with QUAD_STRIDE_BYTES * Max(1, (Bytes + QUAD_STRIDE_BYTES - 1) div QUAD_STRIDE_BYTES). Confirmed in current URenderer_OpenGL.pas; no duplicate patch.",
+        "reviewedCommitCount": 1
       }
     },
     {
@@ -8845,9 +9062,27 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "assessed",
+        "assessedAgainst": "e42382b48c2ca6fc947376f4c936b1a89c509199",
+        "assessedAt": "2026-10-31",
+        "scope": "Source-diff and current-USCE comparison, with linked concrete outputs. Assessment is not runtime acceptance or adoption of the fork.",
+        "items": [
+          {
+            "area": "Windows installer download/cache",
+            "decision": "already-covered",
+            "reason": "platform-builds.yml already caches FPC/NSIS and dependency builds, verifies SHA256, uses bounded retries and bounds installer waits. The older single main.yml patch is superseded by that shared workflow.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/pull/130",
+              "https://github.com/UltraStar-CE/USCE/commit/4b41e171"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/130",
+          "https://github.com/UltraStar-CE/USCE/commit/4b41e171"
+        ],
+        "reason": "Windows installer download/cache: platform-builds.yml already caches FPC/NSIS and dependency builds, verifies SHA256, uses bounded retries and bounds installer waits. The older single main.yml patch is superseded by that shared workflow.",
+        "reviewedCommitCount": 2
       }
     },
     {
@@ -8878,9 +9113,27 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "assessed",
+        "assessedAgainst": "e42382b48c2ca6fc947376f4c936b1a89c509199",
+        "assessedAt": "2026-10-31",
+        "scope": "Source-diff and current-USCE comparison, with linked concrete outputs. Assessment is not runtime acceptance or adoption of the fork.",
+        "items": [
+          {
+            "area": "Windows runtime bootstrap",
+            "decision": "already-covered",
+            "reason": "The current build has runtime dependency extraction/checks and bundled dependency preference, including the Lua metadata checks. Do not reintroduce the historical download script as another bootstrap route.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/commit/450fe2fa",
+              "https://github.com/UltraStar-CE/USCE/blob/e42382b48c2ca6fc947376f4c936b1a89c509199/tools/check_windows_runtime.py"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/commit/450fe2fa",
+          "https://github.com/UltraStar-CE/USCE/blob/e42382b48c2ca6fc947376f4c936b1a89c509199/tools/check_windows_runtime.py"
+        ],
+        "reason": "Windows runtime bootstrap: The current build has runtime dependency extraction/checks and bundled dependency preference, including the Lua metadata checks. Do not reintroduce the historical download script as another bootstrap route.",
+        "reviewedCommitCount": 1
       }
     },
     {
@@ -8923,9 +9176,27 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "assessed",
+        "assessedAgainst": "e42382b48c2ca6fc947376f4c936b1a89c509199",
+        "assessedAt": "2026-10-31",
+        "scope": "Source-diff and current-USCE comparison, with linked concrete outputs. Assessment is not runtime acceptance or adoption of the fork.",
+        "items": [
+          {
+            "area": "Editor save popup and text sizing",
+            "decision": "already-covered",
+            "reason": "The save-error dialog is in 7311f4e5 and popup width measurement matches source 8fb64622 by stable patch ID at f73d3398. Current popup follow-ups preserve shared scaling; no second copy.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/commit/7311f4e5",
+              "https://github.com/UltraStar-CE/USCE/commit/f73d3398"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/commit/7311f4e5",
+          "https://github.com/UltraStar-CE/USCE/commit/f73d3398"
+        ],
+        "reason": "Editor save popup and text sizing: The save-error dialog is in 7311f4e5 and popup width measurement matches source 8fb64622 by stable patch ID at f73d3398. Current popup follow-ups preserve shared scaling; no second copy.",
+        "reviewedCommitCount": 2
       }
     },
     {
@@ -8956,9 +9227,27 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "assessed",
+        "assessedAgainst": "e42382b48c2ca6fc947376f4c936b1a89c509199",
+        "assessedAt": "2026-10-31",
+        "scope": "Source-diff and current-USCE comparison, with linked concrete outputs. Assessment is not runtime acceptance or adoption of the fork.",
+        "items": [
+          {
+            "area": "SDL2-compat runtime packaging",
+            "decision": "superseded",
+            "reason": "The source changes macOS CI from self-built SDL to Homebrew SDL compatibility libraries and includes dynamically loaded dependencies. Current CI already installs sdl2-compat, configure resolves its extra dylibs, and Makefile.macos-helper includes EXTRA_DYLIBS. The current PortAudio playback path is separate; the old workflow replacement is not reapplied.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/commit/4232255c",
+              "https://github.com/UltraStar-CE/USCE/pull/34"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/commit/4232255c",
+          "https://github.com/UltraStar-CE/USCE/pull/34"
+        ],
+        "reason": "SDL2-compat runtime packaging: The source changes macOS CI from self-built SDL to Homebrew SDL compatibility libraries and includes dynamically loaded dependencies. Current CI already installs sdl2-compat, configure resolves its extra dylibs, and Makefile.macos-helper includes EXTRA_DYLIBS. The current PortAudio playback path is separate; the old workflow replacement is not reapplied.",
+        "reviewedCommitCount": 1
       }
     },
     {
@@ -8989,9 +9278,29 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "assessed",
+        "assessedAgainst": "e42382b48c2ca6fc947376f4c936b1a89c509199",
+        "assessedAt": "2026-10-31",
+        "scope": "Source-diff and current-USCE comparison, with linked concrete outputs. Assessment is not runtime acceptance or adoption of the fork.",
+        "items": [
+          {
+            "area": "Return to playlist after singing",
+            "decision": "already-covered",
+            "reason": "fc43a063 and the later continuous-playback/playlist integration implement the return-selection behavior. Current SongReturnPending and playlist restoration are present; the rebased source hash is not new work.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/commit/fc43a063",
+              "https://github.com/UltraStar-CE/USCE/pull/135",
+              "https://github.com/UltraStar-CE/USCE/pull/150"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/commit/fc43a063",
+          "https://github.com/UltraStar-CE/USCE/pull/135",
+          "https://github.com/UltraStar-CE/USCE/pull/150"
+        ],
+        "reason": "Return to playlist after singing: fc43a063 and the later continuous-playback/playlist integration implement the return-selection behavior. Current SongReturnPending and playlist restoration are present; the rebased source hash is not new work.",
+        "reviewedCommitCount": 1
       }
     },
     {
@@ -9022,9 +9331,25 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "assessed",
+        "assessedAgainst": "e42382b48c2ca6fc947376f4c936b1a89c509199",
+        "assessedAt": "2026-10-31",
+        "scope": "Source-diff and current-USCE comparison, with linked concrete outputs. Assessment is not runtime acceptance or adoption of the fork.",
+        "items": [
+          {
+            "area": "Lua plugin paths",
+            "decision": "already-covered",
+            "reason": "Stable patch ID matches the existing USCE commit 166d3b01. No new fix.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/commit/166d3b01"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/commit/166d3b01"
+        ],
+        "reason": "Lua plugin paths: Stable patch ID matches the existing USCE commit 166d3b01. No new fix.",
+        "reviewedCommitCount": 1
       }
     },
     {
@@ -9055,9 +9380,29 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "assessed",
+        "assessedAgainst": "e42382b48c2ca6fc947376f4c936b1a89c509199",
+        "assessedAt": "2026-10-31",
+        "scope": "Source-diff and current-USCE comparison, with linked concrete outputs. Assessment is not runtime acceptance or adoption of the fork.",
+        "items": [
+          {
+            "area": "Freestyle/rap scoring policy",
+            "decision": "superseded",
+            "reason": "USCE now has configurable freestyle/rap weights and compatible completion/highscore handling; reintroducing the older binary conversion mode would conflict with the chosen scoring model.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/pull/57",
+              "https://github.com/UltraStar-CE/USCE/pull/243",
+              "https://github.com/UltraStar-CE/USCE/pull/244"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/57",
+          "https://github.com/UltraStar-CE/USCE/pull/243",
+          "https://github.com/UltraStar-CE/USCE/pull/244"
+        ],
+        "reason": "Freestyle/rap scoring policy: USCE now has configurable freestyle/rap weights and compatible completion/highscore handling; reintroducing the older binary conversion mode would conflict with the chosen scoring model.",
+        "reviewedCommitCount": 1
       }
     },
     {
@@ -9094,9 +9439,29 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "assessed",
+        "assessedAgainst": "e42382b48c2ca6fc947376f4c936b1a89c509199",
+        "assessedAt": "2026-10-31",
+        "scope": "Source-diff and current-USCE comparison, with linked concrete outputs. Assessment is not runtime acceptance or adoption of the fork.",
+        "items": [
+          {
+            "area": "Freestyle/rap highscores",
+            "decision": "superseded",
+            "reason": "USCE now evaluates completion over actual scoring notes with configurable freestyle weights. The old removal of blanket FreestyleToRap exclusions is superseded, not another unmerged score fix.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/pull/57",
+              "https://github.com/UltraStar-CE/USCE/pull/181",
+              "https://github.com/UltraStar-CE/USCE/pull/243"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/57",
+          "https://github.com/UltraStar-CE/USCE/pull/181",
+          "https://github.com/UltraStar-CE/USCE/pull/243"
+        ],
+        "reason": "Freestyle/rap highscores: USCE now evaluates completion over actual scoring notes with configurable freestyle weights. The old removal of blanket FreestyleToRap exclusions is superseded, not another unmerged score fix.",
+        "reviewedCommitCount": 1
       }
     },
     {
@@ -9127,9 +9492,25 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "assessed",
+        "assessedAgainst": "e42382b48c2ca6fc947376f4c936b1a89c509199",
+        "assessedAt": "2026-10-31",
+        "scope": "Source-diff and current-USCE comparison, with linked concrete outputs. Assessment is not runtime acceptance or adoption of the fork.",
+        "items": [
+          {
+            "area": "Preview reflection rendering",
+            "decision": "already-covered",
+            "reason": "Stable patch ID matches USCE commit 4c34b809.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/commit/4c34b809"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/commit/4c34b809"
+        ],
+        "reason": "Preview reflection rendering: Stable patch ID matches USCE commit 4c34b809.",
+        "reviewedCommitCount": 1
       }
     },
     {
@@ -9160,9 +9541,25 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "assessed",
+        "assessedAgainst": "e42382b48c2ca6fc947376f4c936b1a89c509199",
+        "assessedAt": "2026-10-31",
+        "scope": "Source-diff and current-USCE comparison, with linked concrete outputs. Assessment is not runtime acceptance or adoption of the fork.",
+        "items": [
+          {
+            "area": "Editor score breakdown rendering",
+            "decision": "already-covered",
+            "reason": "Stable patch ID matches USCE commit ec8f8a27.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/commit/ec8f8a27"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/commit/ec8f8a27"
+        ],
+        "reason": "Editor score breakdown rendering: Stable patch ID matches USCE commit ec8f8a27.",
+        "reviewedCommitCount": 1
       }
     },
     {
@@ -9193,9 +9590,27 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "assessed",
+        "assessedAgainst": "e42382b48c2ca6fc947376f4c936b1a89c509199",
+        "assessedAt": "2026-10-31",
+        "scope": "Source-diff and current-USCE comparison, with linked concrete outputs. Assessment is not runtime acceptance or adoption of the fork.",
+        "items": [
+          {
+            "area": "Stale language template removal",
+            "decision": "already-covered",
+            "reason": "The source removal is already in 412fa2a2. Current English coverage is handled by tools/check_english.py rather than restoring removed templates.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/commit/412fa2a2",
+              "https://github.com/UltraStar-CE/USCE/pull/126"
+            ]
+          }
+        ],
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/commit/412fa2a2",
+          "https://github.com/UltraStar-CE/USCE/pull/126"
+        ],
+        "reason": "Stale language template removal: The source removal is already in 412fa2a2. Current English coverage is handled by tools/check_english.py rather than restoring removed templates.",
+        "reviewedCommitCount": 1
       }
     }
   ],

@@ -68,8 +68,7 @@ merges game changes from issue text, and requires no additional paid AI service.
 
 The daily assessment also discovers USDX forks pushed within the last two years,
 including forks listed in GitHub's active-forks view. Archived and disabled
-repositories and USCE itself are excluded. All branch tips are checked, including feature branches. New tips with commits ahead of
-USDX produce a draft assessment with immutable comparisons and commit excerpts.
+repositories and USCE itself are excluded. All branch tips are checked, including feature branches. New tips are filtered against USDX and all previously recorded source heads before producing a draft intake with immutable comparisons and commit excerpts. An intake is not a completed assessment.
 These commits may already have equivalent ports in USCE; they are discovery
 candidates, not automatic imports. Assessments contain up to 20 branch tips, with one
 outstanding fork assessment at a time. Decisions and existing USCE references
@@ -117,8 +116,7 @@ deciding to merge.
 Known branches are compared with their last recorded head. Newly discovered
 branches are compared with USCE main, excluding commits already in its history.
 The complete commit inventory is paginated before applying the six-month author-date cutoff; eligible commits and the number excluded are recorded. Excerpts are only a summary.
-Prior heads and decisions remain in assessment history. Shared commits are
-presented once across the batch and previous inventories. A new push elsewhere
+Prior heads and decisions remain in assessment history. Commits reachable from current USDX are excluded even if USCE adapted their changes. Shared commits are presented once across the batch and previous inventories. Full recorded source-head ancestry, including cross-fork aliases, is excluded even when an old inventory stored only excerpts. A branch containing only previously seen history produces no proposal. A new push elsewhere
 in a fork does not make its old branch history new development.
 
 Assessors check rebased/adapted equivalents against USCE source and existing
@@ -130,13 +128,13 @@ provide recommendations and concrete follow-ups rather than another reading list
 ### Concrete follow-through
 
 The local daily upstream follow-through task consumes discovery records and
-prepares the actual outputs: worthwhile source changes become focused regular
+processes open intake PRs first and prepares the actual outputs: worthwhile source changes become focused regular
 PRs with preserved authorship and appropriate checks; relevant reports become
 attributed issues; product decisions become specific questions for @dgruss.
 Draft is for incomplete work, not a default for automated proposals. Existing
 outputs are reused, and the assessment links those outputs rather than handing
 the maintainer a reading list. Covered or excluded work creates no new action.
-The six-month commit-age cutoff and the fixed new-issue watch cutoff apply.
+Before presenting results, replace the intake body with actual output links and evidence-backed dispositions. Previously assessed source heads in linked theme/engine proposals also count as prior work. Rebased or adapted equivalents require source/patch inspection, not title matching. The six-month commit-age cutoff and the fixed new-issue watch cutoff apply.
 
 The local registry at outputs/upstream-assessment/registry.json remembers source
 heads, decisions and output links while repository checkpoints await merge.

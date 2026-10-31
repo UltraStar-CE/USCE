@@ -59,7 +59,7 @@ function fixture({pending = false, failed = false, previous = null} = {}) {
 test('daily scan uses immutable source heads and creates a metadata-only draft with source comparisons', async () => {
   const x = fixture(); await trackForks(x);
   assert.equal(x.comparisons[0].basehead, 'd'.repeat(40) + '...' + 'b'.repeat(40));
-  assert.equal(x.comparisons.length, 2);
+  assert.equal(x.comparisons.length, 4);
   assert.equal(x.proposals.length, 1); assert.equal(x.proposals[0].draft, true);
   assert.match(x.proposals[0].body, /contributor\/USDX/);
   assert(!x.proposals[0].body.includes('Untrusted instructions'));
@@ -137,6 +137,67 @@ test('a fork containing only old commits produces no assessment PR', async () =>
   const x = fixture();
   x.github.rest.repos.compareCommitsWithBasehead = async () => ({data: {ahead_by: 1, behind_by: 0,
     commits: [{sha: 'b'.repeat(40), commit: {message: 'Old rebased work', author: {name: 'Author', date: '2025-01-01T00:00:00Z'}, committer: {date: '2026-10-20T00:00:00Z'}}}]}});
+  await trackForks(x);
+  assert.equal(x.proposals.length, 0);
+});
+
+
+test('upstream sync commits are excluded even when absent from the USCE checkpoint', async () => {
+  const x = fixture();
+  const change = sha => ({sha, commit: {message: 'Source change',
+    author: {name: 'Author', date: '2026-10-20T00:00:00Z'}}});
+  x.github.rest.repos.compareCommitsWithBasehead = async args => ({data: {
+    ahead_by: args.basehead.startsWith('a'.repeat(40)) ? 1 : 2, behind_by: 0,
+    commits: args.basehead.startsWith('a'.repeat(40)) ? [change('b'.repeat(40))]
+      : [change('9'.repeat(40)), change('b'.repeat(40))]}});
+  await trackForks(x);
+  const first = JSON.parse(x.trees[0].tree[0].content).forks[0];
+  assert.deepEqual(first.commits.map(c => c.sha), ['b'.repeat(40)]);
+  assert.equal(first.ignoredUpstreamCommitCount, 1);
+});
+
+test('an upstream-only sync produces no fork work and incomplete upstream comparison fails closed', async () => {
+  const sync = fixture();
+  const original = sync.github.rest.repos.compareCommitsWithBasehead;
+  sync.github.rest.repos.compareCommitsWithBasehead = async args => args.basehead.startsWith('a'.repeat(40))
+    ? {data: {ahead_by: 0, behind_by: 0, commits: []}} : original(args);
+  await trackForks(sync);
+  assert.equal(sync.proposals.length, 0);
+  const broken = fixture();
+  broken.github.rest.repos.compareCommitsWithBasehead = async args => args.basehead.startsWith('a'.repeat(40))
+    ? {data: {ahead_by: 1, behind_by: 0, commits: []}} : original(args);
+  await assert.rejects(trackForks(broken), /Incomplete fork commit inventory/);
+  assert.equal(broken.proposals.length, 0);
+});
+
+
+test('a new fork alias excludes ancestors of assessed heads even when old inventories were excerpts', async () => {
+  const previous = {repository: 'UltraStar-Deluxe/USDX', forks: [{
+    repository: 'other/USDX', branch: 'old-name', head: '9'.repeat(40), commits: [],
+    assessment: {decision: 'assessed', usceReferences: ['existing-port'], reason: 'Already reviewed'}}]};
+  const x = fixture({previous});
+  const change = sha => ({sha, commit: {message: 'Source change',
+    author: {name: 'Author', date: '2026-10-20T00:00:00Z'}}});
+  x.github.rest.repos.compareCommitsWithBasehead = async args => ({data: {
+    ahead_by: args.basehead.startsWith('9'.repeat(40)) ? 1 : 2, behind_by: 0,
+    commits: args.basehead.startsWith('9'.repeat(40)) ? [change('6'.repeat(40))]
+      : [change('5'.repeat(40)), change('6'.repeat(40))]}});
+  await trackForks(x);
+  const records = JSON.parse(x.trees[0].tree[0].content).forks;
+  const first = records.find(f => f.repository === 'contributor/USDX');
+  assert.deepEqual(first.newCommits.map(c => c.sha), ['6'.repeat(40)]);
+  assert.equal(first.ignoredKnownHistoryCommitCount, 1);
+  assert.deepEqual(records[0], previous.forks[0]);
+});
+
+test('rediscovering only known ancestry creates no empty assessment PR', async () => {
+  const previous = {repository: 'UltraStar-Deluxe/USDX', forks: [{
+    repository: 'old/USDX', branch: 'renamed', head: '9'.repeat(40), commits: [],
+    assessment: {decision: 'assessed'}}]};
+  const x = fixture({previous});
+  const original = x.github.rest.repos.compareCommitsWithBasehead;
+  x.github.rest.repos.compareCommitsWithBasehead = async args => args.basehead.startsWith('9'.repeat(40))
+    ? {data: {ahead_by: 0, behind_by: 1, commits: []}} : original(args);
   await trackForks(x);
   assert.equal(x.proposals.length, 0);
 });

@@ -50,3 +50,18 @@ test('closing-keyword escaping preserves exact comparison URL destinations', () 
     assert.ok(!report.includes('https://github.com/&#'));
   }
 });
+
+
+test('fork reports present only novel source commits, not rediscovered history', () => {
+  const old = {sha: 'a'.repeat(40), title: 'Already assessed old feature'};
+  const fresh = {sha: 'b'.repeat(40), title: 'Genuinely new work'};
+  const report = forkReport({batch: [{repository: 'fork/repo', branch: 'new-name',
+    ahead: 99, compareUrl: 'https://github.com/fork/repo/compare/old...new',
+    commits: [old, fresh], newCommits: [fresh], ignoredKnownHistoryCommitCount: 97,
+    ignoredUpstreamCommitCount: 1}]});
+  assert.match(report, /1 newly discovered source commits/);
+  assert.match(report, /97 previously seen history commits excluded/);
+  assert.match(report, /1 upstream-sync commits excluded/);
+  assert.match(report, /Genuinely new work/);
+  assert.ok(!report.includes(old.title));
+});

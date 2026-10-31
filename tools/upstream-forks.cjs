@@ -55,7 +55,7 @@ function forkChanges(previous, snapshots) {
   if (!batch.length) return null;
   const seen = new Set((previous?.forks || []).flatMap(f => [...(f.commits || []), ...(f.assessmentHistory || []).flatMap(h => h.commits || [])].map(c => c.sha)));
   for (const fork of batch) {
-    fork.newCommits = (fork.commits || []).filter(c => !seen.has(c.sha));
+    fork.newCommits = (fork.novelCommits || fork.commits || []).filter(c => !seen.has(c.sha));
     for (const c of fork.commits || []) seen.add(c.sha);
   }
   for (const fork of batch) records.set(recordKey(fork), {...fork,
@@ -87,6 +87,12 @@ async function trackForks({github, context, core, now = new Date()}) {
   const forks = activeForks(await github.paginate(github.rest.repos.listForks,
     {...source, sort: 'newest', per_page: 100}), now, ownRepository);
   const snapshots = [];
+  const knownHeads = new Set((previous?.forks || []).flatMap(f =>
+    [f.head, f.previousHead, f.previouslyAssessedSourceHead,
+      ...(f.assessmentHistory || []).map(h => h.head)].filter(Boolean)));
+  if ([...knownHeads].some(head => !shaPattern.test(head))) throw Error('Invalid assessed source head');
+  const knownCommits = new Set((previous?.forks || []).flatMap(f =>
+    [...(f.commits || []), ...(f.assessmentHistory || []).flatMap(h => h.commits || [])].map(c => c.sha)));
   const unavailableForks = [];
   for (const fork of forks) {
     const [owner, repo] = fork.full_name.split('/');
@@ -103,33 +109,61 @@ async function trackForks({github, context, core, now = new Date()}) {
     for (const branch of branches.sort((a, b) => Number(b.name === fork.default_branch) - Number(a.name === fork.default_branch))) {
       const head = branch.commit?.sha;
       if (!shaPattern.test(head)) throw Error('Missing fork head: ' + fork.full_name);
-      if (seenHeads.has(head) || previous?.forks.some(record => record.repository === fork.full_name && record.head === head)) continue;
+      if (knownHeads.has(head) || seenHeads.has(head) || previous?.forks.some(record => record.repository === fork.full_name && record.head === head)) continue;
       seenHeads.add(head);
       const prior = previous?.forks.find(record => recordKey(record) === fork.full_name + '#' + branch.name);
       // Compare known branches with their checkpoint, not their entire USDX history.
       // For first discovery, exclude exact commits already in USCE's main history.
       const base = prior?.head || sha;
-      const args = {...context.repo, basehead: base + '...' + head, per_page: 100};
-      const comparison = (await github.rest.repos.compareCommitsWithBasehead(args)).data;
-      if (!Number.isSafeInteger(comparison.ahead_by) || !Number.isSafeInteger(comparison.behind_by) ||
-          !Array.isArray(comparison.commits)) throw Error('Incomplete fork comparison: ' + fork.full_name);
-      const commits = [...comparison.commits];
-      for (let page = 2; commits.length < comparison.ahead_by; page++) {
-        const next = (await github.rest.repos.compareCommitsWithBasehead({...args, page})).data.commits;
-        if (!Array.isArray(next) || !next.length) throw Error('Incomplete fork commit inventory: ' + fork.full_name);
-        commits.push(...next);
+      const comparisons = new Map();
+      async function compare(baseSha) {
+        if (comparisons.has(baseSha)) return comparisons.get(baseSha);
+        const args = {...context.repo, basehead: baseSha + '...' + head, per_page: 100};
+        const comparison = (await github.rest.repos.compareCommitsWithBasehead(args)).data;
+        if (!Number.isSafeInteger(comparison.ahead_by) || !Number.isSafeInteger(comparison.behind_by) ||
+            !Array.isArray(comparison.commits)) throw Error('Incomplete fork comparison: ' + fork.full_name);
+        const commits = [...comparison.commits];
+        for (let page = 2; commits.length < comparison.ahead_by; page++) {
+          const next = (await github.rest.repos.compareCommitsWithBasehead({...args, page})).data.commits;
+          if (!Array.isArray(next) || !next.length) throw Error('Incomplete fork commit inventory: ' + fork.full_name);
+          commits.push(...next);
+        }
+        if (new Set(commits.map(c => c.sha)).size !== commits.length) throw Error('Duplicate fork commit inventory');
+        if (commits.length !== comparison.ahead_by) throw Error('Incomplete fork commit inventory: ' + fork.full_name);
+        const result = {comparison, commits};
+        comparisons.set(baseSha, result);
+        return result;
       }
-      if (new Set(commits.map(c => c.sha)).size !== commits.length) throw Error('Duplicate fork commit inventory');
-      if (commits.length !== comparison.ahead_by) throw Error('Incomplete fork commit inventory: ' + fork.full_name);
-      const inventory = commits.map(c => ({sha: c.sha,
+      const {comparison, commits} = await compare(base);
+      // A fork syncing USDX is not new fork development, even when that sync is
+      // newer than our branch checkpoint or USCE has an adapted/rebased port.
+      const upstream = base === upstreamHead ? {commits} : await compare(upstreamHead);
+      const forkOnly = new Set(upstream.commits.map(c => c.sha));
+      const sourceCommits = commits.filter(c => forkOnly.has(c.sha));
+      const inventory = sourceCommits.map(c => ({sha: c.sha,
         title: c.commit.message.split('\n')[0], author: c.author?.login || c.commit.author.name,
         authoredAt: c.commit.author.date}));
       const eligible = recentCommits(inventory, now);
       if (!eligible.length) continue;
+      let novel = eligible.filter(c => !knownCommits.has(c.sha));
+      // Old checkpoints may contain only excerpts. Reachability from their full
+      // immutable heads also excludes history rediscovered under another fork
+      // or branch name; a new label is not new development.
+      for (const known of knownHeads) {
+        if (!novel.length) break;
+        const delta = new Set((await compare(known)).commits.map(c => c.sha));
+        novel = novel.filter(c => delta.has(c.sha));
+      }
+      if (!novel.length) continue;
+      knownHeads.add(head);
+      for (const c of eligible) knownCommits.add(c.sha);
       snapshots.push({repository: fork.full_name, branch: branch.name, head, upstreamHead,
         comparisonBase: base, comparisonKind: prior ? 'since-checkpoint' : 'outside-usce',
         ahead: comparison.ahead_by, behind: comparison.behind_by,
         compareUrl: 'https://github.com/' + ownRepository + '/compare/' + base + '...' + head,
+        novelCommits: novel,
+        ignoredKnownHistoryCommitCount: eligible.length - novel.length,
+        ignoredUpstreamCommitCount: commits.length - sourceCommits.length,
         ignoredOldCommitCount: inventory.length - eligible.length,
         commits: eligible});
     }
