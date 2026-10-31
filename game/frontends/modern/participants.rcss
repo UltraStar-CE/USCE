@@ -1,0 +1,28 @@
+/* Participant limits and values come from the game; placement belongs to the theme. */
+.participants-screen .description { left: 8.125vw; }
+.player-count { position: absolute; left: 8.75vw; top: 21.666667vh; width: 82.5vw; height: 5.833333vh; display: flex; }
+.player-count button { height: 100%; font-size: 3.75vh; }
+.player-count button span { margin-top: 0.5vh; }
+.count-label { width: 32.5vw; text-align: left; }
+.count-label span { margin-left: 2.5vw; }
+.count-value { width: 50vw; display: flex; }
+.count-value button { background-color: transparent; }
+.count-value .previous, .count-value .next { width: 2.5vw; flex-shrink: 0; }
+.count-value .previous svg, .count-value .next svg { opacity: 1; }
+.count-value .current { flex: 1; }
+.player-count.selected .current { font-weight: bold; }
+.unavailable { visibility: hidden; }
+.participants { position: absolute; left: 8.75vw; top: 35vh; width: 85vw; display: flex; flex-wrap: wrap; }
+.participant-slot { width: 21.25vw; height: 13.333333vh; }
+.participant-name { width: 18.75vw; height: 8.333333vh; font-size: 3.75vh; color: white; }
+.participant-name.selected { font-weight: bold; }
+.participant-text { display: flex; justify-content: center; width: 100%; height: 5vh; padding-top: 1.666667vh; white-space: nowrap; overflow: hidden; }
+.participant-text span { display: block; position: relative; width: auto; flex-shrink: 0; }
+.suggested-name { opacity: 0.5; }
+.participant-reflection-clip { position: relative; top: 0.166667vh; width: 18.75vw; height: 4.166667vh; overflow: hidden; pointer-events: none; mask-image: vertical-gradient(#000f #0000); }
+.participant-reflection { position: absolute; top: 0; transform: scaleY(-1); opacity: 0.7; }
+.participants-screen .hidden { display: none; }
+.participants-screen .participant-name-icon { left: 50.75vw; }
+.participants-screen .participant-name-legend { left: 53.5vw; }
+.participants-screen .participant-continue-icon { left: 72vw; }
+.participants-screen .participant-continue-legend { left: 74.5vw; }

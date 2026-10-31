@@ -266,13 +266,28 @@ UI_EXPORT void ui_scroll(float delta) {
 }
 UI_EXPORT void ui_key(int key) {
     if (!document) return;
-    // Navigate actual document geometry, independent of screen roles or button counts.
+    // Navigation uses document geometry or order, independent of screen roles or button counts.
     context->Update();
     controls.clear(); document->QuerySelectorAll(controls, "[action]");
     if (controls.empty()) return;
     auto it = std::find(controls.begin(), controls.end(), context->GetFocusElement());
     int index = it == controls.end() ? 0 : int(it - controls.begin());
-    if (key != 0) {
+    if (std::abs(key) == 3) {
+        // Ordered form navigation follows document order, treating arrow controls
+        // for the same field as one stop. Spatial navigation remains available.
+        const auto group = [](Rml::Element* e) {
+            return e->GetAttribute<Rml::String>("focus-target", e->GetAttribute<Rml::String>("target", ""));
+        };
+        const auto origin = group(controls[index]);
+        const int direction = key > 0 ? 1 : -1;
+        for (int step = 1; step <= int(controls.size()); ++step) {
+            auto* candidate = controls[(index + int(controls.size()) + direction * step) % int(controls.size())];
+            if (!candidate->IsVisible(true) || candidate->HasAttribute("disabled")) continue;
+            if (!origin.empty() && group(candidate) == origin) continue;
+            candidate->Focus();
+            break;
+        }
+    } else if (key != 0) {
         const bool vertical = std::abs(key) == 2;
         const int direction = key > 0 ? 1 : -1;
         const auto center = [](Rml::Element* e) {

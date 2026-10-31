@@ -19,3 +19,6 @@ button { background-color: #e78642e6; }
 
 .count-value { background-color: #e78642e6; }
 .player-count.selected .count-label, .player-count.selected .count-value { background-color: #eab37ee6; }
+
+.participant-name { background-color: #e78642e6; }
+.participant-name.selected, .participant-name:focus, .participant-name:hover { background-color: #eab37ee6; }

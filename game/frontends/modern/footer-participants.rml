@@ -1,0 +1,12 @@
+<template name="footer-participants">
+<head></head>
+<body>
+  <span class="where" lang="PARTY_MODE_TOURNAMENT_PLAYER_WHEREAMI" />
+  <img class="legend-icon navigation-icon" src="../../themes/Modern/[button]navi.png" />
+  <span class="legend navigation" lang="SING_LEGEND_NAVIGATE" />
+  <img class="legend-icon participant-name-icon" src="../../themes/Modern/[button]az.png" />
+  <span class="legend participant-name-legend" lang="PARTY_PLAYER_ENTER_NAME" />
+  <img class="legend-icon participant-continue-icon" src="../../themes/Modern/[button]enter.png" />
+  <span class="legend participant-continue-legend" lang="SING_LEGEND_CONTINUE" />
+</body>
+</template>

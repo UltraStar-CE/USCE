@@ -4,8 +4,15 @@ unit UDocumentUI;
 interface
 uses Classes, SysUtils;
 const
+  uiKeyNext = 3;
+  uiKeyPrevious = -3;
   uiScreenPartyOptions = 'party-options';
   uiScreenTournamentOptions = 'tournament-options';
+  uiScreenTournamentPlayers = 'tournament-players';
+  uiParticipantsPrevious = 'participants.previous';
+  uiParticipantsNext = 'participants.next';
+  uiParticipantsContinue = 'participants.continue';
+  uiParticipantsSelect = 'participants.select';
   uiScreenPlayers = 'players';
   uiPlayersContinue = 'players.continue';
   uiPlayersPrevious = 'players.previous';
@@ -57,7 +64,7 @@ type
   end;
   TDocumentUI = class
   private
-    FileName: UTF8String;
+    FileName, ArrayBinding: UTF8String;
     ColorStyle, SkinStyle: UTF8String;
     Values: TStringList;
     LastActionTarget: UTF8String;
@@ -203,8 +210,8 @@ begin
     Manifest.Free;
   end;
   if not FileExists(DocumentFile) or not LoadRuntime(Font, BoldFont) then Exit;
-  if ArrayBinding <> '' then SetModelArray(PAnsiChar(ArrayBinding), 0);
   Result := TDocumentUI.Create(DocumentFile);
+  Result.ArrayBinding := ArrayBinding;
   Result.ColorStyle := Style;
   Result.SkinStyle := SkinSheet;
   if not Result.Activate then FreeAndNil(Result);
@@ -230,6 +237,9 @@ begin
   Result := LibraryHandle <> NilHandle;
   if not Result or (Current = Self) then Exit;
   Current := nil;
+  // Each form supplies its own fields before drawing. Do not instantiate a new
+  // document against the previous form's nested choices.
+  if ArrayBinding <> '' then SetModelArray(PAnsiChar(ArrayBinding), 0);
   Result := OpenDocument(PAnsiChar(FileName)) <> 0;
   if not Result then begin Log.LogWarn(UTF8String(GetError()), 'DocumentUI'); Exit; end;
   if (SkinStyle <> '') and (ApplyStyle(PAnsiChar(SkinStyle)) = 0) then

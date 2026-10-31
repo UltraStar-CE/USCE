@@ -134,6 +134,59 @@ int main(int argc, char** argv) {
                     "Party fields must reuse the named form actions");
                 ui_clear_action();
             }
+            // Nested choices must disappear before their now-invalid bindings update.
+            ui_model_set("form.fields[0].inline", "1", 2);
+            ui_model_array("form.fields[0].choices", 3);
+            for (int i = 0; i < 3; ++i) {
+                const auto prefix = "form.fields[0].choices[" + std::to_string(i) + "].";
+                ui_model_set((prefix + "id").c_str(), ("nested-" + std::to_string(i)).c_str(), 0);
+                ui_model_set((prefix + "target").c_str(), ("0:" + std::to_string(i)).c_str(), 0);
+                ui_model_set((prefix + "label").c_str(), "Choice", 0);
+                ui_model_set((prefix + "selected").c_str(), i == 0 ? "1" : "0", 2);
+            }
+            require(ui_open(form_document.c_str()) != 0, "Nested form choices");
+            ui_render(1280, 720, 0);
+            const int before_shrink = warnings;
+            ui_model_array("form.fields[0].choices", 1);
+            ui_render(1280, 720, 0);
+            require(warnings == before_shrink, "Nested array shrink must not evaluate removed choice bindings");
+            ui_model_set("form.fields[0].inline", "0", 2);
+            ui_model_set("participants.count", "2", 1);
+            ui_model_set("participants.focus", "-1", 1);
+            ui_model_set("participants.previousCount", "0", 2);
+            ui_model_set("participants.nextCount", "1", 2);
+            ui_model_array("participants.fields", 16);
+            for (int i = 0; i < 16; ++i) {
+                const auto prefix = "participants.fields[" + std::to_string(i) + "].";
+                ui_model_set((prefix + "id").c_str(), std::to_string(i).c_str(), 1);
+                ui_model_set((prefix + "visible").c_str(), i < 2 ? "1" : "0", 2);
+                ui_model_set((prefix + "value").c_str(), "Participant", 0);
+                ui_model_set((prefix + "suffix").c_str(), "", 0);
+            }
+            require(ui_open(utf8(root / "frontends/modern/tournament-players.rml").c_str()) != 0,
+                "Tournament participant document");
+            ui_render(1280, 720, 0);
+            ui_focus("participants-count");
+            ui_key(3);
+            require(std::string(ui_focused_target()) == "0", "Ordered navigation skips count arrows");
+            ui_key(3);
+            require(std::string(ui_focused_target()) == "1", "Ordered navigation follows participant order");
+            ui_key(3);
+            require(std::string(ui_focused_target()) == "count", "Ordered navigation skips hidden participants and wraps");
+            ui_key(-3);
+            require(std::string(ui_focused_target()) == "1", "Reverse ordered navigation wraps");
+            ui_model_set("participants.fields[15].visible", "1", 2);
+            ui_render(1280, 720, 0);
+            ui_focus("participant-1");
+            ui_key(3);
+            require(std::string(ui_focused_target()) == "15", "Ordered navigation respects changing visibility");
+            for (int i = 0; i < 16; ++i)
+                ui_model_set(("participants.fields[" + std::to_string(i) + "].visible").c_str(), "1", 2);
+            ui_render(1280, 720, 0);
+            ui_mouse(1048, 570, 0, 1); ui_mouse(1048, 570, 0, 0);
+            require(std::string(ui_action()) == "participants.select" && std::string(ui_action_target()) == "15",
+                "Last participant has a theme-defined mouse target");
+            ui_clear_action();
             require(ui_open(form_document.c_str()) != 0, "Return to settings form document");
             ui_render(1280, 720, 0);
             ui_focus("field-0");
