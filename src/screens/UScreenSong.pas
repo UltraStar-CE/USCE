@@ -1662,6 +1662,7 @@ begin
         end;
       SDLK_SPACE:
         begin
+          if not HasSelection then Exit;
           if (CatSongs.CatNumShow = -3) and (not CatSongs.Song[Interaction].Main) then
           begin
             if MarkedPlaylistSong = -1 then
@@ -5079,6 +5080,7 @@ var
   SongNr: integer;
 
 begin
+  if not HasSelection then Exit;
   //Sel3 := 0;
   if (NumSongs > 0) and not MakeMedley then
   begin
