@@ -2058,7 +2058,7 @@ begin
   Log.LogInfo('Using Modern OpenGL renderer', 'TRenderer_OpenGL3.CheckVersion');
   SupportsVAO := true;
   SupportsFBO := true;
-  SupportsMappedBuffer := true;
+  SupportsMappedBuffer := false; // TEST BUILD: force the glBufferSubData path (Intel ig9icd64 spins in glMapBufferRange/glUnmapBuffer)
   SupportsMipMap := true;
   GlyphTextureFormat := GL_RED;
   if ((MajorVersion > 3) or ((MajorVersion = 3) and (MinorVersion >= 3))) then
