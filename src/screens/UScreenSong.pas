@@ -103,6 +103,7 @@ type
       procedure StartMusicPreview();
       procedure StartVideoPreview();
       function GetSongButtonMouseOverArea(ButtonIndex: integer): TMouseOverRect;
+      function HasSelection: boolean;
       function ReloadCurrentPlaylist(ForceCheck: boolean): boolean;
     public
       TextConfiguration, StaticContinuousKey, StaticContinuousStatus: integer;
@@ -249,6 +250,7 @@ type
       procedure FadeMessage();
       procedure CloseMessage();
 
+      procedure ClearSelection;
       procedure GenerateThumbnails();
       procedure SyncCoversToSongs();
       procedure OnShow; override;
@@ -493,10 +495,22 @@ begin
 
 end;
 
+procedure TScreenSong.ClearSelection;
+begin
+  SelInteraction := -1;
+end;
+
+function TScreenSong.HasSelection: boolean;
+begin
+  Result := (Interaction >= 0) and (Interaction < Length(CatSongs.Song)) and
+    CatSongs.Song[Interaction].Visible;
+end;
+
 procedure TScreenSong.ParseInputNextHorizontal(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean);
 var
   SDL_ModState: word;
 begin
+  if not HasSelection then Exit;
   CloseMessage();
 
   SDL_ModState := SDL_GetModState and (KMOD_LSHIFT + KMOD_RSHIFT
@@ -535,6 +549,7 @@ procedure TScreenSong.ParseInputPrevHorizontal(PressedKey: cardinal; CharCode: U
 var
   SDL_ModState: word;
 begin
+  if not HasSelection then Exit;
   CloseMessage();
 
   SDL_ModState := SDL_GetModState and (KMOD_LSHIFT + KMOD_RSHIFT
@@ -573,6 +588,7 @@ procedure TScreenSong.ParseInputNextVertical(PressedKey: cardinal; CharCode: UCS
 var
   I: integer;
 begin
+  if not HasSelection then Exit;
   CloseMessage();
 
   if (FreeListMode) and not (TSongMenuMode(Ini.SongMenu) in [smList]) then
@@ -637,6 +653,7 @@ procedure TScreenSong.ParseInputPrevVertical(PressedKey: cardinal; CharCode: UCS
 var
   I, I2: integer;
 begin
+  if not HasSelection then Exit;
   CloseMessage();
 
   if (FreeListMode) and not (TSongMenuMode(Ini.SongMenu) in [smList]) then
@@ -982,7 +999,7 @@ begin
 
       SDLK_M: //Show SongMenu
         begin
-          if (Songs.SongList.Count > 0) then
+          if HasSelection then
           begin
 
             if not(MakeMedley) and (FreeListMode) and (Mode <> smPartyFree) and (Mode <> smPartyTournament) then
@@ -1215,6 +1232,7 @@ begin
 
           if (FreeListMode) then
           begin
+            if ScreenSongJumpto.LeaveFolder then Exit;
             Fix := true;
 
             if (CatSongs.CatNumShow = -2) and (PlaylistMan.CurPlayList <> -1) then
@@ -1356,7 +1374,7 @@ begin
 
           LastSelectTime := SDL_GetTicks;
 
-          if (Songs.SongList.Count > 0) then
+          if HasSelection then
           begin
             if CatSongs.Song[Interaction].Main then
             begin // clicked on Category Button
@@ -1370,9 +1388,6 @@ begin
               ShowCatTL (Interaction);
 
               CatSongs.ClickCategoryButton(Interaction);
-
-              //Show Wrong Song when Tabs on Fix
-              SelectNext;
               FixSelected;
 
               SetScrollRefresh;
@@ -2378,6 +2393,7 @@ end;
 
 procedure TScreenSong.SetScrollRefresh;
 begin
+  if not HasSelection then Exit;
   SchedulePreview;
   case TSongMenuMode(Ini.SongMenu) of
     smRoulette: SetRouletteScrollRefresh;
@@ -2402,7 +2418,7 @@ var
   VisibleCount: integer;
 begin
   VS := CatSongs.VisibleSongs;
-  if VS > 0 then
+  if HasSelection then
   begin
 
     case TSongMenuMode(Ini.SongMenu) of
@@ -2481,6 +2497,7 @@ begin
   end
   else
   begin
+    SongScore;
     Text[TextNumber].Text := '0/0';
     Text[TextArtist].Text := '';
     Text[TextTitle].Text  := '';
@@ -3645,7 +3662,7 @@ begin
 
   Position := AudioPlayback.Position;
 
-  if Assigned(fCurrentVideo) then
+  if HasSelection and Assigned(fCurrentVideo) then
   begin
     // Just call this once
     // when Screens = 2
@@ -3694,7 +3711,7 @@ begin
   end;
 
   // duet names
-  if (CatSongs.Song[Interaction].isDuet) then
+  if HasSelection and CatSongs.Song[Interaction].isDuet then
     ColorDuetNameSingers();
 
   for I := 0 to High(Theme.Song.Statics) do
@@ -3729,7 +3746,7 @@ begin
   end;
 
   // Keep duet assignment widgets in the foreground to avoid mode-specific overlap.
-  if CatSongs.Song[Interaction].isDuet then
+  if HasSelection and CatSongs.Song[Interaction].isDuet then
   begin
     for I := 0 to High(DuetSingerStatics) do
       if Statics[DuetSingerStatics[I]].Visible then
@@ -3745,7 +3762,7 @@ begin
   DrawExtensions;
 
   // Keep fullscreen preview video above all song-selection overlays/text.
-  if Assigned(fCurrentVideo) and CoverFull then
+  if HasSelection and Assigned(fCurrentVideo) and CoverFull then
   begin
     fCurrentVideo.SetScreen(ScreenAct);
     fCurrentVideo.Alpha := 1;
@@ -3770,6 +3787,7 @@ var
   NextInt: integer;
   OriginalInteraction: integer;
 begin
+  if not HasSelection then Exit;
   VS := CatSongs.VisibleSongs;
 
   if VS > 0 then
@@ -3824,6 +3842,7 @@ var
   PrevInt: integer;
   OriginalInteraction: integer;
 begin
+  if not HasSelection then Exit;
   VS := CatSongs.VisibleSongs;
 
   if (VS > 0) then
@@ -3870,6 +3889,7 @@ var
   MaxLine: real;
   OriginalInteraction: integer;
 begin
+  if not HasSelection then Exit;
   VS := CatSongs.VisibleSongs;
 
   if (SDL_GetTicks - LastChangeSoundTime >= CHANGE_SOUND_THROTTLE_MS) then
@@ -3936,6 +3956,7 @@ var
   VS:   integer;
   OriginalInteraction: integer;
 begin
+  if not HasSelection then Exit;
   VS := CatSongs.VisibleSongs;
 
   if (SDL_GetTicks - LastChangeSoundTime >= CHANGE_SOUND_THROTTLE_MS) then
@@ -3992,6 +4013,7 @@ end;
 
 procedure TScreenSong.SelectNextListRow;
 begin
+  if not HasSelection then Exit;
   AudioPlayback.PlaySound(SoundLib.Change);
   SelectNext;
 
@@ -4004,6 +4026,7 @@ end;
 
 procedure TScreenSong.SelectPrevListRow;
 begin
+  if not HasSelection then Exit;
   AudioPlayback.PlaySound(SoundLib.Change);
   SelectPrev;
 
@@ -4501,6 +4524,7 @@ end;
 
 procedure TScreenSong.StartSong;
 begin
+  if not HasSelection then Exit;
   // The sing and score screens are created by player setup.
   if not Assigned(ScreenSing) then
   begin
@@ -4532,6 +4556,7 @@ end;
 
 procedure TScreenSong.SelectPlayers;
 begin
+  if not HasSelection then Exit;
   CatSongs.Selected := Interaction;
 
   KeepPreviewMusicOnHide := true;
@@ -4541,6 +4566,7 @@ end;
 
 procedure TScreenSong.OpenEditor;
 begin
+  if not HasSelection then Exit;
   if (Songs.SongList.Count > 0) and
      (not CatSongs.Song[Interaction].Main) and
      // currently, the editor is not suitable to edit duets
@@ -4772,6 +4798,12 @@ procedure TScreenSong.SongScore;
     setVisible(elements, true);
   end;
 begin
+  if not HasSelection then
+  begin
+    hide([TextScore, TextMaxScore, TextMediaScore, TextScoreUser,
+      TextMaxScore2, TextMediaScore2, TextScoreUserLocal, TextMaxScoreLocal, TextMediaScoreLocal]);
+    Exit;
+  end;
 
   if ((Mode <> smNormal) or (Ini.ShowScores = 0) or (CatSongs.Song[Interaction].Edition = '') or ((Ini.ShowScores = 1) and ((Text[TextMaxScore2].Text = '0') and (Text[TextMaxScoreLocal].Text = '0')))) then
   begin

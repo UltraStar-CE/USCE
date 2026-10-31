@@ -98,6 +98,8 @@ type
     function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
     procedure OnShow; override;
     procedure ResetFilters;
+    procedure SetFolderFilter(const Query: UTF8String);
+    function LeaveFolder: boolean;
     procedure SetTypingQuery(const Query: UTF8String);
     function SearchSummary: UTF8String;
     property TypingQuery: UTF8String read GetTypingQuery;
@@ -107,7 +109,7 @@ type
 
 implementation
 
-uses Math, UCommon, UDisplay, UFiles, UMusic, UGraphic, ULibraryLockdown, ULockdownUI,
+uses UFolderFilter, Math, UCommon, UDisplay, UFiles, UMusic, UGraphic, ULibraryLockdown, ULockdownUI,
   UHelp, UIni, ULanguage, ULog, UMain, UParty, URenderer, UPlaylist,
   UScreenSong, UUnicodeUtils, UPath, UMenuInteract, UMenuText, UAge, UFilterTerms, Contnrs, sha1, UPlatform, UPathUtils, UScreenPopup;
 
@@ -528,6 +530,8 @@ begin
         S := Ord(fRows[fFocus].Kind);
         if PressedKey = SDLK_LEFT then S := (S + Ord(High(TSongFilter))) mod (Ord(High(TSongFilter)) + 1)
         else S := (S + 1) mod (Ord(High(TSongFilter)) + 1);
+        if (S = Ord(fltFolder)) and (Ini.FolderFiltering = 0) then
+          if PressedKey = SDLK_LEFT then S := Ord(fltAge) else S := Ord(fltAll);
         fRows[fFocus].Kind := TSongFilter(S);
         Changed;
         FlushChanges;
@@ -634,6 +638,38 @@ begin
   fPlaylistSearch := false;
   fPlaylist := -1;
   fFocus := 0; fFirst := 0;
+end;
+
+procedure TScreenSongJumpto.SetFolderFilter(const Query: UTF8String);
+var I, Row: integer;
+begin
+  if CatSongs.CatNumShow <> -2 then ResetFilters;
+  Row := -1;
+  for I := 0 to High(fRows) do
+    if fRows[I].Kind = fltFolder then begin Row := I; Break; end;
+  if Row < 0 then
+  begin
+    Row := Length(fRows); SetLength(fRows, Row + 1);
+  end;
+  fRows[Row].Kind := fltFolder;
+  fRows[Row].Query := NormalizeFolderPath(Query);
+  fLastPlayed := ScreenSong.Interaction;
+  fPending := true; FlushChanges;
+end;
+
+function TScreenSongJumpto.LeaveFolder: boolean;
+var I: integer;
+begin
+  Result := false;
+  for I := High(fRows) downto 0 do
+    if (fRows[I].Kind = fltFolder) and (fRows[I].Query <> '') then
+    begin RemoveRow(I); Result := true; end;
+  if Result then
+  begin
+    fTypingRow := -1;
+    fLastPlayed := ScreenSong.Interaction;
+    fPending := true; FlushChanges;
+  end;
 end;
 
 procedure TScreenSongJumpto.OnShow;
@@ -824,6 +860,18 @@ begin
           fltYear: if Song.Year > 0 then Value := IntToStr(Song.Year);
           fltCreator: Value := Song.Creator;
           fltTags: Value := Song.Tags;
+          fltFolder:
+            begin
+              Parts.Clear; AddFolderChoices(Song.FolderPath, Ini.FolderFiltering, Parts);
+              for J := 0 to Parts.Count - 1 do
+              begin
+                AddValue(Parts[J]);
+                Value := Copy(Parts[J], 1, Length(Parts[J]) - 1);
+                Value := Copy(Value, LastDelimiter('/', Value) + 1, MaxInt);
+                AddValue(Value);
+              end;
+              Continue;
+            end;
           fltAge: begin Age := AgeForRegion(Song.AgeRaw, Region);
             if Age < 0 then Value := '?' else Value := IntToStr(Age); end;
         end;
@@ -995,6 +1043,7 @@ begin
   end
   else
   begin
+    ScreenSong.ClearSelection;
     ScreenSong.ChessboardMinLine := 0;
     ScreenSong.ListMinLine := 0;
   end;

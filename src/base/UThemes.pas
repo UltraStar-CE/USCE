@@ -807,7 +807,7 @@ type
     Songsfound:       UTF8String;
     NoSongsfound:     UTF8String;
     CatText:          UTF8String;
-    IType:            array [0..9] of UTF8String;
+    IType:            array [0..10] of UTF8String;
     constructor Create;
     destructor Destroy; override;
   end;
@@ -2423,6 +2423,7 @@ begin
       SongJumpto.IType[7] := Language.Translate('SONG_JUMPTO_TYPE8');
       SongJumpto.IType[8] := Language.Translate('SONG_JUMPTO_TYPE9');
       SongJumpto.IType[9] := Language.Translate('SONG_JUMPTO_TYPE10');
+      SongJumpto.IType[10] := Language.Translate('SONG_JUMPTO_TYPE_FOLDER');
       SongJumpto.SongsFound := Language.Translate('SONG_JUMPTO_SONGSFOUND');
       SongJumpto.NoSongsFound := Language.Translate('SONG_JUMPTO_NOSONGSFOUND');
       SongJumpto.CatText := Language.Translate('SONG_JUMPTO_CATTEXT');
