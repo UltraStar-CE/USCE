@@ -12,6 +12,8 @@ type
   public
     Key: UTF8String;
     Kind: TOptionKind;
+    Visible: boolean;
+    InlineChoices: boolean;
     Values: array of UTF8String;
     constructor Create(const AKey: UTF8String; AKind: TOptionKind);
     procedure Bind(var AData: integer; const AValues: array of UTF8String);
@@ -25,6 +27,7 @@ begin
   inherited Create;
   Key := AKey;
   Kind := AKind;
+  Visible := true;
 end;
 procedure TOptionModel.Bind(var AData: integer; const AValues: array of UTF8String);
 var I: integer;

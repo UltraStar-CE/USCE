@@ -67,7 +67,7 @@ button:focus span { font-weight: bold; }
 .form-fields scrollbarvertical { width: 1vw; }
 .form-fields scrollbarvertical sliderbar { background-color: #dfdfdf; }
 .form-fields scrollbarvertical slidertrack { background-color: transparent; }
-.form-row { display: flex; width: 82.5vw; height: 5.833333vh; margin-left: 2.625vw; margin-bottom: 0.833333vh; }
+.form-row { position: relative; display: flex; width: 82.5vw; height: 5.833333vh; margin-left: 2.625vw; margin-bottom: 0.833333vh; }
 .form-row:last-child { margin-bottom: 0; }
 .form-row button { height: 5.833333vh; font-size: 3.75vh; flex-shrink: 0; }
 .form-row button span { margin-top: 0.5vh; white-space: nowrap; overflow: hidden; }
@@ -96,3 +96,12 @@ button:focus span { font-weight: bold; }
 
 .webcam-preview { position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; pointer-events: none; }
 .foreground.preview .form-area, .foreground.preview .heading, .foreground.preview .heading-icon, .foreground.preview .description, .foreground.preview .footer, .foreground.preview .footer-labels { opacity: 0.5; }
+
+.form-row.hidden { visibility: hidden; }
+.form-surface { display: none; pointer-events: none; }
+
+.form-choices { display: none; }
+.form-row.inline .form-value { display: none; }
+.form-row.inline .form-choices { display: flex; width: 50vw; height: 5.833333vh; margin-left: 1.25vw; background-color: #42a3e7e6; }
+.form-choices button { flex: 1; background-color: transparent; color: #3c4b54; }
+.form-choices button.chosen { color: white; }

@@ -31,10 +31,12 @@ const
   uiFormWhereAmI = 'form.whereami';
   uiFormIncrement = 'form.increment';
   uiFormDecrement = 'form.decrement';
+  uiFormChoose = 'form.choose';
   uiFormActivate = 'form.activate';
   uiScreenSettingsGame = 'settings-game';
   uiScreenSettingsGraphics = 'settings-graphics';
   uiFormPreview = 'form.preview';
+  uiScreenSettingsRecording = 'settings-recording';
   uiScreenSettingsWebcam = 'settings-webcam';
   uiScreenSettingsLyrics = 'settings-lyrics';
   uiScreenSettingsSound = 'settings-sound';

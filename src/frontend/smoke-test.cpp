@@ -109,6 +109,7 @@ int main(int argc, char** argv) {
                 ui_model_set((prefix+"id").c_str(), std::to_string(index).c_str(), 1);
                 ui_model_set((prefix+"label").c_str(), "Test option", 0);
                 ui_model_set((prefix+"value").c_str(), "Value", 0);
+                ui_model_set((prefix+"visible").c_str(), "1", 2);
                 ui_model_set((prefix+"kind").c_str(), "0", 1);
                 ui_model_set((prefix+"selected").c_str(), index == 0 ? "1" : "0", 2);
                 ui_model_set((prefix+"previous").c_str(), "0", 2);
@@ -145,6 +146,7 @@ int main(int argc, char** argv) {
             ui_model_set("form.fields[0].id", "0", 1);
             ui_model_set("form.fields[0].label", "Camera", 0);
             ui_model_set("form.fields[0].value", "Off", 0);
+            ui_model_set("form.fields[0].visible", "1", 2);
             ui_model_set("form.fields[0].kind", "0", 1);
             ui_model_set("form.fields[0].selected", "1", 2);
             ui_model_set("form.fields[0].previous", "0", 2);
@@ -161,6 +163,31 @@ int main(int argc, char** argv) {
             glReadPixels(300, 720-180, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
             require(pixel[3] > 200, "Leaving camera preview restores control opacity");
             require(ui_bounds("webcam-preview", &x, &y, &width, &height) != 0 && width == 1280 && height == 720, "Theme-defined webcam surface");
+            ui_model_array("form.fields", 2);
+            ui_model_set("form.fields[1].id", "1", 1);
+            ui_model_set("form.fields[1].label", "Input source", 0);
+            ui_model_set("form.fields[1].value", "Microphone", 0);
+            ui_model_set("form.fields[1].kind", "0", 1);
+            ui_model_set("form.fields[1].visible", "1", 2);
+            ui_model_set("form.fields[1].selected", "0", 2);
+            ui_model_set("form.fields[1].previous", "0", 2);
+            ui_model_set("form.fields[1].next", "0", 2);
+            ui_model_set("form.fields[0].inline", "1", 2);
+            ui_model_array("form.fields[0].choices", 2);
+            for (int option = 0; option < 2; ++option) {
+                const auto prefix = "form.fields[0].choices[" + std::to_string(option) + "].";
+                ui_model_set((prefix+"label").c_str(), std::to_string(option).c_str(), 0);
+                ui_model_set((prefix+"target").c_str(), ("0:" + std::to_string(option)).c_str(), 0);
+                ui_model_set((prefix+"selected").c_str(), option == 0 ? "1" : "0", 2);
+            }
+            const auto recording_document = utf8(root / "frontends/modern/settings-recording.rml");
+            require(ui_open(recording_document.c_str()) != 0, "Microphone document");
+            ui_render(1280, 720, 0);
+            ui_clear_action();
+            ui_mouse(1000, 177, 0, 1); ui_mouse(1000, 177, 0, 0);
+            require(std::string(ui_action()) == "form.choose" && std::string(ui_action_target()) == "0:1", "Inline choice preserves its field and value");
+            require(ui_bounds("field-surface-1", &x, &y, &width, &height) != 0, "Microphone meter surface");
+            require(std::abs(x - 528) < 1 && std::abs(y - 247.2f) < 1 && std::abs(width - 640) < 1 && std::abs(height - 13.2f) < 1, "Microphone meter follows its field geometry");
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
             glDeleteFramebuffers(1, &framebuffer); glDeleteTextures(1, &texture);
             ui_shutdown();

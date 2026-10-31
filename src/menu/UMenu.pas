@@ -242,6 +242,9 @@ TOptionsMenu = class(TMenu)
     function HasDocumentUI: boolean;
     procedure SetDocumentPreview(Value: boolean);
     procedure SetOptionLabel(InteractionID: integer; const Key: UTF8String);
+    procedure SetOptionVisible(SelectNum: integer; Value: boolean);
+    procedure SetOptionInline(SelectNum: integer);
+    procedure OptionChanged(SelectNum: integer); virtual;
     procedure Load;
     procedure LoadWidgets; virtual; abstract;
     procedure LoadLegend; virtual;
@@ -2428,6 +2431,24 @@ begin
     Button[Interactions[InteractionID].Num].Text[0].Text := Language.Translate(Key);
 end;
 
+procedure TOptionsMenu.SetOptionInline(SelectNum: integer);
+begin
+  if DocumentUI <> nil then Fields[SelectNum].InlineChoices := true;
+end;
+
+procedure TOptionsMenu.OptionChanged(SelectNum: integer);
+begin
+end;
+
+procedure TOptionsMenu.SetOptionVisible(SelectNum: integer; Value: boolean);
+begin
+  if DocumentUI <> nil then
+  begin
+    if (SelectNum >= 0) and (SelectNum < Length(Fields)) then Fields[SelectNum].Visible := Value;
+  end
+  else if (SelectNum >= 0) and (SelectNum < Length(SelectsS)) then SelectsS[SelectNum].Visible := Value;
+end;
+
 function TOptionsMenu.DocumentRegion(const ID: UTF8String; out Bounds: TDocumentRegion): boolean;
 begin
   Result := (DocumentUI <> nil) and DocumentUI.Region(ID, Bounds);
@@ -2463,7 +2484,7 @@ end;
 procedure TOptionsMenu.SetInteraction(Num: integer);
 begin
   if DocumentUI = nil then inherited SetInteraction(Num)
-  else if (Num >= 0) and (Num < Length(Fields)) and (Fields[Num].Kind <> okSection) then SelInteraction := Num;
+  else if (Num >= 0) and (Num < Length(Fields)) and (Fields[Num].Kind <> okSection) and Fields[Num].Visible then SelInteraction := Num;
 end;
 
 procedure TOptionsMenu.InteractNext;
@@ -2473,7 +2494,7 @@ begin
   for I := 1 to Length(Fields) do
   begin
     Next := (SelInteraction + I) mod Length(Fields);
-    if Fields[Next].Kind <> okSection then begin Interaction := Next; Exit; end;
+    if (Fields[Next].Kind <> okSection) and Fields[Next].Visible then begin Interaction := Next; Exit; end;
   end;
 end;
 
@@ -2484,7 +2505,7 @@ begin
   for I := 1 to Length(Fields) do
   begin
     Previous := (SelInteraction + Length(Fields) - I) mod Length(Fields);
-    if Fields[Previous].Kind <> okSection then begin Interaction := Previous; Exit; end;
+    if (Fields[Previous].Kind <> okSection) and Fields[Previous].Visible then begin Interaction := Previous; Exit; end;
   end;
 end;
 
@@ -2503,7 +2524,7 @@ begin
 end;
 
 procedure TOptionsMenu.SyncDocument;
-var I: integer; Prefix: UTF8String;
+var I, J, First, Count: integer; Prefix, Choice: UTF8String;
 begin
   DocumentUI.SetModel(uiFormPreview, IntToStr(Ord(DocumentPreview)), 2);
   DocumentUI.SetArray(uiFormFields, Length(Fields) - 1);
@@ -2511,8 +2532,21 @@ begin
   begin
     Prefix := uiFormFields + '[' + IntToStr(I) + '].';
     DocumentUI.SetModel(Prefix + 'id', IntToStr(I), 1);
+    DocumentUI.SetModel(Prefix + 'inline', IntToStr(Ord(Fields[I].InlineChoices)), 2);
+    Count := 0;
+    if Fields[I].InlineChoices then Count := Min(7, Length(Fields[I].Values));
+    First := Max(0, Min(Fields[I].Selected - Count div 2, Length(Fields[I].Values) - Count));
+    DocumentUI.SetArray(Prefix + 'choices', Count);
+    for J := 0 to Count - 1 do
+    begin
+      Choice := Prefix + 'choices[' + IntToStr(J) + '].';
+      DocumentUI.SetModel(Choice + 'label', Fields[I].Values[First + J]);
+      DocumentUI.SetModel(Choice + 'target', IntToStr(I) + ':' + IntToStr(First + J));
+      DocumentUI.SetModel(Choice + 'selected', IntToStr(Ord(First + J = Fields[I].Selected)), 2);
+    end;
     DocumentUI.SetModel(Prefix + 'label', Language.Translate(Fields[I].Key));
     DocumentUI.SetModel(Prefix + 'value', Fields[I].CurrentText);
+    DocumentUI.SetModel(Prefix + 'visible', IntToStr(Ord(Fields[I].Visible)), 2);
     DocumentUI.SetModel(Prefix + 'kind', IntToStr(Ord(Fields[I].Kind)), 1);
     DocumentUI.SetModel(Prefix + 'selected', IntToStr(Ord(I = Interaction)), 2);
     DocumentUI.SetModel(Prefix + 'previous', IntToStr(Ord(Fields[I].Selected > 0)), 2);
@@ -2537,7 +2571,7 @@ begin
 end;
 
 function TOptionsMenu.ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
-var Action: UTF8String; Target: integer;
+var Action, Payload: UTF8String; Target, Selected, Separator: integer;
 begin
   if DocumentUI = nil then Exit(inherited ParseMouse(MouseButton, BtnDown, X, Y));
   Result := true;
@@ -2551,8 +2585,27 @@ begin
     else if MouseButton = SDL_BUTTON_WHEELDOWN then DocumentUI.Scroll(1);
   end;
   Action := DocumentUI.TakeAction;
-  if TryStrToInt(DocumentUI.FocusedTarget, Target) then Interaction := Target;
+  Payload := DocumentUI.FocusedTarget;
+  Separator := Pos(':', Payload);
+  if Separator > 0 then Payload := Copy(Payload, 1, Separator - 1);
+  if TryStrToInt(Payload, Target) then Interaction := Target;
   if Action = uiNavigationBack then Exit(ParseInput(SDLK_ESCAPE, 0, true));
+  if Action = uiFormChoose then
+  begin
+    Payload := DocumentUI.ActionTarget;
+    Separator := Pos(':', Payload);
+    if (Separator > 0) and TryStrToInt(Copy(Payload, 1, Separator - 1), Target) and
+      TryStrToInt(Copy(Payload, Separator + 1, MaxInt), Selected) and
+      (Target >= 0) and (Target < Length(Fields)) and Fields[Target].InlineChoices and
+      (Selected >= 0) and (Selected < OptionCount(Target)) then
+    begin
+      Interaction := Target;
+      SetOptionSelected(Target, Selected);
+      AudioPlayback.PlaySound(SoundLib.Option);
+      OptionChanged(Target);
+    end;
+    Exit;
+  end;
   if not TryStrToInt(DocumentUI.ActionTarget, Target) or (Target < 0) or (Target >= Length(Fields)) then Exit;
   Interaction := Target;
   if Action = uiFormIncrement then Result := ParseInput(SDLK_RIGHT, 0, true)
