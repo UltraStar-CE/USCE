@@ -25,6 +25,7 @@ with tempfile.TemporaryDirectory(prefix='usce-deb-test-') as temp:
     command = ['dpkg', '--log=' + str(root / 'var/log/dpkg.log'), '--no-triggers', '--root=' + str(root), '--force-not-root', '--force-bad-path', '--force-depends']
     subprocess.run(command + ['--install', str(package)], check=True)
     assert (root / 'usr/bin/usce').is_file()
+    assert (root / 'usr/bin/libusce-phone-audio.so').is_file()
     assert (root / 'usr/share/applications/usce.desktop').is_file()
     unpack = Path(temp) / 'upgrade'
     subprocess.run(['dpkg-deb', '--raw-extract', str(package), str(unpack)], check=True)
