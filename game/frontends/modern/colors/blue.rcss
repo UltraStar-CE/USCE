@@ -1,6 +1,6 @@
 /* Modern blue color variant. */
 button { background-color: #42a3e7e6; }
-.buttons button:focus, .buttons button:hover, .secondary:focus, .secondary:hover, .option-cell button:focus, .option-cell button:hover, .about-credits:focus, .about-credits:hover, .about-back:focus, .about-back:hover { background-color: #7ec5eae6; }
+.buttons button:focus, .secondary:focus, .option-cell button:focus, .about-credits:focus, .about-back:focus { background-color: #7ec5eae6; }
 .form-label { background-color: #3c94d0; }
 .form-value, .form-row.inline .form-choices { background-color: #42a3e7; }
 .form-row.selected .form-label { background-color: #71b2d4; }
@@ -21,4 +21,4 @@ button { background-color: #42a3e7e6; }
 .player-count.selected .count-label, .player-count.selected .count-value { background-color: #7ec5eae6; }
 
 .participant-name { background-color: #42a3e7e6; }
-.participant-name.selected, .participant-name:focus, .participant-name:hover { background-color: #7ec5eae6; }
+.participant-name.selected, .participant-name:focus { background-color: #7ec5eae6; }

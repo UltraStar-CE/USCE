@@ -16,33 +16,38 @@
 .profiles { position: absolute; left: 3.75vw; top: 30.833333vh; width: 95vw; height: 25.833333vh; display: flex; flex-wrap: wrap; align-content: flex-start; }
 .profile-slot { width: 50%; height: 100%; }
 .profile { position: relative; left: 50%; width: 22.1875vw; height: 22.5vh; margin: 0; transform: translateX(-50%); transform-origin: 50% 0%; background-color: transparent; }
-.profile:hover, .profile:focus { background-color: transparent; }
+.profile:focus { background-color: transparent; }
 .profile-frame { position: absolute; left: 3.825vw; top: 0; width: 15.833333vh; height: 13.5vh; }
 .profile-avatar { position: absolute; left: 4.40625vw; top: 1.125vh; width: 13.751111vh; height: 11.805vh; }
 .profile-name, .profile-name-reflection { position: absolute; left: -3vw; top: 13.725vh; width: 100%; height: 3.6vh; font-size: 2.75vh; font-weight: bold; white-space: nowrap; overflow: hidden; }
 .profile-name-reflection { top: 17.325vh; transform: scaleY(-1); opacity: 0.3; mask-image: vertical-gradient(#0000 #0008); }
 .avatar-frame { position: absolute; left: 38.25vw; top: 45.833333vh; width: 24.75vw; height: 27.333333vh; background-color: transparent; }
 .avatar-frame img { position: absolute; left: 50%; top: 0; width: 33vh; height: 27.333333vh; transform: translateX(-50%); pointer-events: none; }
-.avatar-frame:focus, .avatar-frame:hover { background-color: transparent; }
+.avatar-frame:focus { background-color: transparent; }
 .avatar-carousel { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
 .avatar-slot { position: absolute; left: 50vw; top: 60vh; width: 0; height: 0; opacity: 0; }
 .avatar-image { width: 100%; height: 100%; }
 .avatar-previous, .avatar-next { position: absolute; top: 56.666667vh; width: 2.5vw; height: 5vh; background-color: transparent; }
-.avatar-previous { left: 41.25vw; } .avatar-next { left: 57.5vw; }
+.avatar-previous { left: 41.25vw; }
+ .avatar-next { left: 57.5vw; }
 .name-entry { position: absolute; left: 33.125vw; top: 73.333333vh; width: 33.75vw; height: 5.833333vh; font-size: 3.25vh; }
 .profile-choice { position: absolute; left: 35.625vw; width: 28.75vw; height: 3.333333vh; display: flex; }
 .profile-choice button { height: 100%; background-color: transparent; font-size: 2.25vh; }
 .profile-choice span { margin-top: 0.166667vh; }
-.color-choice { top: 79.666667vh; } .level-choice { top: 83.333333vh; } .voice-choice { top: 87vh; }
+.color-choice { top: 79.666667vh; }
+ .level-choice { top: 83.333333vh; }
+ .voice-choice { top: 87vh; }
 .players-screen .hidden { display: none; }
-.players-screen .name-icon { left: 52vw; } .players-screen .name-legend { left: 55vw; }
-.players-screen .continue-icon { left: 75.75vw; } .players-screen .continue-legend { left: 78.75vw; }
+.players-screen .name-icon { left: 52vw; }
+ .players-screen .name-legend { left: 55vw; }
+.players-screen .continue-icon { left: 75.75vw; }
+ .players-screen .continue-legend { left: 78.75vw; }
 .name-text { display: flex; justify-content: center; width: 100%; height: 4vh; margin-top: 0.833333vh; white-space: nowrap; overflow: hidden; }
 .name-entry .name-text span { display: block; position: relative; width: auto; flex-shrink: 0; margin: 0; }
 .name-entry:focus .name-text { font-weight: bold; }
 .name-text .suggested-name { opacity: 0.5; }
 .avatar-image-button { width: 100%; height: 100%; background-color: transparent; pointer-events: auto; }
-.avatar-image-button:hover, .avatar-image-button:focus { background-color: transparent; }
+.avatar-image-button:focus { background-color: transparent; }
 .avatar-image { pointer-events: none; }
 .avatar-slot[slot="0"] .avatar-image, .avatar-slot[slot="1"] .avatar-image, .avatar-slot[slot="3"] .avatar-image, .avatar-slot[slot="4"] .avatar-image { filter: brightness(0.7); }
 .count-1 .profile-slot { width: 50.000000%; height: 100%; }
@@ -101,7 +106,11 @@
 .avatar-slot[slot="0"] .avatar-reflection, .avatar-slot[slot="1"] .avatar-reflection, .avatar-slot[slot="3"] .avatar-reflection, .avatar-slot[slot="4"] .avatar-reflection { filter: brightness(0.7); }
 .name-entry, .profile-choice { z-index: 4; }
 .name-entry .name-text .name-caret { width: 0; overflow: visible; animation: 1.1s name-caret infinite; }
-@keyframes name-caret { from { opacity: 1; } 49% { opacity: 1; } 50% { opacity: 0; } to { opacity: 0; } }
+@keyframes name-caret { from { opacity: 1; }
+ 49% { opacity: 1; }
+ 50% { opacity: 0; }
+ to { opacity: 0; }
+ }
 .avatar-slot[slot="0"] { left: 24.663336vw; top: 61.896963vh; width: 11.252363vh; height: 10.537927vh; transform: translate(-50%, -50%); z-index: 1; opacity: 1; }
 .avatar-slot[slot="1"] { left: 31.594946vw; top: 60.328349vh; width: 18.402440vh; height: 17.234031vh; transform: translate(-50%, -50%); z-index: 2; opacity: 1; }
 .avatar-slot[slot="2"] { left: 50.375000vw; top: 59.666667vh; width: 21.000000vh; height: 19.666667vh; transform: translate(-50%, -50%); z-index: 3; opacity: 1; }

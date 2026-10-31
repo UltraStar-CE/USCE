@@ -1,6 +1,6 @@
 /* Modern yellow color variant. */
 button { background-color: #d7d759e6; }
-.buttons button:focus, .buttons button:hover, .secondary:focus, .secondary:hover, .option-cell button:focus, .option-cell button:hover, .about-credits:focus, .about-credits:hover, .about-back:focus, .about-back:hover { background-color: #e2e291e6; }
+.buttons button:focus, .secondary:focus, .option-cell button:focus, .about-credits:focus, .about-back:focus { background-color: #e2e291e6; }
 .form-label { background-color: #c2c250; }
 .form-value, .form-row.inline .form-choices { background-color: #d7d759; }
 .form-row.selected .form-label { background-color: #cccc83; }
@@ -21,4 +21,4 @@ button { background-color: #d7d759e6; }
 .player-count.selected .count-label, .player-count.selected .count-value { background-color: #e2e291e6; }
 
 .participant-name { background-color: #d7d759e6; }
-.participant-name.selected, .participant-name:focus, .participant-name:hover { background-color: #e2e291e6; }
+.participant-name.selected, .participant-name:focus { background-color: #e2e291e6; }

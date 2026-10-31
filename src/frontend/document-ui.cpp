@@ -83,6 +83,8 @@ static std::vector<Rml::Element*> controls;
 static std::string pending_action;
 static std::string pending_target;
 static std::string focused_target;
+static bool pointer_known = false;
+static int pointer_x = 0, pointer_y = 0;
 static bool initialized;
 static std::vector<Rml::byte> font_data;
 static std::vector<Rml::byte> bold_font_data;
@@ -100,8 +102,6 @@ public:
                 pending_target = element->GetAttribute<Rml::String>("target", "");
             }
             else {
-                if (event.GetId() == Rml::EventId::Mouseover && context->GetFocusElement() != element)
-                    element->Focus();
                 const auto target = element->GetAttribute<Rml::String>("focus-text-target", "");
                 const auto key = element->GetAttribute<Rml::String>("focus-text-lang", "");
                 if (document && !target.empty()) {
@@ -152,6 +152,7 @@ UI_EXPORT int ui_initialize(Translate translator, Log logger, const char* font, 
     Rml::SetRenderInterface(renderer.get());
     if (!Rml::Initialise()) { last_error = "RmlUi initialization failed"; renderer.reset(); return 0; }
     initialized = true;
+    pointer_known = false;
     context = Rml::CreateContext("usce", {800, 600});
     if (context && !DocumentModel::Initialize(context)) { last_error = "Data model initialization failed"; ui_shutdown(); return 0; }
     std::ifstream file(std::filesystem::u8path(font), std::ios::binary);
@@ -174,7 +175,6 @@ UI_EXPORT int ui_open(const char* filename) {
     bind_tree(document);
     document->AddEventListener(Rml::EventId::Click, &actions);
     document->AddEventListener(Rml::EventId::Focus, &actions, true);
-    document->AddEventListener(Rml::EventId::Mouseover, &actions);
     document->Show(); context->Update();
     if (!controls.empty()) controls.front()->Focus();
     return 1;
@@ -245,7 +245,14 @@ UI_EXPORT void ui_reveal(const char* id) {
 }
 UI_EXPORT void ui_mouse(int x, int y, int button, int down) {
     if (!document) return;
-    context->ProcessMouseMove(x, y, 0);
+    const bool moved = !pointer_known || x != pointer_x || y != pointer_y;
+    pointer_known = true; pointer_x = x; pointer_y = y;
+    if (moved || button >= 0) {
+        context->ProcessMouseMove(x, y, 0);
+        auto* hovered = context->GetHoverElement();
+        while (hovered && !hovered->HasAttribute("action")) hovered = hovered->GetParentNode();
+        if (hovered && !hovered->HasAttribute("disabled")) hovered->Focus();
+    }
     if (button >= 0) {
         if (down) context->ProcessMouseButtonDown(button, 0);
         else context->ProcessMouseButtonUp(button, 0);
@@ -298,6 +305,13 @@ UI_EXPORT void ui_key(int key) {
         Rml::Element* next = nullptr;
         for (auto* candidate : controls) {
             if (candidate == controls[index] || !candidate->IsVisible(true) || candidate->HasAttribute("disabled")) continue;
+            if (!vertical) {
+                const auto origin_top = controls[index]->GetAbsoluteOffset(Rml::BoxArea::Border).y;
+                const auto origin_bottom = origin_top + controls[index]->GetBox().GetSize(Rml::BoxArea::Border).y;
+                const auto target_top = candidate->GetAbsoluteOffset(Rml::BoxArea::Border).y;
+                const auto target_bottom = target_top + candidate->GetBox().GetSize(Rml::BoxArea::Border).y;
+                if (std::min(origin_bottom, target_bottom) <= std::max(origin_top, target_top)) continue;
+            }
             const auto delta = center(candidate) - from;
             const float forward = (vertical ? delta.y : delta.x) * direction;
             if (forward < 1) continue;

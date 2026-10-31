@@ -1,6 +1,6 @@
 /* Modern red color variant. */
 button { background-color: #e74242e6; }
-.buttons button:focus, .buttons button:hover, .secondary:focus, .secondary:hover, .option-cell button:focus, .option-cell button:hover, .about-credits:focus, .about-credits:hover, .about-back:focus, .about-back:hover { background-color: #ea7e7ee6; }
+.buttons button:focus, .secondary:focus, .option-cell button:focus, .about-credits:focus, .about-back:focus { background-color: #ea7e7ee6; }
 .form-label { background-color: #d03c3c; }
 .form-value, .form-row.inline .form-choices { background-color: #e74242; }
 .form-row.selected .form-label { background-color: #d47171; }
@@ -21,4 +21,4 @@ button { background-color: #e74242e6; }
 .player-count.selected .count-label, .player-count.selected .count-value { background-color: #ea7e7ee6; }
 
 .participant-name { background-color: #e74242e6; }
-.participant-name.selected, .participant-name:focus, .participant-name:hover { background-color: #ea7e7ee6; }
+.participant-name.selected, .participant-name:focus { background-color: #ea7e7ee6; }

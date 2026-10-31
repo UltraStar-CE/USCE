@@ -11,13 +11,13 @@
   <span class="heading" lang="SING_MENU" />
   <span id="description" class="description" lang="SING_SING_DESC" />
   <div class="buttons">
-    <button action="game.sing" focus-text-target="description" focus-text-lang="SING_SING_DESC"><span lang="SING_SING" /></button>
-    <button action="game.party" focus-text-target="description" focus-text-lang="SING_MULTI_DESC"><span lang="SING_MULTI" /></button>
-    <button action="statistics.open" focus-text-target="description" focus-text-lang="SING_STATS_DESC"><span lang="SING_STATS" /></button>
-    <button action="settings.open" focus-text-target="description" focus-text-lang="SING_GAME_OPTIONS_DESC"><span lang="SING_SETTINGS" /></button>
+    <button id="menu-sing" action="game.sing" focus-text-target="description" focus-text-lang="SING_SING_DESC"><span lang="SING_SING" /></button>
+    <button id="menu-party" action="game.party" focus-text-target="description" focus-text-lang="SING_MULTI_DESC"><span lang="SING_MULTI" /></button>
+    <button id="menu-statistics" action="statistics.open" focus-text-target="description" focus-text-lang="SING_STATS_DESC"><span lang="SING_STATS" /></button>
+    <button id="menu-settings" action="settings.open" focus-text-target="description" focus-text-lang="SING_GAME_OPTIONS_DESC"><span lang="SING_SETTINGS" /></button>
   </div>
-  <button class="secondary about" action="about.open" focus-text-target="description" focus-text-lang="SING_ABOUT_DESC"><span lang="SING_ABOUT" /></button>
-  <button class="secondary exit" action="game.exit" focus-text-target="description" focus-text-lang="SING_EXIT_DESC"><span lang="SING_EXIT" /></button>
+  <button class="secondary about" id="menu-about" action="about.open" focus-text-target="description" focus-text-lang="SING_ABOUT_DESC"><span lang="SING_ABOUT" /></button>
+  <button class="secondary exit" id="menu-exit" action="game.exit" focus-text-target="description" focus-text-lang="SING_EXIT_DESC"><span lang="SING_EXIT" /></button>
   <div class="footer" />
   <div class="footer-labels"><template src="footer-main" /></div>
   <div class="reflection-clip"><div class="footer-labels"><template src="footer-main" /></div></div>

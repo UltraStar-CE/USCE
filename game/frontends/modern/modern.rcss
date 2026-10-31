@@ -25,7 +25,7 @@ progress fill { background-color: transparent; }
 button { position: relative; display: block; box-sizing: border-box; border-width: 0; padding: 0; text-align: center;
   color: white; font-family: ui; background-color: #42a3e7e6; }
 button svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; }
-button:focus, button:hover { background-color: #7ec5eae6; }
+button:focus { background-color: #7ec5eae6; }
 button span { position: relative; display: block; }
 .buttons button { flex-shrink: 0; width: 18.75vw; height: 8.333333vh; margin-right: 0.625vw; font-size: 3.75vh; }
 .buttons button span { margin-top: 1.944444vh; }
@@ -35,9 +35,12 @@ button span { position: relative; display: block; }
 .exit { left: 73.75vw; }
 .legend-icon { position: absolute; top: 90.833333vh; width: 5.333333vh; height: 5vh; transform: translateX(-50%); }
 .legend { position: absolute; top: 91.611111vh; font-size: 3vh; color: black; }
-.navigation-icon { left: 34.5vw; } .navigation { left: 37.5vw; }
-.select-icon { left: 69.75vw; } .select { left: 72.75vw; }
-.credits-icon { left: 52vw; } .credits { left: 55vw; }
+.navigation-icon { left: 34.5vw; }
+ .navigation { left: 37.5vw; }
+.select-icon { left: 69.75vw; }
+ .select { left: 72.75vw; }
+.credits-icon { left: 52vw; }
+ .credits { left: 55vw; }
 
 button:focus span { font-weight: bold; }
 .buttons button:last-child { margin-right: 0; }
@@ -51,8 +54,10 @@ button:focus span { font-weight: bold; }
 .option-cell button span { margin-top: 1.666667vh; transition: margin-top 0.128s; }
 .option-cell button:focus { height: 16.666667vh; }
 .option-cell button:focus span { margin-top: 10vh; }
-.settings-select-icon { left: 52vw; } .settings-select { left: 55vw; }
-.settings-back-icon { left: 70.75vw; } .settings-back { left: 73.75vw; }
+.settings-select-icon { left: 52vw; }
+ .settings-select { left: 55vw; }
+.settings-back-icon { left: 70.75vw; }
+ .settings-back { left: 73.75vw; }
 .settings .where { font-size: 2.25vh; }
 .footer-labels { position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; pointer-events: none; }
 .reflection-clip { position: absolute; left: 0; top: 96.388889vh; width: 100vw; height: 3.333333vh; overflow: hidden; pointer-events: none; mask-image: vertical-gradient(#000b #0000); }
@@ -93,8 +98,10 @@ button:focus span { font-weight: bold; }
 .form-back-reflection.selected { decorator: vertical-gradient(#7ec5ea80 #7ec5ea00); }
 
 .lyrics-preview { position: absolute; left: 10vw; width: 80vw; height: 6.666667vh; pointer-events: none; }
-.preview-0 { top: 58.333333vh; } .preview-1 { top: 65vh; }
-.preview-2 { top: 75vh; } .preview-3 { top: 81.666667vh; }
+.preview-0 { top: 58.333333vh; }
+ .preview-1 { top: 65vh; }
+.preview-2 { top: 75vh; }
+ .preview-3 { top: 81.666667vh; }
 
 .webcam-preview { position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; pointer-events: none; }
 .foreground.preview .form-area, .foreground.preview .heading, .foreground.preview .heading-icon, .foreground.preview .description, .foreground.preview .footer, .foreground.preview .footer-labels { opacity: 0.5; }
@@ -111,12 +118,14 @@ button:focus span { font-weight: bold; }
 
 .about-panel { position: absolute; left: 5vw; top: 16.666667vh; width: 65vw; height: 68.333333vh; background-color: #0097ff7b; border-top-right-radius: 3.333333vh; border-bottom-left-radius: 3.333333vh; overflow: hidden; }
 .about-panel-top, .about-panel-bottom { position: absolute; left: 0; width: 100%; height: 3.333333vh; background-color: #00afff; }
-.about-panel-top { top: 0; } .about-panel-bottom { bottom: 0; }
+.about-panel-top { top: 0; }
+ .about-panel-bottom { bottom: 0; }
 .about-screen .heading { font-size: 7.5vh; }
 .about-screen .description { color: white; }
 .about-text { position: absolute; left: 5.625vw; top: 20.833333vh; width: 63.75vw; height: 61.666667vh; font-size: 3.125vh; line-height: 3.4vh; white-space: pre-line; overflow-y: auto; }
 .about-credits, .about-back { position: absolute; left: 73.625vw; width: 23.75vw; height: 8.333333vh; font-size: 3.75vh; }
-.about-credits { top: 69.166667vh; } .about-back { top: 80vh; }
+.about-credits { top: 69.166667vh; }
+ .about-back { top: 80vh; }
 .about-credits span, .about-back span { margin-top: 1.666667vh; }
 
 .form-footer { display: flex; width: 100%; }

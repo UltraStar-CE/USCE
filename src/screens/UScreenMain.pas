@@ -161,9 +161,13 @@ begin
       end
       else if (Interaction >= 0) and (Interaction <= High(Actions)) then
         Result := RunAction(Actions[Interaction]);
-    SDLK_DOWN, SDLK_RIGHT:
+    SDLK_DOWN:
+      if DocumentUI <> nil then DocumentUI.Key(2) else InteractNext;
+    SDLK_UP:
+      if DocumentUI <> nil then DocumentUI.Key(-2) else InteractPrev;
+    SDLK_RIGHT:
       if DocumentUI <> nil then DocumentUI.Key(1) else InteractNext;
-    SDLK_UP, SDLK_LEFT:
+    SDLK_LEFT:
       if DocumentUI <> nil then DocumentUI.Key(-1) else InteractPrev;
     SDLK_R:
       begin

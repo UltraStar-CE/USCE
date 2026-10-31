@@ -1,6 +1,6 @@
 /* Modern orange color variant. */
 button { background-color: #e78642e6; }
-.buttons button:focus, .buttons button:hover, .secondary:focus, .secondary:hover, .option-cell button:focus, .option-cell button:hover, .about-credits:focus, .about-credits:hover, .about-back:focus, .about-back:hover { background-color: #eab37ee6; }
+.buttons button:focus, .secondary:focus, .option-cell button:focus, .about-credits:focus, .about-back:focus { background-color: #eab37ee6; }
 .form-label { background-color: #d0793c; }
 .form-value, .form-row.inline .form-choices { background-color: #e78642; }
 .form-row.selected .form-label { background-color: #d4a271; }
@@ -21,4 +21,4 @@ button { background-color: #e78642e6; }
 .player-count.selected .count-label, .player-count.selected .count-value { background-color: #eab37ee6; }
 
 .participant-name { background-color: #e78642e6; }
-.participant-name.selected, .participant-name:focus, .participant-name:hover { background-color: #eab37ee6; }
+.participant-name.selected, .participant-name:focus { background-color: #eab37ee6; }
