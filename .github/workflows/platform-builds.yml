@@ -163,6 +163,10 @@ jobs:
           ./autogen.sh
           ./configure --with-opencv --with-libprojectM
           make
+      - name: Test native library notifications
+        env:
+          USCE_FPC: C:/FPC/3.2.2/bin/i386-win32/fpc.exe
+        run: python -m unittest discover -s tools -p "test_library*.py" -v
       - name: Verify packaged Windows DLL loading without development paths
         run: python tools/check_windows_runtime.py game
       - name: Create installer
@@ -243,6 +247,8 @@ jobs:
       - name: Install Homebrew Dependencies
         run: |
           brew install fpc sdl2-compat sdl2_image automake portaudio lua ffmpeg opencv
+      - name: Test native library notifications
+        run: python3 -m unittest discover -s tools -p "test_library*.py" -v
       - name: Cache ProjectM
         if: inputs.use-caches
         id: cache-projectm
@@ -312,6 +318,12 @@ jobs:
           key: linux-docker-${{ hashFiles('dists/linux/dl.sh', 'dists/linux/tasks.sh', 'dists/linux/dockerenv.sh', 'dists/linux/Dockerfile.in') }}
           path: |
             dists/linux/prefix
+      - name: Install native test compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y fp-compiler
+      - name: Test native library notifications
+        run: python3 -m unittest discover -s tools -p "test_library*.py" -v
       - name: Start container builder
         uses: docker/setup-buildx-action@v4
       - name: Generate Dockerfile

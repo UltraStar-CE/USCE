@@ -138,7 +138,9 @@ type
     function ParseLyricCharParam(const Line: RawByteString; var LinePos: integer): AnsiChar;
     function ParseLyricText(const Line: RawByteString; var LinePos: integer): RawByteString;
 
-    function ReadTXTHeader(SongFile: TTextFileStream; ReadCustomTags: Boolean): boolean;
+    function ReadTXTHeader(SongFile: TTextFileStream; ReadCustomTags: Boolean;
+      DefaultEncoding: UTextEncoding.TEncoding; const AgeCountry: UTF8String): boolean;
+    procedure ClearWithEncoding(DefaultEncoding: UTextEncoding.TEncoding);
 
     function GetFolderCategory(const aFileName: IPath): UTF8String;
     function LoadOpenedSong(SongFile: TTextFileStream; FileNamePath: IPath; DuetChange: boolean; OutOfBoundsToFreestyle: boolean; AudioLength: real): boolean;
@@ -222,6 +224,8 @@ type
     Mult:       integer;
 
     LastError:  AnsiString;
+    function ReadRefreshHeader(Stream: TTextFileStream; DefaultEncoding: UTextEncoding.TEncoding;
+      const AgeCountry: UTF8String): boolean;
     function    GetErrorLineNo: integer;
     property    ErrorLineNo: integer read GetErrorLineNo;
     property    MD5: string read GetMD5 write SetMD5; //MD5 Hash of Current Song
@@ -954,7 +958,8 @@ begin
   Result := true;
 end;
 
-function TSong.ReadTXTHeader(SongFile: TTextFileStream; ReadCustomTags: Boolean): boolean;
+function TSong.ReadTXTHeader(SongFile: TTextFileStream; ReadCustomTags: Boolean;
+  DefaultEncoding: UTextEncoding.TEncoding; const AgeCountry: UTF8String): boolean;
 var
   Line, Identifier: string;
   Value: string;
@@ -1224,7 +1229,7 @@ begin
       if TagMapTryGetData('ENCODING', Value) then
       begin
         RemoveTagsFromTagMap('ENCODING');
-        self.Encoding := ParseEncoding(Value, Ini.DefaultEncoding);
+        self.Encoding := ParseEncoding(Value, DefaultEncoding);
       end;
     end;
 
@@ -1379,7 +1384,7 @@ begin
       AgeRaw := Value;
       RemoveTagsFromTagMap('AGE');
     end;
-    Age := AgeForRegion(AgeRaw, Ini.AgeCountry);
+    Age := AgeForRegion(AgeRaw, AgeCountry);
 
     //Tags Sorting
     if FormatVersion.MinVersion(1,0,0) then
@@ -2147,7 +2152,12 @@ begin
   UpdateCompletion;
 end;
 
-procedure TSong.Clear();
+procedure TSong.Clear;
+begin
+  ClearWithEncoding(Ini.DefaultEncoding);
+end;
+
+procedure TSong.ClearWithEncoding(DefaultEncoding: UTextEncoding.TEncoding);
 begin
   FMD5 := '';
   FMD5Cached := false;
@@ -2166,7 +2176,7 @@ begin
   AgeRaw := '';
 
   // set to default encoding
-  Encoding := Ini.DefaultEncoding;
+  Encoding := DefaultEncoding;
 
   // clear custom header tags
   SetLength(CustomTags, 0);
@@ -2200,6 +2210,15 @@ begin
   Relative := false;
 end;
 
+function TSong.ReadRefreshHeader(Stream: TTextFileStream; DefaultEncoding: UTextEncoding.TEncoding;
+  const AgeCountry: UTF8String): boolean;
+begin
+  // Header-only parsing does not assign CurrentSong or load playback tracks.
+  FileLineNo := 0;
+  ClearWithEncoding(DefaultEncoding);
+  Result := ReadTXTHeader(Stream, false, DefaultEncoding, AgeCountry);
+end;
+
 function TSong.Analyse(const ReadCustomTags: Boolean; DuetChange: boolean; OutOfBoundsToFreestyle: boolean; AudioLength: real; ForceLoadNotes: boolean): boolean;
 var
   SongFile: TTextFileStream;
@@ -2227,7 +2246,7 @@ begin
     Self.clear;
 
     //Read Header
-    Result := Self.ReadTxTHeader(SongFile, ReadCustomTags);
+    Result := Self.ReadTxTHeader(SongFile, ReadCustomTags, Ini.DefaultEncoding, Ini.AgeCountry);
 
     if Result and ForceLoadNotes then
     begin
