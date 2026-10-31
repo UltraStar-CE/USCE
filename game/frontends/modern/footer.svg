@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="48" viewBox="0 0 800 48" preserveAspectRatio="none">
+  <defs>
+    <linearGradient id="bar" x2="0" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#b8b8b8"/></linearGradient>
+    <linearGradient id="reflection" x2="0" y2="1"><stop stop-color="#b9d1e6" stop-opacity=".38"/><stop offset="1" stop-color="#b9d1e6" stop-opacity="0"/></linearGradient>
+  </defs>
+  <path fill="#124764" d="M0 0h250v30H0z"/>
+  <path fill="url(#bar)" d="M250 0h550v30H250z"/>
+  <path stroke="#253144" stroke-width="1" d="M0 30.5h800"/>
+  <path fill="url(#reflection)" d="M0 33h800v15H0z"/>
+</svg>

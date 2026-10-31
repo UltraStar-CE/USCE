@@ -161,6 +161,7 @@ uses
   
   UCommon           in 'base\UCommon.pas',
   URenderer         in 'base\URenderer.pas',
+  UDocumentUI       in 'base\UDocumentUI.pas',
   URenderer_OpenGL  in 'base\URenderer_OpenGL.pas',
   UGraphic          in 'base\UGraphic.pas',
   UScale            in 'base\UScale.pas',

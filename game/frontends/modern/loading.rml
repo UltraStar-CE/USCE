@@ -1,0 +1,14 @@
+<rml>
+<head><title>Modern loading</title><link type="text/rcss" href="modern.rcss" /></head>
+<body>
+  <svg class="background-edge" src="edge-load.svg" />
+  <img class="background" src="../../themes/Modern/[bg-load]blue.png" />
+  <div class="foreground">
+  <svg class="footer" src="footer.svg" />
+  <progress class="discovery" bind-value="loading.discovery" value="0" />
+  <progress class="loading" bind-value="loading.progress" value="0" />
+  <span class="status" lang="SING_LOADING" bind-text="loading.status" />
+  <span class="version" lang="US_VERSION" bind-text="game.version" />
+  </div>
+</body>
+</rml>

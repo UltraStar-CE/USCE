@@ -1,0 +1,37 @@
+/* Modern's 800x600 composition, expressed entirely by the theme. */
+body { margin: 0; width: 100%; height: 100%; font-family: ui; color: white; }
+.background-edge { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.background { position: absolute; left: 50%; margin-left: -66.666667vh; top: 0; width: 133.333333vh; height: 100%; }
+.foreground-only .background, .foreground-only .background-edge { visibility: hidden; }
+.background-only .foreground { visibility: hidden; }
+.footer { position: absolute; left: 0; top: 90.833333vh; width: 100%; height: 8vh; }
+.where { position: absolute; right: 70.25vw; top: 91.666667vh; font-size: 3vh; white-space: nowrap; color: #bfe8f5; }
+.version { position: absolute; right: 1.25vw; top: 91.333333vh; font-size: 3vh; color: black; }
+.status { position: absolute; right: 70.25vw; top: 91.666667vh; font-size: 3vh; white-space: nowrap; }
+progress { position: absolute; top: 90.833333vh; height: 5vh; background-color: transparent; }
+progress fill { background-color: #ffffff28; }
+.discovery { left: 0; width: 31.25vw; }
+.loading { left: 31.25vw; width: 68.75vw; }
+.heading { position: absolute; left: 11.875vw; top: 31.4vh; font-size: 6.75vh; }
+.description { position: absolute; left: 11.875vw; top: 39.3vh; font-size: 3.75vh; color: #bfdfeb; }
+.heading-icon { position: absolute; left: 8.125vw; top: 34.166667vh; width: 3.125vw; height: 3.833333vh; }
+.buttons { position: absolute; left: 11.875vw; top: 45vh; display: flex; width: 76.875vw; }
+button { position: relative; display: block; box-sizing: border-box; border-width: 0; padding: 0; text-align: center;
+  color: white; font-family: ui; background-color: #399ed3; }
+button svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; }
+button:focus svg, button:hover svg { opacity: 1; }
+button span { position: relative; display: block; }
+.buttons button { flex-shrink: 0; width: 18.75vw; height: 8.333333vh; margin-right: 0.625vw; font-size: 3.75vh; }
+.buttons button span { margin-top: 1.944444vh; }
+.secondary { position: absolute; top: 81.666667vh; width: 15vw; height: 6.666667vh; font-size: 3vh; }
+.secondary span { margin-top: 1.333333vh; }
+.about { left: 58.125vw; }
+.exit { left: 73.75vw; }
+.legend-icon { position: absolute; top: 90.833333vh; width: 4vw; height: 5vh; }
+.legend { position: absolute; top: 91.333333vh; font-size: 3vh; color: black; }
+.navigation-icon { left: 32.5vw; } .navigation { left: 37.5vw; }
+.select-icon { left: 67.75vw; } .select { left: 72.75vw; }
+.credits-icon { left: 50vw; } .credits { left: 55vw; }
+
+button:focus span { font-weight: bold; }
+.buttons button:last-child { margin-right: 0; }
