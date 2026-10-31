@@ -1255,6 +1255,7 @@ begin
                 I2 := Random(High(CatSongs.Song) + 1);
               until (not CatSongs.Song[I2].Main);
 
+              ScreenSongJumpto.ResetFilters;
               ScreenSongJumpto.SetFolderFilter(CatSongs.Song[I2].FolderPath);
               SkipTo(CatSongs.VisibleIndex(I2), I2, CatSongs.VisibleSongs);
             end
@@ -1309,7 +1310,7 @@ begin
       SDLK_W:
         begin
 
-          if not CatSongs.Song[Interaction].Main then
+          if HasSelection and not CatSongs.Song[Interaction].Main then
           begin
             WebList := '';
 
@@ -1341,6 +1342,16 @@ begin
           if (FreeListMode) then
           begin
             if ScreenSongJumpto.LeaveFolder then Exit;
+            if not HasSelection then
+            begin
+              ScreenSongJumpto.ResetFilters;
+              CatSongs.ShowCategoryList;
+              if Length(Button) > 0 then
+              begin Interaction := 0; FixSelected; end;
+              SetScroll;
+              SetScrollRefresh;
+              Exit;
+            end;
             Fix := true;
 
             if (CatSongs.CatNumShow = -2) and (PlaylistMan.Mode = smPlaylist) and
