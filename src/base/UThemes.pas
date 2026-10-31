@@ -131,7 +131,12 @@ type
     ScaleMode: TLayoutScaleMode;
   end;
 
+  TThemeSurface = record
+    Radius, BorderWidth, BorderR, BorderG, BorderB, BorderAlpha: real;
+  end;
+
   TThemeStatic = record
+    Surface: TThemeSurface;
     X:      integer;
     Y:      integer;
     Z:      real;
@@ -186,6 +191,8 @@ type
   AThemeText = array of TThemeText;
 
   TThemeButton = record
+    Surface: TThemeSurface;
+    FocusFollowShape: boolean;
     HasDAlpha: boolean;
     DAlpha: real;
     Text:   AThemeText;
@@ -226,6 +233,7 @@ type
     FocusColR, FocusColG, FocusColB, FocusAlpha: real;
     FocusDuration: integer;
 
+    CornerRadius: real;
     //Button Collection Mod
     Parent: byte; //Number of the Button Collection this Button is assigned to. IF 0: No Assignement
     ScaleMode: TLayoutScaleMode;
@@ -242,6 +250,11 @@ type
   PAThemeButtonCollection = ^AThemeButtonCollection;
 
   TThemeSelectSlide = record
+    Surface: TThemeSurface;
+    FullRow, HasUnfocusedValueColor: boolean;
+    UnfocusedR, UnfocusedG, UnfocusedB: real;
+    FocusWidth, FocusR, FocusG, FocusB: real;
+    FontFile: IPath;
     Tex:    string;
     Typ:    TTextureType;
     TexSBG: string;
@@ -341,7 +354,8 @@ type
     MinScoreW: integer;
     MinScoreH: integer;
     DockTop: boolean;
-    DockY, DockW: integer;
+    DockY, DockW, DockX, DockAreaW, OffsetX: integer;
+    MirrorAlternate: boolean;
     HeaderOffsetTopBase: integer;
     HeaderOffsetTopPerExtraRow: integer;
     ReferenceX: integer;
@@ -377,6 +391,7 @@ type
 
     TextDescription:      TThemeText;
     TextDescriptionLong:  TThemeText;
+    TextLibraryCount: TThemeText;
     Description:          array[0..5] of UTF8String;
     DescriptionLong:      array[0..5] of UTF8String;
   end;
@@ -390,6 +405,11 @@ type
       Avatar: TThemePosition;
       NameText: TThemeText;
       EditOutside, ShowLabel, TintControls, LevelSegments, Initials: boolean;
+      ColorPalette, CountChips, NameUnderline, ColorDots, ColorLabels: boolean;
+      Dot, CountChip, CountFocus: TThemeStatic;
+      CountChipText: TThemeText;
+      PaletteX, PaletteY, PaletteStep, PaletteSize, PaletteColumns: integer;
+      CountX, CountY, CountW, CountH, CountGap, CountMax: integer;
     end;
     PlayerButtonName:          TThemeButton;
     PlayerButtonAvatar:        TThemeButton;
@@ -468,6 +488,8 @@ type
       ZoomThumbW: integer;
       ZoomThumbH: integer;
       ZoomThumbStyle: integer;
+      FlatStrip: boolean;
+      InactiveBrightness, SelectedScale: real;
       Tex: string;
     end;
 
@@ -572,7 +594,9 @@ type
     PlayerLayout:            TSingPlayerLayoutConfig;
     LanePanel: TThemeStatic;
     HasLanePanel: boolean;
-    LanePanelPadding: integer;
+    LanePanelPadding, LanePanelPaddingX: integer;
+    ProgressMarker: TThemeStatic;
+    HasProgressMarker: boolean;
     PlayerWidgetLayout:      TThemeSingPlayerWidgetLayout;
 
     StaticSongName:   TThemeStatic;
@@ -580,7 +604,9 @@ type
     Countdown: record
       X, Y, Size, ColR, ColG, ColB, Alpha: real;
       Font, Style: integer;
+      FontFile: IPath;
     end;
+    HelperWidth, HelperHeight, HelperRadius, HelperAboveHeight, HelperAboveOffset, HelperAboveAlpha, NoteInset: real;
 
     //Linebonus Translations
     LineBonusText:    array [0..8] of UTF8String;
@@ -604,6 +630,7 @@ type
     TextArtistTitle:  TThemeText;
     PlayerLayoutArea: TPlayerSlotRect;
     PlayerLayoutExtraColsBias: integer;
+    HorizontalBars: boolean;
 
     PlayerStatic:     array[1..UIni.IMaxPlayerCount] of AThemeStatic;
     PlayerTexts:      array[1..UIni.IMaxPlayerCount] of AThemeText;
@@ -649,6 +676,10 @@ type
   end;
 
   TThemeHighScores = class(TThemeBasic)
+    TextSongTitle, TextArtist: TThemeText;
+    RowBackground: TThemeStatic;
+    HasRowBackground: boolean;
+    FirstRowY: integer;
     TextTitle:            TThemeText;
     TextWhereAmI:         TThemeText;
     TextArtistTitle:      TThemeText;
@@ -698,6 +729,7 @@ type
     Button:             TThemeButton;
     ButtonBack:         TThemeButton;
     ButtonBackVSpacing: integer;
+    ReserveBackForPreview: boolean;
     TextDescription:    TThemeText;
     TextWhereAmI:       TThemeText;
     LegendStatic:       array of TThemeStatic;
@@ -1159,6 +1191,7 @@ type
     function ResolveThemeFile(SectionName: string): TMemIniFile;
     function SectionExists(const Name: string; var Enabled: boolean): boolean;
     function GetSectionList(const Name: string): TThemeSectionList;
+    function GetStyledSectionList(const Name, Style: string): TThemeSectionList;
     function ReadString(const Sections: TThemeSectionList; const Key: string; const DefaultValue: string): string;
     function ReadInteger(const Sections: TThemeSectionList; const Key: string; DefaultValue: integer): integer;
     function ReadBool(const Sections: TThemeSectionList; const Key: string; DefaultValue: boolean): boolean;
@@ -1251,6 +1284,7 @@ type
     procedure ThemeLoadTexts(var ThemeText: AThemeText; const Name: string);
 
     procedure ThemeLoadOptionalStatic(var ThemeStatic: TThemeStatic; const Name: string);
+    procedure ThemeLoadSurface(var Surface: TThemeSurface; const Sections: TThemeSectionList);
     procedure ThemeLoadStatic(var ThemeStatic: TThemeStatic; const Name: string);
     procedure ThemeLoadStatics(var ThemeStatic: AThemeStatic; const Name: string);
     procedure ThemeLoadOptionalStaticRectangle(var ThemeStaticRectangle: TThemeStaticRectangle; const Name: string);
@@ -1290,6 +1324,8 @@ function GetLyricOutlineColor(Color: integer): TRGB;
 function GetLyricBarColor(Color: integer): TRGB;
 
 function GetThemePlayerBounds(const ThemePlayer: TThemeSingPlayer): TPlayerSlotRect;
+procedure ApplyThemeSurface(Texture: TTexture; const Surface: TThemeSurface);
+
 function GetThemePlayerScoreLayoutBounds(const BaseBounds, LayoutArea: TPlayerSlotRect;
   PlayerCountOnScreen: integer): TPlayerSlotRect;
 function GetNamePlayerSelectBaseBounds(const NameTheme: TThemeName): TPlayerSlotRect;
@@ -1321,6 +1357,7 @@ var
 
 implementation
 
+
 uses
   UGraphic,
   ULanguage,
@@ -1336,6 +1373,15 @@ const
 var
   CurrentThemeIndex: integer = -1;
   CurrentBaseThemeIndexes: array of integer;
+
+procedure ApplyThemeSurface(Texture: TTexture; const Surface: TThemeSurface);
+begin
+  if Texture = nil then Exit;
+  Texture.Radius := Surface.Radius;
+  Texture.BorderWidth := Surface.BorderWidth;
+  Texture.BorderR := Surface.BorderR; Texture.BorderG := Surface.BorderG;
+  Texture.BorderB := Surface.BorderB; Texture.BorderAlpha := Surface.BorderAlpha;
+end;
 
 function GetThemeFolder(ThemeIndex: integer): IPath;
 begin
@@ -1596,19 +1642,19 @@ procedure GetSingHeaderPlacement(PlayerCount, PlayerIndex: integer; const Lane: 
   const Config: TThemeSingPlayerWidgetLayout; out Left, Width, Top: integer; out Scale: real; ReserveTopLyrics: boolean);
 var CellWidth: real;
 begin
-  Left := Lane.ColumnLeft;
+  Left := Lane.ColumnLeft + Config.OffsetX;
   Width := Lane.ColumnWidth;
   Scale := Lane.WidgetScale;
   Top := Max(10, Lane.RowAnchorY - GetSingHeaderTopOffset(Config, Lane.GridRows, Scale));
   if not Config.DockTop or ReserveTopLyrics then Exit;
   // Share the available width across any number of players on this screen.
-  CellWidth := Theme.Sing.PlayerLayout.ColumnContainerWidth / Max(1, PlayerCount);
+  CellWidth := Config.DockAreaW / Max(1, PlayerCount);
   Width := Min(Config.DockW, Max(1, Floor(CellWidth)));
   Scale := Min(1.0, Width / Config.ReferenceW);
   if PlayerCount > 1 then
-    Left := Theme.Sing.PlayerLayout.ColumnContainerLeft + Round(PlayerIndex *
-      (Theme.Sing.PlayerLayout.ColumnContainerWidth - Width) / (PlayerCount - 1))
-  else Left := Theme.Sing.PlayerLayout.ColumnContainerLeft;
+    Left := Config.DockX + Round(PlayerIndex *
+      (Config.DockAreaW - Width) / (PlayerCount - 1))
+  else Left := Config.DockX;
   Top := Config.DockY;
 end;
 
@@ -1716,6 +1762,8 @@ begin
     Result.H := 1;
   Scale := Min(SlotRect.W / Max(1.0, SourceBounds.W), SlotRect.H / Max(1.0, SourceBounds.H));
   Result.Reflectionspacing := Source.Reflectionspacing * Scale;
+  if Result.Surface.Radius >= 0 then Result.Surface.Radius := Result.Surface.Radius * Scale;
+  Result.Surface.BorderWidth := Result.Surface.BorderWidth * Scale;
 end;
 
 function TransformScoreText(const Source: TThemeText; const SourceBounds, SlotRect: TPlayerSlotRect): TThemeText;
@@ -2155,6 +2203,29 @@ begin
         Name.Cards.TintControls := ReadBool(SectionList, 'TintControls', true);
         Name.Cards.Initials := ReadBool(SectionList, 'Initials', false);
         Name.Cards.LevelSegments := ReadBool(SectionList, 'LevelSegments', false);
+        Name.Cards.ColorPalette := ReadBool(SectionList, 'ColorPalette', false);
+        Name.Cards.CountChips := ReadBool(SectionList, 'CountChips', false);
+        Name.Cards.NameUnderline := ReadBool(SectionList, 'NameUnderline', false);
+        Name.Cards.ColorDots := ReadBool(SectionList, 'ColorDots', false);
+        Name.Cards.ColorLabels := ReadBool(SectionList, 'ColorLabels', false);
+        Name.Cards.PaletteX := ReadInteger(SectionList, 'PaletteX', 92);
+        Name.Cards.PaletteY := ReadInteger(SectionList, 'PaletteY', 417);
+        Name.Cards.PaletteStep := Max(1, ReadInteger(SectionList, 'PaletteStep', 24));
+        Name.Cards.PaletteColumns := Max(1, ReadInteger(SectionList, 'PaletteColumns', 16));
+        Name.Cards.PaletteSize := Max(1, ReadInteger(SectionList, 'PaletteSize', 15));
+        Name.Cards.CountX := ReadInteger(SectionList, 'CountX', 35);
+        Name.Cards.CountY := ReadInteger(SectionList, 'CountY', 112);
+        Name.Cards.CountW := Max(1, ReadInteger(SectionList, 'CountW', 40));
+        Name.Cards.CountH := Max(1, ReadInteger(SectionList, 'CountH', 42));
+        Name.Cards.CountGap := Max(0, ReadInteger(SectionList, 'CountGap', 6));
+        Name.Cards.CountMax := EnsureRange(ReadInteger(SectionList, 'CountMax', 6), 1, UIni.IMaxPlayerCount);
+        if Name.Cards.ColorPalette or Name.Cards.ColorDots then ThemeLoadStatic(Name.Cards.Dot, 'NameCardDot');
+        if Name.Cards.CountChips then
+        begin
+          ThemeLoadStatic(Name.Cards.CountChip, 'NameCountChip');
+          ThemeLoadStatic(Name.Cards.CountFocus, 'NameCountChipFocus');
+          ThemeLoadText(Name.Cards.CountChipText, 'NameCountChipText');
+        end;
       end;
       ThemeLoadButton(Name.PlayerButtonName, 'NamePlayerButtonName');
       ThemeLoadButton(Name.PlayerButtonAvatar, 'NamePlayerButtonAvatar');
@@ -2294,6 +2365,9 @@ begin
       Sing.HasLanePanel := ResolveThemeFile('SingLanePanel') <> nil;
       if Sing.HasLanePanel then ThemeLoadStatic(Sing.LanePanel, 'SingLanePanel');
       Sing.LanePanelPadding := EnsureRange(ReadInteger(GetSectionList('SingLanePanel'), 'Padding', 0), 0, 40);
+      Sing.LanePanelPaddingX := EnsureRange(ReadInteger(GetSectionList('SingLanePanel'), 'PaddingX', Sing.LanePanelPadding), 0, 40);
+      Sing.HasProgressMarker := ResolveThemeFile('SingProgressMarker') <> nil;
+      if Sing.HasProgressMarker then ThemeLoadStatic(Sing.ProgressMarker, 'SingProgressMarker');
       SectionList := GetSectionList('SingPlayerGrid');
       Sing.PlayerLayout.ColumnContainerLeft := ReadInteger(SectionList, 'LaneAreaX', 40);
       Sing.PlayerLayout.ColumnContainerTopReserved := ReadInteger(SectionList, 'LaneAreaY', 120);
@@ -2337,6 +2411,10 @@ begin
       Sing.PlayerWidgetLayout.HeaderOffsetTopBase := ReadInteger(SectionList, 'HeaderTopOffsetBase', 40);
       Sing.PlayerWidgetLayout.HeaderOffsetTopPerExtraRow := ReadInteger(SectionList,
         'HeaderTopOffsetPerExtraRow', 0);
+      Sing.PlayerWidgetLayout.DockX := ReadInteger(SectionList, 'DockX', Sing.PlayerLayout.ColumnContainerLeft);
+      Sing.PlayerWidgetLayout.DockAreaW := Max(1, ReadInteger(SectionList, 'DockAreaW', Sing.PlayerLayout.ColumnContainerWidth));
+      Sing.PlayerWidgetLayout.OffsetX := ReadInteger(SectionList, 'OffsetX', 0);
+      Sing.PlayerWidgetLayout.MirrorAlternate := ReadBool(SectionList, 'MirrorAlternate', false);
       Sing.PlayerWidgetLayout.ReferenceX := ReadInteger(SectionList, 'ReferenceX', 20);
       Sing.PlayerWidgetLayout.ReferenceY := ReadInteger(SectionList, 'ReferenceY', 275);
       Sing.PlayerWidgetLayout.ReferenceW := Max(1, ReadInteger(SectionList, 'ReferenceW', 760));
@@ -2363,6 +2441,14 @@ begin
       ThemeLoadText(Sing.TextSongName, 'SingSongNameText');
       SectionList := GetSectionList('SingCountdown');
       // Countdown center uses the standard 800x600 theme reference coordinates.
+      Sing.HelperWidth := Max(1, ReadFloat(GetSectionList('SingLyricHelper'), 'W', 50));
+      Sing.HelperHeight := Max(1, ReadFloat(GetSectionList('SingLyricHelper'), 'H', 30));
+      Sing.HelperRadius := EnsureRange(ReadFloat(GetSectionList('SingLyricHelper'), 'Radius', 0), 0, 0.5);
+      Sing.HelperAboveHeight := Max(1, ReadFloat(GetSectionList('SingLyricHelper'), 'AboveH', 4));
+      Sing.HelperAboveOffset := ReadFloat(GetSectionList('SingLyricHelper'), 'AboveOffset', 8);
+      Sing.HelperAboveAlpha := EnsureRange(ReadFloat(GetSectionList('SingLyricHelper'), 'AboveAlpha', -1), -1, 1);
+      Sing.NoteInset := Max(0, ReadFloat(GetSectionList('Sing'), 'NoteInset', 0));
+      Sing.Countdown.FontFile := ResolveThemeAsset(Path(ReadString(SectionList, 'FontFile', '')));
       Sing.Countdown.X := ReadFloat(SectionList, 'X', 400);
       Sing.Countdown.Y := ReadFloat(SectionList, 'Y', 300);
       Sing.Countdown.Size := Max(1, ReadFloat(SectionList, 'Size', 300));
@@ -2986,6 +3072,21 @@ begin
   end;
 end;
 
+// Optional presentation defaults sit below this theme's explicit sections and
+// above inherited base-theme sections. Themes without Style* keep exact lookup.
+function TTheme.GetStyledSectionList(const Name, Style: string): TThemeSectionList;
+var I, At: integer;
+begin
+  Result := GetSectionList(Name);
+  if (Length(Result) = 0) or not ThemeIni.SectionExists(Style) then Exit;
+  At := 0;
+  while (At < Length(Result)) and (Result[At].IniFile = ThemeIni) do Inc(At);
+  SetLength(Result, Length(Result) + 1);
+  for I := High(Result) downto At + 1 do Result[I] := Result[I - 1];
+  Result[At].Name := Style;
+  Result[At].IniFile := ThemeIni;
+end;
+
 function TTheme.ReadString(const Sections: TThemeSectionList; const Key: string; const DefaultValue: string): string;
 var
   I: integer;
@@ -3311,6 +3412,7 @@ begin
   ThemeLoadPosition(OptionsSub.Area, 'OptionsSubArea');
   IniFile := ResolveThemeFile('OptionsSubArea');
   OptionsSub.WidgetVSpacing := IniFile.ReadInteger('OptionsSubArea', 'WidgetVSpacing', 1);
+  OptionsSub.ReserveBackForPreview := IniFile.ReadBool('OptionsSubArea', 'ReserveBackForPreview', false);
   OptionsSub.ButtonBackVSpacing := IniFile.ReadInteger('OptionsSubArea', 'ButtonBackVSpacing', 1);
   IniFile := ResolveThemeFile('OptionsSubScrollBar');
   OptionsSub.ScrollBar.HSpacing := IniFile.ReadInteger('OptionsSubScrollBar', 'HSpacing', -1);
@@ -3335,7 +3437,7 @@ var
   I: TBackgroundType;
   SectionList: TThemeSectionList;
 begin
-  SectionList := GetSectionList(Name + 'Background');
+  SectionList := GetStyledSectionList(Name + 'Background', 'StyleBackground');
   BGType := LowerCase(ReadString(SectionList, 'Type', 'auto'));
 
   ThemeBackground.BGType := bgtAuto;
@@ -3363,6 +3465,8 @@ var
   Sections: TThemeSectionList;
 begin
   Sections := GetSectionList('MainPreview');
+  Main.TextLibraryCount := Default(TThemeText);
+  if ResolveThemeFile('MainTextLibraryCount') <> nil then ThemeLoadText(Main.TextLibraryCount, 'MainTextLibraryCount');
   Main.DynamicDescription := ReadBool(GetSectionList('Main'), 'DynamicDescription', true);
   Main.PreviewFadeTime := EnsureRange(ReadFloat(Sections, 'FadeTime', 0), 0, 5);
   Main.PreviewSlideX := ReadFloat(Sections, 'SlideX', 0);
@@ -3426,6 +3530,13 @@ begin
   ThemeLoadText(HighScores.TextTitle,            SectionName('HighScoresTextTitle', 'Top5Text1'));
   ThemeLoadText(HighScores.TextWhereAmI,         SectionName('HighScoresTextWhereAmI', 'Top5Text2'));
   ThemeLoadText(HighScores.TextArtistTitle,      SectionName('HighScoresTextArtistTitle', 'Top5TextArtistTitle'));
+  HighScores.TextSongTitle := Default(TThemeText);
+  HighScores.TextArtist := Default(TThemeText);
+  if ResolveThemeFile('HighScoresTextSongTitle') <> nil then ThemeLoadText(HighScores.TextSongTitle, 'HighScoresTextSongTitle');
+  if ResolveThemeFile('HighScoresTextArtist') <> nil then ThemeLoadText(HighScores.TextArtist, 'HighScoresTextArtist');
+  HighScores.FirstRowY := ReadInteger(GetSectionList('HighScoresListArea'), 'FirstRowY', -1);
+  HighScores.HasRowBackground := ResolveThemeFile('HighScoresRowBackground') <> nil;
+  if HighScores.HasRowBackground then ThemeLoadStatic(HighScores.RowBackground, 'HighScoresRowBackground');
   ThemeLoadText(HighScores.TextDifficultyLabel,  SectionName('HighScoresTextDifficultyLabel', 'Top5Text4'));
   ThemeLoadText(HighScores.TextDifficulty,       SectionName('HighScoresTextDifficulty', 'Top5TextLevel'));
   ThemeLoadText(HighScores.TextContinue,         SectionName('HighScoresTextContinue', 'Top5Text3'));
@@ -3452,7 +3563,7 @@ var
   C: integer;
   SectionList: TThemeSectionList;
 begin
-  SectionList := GetSectionList(Name);
+  SectionList := GetStyledSectionList(Name, 'StyleText');
   ThemeText.X     := ReadInteger(SectionList, 'X', 0);
   ThemeText.Y     := ReadInteger(SectionList, 'Y', 0);
   ThemeText.W     := ReadInteger(SectionList, 'W', 0);
@@ -3528,6 +3639,15 @@ begin
   end;
 end;
 
+procedure TTheme.ThemeLoadSurface(var Surface: TThemeSurface; const Sections: TThemeSectionList);
+begin
+  Surface.Radius := Max(-1, ReadFloat(Sections, 'Radius', -1));
+  Surface.BorderWidth := Max(0, ReadFloat(Sections, 'BorderWidth', 0));
+  Surface.BorderR := 1; Surface.BorderG := 1; Surface.BorderB := 1;
+  LoadColor(Surface.BorderR, Surface.BorderG, Surface.BorderB, ReadString(Sections, 'BorderColor', 'White'));
+  Surface.BorderAlpha := EnsureRange(ReadFloat(Sections, 'BorderAlpha', 1), 0, 1);
+end;
+
 procedure TTheme.ThemeLoadStatic(var ThemeStatic: TThemeStatic; const Name: string);
 var
   C: integer;
@@ -3542,6 +3662,7 @@ begin
     Exit;
   end;
 
+  ThemeLoadSurface(ThemeStatic.Surface, SectionList);
   ThemeStatic.Tex := ReadString(SectionList, 'Tex', '');
   ThemeStatic.X := ReadInteger(SectionList, 'X', 0);
   ThemeStatic.Y := ReadInteger(SectionList, 'Y', 0);
@@ -3717,19 +3838,22 @@ begin
     Exit;
   end;
 
-  SectionList := GetSectionList(Name);
+  SectionList := GetStyledSectionList(Name, 'StyleButton');
   if Length(SectionList) = 0 then
   begin
     ThemeButton.Visible := False;
     exit;
   end;
 
+  ThemeLoadSurface(ThemeButton.Surface, SectionList);
+  ThemeButton.FocusFollowShape := ReadBool(SectionList, 'FocusFollowShape', false);
   ThemeButton.Tex := ReadString(SectionList, 'Tex', '');
   ThemeButton.X := ReadInteger (SectionList, 'X', 0);
   ThemeButton.Y := ReadInteger (SectionList, 'Y', 0);
   ThemeButton.Z := ReadFloat   (SectionList, 'Z', 0);
   ThemeButton.W := ReadInteger (SectionList, 'W', 0);
   ThemeButton.H := ReadInteger (SectionList, 'H', 0);
+  ThemeButton.CornerRadius := EnsureRange(ReadFloat(SectionList, 'CornerRadius', 0), 0, 0.5);
   ThemeButton.ScaleMode := ParseScaleMode(ReadString(SectionList, 'ScaleMode', ''), lsStretch);
   ThemeButton.Typ := ParseTextureType(ReadString(SectionList, 'Type', ''), TEXTURE_TYPE_PLAIN);
 
@@ -3839,11 +3963,18 @@ procedure TTheme.ThemeLoadSelectSlide(var ThemeSelectS: TThemeSelectSlide; const
 var
   SectionList: TThemeSectionList;
 begin
-  SectionList := GetSectionList(Name);
+  SectionList := GetStyledSectionList(Name, 'StyleSelectSlide');
   if Length(SectionList) = 0 then
   begin
     Log.LogWarn('Required theme section ' + Name + ' (selectslide) does not exist.', 'TTheme.ThemeLoadSelectSlide');
   end;
+  ThemeLoadSurface(ThemeSelectS.Surface, SectionList);
+  ThemeSelectS.FullRow := ReadBool(SectionList, 'FullRow', false);
+  ThemeSelectS.HasUnfocusedValueColor := ReadString(SectionList, 'UnfocusedValueColor', '') <> '';
+  LoadColor(ThemeSelectS.UnfocusedR, ThemeSelectS.UnfocusedG, ThemeSelectS.UnfocusedB, ReadString(SectionList, 'UnfocusedValueColor', 'White'));
+  ThemeSelectS.FocusWidth := Max(0, ReadFloat(SectionList, 'FocusWidth', 0));
+  LoadColor(ThemeSelectS.FocusR, ThemeSelectS.FocusG, ThemeSelectS.FocusB, ReadString(SectionList, 'FocusColor', 'White'));
+  ThemeSelectS.FontFile := ResolveThemeAsset(Path(ReadString(SectionList, 'FontFile', '')));
   ThemeSelectS.Text := Language.Translate(ReadString(SectionList, 'Text', ''));
   if ReadBool(SectionList, 'EmptyText', false) then ThemeSelectS.Text := '';
 
@@ -4898,6 +5029,7 @@ begin
   Score.PlayerLayoutArea.W := ReadInteger(SectionList, 'AreaW', ReadInteger(SectionList, 'W', 760));
   Score.PlayerLayoutArea.H := ReadInteger(SectionList, 'AreaH', ReadInteger(SectionList, 'H', 420));
   Score.PlayerLayoutExtraColsBias := ReadInteger(SectionList, 'ExtraColsBias', 0);
+  Score.HorizontalBars := ReadInteger(SectionList, 'HorizontalBars', 0) <> 0;
 
   for I := 1 to UIni.IMaxPlayerCount do
   begin
@@ -5060,6 +5192,14 @@ begin
   Song.Cover.W := ReadInteger(SectionList, 'W', 300);
   Song.Cover.H := ReadInteger(SectionList, 'H', 200);
   Song.Cover.SelectX := ReadInteger(SectionList, 'SelectX', Song.Cover.X);
+  Song.Cover.SelectedScale := EnsureRange(ReadFloat(SectionList, 'SelectedScale', 1.18), 1, 2);
+  Song.Cover.FlatStrip := ReadBool(SectionList, 'FlatStrip', false);
+  Song.Cover.InactiveBrightness := EnsureRange(ReadFloat(SectionList, 'InactiveBrightness', 0.5), 0, 1);
+  if Song.Cover.FlatStrip then
+  begin
+    Song.Cover.Cols := EnsureRange(ReadInteger(SectionList, 'Cols', 6), 1, 24);
+    Song.Cover.Padding := Max(0, ReadInteger(SectionList, 'Padding', 8));
+  end;
   Song.Cover.SelectY := ReadInteger(SectionList, 'SelectY', Song.Cover.Y);
   Song.Cover.SelectW := ReadInteger(SectionList, 'SelectW', Song.Cover.W);
   Song.Cover.SelectH := ReadInteger(SectionList, 'SelectH', Song.Cover.H);

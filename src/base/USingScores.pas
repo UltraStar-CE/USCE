@@ -125,6 +125,7 @@ type
     TextY:     real; // y position of the score text
     TextFont:  byte; // font family of the score text
     TextStyle: byte; // font style of the score text
+    Mirrored: boolean;
     TextSize:  integer;    // size of the score text
 
     PUW:       real;     // width of the line bonus popup
@@ -368,6 +369,14 @@ begin
     PopupFontSize := Theme.Sing.PlayerWidgetLayout.PopupFontSizeSolo;
   end;
 
+  Result.Mirrored := Theme.Sing.PlayerWidgetLayout.MirrorAlternate and Theme.Sing.PlayerWidgetLayout.DockTop and
+    not CurrentSong.isDuet and (PlayerCountOnScreen = 2) and (LocalIndex = 1);
+  if Result.Mirrored then
+  begin
+    Result.BGX := 2 * LaneLeft + LaneWidth - Result.BGX - Result.BGW;
+    Result.TextX := 2 * LaneLeft + LaneWidth - Result.TextX;
+    Result.RBX := 2 * LaneLeft + LaneWidth - Result.RBX - Result.RBW;
+  end;
   Result.PUW := Result.BGW;
   Result.PUH := Result.BGH;
   Result.PUFont := 0;
@@ -1015,7 +1024,14 @@ begin
     if Theme.Sing.ScoreThemedText then
     begin
       TextX := Position.TextX;
-      case Theme.Sing.PlayerTemplate.Score.Align of
+      if Position.Mirrored then
+      begin
+        case Theme.Sing.PlayerTemplate.Score.Align of
+          0: TextX := TextX - TextW;
+          1: TextX := TextX - TextW / 2;
+        end;
+      end
+      else case Theme.Sing.PlayerTemplate.Score.Align of
         1: TextX := TextX - TextW / 2;
         2: TextX := TextX - TextW;
       end;

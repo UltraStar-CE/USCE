@@ -176,6 +176,8 @@ type
       ScaleMode: TLayoutScaleMode;
       OutlineWidth: single; // fraction of the shorter side; 0 keeps a filled texture
       CornerRadius: single; // fraction of the shorter displayed side, 0..0.5
+      Radius: single; // optional logical-unit radius; -1 keeps CornerRadius
+      BorderWidth, BorderR, BorderG, BorderB, BorderAlpha: single;
       EdgeExtend: boolean;
       EdgeExtendSolidFill: boolean;
       EdgeExtendPixels: single;
@@ -368,6 +370,8 @@ begin
   ReflectionTexY2 := TexY1 + ReflectionHeight;
   ScaleMode := lsStretch;
   CornerRadius := 0;
+  Radius := -1;
+  BorderWidth := 0; BorderR := 1; BorderG := 1; BorderB := 1; BorderAlpha := 1;
   OutlineWidth := 0;
   EdgeExtend := false;
   EdgeExtendSolidFill := false;
@@ -408,6 +412,9 @@ begin
   T.ReflectionTexY2 := ReflectionTexY2;
   T.ScaleMode := ScaleMode;
   T.CornerRadius := CornerRadius;
+  T.Radius := Radius;
+  T.BorderWidth := BorderWidth; T.BorderR := BorderR; T.BorderG := BorderG;
+  T.BorderB := BorderB; T.BorderAlpha := BorderAlpha;
   T.OutlineWidth := OutlineWidth;
   T.EdgeExtend := EdgeExtend;
   T.EdgeExtendSolidFill := EdgeExtendSolidFill;

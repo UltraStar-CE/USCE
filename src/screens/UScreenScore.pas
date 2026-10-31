@@ -320,6 +320,7 @@ begin
       ScreenScore.Statics[StaticIndex].Texture.ColB := Col.B;
     end;
   end;
+  ApplyThemeSurface(ScreenScore.Statics[StaticIndex].Texture, ThemeStatic.Surface);
 end;
 
 function GetScoreButtonLayout(PlayerCount, ScreenCount: integer): integer;
@@ -985,6 +986,7 @@ begin
     Statics[AvatarStaticRef[I]].Texture.Z := Theme.Score.AvatarStatic[SlotIndex].Z;
     Statics[AvatarStaticRef[I]].Texture.Alpha := Theme.Score.AvatarStatic[SlotIndex].Alpha;
     Statics[AvatarStaticRef[I]].Texture.CornerRadius := Theme.Score.AvatarStatic[SlotIndex].CornerRadius;
+    ApplyThemeSurface(Statics[AvatarStaticRef[I]].Texture, Theme.Score.AvatarStatic[SlotIndex].Surface);
     Statics[AvatarStaticRef[I]].Texture.ScaleMode := Theme.Score.AvatarStatic[SlotIndex].ScaleMode;
     Statics[AvatarStaticRef[I]].Visible := true;
     ApplyScoreSlotPlayerVisuals(Self, SlotIndex, I);
@@ -1571,6 +1573,8 @@ var
   BarStartPosX: real;
   SlotIndex: integer;
   Texture: TTexture;
+  SegmentStart, SegmentFraction: real;
+  SegmentColor: TRGB;
 begin
   SlotIndex := PlayerPositionMap[PlayerNumber-1].Position;
 
@@ -1585,6 +1589,30 @@ begin
     Texture := aPlayerScoreScreenTextures[PlayerNumber].Score_NoteBarLevel_Light;
   if (BarType = sbtGolden) then
     Texture := aPlayerScoreScreenTextures[PlayerNumber].Score_NoteBarLevel_Lightest;
+
+  if Theme.Score.HorizontalBars then
+  begin
+    SegmentStart := 0;
+    SegmentFraction := Player[PlayerNumber - 1].ScoreInt / 10000;
+    SegmentColor := GetPlayerColor(Ini.PlayerColor[PlayerNumber - 1]);
+    if BarType <> sbtScore then
+    begin
+      SegmentStart := SegmentFraction;
+      SegmentFraction := Player[PlayerNumber - 1].ScoreLineInt / 10000;
+      SegmentColor := GetPlayerLightColor(Ini.PlayerColor[PlayerNumber - 1]);
+    end;
+    if BarType = sbtGolden then
+    begin
+      SegmentStart := SegmentStart + SegmentFraction;
+      SegmentFraction := Player[PlayerNumber - 1].ScoreGoldenInt / 10000;
+      SegmentColor := ColorSqrt(SegmentColor);
+    end;
+    with Theme.Score.StaticBackLevel[SlotIndex] do
+      Renderer.DrawQuad(X + SegmentStart * W, Y, ZBars,
+        EnsureRange(NewHeight / Max(1, H), 0.0, SegmentFraction) * W, H,
+        SegmentColor.R, SegmentColor.G, SegmentColor.B, 1);
+    Exit;
+  end;
 
   //draw it
   with Texture do

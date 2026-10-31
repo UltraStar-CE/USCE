@@ -177,6 +177,8 @@ begin
 
   // Keep the samples below the last widget, including the Back button.
   PreviewY := Max(350, Ceil(Widgets[High(Widgets)].Y + Widgets[High(Widgets)].H + 15));
+  if Theme.OptionsSub.ReserveBackForPreview and (Length(Button) > 0) then
+    PreviewY := Max(PreviewY, Ceil(Button[High(Button)].Y + Button[High(Button)].H + 15));
   PreviewHeight := Max(1, Min(40, (530 - PreviewY - 20) div 4));
 
   // lyric sample engine 1

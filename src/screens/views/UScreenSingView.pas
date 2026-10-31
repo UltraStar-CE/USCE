@@ -61,7 +61,7 @@ type
   private
     GapCountdown: TGapCountdown;
     LanePanelTexture: TTexture;
-    HeaderTexture: TTexture;
+    HeaderTexture, ProgressMarkerTexture: TTexture;
     DefaultAvatarTexture: TTexture;
     procedure DrawHeaders;
     procedure DrawLanePanels;
@@ -244,6 +244,14 @@ begin
   Result.Name.W := NameW;
   Result.Name.H := NameH;
   Result.Name.Size := Max(Theme.Sing.PlayerWidgetLayout.NameMinSize, Round(BaseTemplate.Name.Size * Scale));
+  if Theme.Sing.PlayerWidgetLayout.MirrorAlternate and Theme.Sing.PlayerWidgetLayout.DockTop and
+    not IsCurrentSongDuet and (PlayerCountOnScreen = 2) and (PlayerIndexOnScreen = 1) then
+  begin
+    Result.AvatarFrame.X := 2 * LaneLeft + LaneWidth - Result.AvatarFrame.X - Result.AvatarFrame.W;
+    Result.Avatar.X := 2 * LaneLeft + LaneWidth - Result.Avatar.X - Result.Avatar.W;
+    Result.Name.X := 2 * LaneLeft + LaneWidth - NameX;
+    Result.Name.Align := 2;
+  end;
   if LaneWidth <= 0 then
     Result.Name.W := 0;
 end;
@@ -278,6 +286,7 @@ begin
   ScreenSing.Text[TextSlot].H := SingPlayer.Name.H;
   ScreenSing.Text[TextSlot].Z := SingPlayer.Name.Z;
   ScreenSing.Text[TextSlot].Size := SingPlayer.Name.Size;
+  ScreenSing.Text[TextSlot].Align := SingPlayer.Name.Align;
 end;
 
 //ToDo basisbit: check this again
@@ -590,6 +599,12 @@ begin
     HeaderTexture := ScreenSing.Statics[I].Texture.Clone;
     ScreenSing.Statics[I].Visible := false;
   end;
+  if Theme.Sing.HasProgressMarker then
+  begin
+    I := ScreenSing.AddStatic(Theme.Sing.ProgressMarker);
+    ProgressMarkerTexture := ScreenSing.Statics[I].Texture.Clone;
+    ScreenSing.Statics[I].Visible := false;
+  end;
   if Theme.Sing.DefaultAvatarTex <> '' then
     DefaultAvatarTexture := Renderer.LoadTexture(Skin.GetTextureFileName(Theme.Sing.DefaultAvatarTex),
       TEXTURE_TYPE_TRANSPARENT, 0);
@@ -600,6 +615,7 @@ destructor TScreenSingView.Destroy;
 begin
   DefaultAvatarTexture.Free;
   HeaderTexture.Free;
+  ProgressMarkerTexture.Free;
   LanePanelTexture.Free;
   GapCountdown.Free;
   UnloadSingScreenTextures;
@@ -646,9 +662,9 @@ begin
     LocalIndex := GetPlayerIndexOnScreen(PlayerIndex, PlayersPlay, Screens);
     Layout := GetSingLaneLayout(Count, LocalIndex, Theme.Sing.PlayerLayout, CurrentSong.isDuet);
     Padding := Theme.Sing.LanePanelPadding * Layout.ContentScale;
-    LanePanelTexture.X := Layout.GridLeft - Padding;
+    LanePanelTexture.X := Layout.GridLeft - Theme.Sing.LanePanelPaddingX * Layout.ContentScale;
     LanePanelTexture.Y := Layout.GuideTopY - Padding;
-    LanePanelTexture.W := Layout.GridWidth + 2 * Padding;
+    LanePanelTexture.W := Layout.GridWidth + 2 * Theme.Sing.LanePanelPaddingX * Layout.ContentScale;
     LanePanelTexture.H := 9 * Layout.NoteLineSpacing + 2 * Padding;
     LanePanelTexture.Z := Theme.Sing.LanePanel.Z;
     Renderer.DrawTexture(LanePanelTexture);
@@ -1080,7 +1096,7 @@ begin
   t := frac(timeDiff);
 
   h := Theme.Sing.Countdown.Size*t*ScreenH/RenderH;
-  SetFontFamily(Theme.Sing.Countdown.Font);
+  SetFontFamily(ResolveThemeFont(Theme.Sing.Countdown.FontFile, Theme.Sing.Countdown.Font));
   SetFontStyle(Theme.Sing.Countdown.Style);
   SetFontItalic(false);
   SetFontSize(h);
@@ -1360,6 +1376,12 @@ begin
   QuadList[I].ColB := Theme.Sing.StaticTimeProgress.ColB;
   QuadList[I].Alpha := 1;
   Renderer.DrawQuads(QuadList);
+  if ProgressMarkerTexture <> nil then
+  begin
+    ProgressMarkerTexture.X := x + Min(w, br) - ProgressMarkerTexture.W / 2;
+    ProgressMarkerTexture.Y := y + h / 2 - ProgressMarkerTexture.H / 2;
+    Renderer.DrawTexture(ProgressMarkerTexture);
+  end;
 end;
 
 end.

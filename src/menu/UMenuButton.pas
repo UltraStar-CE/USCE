@@ -70,6 +70,7 @@ type
       procedure DrawFocus;
 
     public
+      FocusFollowShape: boolean;
       Text:                      array of TText;
       TextColors: array of record
         Enabled: boolean;
@@ -390,6 +391,14 @@ begin
   FocusTexture.Z := Texture.Z;
   FocusTexture.ScaleMode := lsStretch;
   FocusTexture.CornerRadius := Min(0.5, FocusRadius * PixelScale / ShortSide);
+  if FocusFollowShape then
+  begin
+    if Texture.Radius >= 0 then
+      FocusTexture.CornerRadius := Min(0.5, Max(0, Texture.Radius - FocusInset) * PixelScale / ShortSide)
+    else
+      FocusTexture.CornerRadius := Min(0.5, Max(0, Texture.CornerRadius *
+        Min(Texture.W * GetLayoutScaleX, Texture.H * GetLayoutScaleY) - FocusInset * PixelScale) / ShortSide);
+  end;
   FocusTexture.OutlineWidth := Min(0.5, FocusWidth * PixelScale / ShortSide);
   FocusTexture.Alpha := FocusAlpha * FocusProgress * Texture.Alpha;
   Renderer.DrawTexture(FocusTexture);

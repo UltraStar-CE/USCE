@@ -265,3 +265,64 @@ can opt into its selected/deselected colors with `FocusColors=1`; existing text
 color behavior remains the default. Select slides can set `EmptyText=1` to omit
 their label while retaining the option text. Required text sections may use
 `Enabled=0` to omit their text, as numbered optional text sections already do.
+
+
+### Optional inherited-theme presentation defaults
+
+`StyleText`, `StyleButton`, `StyleSelectSlide` and `StyleBackground` supply
+presentation keys below the active theme's explicit section/inheritance chain
+and above base-theme sections. They use the corresponding ordinary section
+keys; omit them to retain the existing lookup. Explicit per-control keys win.
+For example, a dark derived theme can set `StyleButton` Tex/Color/DColor and
+`StyleBackground` Type/ColR/ColG/ColB without copying every inherited page.
+`CornerRadius=0..0.5` also works on button backgrounds and deselected textures.
+
+`SongRouletteCover` may opt into `FlatStrip=1`, with X/Y/W/H, Cols, Padding and SelectedScale (default 1.18).
+The strip pages through the existing visible song order and uses the same song
+selection, keyboard actions and cover hit regions. Other carousel layouts are
+unchanged. `InactiveBrightness=0..1` on a song cover section defaults to 0.5.
+
+Card-based player setup may set `CountChips=1` and/or `ColorPalette=1` in
+`NameCards`. CountX/Y/W/H/Gap/Max position count chips; the zero-player choice
+remains available where native setup allows it, and a larger current count is
+shown without restricting keyboard selection. `NameCountChip`,
+`NameCountChipFocus`, and `NameCountChipText` style those chips. PaletteX/Y,
+PaletteStep/Size/Columns position swatches from the current player's available
+colors. The next-page chevron and left/right keys retain access to every color.
+Both presentations update the existing bound controls, not a separate setup
+state. `NameUnderline`, `ColorDots` and `ColorLabels` optionally decorate cards;
+`NameCardDot` supplies the dot texture. Absent switches preserve existing cards.
+
+`SingLyricHelper` W/H/Radius optionally controls the pre-line helper.
+`SingLanePanel` PaddingX defaults to Padding. `SingProgressMarker` is an optional
+static centered on the existing progress position, obeying time-bar visibility.
+`SingPlayerWidgetPlacement` may set OffsetX, DockX and DockAreaW; their defaults
+retain the lane-based placement. `MirrorAlternate=1` mirrors the right header
+only for two top-docked, non-duet singers. N-player and duet layout is unchanged.
+
+`ScorePlayerSlotArea` may set `HorizontalBars=1` to draw the animated score
+segments left-to-right within StaticBackLevel. The default remains vertical.
+
+Simple static/button/select-slide surfaces may use `Radius` in logical units,
+`BorderWidth`, `BorderColor`, and `BorderAlpha`. The renderer scales the radius
+uniformly in physical pixels and derives the fill and border from one contour.
+Omitting Radius retains the existing fractional `CornerRadius`; omitted borders
+are disabled. Use flat artwork for these surfaces, not pre-rounded alpha masks.
+`FocusFollowShape=1` on buttons derives the focus contour from the surface and
+its inset; old independent FocusRadius behavior remains the default.
+
+Select slides may use `FullRow=1` for a single label/value surface,
+`UnfocusedValueColor`, `FocusWidth`/`FocusColor`, and `FontFile`. These keep the
+native bound value, keyboard input and hit areas. OptionsSubArea may enable
+`ReserveBackForPreview=1` to keep lyric previews below the Back control.
+
+Optional `HighScoresRowBackground`, `HighScoresTextSongTitle` and
+`HighScoresTextArtist` sections keep the existing database, difficulty and
+entry-count behavior. FirstRowY in HighScoresListArea fixes the first-row anchor;
+the default retains the old pitch-relative anchor. A date below the name can
+share its column; dense two-column lists compact both lines within each row.
+
+SingLyricHelper supports AboveH/AboveOffset/AboveAlpha (-1 keeps normal fading).
+Sing.NoteInset optionally insets notes without moving stave guides. Countdown
+FontFile is optional. MainTextLibraryCount may contain a translated %d placeholder
+for the current library count; no printf-style format string is executed.
