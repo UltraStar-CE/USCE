@@ -654,7 +654,7 @@ begin
     Row := Length(fRows); SetLength(fRows, Row + 1);
   end;
   fRows[Row].Kind := fltFolder;
-  fRows[Row].Query := NormalizeFolderPath(Query);
+  fRows[Row].Query := FolderQueryValue(NormalizeFolderPath(Query));
   fLastPlayed := ScreenSong.Interaction;
   fPending := true; FlushChanges;
 end;
@@ -887,10 +887,10 @@ begin
               Parts.Clear; AddFolderChoices(Song.FolderPath, Ini.FolderFiltering, Parts);
               for J := 0 to Parts.Count - 1 do
               begin
-                AddValue(Parts[J]);
+                AddValue(FolderQueryValue(Parts[J]));
                 Value := Copy(Parts[J], 1, Length(Parts[J]) - 1);
                 Value := Copy(Value, LastDelimiter('/', Value) + 1, MaxInt);
-                AddValue(Value);
+                AddValue(FolderQueryValue(Value));
               end;
               Continue;
             end;

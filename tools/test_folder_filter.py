@@ -34,6 +34,10 @@ begin
   Check(MatchesFolderPath('/Denglish/Kids/', '/'), 'whole library');
   Check(MatchesFolderPath('/', '/'), 'direct root songs');
   Check(MatchesFolderPath('/Deutsch/Für Kinder/', 'für kinder'), 'Unicode case folding');
+  Check(MatchesFolderPath('/Rock, Pop/', FolderQueryValue('/Rock, Pop/')), 'literal comma');
+  Check(not MatchesFolderPath('/Rock/', FolderQueryValue('/Rock, Pop/')), 'literal path not alternatives');
+  Check(MatchesFolderPath('/Rock; Pop/', FolderQueryValue('/Rock; Pop/')), 'literal semicolon');
+  Check(MatchesFolderPath('/Rock"n"Roll/', FolderQueryValue('/Rock"n"Roll/')), 'literal quotes');
   Choices := TStringList.Create;
   try
     AddFolderChoices('/Denglish/Kids/GanzKlein/', 0, Choices);
