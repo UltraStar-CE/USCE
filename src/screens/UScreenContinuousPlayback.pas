@@ -410,7 +410,7 @@ begin
         Singers := TJSONArray.Create;
         Handoff.Add('singers', Singers);
         AudioInputProcessor.CheckPlayersConfig(IMaxPlayerCount, Local);
-        for I := 0 to PlayersPlay - 1 do
+        for I := 0 to AudioInputProcessor.ConfiguredPlayerCount - 1 do
           if Local[I] or RemoteInputProcessor.HasAssignedPlayer(I) then
             Singers.Add(TJSONObject.Create(['slot', I + 1, 'name', string(Ini.Name[I])]));
         RemoteBridgeIPC.SendJsonMessage(UTF8String(Handoff.AsJSON));
