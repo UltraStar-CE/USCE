@@ -541,6 +541,29 @@ int main(int argc, char** argv) {
             ui_render(1280, 720, 0);
             require(ui_bounds("language-row-1", &player_x, &player_y, &player_w, &player_h) != 0 && player_w > 190,
                 "Recreated repeated labels must receive their translation");
+            {
+                std::ofstream fixture(language_fixture);
+                fixture << R"(<rml><head><style>div{display:block;} .probe{position:absolute;height:10px;}</style></head>
+<body><div data-model="game">
+<div id="math-sin" class="probe" data-style-width="((data.math.angle | sin) + 1) * 100 + 'px'" />
+<div id="math-cos" class="probe" data-style-width="((data.math.angle | cos) + 1) * 100 + 'px'" />
+<div id="math-clamp" class="probe" data-style-width="((data.math.value | abs) | min(80) | max(20)) + 'px'" />
+</div></body></rml>)";
+            }
+            ui_model_set("math.angle", "1.5707963267948966", 3);
+            ui_model_set("math.value", "-120", 3);
+            require(ui_open(utf8(language_fixture).c_str()) != 0, "Theme math fixture");
+            ui_render(1280, 720, 0);
+            require(ui_bounds("math-sin", &player_x, &player_y, &player_w, &player_h) != 0 && std::abs(player_w - 200) < 1,
+                "Theme sine transform uses radians");
+            require(ui_bounds("math-cos", &player_x, &player_y, &player_w, &player_h) != 0 && std::abs(player_w - 100) < 1,
+                "Theme cosine transform uses radians");
+            require(ui_bounds("math-clamp", &player_x, &player_y, &player_w, &player_h) != 0 && std::abs(player_w - 80) < 1,
+                "Theme absolute/min/max transforms compose");
+            ui_model_set("math.value", "-5", 3);
+            ui_render(1280, 720, 0);
+            require(ui_bounds("math-clamp", &player_x, &player_y, &player_w, &player_h) != 0 && std::abs(player_w - 20) < 1,
+                "Theme math responds to model updates");
             std::filesystem::remove(language_fixture);
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
             glDeleteFramebuffers(1, &framebuffer); glDeleteTextures(1, &texture);

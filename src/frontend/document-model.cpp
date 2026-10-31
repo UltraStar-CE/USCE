@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "document-model.h"
 #include <map>
+#include <algorithm>
+#include <cmath>
 #include <vector>
 
 namespace DocumentModel {
@@ -83,6 +85,22 @@ bool Initialize(Rml::Context* context) {
         if (offset * 2LL < -count) offset += count;
         if (offset * 2LL > count) offset -= count;
         return Rml::Variant(offset);
+    });
+    // Theme expressions use radians; the game supplies raw positions only.
+    constructor.RegisterTransformFunc("sin", [](const Rml::VariantList& arguments) -> Rml::Variant {
+        return arguments.size() == 1 ? Rml::Variant(std::sin(arguments[0].Get<double>())) : Rml::Variant(0);
+    });
+    constructor.RegisterTransformFunc("cos", [](const Rml::VariantList& arguments) -> Rml::Variant {
+        return arguments.size() == 1 ? Rml::Variant(std::cos(arguments[0].Get<double>())) : Rml::Variant(0);
+    });
+    constructor.RegisterTransformFunc("abs", [](const Rml::VariantList& arguments) -> Rml::Variant {
+        return arguments.size() == 1 ? Rml::Variant(std::abs(arguments[0].Get<double>())) : Rml::Variant(0);
+    });
+    constructor.RegisterTransformFunc("min", [](const Rml::VariantList& arguments) -> Rml::Variant {
+        return arguments.size() == 2 ? Rml::Variant(std::min(arguments[0].Get<double>(), arguments[1].Get<double>())) : Rml::Variant(0);
+    });
+    constructor.RegisterTransformFunc("max", [](const Rml::VariantList& arguments) -> Rml::Variant {
+        return arguments.size() == 2 ? Rml::Variant(std::max(arguments[0].Get<double>(), arguments[1].Get<double>())) : Rml::Variant(0);
     });
     model = constructor.GetModelHandle();
     return true;
