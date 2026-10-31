@@ -38,6 +38,7 @@ uses
   UDisplay,
   UFiles,
   UMenu,
+  UDocumentUI,
   UMusic,
   UScreenSong,
   USong,
@@ -50,24 +51,28 @@ type
 
   TScreenMain = class(TMenu)
   private
+    DocumentUI: TDocumentUI;
     Preview: array[0..5] of record
       Statics: array of integer;
       BaseX, BaseAlpha: array of real;
       Alpha: real;
     end;
     PreviewTick: cardinal;
+    function RunAction(const Action: UTF8String): boolean;
     procedure UpdatePreviews;
   public
     TextDescription:     integer;
     TextDescriptionLong: integer;
 
     constructor Create; override;
+    destructor Destroy; override;
     function ParseInput(PressedKey: Cardinal; CharCode: UCS4Char;
       PressedDown: boolean; Repeated: boolean = false): boolean; override;
     function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
     procedure OnShow; override;
     procedure SetInteraction(Num: integer); override;
     function Draw: boolean; override;
+    function DrawBG: boolean; override;
   end;
 
 const
@@ -92,148 +97,95 @@ uses
   USongs,
   UUnicodeUtils;
 
-function TScreenMain.ParseInput(PressedKey: Cardinal; CharCode: UCS4Char;
-  PressedDown: boolean; Repeated: boolean = false): boolean;
-var
-  SDL_ModState: word;
+function TScreenMain.RunAction(const Action: UTF8String): boolean;
 begin
   Result := true;
-
-  if (PressedDown) then
-  begin // Key Down
-        // check normal keys
-    case PressedKey of
-      SDLK_S: begin
+  if (Action = uiGameSing) or (Action = uiGameParty) then
+  begin
+    if Songs.SongList.Count = 0 then
+    begin
+      ScreenPopupError.ShowPopup(Language.Translate('ERROR_NO_SONGS'));
+      Exit;
+    end;
+    if Action = uiGameParty then
+    begin
+      if (Ini.Players < 1) or not Party.ModesAvailable then Exit;
+      Party.bPartyGame := true;
+      FadeTo(@ScreenPartyOptions, SoundLib.Start);
+    end
+    else
+    begin
+      Party.bPartyGame := false;
+      PlayersPlay := UIni.IPlayersVals[Ini.Players];
+      if Ini.OnSongClick = sSelectPlayer then FadeTo(@ScreenSong)
+      else
+      begin
+        ScreenName.Goto_SingScreen := false;
         FadeTo(@ScreenName, SoundLib.Start);
-        Exit;
       end;
+    end;
+  end
+  else if Action = uiStatisticsOpen then FadeTo(@ScreenStatMain, SoundLib.Start)
+  else if Action = uiSettingsOpen then FadeTo(@ScreenOptions, SoundLib.Start)
+  else if Action = uiAboutOpen then FadeTo(@ScreenAbout, SoundLib.Start)
+  else if Action = uiCreditsOpen then
+  begin
+    ScreenAbout.ShowCreditsInAbout;
+    FadeTo(@ScreenAbout, SoundLib.Start);
+  end
+  else if Action = uiGameExit then Result := false
+  else if Action <> '' then Log.LogWarn('Unknown action: ' + Action, 'ScreenMain');
+end;
 
-      SDLK_P: begin
-        if (Ini.Players >= 1) and (Party.ModesAvailable) then
-        begin
-          FadeTo(@ScreenPartyOptions, SoundLib.Start);
-          Exit;
-        end;
-      end;
-
-      SDLK_R: begin
+function TScreenMain.ParseInput(PressedKey: Cardinal; CharCode: UCS4Char;
+  PressedDown: boolean; Repeated: boolean = false): boolean;
+const Actions: array[0..5] of UTF8String =
+  (uiGameSing, uiGameParty, uiStatisticsOpen, uiSettingsOpen, uiAboutOpen, uiGameExit);
+begin
+  Result := true;
+  if not PressedDown then Exit;
+  case PressedKey of
+    SDLK_S: Result := RunAction(uiGameSing);
+    SDLK_P: Result := RunAction(uiGameParty);
+    SDLK_T: Result := RunAction(uiStatisticsOpen);
+    SDLK_O: Result := RunAction(uiSettingsOpen);
+    SDLK_A: Result := RunAction(uiAboutOpen);
+    SDLK_C: Result := RunAction(uiCreditsOpen);
+    SDLK_Q, SDLK_ESCAPE, SDLK_BACKSPACE: Result := RunAction(uiGameExit);
+    SDLK_TAB: ScreenPopupHelp.ShowPopup();
+    SDLK_RETURN:
+      if DocumentUI <> nil then
+      begin
+        DocumentUI.Key(0);
+        Result := RunAction(DocumentUI.TakeAction);
+      end
+      else if (Interaction >= 0) and (Interaction <= High(Actions)) then
+        Result := RunAction(Actions[Interaction]);
+    SDLK_DOWN:
+      if DocumentUI <> nil then DocumentUI.Key(2) else InteractNext;
+    SDLK_UP:
+      if DocumentUI <> nil then DocumentUI.Key(-2) else InteractPrev;
+    SDLK_RIGHT:
+      if DocumentUI <> nil then DocumentUI.Key(1) else InteractNext;
+    SDLK_LEFT:
+      if DocumentUI <> nil then DocumentUI.Key(-1) else InteractPrev;
+    SDLK_R:
+      begin
         UGraphic.UnLoadScreens();
         Theme.LoadTheme(Ini.Theme, Ini.Color);
         SoundLib.LoadSounds();
         SoundLib.StartBgMusic();
         UGraphic.LoadScreens(Log.Title);
       end;
-
-      SDLK_T: begin
-        FadeTo(@ScreenStatMain, SoundLib.Start);
-        Exit;
-      end;
-
-      SDLK_O: begin
-        FadeTo(@ScreenOptions, SoundLib.Start);
-        Exit;
-      end;
-
-      SDLK_A: begin
-        FadeTo(@ScreenAbout, SoundLib.Start);
-        Exit;
-      end;
-
-      SDLK_C: begin
-        ScreenAbout.ShowCreditsInAbout;
-        FadeTo(@ScreenAbout, SoundLib.Start);
-        Exit;
-      end;
-
-      SDLK_Q: begin
-        Result := false;
-        Exit;
-      end;
-    end;
-
-    // check special keys
-    case PressedKey of
-      SDLK_ESCAPE,
-      SDLK_BACKSPACE:
-      begin
-        Result := false;
-      end;
-
-      SDLK_TAB:
-      begin
-        ScreenPopupHelp.ShowPopup();
-      end;
-
-      SDLK_RETURN:
-      begin
-        // reset
-        Party.bPartyGame := false;
-
-        //Solo
-        if (Interaction = 0) then
-        begin
-          if (Songs.SongList.Count >= 1) then
-          begin
-            PlayersPlay := UIni.IPlayersVals[Ini.Players];
-
-            if Ini.OnSongClick = sSelectPlayer then
-              FadeTo(@ScreenSong)
-            else
-            begin
-              ScreenName.Goto_SingScreen := false;
-              FadeTo(@ScreenName, SoundLib.Start);
-            end;
-          end
-          else //show error message
-            ScreenPopupError.ShowPopup(Language.Translate('ERROR_NO_SONGS'));
-        end;
-
-        //Party
-        if Interaction = 1 then
-        begin
-          if (Songs.SongList.Count >= 1) then
-          begin
-            Party.bPartyGame := true;
-
-            FadeTo(@ScreenPartyOptions, SoundLib.Start);
-          end
-          else //show error message, No Songs Loaded
-            ScreenPopupError.ShowPopup(Language.Translate('ERROR_NO_SONGS'));
-        end;
-
-        if Interaction = 2 then
-          FadeTo(@ScreenStatMain, SoundLib.Start);
-
-        if Interaction = 3 then
-          FadeTo(@ScreenOptions, SoundLib.Start);
-        if Interaction = 4 then
-          FadeTo(@ScreenAbout, SoundLib.Start);
-        if Interaction = 5 then
-          Result := false;
-      end;
-      {**
-       * Up and Down could be done at the same time,
-       * but I don't want to declare variables inside
-       * functions like this one, called so many times
-       *}
-      SDLK_DOWN: InteractInc;
-      SDLK_UP: InteractDec;
-      SDLK_RIGHT: InteractNext;
-      SDLK_LEFT: InteractPrev;
-    end;
-  end
-  else // Key Up
-    case PressedKey of
-      SDLK_RETURN:
-      begin
-      end;
-    end;
+  end;
 end;
 
 function TScreenMain.ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
 begin
-  // default mouse behaviour
-  Result := inherited ParseMouse(MouseButton, BtnDown, X, Y);
+  if DocumentUI = nil then Exit(inherited ParseMouse(MouseButton, BtnDown, X, Y));
+  if MouseButton = SDL_BUTTON_LEFT then DocumentUI.Mouse(X, Y, 0, BtnDown)
+  else DocumentUI.Mouse(X, Y);
+  Result := RunAction(DocumentUI.TakeAction);
 end;
 
 constructor TScreenMain.Create;
@@ -241,6 +193,12 @@ var
   I, J, Index: integer;
 begin
   inherited Create;
+  DocumentUI := TDocumentUI.Open('main');
+  if DocumentUI <> nil then
+  begin
+    WantSoftwareRenderingMsg := Renderer.SoftwareRendering;
+    Exit;
+  end;
 {**
  * Attention ^^:
  * New Creation Order needed because of LoadFromTheme
@@ -307,6 +265,12 @@ begin
   Party.Clear;
 end;
 
+destructor TScreenMain.Destroy;
+begin
+  DocumentUI.Free;
+  inherited;
+end;
+
 procedure TScreenMain.UpdatePreviews;
 var
   Now, Elapsed: cardinal;
@@ -337,8 +301,12 @@ end;
 
 function TScreenMain.Draw: boolean;
 begin
-  UpdatePreviews;
-  Result := inherited Draw;
+  if DocumentUI <> nil then Result := DocumentUI.Draw
+  else
+  begin
+    UpdatePreviews;
+    Result := inherited Draw;
+  end;
 
   if not ScreenPopupError.Visible then
   begin
@@ -350,8 +318,15 @@ begin
   end;
 end;
 
+function TScreenMain.DrawBG: boolean;
+begin
+  if DocumentUI <> nil then Result := DocumentUI.Draw(true)
+  else Result := inherited DrawBG;
+end;
+
 procedure TScreenMain.SetInteraction(Num: integer);
 begin
+  if DocumentUI <> nil then Exit;
   inherited SetInteraction(Num);
   if not Theme.Main.DynamicDescription then Exit;
   Text[TextDescription].Text     := Theme.Main.Description[Interaction];

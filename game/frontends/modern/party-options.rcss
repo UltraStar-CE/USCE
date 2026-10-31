@@ -1,0 +1,17 @@
+/* Party forms retain Modern's original spacing and navigation. */
+.party-options .heading { left: 8.75vw; top: 1.5vh; font-size: 7.5vh; }
+.party-options .heading-icon { left: 5vw; top: 3.666667vh; width: 3.375vw; height: 4.5vh; }
+.party-options .description { left: 8.75vw; top: 10.466667vh; color: white; }
+.party-options .where { font-size: 2.25vh; }
+.party-options .form-area { left: 8.75vw; top: 18.333333vh; width: 80vw; }
+.party-options .form-fields { max-height: none; overflow: visible; }
+.party-options .form-row { width: 80vw; height: 6.666667vh; margin-left: 0; margin-top: 2.5vh; }
+.party-options .form-row:first-child { margin-top: 0; }
+.party-options .form-row button { height: 6.666667vh; }
+.party-options .form-label { width: 28.75vw; }
+.party-options .form-value { width: 50vw; height: 6.666667vh; }
+.party-options .form-current { width: 45vw; }
+.party-options .party-continue-icon { left: 50.5vw; }
+.party-options .party-continue { left: 53.5vw; }
+
+.party-options .form-row button span { margin-top: 1vh; }

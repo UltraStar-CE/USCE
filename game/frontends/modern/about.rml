@@ -1,0 +1,26 @@
+<rml>
+<head>
+  <title>About USCE</title>
+  <link type="text/rcss" href="modern.rcss" />
+  <link type="text/template" href="footer-about.rml" />
+</head>
+<body class="settings-form about-screen">
+  <div class="background-layer">
+    <div class="background-edge background-edge-left" />
+    <div class="background" />
+    <div class="background-edge background-edge-right" />
+  </div>
+  <div class="foreground">
+    <img class="heading-icon" src="../../themes/Modern/[icon]main.png" />
+    <span class="heading" lang="ABOUT_MAIN" />
+    <span class="description" lang="ABOUT_MAIN_DESC" />
+    <div class="about-panel"><div class="about-panel-top" /><div class="about-panel-bottom" /></div>
+    <div class="about-text" bind-lines="about.text" />
+    <button class="about-credits" action="credits.open"><span lang="ABOUT_USDX_CREDITS" /></button>
+    <button class="about-back" action="navigation.back"><span lang="SING_OPTIONS_EXIT" /></button>
+    <div class="footer" />
+    <div class="footer-labels"><template src="footer-about" /></div>
+    <div class="reflection-clip"><div class="footer-labels"><template src="footer-about" /></div></div>
+  </div>
+</body>
+</rml>

@@ -34,6 +34,7 @@ interface
 {$I switches.inc}
 
 uses
+  UDocumentUI,
   UMenu,
   UMenuWidget,
   UMusic,
@@ -56,6 +57,7 @@ type
     public
       constructor Create(PosX, PosY, Width, Height: single);
       procedure Draw; override;
+      procedure SetBounds(const Bounds: TDocumentRegion);
   end;
 
   TVUMeter = class(ISimpleMenuWidget)
@@ -66,6 +68,7 @@ type
     public
       constructor Create(PosX, PosY, Width, Height: single);
       procedure Draw; override;
+      procedure SetBounds(const Bounds: TDocumentRegion);
   end;
 
   TScreenOptionsRecord = class(TOptionsMenu)
@@ -111,6 +114,7 @@ type
       SourceVolume: single;
 
       procedure LoadWidgets; override;
+      procedure OptionChanged(SelectNum: integer); override;
 
     public
       constructor Create; override;
@@ -169,6 +173,12 @@ type
 constructor TVolumeMeter.Create(PosX, PosY, Width, Height: single);
 begin
   inherited;
+end;
+
+procedure TVolumeMeter.SetBounds(const Bounds: TDocumentRegion);
+begin
+  PosX := Bounds.X; PosY := Bounds.Y;
+  Width := Bounds.W; Height := Bounds.H;
 end;
 
 procedure TVolumeMeter.Draw;
@@ -245,6 +255,12 @@ end;
 constructor TVUMeter.Create(PosX, PosY, Width, Height: single);
 begin
   inherited;
+end;
+
+procedure TVUMeter.SetBounds(const Bounds: TDocumentRegion);
+begin
+  PosX := Bounds.X; PosY := Bounds.Y;
+  Width := Bounds.W; Height := Bounds.H;
 end;
 
 procedure TVUMeter.Draw;
@@ -661,15 +677,13 @@ end;
 constructor TScreenOptionsRecord.Create;
 begin
   inherited Create;
+  DocumentRole := uiScreenSettingsRecording;
   Description := Language.Translate('SING_OPTIONS_RECORD_DESC');
   WhereAmI := Language.Translate('SING_OPTIONS_RECORD_WHEREAMI');
   Load;
 
   // store InteractionID
-  if (Length(AudioInputProcessor.DeviceList) > 0) then
-    ExitButtonIID := ord(iBackButton)
-  else
-    ExitButtonIID := ord(iInputSlide) + 1;
+  ExitButtonIID := High(Interactions);
 
   // set focus
   Interaction := 0;
@@ -721,7 +735,7 @@ begin
 
       // show slider
       UpdateSelectSlideOptions(SelectAssigneeID, IChannelPlayerTranslated, InputDeviceCfg.ChannelToPlayerMap[ChannelIndex]);
-      SelectsS[SelectAssigneeID].Visible := true;
+      SetOptionVisible(SelectAssigneeID, true);
     end
     else
     begin
@@ -731,7 +745,7 @@ begin
 
       // hide slider and assign a dummy variable to it
       UpdateSelectSlideOptions(SelectAssigneeID, IChannelPlayerTranslated, ChannelToPlayerMapDummy);
-      SelectsS[SelectAssigneeID].Visible := false;
+      SetOptionVisible(SelectAssigneeID, false);
     end;
   end;
 
@@ -843,6 +857,7 @@ var
   Device: TAudioInputDevice;
   DeviceCfg: PInputDeviceConfig;
   ChannelIndex: integer;
+  Bounds: TDocumentRegion;
 begin
   if ((PreviewDeviceIndex >= 0) and
       (PreviewDeviceIndex <= High(AudioInputProcessor.DeviceList))) then
@@ -878,6 +893,22 @@ begin
     State.ChannelIndex := ChannelIndex;
   end;
   Result := inherited;
+  if HasDocumentUI then
+  begin
+    if (VolumeMeter <> nil) and DocumentRegion('field-surface-' + IntToStr(SelectInputSourceID), Bounds) then
+    begin
+      VolumeMeter.SetBounds(Bounds); VolumeMeter.Draw;
+    end;
+    if (VUMeter <> nil) and (PreviewChannel <> nil) and DocumentRegion('field-surface-' + IntToStr(SelectAssigneeID), Bounds) then
+    begin
+      VUMeter.SetBounds(Bounds); VUMeter.Draw;
+    end;
+  end;
+end;
+
+procedure TScreenOptionsRecord.OptionChanged(SelectNum: integer);
+begin
+  UpdateInputDevice;
 end;
 
 procedure TScreenOptionsRecord.LoadWidgets;
@@ -921,12 +952,17 @@ begin
     // add source-selection slider (InteractionID: 1)
     SelectInputSourceID := AddSelectSlide('SING_OPTIONS_RECORD_INPUT', InputDeviceCfg.Input, InputSourceNames);
 
-    YNextWidget := Round(SelectsS[SelectInputSourceID].Y + SelectsS[SelectInputSourceID].H + BarUpperSpacing);
-    VolumeMeter := TVolumeMeter.Create(SelectsS[SelectInputSourceID].TextureSBG.X, YNextWidget, SelectsS[SelectInputSourceID].TextureSBG.W, BarHeight);
-    YNextWidget := Round(VolumeMeter.Y + VolumeMeter.H + BarLowerSpacing);
-    NumWidgets := Length(Widgets);
-    SetLength(Widgets, NumWidgets + 1);
-    Widgets[NumWidgets] := VolumeMeter;
+    if HasDocumentUI then VolumeMeter := TVolumeMeter.Create(0, 0, 0, 0)
+    else
+    begin
+      YNextWidget := Round(SelectsS[SelectInputSourceID].Y + SelectsS[SelectInputSourceID].H + BarUpperSpacing);
+      VolumeMeter := TVolumeMeter.Create(SelectsS[SelectInputSourceID].TextureSBG.X, YNextWidget, SelectsS[SelectInputSourceID].TextureSBG.W, BarHeight);
+      YNextWidget := Round(VolumeMeter.Y + VolumeMeter.H + BarLowerSpacing);
+      NumWidgets := Length(Widgets);
+      SetLength(Widgets, NumWidgets + 1);
+      Widgets[NumWidgets] := VolumeMeter;
+
+    end;
 
     // compute list of selectable channels
     SetLength(SelectChannelOptions, InputDevice.AudioFormat.Channels);
@@ -943,24 +979,30 @@ begin
       // current device has a channel
       // add slider, assign to first channel of the device
       SelectAssigneeID := AddSelectSlide('SING_OPTIONS_RECORD_ASSIGNEE', InputDeviceCfg.ChannelToPlayerMap[0], IChannelPlayerTranslated);
-      SelectsS[SelectAssigneeID].showArrows := false;
-      SelectsS[SelectAssigneeID].oneItemOnly := false;
+      if not HasDocumentUI then SelectsS[SelectAssigneeID].showArrows := false;
+      if not HasDocumentUI then SelectsS[SelectAssigneeID].oneItemOnly := false;
+      SetOptionInline(SelectAssigneeID);
     end
     else
     begin
       // current device does not have any channels
       // add slider but hide it and assign a dummy variable to it
       SelectAssigneeID := AddSelectSlide('SING_OPTIONS_RECORD_ASSIGNEE', ChannelToPlayerMapDummy, IChannelPlayerTranslated);
-      SelectsS[SelectAssigneeID].Visible := false;
-      SelectsS[SelectAssigneeID].showArrows := false;
+      SetOptionVisible(SelectAssigneeID, false);
+      if not HasDocumentUI then SelectsS[SelectAssigneeID].showArrows := false;
     end;
 
-    YNextWidget := Round(SelectsS[SelectAssigneeID].Y + SelectsS[SelectAssigneeID].H + BarUpperSpacing);
-    VUMeter := TVUMeter.Create(SelectsS[SelectAssigneeID].TextureSBG.X, YNextWidget, SelectsS[SelectAssigneeID].TextureSBG.W, 2.0*BarHeight);
-    YNextWidget := Round(VUMeter.Y + VUMeter.H + BarLowerSpacing);
-    NumWidgets := Length(Widgets);
-    SetLength(Widgets, NumWidgets + 1);
-    Widgets[NumWidgets] := VUMeter;
+    if HasDocumentUI then VUMeter := TVUMeter.Create(0, 0, 0, 0)
+    else
+    begin
+      YNextWidget := Round(SelectsS[SelectAssigneeID].Y + SelectsS[SelectAssigneeID].H + BarUpperSpacing);
+      VUMeter := TVUMeter.Create(SelectsS[SelectAssigneeID].TextureSBG.X, YNextWidget, SelectsS[SelectAssigneeID].TextureSBG.W, 2.0*BarHeight);
+      YNextWidget := Round(VUMeter.Y + VUMeter.H + BarLowerSpacing);
+      NumWidgets := Length(Widgets);
+      SetLength(Widgets, NumWidgets + 1);
+      Widgets[NumWidgets] := VUMeter;
+
+    end;
 
     SelectThresholdID := AddSelectSlide('SING_OPTIONS_SOUND_THRESHOLD', Ini.ThresholdIndex, IThreshold);
     AddSelectSlide('SING_OPTIONS_SOUND_MIC_BOOST', Ini.MicBoost, IMicBoostTranslated);

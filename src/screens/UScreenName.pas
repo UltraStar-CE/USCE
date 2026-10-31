@@ -34,6 +34,7 @@ interface
 {$I switches.inc}
 
 uses
+  UDocumentUI, URecentNames, UPath,
   UPlayerLayout,
   UVoiceAssignments,
   UAvatars,
@@ -55,6 +56,18 @@ uses
 
 type
   TScreenName = class(TMenu)
+    private
+      DocumentUI: TDocumentUI;
+      DocumentName: TNameEntryState;
+      DocumentControl: UTF8String;
+      DocumentAvatarsPlayer, DocumentAvatarsCount: integer;
+      procedure SyncDocument;
+      procedure FocusDocumentControl(const Control: UTF8String);
+      function DocumentInput(Key: cardinal; CharCode: UCS4Char; Down: boolean): boolean;
+      procedure ChangeDocumentValue(const Control: UTF8String; Delta: integer);
+      procedure ContinueToSongs;
+      procedure ReturnFromSetup;
+      function AvatarFile(PlayerID, AvatarID: integer): IPath;
     private
       PlayersCount:  cardinal;
       PlayersCountIID: integer;
@@ -109,6 +122,8 @@ type
       Goto_SingScreen: boolean; //If true then next Screen in SingScreen
 
       constructor Create; override;
+      destructor Destroy; override;
+      function DrawBG: boolean; override;
       function ShouldHandleInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; out SuppressKey: boolean): boolean; override;
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
@@ -155,7 +170,6 @@ uses
   ULog,
   UMain,
   UMenuButton,
-  UPath,
   URenderer,
   UScreenSong,
   USkins,
@@ -205,6 +219,204 @@ begin
   Result := GetFittedSlotRect(BaseBounds, SlotRect, MaxScale);
 end;
 
+function TScreenName.AvatarFile(PlayerID, AvatarID: integer): IPath;
+begin
+  if (AvatarID > 0) and (AvatarID < Length(AvatarsList)) then Exit(AvatarsList[AvatarID]);
+  Result := DefaultAvatarFile(PlayerID);
+end;
+
+destructor TScreenName.Destroy;
+begin
+  DocumentUI.Free;
+  inherited;
+end;
+
+function TScreenName.DrawBG: boolean;
+begin
+  if DocumentUI <> nil then Result := DocumentUI.Draw(true)
+  else Result := inherited DrawBG;
+end;
+
+procedure TScreenName.FocusDocumentControl(const Control: UTF8String);
+var Index: integer;
+begin
+  if TryStrToInt(Control, Index) then begin FocusDocumentControl('profile'); Exit; end;
+  if (Control = '') or (Control = DocumentControl) then Exit;
+  if DocumentControl = 'name' then
+  begin
+    DocumentName.Finish;
+    PlayerNames[PlayerIndex] := DocumentName.Value;
+  end;
+  DocumentControl := Control;
+  SetTextInput(Control = 'name');
+end;
+
+procedure TScreenName.ChangeDocumentValue(const Control: UTF8String; Delta: integer);
+var I, Count, VoiceCount: integer;
+begin
+  Count := SelectedPlayerCount;
+  if Control = 'count' then
+  begin
+    CountIndex := EnsureRange(CountIndex + Delta, 0, High(IPlayers) + PlayerCountOffset);
+    PlayerIndex := EnsureRange(PlayerIndex, 0, Max(0, SelectedPlayerCount - 1));
+    for I := 0 to SelectedPlayerCount - 1 do Num[I] := NoRepeatColors(Num[I], I, 1);
+    DocumentName.Assign(PlayerNames[PlayerIndex]);
+  end
+  else if Count > 0 then
+  begin
+    if Control = 'profile' then
+    begin
+      DocumentName.Finish; PlayerNames[PlayerIndex] := DocumentName.Value;
+      PlayerIndex := EnsureRange(PlayerIndex + Delta, 0, Count - 1);
+      DocumentName.Assign(PlayerNames[PlayerIndex]);
+    end
+    else if (Control = 'avatar') and (Length(AvatarsList) > 0) then
+      PlayerAvatars[PlayerIndex] := (PlayerAvatars[PlayerIndex] + Delta + Length(AvatarsList)) mod Length(AvatarsList)
+    else if Control = 'color' then
+    begin
+      Num[PlayerIndex] := NoRepeatColors(Num[PlayerIndex] + Delta, PlayerIndex, Delta);
+      Ini.PlayerColor[PlayerIndex] := Num[PlayerIndex];
+    end
+    else if Control = 'level' then PlayerLevel[PlayerIndex] := EnsureRange(PlayerLevel[PlayerIndex] + Delta, 0, High(IDifficultyTranslated))
+    else if (Control = 'voice') and Goto_SingScreen and (CatSongs.Selected >= 0) and
+      (CatSongs.Selected < Length(CatSongs.Song)) then
+    begin
+      VoiceCount := CatSongs.Song[CatSongs.Selected].VoiceCount;
+      if VoiceCount > 1 then VoiceAssignments.SetVoice(PlayerIndex,
+        EnsureRange(VoiceAssignments.VoiceForPlayer(PlayerIndex, VoiceCount) + Delta, 0, VoiceCount - 1), VoiceCount);
+    end;
+  end;
+  SyncDocument;
+  if Control = 'profile' then DocumentUI.Focus('player-profile-' + IntToStr(PlayerIndex));
+  AudioPlayback.PlaySound(SoundLib.Change);
+end;
+
+function TScreenName.DocumentInput(Key: cardinal; CharCode: UCS4Char; Down: boolean): boolean;
+var TemplateIndex: integer; Modifiers: word;
+begin
+  Result := true;
+  if not Down then Exit;
+  if DocumentControl = 'name' then
+  begin
+    if (Key = SDLK_ESCAPE) and DocumentName.Cancel then Exit;
+    if (Key = SDLK_RETURN) and DocumentName.Accept then
+    begin PlayerNames[PlayerIndex] := DocumentName.Value; Exit; end;
+    if IsPrintableChar(CharCode) then DocumentName.TypeText(UCS4ToUTF8String(CharCode))
+    else if Key = SDLK_BACKSPACE then DocumentName.Backspace
+    else
+    begin
+      TemplateIndex := GetNameTemplateIndexFromKey(Key);
+      if (TemplateIndex >= 0) and (TemplateIndex <= High(Ini.NameTemplate)) then
+      begin
+        Modifiers := SDL_GetModState;
+        if (Modifiers and (KMOD_LSHIFT or KMOD_RSHIFT or KMOD_LALT)) <> 0 then
+          Ini.NameTemplate[TemplateIndex] := DocumentName.Value
+        else DocumentName.Assign(Ini.NameTemplate[TemplateIndex]);
+        PlayerNames[PlayerIndex] := DocumentName.Value;
+        Exit;
+      end;
+    end;
+    if IsPrintableChar(CharCode) or (Key = SDLK_BACKSPACE) then
+    begin
+      DocumentName.Suggest(Ini.RecentNames);
+      PlayerNames[PlayerIndex] := DocumentName.Value;
+      Exit;
+    end;
+  end;
+  case Key of
+    SDLK_UP, SDLK_DOWN:
+      begin
+        if Key = SDLK_UP then DocumentUI.Key(-2) else DocumentUI.Key(2);
+        FocusDocumentControl(DocumentUI.FocusedTarget);
+      end;
+    SDLK_LEFT: ChangeDocumentValue(DocumentControl, -1);
+    SDLK_RIGHT: ChangeDocumentValue(DocumentControl, 1);
+    SDLK_ESCAPE, SDLK_BACKSPACE: ReturnFromSetup;
+    SDLK_RETURN:
+      begin
+        DocumentName.Finish; PlayerNames[PlayerIndex] := DocumentName.Value;
+        ContinueToSongs;
+      end;
+    SDLK_TAB: ScreenPopupHelp.ShowPopup;
+    SDLK_Q: if DocumentControl <> 'name' then Result := false;
+  end;
+end;
+
+procedure TScreenName.SyncDocument;
+var I, Count, VoiceCount, Voice: integer; Prefix, Value: UTF8String;
+  function ColorText(const Color: TRGB): UTF8String;
+  begin
+    Result := '#' + IntToHex(EnsureRange(Round(Color.R * 255), 0, 255), 2) +
+      IntToHex(EnsureRange(Round(Color.G * 255), 0, 255), 2) +
+      IntToHex(EnsureRange(Round(Color.B * 255), 0, 255), 2);
+  end;
+  procedure Flag(const Name: UTF8String; Value: boolean);
+  begin DocumentUI.SetModel('players.' + Name, IntToStr(Ord(Value)), 2); end;
+begin
+  Count := SelectedPlayerCount;
+  DocumentUI.SetModel('players.count', IntToStr(Count), 1);
+  if Count = 0 then Value := Language.Translate('CONTINUOUS_ZERO_PLAYERS') else Value := IntToStr(Count);
+  DocumentUI.SetModel('players.countLabel', Value);
+  Flag('active', Count > 0);
+  DocumentUI.SetModel('players.focus', DocumentControl);
+  Flag('previousCount', CountIndex > 0);
+  Flag('nextCount', CountIndex < High(IPlayers) + PlayerCountOffset);
+  DocumentUI.SetArray('players.profiles', Count);
+  for I := 0 to Count - 1 do
+  begin
+    Prefix := 'players.profiles[' + IntToStr(I) + '].';
+    DocumentUI.SetModel(Prefix + 'id', IntToStr(I), 1);
+    DocumentUI.SetModel(Prefix + 'name', PlayerNames[I]);
+    DocumentUI.SetModel(Prefix + 'avatar', AvatarFile(I, PlayerAvatars[I]).ToUTF8(false));
+    DocumentUI.SetModel(Prefix + 'tint', ColorText(GetPlayerColor(Num[I])));
+    DocumentUI.SetModel(Prefix + 'avatarTint', '#ffffff');
+    if (PlayerAvatars[I] = 0) and Skin.ColorizeDefaultAvatars then
+      DocumentUI.SetModel(Prefix + 'avatarTint', ColorText(GetPlayerColor(Num[I])));
+    DocumentUI.SetModel(Prefix + 'selected', IntToStr(Ord(I = PlayerIndex)), 2);
+  end;
+  if Count = 0 then Exit;
+  DocumentUI.SetModel('players.name', DocumentName.Value);
+  DocumentUI.SetModel('players.suffix', DocumentName.Suffix);
+  DocumentUI.SetModel('players.tint', ColorText(GetPlayerColor(Num[PlayerIndex])));
+  DocumentUI.SetModel('players.light', ColorText(GetPlayerLightColor(Num[PlayerIndex])));
+  DocumentUI.SetModel('players.color', IPlayerColorTranslated[Num[PlayerIndex] - 1]);
+  DocumentUI.SetModel('players.level', IDifficultyTranslated[PlayerLevel[PlayerIndex]]);
+  DocumentUI.SetModel('players.avatarSelected', IntToStr(PlayerAvatars[PlayerIndex]), 1);
+  DocumentUI.SetModel('players.avatarCount', IntToStr(Length(AvatarsList)), 1);
+  if (DocumentAvatarsPlayer <> PlayerIndex) or (DocumentAvatarsCount <> Length(AvatarsList)) then
+  begin
+    DocumentUI.SetArray('players.avatars', Length(AvatarsList));
+    for I := 0 to High(AvatarsList) do
+    begin
+      Prefix := 'players.avatars[' + IntToStr(I) + '].';
+      DocumentUI.SetModel(Prefix + 'id', IntToStr(I), 1);
+      DocumentUI.SetModel(Prefix + 'image', AvatarFile(PlayerIndex, I).ToUTF8(false));
+      DocumentUI.SetModel(Prefix + 'tint', '#ffffff');
+    end;
+    DocumentAvatarsPlayer := PlayerIndex;
+    DocumentAvatarsCount := Length(AvatarsList);
+  end;
+  if Length(AvatarsList) > 0 then
+  begin
+    Value := '#ffffff';
+    if Skin.ColorizeDefaultAvatars then Value := ColorText(GetPlayerColor(Num[PlayerIndex]));
+    DocumentUI.SetModel('players.avatars[0].tint', Value);
+  end;
+  VoiceCount := 0;
+  if Goto_SingScreen and (CatSongs.Selected >= 0) and (CatSongs.Selected < Length(CatSongs.Song)) and
+    CatSongs.Song[CatSongs.Selected].isDuet then
+  begin
+    VoiceAssignments.SelectSong(CatSongs.Song[CatSongs.Selected]);
+    VoiceCount := CatSongs.Song[CatSongs.Selected].VoiceCount;
+  end;
+  Flag('voices', VoiceCount > 1);
+  if VoiceCount > 1 then
+  begin
+    Voice := VoiceAssignments.VoiceForPlayer(PlayerIndex, VoiceCount);
+    DocumentUI.SetModel('players.voice', Format(Language.Translate('SING_VOICE_NUMBER'), [Voice + 1]) + ': ' + CatSongs.Song[CatSongs.Selected].DuetNames[Voice]);
+  end;
+end;
+
 procedure TScreenName.SetInteraction(Num: integer);
 begin
   if (Num <> SelInteraction) and (PlayerName < cardinal(Length(Button))) and
@@ -238,10 +450,41 @@ var
   I: integer;
   Btn: integer;
   MouseX, MouseY: integer;
+  Action: UTF8String;
   Card: TPlayerSlotRect;
   SegmentBounds: TMouseOverRect;
 begin
   Result := true;
+  if DocumentUI <> nil then
+  begin
+    if RightMbESC and (MouseButton = SDL_BUTTON_RIGHT) and BtnDown then
+      Exit(DocumentInput(SDLK_ESCAPE, 0, true));
+    if MouseButton = SDL_BUTTON_LEFT then DocumentUI.Mouse(X, Y, 0, BtnDown)
+    else DocumentUI.Mouse(X, Y);
+    FocusDocumentControl(DocumentUI.FocusedTarget);
+    if BtnDown and (DocumentControl = 'avatar') then
+    begin
+      if MouseButton = SDL_BUTTON_WHEELUP then ChangeDocumentValue('avatar', -1)
+      else if MouseButton = SDL_BUTTON_WHEELDOWN then ChangeDocumentValue('avatar', 1);
+    end;
+    Action := DocumentUI.TakeAction;
+    if Action = uiPlayersContinue then begin DocumentName.Finish; PlayerNames[PlayerIndex] := DocumentName.Value; ContinueToSongs; end
+    else if Action = uiNavigationBack then ReturnFromSetup
+    else if Action = uiPlayersPrevious then ChangeDocumentValue(DocumentControl, -1)
+    else if Action = uiPlayersNext then ChangeDocumentValue(DocumentControl, 1)
+    else if (Action = uiPlayersAvatarSelect) and (SelectedPlayerCount > 0) then
+    begin
+      PlayerAvatars[PlayerIndex] := EnsureRange(StrToIntDef(DocumentUI.ActionTarget, PlayerAvatars[PlayerIndex]), 0, High(AvatarsList));
+      SyncDocument;
+    end
+    else if Action = uiPlayersSelect then
+        begin
+          DocumentName.Finish; PlayerNames[PlayerIndex] := DocumentName.Value;
+          PlayerIndex := EnsureRange(StrToIntDef(DocumentUI.ActionTarget, PlayerIndex), 0, Max(0, SelectedPlayerCount - 1));
+          DocumentName.Assign(PlayerNames[PlayerIndex]);
+        end;
+    Exit;
+  end;
 
   MouseX := X;
   MouseY := Y;
@@ -396,6 +639,11 @@ end;
 
 function TScreenName.ShouldHandleInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; out SuppressKey: boolean): boolean;
 begin
+  if DocumentUI <> nil then
+  begin
+    SuppressKey := (DocumentControl = 'name') and (GetNameTemplateIndexFromKey(PressedKey) <> -1);
+    Exit((GetNameTemplateIndexFromKey(PressedKey) = -1) or (DocumentControl = 'name'));
+  end;
   Result := inherited;
   // only suppress special keys for now
   if GetNameTemplateIndexFromKey(PressedKey) <> -1 then
@@ -407,7 +655,6 @@ end;
 
 function TScreenName.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
   var
-    I: integer;
     SDL_ModState: word;
 
   procedure HandleNameTemplate(const index: integer);
@@ -438,6 +685,7 @@ function TScreenName.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; Presse
   end;
 
 begin
+  if DocumentUI <> nil then Exit(DocumentInput(PressedKey, CharCode, PressedDown));
   Result := true;
   if (PressedDown) then
   begin // Key Down
@@ -495,75 +743,12 @@ begin
 
       SDLK_ESCAPE :
         begin
-          StopTextInput;
-          Ini.SaveNames;
-          AudioPlayback.PlaySound(SoundLib.Back);
-          if GoTo_SingScreen then
-          begin
-            ScreenSong.PreservePreviewForReturn;
-            FadeTo(@ScreenSong);
-            GoTo_SingScreen := false;
-          end
-          else
-            FadeTo(@ScreenMain);
+          ReturnFromSetup;
         end;
 
       SDLK_RETURN:
         begin
-          StopTextInput;
-          LyricsOnly := (PlayerCountOffset = 1) and (SelectedPlayerCount = 0);
-          if not LyricsOnly then Ini.Players := CountIndex - PlayerCountOffset;
-
-          for I := 1 to SelectedPlayerCount do
-          begin
-            // TODO: is it really necessary for this screen to duplicate all these Ini. arrays?
-            Ini.Name[I-1] := PlayerNames[I-1];
-            Ini.PlayerColor[I-1] := Num[I-1];
-            Ini.SingColor[I-1] := Num[I-1];
-            Ini.PlayerLevel[I-1] := PlayerLevel[I-1];
-
-            Ini.PlayerAvatar[I-1] := AvatarsMD5[PlayerAvatars[I-1]];
-          end;
-
-          LoadPlayersFromIni;
-
-          for I := SelectedPlayerCount - 1 downto 0 do
-            Ini.RememberUsedNames([PlayerNames[I]]);
-          Ini.SaveNumberOfPlayers;
-          Ini.SaveNames;
-          Ini.SavePlayerColors;
-          Ini.SavePlayerAvatars;
-          Ini.SavePlayerLevels;
-
-          LoadPlayersColors;
-          Theme.ThemeScoreLoad;
-
-          // Reload ScreenSing and ScreenScore because of player colors
-          // TODO: do this better  REALLY NECESSARY?
-          ScreenScore.Free;
-          ScreenSing.Free;
-
-          ScreenScore := TScreenScore.Create;
-          ScreenSing  := TScreenSingController.Create;
-          //
-
-          AudioPlayback.PlaySound(SoundLib.Start);
-
-          if GoTo_SingScreen then
-          begin
-            // if we've been in the player screen, we need to show the warning again
-            ScreenSing.CheckPlayerConfigOnNextSong := true;
-            AudioPlayback.SetVolume(1.0);
-            ScreenSong.StopMusicPreview();
-            ScreenSong.StopVideoPreview();
-            ScreenSong.StartSong;
-            GoTo_SingScreen := false;
-          end
-          else
-          begin
-            FadeTo(@ScreenSong);
-            GoTo_SingScreen := false;
-          end;
+          ContinueToSongs;
         end;
 
       // Up and Down could be done at the same time,
@@ -676,6 +861,81 @@ begin
 
     end;
   end;
+end;
+
+procedure TScreenName.ContinueToSongs;
+var I: integer;
+begin
+  StopTextInput;
+  LyricsOnly := (PlayerCountOffset = 1) and (SelectedPlayerCount = 0);
+  if not LyricsOnly then Ini.Players := CountIndex - PlayerCountOffset;
+
+  for I := 1 to SelectedPlayerCount do
+  begin
+    // TODO: is it really necessary for this screen to duplicate all these Ini. arrays?
+    Ini.Name[I-1] := PlayerNames[I-1];
+    Ini.PlayerColor[I-1] := Num[I-1];
+    Ini.SingColor[I-1] := Num[I-1];
+    Ini.PlayerLevel[I-1] := PlayerLevel[I-1];
+
+    if PlayerAvatars[I-1] > 0 then Ini.PlayerAvatar[I-1] := AvatarsMD5[PlayerAvatars[I-1]]
+    else Ini.PlayerAvatar[I-1] := '';
+  end;
+
+  LoadPlayersFromIni;
+
+  for I := SelectedPlayerCount - 1 downto 0 do
+    Ini.RememberUsedNames([PlayerNames[I]]);
+  Ini.SaveNumberOfPlayers;
+  Ini.SaveNames;
+  Ini.SavePlayerColors;
+  Ini.SavePlayerAvatars;
+  Ini.SavePlayerLevels;
+
+  LoadPlayersColors;
+  Theme.ThemeScoreLoad;
+
+  // Reload ScreenSing and ScreenScore because of player colors
+  // TODO: do this better  REALLY NECESSARY?
+  ScreenScore.Free;
+  ScreenSing.Free;
+
+  ScreenScore := TScreenScore.Create;
+  ScreenSing  := TScreenSingController.Create;
+  //
+
+  AudioPlayback.PlaySound(SoundLib.Start);
+
+  if GoTo_SingScreen then
+  begin
+    // if we've been in the player screen, we need to show the warning again
+    ScreenSing.CheckPlayerConfigOnNextSong := true;
+    AudioPlayback.SetVolume(1.0);
+    ScreenSong.StopMusicPreview();
+    ScreenSong.StopVideoPreview();
+    ScreenSong.StartSong;
+    GoTo_SingScreen := false;
+  end
+  else
+  begin
+    FadeTo(@ScreenSong);
+    GoTo_SingScreen := false;
+  end;
+end;
+
+procedure TScreenName.ReturnFromSetup;
+begin
+  StopTextInput;
+  Ini.SaveNames;
+  AudioPlayback.PlaySound(SoundLib.Back);
+  if GoTo_SingScreen then
+  begin
+    ScreenSong.PreservePreviewForReturn;
+    FadeTo(@ScreenSong);
+    GoTo_SingScreen := false;
+  end
+  else
+    FadeTo(@ScreenMain);
 end;
 
 procedure TScreenName.GenerateAvatars();
@@ -1074,6 +1334,11 @@ var
 begin
   inherited Create;
 
+  DocumentAvatarsPlayer := -1;
+  DocumentAvatarsCount := -1;
+  DocumentUI := TDocumentUI.Open(uiScreenPlayers);
+  if DocumentUI <> nil then Exit;
+
   LoadFromTheme(Theme.Name);
 
   Theme.Name.SelectPlayersCount.oneItemOnly := true;
@@ -1209,12 +1474,20 @@ begin
     AvatarIndex := GetArrayIndex(AvatarsMD5, Ini.PlayerAvatar[I]);
     if (AvatarIndex > 0) then
     begin
-      Button[PlayerAvatarButton[AvatarIndex]].Texture.Int := 1;
-      AvatarPlayerTextures[I+1] := Button[PlayerAvatarButton[AvatarIndex]].Texture.Clone();
+      if DocumentUI <> nil then
+      begin
+        AvatarPlayerTextures[I+1] := Renderer.LoadTexture(AvatarsList[AvatarIndex]);
+        AvatarPlayerTextures[I+1].ScaleMode := lsUniform;
+      end
+      else
+      begin
+        Button[PlayerAvatarButton[AvatarIndex]].Texture.Int := 1;
+        AvatarPlayerTextures[I+1] := Button[PlayerAvatarButton[AvatarIndex]].Texture.Clone();
+      end;
     end
     else
     begin
-      AvatarPlayerTextures[I+1] := NoAvatarTexture[I+1];
+      AvatarPlayerTextures[I+1] := DefaultAvatarTexture(I);
 
       Col := GetPlayerColor(Ini.PlayerColor[I]);
 
@@ -1240,7 +1513,7 @@ var
   Counts: array of UTF8String;
   PreviewEnd: real;
 begin
-  inherited;
+  if DocumentUI = nil then inherited;
   PreviewEnd := 0;
   if Goto_SingScreen and (CatSongs.Selected >= 0) and
      (CatSongs.Selected < Length(CatSongs.Song)) then
@@ -1254,12 +1527,13 @@ begin
   for I := 0 to High(IPlayers) do Counts[I + PlayerCountOffset] := IPlayers[I];
   CountIndex := Ini.Players + PlayerCountOffset;
   if LyricsOnly and (PlayerCountOffset = 1) then CountIndex := 0;
-  UpdateSelectSlideOptions(PlayersCount, Counts, CountIndex);
+  if DocumentUI = nil then UpdateSelectSlideOptions(PlayersCount, Counts, CountIndex);
 
   for I := 0 to UIni.IMaxPlayerCount-1 do
   begin
     PlayerNames[I] := Ini.Name[I];
-    PlayerLevel[I] := Ini.PlayerLevel[I];
+    PlayerLevel[I] := EnsureRange(Ini.PlayerLevel[I], 0, High(IDifficultyTranslated));
+    if DocumentUI <> nil then Num[I] := EnsureRange(Ini.PlayerColor[I], 1, Length(IPlayerColorTranslated));
     PlayerAvatars[I] := GetArrayIndex(AvatarsMD5, Ini.PlayerAvatar[I]);
     // if it is -1 then the current saved md5 does not exist anymore (file has changed or was deleted entirely)
     // setting it to 0 just resets it to the colorized default avatar
@@ -1267,6 +1541,19 @@ begin
     begin
       PlayerAvatars[I] := 0;
     end;
+  end;
+
+  if DocumentUI <> nil then
+  begin
+    PlayerIndex := EnsureRange(PlayerIndex, 0, Max(0, SelectedPlayerCount - 1));
+    for I := 0 to SelectedPlayerCount - 1 do Num[I] := NoRepeatColors(Num[I], I, 1);
+    DocumentName.Assign(PlayerNames[PlayerIndex]);
+    DocumentControl := 'count';
+    DocumentAvatarsPlayer := -1;
+    Help.SetHelpID(ID);
+    SyncDocument;
+    DocumentUI.Focus('players-count');
+    Exit;
   end;
 
   AvatarTarget := PlayerAvatars[PlayerIndex];
@@ -1649,6 +1936,12 @@ begin
   //are Drawn after the Buttons because of some Blending Problems.
   //This should cause no Problems because all Buttons on this screen
   //Has Z Position.
+  if DocumentUI <> nil then
+  begin
+    if Ini.ReloadNames then begin OnShow; Ini.ReloadDelays; end;
+    SyncDocument;
+    Exit(DocumentUI.Draw);
+  end;
   DrawBG;
 
   if Ini.ReloadNames then

@@ -82,6 +82,7 @@ implementation
 
 uses
   UGraphic,
+  UDocumentUI,
   UHelp,
   ULanguage,
   ULog,
@@ -171,12 +172,15 @@ var
   i, PreviewY, PreviewHeight: Integer;
 begin
   inherited Create;
+  DocumentRole := uiScreenSettingsLyrics;
   Description := Language.Translate('SING_OPTIONS_LYRICS_DESC');
   WhereAmI := Language.Translate('SING_OPTIONS_LYRICS_WHEREAMI');
   Load;
 
   // Keep the samples below the last widget, including the Back button.
-  PreviewY := Max(350, Ceil(Widgets[High(Widgets)].Y + Widgets[High(Widgets)].H + 15));
+  PreviewY := 350;
+  if Length(Widgets) > 0 then
+    PreviewY := Max(PreviewY, Ceil(Widgets[High(Widgets)].Y + Widgets[High(Widgets)].H + 15));
   PreviewHeight := Max(1, Min(40, (530 - PreviewY - 20) div 4));
 
   // lyric sample engine 1
@@ -332,8 +336,29 @@ begin
 end;
 
 function TScreenOptionsLyrics.Draw: boolean;
+var I: integer; Bounds: TDocumentRegion; Changed: boolean;
 begin
   Result := inherited Draw;
+  for I := 0 to 3 do
+    if DocumentRegion('lyrics-preview-' + IntToStr(I), Bounds) then
+    begin
+      with LyricEngine[I div 2] do
+      begin
+        if I mod 2 = 0 then
+        begin
+          Changed := (UpperLineW <> Bounds.W) or (UpperLineH <> Bounds.H);
+          UpperLineX := Bounds.X; UpperLineY := Bounds.Y;
+          UpperLineW := Bounds.W; UpperLineH := Bounds.H;
+        end
+        else
+        begin
+          Changed := (LowerLineW <> Bounds.W) or (LowerLineH <> Bounds.H);
+          LowerLineX := Bounds.X; LowerLineY := Bounds.Y;
+          LowerLineW := Bounds.W; LowerLineH := Bounds.H;
+        end;
+        if Changed then UpdateLineMetrics;
+      end;
+    end;
   LyricSample();
 end;
 

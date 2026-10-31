@@ -1,0 +1,11 @@
+<template name="footer-main">
+<head></head>
+<body>
+  <img class="legend-icon navigation-icon" src="../../themes/Modern/[button]navi.png" />
+  <span class="legend navigation" lang="SING_LEGEND_NAVIGATE" />
+  <img class="legend-icon credits-icon" src="../../themes/Modern/[button]c.png" />
+  <span class="legend credits" lang="SING_SONG_CREDITS" />
+  <img class="legend-icon select-icon" src="../../themes/Modern/[button]enter.png" />
+  <span class="legend select" lang="SING_LEGEND_SELECT" />
+</body>
+</template>

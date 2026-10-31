@@ -79,6 +79,7 @@ uses
   ULanguage,
   ULog,
   UUnicodeUtils,
+  UDocumentUI,
   SysUtils,
   Math;
 
@@ -210,6 +211,7 @@ end;
 constructor TScreenOptionsSound.Create;
 begin
   inherited Create;
+  DocumentRole := uiScreenSettingsSound;
   AudioVolumeSelectId := -1;
   BackgroundVolumeSelectId := -1;
   VocalsVolumeSelectId := -1;
@@ -257,13 +259,10 @@ end;
 
 procedure TScreenOptionsSound.UpdateVolumeSliderFromIni(SelectId, Value: integer);
 begin
-  if (SelectId < 0) or (SelectId > High(SelectsS)) then
-    Exit;
-
+  if OptionCount(SelectId) = 0 then Exit;
   EnsureVolumePercentOptions;
   Value := EnsureRange(Value, 0, High(VolumePercentOptions));
-  if SelectsS[SelectId].SelectedOption <> Value then
-    SelectsS[SelectId].SelectedOption := Value;
+  if OptionSelected(SelectId) <> Value then SetOptionSelected(SelectId, Value);
 end;
 
 procedure TScreenOptionsSound.SyncVolumeSlidersFromIni;
@@ -302,7 +301,6 @@ const
   StepSize = 10;
 var
   SelectId: integer;
-  Slider: TSelectSlide;
   Current: integer;
   Target: integer;
   MaxIndex: integer;
@@ -315,15 +313,9 @@ begin
   if SelectId < 0 then
     Exit;
 
-  Slider := SelectsS[SelectId];
-  if Slider = nil then
-    Exit;
-
-  MaxIndex := High(Slider.TextOptT);
-  if MaxIndex < 0 then
-    Exit;
-
-  Current := Slider.SelectedOption;
+  MaxIndex := OptionCount(SelectId) - 1;
+  if MaxIndex < 0 then Exit;
+  Current := OptionSelected(SelectId);
 
   if Delta > 0 then
   begin
@@ -342,7 +334,7 @@ begin
   if Target = Current then
     Exit;
 
-  Slider.SetSelectOpt(Target);
+  SetOptionSelected(SelectId, Target);
   Result := true;
 end;
 

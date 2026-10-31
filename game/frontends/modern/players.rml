@@ -1,0 +1,66 @@
+<rml>
+<head>
+  <title>Modern player setup</title>
+  <link type="text/rcss" href="modern.rcss" />
+  <link type="text/rcss" href="players.rcss" />
+  <link type="text/template" href="footer-players.rml" />
+</head>
+<body class="players-screen">
+  <div class="background-layer"><div class="background-edge background-edge-left" /><div class="background" /><div class="background-edge background-edge-right" /></div>
+  <div data-model="game">
+  <div class="foreground" data-attr-class="'foreground count-' + data.players.count">
+    <img class="heading-icon" src="../../themes/Modern/[icon]main.png" />
+    <span class="heading" lang="SING_MODE" />
+    <span class="description" lang="SING_PLAYER_DESC" />
+    <div class="player-count" data-class-selected="data.players.focus == 'count'">
+      <button id="players-count" class="count-label" action="players.next" target="count"><span lang="NAME_PLAYERS_COUNT" /></button>
+      <div class="count-value">
+        <button class="previous" action="players.previous" target="count" data-class-unavailable="!data.players.previousCount"><svg src="arrow-left.svg" /></button>
+        <button class="current" action="players.next" target="count"><span>{{ data.players.countLabel }}</span></button>
+        <button class="next" action="players.next" target="count" data-class-unavailable="!data.players.nextCount"><svg src="arrow-right.svg" /></button>
+      </div>
+    </div>
+    <div class="profiles" data-class-hidden="!data.players.active">
+      <div data-for="profile : data.players.profiles" class="profile-slot">
+        <button class="profile" data-attr-id="'player-profile-' + profile.id" action="players.select" focus-target="profile" data-attr-target="profile.id" data-class-selected="profile.selected">
+          <img class="profile-avatar" data-attr-id="'profile-avatar-' + profile.id" data-attr-src="profile.avatar" data-style-image-color="profile.avatarTint" />
+          <img class="profile-frame" data-attr-id="'profile-frame-' + profile.id" src="../../themes/Modern/[score]frame.png" data-style-image-color="profile.tint" />
+          <span class="profile-name">{{ profile.name }}</span>
+          <span class="profile-name-reflection">{{ profile.name }}</span>
+        </button>
+      </div>
+    </div>
+    <div class="profile-editor" data-class-hidden="!data.players.active">
+      <button id="players-avatar" class="avatar-frame" action="players.next" target="avatar"><img src="../../themes/Modern/[name]frame.png" data-style-image-color="data.players.focus == 'avatar' ? data.players.light : (data.players.tint != '' ? data.players.tint : '#ffffff')" /></button>
+      <div class="avatar-carousel">
+        <div data-for="avatar : data.players.avatars" data-attr-id="'avatar-item-' + avatar.id" class="avatar-slot" data-attr-slot="((avatar.id - data.players.avatarSelected) | cyclic_offset(data.players.avatarCount)) + 2" data-class-offstage-left="((avatar.id - data.players.avatarSelected) | cyclic_offset(data.players.avatarCount)) &lt; -3" data-class-offstage-right="((avatar.id - data.players.avatarSelected) | cyclic_offset(data.players.avatarCount)) > 3">
+          <button class="avatar-image-button" action="players.avatar.select" focus-target="avatar" data-attr-target="avatar.id"><img width="1" height="1" class="avatar-image" data-attr-src="((avatar.id - data.players.avatarSelected) | cyclic_offset(data.players.avatarCount)) &lt; -3 ? '' : (((avatar.id - data.players.avatarSelected) | cyclic_offset(data.players.avatarCount)) > 3 ? '' : avatar.image)" data-style-image-color="avatar.tint" /></button>
+          <div class="avatar-reflection-clip" data-attr-id="'avatar-reflection-clip-' + avatar.id"><img width="1" height="1" class="avatar-reflection" data-attr-src="((avatar.id - data.players.avatarSelected) | cyclic_offset(data.players.avatarCount)) &lt; -3 ? '' : (((avatar.id - data.players.avatarSelected) | cyclic_offset(data.players.avatarCount)) > 3 ? '' : avatar.image)" data-style-image-color="avatar.tint" /></div>
+        </div>
+      </div>
+      <button class="avatar-previous" action="players.previous" target="avatar" />
+      <button class="avatar-next" action="players.next" target="avatar" />
+      <button id="players-name" class="name-entry" action="players.focus" target="name" data-style-background-color="data.players.focus == 'name' ? data.players.light : (data.players.tint != '' ? data.players.tint : '#000000')"><div class="name-text"><span class="typed-name">{{ data.players.name }}</span><span class="name-caret" data-class-hidden="data.players.focus != 'name'">|</span><span class="suggested-name">{{ data.players.suffix }}</span></div></button>
+      <div class="profile-choice color-choice" data-class-selected="data.players.focus == 'color'" data-style-background-color="data.players.focus == 'color' ? data.players.light : (data.players.tint != '' ? data.players.tint : '#000000')">
+        <button class="previous" action="players.previous" target="color"><svg src="arrow-left.svg" /></button>
+        <button id="players-color" class="current" action="players.next" target="color"><span>{{ data.players.color }}</span></button>
+        <button class="next" action="players.next" target="color"><svg src="arrow-right.svg" /></button>
+      </div>
+      <div class="profile-choice level-choice" data-class-selected="data.players.focus == 'level'" data-style-background-color="data.players.focus == 'level' ? data.players.light : (data.players.tint != '' ? data.players.tint : '#000000')">
+        <button class="previous" action="players.previous" target="level"><svg src="arrow-left.svg" /></button>
+        <button id="players-level" class="current" action="players.next" target="level"><span>{{ data.players.level }}</span></button>
+        <button class="next" action="players.next" target="level"><svg src="arrow-right.svg" /></button>
+      </div>
+      <div class="profile-choice voice-choice" data-class-selected="data.players.focus == 'voice'" data-class-hidden="!data.players.voices" data-style-background-color="data.players.focus == 'voice' ? data.players.light : (data.players.tint != '' ? data.players.tint : '#000000')">
+        <button class="previous" action="players.previous" target="voice"><svg src="arrow-left.svg" /></button>
+        <button id="players-voice" class="current" action="players.next" target="voice"><span>{{ data.players.voice }}</span></button>
+        <button class="next" action="players.next" target="voice"><svg src="arrow-right.svg" /></button>
+      </div>
+    </div>
+    <div class="footer" />
+    <div class="footer-labels"><template src="footer-players" /></div>
+    <div class="reflection-clip"><div class="footer-labels"><template src="footer-players" /></div></div>
+  </div>
+  </div>
+</body>
+</rml>

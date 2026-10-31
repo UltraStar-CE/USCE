@@ -1,0 +1,12 @@
+<rml>
+<head>
+  <title>Modern settings</title>
+  <link type="text/template" href="settings-form-template.rml" />
+</head>
+<body template="settings-form">
+    <div id="lyrics-preview-0" class="lyrics-preview preview-0" />
+    <div id="lyrics-preview-1" class="lyrics-preview preview-1" />
+    <div id="lyrics-preview-2" class="lyrics-preview preview-2" />
+    <div id="lyrics-preview-3" class="lyrics-preview preview-3" />
+</body>
+</rml>

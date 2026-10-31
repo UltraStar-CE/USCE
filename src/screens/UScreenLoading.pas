@@ -36,6 +36,7 @@ interface
 uses
   UMenu,
   UMenuStatic,
+  UDocumentUI,
   SysUtils,
   UThemes,
   sdl2;
@@ -43,6 +44,7 @@ uses
 type
   TScreenLoading = class(TMenu)
     private
+      DocumentUI: TDocumentUI;
       DiscoveryBarBaseIndex: integer;
       DiscoveryBarFillIndex: integer;
       LoadingBarBaseIndex: integer;
@@ -61,6 +63,8 @@ type
       TextDescription: integer;
 
       constructor Create; override;
+      destructor Destroy; override;
+      function Draw: boolean; override;
       procedure OnShow; override;
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       procedure SetDiscoveryProgress(Current, Total, SongsFound: integer);
@@ -75,7 +79,8 @@ uses
   UGraphic,
   UDisplay,
   URenderer,
-  UTime;
+  UTime,
+  ULanguage;
 
 function TScreenLoading.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
 begin
@@ -85,6 +90,14 @@ end;
 constructor TScreenLoading.Create;
 begin
   inherited Create;
+
+  DocumentUI := TDocumentUI.Open('loading');
+  if DocumentUI <> nil then
+  begin
+    DocumentUI.SetValue(uiLoadingStatus, Language.Translate('SING_LOADING'));
+    DocumentUI.SetValue(uiGameVersion, Language.Translate('US_VERSION'));
+    Exit;
+  end;
 
   LoadFromTheme(Theme.Loading);
 
@@ -131,6 +144,18 @@ begin
   UpdateStatus('');
   RefreshProgress(true);
   Fadeout := false;
+end;
+
+destructor TScreenLoading.Destroy;
+begin
+  DocumentUI.Free;
+  inherited;
+end;
+
+function TScreenLoading.Draw: boolean;
+begin
+  if DocumentUI <> nil then Result := DocumentUI.Draw
+  else Result := inherited Draw;
 end;
 
 procedure TScreenLoading.OnShow;
@@ -185,6 +210,11 @@ end;
 
 procedure TScreenLoading.UpdateStatus(const Value: UTF8String);
 begin
+  if DocumentUI <> nil then
+  begin
+    DocumentUI.SetValue(uiLoadingStatus, Language.Translate('SING_LOADING') + ' ' + Value);
+    Exit;
+  end;
   if (StatusTextIndex >= 0) and (StatusTextIndex < Length(Text)) then
   begin
     if Value = '' then
@@ -196,6 +226,8 @@ end;
 
 procedure TScreenLoading.SetDiscoveryProgress(Current, Total, SongsFound: integer);
 begin
+  if DocumentUI <> nil then
+    DocumentUI.SetNumber(uiLoadingDiscovery, ClampProgress(Current, Total));
   UpdateBar(DiscoveryBarBaseIndex, DiscoveryBarFillIndex, ClampProgress(Current, Total), DiscoveryBarAlpha * 0.5, DiscoveryBarAlpha);
   if SongsFound > 0 then
     UpdateStatus(Format('0 / %5d', [SongsFound]))
@@ -206,6 +238,8 @@ end;
 
 procedure TScreenLoading.SetSongLoadingProgress(Current, Total: integer);
 begin
+  if DocumentUI <> nil then
+    DocumentUI.SetNumber(uiLoadingProgress, ClampProgress(Current, Total));
   UpdateBar(LoadingBarBaseIndex, LoadingBarFillIndex, ClampProgress(Current, Total), LoadingBarAlpha * 0.5, LoadingBarAlpha);
   if Total > 0 then
     UpdateStatus(Format('%5d / %5d', [Current, Total]))
@@ -216,6 +250,7 @@ end;
 
 procedure TScreenLoading.SetStatus(const Value: UTF8String);
 begin
+  if DocumentUI <> nil then DocumentUI.SetValue(uiLoadingStatus, Value);
   if (StatusTextIndex >= 0) and (StatusTextIndex < Length(Text)) then
     Text[StatusTextIndex].Text := Value;
   RefreshProgress(true);

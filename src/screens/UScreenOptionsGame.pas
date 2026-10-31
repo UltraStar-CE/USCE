@@ -86,6 +86,7 @@ uses
   ULanguage,
   ULog,
   UUnicodeUtils,
+  UDocumentUI,
   SysUtils, Classes;
 
 type
@@ -242,6 +243,7 @@ end;
 constructor TScreenOptionsGame.Create;
 begin
   inherited Create;
+  DocumentRole := uiScreenSettingsGame;
   Description := Language.Translate('SING_OPTIONS_GAME_DESC');
   WhereAmI := Language.Translate('SING_OPTIONS_GAME_WHEREAMI');
   Load;

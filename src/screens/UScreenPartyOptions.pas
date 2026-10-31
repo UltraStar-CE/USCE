@@ -44,7 +44,7 @@ uses
   UThemes;
 
 type
-  TScreenPartyOptions = class(TMenu)
+  TScreenPartyOptions = class(TOptionsMenu)
     private
       SelectMode:     cardinal;
       SelectLevel:     cardinal;
@@ -66,6 +66,9 @@ type
       procedure SetPlaylists;
       procedure SetPlaylist2;
       function ApplyPlaylistRestriction: boolean;
+    protected
+      procedure LoadWidgets; override;
+      procedure OptionChanged(SelectNum: integer); override;
     public
       constructor Create; override;
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
@@ -83,6 +86,7 @@ implementation
 
 uses
   UGraphic,
+  UDocumentUI,
   UHelp,
   UIni,
   ULanguage,
@@ -133,7 +137,7 @@ begin
             Exit;
 
           //Save Difficulty
-          Ini.Difficulty := SelectsS[SelectLevel].SelectedOption;
+          Ini.Difficulty := OptionSelected(SelectLevel);
           Ini.SaveLevel;
           Ini.Save;
 
@@ -206,6 +210,16 @@ begin
   PlayList2 := 0;
   Mode := 0;
 
+  DocumentRole := uiScreenPartyOptions;
+  Description := Language.Translate('PARTY_OPTIONS_DESC');
+  WhereAmI := Language.Translate('PARTY_OPTIONS_WHEREAMI');
+  if TryLoadDocument then
+  begin
+    // This screen continues from any field; its theme has no separate back button.
+    SetOptionVisible(DocumentBackField, false);
+    Exit;
+  end;
+
   //Load Screen From Theme
   LoadFromTheme(Theme.PartyOptions);
 
@@ -233,6 +247,23 @@ begin
   FillLevel;
 
   Interaction := 0;
+end;
+
+procedure TScreenPartyOptions.LoadWidgets;
+begin
+  SelectMode := AddSelectSlide('PARTY_SELECT_MODE', Mode,
+    [Language.Translate('PARTY_MODE_CLASSIC'), Language.Translate('PARTY_MODE_CLASSIC_FREE'),
+     Language.Translate('PARTY_MODE_TOURNAMENT')]);
+  SelectLevel := AddSelectSlide('PARTY_DIFFICULTY', Level, ILevel);
+  SelectPlayList := AddSelectSlide('PARTY_PLAYLIST', PlayList, IPlaylist);
+  SelectPlayList2 := AddSelectSlide('PARTY_PLAYLIST_PLAYLIST', PlayList2, IPlaylist2);
+  SelectHighscores := AddSelectSlide('PARTY_HIGHSCORES', Ini.PartyHighscores, IPartyHighscoresTranslated);
+end;
+
+procedure TScreenPartyOptions.OptionChanged(SelectNum: integer);
+begin
+  if SelectNum = integer(SelectMode) then SetPlaylists
+  else if SelectNum = integer(SelectPlayList) then SetPlaylist2;
 end;
 
 procedure TScreenPartyOptions.FillPlaylist;

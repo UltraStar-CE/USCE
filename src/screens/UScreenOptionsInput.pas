@@ -79,6 +79,7 @@ implementation
 uses
   UDisplay,
   UGraphic,
+  UDocumentUI,
   UHelp,
   ULanguage,
   ULog,
@@ -148,6 +149,7 @@ end;
 constructor TScreenOptionsInput.Create;
 begin
   inherited Create;
+  DocumentRole := uiScreenSettingsInput;
   SoundInteractions := [];
   Description := Language.Translate('SING_OPTIONS_INPUT_DESC');
   WhereAmI := Language.Translate('SING_OPTIONS_INPUT_WHEREAMI');

@@ -59,6 +59,7 @@ implementation
 
 uses
   UGraphic,
+  UDocumentUI,
   UHelp,
   ULanguage,
   ULog,
@@ -141,6 +142,7 @@ end;
 constructor TScreenOptionsAdvanced.Create;
 begin
   inherited Create;
+  DocumentRole := uiScreenSettingsAdvanced;
   Description := Language.Translate('SING_OPTIONS_ADVANCED_DESC');
   WhereAmI := Language.Translate('SING_OPTIONS_ADVANCED_WHEREAMI');
   Load;

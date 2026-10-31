@@ -75,6 +75,7 @@ implementation
 
 uses
   UGraphic,
+  UDocumentUI,
   UHelp,
   ULanguage,
   ULog,
@@ -153,9 +154,9 @@ begin
             ChangeElementAlpha;
 
             if (PreVisualization) then
-              Button[0].Text[0].Text := Language.Translate('SING_OPTIONS_WEBCAM_DISABLE_PREVIEW')
+              SetOptionLabel(Ord(iEnablePreviewButton), 'SING_OPTIONS_WEBCAM_DISABLE_PREVIEW')
             else
-              Button[0].Text[0].Text := Language.Translate('SING_OPTIONS_WEBCAM_ENABLE_PREVIEW');
+              SetOptionLabel(Ord(iEnablePreviewButton), 'SING_OPTIONS_WEBCAM_ENABLE_PREVIEW');
           end;
 
           if SelInteraction = ord(iBackButton) then
@@ -208,6 +209,7 @@ end;
 constructor TScreenOptionsWebcam.Create;
 begin
   inherited Create;
+  DocumentRole := uiScreenSettingsWebcam;
   Description := Language.Translate('SING_OPTIONS_WEBCAM_DESC');
   WhereAmI := Language.Translate('SING_OPTIONS_WEBCAM_WHEREAMI');
   Load;
@@ -231,7 +233,7 @@ begin
 
   ChangeElementAlpha;
 
-  Button[0].Text[0].Text := Language.Translate('SING_OPTIONS_WEBCAM_ENABLE_PREVIEW');
+  SetOptionLabel(Ord(iEnablePreviewButton), 'SING_OPTIONS_WEBCAM_ENABLE_PREVIEW');
 
   Interaction := 0;
 end;
@@ -242,7 +244,7 @@ var
   Alpha: real;
 begin
 
-  if (PreVisualization) and (SelectsS[WebcamID].SelectOptInt > 0) then
+  if (PreVisualization) and (OptionSelected(WebcamID) > 0) then
   begin
     try
 
@@ -275,6 +277,12 @@ var
   I, J: integer;
   Alpha: real;
 begin
+  if HasDocumentUI then
+  begin
+    SetDocumentPreview(PreVisualization);
+    Exit;
+  end;
+
 
   if (PreVisualization) then
     Alpha := 0.5
@@ -314,7 +322,9 @@ begin
 end;
 
 procedure TScreenOptionsWebcam.DrawWebCamFrame;
+var Bounds: TDocumentRegion;
 begin
+  if HasDocumentUI and not DocumentRegion('webcam-preview', Bounds) then Exit;
 
   Webcam.GetWebcamFrame;
 
@@ -326,6 +336,11 @@ begin
       Y := 0;
       W := RenderW;
       H := RenderH;
+    end;
+    if HasDocumentUI then
+    begin
+      Webcam.TextureCam.X := Bounds.X; Webcam.TextureCam.Y := Bounds.Y;
+      Webcam.TextureCam.W := Bounds.W; Webcam.TextureCam.H := Bounds.H;
     end;
     Renderer.DrawTexture(Webcam.TextureCam);
   end;

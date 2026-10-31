@@ -1,0 +1,24 @@
+/* Modern yellow color variant. */
+button { background-color: #d7d759e6; }
+.buttons button:focus, .secondary:focus, .option-cell button:focus, .about-credits:focus, .about-back:focus { background-color: #e2e291e6; }
+.form-label { background-color: #c2c250; }
+.form-value, .form-row.inline .form-choices { background-color: #d7d759; }
+.form-row.selected .form-label { background-color: #cccc83; }
+.form-row.selected .form-value, .form-row.selected .form-choices { background-color: #e2e291; }
+.form-back, .form-extra-command { background-color: #c2c250e6; }
+.form-back.selected, .form-extra-command.selected { background-color: #cccc83e6; }
+.form-back-reflection { decorator: vertical-gradient(#c2c25080 #c2c25000); }
+.form-back-reflection.selected { decorator: vertical-gradient(#cccc8380 #cccc8300); }
+.description, .where { color: #f9f9c7; }
+.about-screen .description { color: white; }
+.about-panel { background-color: #ffff007b; }
+.about-panel-top, .about-panel-bottom { background-color: #ffff00; }
+.footer { decorator: image(yellow-footer.svg); }
+.discovery fill { decorator: image(yellow-bar-left.svg); }
+.loading fill { decorator: image(yellow-bar-right.svg); }
+
+.count-value { background-color: #d7d759e6; }
+.player-count.selected .count-label, .player-count.selected .count-value { background-color: #e2e291e6; }
+
+.participant-name { background-color: #d7d759e6; }
+.participant-name.selected, .participant-name:focus { background-color: #e2e291e6; }

@@ -1,0 +1,23 @@
+<rml>
+<head>
+  <title>Modern party options</title>
+  <link type="text/rcss" href="modern.rcss" />
+  <link type="text/rcss" href="party-options.rcss" />
+  <link type="text/template" href="form-fields.rml" />
+  <link type="text/template" href="footer-party.rml" />
+</head>
+<body class="party-options">
+  <div class="background-layer"><div class="background-edge background-edge-left" /><div class="background" /><div class="background-edge background-edge-right" /></div>
+  <div data-model="game">
+  <div class="foreground">
+    <img class="heading-icon" src="../../themes/Modern/[icon]party.png" />
+    <span class="heading" lang="PARTY_MODE" />
+    <span class="description" lang="PARTY_OPTIONS_DESC" />
+    <div class="form-area"><template src="form-fields" /></div>
+    <div class="footer" />
+    <div class="footer-labels"><template src="footer-party" /></div>
+    <div class="reflection-clip"><div class="footer-labels"><template src="footer-party" /></div></div>
+  </div>
+  </div>
+</body>
+</rml>

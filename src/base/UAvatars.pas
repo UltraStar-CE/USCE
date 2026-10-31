@@ -61,13 +61,36 @@ var
   NoAvatarTexture: array[1..UIni.IMaxPlayerCount] of TTexture;
   AvatarPlayerTextures: array[1..UIni.IMaxPlayerCount] of TTexture;
 
+function DefaultAvatarFile(PlayerID: integer): IPath;
+function DefaultAvatarTexture(PlayerID: integer): TTexture;
+
 implementation
 
 uses
   md5,
   sysutils,
   UFilesystem,
-  UPathUtils;
+  UPathUtils, USkins;
+
+function DefaultAvatarFile(PlayerID: integer): IPath;
+begin
+  Result := Skin.GetTextureFileName('NoAvatar_P' + IntToStr(PlayerID + 1));
+  if not Result.IsFile then Result := Skin.GetTextureFileName('NoAvatar_P1');
+  if not Result.IsFile then Result := Skin.GetTextureFileName('NoAvatar');
+end;
+
+function DefaultAvatarTexture(PlayerID: integer): TTexture;
+var FileName: IPath;
+begin
+  FileName := DefaultAvatarFile(PlayerID);
+  if (NoAvatarTexture[PlayerID + 1] = nil) or
+     (NoAvatarTexture[PlayerID + 1].Name.ToUTF8 <> FileName.ToUTF8) then
+  begin
+    NoAvatarTexture[PlayerID + 1] := Renderer.GetTexture(FileName, TEXTURE_TYPE_TRANSPARENT, $FFFFFF);
+    NoAvatarTexture[PlayerID + 1].ScaleMode := lsUniform;
+  end;
+  Result := NoAvatarTexture[PlayerID + 1];
+end;
 
 function AvatarExists(Hash: string): boolean;
 var

@@ -1,0 +1,24 @@
+/* Modern pink color variant. */
+button { background-color: #eea3e7e6; }
+.buttons button:focus, .secondary:focus, .option-cell button:focus, .about-credits:focus, .about-back:focus { background-color: #eec5eae6; }
+.form-label { background-color: #d794d0; }
+.form-value, .form-row.inline .form-choices { background-color: #eea3e7; }
+.form-row.selected .form-label { background-color: #d7b2d4; }
+.form-row.selected .form-value, .form-row.selected .form-choices { background-color: #eec5ea; }
+.form-back, .form-extra-command { background-color: #d794d0e6; }
+.form-back.selected, .form-extra-command.selected { background-color: #d7b2d4e6; }
+.form-back-reflection { decorator: vertical-gradient(#d794d080 #d794d000); }
+.form-back-reflection.selected { decorator: vertical-gradient(#d7b2d480 #d7b2d400); }
+.description, .where { color: #ffe8fd; }
+.about-screen .description { color: white; }
+.about-panel { background-color: #ff00e67b; }
+.about-panel-top, .about-panel-bottom { background-color: #ff00e8; }
+.footer { decorator: image(pink-footer.svg); }
+.discovery fill { decorator: image(pink-bar-left.svg); }
+.loading fill { decorator: image(pink-bar-right.svg); }
+
+.count-value { background-color: #eea3e7e6; }
+.player-count.selected .count-label, .player-count.selected .count-value { background-color: #eec5eae6; }
+
+.participant-name { background-color: #eea3e7e6; }
+.participant-name.selected, .participant-name:focus { background-color: #eec5eae6; }

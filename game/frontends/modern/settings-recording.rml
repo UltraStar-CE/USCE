@@ -1,0 +1,8 @@
+<rml>
+<head>
+  <link type="text/rcss" href="recording.rcss" />
+  <title>Modern microphone settings</title>
+  <link type="text/template" href="settings-form-template.rml" />
+</head>
+<body template="settings-form" />
+</rml>

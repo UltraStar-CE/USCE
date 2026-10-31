@@ -1,0 +1,12 @@
+<template name="footer-players">
+<head></head>
+<body>
+  <span class="where" lang="SING_PLAYER_WHEREAMI" />
+  <img class="legend-icon navigation-icon" src="../../themes/Modern/[button]navi.png" />
+  <span class="legend navigation" lang="SING_LEGEND_NAVIGATE" />
+  <img class="legend-icon name-icon" src="../../themes/Modern/[button]az.png" />
+  <span class="legend name-legend" lang="SING_PLAYER_ENTER_NAME" />
+  <img class="legend-icon continue-icon" src="../../themes/Modern/[button]enter.png" />
+  <span class="legend continue-legend" lang="SING_LEGEND_CONTINUE" />
+</body>
+</template>

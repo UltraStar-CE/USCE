@@ -1,0 +1,34 @@
+<rml>
+<head>
+  <title>Modern tournament participants</title>
+  <link type="text/rcss" href="modern.rcss" />
+  <link type="text/rcss" href="party-options.rcss" />
+  <link type="text/rcss" href="participants.rcss" />
+  <link type="text/template" href="footer-participants.rml" />
+</head>
+<body class="party-options participants-screen">
+  <div class="background-layer"><div class="background-edge background-edge-left" /><div class="background" /><div class="background-edge background-edge-right" /></div>
+  <div data-model="game"><div class="foreground">
+    <img class="heading-icon" src="../../themes/Modern/[icon]party.png" />
+    <span class="heading" lang="PARTY_MODE" />
+    <span class="description" lang="PARTY_MODE_TOURNAMENT_PLAYER_DESC" />
+    <div class="player-count" data-class-selected="data.participants.focus == -1">
+      <button id="participants-count" class="count-label" action="participants.next" target="count"><span lang="PARTY_MODE_TOURNAMENT_NUMBER_PLAYERS" /></button>
+      <div class="count-value">
+        <button class="previous" action="participants.previous" target="count" data-class-unavailable="!data.participants.previousCount"><svg src="arrow-left.svg" /></button>
+        <button class="current" action="participants.next" target="count"><span>{{ data.participants.count }}</span></button>
+        <button class="next" action="participants.next" target="count" data-class-unavailable="!data.participants.nextCount"><svg src="arrow-right.svg" /></button>
+      </div>
+    </div>
+    <div class="participants">
+      <div data-for="field : data.participants.fields" class="participant-slot" data-class-hidden="!field.visible">
+        <button class="participant-name" data-attr-id="'participant-' + field.id" action="participants.select" data-attr-target="field.id" data-class-selected="data.participants.focus == field.id"><div class="participant-text"><span>{{ field.value }}</span><span data-class-hidden="data.participants.focus != field.id">|</span><span class="suggested-name">{{ field.suffix }}</span></div></button>
+        <div class="participant-reflection-clip"><div class="participant-name participant-reflection" data-class-selected="data.participants.focus == field.id" /></div>
+      </div>
+    </div>
+    <div class="footer" />
+    <div class="footer-labels"><template src="footer-participants" /></div>
+    <div class="reflection-clip"><div class="footer-labels"><template src="footer-participants" /></div></div>
+  </div></div>
+</body>
+</rml>

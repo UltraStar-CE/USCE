@@ -1,0 +1,154 @@
+/* Modern's 800x600 composition, expressed entirely by the theme. */
+body { margin: 0; width: 100%; height: 100%; font-family: ui; color: white; }
+.background-layer { position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; display: flex; }
+.background-edge { position: relative; flex: 1; height: 100vh; }
+.background-edge-left { decorator: image(main-edge-left flip-horizontal); }
+.background-edge-right { decorator: image(main-edge-right flip-horizontal); }
+.background { decorator: image("../../themes/Modern/[bg-main]blue.jpg"); position: relative; width: 133.333333vh; max-width: 100vw; height: 100vh; flex-shrink: 0; }
+.foreground-only .background, .foreground-only .background-edge { visibility: hidden; }
+.background-only .foreground { visibility: hidden; }
+.footer { decorator: image(footer.svg); position: absolute; left: 0; top: 90.833333vh; width: 100%; height: 8vh; }
+.where { position: absolute; right: 70.25vw; top: 91.666667vh; font-size: 3vh; white-space: nowrap; color: #bfe8f5; }
+.version { position: absolute; right: 1.25vw; top: 91.611111vh; font-size: 3vh; color: black; }
+.status { position: absolute; right: 70.25vw; top: 91.944444vh; font-size: 3vh; white-space: pre; }
+progress { position: absolute; top: 90.833333vh; height: 5vh; background-color: transparent; }
+progress fill { background-color: transparent; }
+.discovery fill { decorator: image(bar-left.svg); }
+.loading fill { decorator: image(bar-right.svg); }
+.loading-screen .footer { opacity: 0.5; }
+.discovery { left: 0; width: 31.25vw; }
+.loading { left: 31.25vw; width: 68.75vw; }
+.heading { position: absolute; left: 11.875vw; top: 31.4vh; font-size: 6.75vh; }
+.description { position: absolute; left: 11.875vw; top: 39.3vh; font-size: 3.75vh; color: #bfdfeb; }
+.heading-icon { position: absolute; left: 8.125vw; top: 34.166667vh; width: 3.125vw; height: 3.833333vh; }
+.buttons { position: absolute; left: 11.875vw; top: 45vh; display: flex; width: 76.875vw; }
+button { position: relative; display: block; box-sizing: border-box; border-width: 0; padding: 0; text-align: center;
+  color: white; font-family: ui; background-color: #42a3e7e6; }
+button svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; }
+button:focus { background-color: #7ec5eae6; }
+button span { position: relative; display: block; }
+.buttons button { flex-shrink: 0; width: 18.75vw; height: 8.333333vh; margin-right: 0.625vw; font-size: 3.75vh; }
+.buttons button span { margin-top: 1.944444vh; }
+.secondary { position: absolute; top: 81.666667vh; width: 15vw; height: 6.666667vh; font-size: 3vh; }
+.secondary span { margin-top: 1.333333vh; }
+.about { left: 58.125vw; }
+.exit { left: 73.75vw; }
+.legend-icon { position: absolute; top: 90.833333vh; width: 5.333333vh; height: 5vh; transform: translateX(-50%); }
+.legend { position: absolute; top: 91.611111vh; font-size: 3vh; color: black; }
+.navigation-icon { left: 34.5vw; }
+ .navigation { left: 37.5vw; }
+.select-icon { left: 69.75vw; }
+ .select { left: 72.75vw; }
+.credits-icon { left: 52vw; }
+ .credits { left: 55vw; }
+
+button:focus span { font-weight: bold; }
+.buttons button:last-child { margin-right: 0; }
+.settings .heading { top: 7.9vh; }
+.settings .heading-icon { top: 10vh; height: 4.166667vh; }
+.settings .description { top: 16.3vh; }
+.selection-description { position: absolute; left: 11.875vw; top: 21.3vh; font-size: 3.75vh; }
+.settings-grid { position: absolute; left: 11.875vw; top: 27.5vh; display: flex; flex-wrap: wrap; width: 77.5vw; }
+.option-cell { width: 19.375vw; height: 18.333333vh; flex-shrink: 0; }
+.option-cell button { width: 18.75vw; height: 8.333333vh; font-size: 3.75vh; transition: height 0.128s; }
+.option-cell button span { margin-top: 1.666667vh; transition: margin-top 0.128s; }
+.option-cell button:focus { height: 16.666667vh; }
+.option-cell button:focus span { margin-top: 10vh; }
+.settings-select-icon { left: 52vw; }
+ .settings-select { left: 55vw; }
+.settings-back-icon { left: 70.75vw; }
+ .settings-back { left: 73.75vw; }
+.settings .where { font-size: 2.25vh; }
+.footer-labels { position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; pointer-events: none; }
+.reflection-clip { position: absolute; left: 0; top: 96.388889vh; width: 100vw; height: 3.333333vh; overflow: hidden; pointer-events: none; mask-image: vertical-gradient(#000b #0000); }
+.reflection-clip .footer-labels { top: 0; }
+.reflection-clip .legend, .reflection-clip .status, .reflection-clip .version { top: 0.555556vh; height: 3vh; transform: scaleY(-1); }
+.reflection-clip .legend-icon { top: 0; transform: translateX(-50%) scaleY(-1); }
+.reflection-clip .where { visibility: hidden; }
+.settings-form .heading { left: 8.75vw; top: 1.166667vh; }
+.settings-form .heading-icon { left: 5vw; top: 3.666667vh; }
+.settings-form .description { left: 8.75vw; top: 10.466667vh; }
+.settings-form .where { font-size: 2.25vh; }
+.form-area { position: absolute; left: 6.125vw; top: 21.666667vh; width: 87.25vw; }
+.form-fields { width: 100%; max-height: 52.5vh; overflow-y: auto; overflow-x: hidden; }
+.form-fields scrollbarvertical { width: 1vw; }
+.form-fields scrollbarvertical sliderbar { background-color: #dfdfdf; }
+.form-fields scrollbarvertical slidertrack { background-color: transparent; }
+.form-row { position: relative; display: flex; width: 82.5vw; height: 5.833333vh; margin-left: 2.625vw; margin-top: 0.833333vh; }
+.form-row:first-child { margin-top: 0; }
+.form-row button { height: 5.833333vh; font-size: 3.75vh; flex-shrink: 0; }
+.form-row button span { margin-top: 0.5vh; white-space: nowrap; overflow: hidden; }
+.form-label { white-space: nowrap; overflow: hidden; width: 31.25vw; text-align: left; padding-left: 2.5vw; }
+.form-row.selected .form-label { background-color: #7ec5eae6; font-weight: bold; }
+.form-value { display: flex; margin-left: 1.25vw; width: 50vw; height: 5.833333vh; background-color: #42a3e7e6; }
+.form-value button { background-color: transparent; }
+.form-current { width: 45vw; text-align: center; }
+.form-previous, .form-next { width: 2.5vw; visibility: hidden; }
+.form-previous.available, .form-next.available { visibility: visible; }
+.form-previous svg, .form-next svg { position: absolute; width: 100%; height: 100%; opacity: 1; }
+.form-row.selected .form-current { font-weight: bold; }
+.form-row.selected .form-value { background-color: #7ec5eae6; }
+.form-row.command .form-value, .form-row.section .form-value { display: none; }
+.form-row.command .form-label, .form-row.section .form-label { white-space: nowrap; overflow: hidden; width: 82.5vw; text-align: center; padding-left: 0; }
+.form-back { width: 31.25vw; height: 5.833333vh; margin-left: 2.625vw; margin-top: 2.083333vh; font-size: 3.75vh; text-align: left; padding-left: 2.5vw; }
+.form-back span { margin-top: 0.5vh; }
+.form-back.selected { background-color: #7ec5eae6; font-weight: bold; }
+
+.form-back-reflection { display: block; width: 31.25vw; height: 2.777778vh; margin-left: 2.625vw; margin-top: 0.277778vh; pointer-events: none; decorator: vertical-gradient(#42a3e780 #42a3e700); }
+.form-back-reflection.selected { decorator: vertical-gradient(#7ec5ea80 #7ec5ea00); }
+
+.lyrics-preview { position: absolute; left: 10vw; width: 80vw; height: 6.666667vh; pointer-events: none; }
+.preview-0 { top: 58.333333vh; }
+ .preview-1 { top: 65vh; }
+.preview-2 { top: 75vh; }
+ .preview-3 { top: 81.666667vh; }
+
+.webcam-preview { position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; pointer-events: none; }
+.foreground.preview .form-area, .foreground.preview .heading, .foreground.preview .heading-icon, .foreground.preview .description, .foreground.preview .footer, .foreground.preview .footer-labels { opacity: 0.5; }
+
+.form-row.hidden { visibility: hidden; }
+.form-surface { display: none; pointer-events: none; }
+
+.form-choices { display: none; }
+.form-row.inline .form-value { display: none; }
+.form-row.inline .form-choices { display: flex; width: 50vw; height: 5.833333vh; margin-left: 1.25vw; background-color: #42a3e7e6; }
+.form-choices scrollbarhorizontal { height: 0; }
+.form-choices button { width: 6.25vw; text-align: left; flex-shrink: 0; background-color: transparent; color: #3c4b54; }
+.form-choices button.chosen { color: white; }
+
+.about-panel { position: absolute; left: 5vw; top: 16.666667vh; width: 65vw; height: 68.333333vh; background-color: #0097ff7b; border-top-right-radius: 3.333333vh; border-bottom-left-radius: 3.333333vh; overflow: hidden; }
+.about-panel-top, .about-panel-bottom { position: absolute; left: 0; width: 100%; height: 3.333333vh; background-color: #00afff; }
+.about-panel-top { top: 0; }
+ .about-panel-bottom { bottom: 0; }
+.about-screen .heading { font-size: 7.5vh; }
+.about-screen .description { color: white; }
+.about-text { position: absolute; left: 5.625vw; top: 20.833333vh; width: 63.75vw; height: 61.666667vh; font-size: 3.125vh; line-height: 3.4vh; white-space: pre-line; overflow-y: auto; }
+.about-credits, .about-back { position: absolute; left: 73.625vw; width: 23.75vw; height: 8.333333vh; font-size: 3.75vh; }
+.about-credits { top: 69.166667vh; }
+ .about-back { top: 80vh; }
+.about-credits span, .about-back span { margin-top: 1.666667vh; }
+
+.form-footer { display: flex; width: 100%; }
+.form-footer button { flex-shrink: 0; }
+.form-extra-command { position: relative; margin-left: 28.75vw; margin-top: 2.083333vh; width: 22.5vw; height: 5.833333vh; font-size: 3.75vh; }
+.form-extra-command span { margin-top: 0.5vh; }
+.form-extra-command.selected { background-color: #7ec5eae6; font-weight: bold; }
+.network-notice { position: absolute; left: 26.25vw; top: 35.833333vh; width: 47.5vw; text-align: center; font-size: 3vh; }
+
+.loading-screen .background { decorator: image("../../themes/Modern/[bg-load]blue.png"); }
+.loading-screen .background-edge-left { decorator: image(load-edge-left flip-horizontal); }
+.loading-screen .background-edge-right { decorator: image(load-edge-right flip-horizontal); }
+
+@spritesheet main-edge-source {
+  src: "../../themes/Modern/[bg-main]blue.jpg";
+  main-edge-left: 0.5px 0px 15.5px 600px;
+  main-edge-right: 784px 0px 15.5px 600px;
+}
+@spritesheet load-edge-source {
+  src: "../../themes/Modern/[bg-load]blue.png";
+  load-edge-left: 0.5px 0px 15.5px 600px;
+  load-edge-right: 784px 0px 15.5px 600px;
+}
+
+.choices-scroll { display: flex; width: 43.75vw; margin-left: 3.125vw; height: 5.833333vh; overflow-x: auto; overflow-y: hidden; flex-shrink: 0; }
+.form-row.selected .form-choices button.chosen span { font-weight: bold; }

@@ -4,6 +4,26 @@
 
 This guide introduces the inherited USDX codebase. For the USCE contribution and review process, read [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Document frontend experiment
+
+The optional RmlUi frontend covers Modern's loading screen, main menu, settings
+menu and settings forms, plus About and credits. Other screens retain their
+existing implementation. Build with
+`python3 tools/build-document-ui.py` in a CMake/C++ build environment with
+FreeType, SDL2 and SDL2_image. This downloads pinned RmlUi and LunaSVG sources;
+extra CMake options can follow `--`. The shared library and its runtime
+dependencies must be available beside the game or through the platform loader.
+Set `USCE_FRONTEND` to the absolute path of `game/frontends/modern` before
+launching the game. The experiment requires OpenGL 3.3 and one screen.
+Build with `-DUSCE_FRONTEND_TESTS=ON` and run CTest in the build directory to
+check rendering into transition textures, input, resizing and runtime cleanup.
+
+The frontend manifest selects documents, fonts and skin/color stylesheets. Documents reference named
+game bindings, actions and existing language-INI keys through `lang`; translations
+use the game's selected-language, English and key-name fallback. Layout and SVG
+artwork belong to the frontend. The existing theme loader is still needed for
+unmigrated screens. No replacement is enabled in normal builds by default.
+
 ## AI assistance and human responsibility
 
 We use AI reviews to help maintainers keep up with a fast pace of development
