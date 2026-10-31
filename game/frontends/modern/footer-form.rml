@@ -1,0 +1,10 @@
+<template name="footer-form">
+<head></head>
+<body>
+  <span class="where" bind-text="form.whereami" />
+  <img class="legend-icon navigation-icon" src="../../themes/Modern/[button]navi.png" />
+  <span class="legend navigation" lang="SING_LEGEND_NAVIGATE" />
+  <img class="legend-icon settings-select-icon" src="../../themes/Modern/[button]esc.png" />
+  <span class="legend settings-select" lang="SING_LEGEND_ESC" />
+</body>
+</template>

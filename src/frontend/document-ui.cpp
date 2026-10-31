@@ -2,6 +2,7 @@
 // The C boundary keeps RmlUi's C++ objects out of the Pascal game.
 #include <RmlUi/Core.h>
 #include "RmlUi_Renderer_GL3.h"
+#include "document-model.h"
 #include <SDL.h>
 #include <SDL_image.h>
 #include <lunasvg.h>
@@ -78,6 +79,8 @@ struct Binding { Rml::Element* element; std::string attribute; };
 static std::unordered_map<std::string, std::vector<Binding>> bindings;
 static std::vector<Rml::Element*> controls;
 static std::string pending_action;
+static std::string pending_target;
+static std::string focused_target;
 static bool initialized;
 static std::vector<Rml::byte> font_data;
 static std::vector<Rml::byte> bold_font_data;
@@ -86,9 +89,14 @@ class Actions final : public Rml::EventListener {
 public:
     void ProcessEvent(Rml::Event& event) override {
         // Queue actions. Never destroy a document while RmlUi is dispatching an event.
-        if (auto* element = event.GetCurrentElement()) {
+        auto* element = event.GetTargetElement();
+        while (element && !element->HasAttribute("action")) element = element->GetParentNode();
+        if (element) {
             if (event.GetId() == Rml::EventId::Click)
+            {
                 pending_action = element->GetAttribute<Rml::String>("action", "");
+                pending_target = element->GetAttribute<Rml::String>("target", "");
+            }
             else {
                 if (event.GetId() == Rml::EventId::Mouseover && context->GetFocusElement() != element)
                     element->Focus();
@@ -115,9 +123,6 @@ static void bind_tree(Rml::Element* element) {
         if (!name.empty()) bindings[name].push_back({element, attribute});
     }
     if (element->HasAttribute("action")) {
-        element->AddEventListener(Rml::EventId::Click, &actions);
-        element->AddEventListener(Rml::EventId::Focus, &actions);
-        element->AddEventListener(Rml::EventId::Mouseover, &actions);
         controls.push_back(element);
     }
     for (int i = 0; i < element->GetNumChildren(); ++i) bind_tree(element->GetChild(i));
@@ -125,13 +130,14 @@ static void bind_tree(Rml::Element* element) {
 
 UI_EXPORT const char* ui_error() { return last_error.c_str(); }
 UI_EXPORT void ui_close_document() {
-    bindings.clear(); controls.clear(); pending_action.clear();
+    bindings.clear(); controls.clear(); pending_action.clear(); pending_target.clear();
     if (document) { document->Close(); document = nullptr; context->Update(); }
 }
 UI_EXPORT void ui_shutdown() {
     if (!initialized) return;
     ui_close_document();
     Rml::Shutdown();
+    DocumentModel::Reset();
     context = nullptr; renderer.reset(); font_data.clear(); bold_font_data.clear(); RmlGL3::Shutdown(); initialized = false;
 }
 UI_EXPORT int ui_initialize(Translate translator, Log logger, const char* font, const char* bold_font) {
@@ -145,6 +151,7 @@ UI_EXPORT int ui_initialize(Translate translator, Log logger, const char* font, 
     if (!Rml::Initialise()) { last_error = "RmlUi initialization failed"; renderer.reset(); return 0; }
     initialized = true;
     context = Rml::CreateContext("usce", {800, 600});
+    if (context && !DocumentModel::Initialize(context)) { last_error = "Data model initialization failed"; ui_shutdown(); return 0; }
     std::ifstream file(std::filesystem::u8path(font), std::ios::binary);
     font_data.assign(std::istreambuf_iterator<char>(file), {});
     if (!context || font_data.empty() || !Rml::LoadFontFace(font_data, "ui", Rml::Style::FontStyle::Normal)) {
@@ -163,11 +170,15 @@ UI_EXPORT int ui_open(const char* filename) {
     document = context->LoadDocument(filename);
     if (!document) { last_error = std::string("Cannot load frontend document: ") + filename; return 0; }
     bind_tree(document);
+    document->AddEventListener(Rml::EventId::Click, &actions);
+    document->AddEventListener(Rml::EventId::Focus, &actions, true);
+    document->AddEventListener(Rml::EventId::Mouseover, &actions);
     document->Show(); context->Update();
     if (!controls.empty()) controls.front()->Focus();
     return 1;
 }
 UI_EXPORT void ui_set(const char* name, const char* value) {
+    DocumentModel::Set(name, value);
     const auto found = bindings.find(name);
     if (found == bindings.end()) return; // Optional elements need no game-side defaults.
     for (const auto& binding : found->second) {
@@ -184,7 +195,24 @@ UI_EXPORT void ui_render(int width, int height, int foreground_only) {
     renderer->BeginFrame(); context->Render(); renderer->EndFrame();
 }
 UI_EXPORT const char* ui_action() { return pending_action.c_str(); }
-UI_EXPORT void ui_clear_action() { pending_action.clear(); }
+UI_EXPORT const char* ui_action_target() { return pending_target.c_str(); }
+UI_EXPORT const char* ui_focused_target() {
+    auto* element = context ? context->GetFocusElement() : nullptr;
+    focused_target = element ? element->GetAttribute<Rml::String>("target", "") : "";
+    return focused_target.c_str();
+}
+UI_EXPORT void ui_clear_action() { pending_action.clear(); pending_target.clear(); }
+UI_EXPORT void ui_model_set(const char* name, const char* value, int type) { DocumentModel::Set(name, value, type); }
+UI_EXPORT void ui_model_array(const char* name, int count) { DocumentModel::Array(name, count); }
+UI_EXPORT void ui_focus(const char* id) {
+    if (!document) return;
+    context->Update();
+    if (auto* element = document->GetElementById(id)) {
+        if (context->GetFocusElement() == element) return;
+        element->Focus();
+        element->ScrollIntoView({Rml::ScrollAlignment::Nearest, Rml::ScrollAlignment::Nearest});
+    }
+}
 UI_EXPORT void ui_mouse(int x, int y, int button, int down) {
     if (!document) return;
     context->ProcessMouseMove(x, y, 0);
@@ -194,9 +222,11 @@ UI_EXPORT void ui_mouse(int x, int y, int button, int down) {
     }
 }
 UI_EXPORT void ui_key(int key) {
-    if (!document || controls.empty()) return;
+    if (!document) return;
     // Navigate actual document geometry, independent of screen roles or button counts.
     context->Update();
+    controls.clear(); document->QuerySelectorAll(controls, "[action]");
+    if (controls.empty()) return;
     auto it = std::find(controls.begin(), controls.end(), context->GetFocusElement());
     int index = it == controls.end() ? 0 : int(it - controls.begin());
     if (key != 0) {
@@ -218,5 +248,8 @@ UI_EXPORT void ui_key(int key) {
             if (score < best) { best = score; next = candidate; }
         }
         if (next) next->Focus();
-    } else if (key == 0) pending_action = controls[index]->GetAttribute<Rml::String>("action", "");
+    } else if (key == 0) {
+        pending_action = controls[index]->GetAttribute<Rml::String>("action", "");
+        pending_target = controls[index]->GetAttribute<Rml::String>("target", "");
+    }
 }

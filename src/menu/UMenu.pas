@@ -46,6 +46,8 @@ uses
   UMenuStatic,
   UMenuText,
   UMenuWidget,
+  UDocumentUI,
+  UOptionModel,
   UMusic,
   URenderer,
   UThemes;
@@ -225,7 +227,13 @@ type
   end;
 
 TOptionsMenu = class(TMenu)
+  private
+    DocumentUI: TDocumentUI;
+    Fields: array of TOptionModel;
+    function AddField(const Key: UTF8String; Kind: TOptionKind): integer;
+    procedure SyncDocument;
   protected
+    DocumentRole: string;
     YNextWidget: integer; // Y coordinate of the next settings widget in the menu
     Description: AnsiString;
     WhereAmI:    AnsiString;
@@ -235,11 +243,20 @@ TOptionsMenu = class(TMenu)
     function AddSelectSlide(const Text: UTF8String; var Data: integer; const Values: array of UTF8String): integer; overload;
     function AddButton(const Text: UTF8String): integer; overload;
     procedure AddSection(const Text: UTF8String);
+    procedure UpdateSelectSlideOptions(SelectNum: integer; const Values: array of UTF8String; var Data: integer);
 
   public
     destructor Destroy; override;
     constructor Create; overload; override;
     function DrawFG: boolean; override;
+    function Draw: boolean; override;
+    function DrawBG: boolean; override;
+    function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
+    procedure SetInteraction(Num: integer); override;
+    procedure InteractNext; override;
+    procedure InteractPrev; override;
+    procedure InteractInc; override;
+    procedure InteractDec; override;
 end;
 
 function RGBFloatToInt(R, G, B: double): cardinal;
@@ -2237,7 +2254,10 @@ begin
 end;
 
 destructor TOptionsMenu.Destroy;
+var I: integer;
 begin
+  DocumentUI.Free;
+  for I := 0 to High(Fields) do Fields[I].Free;
   inherited;
 end;
 
@@ -2258,6 +2278,16 @@ var
   ThemeText: TThemeText;
   ThemeButtonBack: TThemeButton;
 begin
+  if DocumentRole <> '' then DocumentUI := TDocumentUI.Open(DocumentRole, uiFormFields);
+  if DocumentUI <> nil then
+  begin
+    DocumentUI.SetValue(uiFormDescription, Description);
+    DocumentUI.SetValue(uiFormWhereAmI, WhereAmI);
+    LoadWidgets;
+    AddField('SING_OPTIONS_EXIT', okButton);
+    Interaction := 0;
+    Exit;
+  end;
   LoadFromTheme(Theme.OptionsSub);
   LoadLegend;
   // Add Description and WhereAmI texts (customized per subclass)
@@ -2308,6 +2338,12 @@ var
   SelectS: TSelectSlide;
   ThemeSelect: TThemeSelectSlide;
 begin
+  if DocumentUI <> nil then
+  begin
+    Result := AddField(Text, okSelect);
+    Fields[Result].Bind(Data, Values);
+    Exit;
+  end;
   ThemeSelect := Theme.OptionsSub.SelectS;
   ThemeSelect.Text := Language.Translate(Text);
   ThemeSelect.Y := YNextWidget;
@@ -2325,6 +2361,7 @@ var
   But: TThemeButton;
   NumWidgets: integer;
 begin
+  if DocumentUI <> nil then Exit(AddField(Text, okButton));
   But := Theme.OptionsSub.Button;
   But.Y := YNextWidget;
   if (Length(But.Text) > 0) then
@@ -2341,8 +2378,122 @@ procedure TOptionsMenu.AddSection(const Text: UTF8String);
 var
   ButtonIndex: integer;
 begin
+  if DocumentUI <> nil then
+  begin
+    AddField(Text, okSection);
+    Exit;
+  end;
   ButtonIndex := AddButton(Text);
   Button[ButtonIndex].Selectable := false;
+end;
+
+function TOptionsMenu.AddField(const Key: UTF8String; Kind: TOptionKind): integer;
+begin
+  Result := Length(Fields);
+  SetLength(Fields, Result + 1);
+  Fields[Result] := TOptionModel.Create(Key, Kind);
+  if Kind = okSelect then AddInteraction(iSelectS, Result)
+  else AddInteraction(iButton, Result);
+end;
+
+procedure TOptionsMenu.UpdateSelectSlideOptions(SelectNum: integer; const Values: array of UTF8String; var Data: integer);
+begin
+  if DocumentUI = nil then inherited UpdateSelectSlideOptions(SelectNum, Values, Data)
+  else if (SelectNum >= 0) and (SelectNum < Length(Fields)) then Fields[SelectNum].Bind(Data, Values);
+end;
+
+procedure TOptionsMenu.SetInteraction(Num: integer);
+begin
+  if DocumentUI = nil then inherited SetInteraction(Num)
+  else if (Num >= 0) and (Num < Length(Fields)) and (Fields[Num].Kind <> okSection) then SelInteraction := Num;
+end;
+
+procedure TOptionsMenu.InteractNext;
+var I, Next: integer;
+begin
+  if DocumentUI = nil then begin inherited; Exit; end;
+  for I := 1 to Length(Fields) do
+  begin
+    Next := (SelInteraction + I) mod Length(Fields);
+    if Fields[Next].Kind <> okSection then begin Interaction := Next; Exit; end;
+  end;
+end;
+
+procedure TOptionsMenu.InteractPrev;
+var I, Previous: integer;
+begin
+  if DocumentUI = nil then begin inherited; Exit; end;
+  for I := 1 to Length(Fields) do
+  begin
+    Previous := (SelInteraction + Length(Fields) - I) mod Length(Fields);
+    if Fields[Previous].Kind <> okSection then begin Interaction := Previous; Exit; end;
+  end;
+end;
+
+procedure TOptionsMenu.InteractInc;
+begin
+  if DocumentUI = nil then begin inherited; Exit; end;
+  if (Interaction >= 0) and (Interaction < Length(Fields)) and (Fields[Interaction].Kind = okSelect) then
+    Fields[Interaction].Selected := Fields[Interaction].Selected + 1;
+end;
+
+procedure TOptionsMenu.InteractDec;
+begin
+  if DocumentUI = nil then begin inherited; Exit; end;
+  if (Interaction >= 0) and (Interaction < Length(Fields)) and (Fields[Interaction].Kind = okSelect) then
+    Fields[Interaction].Selected := Fields[Interaction].Selected - 1;
+end;
+
+procedure TOptionsMenu.SyncDocument;
+var I: integer; Prefix: UTF8String;
+begin
+  DocumentUI.SetArray(uiFormFields, Length(Fields) - 1);
+  for I := 0 to High(Fields) - 1 do
+  begin
+    Prefix := uiFormFields + '[' + IntToStr(I) + '].';
+    DocumentUI.SetModel(Prefix + 'id', IntToStr(I), 1);
+    DocumentUI.SetModel(Prefix + 'label', Language.Translate(Fields[I].Key));
+    DocumentUI.SetModel(Prefix + 'value', Fields[I].CurrentText);
+    DocumentUI.SetModel(Prefix + 'kind', IntToStr(Ord(Fields[I].Kind)), 1);
+    DocumentUI.SetModel(Prefix + 'selected', IntToStr(Ord(I = Interaction)), 2);
+    DocumentUI.SetModel(Prefix + 'previous', IntToStr(Ord(Fields[I].Selected > 0)), 2);
+    DocumentUI.SetModel(Prefix + 'next', IntToStr(Ord(Fields[I].Selected < High(Fields[I].Values))), 2);
+  end;
+  DocumentUI.SetModel('form.backSelected', IntToStr(Ord(Interaction = High(Fields))), 2);
+  if Interaction = High(Fields) then DocumentUI.Focus('form-back')
+  else DocumentUI.Focus('field-' + IntToStr(Interaction));
+end;
+
+function TOptionsMenu.Draw: boolean;
+begin
+  if DocumentUI = nil then Exit(inherited Draw);
+  SyncDocument;
+  Result := DocumentUI.Draw;
+end;
+
+function TOptionsMenu.DrawBG: boolean;
+begin
+  if DocumentUI = nil then Result := inherited DrawBG
+  else Result := DocumentUI.Draw(true);
+end;
+
+function TOptionsMenu.ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
+var Action: UTF8String; Target: integer;
+begin
+  if DocumentUI = nil then Exit(inherited ParseMouse(MouseButton, BtnDown, X, Y));
+  Result := true;
+  if RightMbESC and (MouseButton = SDL_BUTTON_RIGHT) and BtnDown then
+    Exit(ParseInput(SDLK_ESCAPE, 0, true));
+  if MouseButton = SDL_BUTTON_LEFT then DocumentUI.Mouse(X, Y, 0, BtnDown)
+  else DocumentUI.Mouse(X, Y);
+  Action := DocumentUI.TakeAction;
+  if TryStrToInt(DocumentUI.FocusedTarget, Target) then Interaction := Target;
+  if Action = uiNavigationBack then Exit(ParseInput(SDLK_ESCAPE, 0, true));
+  if not TryStrToInt(DocumentUI.ActionTarget, Target) or (Target < 0) or (Target >= Length(Fields)) then Exit;
+  Interaction := Target;
+  if Action = uiFormIncrement then Result := ParseInput(SDLK_RIGHT, 0, true)
+  else if Action = uiFormDecrement then Result := ParseInput(SDLK_LEFT, 0, true)
+  else if Action = uiFormActivate then Result := ParseInput(SDLK_RETURN, 0, true);
 end;
 
 function TOptionsMenu.DrawFG;

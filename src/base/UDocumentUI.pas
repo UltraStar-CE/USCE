@@ -26,14 +26,25 @@ const
   uiSettingsNetwork = 'settings.network.open';
   uiSettingsWebcam = 'settings.webcam.open';
   uiNavigationBack = 'navigation.back';
+  uiFormFields = 'form.fields';
+  uiFormDescription = 'form.description';
+  uiFormWhereAmI = 'form.whereami';
+  uiFormIncrement = 'form.increment';
+  uiFormDecrement = 'form.decrement';
+  uiFormActivate = 'form.activate';
+  uiScreenSettingsGame = 'settings-game';
+  uiScreenSettingsGraphics = 'settings-graphics';
+  uiScreenSettingsInput = 'settings-input';
+  uiScreenSettingsAdvanced = 'settings-advanced';
 type
   TDocumentUI = class
   private
     FileName: UTF8String;
     Values: TStringList;
+    LastActionTarget: UTF8String;
     function Activate: boolean;
   public
-    class function Open(const ScreenName: string): TDocumentUI;
+    class function Open(const ScreenName: string; const ArrayBinding: UTF8String = ''): TDocumentUI;
     constructor Create(const AFileName: UTF8String);
     destructor Destroy; override;
     procedure SetValue(const Name, Value: UTF8String);
@@ -42,6 +53,11 @@ type
     procedure Mouse(X, Y: integer; Button: integer = -1; Down: boolean = false);
     procedure Key(Direction: integer);
     function TakeAction: UTF8String;
+    function FocusedTarget: UTF8String;
+    procedure SetModel(const Name, Value: UTF8String; ValueType: integer = 0);
+    procedure SetArray(const Name: UTF8String; Count: integer);
+    procedure Focus(const ID: UTF8String);
+    property ActionTarget: UTF8String read LastActionTarget;
   end;
 procedure ShutdownDocumentUI;
 implementation
@@ -60,6 +76,10 @@ var
   ProcessMouse: procedure(X, Y, Button, Down: integer); cdecl;
   ProcessKey: procedure(Direction: integer); cdecl;
   GetAction: function: PAnsiChar; cdecl;
+  GetActionTarget, GetFocusedTarget: function: PAnsiChar; cdecl;
+  SetModelValue: procedure(Name, Value: PAnsiChar; ValueType: integer); cdecl;
+  SetModelArray: procedure(Name: PAnsiChar; Count: integer); cdecl;
+  FocusElement: procedure(ID: PAnsiChar); cdecl;
   ClearAction, Shutdown: procedure; cdecl;
   GetError: function: PAnsiChar; cdecl;
 
@@ -106,6 +126,11 @@ begin
     @ProcessMouse := Symbol('ui_mouse');
     @ProcessKey := Symbol('ui_key');
     @GetAction := Symbol('ui_action');
+    @GetActionTarget := Symbol('ui_action_target');
+    @GetFocusedTarget := Symbol('ui_focused_target');
+    @SetModelValue := Symbol('ui_model_set');
+    @SetModelArray := Symbol('ui_model_array');
+    @FocusElement := Symbol('ui_focus');
     @ClearAction := Symbol('ui_clear_action');
     @GetError := Symbol('ui_error');
     Result := Initialize(@TranslateKey, @FrontendLog, PAnsiChar(Font), PAnsiChar(BoldFont)) <> 0;
@@ -117,7 +142,7 @@ begin
   if not Result then ShutdownDocumentUI;
 end;
 
-class function TDocumentUI.Open(const ScreenName: string): TDocumentUI;
+class function TDocumentUI.Open(const ScreenName: string; const ArrayBinding: UTF8String): TDocumentUI;
 var Root, DocumentFile, Font, BoldFont: UTF8String; Manifest: TMemIniFile;
 begin
   Result := nil;
@@ -139,6 +164,7 @@ begin
     Manifest.Free;
   end;
   if not FileExists(DocumentFile) or not LoadRuntime(Font, BoldFont) then Exit;
+  if ArrayBinding <> '' then SetModelArray(PAnsiChar(ArrayBinding), 0);
   Result := TDocumentUI.Create(DocumentFile);
   if not Result.Activate then FreeAndNil(Result);
 end;
@@ -208,6 +234,28 @@ begin
   Result := '';
   if not Activate then Exit;
   Result := UTF8String(GetAction());
+  LastActionTarget := UTF8String(GetActionTarget());
   ClearAction();
+end;
+
+function TDocumentUI.FocusedTarget: UTF8String;
+begin
+  Result := '';
+  if Current = Self then Result := UTF8String(GetFocusedTarget());
+end;
+
+procedure TDocumentUI.SetModel(const Name, Value: UTF8String; ValueType: integer);
+begin
+  if Activate then SetModelValue(PAnsiChar(Name), PAnsiChar(Value), ValueType);
+end;
+
+procedure TDocumentUI.SetArray(const Name: UTF8String; Count: integer);
+begin
+  if Activate then SetModelArray(PAnsiChar(Name), Count);
+end;
+
+procedure TDocumentUI.Focus(const ID: UTF8String);
+begin
+  if Activate then FocusElement(PAnsiChar(ID));
 end;
 end.

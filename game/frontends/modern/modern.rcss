@@ -58,3 +58,31 @@ button:focus span { font-weight: bold; }
 .reflection-clip .legend, .reflection-clip .status, .reflection-clip .version { top: 0.555556vh; height: 3vh; transform: scaleY(-1); }
 .reflection-clip .legend-icon { top: 0; transform: translateX(-50%) scaleY(-1); }
 .reflection-clip .where { visibility: hidden; }
+.settings-form .heading { left: 8.75vw; top: 1.166667vh; }
+.settings-form .heading-icon { left: 5vw; top: 3.666667vh; }
+.settings-form .description { left: 8.75vw; top: 10.466667vh; }
+.settings-form .where { font-size: 2.25vh; }
+.form-area { position: absolute; left: 6.125vw; top: 21.666667vh; width: 87.25vw; }
+.form-fields { width: 100%; max-height: 52.5vh; overflow-y: auto; overflow-x: hidden; }
+.form-fields scrollbarvertical { width: 1vw; }
+.form-fields scrollbarvertical sliderbar { background-color: #dfdfdf; }
+.form-fields scrollbarvertical slidertrack { background-color: transparent; }
+.form-row { display: flex; width: 82.5vw; height: 5.833333vh; margin-left: 2.625vw; margin-bottom: 0.833333vh; }
+.form-row:last-child { margin-bottom: 0; }
+.form-row button { height: 5.833333vh; font-size: 3.75vh; flex-shrink: 0; }
+.form-row button span { margin-top: 0.5vh; }
+.form-label { width: 31.25vw; text-align: left; padding-left: 2.5vw; }
+.form-row.selected .form-label { background-color: #7ec5eae6; font-weight: bold; }
+.form-value { display: flex; margin-left: 1.25vw; width: 50vw; height: 5.833333vh; background-color: #42a3e7e6; }
+.form-value button { background-color: transparent; }
+.form-current { width: 45vw; text-align: center; }
+.form-previous, .form-next { width: 2.5vw; visibility: hidden; }
+.form-previous.available, .form-next.available { visibility: visible; }
+.form-previous svg, .form-next svg { position: absolute; width: 100%; height: 100%; opacity: 1; }
+.form-row.selected .form-current { font-weight: bold; }
+.form-row.selected .form-value { background-color: #7ec5eae6; }
+.form-row.command .form-value, .form-row.section .form-value { display: none; }
+.form-row.command .form-label, .form-row.section .form-label { width: 82.5vw; text-align: center; padding-left: 0; }
+.form-back { width: 31.25vw; height: 5.833333vh; margin-left: 2.625vw; margin-top: 2.083333vh; font-size: 3.75vh; text-align: left; padding-left: 2.5vw; }
+.form-back span { margin-top: 0.5vh; }
+.form-back.selected { background-color: #7ec5eae6; font-weight: bold; }

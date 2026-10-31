@@ -15,6 +15,11 @@ void ui_set(const char*, const char*);
 void ui_render(int, int, int);
 void ui_mouse(int, int, int, int);
 void ui_key(int);
+void ui_model_set(const char*, const char*, int);
+void ui_model_array(const char*, int);
+void ui_focus(const char*);
+const char* ui_focused_target();
+const char* ui_action_target();
 const char* ui_action();
 void ui_clear_action();
 void ui_shutdown();
@@ -23,8 +28,9 @@ static void require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
 static const char* translate(const char* key) { return key; }
+static int warnings = 0;
 static void log(int level, const char* message) {
-    if (level <= 3) std::cerr << message << '\n';
+    if (level <= 3) { ++warnings; std::cerr << message << '\n'; }
 }
 static std::string utf8(const std::filesystem::path& path) {
     const auto text = path.u8string();
@@ -49,6 +55,7 @@ int main(int argc, char** argv) {
         const auto main_document = utf8(root / "frontends/modern/main.rml");
         const auto loading_document = utf8(root / "frontends/modern/loading.rml");
         const auto settings_document = utf8(root / "frontends/modern/settings.rml");
+        const auto form_document = utf8(root / "frontends/modern/settings-form.rml");
         for (int cycle = 0; cycle < 2; ++cycle) {
             require(ui_initialize(translate, log, font.c_str(), bold.c_str()) != 0, "Frontend initialization");
             require(ui_open(main_document.c_str()) != 0, "Main document");
@@ -97,9 +104,39 @@ int main(int argc, char** argv) {
             ui_set("loading.progress", "0.5");
             ui_set("optional.missing", "ignored");
             ui_render(1280, 720, 0); ui_render(1680, 720, 0);
+            ui_model_array("form.fields", 2);
+            for (int index = 0; index < 2; ++index) {
+                const auto prefix = "form.fields[" + std::to_string(index) + "].";
+                ui_model_set((prefix+"id").c_str(), std::to_string(index).c_str(), 1);
+                ui_model_set((prefix+"label").c_str(), "Test option", 0);
+                ui_model_set((prefix+"value").c_str(), "Value", 0);
+                ui_model_set((prefix+"kind").c_str(), "0", 1);
+                ui_model_set((prefix+"selected").c_str(), index == 0 ? "1" : "0", 2);
+                ui_model_set((prefix+"previous").c_str(), "0", 2);
+                ui_model_set((prefix+"next").c_str(), "1", 2);
+            }
+            require(ui_open(form_document.c_str()) != 0, "Repeated form document");
+            ui_render(1280, 720, 0);
+            ui_focus("field-0");
+            require(std::string(ui_focused_target()) == "0", "Repeated field binding");
+            ui_mouse(1152, 177, 0, 1); ui_mouse(1152, 177, 0, 0);
+            require(std::string(ui_action()) == "form.increment" && std::string(ui_action_target()) == "0", "Repeated field action argument");
+            ui_clear_action();
+            ui_model_array("form.fields", 1);
+            ui_model_set("form.fields[0].label", "Changed <label> & value", 0);
+            ui_render(1280, 720, 0);
+            ui_focus("field-0");
+            ui_key(0);
+            require(std::string(ui_action()) == "form.activate" && std::string(ui_action_target()) == "0", "Collection resize preserved surviving field actions");
+            ui_clear_action();
+            ui_model_array("form.fields", 0);
+            ui_render(1280, 720, 0);
+            ui_focus("form-back"); ui_key(0);
+            require(std::string(ui_action()) == "navigation.back", "Empty collection preserved document controls");
             ui_shutdown();
         }
         SDL_GL_DeleteContext(gl_context); SDL_DestroyWindow(window); SDL_Quit();
+        require(warnings == 0, "Frontend emitted parser or binding diagnostics");
         std::cout << "Frontend lifecycle, bindings, input, resizing and transition capture passed\n";
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n'; return 1;
