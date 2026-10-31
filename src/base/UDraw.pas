@@ -865,8 +865,8 @@ begin
   else
     LyricEngine := ScreenSing.Lyrics;
 
-  BarHeight := Min(DefaultBarHeight, LyricEngine.UpperLineH * 0.85);
-  BarWidth := DefaultBarWidth * BarHeight / DefaultBarHeight;
+  BarHeight := Min(Theme.Sing.HelperHeight, LyricEngine.UpperLineH * 0.85);
+  BarWidth := Theme.Sing.HelperWidth * BarHeight / Theme.Sing.HelperHeight;
   LyricEngine.FontFamily := Ini.LyricsFont;
   LyricEngine.FontStyle  := Ini.LyricsStyle;
 
@@ -945,6 +945,7 @@ begin
         Tex_Lyric_Help_Bar.ColG := Theme.Sing.LyricActive.G;
         Tex_Lyric_Help_Bar.ColB := Theme.Sing.LyricActive.B;
       end;
+      Tex_Lyric_Help_Bar.CornerRadius := Theme.Sing.HelperRadius;
       Renderer.DrawTexture(Tex_Lyric_Help_Bar);
     end;
   end;

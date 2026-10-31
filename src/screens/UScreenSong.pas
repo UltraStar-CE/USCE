@@ -1738,6 +1738,18 @@ var
     Btn: Integer;
 begin
   Result := true;
+  if Theme.Song.Cover.FlatStrip and BtnDown and (MouseButton = SDL_BUTTON_LEFT) then
+  begin
+    for I := 0 to High(Button) do
+      if Button[I].Visible and InRegion(X, Y, GetSongButtonMouseOverArea(I)) then
+      begin
+        if I = Interaction then ParseInput(SDLK_RETURN, 0, true)
+        else begin OnSongDeSelect; Interaction := I; FixSelected; SetScrollRefresh; end;
+        Exit;
+      end;
+    Exit;
+  end;
+
 
   if (BtnDown) then
   begin
@@ -2242,6 +2254,7 @@ begin
     if (CoverButton = nil) then
       Continue;
 
+    CoverButton.DeselectInt := Theme.Song.Cover.InactiveBrightness;
     // Covers must fill their themed slots without distorting the artwork.
     CoverButton.Texture.ScaleMode := Theme.Song.Cover.ScaleMode;
     CoverButton.DeSelectTexture.ScaleMode := Theme.Song.Cover.ScaleMode;
@@ -2467,8 +2480,32 @@ var
   VS:     integer;
   Padding:     real;
   X,AutoWidthCorrection:        real;
+  First, Slot: integer;
+  Zoom: real;
 begin
   VS := CatSongs.VisibleSongs();
+
+  if Theme.Song.Cover.FlatStrip then
+  begin
+    First := (Max(0, CatSongs.VisibleIndex(Interaction)) div Max(1, Theme.Song.Cover.Cols)) * Max(1, Theme.Song.Cover.Cols);
+    for B := 0 to High(Button) do
+    begin
+      Slot := CatSongs.VisibleIndex(B) - First;
+      Button[B].Visible := CatSongs.Song[B].Visible and (Slot >= 0) and (Slot < Max(1, Theme.Song.Cover.Cols));
+      if not Button[B].Visible then begin UnLoadCover(B); Continue; end;
+      LoadCover(B);
+      Zoom := 1;
+      if B = Interaction then Zoom := Theme.Song.Cover.SelectedScale;
+      Button[B].W := Theme.Song.Cover.W * Zoom;
+      Button[B].H := Theme.Song.Cover.H * Zoom;
+      Button[B].X := Theme.Song.Cover.X + Slot * (Theme.Song.Cover.W + Theme.Song.Cover.Padding) - (Button[B].W - Theme.Song.Cover.W) / 2;
+      Button[B].Y := Theme.Song.Cover.Y - (Button[B].H - Theme.Song.Cover.H) / 2;
+      Button[B].Z := 0.9;
+      Button[B].Texture.Alpha := 1;
+      Button[B].Reflection := Theme.Song.Cover.Reflections;
+    end;
+    Exit;
+  end;
 
   //calculate Auto-Width-Correction
   AutoWidthCorrection:= (UGraphic.RenderH/UGraphic.ScreenH)*(UGraphic.ScreenW/UGraphic.RenderW); //ToDo basisbit: width for 2-screen-setup
@@ -2564,6 +2601,7 @@ var
   Z, Z2:  real;
   VS:     integer;
 begin
+  if Theme.Song.Cover.FlatStrip then begin SetRouletteScroll; Exit; end;
   VS := CatSongs.VisibleSongs();
 
   for B := 0 to High(Button) do

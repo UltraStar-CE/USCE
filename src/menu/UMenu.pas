@@ -1053,6 +1053,8 @@ begin
   Button[Result].BackgroundAlpha := ThemeButton.Alpha;
   Button[Result].Texture.Alpha := ThemeButton.Alpha;
   Button[Result].DeSelectTexture.Alpha := ThemeButton.Alpha;
+  Button[Result].Texture.CornerRadius := ThemeButton.CornerRadius;
+  Button[Result].DeSelectTexture.CornerRadius := ThemeButton.CornerRadius;
   Button[Result].Texture.ScaleMode := ThemeButton.ScaleMode;
   Button[Result].DeSelectTexture.ScaleMode := ThemeButton.ScaleMode;
 

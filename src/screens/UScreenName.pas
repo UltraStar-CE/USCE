@@ -98,7 +98,7 @@ type
       APlayerColor: array of integer;
 
       PlayerAvatarButton: array of integer;
-      CardPanel, CardFocus: integer;
+      CardPanel, CardFocus, CardDot, CountChip, CountFocus: integer;
       function SelectedPlayerCount: integer;
       function CardRect(Index: integer): TPlayerSlotRect;
       function DifficultySegmentRect(PlayerID, Segment: integer): TMouseOverRect;
@@ -253,6 +253,46 @@ begin
 
   if Theme.Name.Cards.Enabled and BtnDown and (MouseButton = SDL_BUTTON_LEFT) then
   begin
+    if Theme.Name.Cards.CountChips and (Y >= Theme.Name.Cards.CountY) and
+      (Y < Theme.Name.Cards.CountY + Theme.Name.Cards.CountH) then
+    begin
+      I := (X - Theme.Name.Cards.CountX) div (Theme.Name.Cards.CountW + Theme.Name.Cards.CountGap);
+      if (X >= Theme.Name.Cards.CountX) and (I >= 0) and (I <= Theme.Name.Cards.CountMax + 1) and
+        ((X - Theme.Name.Cards.CountX) mod (Theme.Name.Cards.CountW + Theme.Name.Cards.CountGap) < Theme.Name.Cards.CountW) then
+      begin
+        Btn := I;
+        if PlayerCountOffset = 0 then Inc(Btn);
+        if Btn > Theme.Name.Cards.CountMax then Btn := SelectedPlayerCount;
+        if (Btn >= 1 - PlayerCountOffset) and (Btn <= UIni.IMaxPlayerCount) then
+        begin
+          if Btn = 0 then CountIndex := 0 else CountIndex := Btn - 1 + PlayerCountOffset;
+          SelectsS[PlayersCount].SetSelectOpt(CountIndex);
+          RefreshPlayers; Interaction := PlayersCountIID; SetTextInput(false); Exit;
+        end;
+      end;
+    end;
+    if Theme.Name.Cards.ColorPalette and (SelectedPlayerCount > 0) and (Length(APlayerColor) > 0) and (Y >= Theme.Name.Cards.PaletteY) and
+      (Y < Theme.Name.Cards.PaletteY + Theme.Name.Cards.PaletteSize) and
+      (X >= Theme.Name.Cards.PaletteX) then
+    begin
+      I := (ColorIndex div Theme.Name.Cards.PaletteColumns) * Theme.Name.Cards.PaletteColumns +
+        (X - Theme.Name.Cards.PaletteX) div Theme.Name.Cards.PaletteStep;
+      if X >= Theme.Name.Cards.PaletteX + Theme.Name.Cards.PaletteColumns * Theme.Name.Cards.PaletteStep then
+      begin
+        if X < Theme.Name.Cards.PaletteX + (Theme.Name.Cards.PaletteColumns + 1) * Theme.Name.Cards.PaletteStep then
+        begin
+          I := ((ColorIndex div Theme.Name.Cards.PaletteColumns + 1) * Theme.Name.Cards.PaletteColumns) mod Length(APlayerColor);
+          ColorIndex := I; SelectsS[PlayerColor].SetSelectOpt(I); RefreshColor;
+          Interaction := PlayerColorIID; SetTextInput(false); Exit;
+        end;
+      end
+      else if (I <= High(APlayerColor)) and
+        ((X - Theme.Name.Cards.PaletteX) mod Theme.Name.Cards.PaletteStep < Theme.Name.Cards.PaletteSize) then
+      begin
+        ColorIndex := I; SelectsS[PlayerColor].SetSelectOpt(I); RefreshColor;
+        Interaction := PlayerColorIID; SetTextInput(false); Exit;
+      end;
+    end;
     if Theme.Name.Cards.LevelSegments then
       for I := 0 to 2 do
       begin
@@ -1086,6 +1126,14 @@ begin
     CardFocus := AddStatic(Theme.Name.Cards.Focus);
     Statics[CardPanel].Visible := false;
     Statics[CardFocus].Visible := false;
+    CardDot := -1; CountChip := -1;
+    if Theme.Name.Cards.ColorPalette or Theme.Name.Cards.ColorDots then
+    begin CardDot := AddStatic(Theme.Name.Cards.Dot); Statics[CardDot].Visible := false; end;
+    if Theme.Name.Cards.CountChips then
+    begin
+      CountChip := AddStatic(Theme.Name.Cards.CountChip); Statics[CountChip].Visible := false;
+      CountFocus := AddStatic(Theme.Name.Cards.CountFocus); Statics[CountFocus].Visible := false;
+    end;
   end;
   PlayersCount := AddSelectSlide(Theme.Name.SelectPlayersCount, CountIndex, IPlayers);
   PlayersCountIID := High(Interactions);
@@ -1455,6 +1503,44 @@ var I, First, Last, J: integer;
   SX, SY, AvatarSide: real;
   Panel: TTexture;
   LabelText: UTF8String;
+  AccentColor: TRGB;
+  procedure Dot(X, Y, Size: real; const C: TRGB);
+  var T: TTexture;
+  begin
+    if CardDot < 0 then Exit;
+    T := Statics[CardDot].Texture; T.X := X; T.Y := Y; T.W := Size;
+    T.H := Size * GetLayoutScaleX / Max(0.0001, GetLayoutScaleY);
+    T.ColR := C.R; T.ColG := C.G; T.ColB := C.B; Renderer.DrawTexture(T);
+  end;
+  procedure DrawCountChips;
+  var K, Value, LastValue: integer; T, F: TTexture; S: UTF8String;
+  begin
+    LastValue := Theme.Name.Cards.CountMax;
+    if SelectedPlayerCount > LastValue then Inc(LastValue);
+    for K := 1 - PlayerCountOffset to LastValue do
+    begin
+      Value := K;
+      if K > Theme.Name.Cards.CountMax then Value := SelectedPlayerCount;
+      T := Statics[CountChip].Texture;
+      T.X := Theme.Name.Cards.CountX + (K - 1 + PlayerCountOffset) * (Theme.Name.Cards.CountW + Theme.Name.Cards.CountGap);
+      T.Y := Theme.Name.Cards.CountY; T.W := Theme.Name.Cards.CountW; T.H := Theme.Name.Cards.CountH;
+      if Value = SelectedPlayerCount then
+      begin T.ColR := SelectsS[PlayersCount].SBGColR; T.ColG := SelectsS[PlayersCount].SBGColG; T.ColB := SelectsS[PlayersCount].SBGColB; end;
+      if Value <> SelectedPlayerCount then
+      begin T.ColR := Theme.Name.Cards.CountChip.ColR; T.ColG := Theme.Name.Cards.CountChip.ColG; T.ColB := Theme.Name.Cards.CountChip.ColB; end;
+      Renderer.DrawTexture(T);
+      if Value = SelectedPlayerCount then
+      begin
+        F := Statics[CountFocus].Texture; F.X := T.X - 3; F.Y := T.Y - 3;
+        F.W := T.W + 6; F.H := T.H + 6; Renderer.DrawTexture(F);
+      end;
+      SetFontFamily(ResolveThemeFont(Theme.Name.Cards.CountChipText.FontFile, Theme.Name.Cards.CountChipText.Font));
+      SetFontStyle(Theme.Name.Cards.CountChipText.Style); SetFontSize(Theme.Name.Cards.CountChipText.Size);
+      if Value = SelectedPlayerCount then SetFontColor(0, 0, 0, 1)
+      else with Theme.Name.Cards.CountChipText do SetFontColor(ColR, ColG, ColB, 1);
+      S := IntToStr(Value); SetFontPos(T.X + T.W / 2 - TextWidth(S) / 2, T.Y + (T.H - Theme.Name.Cards.CountChipText.Size) / 2); PrintText(S);
+    end;
+  end;
   procedure Difficulty(PlayerID: integer);
   var K: integer; T: TTexture; C: TRGB; BaseX, BaseY, SegmentW: real;
     Bounds: TMouseOverRect;
@@ -1492,10 +1578,10 @@ var I, First, Last, J: integer;
     Result.G := Theme.Name.PlayerSelectTemplateText.ColG;
     Result.B := Theme.Name.PlayerSelectTemplateText.ColB;
   end;
-  procedure Caption(const Value: UTF8String; X, Y, Size: real; const C: TRGB);
+  procedure Caption(const Value: UTF8String; X, Y, Size: real; const C: TRGB; Style: integer = 0);
   begin
     SetFontFamily(ResolveThemeFont(Theme.Name.Cards.NameText.FontFile, Theme.Name.Cards.NameText.Font));
-    SetFontStyle(0); SetFontItalic(false); SetFontReflection(false, 0);
+    SetFontStyle(Style); SetFontItalic(false); SetFontReflection(false, 0);
     SetFontSize(Max(8, Round(Size * SY)));
     SetFontColor(C.R, C.G, C.B, 1);
     SetFontPos(R.X + X * SX, R.Y + Y * SY);
@@ -1568,9 +1654,19 @@ begin
         R.Y + (Theme.Name.Cards.Avatar.Y + Theme.Name.Cards.Avatar.H / 2 - 10) * SY);
       PrintText(LabelText);
     end;
+    if Theme.Name.Cards.ColorDots and Theme.Name.Cards.EditOutside then
+      Dot(R.X + (Theme.Name.Cards.NameText.X - 10) * SX,
+        R.Y + (Theme.Name.Cards.NameText.Y + 6) * SY, 6 * SX, GetPlayerColor(Num[I]));
+    if Theme.Name.Cards.NameUnderline and (I = PlayerIndex) then
+    begin
+      AccentColor := GetPlayerColor(Num[I]);
+      Renderer.DrawQuad(R.X + (Theme.Name.Cards.NameText.X - 4) * SX,
+          R.Y + (Theme.Name.Cards.NameText.Y + 25) * SY, 0.99,
+          (Theme.Name.Cards.Panel.W - Theme.Name.Cards.NameText.X - 12) * SX, Max(1, SY), AccentColor.R, AccentColor.G, AccentColor.B, 1);
+    end;
     if (I = PlayerIndex) and Theme.Name.Cards.EditOutside then
       Caption(Button[PlayerName].Text[0].Text, Theme.Name.Cards.NameText.X,
-        Theme.Name.Cards.NameText.Y, Theme.Name.Cards.NameText.Size, TextColor);
+        Theme.Name.Cards.NameText.Y, Theme.Name.Cards.NameText.Size, TextColor, Theme.Name.Cards.NameText.Style);
     if I = PlayerIndex then
     begin
       if Theme.Name.Cards.EditOutside then
@@ -1586,7 +1682,7 @@ begin
       PlaceSlide(PlayerColor, Theme.Name.SelectPlayerColor);
       PlaceSlide(PlayerSelectLevel, Theme.Name.SelectPlayerLevel);
       PlaceSlide(PlayerSelectVoice, Theme.Name.SelectPlayerVoice);
-      SelectsS[PlayerColor].Draw;
+      if not Theme.Name.Cards.ColorPalette then SelectsS[PlayerColor].Draw;
       if Theme.Name.Cards.LevelSegments then Difficulty(I)
       else SelectsS[PlayerSelectLevel].Draw;
       if SelectsS[PlayerSelectVoice].Visible then SelectsS[PlayerSelectVoice].Draw;
@@ -1605,10 +1701,14 @@ begin
     else
     begin
       Caption(PlayerNames[I], Theme.Name.Cards.NameText.X, Theme.Name.Cards.NameText.Y,
-        Theme.Name.Cards.NameText.Size, TextColor);
+        Theme.Name.Cards.NameText.Size, TextColor, Theme.Name.Cards.NameText.Style);
       if not Theme.Name.Cards.EditOutside then
       begin
-        Caption(IPlayerColorTranslated[Num[I] - 1], 75, 142, 14, GetPlayerColor(Num[I]));
+        if Theme.Name.Cards.ColorLabels then Caption(SelectsS[PlayerColor].Text.Text, 25, 142, 12, TextColor);
+        if Theme.Name.Cards.ColorDots then Dot(R.X + 70 * SX, R.Y + 145 * SY, 8 * SX, GetPlayerColor(Num[I]));
+        if Theme.Name.Cards.ColorDots or Theme.Name.Cards.ColorLabels then
+          Caption(IPlayerColorTranslated[Num[I] - 1], 85, 142, 14, TextColor)
+        else Caption(IPlayerColorTranslated[Num[I] - 1], 75, 142, 14, GetPlayerColor(Num[I]));
         if Theme.Name.Cards.LevelSegments then Difficulty(I)
         else Caption(IDifficultyTranslated[PlayerLevel[I]], 75, 184, 14, TextColor);
       end;
@@ -1621,13 +1721,31 @@ begin
     Caption(Format('%d-%d / %d', [First + 1, Last + 1, SelectedPlayerCount]),
       0, Theme.Name.Cards.Area.H + 10, 13, TextColor);
   end;
-  SelectsS[PlayersCount].Draw;
+  if Theme.Name.Cards.CountChips then DrawCountChips else SelectsS[PlayersCount].Draw;
   for I := 0 to High(Statics) do
   begin
     J := 0;
     while (J < UIni.IMaxPlayerCount) and (I <> PlayerCurrent[J]) and
       (I <> PlayerCurrentAvatar[J]) do Inc(J);
     if J = UIni.IMaxPlayerCount then Statics[I].Draw;
+  end;
+  if Theme.Name.Cards.ColorPalette and (SelectedPlayerCount > 0) then
+  begin
+    for J := (ColorIndex div Theme.Name.Cards.PaletteColumns) * Theme.Name.Cards.PaletteColumns to
+      Min(High(APlayerColor), (ColorIndex div Theme.Name.Cards.PaletteColumns + 1) * Theme.Name.Cards.PaletteColumns - 1) do
+    begin
+      if J = ColorIndex then Dot(Theme.Name.Cards.PaletteX + (J mod Theme.Name.Cards.PaletteColumns) * Theme.Name.Cards.PaletteStep - 2,
+        Theme.Name.Cards.PaletteY - 2, Theme.Name.Cards.PaletteSize + 4, TextColor);
+      Dot(Theme.Name.Cards.PaletteX + (J mod Theme.Name.Cards.PaletteColumns) * Theme.Name.Cards.PaletteStep,
+        Theme.Name.Cards.PaletteY, Theme.Name.Cards.PaletteSize, GetPlayerColor(APlayerColor[J]));
+    end;
+  end;
+  if Theme.Name.Cards.ColorPalette and (SelectedPlayerCount > 0) and
+    (Length(APlayerColor) > Theme.Name.Cards.PaletteColumns) then
+  begin
+    R.X := 0; R.Y := 0; R.W := 800; SX := 1; SY := 1;
+    Caption('>', Theme.Name.Cards.PaletteX + Theme.Name.Cards.PaletteColumns * Theme.Name.Cards.PaletteStep,
+      Theme.Name.Cards.PaletteY, 16, TextColor);
   end;
   for I := 0 to High(Text) do
   begin
