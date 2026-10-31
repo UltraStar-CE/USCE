@@ -1744,7 +1744,8 @@ begin
       if Button[I].Visible and InRegion(X, Y, GetSongButtonMouseOverArea(I)) then
       begin
         if I = Interaction then ParseInput(SDLK_RETURN, 0, true)
-        else begin OnSongDeSelect; Interaction := I; FixSelected; SetScrollRefresh; end;
+        else if FreeListMode then
+        begin OnSongDeSelect; Interaction := I; FixSelected; SetScrollRefresh; end;
         Exit;
       end;
     Exit;

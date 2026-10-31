@@ -2332,7 +2332,7 @@ begin
       if Sing.HasLanePanel then ThemeLoadStatic(Sing.LanePanel, 'SingLanePanel');
       Sing.LanePanelPadding := EnsureRange(ReadInteger(GetSectionList('SingLanePanel'), 'Padding', 0), 0, 40);
       Sing.LanePanelPaddingX := EnsureRange(ReadInteger(GetSectionList('SingLanePanel'), 'PaddingX', Sing.LanePanelPadding), 0, 40);
-      Sing.HasProgressMarker := ThemeIni.SectionExists('SingProgressMarker');
+      Sing.HasProgressMarker := ResolveThemeFile('SingProgressMarker') <> nil;
       if Sing.HasProgressMarker then ThemeLoadStatic(Sing.ProgressMarker, 'SingProgressMarker');
       SectionList := GetSectionList('SingPlayerGrid');
       Sing.PlayerLayout.ColumnContainerLeft := ReadInteger(SectionList, 'LaneAreaX', 40);
