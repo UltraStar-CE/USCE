@@ -5202,9 +5202,9 @@ begin
         SetDuetSingerVisibility(0);
         for I := 0 to High(ListTextArtist) do
         begin
-          Text[ListTextArtist[I]].Visible := false;
-          Text[ListTextTitle[I]].Visible := false;
-          Text[ListTextYear[I]].Visible := false;
+          Text[ListTextArtist[I]].Text := '';
+          Text[ListTextTitle[I]].Text := '';
+          Text[ListTextYear[I]].Text := '';
           Statics[ListVideoIcon[I]].Visible := false;
           Statics[ListDuetIcon[I]].Visible := false;
         end;
