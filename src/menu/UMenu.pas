@@ -244,6 +244,9 @@ TOptionsMenu = class(TMenu)
     function AddButton(const Text: UTF8String): integer; overload;
     procedure AddSection(const Text: UTF8String);
     procedure UpdateSelectSlideOptions(SelectNum: integer; const Values: array of UTF8String; var Data: integer);
+    function OptionSelected(SelectNum: integer): integer;
+    function OptionCount(SelectNum: integer): integer;
+    procedure SetOptionSelected(SelectNum, Value: integer);
 
   public
     destructor Destroy; override;
@@ -2402,6 +2405,33 @@ begin
   else if (SelectNum >= 0) and (SelectNum < Length(Fields)) then Fields[SelectNum].Bind(Data, Values);
 end;
 
+function TOptionsMenu.OptionSelected(SelectNum: integer): integer;
+begin
+  Result := -1;
+  if DocumentUI <> nil then
+  begin
+    if (SelectNum >= 0) and (SelectNum < Length(Fields)) then Result := Fields[SelectNum].Selected;
+  end
+  else if (SelectNum >= 0) and (SelectNum < Length(SelectsS)) then Result := SelectsS[SelectNum].SelectedOption;
+end;
+
+function TOptionsMenu.OptionCount(SelectNum: integer): integer;
+begin
+  Result := 0;
+  if DocumentUI <> nil then
+  begin
+    if (SelectNum >= 0) and (SelectNum < Length(Fields)) then Result := Length(Fields[SelectNum].Values);
+  end
+  else if (SelectNum >= 0) and (SelectNum < Length(SelectsS)) then Result := Length(SelectsS[SelectNum].TextOptT);
+end;
+
+procedure TOptionsMenu.SetOptionSelected(SelectNum, Value: integer);
+begin
+  if (Value < 0) or (Value >= OptionCount(SelectNum)) then Exit;
+  if DocumentUI <> nil then Fields[SelectNum].Selected := Value
+  else SelectsS[SelectNum].SetSelectOpt(Value);
+end;
+
 procedure TOptionsMenu.SetInteraction(Num: integer);
 begin
   if DocumentUI = nil then inherited SetInteraction(Num)
@@ -2486,6 +2516,11 @@ begin
     Exit(ParseInput(SDLK_ESCAPE, 0, true));
   if MouseButton = SDL_BUTTON_LEFT then DocumentUI.Mouse(X, Y, 0, BtnDown)
   else DocumentUI.Mouse(X, Y);
+  if BtnDown then
+  begin
+    if MouseButton = SDL_BUTTON_WHEELUP then DocumentUI.Scroll(-1)
+    else if MouseButton = SDL_BUTTON_WHEELDOWN then DocumentUI.Scroll(1);
+  end;
   Action := DocumentUI.TakeAction;
   if TryStrToInt(DocumentUI.FocusedTarget, Target) then Interaction := Target;
   if Action = uiNavigationBack then Exit(ParseInput(SDLK_ESCAPE, 0, true));

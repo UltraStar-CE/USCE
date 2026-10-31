@@ -221,6 +221,9 @@ UI_EXPORT void ui_mouse(int x, int y, int button, int down) {
         else context->ProcessMouseButtonUp(button, 0);
     }
 }
+UI_EXPORT void ui_scroll(float delta) {
+    if (context) context->ProcessMouseWheel(delta, 0);
+}
 UI_EXPORT void ui_key(int key) {
     if (!document) return;
     // Navigate actual document geometry, independent of screen roles or button counts.

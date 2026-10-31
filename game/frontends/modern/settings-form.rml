@@ -23,6 +23,7 @@
         </div>
       </div>
       <button id="form-back" class="form-back" action="navigation.back" data-class-selected="data.form.backSelected"><span lang="SING_OPTIONS_EXIT" /></button>
+      <div class="form-back-reflection" data-class-selected="data.form.backSelected"><span lang="SING_OPTIONS_EXIT" /></div>
     </div>
     <svg class="footer" src="footer.svg" />
     <div class="footer-labels"><template src="footer-form" /></div>

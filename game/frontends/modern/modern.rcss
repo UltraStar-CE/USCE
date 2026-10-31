@@ -86,3 +86,7 @@ button:focus span { font-weight: bold; }
 .form-back { width: 31.25vw; height: 5.833333vh; margin-left: 2.625vw; margin-top: 2.083333vh; font-size: 3.75vh; text-align: left; padding-left: 2.5vw; }
 .form-back span { margin-top: 0.5vh; }
 .form-back.selected { background-color: #7ec5eae6; font-weight: bold; }
+
+.form-back-reflection { position: relative; width: 31.25vw; height: 3.333333vh; margin-left: 2.625vw; margin-top: 0.277778vh; overflow: hidden; pointer-events: none; background-color: #42a3e7e6; mask-image: vertical-gradient(#0009 #0000); }
+.form-back-reflection span { position: absolute; top: -2.5vh; display: block; height: 5.833333vh; padding-left: 2.5vw; font-size: 3.75vh; transform: scaleY(-1); }
+.form-back-reflection.selected { background-color: #7ec5eae6; font-weight: bold; }

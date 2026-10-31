@@ -34,6 +34,7 @@ const
   uiFormActivate = 'form.activate';
   uiScreenSettingsGame = 'settings-game';
   uiScreenSettingsGraphics = 'settings-graphics';
+  uiScreenSettingsSound = 'settings-sound';
   uiScreenSettingsInput = 'settings-input';
   uiScreenSettingsAdvanced = 'settings-advanced';
 type
@@ -52,6 +53,7 @@ type
     function Draw(BackgroundOnly: boolean = false): boolean;
     procedure Mouse(X, Y: integer; Button: integer = -1; Down: boolean = false);
     procedure Key(Direction: integer);
+    procedure Scroll(Delta: single);
     function TakeAction: UTF8String;
     function FocusedTarget: UTF8String;
     procedure SetModel(const Name, Value: UTF8String; ValueType: integer = 0);
@@ -75,6 +77,7 @@ var
   Render: procedure(Width, Height, ForegroundOnly: integer); cdecl;
   ProcessMouse: procedure(X, Y, Button, Down: integer); cdecl;
   ProcessKey: procedure(Direction: integer); cdecl;
+  ProcessScroll: procedure(Delta: single); cdecl;
   GetAction: function: PAnsiChar; cdecl;
   GetActionTarget, GetFocusedTarget: function: PAnsiChar; cdecl;
   SetModelValue: procedure(Name, Value: PAnsiChar; ValueType: integer); cdecl;
@@ -125,6 +128,7 @@ begin
     @Render := Symbol('ui_render');
     @ProcessMouse := Symbol('ui_mouse');
     @ProcessKey := Symbol('ui_key');
+    @ProcessScroll := Symbol('ui_scroll');
     @GetAction := Symbol('ui_action');
     @GetActionTarget := Symbol('ui_action_target');
     @GetFocusedTarget := Symbol('ui_focused_target');
@@ -222,6 +226,11 @@ end;
 procedure TDocumentUI.Mouse(X, Y, Button: integer; Down: boolean);
 begin
   if Activate then ProcessMouse(X, Y, Button, Ord(Down));
+end;
+
+procedure TDocumentUI.Scroll(Delta: single);
+begin
+  if Activate then ProcessScroll(Delta);
 end;
 
 procedure TDocumentUI.Key(Direction: integer);
