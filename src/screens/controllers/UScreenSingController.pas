@@ -807,6 +807,13 @@ begin
 
   ScoringTailActive := false;
   RemoteBridgeIPC.ApplyPendingPlayerCount(true);
+  if (ScreenSong.Mode = smNormal) and not Party.bPartyGame then
+  begin
+    // Input loss preserves this song's scores, but must not retain next-song lanes.
+    ScreenName.LoadPlayersFromIni(true);
+    if ScreenContinuousPlayback.Session.Active then
+      ScreenContinuousPlayback.Session.Scored := PlayersPlay > 0;
+  end;
   Log.LogStatus('Begin', 'OnShow');
 
   // Drop any pitch history from the previous song, otherwise the trace would
@@ -2183,9 +2190,14 @@ begin
       // line-bonus points (same for each line, no matter how long the line is)
       LineBonus := MAX_SONG_LINE_BONUS / (Length(CurrentSong.Tracks[Track].Lines) -
         NumEmptySentences[Track]);
+      LineBonus := LineBonus * LinePerfection;
+      if CurrentPlayer.SentenceFinalized[Track][SentenceIndex] and
+         (CurrentPlayer.SentenceBonus[Track][SentenceIndex] = LineBonus) then Continue;
       // apply line-bonus
       CurrentPlayer.ScoreLine :=
-        CurrentPlayer.ScoreLine + LineBonus * LinePerfection;
+        CurrentPlayer.ScoreLine + LineBonus - CurrentPlayer.SentenceBonus[Track][SentenceIndex];
+      CurrentPlayer.SentenceBonus[Track][SentenceIndex] := LineBonus;
+      CurrentPlayer.SentenceFinalized[Track][SentenceIndex] := true;
 
       // spawn rating pop-up
       Rating := Round(LinePerfection * MAX_LINE_RATING);
