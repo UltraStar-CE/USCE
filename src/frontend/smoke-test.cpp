@@ -243,6 +243,65 @@ int main(int argc, char** argv) {
             ui_render(1280, 720, 0);
             glReadPixels(640, 720-420, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
             require(std::abs(int(pixel[0])-blue_background[0]) + std::abs(int(pixel[1])-blue_background[1]) + std::abs(int(pixel[2])-blue_background[2]) > 40, "Skin stylesheet changes artwork");
+            ui_model_set("players.count", "24", 1);
+            ui_model_set("players.countLabel", "24", 0);
+            ui_model_set("players.active", "1", 2);
+            ui_model_set("players.focus", "name", 0);
+            ui_model_set("players.previousCount", "1", 2);
+            ui_model_set("players.nextCount", "0", 2);
+            ui_model_set("players.name", "D", 0);
+            ui_model_set("players.suffix", "aniel", 0);
+            ui_model_set("players.tint", "#008fbe", 0);
+            ui_model_set("players.light", "#91d7f0", 0);
+            ui_model_set("players.color", "Blue", 0);
+            ui_model_set("players.level", "Medium", 0);
+            ui_model_set("players.voices", "1", 2);
+            ui_model_set("players.voice", "Voice 4: Chorus", 0);
+            const auto avatar_image = utf8(root / "themes/Modern/[name]noavatar.png");
+            ui_model_array("players.profiles", 24);
+            for (int i = 0; i < 24; ++i) {
+                const auto prefix = "players.profiles[" + std::to_string(i) + "].";
+                ui_model_set((prefix + "id").c_str(), std::to_string(i).c_str(), 1);
+                ui_model_set((prefix + "name").c_str(), ("Player" + std::to_string(i + 1)).c_str(), 0);
+                ui_model_set((prefix + "avatar").c_str(), avatar_image.c_str(), 0);
+                ui_model_set((prefix + "tint").c_str(), "#008fbe", 0);
+                ui_model_set((prefix + "avatarTint").c_str(), "#008fbe", 0);
+                ui_model_set((prefix + "selected").c_str(), i == 0 ? "1" : "0", 2);
+            }
+            ui_model_array("players.avatars", 5);
+            for (int i = 0; i < 5; ++i) {
+                const auto prefix = "players.avatars[" + std::to_string(i) + "].";
+                ui_model_set((prefix + "slot").c_str(), std::to_string(i).c_str(), 1);
+                ui_model_set((prefix + "id").c_str(), std::to_string(i).c_str(), 1);
+                ui_model_set((prefix + "image").c_str(), avatar_image.c_str(), 0);
+                ui_model_set((prefix + "tint").c_str(), "#008fbe", 0);
+            }
+            const auto players_document = utf8(root / "frontends/modern/players.rml");
+            require(ui_open(players_document.c_str()) != 0, "Player setup document");
+            ui_render(1280, 720, 0);
+            float player_x, player_y, player_w, player_h;
+            require(ui_bounds("profile-frame-23", &player_x, &player_y, &player_w, &player_h) != 0,
+                "Player setup must display all 24 profiles");
+            require(player_y > 270 && player_y < 320, "Compact player grid second row must remain above the avatar editor");
+            // ui_bounds exposes the layout box; pointer hit testing includes CSS transforms.
+            ui_mouse(1190, 305, 0, 1); ui_mouse(1190, 305, 0, 0);
+            require(std::string(ui_action()) == "players.select" && std::string(ui_action_target()) == "23",
+                "The last compact profile must be reachable inside the viewport");
+            ui_clear_action();
+            require(ui_bounds("avatar-reflection-clip-1", &player_x, &player_y, &player_w, &player_h) != 0 && player_h > 60,
+                "Avatar reflection clipping region must have a nonzero height");
+            ui_focus("players-name");
+            require(std::string(ui_focused_target()) == "name", "Name field focus target");
+            ui_mouse(850, 420, 0, 1); ui_mouse(850, 420, 0, 0);
+            require(std::string(ui_action()) == "players.avatar.select", "Neighbor avatar mouse selection");
+            require(std::string(ui_focused_target()) == "avatar", "Avatar action argument must not replace its focus group");
+            ui_clear_action();
+            ui_model_set("players.count", "0", 1);
+            ui_model_set("players.active", "0", 2);
+            ui_model_array("players.profiles", 0);
+            ui_render(1280, 720, 0);
+            require(ui_bounds("players-name", &player_x, &player_y, &player_w, &player_h) == 0,
+                "Lyrics-only setup must hide profile editing");
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
             glDeleteFramebuffers(1, &framebuffer); glDeleteTextures(1, &texture);
             ui_shutdown();

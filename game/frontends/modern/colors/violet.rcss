@@ -16,3 +16,6 @@ button { background-color: #c642e7e6; }
 .footer { decorator: image(violet-footer.svg); }
 .discovery fill { decorator: image(violet-bar-left.svg); }
 .loading fill { decorator: image(violet-bar-right.svg); }
+
+.count-value { background-color: #c642e7e6; }
+.player-count.selected .count-label { background-color: #d97eeae6; }

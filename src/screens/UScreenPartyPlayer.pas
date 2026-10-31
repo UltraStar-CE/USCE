@@ -275,7 +275,7 @@ begin
       Party.AddPlayer(I, Button[I * 5 + 1 + J].Text[0].Text);
 
     // no avatar on Party
-    AvatarPlayerTextures[I + 1] := NoAvatarTexture[I + 1];
+    AvatarPlayerTextures[I + 1] := DefaultAvatarTexture(I);
 
     Col := GetPlayerColor(Num[I]);
 

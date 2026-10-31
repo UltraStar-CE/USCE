@@ -218,7 +218,7 @@ UI_EXPORT const char* ui_action() { return pending_action.c_str(); }
 UI_EXPORT const char* ui_action_target() { return pending_target.c_str(); }
 UI_EXPORT const char* ui_focused_target() {
     auto* element = context ? context->GetFocusElement() : nullptr;
-    focused_target = element ? element->GetAttribute<Rml::String>("target", "") : "";
+    focused_target = element ? element->GetAttribute<Rml::String>("focus-target", element->GetAttribute<Rml::String>("target", "")) : "";
     return focused_target.c_str();
 }
 UI_EXPORT void ui_clear_action() { pending_action.clear(); pending_target.clear(); }
@@ -255,7 +255,7 @@ UI_EXPORT int ui_bounds(const char* id, float* x, float* y, float* width, float*
     if (!document || !id || !x || !y || !width || !height) return 0;
     context->Update();
     auto* element = document->GetElementById(id);
-    if (!element || !element->IsVisible()) return 0;
+    if (!element || !element->IsVisible(true)) return 0;
     const auto offset = element->GetAbsoluteOffset(Rml::BoxArea::Content);
     const auto size = element->GetBox().GetSize(Rml::BoxArea::Content);
     *x = offset.x; *y = offset.y; *width = size.x; *height = size.y;

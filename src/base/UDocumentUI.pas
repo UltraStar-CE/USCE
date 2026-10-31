@@ -4,6 +4,12 @@ unit UDocumentUI;
 interface
 uses Classes, SysUtils;
 const
+  uiScreenPlayers = 'players';
+  uiPlayersContinue = 'players.continue';
+  uiPlayersPrevious = 'players.previous';
+  uiPlayersNext = 'players.next';
+  uiPlayersSelect = 'players.select';
+  uiPlayersAvatarSelect = 'players.avatar.select';
   uiLoadingStatus = 'loading.status';
   uiLoadingDiscovery = 'loading.discovery';
   uiLoadingProgress = 'loading.progress';
