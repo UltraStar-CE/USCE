@@ -34,10 +34,14 @@ const
   uiFormActivate = 'form.activate';
   uiScreenSettingsGame = 'settings-game';
   uiScreenSettingsGraphics = 'settings-graphics';
+  uiScreenSettingsLyrics = 'settings-lyrics';
   uiScreenSettingsSound = 'settings-sound';
   uiScreenSettingsInput = 'settings-input';
   uiScreenSettingsAdvanced = 'settings-advanced';
 type
+  TDocumentRegion = record
+    X, Y, W, H: single;
+  end;
   TDocumentUI = class
   private
     FileName: UTF8String;
@@ -54,6 +58,7 @@ type
     procedure Mouse(X, Y: integer; Button: integer = -1; Down: boolean = false);
     procedure Key(Direction: integer);
     procedure Scroll(Delta: single);
+    function Region(const ID: UTF8String; out Bounds: TDocumentRegion): boolean;
     function TakeAction: UTF8String;
     function FocusedTarget: UTF8String;
     procedure SetModel(const Name, Value: UTF8String; ValueType: integer = 0);
@@ -78,6 +83,7 @@ var
   ProcessMouse: procedure(X, Y, Button, Down: integer); cdecl;
   ProcessKey: procedure(Direction: integer); cdecl;
   ProcessScroll: procedure(Delta: single); cdecl;
+  GetBounds: function(ID: PAnsiChar; out X, Y, W, H: single): integer; cdecl;
   GetAction: function: PAnsiChar; cdecl;
   GetActionTarget, GetFocusedTarget: function: PAnsiChar; cdecl;
   SetModelValue: procedure(Name, Value: PAnsiChar; ValueType: integer); cdecl;
@@ -129,6 +135,7 @@ begin
     @ProcessMouse := Symbol('ui_mouse');
     @ProcessKey := Symbol('ui_key');
     @ProcessScroll := Symbol('ui_scroll');
+    @GetBounds := Symbol('ui_bounds');
     @GetAction := Symbol('ui_action');
     @GetActionTarget := Symbol('ui_action_target');
     @GetFocusedTarget := Symbol('ui_focused_target');
@@ -226,6 +233,19 @@ end;
 procedure TDocumentUI.Mouse(X, Y, Button: integer; Down: boolean);
 begin
   if Activate then ProcessMouse(X, Y, Button, Ord(Down));
+end;
+
+function TDocumentUI.Region(const ID: UTF8String; out Bounds: TDocumentRegion): boolean;
+begin
+  FillChar(Bounds, SizeOf(Bounds), 0);
+  Result := Activate and (GetBounds(PAnsiChar(ID), Bounds.X, Bounds.Y, Bounds.W, Bounds.H) <> 0);
+  if Result then
+  begin
+    Bounds.X := Bounds.X * RenderW / ScreenW;
+    Bounds.Y := Bounds.Y * RenderH / ScreenH;
+    Bounds.W := Bounds.W * RenderW / ScreenW;
+    Bounds.H := Bounds.H * RenderH / ScreenH;
+  end;
 end;
 
 procedure TDocumentUI.Scroll(Delta: single);

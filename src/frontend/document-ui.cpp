@@ -221,6 +221,16 @@ UI_EXPORT void ui_mouse(int x, int y, int button, int down) {
         else context->ProcessMouseButtonUp(button, 0);
     }
 }
+UI_EXPORT int ui_bounds(const char* id, float* x, float* y, float* width, float* height) {
+    if (!document || !id || !x || !y || !width || !height) return 0;
+    context->Update();
+    auto* element = document->GetElementById(id);
+    if (!element || !element->IsVisible()) return 0;
+    const auto offset = element->GetAbsoluteOffset(Rml::BoxArea::Content);
+    const auto size = element->GetBox().GetSize(Rml::BoxArea::Content);
+    *x = offset.x; *y = offset.y; *width = size.x; *height = size.y;
+    return size.x > 0 && size.y > 0;
+}
 UI_EXPORT void ui_scroll(float delta) {
     if (context) context->ProcessMouseWheel(delta, 0);
 }

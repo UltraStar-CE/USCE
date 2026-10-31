@@ -15,6 +15,7 @@ void ui_set(const char*, const char*);
 void ui_render(int, int, int);
 void ui_mouse(int, int, int, int);
 void ui_key(int);
+int ui_bounds(const char*, float*, float*, float*, float*);
 void ui_model_set(const char*, const char*, int);
 void ui_model_array(const char*, int);
 void ui_focus(const char*);
@@ -133,6 +134,15 @@ int main(int argc, char** argv) {
             ui_render(1280, 720, 0);
             ui_focus("form-back"); ui_key(0);
             require(std::string(ui_action()) == "navigation.back", "Empty collection preserved document controls");
+            const auto lyrics_document = utf8(root / "frontends/modern/settings-lyrics.rml");
+            require(ui_open(lyrics_document.c_str()) != 0, "Lyrics document");
+            ui_render(1280, 720, 0);
+            float x, y, width, height;
+            require(ui_bounds("lyrics-preview-0", &x, &y, &width, &height) != 0, "Native preview region");
+            require(std::abs(x - 128) < 1 && std::abs(y - 420) < 1 && std::abs(width - 1024) < 1 && std::abs(height - 48) < 1, "Theme-defined preview geometry");
+            ui_render(1024, 768, 0);
+            require(ui_bounds("lyrics-preview-0", &x, &y, &width, &height) != 0 && std::abs(width - 819.2f) < 1 && std::abs(height - 51.2f) < 1, "Preview geometry follows theme resizing");
+            require(ui_bounds("missing-region", &x, &y, &width, &height) == 0, "Missing preview region is optional");
             ui_shutdown();
         }
         SDL_GL_DeleteContext(gl_context); SDL_DestroyWindow(window); SDL_Quit();

@@ -70,8 +70,8 @@ button:focus span { font-weight: bold; }
 .form-row { display: flex; width: 82.5vw; height: 5.833333vh; margin-left: 2.625vw; margin-bottom: 0.833333vh; }
 .form-row:last-child { margin-bottom: 0; }
 .form-row button { height: 5.833333vh; font-size: 3.75vh; flex-shrink: 0; }
-.form-row button span { margin-top: 0.5vh; }
-.form-label { width: 31.25vw; text-align: left; padding-left: 2.5vw; }
+.form-row button span { margin-top: 0.5vh; white-space: nowrap; overflow: hidden; }
+.form-label { white-space: nowrap; overflow: hidden; width: 31.25vw; text-align: left; padding-left: 2.5vw; }
 .form-row.selected .form-label { background-color: #7ec5eae6; font-weight: bold; }
 .form-value { display: flex; margin-left: 1.25vw; width: 50vw; height: 5.833333vh; background-color: #42a3e7e6; }
 .form-value button { background-color: transparent; }
@@ -82,7 +82,7 @@ button:focus span { font-weight: bold; }
 .form-row.selected .form-current { font-weight: bold; }
 .form-row.selected .form-value { background-color: #7ec5eae6; }
 .form-row.command .form-value, .form-row.section .form-value { display: none; }
-.form-row.command .form-label, .form-row.section .form-label { width: 82.5vw; text-align: center; padding-left: 0; }
+.form-row.command .form-label, .form-row.section .form-label { white-space: nowrap; overflow: hidden; width: 82.5vw; text-align: center; padding-left: 0; }
 .form-back { width: 31.25vw; height: 5.833333vh; margin-left: 2.625vw; margin-top: 2.083333vh; font-size: 3.75vh; text-align: left; padding-left: 2.5vw; }
 .form-back span { margin-top: 0.5vh; }
 .form-back.selected { background-color: #7ec5eae6; font-weight: bold; }
@@ -90,3 +90,7 @@ button:focus span { font-weight: bold; }
 .form-back-reflection { position: relative; width: 31.25vw; height: 3.333333vh; margin-left: 2.625vw; margin-top: 0.277778vh; overflow: hidden; pointer-events: none; background-color: #42a3e7e6; mask-image: vertical-gradient(#0009 #0000); }
 .form-back-reflection span { position: absolute; top: -2.5vh; display: block; height: 5.833333vh; padding-left: 2.5vw; font-size: 3.75vh; transform: scaleY(-1); }
 .form-back-reflection.selected { background-color: #7ec5eae6; font-weight: bold; }
+
+.lyrics-preview { position: absolute; left: 10vw; width: 80vw; height: 6.666667vh; pointer-events: none; }
+.preview-0 { top: 58.333333vh; } .preview-1 { top: 65vh; }
+.preview-2 { top: 75vh; } .preview-3 { top: 81.666667vh; }

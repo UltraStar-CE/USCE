@@ -237,6 +237,7 @@ TOptionsMenu = class(TMenu)
     YNextWidget: integer; // Y coordinate of the next settings widget in the menu
     Description: AnsiString;
     WhereAmI:    AnsiString;
+    function DocumentRegion(const ID: UTF8String; out Bounds: TDocumentRegion): boolean;
     procedure Load;
     procedure LoadWidgets; virtual; abstract;
     procedure LoadLegend; virtual;
@@ -2403,6 +2404,11 @@ procedure TOptionsMenu.UpdateSelectSlideOptions(SelectNum: integer; const Values
 begin
   if DocumentUI = nil then inherited UpdateSelectSlideOptions(SelectNum, Values, Data)
   else if (SelectNum >= 0) and (SelectNum < Length(Fields)) then Fields[SelectNum].Bind(Data, Values);
+end;
+
+function TOptionsMenu.DocumentRegion(const ID: UTF8String; out Bounds: TDocumentRegion): boolean;
+begin
+  Result := (DocumentUI <> nil) and DocumentUI.Region(ID, Bounds);
 end;
 
 function TOptionsMenu.OptionSelected(SelectNum: integer): integer;
