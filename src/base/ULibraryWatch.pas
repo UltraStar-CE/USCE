@@ -487,7 +487,7 @@ begin
     end;
     FillChar(Context, SizeOf(Context), 0); Context.info := Self;
     Stream := FSEventStreamCreate(nil, @LibraryEvents, @Context, Paths,
-      kFSEventStreamEventIdSinceNow, 0.3,
+      FSEventStreamEventId(kFSEventStreamEventIdSinceNow), 0.3,
       kFSEventStreamCreateFlagFileEvents or kFSEventStreamCreateFlagWatchRoot);
     if Stream = nil then raise Exception.Create('Cannot create FSEvents stream');
     try
