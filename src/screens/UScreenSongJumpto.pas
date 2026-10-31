@@ -91,6 +91,7 @@ type
     procedure ActivateAction(Action: integer);
     procedure MoveFocus(Direction: integer);
   public
+    procedure LibraryChanged(PreviousCategory: integer);
     function ApplyFilter: cardinal;
     constructor Create; override;
     destructor Destroy; override;
@@ -597,6 +598,21 @@ begin
   end;
   for I := 0 to 3 do
     if Inside(fActions[I]) then begin fFocus := Length(fRows) + I; ActivateAction(I); Exit; end;
+end;
+
+procedure TScreenSongJumpto.LibraryChanged(PreviousCategory: integer);
+var Kind: TSongFilter;
+begin
+  for Kind := Low(TSongFilter) to High(TSongFilter) do
+  begin FreeAndNil(fValueCache[Kind].Values); FreeAndNil(fValueCache[Kind].Keys); end;
+  fValues := nil;
+  fValueKeys := nil;
+  fPending := false;
+  fSuggestionFocus := false;
+  SetLength(fMatches, 0);
+  fSuggestionContext := #1;
+  if (PreviousCategory = -2) or ((PreviousCategory = -3) and fPlaylistSearch) then
+    ApplyFilter;
 end;
 
 function TScreenSongJumpto.ApplyFilter: cardinal;

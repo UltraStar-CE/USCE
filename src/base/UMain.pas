@@ -433,6 +433,7 @@ begin
       Log.LogStatus('Remote Bridge IPC', 'Finalization');
       RemoteBridgeIPC.Stop;
     end;
+    if Assigned(Songs) then Songs.StopRefresh;
 
     Log.LogStatus('Closing DB file', 'Finalization');
     PhoneAudio.Stop;

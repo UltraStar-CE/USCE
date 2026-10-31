@@ -33,12 +33,6 @@ interface
 
 {$I switches.inc}
 
-{$IFDEF DARWIN}
-  {$IFDEF DEBUG}
-    {$DEFINE USE_PSEUDO_THREAD}
-  {$ENDIF}
-{$ENDIF}
-
 uses
   SysUtils,
   Classes,
@@ -54,14 +48,11 @@ uses
   UPlatform,
   ULog,
   UCommon,
-  {$IFDEF USE_PSEUDO_THREAD}
-  PseudoThread,
-  {$ENDIF}
   UPath,
   UPlaylist,
   USong,
   UIni,
-  UCatCovers;
+  UCatCovers, ULibraryRefresh, ULibraryWatch;
 
 type
   TSongFilter = (
@@ -92,13 +83,8 @@ type
     Length: string;
   end;
 
-  {$IFDEF USE_PSEUDO_THREAD}
-  TSongs = class(TPseudoThread)
-  {$ELSE}
-  TSongs = class(TThread)
-  {$ENDIF}
+  TSongs = class
   private
-    fParseSongDirectory: boolean;
     fProcessing:         boolean;
     fDiscoveringDirectories: boolean;
     fDiscoveryDirCount:  integer;
@@ -106,14 +92,19 @@ type
     fTotalSongsToLoad:   integer;
     fSongsLoaded:        integer;
     fReloadAfterLockdown: boolean;
+    fRefresh: TLibraryRefresh;
+    fRefreshAgain: boolean;
+    fWatcher: TLibraryWatch;
+    fWatchRoots: string;
+    fOwnerThread: cardinal; // SDL_ThreadID returns a Uint32, not a native thread handle.
+    procedure PollLibraryChanges;
+    function RequestRefreshPaths(const Roots: TPathDynArray): boolean;
     function CollectSongFiles: TPathDynArray;
     procedure int_LoadSongList;
     procedure DoDirChanged(Sender: TObject);
     procedure LoadSongFromFile(const FilePath: IPath);
     procedure UpdateDiscoveryProgress(SongsFound: integer; Force: boolean = false);
     procedure UpdateSongLoadingProgress(Force: boolean = false);
-  protected
-    procedure Execute; override;
   public
     SongList: TList;            // array of songs
 
@@ -123,6 +114,12 @@ type
 
     procedure LoadSongList;     // load all songs
     procedure ReplayDeferredReload;
+    procedure StopRefresh;
+    // Main-thread request; nil rescans configured roots. Busy requests return false.
+    function RequestRefresh(const Target: IPath = nil): boolean;
+    function RefreshReady: boolean;
+    // Caller releases retired headers after dropping old UI/media references.
+    function PublishRefresh(out Retired: TList): boolean;
   procedure FindFilesByExtension(const Dir: IPath; const Ext: IPath; Recursive: Boolean; var Files: TPathDynArray);
     procedure Sort(Order: TSortingType);
     property  Processing: boolean read fProcessing;
@@ -255,18 +252,18 @@ end;
 
 constructor TSongs.Create();
 begin
-  // do not start thread BEFORE initialization (suspended = true)
-  inherited Create(true);
-  Self.FreeOnTerminate := true;
+  inherited Create;
+  fOwnerThread := SDL_ThreadID;
 
   SongList           := TList.Create();
 
-  // until it is fixed, simply load the song-list
+  // Initial loading runs before the song screen is available.
   int_LoadSongList();
 end;
 
 destructor TSongs.Destroy();
 begin
+  StopRefresh;
   FreeAndNil(SongList);
 
   inherited;
@@ -275,34 +272,6 @@ end;
 procedure TSongs.DoDirChanged(Sender: TObject);
 begin
   LoadSongList();
-end;
-
-procedure TSongs.Execute();
-begin
-  try
-{$IFDEF USE_PSEUDO_THREAD}
-  int_LoadSongList();
-{$ELSE}
-  fParseSongDirectory := true;
-
-  while not terminated do
-  begin
-
-    if fParseSongDirectory then
-    begin
-      Log.LogStatus('Calling int_LoadSongList', 'TSongs.Execute');
-      int_LoadSongList();
-    end;
-
-    Suspend();
-  end;
-{$ENDIF}
-  except
-    {$IFNDEF USE_PSEUDO_THREAD}
-    LogWorkerException('TSongs.Execute');
-    {$ENDIF}
-    raise;
-  end;
 end;
 
 procedure TSongs.int_LoadSongList;
@@ -366,21 +335,155 @@ begin
     SetLength(SongFiles, 0);
     Log.LogStatus('Search Complete', 'SongList');
 
-    fParseSongDirectory := false;
     fProcessing         := false;
   end;
 end;
 
 
+procedure TSongs.StopRefresh;
+begin
+  FreeAndNil(fWatcher);
+  fWatchRoots := '';
+  FreeAndNil(fRefresh); // TLibraryRefresh terminates and joins before freeing its data.
+  fRefreshAgain := false;
+  fProcessing := false;
+end;
+
 procedure TSongs.LoadSongList;
 begin
+  if SDL_ThreadID <> fOwnerThread then Exit;
   if LibraryLockdown.Active then
+    fReloadAfterLockdown := true
+  else if not RequestRefresh then
+    fRefreshAgain := true;
+end;
+
+procedure TSongs.PollLibraryChanges;
+var Paths, Changed: TStringList; Roots: TPathDynArray;
+  I: integer; AllRoots: boolean; Error: string;
+begin
+  if (SDL_ThreadID <> fOwnerThread) or LibraryLockdown.Active then Exit;
+  Paths := TStringList.Create;
+  Changed := TStringList.Create;
+  try
+    if Params.Song.IsSet then Paths.Add(Params.Song.ToUTF8)
+    else for I := 0 to SongPaths.Count - 1 do Paths.Add((SongPaths[I] as IPath).GetAbsolutePath.ToUTF8);
+    if (fWatcher = nil) or (Paths.Text <> fWatchRoots) then
+    begin
+      FreeAndNil(fWatcher);
+      fWatchRoots := Paths.Text;
+      if Paths.Count > 0 then fWatcher := TLibraryWatch.Create(Paths);
+    end;
+    if (fWatcher = nil) or (fRefresh <> nil) then Exit;
+    if not fWatcher.TakeChanges(Changed, AllRoots, Error) then
+    begin
+      if Error <> '' then Log.LogError(Error, 'Library watcher');
+      Exit;
+    end;
+    if Error <> '' then Log.LogError(Error, 'Library watcher');
+    if AllRoots then RequestRefresh
+    else
+    begin
+      SetLength(Roots, Changed.Count);
+      for I := 0 to Changed.Count - 1 do Roots[I] := Path(UTF8String(Changed[I]));
+      RequestRefreshPaths(Roots);
+    end;
+  finally Changed.Free; Paths.Free; end;
+end;
+
+function TSongs.RequestRefreshPaths(const Roots: TPathDynArray): boolean;
+var FolderRoots: TPathDynArray; I: integer;
+begin
+  Result := false;
+  if (SDL_ThreadID <> fOwnerThread) or LibraryLockdown.Active or
+     (fRefresh <> nil) or (Length(Roots) = 0) then Exit;
+  SetLength(FolderRoots, SongPaths.Count);
+  for I := 0 to SongPaths.Count - 1 do FolderRoots[I] := SongPaths[I] as IPath;
+  fRefresh := TLibraryRefresh.Create(Roots, FolderRoots, Ini.DefaultEncoding, Ini.AgeCountry);
+  fProcessing := true;
+  Result := true;
+end;
+
+function TSongs.RequestRefresh(const Target: IPath): boolean;
+var Roots: TPathDynArray; I: integer;
+begin
+  if Target <> nil then
   begin
-    fReloadAfterLockdown := true;
+    SetLength(Roots, 1);
+    Roots[0] := Target.GetAbsolutePath;
+  end
+  else if Params.Song.IsSet then
+  begin
+    SetLength(Roots, 1);
+    Roots[0] := Params.Song;
+  end
+  else
+  begin
+    SetLength(Roots, SongPaths.Count);
+    for I := 0 to SongPaths.Count - 1 do Roots[I] := SongPaths[I] as IPath;
+  end;
+  Result := RequestRefreshPaths(Roots);
+end;
+
+function TSongs.RefreshReady: boolean;
+begin
+  PollLibraryChanges;
+  Result := false;
+  if (SDL_ThreadID <> fOwnerThread) or (fRefresh = nil) or
+     not fRefresh.Finished or LibraryLockdown.Active then Exit;
+  if fRefreshAgain or (fRefresh.DefaultEncoding <> Ini.DefaultEncoding) or
+     (fRefresh.AgeCountry <> Ini.AgeCountry) then
+  begin
+    FreeAndNil(fRefresh);
+    fRefreshAgain := false;
+    fProcessing := false;
+    RequestRefresh;
     Exit;
   end;
-  fParseSongDirectory := true;
-  Resume();
+  Result := true;
+end;
+
+function TSongs.PublishRefresh(out Retired: TList): boolean;
+var NewList: TList; Old: TSong; Name: IPath; I, Index: integer;
+begin
+  Result := false;
+  Retired := nil;
+  if not RefreshReady then Exit;
+  fRefresh.WaitFor;
+  try
+    if fRefresh.Failure <> '' then Exit;
+    NewList := TList.Create;
+    Retired := TList.Create;
+    for I := 0 to SongList.Count - 1 do
+    begin
+      Old := TSong(SongList[I]);
+      Name := Old.Path.Append(Old.FileName);
+      Index := fRefresh.Entries.IndexOf(TLibraryRefresh.Key(Name));
+      if Index >= 0 then
+      begin
+        if fRefresh.Entries.Objects[Index] <> nil then
+          NewList.Add(fRefresh.Entries.Objects[Index]);
+        fRefresh.Entries.Objects[Index] := nil;
+        Retired.Add(Old);
+      end
+      else if fRefresh.Covers(Name) and (fRefresh.Seen.IndexOf(TLibraryRefresh.Key(Name)) < 0) then
+        Retired.Add(Old)
+      else
+        NewList.Add(Old);
+    end;
+    for I := 0 to fRefresh.Entries.Count - 1 do
+      if fRefresh.Entries.Objects[I] <> nil then
+      begin
+        NewList.Add(fRefresh.Entries.Objects[I]);
+        fRefresh.Entries.Objects[I] := nil;
+      end;
+    SongList.Free;
+    SongList := NewList;
+    Result := true;
+  finally
+    FreeAndNil(fRefresh);
+    fProcessing := false;
+  end;
 end;
 
 procedure TSongs.ReplayDeferredReload;
@@ -861,6 +964,7 @@ end;
  *)
 function TCatSongs.VisibleSongs: integer;
 begin
+  if Length(Song) = 0 then Exit(0);
   Result := VisibleIndex(High(Song));
   if Song[High(Song)].Visible then
     Inc(Result);
@@ -872,6 +976,7 @@ end;
  *)
 function TCatSongs.VisibleIndex(Index: integer): integer;
 begin
+  if (Index < 0) or (Index > High(Song)) then Exit(-1);
   while LastVisChecked < Index do
   begin
     if Song[LastVisChecked].Visible then
