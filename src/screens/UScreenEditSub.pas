@@ -1596,10 +1596,8 @@ begin
 
   UseAudio := UseVocalsPreview or RequestedVocalsPreview or not UseMidiPreview;
 
-  if UseVocalsPreview or RequestedVocalsPreview or (not UseMidiPreview) then
-    SetPlaybackVolume(VolumeAudioIndex / 100)
-  else
-    SetPlaybackVolume(0);
+  if UseAudio then
+    SetPlaybackVolume(VolumeAudioIndex / 100);
 
   if PlaybackStart <= GetPlaybackLength then
   begin
