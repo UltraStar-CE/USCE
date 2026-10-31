@@ -66,6 +66,7 @@ type
     fTypingRow: integer;
     fPresetNames: TFilterPresetNames;
     fPresetName: UTF8String;
+    fFolderReturn: UTF8String;
     fPresetPage: integer;
     fSlotKinds: array[0..FILTER_SLOTS-1] of integer;
     fInputs, fCategories: array[0..FILTER_SLOTS-1] of integer;
@@ -631,6 +632,7 @@ end;
 procedure TScreenSongJumpto.ResetFilters;
 begin
   fTypingRow := -1;
+  fFolderReturn := '';
   // Search rows are temporary. Lockdown freezes the library, not these queries.
   SetLength(fRows, 1);
   fRows[0].Query := '';
@@ -644,6 +646,9 @@ procedure TScreenSongJumpto.SetFolderFilter(const Query: UTF8String);
 var I, Row: integer;
 begin
   if CatSongs.CatNumShow <> -2 then ResetFilters;
+  I := ScreenSong.Interaction;
+  if (I >= 0) and (I < Length(CatSongs.Song)) and CatSongs.Song[I].Main then
+    fFolderReturn := CatSongs.Song[I].FolderPath;
   Row := -1;
   for I := 0 to High(fRows) do
     if fRows[I].Kind = fltFolder then begin Row := I; Break; end;
@@ -658,9 +663,10 @@ begin
 end;
 
 function TScreenSongJumpto.LeaveFolder: boolean;
-var I: integer;
+var I: integer; ReturnPath: UTF8String;
 begin
   Result := false;
+  ReturnPath := fFolderReturn;
   for I := High(fRows) downto 0 do
     if (fRows[I].Kind = fltFolder) and (fRows[I].Query <> '') then
     begin RemoveRow(I); Result := true; end;
@@ -669,14 +675,24 @@ begin
     fTypingRow := -1;
     fLastPlayed := ScreenSong.Interaction;
     fPending := true; FlushChanges;
+    // Restore by path: row removal can rebuild and reorder the category objects.
+    for I := 0 to High(CatSongs.Song) do
+      if CatSongs.Song[I].Main and CatSongs.Song[I].Visible and
+         (CatSongs.Song[I].FolderPath = ReturnPath) then
+      begin
+        ScreenSong.SkipTo(CatSongs.VisibleIndex(I), I, CatSongs.VisibleSongs);
+        ScreenSong.FixSelected;
+        ScreenSong.SetScrollRefresh;
+        Break;
+      end;
+    fFolderReturn := '';
   end;
 end;
 
 procedure TScreenSongJumpto.OnShow;
-var Country: UTF8String; Kind: TSongFilter; TypingFocus: integer;
+var Country: UTF8String; Kind: TSongFilter;
 begin
   inherited;
-  TypingFocus := fTypingRow;
   // The typed query is now an ordinary, editable All row in the full dialog.
   fTypingRow := -1;
   for Kind := Low(TSongFilter) to High(TSongFilter) do
@@ -695,7 +711,7 @@ begin
     fPlaylist := PlaylistMan.CurPlayList;
     Text[0].Text := Format(Theme.SongJumpto.SongsFound, [CatSongs.VisibleSongs]);
   end;
-  fFocus := EnsureRange(TypingFocus, 0, High(fRows)); fFirst := 0;
+  fFocus := High(fRows); fFirst := 0;
   fLastPlayed := ScreenSong.Interaction;
   RefreshRows;
 end;

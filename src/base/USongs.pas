@@ -176,7 +176,7 @@ const
 implementation
 
 uses
-  UFolderFilter, UFilterTerms,
+  ULanguage, UFolderFilter, UFilterTerms,
   UAge,
   ULibraryLockdown,
   StrUtils,
@@ -688,7 +688,7 @@ end;
 
 procedure TCatSongs.Refresh;
 var I, J, K, Offset: integer; Item, Card: TSong;
-  Folders, Prefixes: TStringList;
+  Folders, Prefixes: TStringList; Caption: UTF8String;
 begin
   CatNumShow := -1;
   SortSongs;
@@ -717,7 +717,10 @@ begin
     begin
       Card := TSong.Create;
       Card.Main := true; Card.Visible := true;
-      Card.FolderPath := Folders[I]; Card.Artist := '[' + Folders[I] + ']';
+      Card.FolderPath := Folders[I];
+      Caption := Copy(Folders[I], 2, Length(Folders[I]) - 2);
+      if Caption = '' then Caption := Language.Translate('SONG_JUMPTO_TYPE1');
+      Card.Artist := '[' + Caption + ']';
       Card.OrderNum := I + 1;
       Card.CatNumber := PtrInt(Folders.Objects[I]);
       if Folders[I] = '/' then Card.CatNumber := Songs.SongList.Count;
