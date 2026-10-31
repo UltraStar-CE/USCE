@@ -4218,7 +4218,10 @@ var
 begin
   if (TSongMenuMode(Ini.SongMenu) = smRoulette) then
   begin
-    Interaction := High(CatSongs.Song);
+    if CatSongs.VisibleSongs = 0 then begin SelInteraction := -1; Exit; end;
+    // SelectNext requires a visible starting selection, including in playlists.
+    for i := High(CatSongs.Song) downto 0 do
+      if CatSongs.Song[i].Visible then begin Interaction := i; Break; end;
     SongTarget  := 0;
 
     for i := 1 to Target+1 do
@@ -4677,9 +4680,24 @@ var
   Retired: TList;
   SelectedPath, Category: UTF8String;
   OldCategory, P, Item, I, Index, NewIndex: integer;
-  PlaylistPaths, NewIds: TStringList;
+  OldPosition, ListOffset, GridOffset, Candidate: integer;
+  PlaylistPaths, NewIds, VisiblePaths: TStringList;
   Song: TSong;
   EmptyMainMenu: boolean;
+  function SelectionKey(const Entry: TSong): UTF8String;
+  begin
+    if Entry.Main then Result := '#category:' + Entry.Artist
+    else Result := TLibraryRefresh.Key(Entry.Path.Append(Entry.FileName));
+  end;
+  function VisiblePathIndex(const Key: UTF8String): integer;
+  var Found: integer;
+  begin
+    Result := -1;
+    Found := NewIds.IndexOf(Key);
+    if Found < 0 then Exit;
+    Found := PtrInt(NewIds.Objects[Found]) - 1;
+    if CatSongs.Song[Found].Visible then Result := Found;
+  end;
 begin
   EmptyMainMenu := (Display.CurrentScreen = @ScreenMain) and (Songs.SongList.Count = 0);
   if EmptyMainMenu then
@@ -4688,7 +4706,8 @@ begin
   end
   else if not ShowFinish or (Display.CurrentScreen <> @ScreenSong) then Exit;
   if (Display.NextScreen <> nil) or (Display.NextScreenWithCheck <> nil) or
-     (Mode <> smNormal) or MakeMedley or ScreenSongMenu.Visible or
+     (Mode <> smNormal) or (isScrolling and (CatSongs.VisibleSongs > 0)) or
+     MakeMedley or ScreenSongMenu.Visible or
      ScreenPopupError.Visible or ScreenPopupCheck.Visible or
      ScreenPopupHelp.Visible or ScreenPopupInfo.Visible or
      ScreenSongJumpto.Visible or ScreenContinuousPlayback.Session.Active or
@@ -4696,18 +4715,26 @@ begin
   SelectedPath := '';
   Category := '';
   OldCategory := CatSongs.CatNumShow;
+  OldPosition := 0;
   if (Interaction >= 0) and (Interaction < Length(CatSongs.Song)) then
   begin
     Song := CatSongs.Song[Interaction];
-    if not Song.Main then SelectedPath := TLibraryRefresh.Key(Song.Path.Append(Song.FileName));
+    SelectedPath := SelectionKey(Song);
+    OldPosition := Max(0, CatSongs.VisibleIndex(Interaction));
   end;
+  ListOffset := EnsureRange(OldPosition - ListMinLine, 0, Max(0, Theme.Song.ListCover.Rows - 1));
+  GridOffset := EnsureRange(OldPosition div Max(1, Theme.Song.Cover.Cols) - ChessboardMinLine,
+    0, Max(0, Theme.Song.Cover.Rows - 1));
   if OldCategory >= 0 then
     for I := 0 to High(CatSongs.Song) do
       if CatSongs.Song[I].Main and (CatSongs.Song[I].OrderNum = OldCategory) then
         Category := CatSongs.Song[I].Artist;
   PlaylistPaths := TStringList.Create;
   NewIds := TStringList.Create;
+  VisiblePaths := TStringList.Create;
   try
+    for I := 0 to High(CatSongs.Song) do
+      if CatSongs.Song[I].Visible then VisiblePaths.Add(SelectionKey(CatSongs.Song[I]));
     for P := 0 to High(PlaylistMan.Playlists) do
       for Item := 0 to High(PlaylistMan.Playlists[P].Items) do
       begin
@@ -4769,17 +4796,45 @@ begin
       // Playlist order/filter application can reorder category indices.
       NewIds.Clear;
       for I := 0 to High(CatSongs.Song) do
-        if not CatSongs.Song[I].Main then
-          NewIds.AddObject(TLibraryRefresh.Key(CatSongs.Song[I].Path.Append(CatSongs.Song[I].FileName)), TObject(PtrInt(I + 1)));
-      I := NewIds.IndexOf(SelectedPath);
-      if (I >= 0) and CatSongs.Song[PtrInt(NewIds.Objects[I]) - 1].Visible then
-        Interaction := PtrInt(NewIds.Objects[I]) - 1
-      else if CatSongs.VisibleSongs > 0 then Interaction := CatSongs.FindNextVisible(-1)
-      else SelInteraction := -1;
+        NewIds.AddObject(SelectionKey(CatSongs.Song[I]), TObject(PtrInt(I + 1)));
+      NewIndex := VisiblePathIndex(SelectedPath);
+      // Keep a surviving neighbour in the old visible order, not the first song.
+      if NewIndex < 0 then
+        for Candidate := OldPosition + 1 to VisiblePaths.Count - 1 do
+        begin
+          NewIndex := VisiblePathIndex(VisiblePaths[Candidate]);
+          if NewIndex >= 0 then Break;
+        end;
+      if NewIndex < 0 then
+        for Candidate := Min(OldPosition - 1, VisiblePaths.Count - 1) downto 0 do
+        begin
+          NewIndex := VisiblePathIndex(VisiblePaths[Candidate]);
+          if NewIndex >= 0 then Break;
+        end;
+      if NewIndex < 0 then
+      begin
+        Index := 0;
+        for I := 0 to High(CatSongs.Song) do
+          if CatSongs.Song[I].Visible then
+          begin
+            NewIndex := I;
+            if Index >= OldPosition then Break;
+            Inc(Index);
+          end;
+      end;
+      if NewIndex >= 0 then Interaction := NewIndex else SelInteraction := -1;
       if Interaction >= 0 then
       begin
+        I := CatSongs.VisibleIndex(Interaction);
+        ListMinLine := I - ListOffset;
+        ChessboardMinLine := I div Max(1, Theme.Song.Cover.Cols) - GridOffset;
         FixSelected;
-        SkipTo(CatSongs.VisibleIndex(Interaction), Interaction);
+        if TSongMenuMode(Ini.SongMenu) = smRoulette then
+        begin
+          isScrolling := false;
+          OnSongSelect;
+        end
+        else SkipTo(CatSongs.VisibleIndex(Interaction), Interaction);
         CatSongs.Selected := Interaction;
       end;
       ResetRandomSongState;
@@ -4789,6 +4844,8 @@ begin
         isScrolling := false;
         SongCurrent := 0;
         SongTarget := 0;
+        ListMinLine := 0;
+        ChessboardMinLine := 0;
         PreviewEnd := 0;
         PreviewOpened := -1;
         LastPreviewStartTime := 0;
@@ -4818,6 +4875,7 @@ begin
   finally
     NewIds.Free;
     PlaylistPaths.Free;
+    VisiblePaths.Free;
   end;
 end;
 
