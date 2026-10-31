@@ -1096,7 +1096,7 @@ begin
   t := frac(timeDiff);
 
   h := Theme.Sing.Countdown.Size*t*ScreenH/RenderH;
-  SetFontFamily(Theme.Sing.Countdown.Font);
+  SetFontFamily(ResolveThemeFont(Theme.Sing.Countdown.FontFile, Theme.Sing.Countdown.Font));
   SetFontStyle(Theme.Sing.Countdown.Style);
   SetFontItalic(false);
   SetFontSize(h);

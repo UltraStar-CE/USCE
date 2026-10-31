@@ -263,6 +263,7 @@ const
 implementation
 
 uses
+  UText,
   UCommon,
   ULibraryLockdown,
   ULockdownUI,
@@ -694,9 +695,12 @@ begin
     ThemeStatic.TexX1, ThemeStatic.TexY1, ThemeStatic.TexX2, ThemeStatic.TexY2, ThemeStatic.Alpha,
     Skin.GetTextureFileName(ThemeStatic.Tex),
     ThemeStatic.Typ, $FFFFFF, ThemeStatic.Reflection, ThemeStatic.Reflectionspacing);
-    if (Result >= 0) then
-      Statics[Result].Texture.ScaleMode := ThemeStatic.ScaleMode;
-      Statics[Result].Texture.CornerRadius := ThemeStatic.CornerRadius;
+  if Result >= 0 then
+  begin
+    Statics[Result].Texture.ScaleMode := ThemeStatic.ScaleMode;
+    Statics[Result].Texture.CornerRadius := ThemeStatic.CornerRadius;
+    ApplyThemeSurface(Statics[Result].Texture, ThemeStatic.Surface);
+  end;
 end;
 
 function TMenu.AddStaticPosition(static: TThemePosition): integer;
@@ -1053,6 +1057,9 @@ begin
   Button[Result].BackgroundAlpha := ThemeButton.Alpha;
   Button[Result].Texture.Alpha := ThemeButton.Alpha;
   Button[Result].DeSelectTexture.Alpha := ThemeButton.Alpha;
+  ApplyThemeSurface(Button[Result].Texture, ThemeButton.Surface);
+  ApplyThemeSurface(Button[Result].DeSelectTexture, ThemeButton.Surface);
+  Button[Result].FocusFollowShape := ThemeButton.FocusFollowShape;
   Button[Result].Texture.CornerRadius := ThemeButton.CornerRadius;
   Button[Result].DeSelectTexture.CornerRadius := ThemeButton.CornerRadius;
   Button[Result].Texture.ScaleMode := ThemeButton.ScaleMode;
@@ -1730,6 +1737,19 @@ begin
   SelectsS[High(SelectsS)].showArrows := ThemeSelectS.showArrows;
   SelectsS[High(SelectsS)].oneItemOnly := ThemeSelectS.oneItemOnly;
 
+  with SelectsS[High(SelectsS)] do
+  begin
+    Surface := ThemeSelectS.Surface;
+    FullRow := ThemeSelectS.FullRow;
+    HasUnfocusedValueColor := ThemeSelectS.HasUnfocusedValueColor;
+    UnfocusedR := ThemeSelectS.UnfocusedR; UnfocusedG := ThemeSelectS.UnfocusedG; UnfocusedB := ThemeSelectS.UnfocusedB;
+    FocusWidth := ThemeSelectS.FocusWidth;
+    FocusR := ThemeSelectS.FocusR; FocusG := ThemeSelectS.FocusG; FocusB := ThemeSelectS.FocusB;
+    ApplyThemeSurface(Texture, Surface); ApplyThemeSurface(DeSelectTexture, Surface);
+    ApplyThemeSurface(TextureSBG, Surface); ApplyThemeSurface(DeSelectTextureSBG, Surface);
+    Text.Font := ResolveThemeFont(ThemeSelectS.FontFile, 0);
+    for SO := 0 to High(TextOpt) do TextOpt[SO].Font := Text.Font;
+  end;
   //Generate Lines
   SelectsS[High(SelectsS)].GenLines;
 

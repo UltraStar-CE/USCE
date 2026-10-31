@@ -938,9 +938,10 @@ begin
       if Theme.Sing.HelperAbove then
       begin
         Tex_Lyric_Help_Bar.X := Left + LyricsMid - 50 * (1 - BarProgress);
-        Tex_Lyric_Help_Bar.Y := LyricEngine.UpperLineY - 8;
+        Tex_Lyric_Help_Bar.Y := LyricEngine.UpperLineY - Theme.Sing.HelperAboveOffset;
         Tex_Lyric_Help_Bar.W := 100 * (1 - BarProgress);
-        Tex_Lyric_Help_Bar.H := 4;
+        Tex_Lyric_Help_Bar.H := Theme.Sing.HelperAboveHeight;
+        if Theme.Sing.HelperAboveAlpha >= 0 then Tex_Lyric_Help_Bar.Alpha := Theme.Sing.HelperAboveAlpha;
         Tex_Lyric_Help_Bar.ColR := Theme.Sing.LyricActive.R;
         Tex_Lyric_Help_Bar.ColG := Theme.Sing.LyricActive.G;
         Tex_Lyric_Help_Bar.ColB := Theme.Sing.LyricActive.B;
@@ -978,8 +979,8 @@ var
 
     Layout := GetSingLaneLayout(PlayerCountOnScreen, LocalIndex, Theme.Sing.PlayerLayout,
       CurrentSong.isDuet);
-    Left := Layout.GridLeft;
-    Right := Layout.GridRight;
+    Left := Layout.GridLeft + Min(Layout.GridWidth / 4, Theme.Sing.NoteInset * Layout.ContentScale);
+    Right := Layout.GridRight - Min(Layout.GridWidth / 4, Theme.Sing.NoteInset * Layout.ContentScale);
     Top := Layout.GuideTopY;
     Spacing := Layout.NoteLineSpacing;
   end;

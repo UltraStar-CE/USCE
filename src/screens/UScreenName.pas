@@ -1522,6 +1522,9 @@ var I, First, Last, J: integer;
       Value := K;
       if K > Theme.Name.Cards.CountMax then Value := SelectedPlayerCount;
       T := Statics[CountChip].Texture;
+      ApplyThemeSurface(T, Theme.Name.Cards.CountChip.Surface);
+      if (Value = SelectedPlayerCount) and (Theme.Name.Cards.CountFocus.Surface.Radius >= 0) then
+        ApplyThemeSurface(T, Theme.Name.Cards.CountFocus.Surface);
       T.X := Theme.Name.Cards.CountX + (K - 1 + PlayerCountOffset) * (Theme.Name.Cards.CountW + Theme.Name.Cards.CountGap);
       T.Y := Theme.Name.Cards.CountY; T.W := Theme.Name.Cards.CountW; T.H := Theme.Name.Cards.CountH;
       if Value = SelectedPlayerCount then
@@ -1529,7 +1532,7 @@ var I, First, Last, J: integer;
       if Value <> SelectedPlayerCount then
       begin T.ColR := Theme.Name.Cards.CountChip.ColR; T.ColG := Theme.Name.Cards.CountChip.ColG; T.ColB := Theme.Name.Cards.CountChip.ColB; end;
       Renderer.DrawTexture(T);
-      if Value = SelectedPlayerCount then
+      if (Value = SelectedPlayerCount) and (Theme.Name.Cards.CountFocus.Surface.Radius < 0) then
       begin
         F := Statics[CountFocus].Texture; F.X := T.X - 3; F.Y := T.Y - 3;
         F.W := T.W + 6; F.H := T.H + 6; Renderer.DrawTexture(F);
@@ -1619,11 +1622,18 @@ begin
     SY := R.H / Max(1, Theme.Name.Cards.Panel.H);
     Panel := Statics[CardPanel].Texture;
     Panel.X := R.X; Panel.Y := R.Y; Panel.W := R.W; Panel.H := R.H;
+    if Theme.Name.Cards.Panel.Surface.Radius >= 0 then
+      Panel.Radius := Theme.Name.Cards.Panel.Surface.Radius * Min(SX, SY);
     Renderer.DrawTexture(Panel);
     if I = PlayerIndex then
     begin
       Panel := Statics[CardFocus].Texture;
       Panel.X := R.X - 2; Panel.Y := R.Y - 2; Panel.W := R.W + 4; Panel.H := R.H + 4;
+      if Theme.Name.Cards.Focus.Surface.Radius >= 0 then
+      begin
+        Panel.X := R.X; Panel.Y := R.Y; Panel.W := R.W; Panel.H := R.H;
+        Panel.Radius := Theme.Name.Cards.Focus.Surface.Radius * Min(SX, SY);
+      end;
       Renderer.DrawTexture(Panel);
     end;
     // Player labels are translated through the shared generated-label keys.

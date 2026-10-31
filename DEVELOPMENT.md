@@ -302,3 +302,27 @@ only for two top-docked, non-duet singers. N-player and duet layout is unchanged
 
 `ScorePlayerSlotArea` may set `HorizontalBars=1` to draw the animated score
 segments left-to-right within StaticBackLevel. The default remains vertical.
+
+Simple static/button/select-slide surfaces may use `Radius` in logical units,
+`BorderWidth`, `BorderColor`, and `BorderAlpha`. The renderer scales the radius
+uniformly in physical pixels and derives the fill and border from one contour.
+Omitting Radius retains the existing fractional `CornerRadius`; omitted borders
+are disabled. Use flat artwork for these surfaces, not pre-rounded alpha masks.
+`FocusFollowShape=1` on buttons derives the focus contour from the surface and
+its inset; old independent FocusRadius behavior remains the default.
+
+Select slides may use `FullRow=1` for a single label/value surface,
+`UnfocusedValueColor`, `FocusWidth`/`FocusColor`, and `FontFile`. These keep the
+native bound value, keyboard input and hit areas. OptionsSubArea may enable
+`ReserveBackForPreview=1` to keep lyric previews below the Back control.
+
+Optional `HighScoresRowBackground`, `HighScoresTextSongTitle` and
+`HighScoresTextArtist` sections keep the existing database, difficulty and
+entry-count behavior. FirstRowY in HighScoresListArea fixes the first-row anchor;
+the default retains the old pitch-relative anchor. A date below the name can
+share its column; dense two-column lists compact both lines within each row.
+
+SingLyricHelper supports AboveH/AboveOffset/AboveAlpha (-1 keeps normal fading).
+Sing.NoteInset optionally insets notes without moving stave guides. Countdown
+FontFile is optional. MainTextLibraryCount may contain a translated %d placeholder
+for the current library count; no printf-style format string is executed.

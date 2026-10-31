@@ -320,6 +320,7 @@ begin
       ScreenScore.Statics[StaticIndex].Texture.ColB := Col.B;
     end;
   end;
+  ApplyThemeSurface(ScreenScore.Statics[StaticIndex].Texture, ThemeStatic.Surface);
 end;
 
 function GetScoreButtonLayout(PlayerCount, ScreenCount: integer): integer;
@@ -985,6 +986,7 @@ begin
     Statics[AvatarStaticRef[I]].Texture.Z := Theme.Score.AvatarStatic[SlotIndex].Z;
     Statics[AvatarStaticRef[I]].Texture.Alpha := Theme.Score.AvatarStatic[SlotIndex].Alpha;
     Statics[AvatarStaticRef[I]].Texture.CornerRadius := Theme.Score.AvatarStatic[SlotIndex].CornerRadius;
+    ApplyThemeSurface(Statics[AvatarStaticRef[I]].Texture, Theme.Score.AvatarStatic[SlotIndex].Surface);
     Statics[AvatarStaticRef[I]].Texture.ScaleMode := Theme.Score.AvatarStatic[SlotIndex].ScaleMode;
     Statics[AvatarStaticRef[I]].Visible := true;
     ApplyScoreSlotPlayerVisuals(Self, SlotIndex, I);

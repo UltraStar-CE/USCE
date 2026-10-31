@@ -60,6 +60,7 @@ type
   public
     TextDescription:     integer;
     TextDescriptionLong: integer;
+    TextLibraryCount: integer;
 
     constructor Create; override;
     function ParseInput(PressedKey: Cardinal; CharCode: UCS4Char;
@@ -251,6 +252,8 @@ begin
  *}
   TextDescription     := AddText(Theme.Main.TextDescription);
   TextDescriptionLong := AddText(Theme.Main.TextDescriptionLong);
+  TextLibraryCount := -1;
+  if Theme.Main.TextLibraryCount.Size > 0 then TextLibraryCount := AddText(Theme.Main.TextLibraryCount);
 
   LoadFromTheme(Theme.Main);
 
@@ -289,6 +292,8 @@ var
   I: integer;
 begin
   inherited;
+  if TextLibraryCount >= 0 then
+    Text[TextLibraryCount].Text := StringReplace(Theme.Main.TextLibraryCount.Text, '%d', IntToStr(Songs.SongList.Count), [rfReplaceAll]);
   PreviewTick := SDL_GetTicks;
   for I := 0 to High(Preview) do
     Preview[I].Alpha := Ord(I = Interaction);

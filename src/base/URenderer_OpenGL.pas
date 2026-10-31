@@ -49,7 +49,7 @@ type
 
       // Shader programs
       MainProgram: GLuint;
-      ShapeRectLocation, ShapeSizeLocation: GLint;
+      ShapeRectLocation, ShapeSizeLocation, ShapeBorderLocation, ShapeBorderWidthLocation: GLint;
       TextProgram: GLuint;
       LineStripProgram: GLuint;
 
@@ -262,10 +262,12 @@ const
     'uniform sampler2D tex;                         ' + #10 +
     'uniform vec4 shape_rect;                          ' + #10 +
     'uniform vec4 shape_size;                        ' + #10 +
+    'uniform vec4 shape_border;                      ' + #10 +
+    'uniform float shape_border_width;               ' + #10 +
     'void main()                                    ' + #10 +
     '{                                              ' + #10 +
     '  vec4 result_color = [TEXTURE_FUNC](tex, tc) * col;' + #10 +
-    '  if (shape_size.z > 0.0 || shape_size.w > 0.0) {                     ' + #10 +
+    '  if (shape_size.z > 0.0 || shape_size.w > 0.0 || shape_border_width > 0.0) {' + #10 +
     '    vec2 p = (canvas_pos - shape_rect.xy) / shape_rect.zw;' + #10 +
     '    vec2 q = abs(p - 0.5) * shape_size.xy       ' + #10 +
     '      - shape_size.xy * 0.5 + shape_size.z;     ' + #10 +
@@ -273,6 +275,10 @@ const
     '      + min(max(q.x, q.y), 0.0) - shape_size.z;' + #10 +
     '    result_color.a *= 1.0 - smoothstep(         ' + #10 +
     '      -0.75, 0.75, d);                         ' + #10 +
+    '    if (shape_border_width > 0.0) {             ' + #10 +
+    '      float edge = smoothstep(-shape_border_width - 0.75, -shape_border_width + 0.75, d);' + #10 +
+    '      result_color.rgb = mix(result_color.rgb, shape_border.rgb, edge * shape_border.a);' + #10 +
+    '    }                                          ' + #10 +
     '    if (shape_size.w > 0.0)                     ' + #10 +
     '      result_color.a *= smoothstep(-shape_size.w - 0.75, -shape_size.w + 0.75, d);' + #10 +
     '  }                                            ' + #10 +
@@ -487,6 +493,8 @@ begin
   TransformLocationMain := glGetUniformLocation(MainProgram, 'transform');
   ShapeRectLocation := glGetUniformLocation(MainProgram, 'shape_rect');
   ShapeSizeLocation := glGetUniformLocation(MainProgram, 'shape_size');
+  ShapeBorderLocation := glGetUniformLocation(MainProgram, 'shape_border');
+  ShapeBorderWidthLocation := glGetUniformLocation(MainProgram, 'shape_border_width');
   TransformLocationText := glGetUniformLocation(TextProgram, 'transform');
   TransformLocationLineStrip := glGetUniformLocation(LineStripProgram, 'transform');
   ColorLocationLineStrip := glGetUniformLocation(LineStripProgram, 'color');
@@ -766,7 +774,7 @@ var
   Bytes: GLuint;
   ColorR, ColorG, ColorB: single;
   X2, Y2: single;
-  ShapeW, ShapeH: single;
+  ShapeW, ShapeH, Radius, PixelScale: single;
   HasShape: boolean;
 begin
   Tex := TTexture_OpenGL(Texture);
@@ -931,15 +939,24 @@ begin
   UploadArray(Bytes);
 
   // Geometry, not source UVs, defines the mask (including cropped images).
-  HasShape := (Prog = MainProgram) and ((Texture.CornerRadius > 0) or (Texture.OutlineWidth > 0)) and
+  HasShape := (Prog = MainProgram) and ((Texture.CornerRadius > 0) or (Texture.OutlineWidth > 0) or
+      (Texture.Radius >= 0) or (Texture.BorderWidth > 0)) and
     (Texture.W > 0) and (Texture.H > 0);
+  if Prog = MainProgram then
+  begin
+    PixelScale := Min(GetLayoutScaleX, GetLayoutScaleY);
+    glUniform4f(ShapeBorderLocation, Texture.BorderR, Texture.BorderG, Texture.BorderB, Texture.BorderAlpha);
+    glUniform1f(ShapeBorderWidthLocation, Max(0, Texture.BorderWidth) * PixelScale);
+  end;
   if HasShape then
   begin
     ShapeW := Abs(Texture.W * GetLayoutScaleX);
     ShapeH := Abs(Texture.H * GetLayoutScaleY);
+    Radius := EnsureRange(Texture.CornerRadius, 0.0, 0.5) * Min(ShapeW, ShapeH);
+    if Texture.Radius >= 0 then Radius := Min(Min(ShapeW, ShapeH) / 2, Texture.Radius * PixelScale);
     glUniform4f(ShapeRectLocation, Texture.X, Texture.Y, Texture.W, Texture.H);
     glUniform4f(ShapeSizeLocation, ShapeW, ShapeH,
-      EnsureRange(Texture.CornerRadius, 0.0, 0.5) * Min(ShapeW, ShapeH),
+      Radius,
       EnsureRange(Texture.OutlineWidth, 0.0, 0.5) * Min(ShapeW, ShapeH));
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, PGLvoid(EBOCursor * SizeOf(GLuint)));
     if Texture.Reflection then
@@ -1139,6 +1156,8 @@ begin
   else
     BindMainVertexAttrib;
   glUseProgram(MainProgram);
+  glUniform4f(ShapeSizeLocation, 0, 0, 0, 0);
+  glUniform1f(ShapeBorderWidthLocation, 0);
   if (UpdateTransformMain) then
   begin
     UploadMatrix(TransformLocationMain, ProjectionMatrix);

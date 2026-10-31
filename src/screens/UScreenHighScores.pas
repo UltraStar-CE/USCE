@@ -52,6 +52,7 @@ type
       EntryColumnOffset, EntryColumnWidth: real;
       function ColumnForEntry(Column, Entry: integer): TListColumn;
       function TryTwoColumns(var Layout: TTextListLayout): boolean;
+      function DateBelowName: boolean;
       procedure AddThemedFrame;
       procedure ApplyEntryStaticLayout(StaticIndex, EntryIndex: integer; const ThemeStatic: TThemeStatic);
       procedure ApplyEntryTextLayout(TextIndex, EntryIndex: integer; const ThemeText: TThemeText);
@@ -71,6 +72,8 @@ type
       TextTitle:            integer;
       TextWhereAmI:         integer;
       TextArtistTitle:      integer;
+      TextSongTitle, TextArtist: integer;
+      EntryBackground: array of integer;
       TextDifficultyLabel:  integer;
       TextDifficulty:       integer;
       TextContinue:         integer;
@@ -214,7 +217,10 @@ end;
 
 function TScreenHighScores.EntryY(EntryIndex: integer): integer;
 begin
-  Result := Round(Theme.HighScores.RowNameText.Y +
+  if Theme.HighScores.FirstRowY >= 0 then
+    Result := Round(Theme.HighScores.FirstRowY + (EntryIndex mod EntryRowsPerColumn) * EntryRowPitch)
+  else
+    Result := Round(Theme.HighScores.RowNameText.Y +
       (EntryIndex mod EntryRowsPerColumn + 1) * EntryRowPitch);
 end;
 
@@ -262,6 +268,7 @@ end;
 
 procedure TScreenHighScores.SetEntryVisible(EntryIndex: integer; Visible: boolean);
 begin
+  if Theme.HighScores.HasRowBackground then Statics[EntryBackground[EntryIndex]].Visible := Visible;
   Statics[EntryNumberStatic[EntryIndex]].Visible := Visible;
   Text[EntryNumberText[EntryIndex]].Visible := Visible;
   Text[EntryNameText[EntryIndex]].Visible := Visible;
@@ -276,6 +283,13 @@ begin
     Result.Left := Result.Left + EntryColumnOffset;
 end;
 
+function TScreenHighScores.DateBelowName: boolean;
+begin
+  Result := Theme.HighScores.HasRowBackground and
+    (Theme.HighScores.RowDateText.Align = 0) and
+    (Theme.HighScores.RowDateText.Y > Theme.HighScores.RowNameText.Y);
+end;
+
 function TScreenHighScores.TryTwoColumns(var Layout: TTextListLayout): boolean;
 var
   Trial: TTextListLayout;
@@ -285,8 +299,9 @@ begin
   Result := false;
   if (LayoutEntryCount < Theme.HighScores.List.TwoColumnMinEntries) or
      (CurrentSong = nil) or (Theme.HighScores.RowNameText.Align <> 0) or
-     (Theme.HighScores.RowScoreText.Align <> 2) or (Theme.HighScores.RowDateText.Align <> 2) then Exit;
+     (Theme.HighScores.RowScoreText.Align <> 2) or ((Theme.HighScores.RowDateText.Align <> 2) and not DateBelowName) then Exit;
   FullWidth := Theme.HighScores.RowDateText.X - Theme.HighScores.RowNumberStatic.X;
+  if DateBelowName then FullWidth := Theme.HighScores.RowBackground.W;
   Width := (FullWidth - Theme.HighScores.List.ColumnGap) / 2;
   if Width <= 0 then Exit;
   HalfRows := (LayoutEntryCount + 1) div 2;
@@ -311,6 +326,7 @@ begin
     end;
     RankWidth := (Theme.HighScores.RowNameText.X - Theme.HighScores.RowNumberStatic.X) *
         FontSize / Theme.HighScores.RowNameText.Size;
+    if DateBelowName then DateWidth := 0;
     if RankWidth + ScoreWidth + DateWidth + Max(80, Min(NameWidth, 120)) + 36 <= Width then
     begin
       EntryRowsPerColumn := HalfRows;
@@ -342,6 +358,15 @@ begin
       FontSizePerRowPitch(LayoutEntryCount, 5, Theme.HighScores.List.MaxEntries, 0.78, 1.10, 2.0), 0.85);
   TryTwoColumns(Layout);
   Layout.RowPitch := Min(Layout.RowPitch, Layout.TextSize / 0.78 + 2);
+  if Theme.HighScores.HasRowBackground then
+    Layout.RowPitch := Max(Layout.RowPitch, Min(
+      (Theme.HighScores.RowBackground.H + 8) * Layout.TextSize / Theme.HighScores.RowNameText.Size,
+      (Theme.HighScores.List.BottomY - Theme.HighScores.RowNameText.Y) / (EntryRowsPerColumn + 1)));
+  if Theme.HighScores.FirstRowY >= 0 then
+    Layout.RowPitch := Min(Layout.RowPitch, (Theme.HighScores.List.BottomY - Theme.HighScores.FirstRowY) / Max(1, EntryRowsPerColumn));
+  if DateBelowName and (EntryColumnOffset > 0) then
+    Layout.TextSize := Min(Layout.TextSize, Min(14, Max(8, (Layout.RowPitch - 4) /
+      (1 + Theme.HighScores.RowDateText.Size / Theme.HighScores.RowNameText.Size))));
   EntryTextSize := Layout.TextSize;
   EntryRowPitch := Layout.RowPitch;
 
@@ -352,6 +377,17 @@ begin
     else
       LayoutIndex := LayoutEntryCount - 1;
 
+    if Theme.HighScores.HasRowBackground then
+    begin
+      ApplyEntryStaticLayout(EntryBackground[I], LayoutIndex, Theme.HighScores.RowBackground);
+      Statics[EntryBackground[I]].Texture.H := Min(Statics[EntryBackground[I]].Texture.H, Max(1, EntryRowPitch - 8));
+      if EntryColumnOffset > 0 then
+      begin
+        Statics[EntryBackground[I]].Texture.X := Theme.HighScores.RowBackground.X;
+        if I >= EntryRowsPerColumn then Statics[EntryBackground[I]].Texture.X := Statics[EntryBackground[I]].Texture.X + EntryColumnOffset;
+        Statics[EntryBackground[I]].Texture.W := Min(Statics[EntryBackground[I]].Texture.W, EntryColumnWidth - 8);
+      end;
+    end;
     ApplyEntryStaticLayout(EntryNumberStatic[I], LayoutIndex, Theme.HighScores.RowNumberStatic);
 
     ApplyEntryTextLayout(EntryNumberText[I], LayoutIndex,
@@ -369,6 +405,19 @@ begin
         Statics[EntryNumberStatic[I]].Texture.X := Statics[EntryNumberStatic[I]].Texture.X + EntryColumnOffset;
       Text[EntryNumberText[I]].X := Statics[EntryNumberStatic[I]].Texture.X +
           Statics[EntryNumberStatic[I]].Texture.W / 2;
+      if DateBelowName then
+      begin
+        Statics[EntryBackground[I]].Texture.Y := EntryY(LayoutIndex) - 3;
+        Statics[EntryBackground[I]].Texture.H := Max(1, EntryRowPitch - 3);
+        Statics[EntryNumberStatic[I]].Texture.H := Min(Statics[EntryNumberStatic[I]].Texture.H, EntryRowPitch - 5);
+        Statics[EntryNumberStatic[I]].Texture.W := Statics[EntryNumberStatic[I]].Texture.H;
+        Statics[EntryNumberStatic[I]].Texture.Y := EntryY(LayoutIndex) - 1;
+        Text[EntryNumberText[I]].X := Statics[EntryNumberStatic[I]].Texture.X + Statics[EntryNumberStatic[I]].Texture.W / 2;
+        Text[EntryNumberText[I]].Y := EntryY(LayoutIndex) + 1;
+        Text[EntryNameText[I]].Y := EntryY(LayoutIndex);
+        Text[EntryDateText[I]].Y := EntryY(LayoutIndex) + EntryTextSize + 1;
+        Text[EntryScoreText[I]].Y := EntryY(LayoutIndex) + 2;
+      end;
     end;
   end;
 end;
@@ -385,6 +434,27 @@ begin
       Theme.HighScores.RowScoreText.W, Theme.HighScores.RowScoreText.Align);
   EntryColumns[2] := ListColumnFromAnchor(Theme.HighScores.RowDateText.X,
       Theme.HighScores.RowDateText.W, Theme.HighScores.RowDateText.Align);
+
+  if DateBelowName then
+  begin
+    Left := Theme.HighScores.RowNameText.X;
+    Width := Theme.HighScores.RowBackground.X + Theme.HighScores.RowBackground.W - Left - 16;
+    if EntryColumnOffset > 0 then Width := EntryColumnWidth - (Left - Theme.HighScores.RowBackground.X) - 16;
+    ScoreWidth := Max(1, Theme.HighScores.RowScoreText.W) * Min(1.0, EntryTextSize / Theme.HighScores.RowNameText.Size);
+    EntryColumns[0] := ListColumnFromAnchor(Left, Max(1, Width - ScoreWidth - 12), 0);
+    EntryColumns[1] := ListColumnFromAnchor(Left + Width, ScoreWidth, 2);
+    EntryColumns[2] := EntryColumns[0];
+    for I := 0 to High(EntryNameText) do
+    begin
+      PositionListColumnText(Text[EntryNameText[I]], ColumnForEntry(0, I));
+      PositionListColumnText(Text[EntryScoreText[I]], ColumnForEntry(1, I));
+      PositionListColumnText(Text[EntryDateText[I]], ColumnForEntry(2, I));
+      Text[EntryNameText[I]].W := EntryColumns[0].Width;
+      Text[EntryScoreText[I]].W := EntryColumns[1].Width;
+      Text[EntryDateText[I]].W := EntryColumns[2].Width;
+    end;
+    Exit;
+  end;
 
   // Keep custom theme anchors; infer widths only for the standard column order.
   if (EntryColumns[0].Align <> 0) or (EntryColumns[1].Align <> 2) or
@@ -560,6 +630,10 @@ begin
   TextTitle := AddText(Theme.HighScores.TextTitle);
   TextWhereAmI := AddText(Theme.HighScores.TextWhereAmI);
   TextArtistTitle := AddText(Theme.HighScores.TextArtistTitle);
+  TextSongTitle := -1; TextArtist := -1;
+  if Theme.HighScores.TextSongTitle.Size > 0 then TextSongTitle := AddText(Theme.HighScores.TextSongTitle);
+  if Theme.HighScores.TextArtist.Size > 0 then TextArtist := AddText(Theme.HighScores.TextArtist);
+  if Theme.HighScores.HasRowBackground then SetLength(EntryBackground, Theme.HighScores.List.MaxEntries);
   TextDifficultyLabel := AddText(Theme.HighScores.TextDifficultyLabel);
   TextDifficulty := AddText(Theme.HighScores.TextDifficulty);
   TextContinue := AddText(Theme.HighScores.TextContinue);
@@ -567,6 +641,7 @@ begin
 
   for I := 0 to Theme.HighScores.List.MaxEntries - 1 do
   begin
+    if Theme.HighScores.HasRowBackground then EntryBackground[I] := AddStatic(Theme.HighScores.RowBackground);
     EntryNumberStatic[I] := AddStatic(Theme.HighScores.RowNumberStatic);
 
     ThemeText := Theme.HighScores.RowNumberText;
@@ -607,6 +682,8 @@ begin
   LoadCurrentSongScores;
 
   Text[TextArtistTitle].Text := CurrentSong.Artist + ' - ' + CurrentSong.Title;
+  if TextSongTitle >= 0 then Text[TextSongTitle].Text := CurrentSong.Title;
+  if TextArtist >= 0 then Text[TextArtist].Text := CurrentSong.Artist;
 
   // An explicitly timed continuous-mode screen also stays visible when this
   // difficulty has no saved scores yet.

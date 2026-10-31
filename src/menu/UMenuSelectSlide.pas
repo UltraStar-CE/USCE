@@ -39,7 +39,8 @@ uses
   UMenuInteract,
   UMenuWidget,
   UPath,
-  URenderer;
+  URenderer,
+  UThemes;
 
 type
   PSelectSlide = ^TSelectSlide;
@@ -117,6 +118,9 @@ type
       SBGDInt:    single;
 
       // selection text
+      Surface: TThemeSurface;
+      FullRow, HasUnfocusedValueColor: boolean;
+      UnfocusedR, UnfocusedG, UnfocusedB, FocusWidth, FocusR, FocusG, FocusB: real;
       STColR:     single;
       STColG:     single;
       STColB:     single;
@@ -184,7 +188,7 @@ uses
   SysUtils,
   UGraphic,
   ULog,
-  UMenu, UThemes;
+  UMenu;
 
 // ------------ Select
 constructor TSelectSlide.Create(PosX, PosY, W, H, SkipX, SBGW, ColR, ColG, ColB, Int, DColR, DColG, DColB, DInt,
@@ -195,6 +199,8 @@ constructor TSelectSlide.Create(PosX, PosY, W, H, SkipX, SBGW, ColR, ColG, ColB,
   const Caption: UTF8String; var Data: integer);
 begin
   inherited Create;
+  Surface.Radius := -1;
+  Surface.BorderAlpha := 1;
   Text := TText.Create;
   SetLength(TextOpt, 1);
   TextOpt[0] := TText.Create;
@@ -597,7 +603,7 @@ begin
     else
       MaxLen := TextureSBG.W;
 
-    SetFontFamily(0);
+    SetFontFamily(Text.Font);
     SetFontStyle(ftRegular);
     SetFontSize(Text.Size);
 
@@ -623,9 +629,18 @@ end;
 procedure TSelectSlide.Draw;
 var
   SO: integer;
+  SavedW: single;
 begin
   if Visible then
   begin
+    ApplyThemeSurface(Texture, Surface);
+    if SelectBool and (FocusWidth > 0) then
+    begin
+      Texture.BorderWidth := FocusWidth;
+      Texture.BorderR := FocusR; Texture.BorderG := FocusG; Texture.BorderB := FocusB;
+    end;
+    SavedW := Texture.W;
+    if FullRow then Texture.W := TextureSBG.X + TextureSBG.W - Texture.X;
     if SelectBool or not Colorized then
     begin
       Renderer.DrawTexture(Texture);
@@ -639,7 +654,12 @@ begin
       Renderer.DrawTexture(DeselectTexture);
     end;
 
-    if SelectBool or not ColorizedSBG then
+    Texture.W := SavedW;
+    if FullRow then
+    begin
+      // The label surface owns the full row; the value retains its native hit area.
+    end
+    else if SelectBool or not ColorizedSBG then
     begin
       Renderer.DrawTexture(TextureSBG);
     end
@@ -661,7 +681,16 @@ begin
     Text.DrawEmphasized(SelectBool and Theme.BoldSelection);
 
     for SO := Low(TextOpt) to High(TextOpt) do
+    begin
+      if HasUnfocusedValueColor and (SO = FocusOption) then
+      begin
+        if SelectBool then
+        begin TextOpt[SO].ColR := STColR; TextOpt[SO].ColG := STColG; TextOpt[SO].ColB := STColB; end
+        else
+        begin TextOpt[SO].ColR := UnfocusedR; TextOpt[SO].ColG := UnfocusedG; TextOpt[SO].ColB := UnfocusedB; end;
+      end;
       TextOpt[SO].DrawEmphasized(SelectBool and Theme.BoldSelection and (SO = FocusOption));
+    end;
   end;
 end;
 
@@ -670,7 +699,7 @@ var
   maxlength: single;
   I:         integer;
 begin
-  SetFontFamily(0);
+  SetFontFamily(Text.Font);
   SetFontStyle(ftRegular{Text.Style});
   SetFontSize(Text.Size);
   maxlength := 0;

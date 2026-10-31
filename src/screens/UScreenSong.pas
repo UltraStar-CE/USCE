@@ -2851,6 +2851,7 @@ begin
             Button[B].H := Theme.Song.ListRowCover.H;
             Button[B].Texture.ScaleMode := Theme.Song.ListRowCover.ScaleMode;
             Button[B].Texture.CornerRadius := Theme.Song.ListRowCover.CornerRadius;
+            ApplyThemeSurface(Button[B].Texture, Theme.Song.ListRowCover.Surface);
           end;
 
 
