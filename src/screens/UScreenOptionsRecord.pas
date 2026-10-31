@@ -858,7 +858,6 @@ var
   DeviceCfg: PInputDeviceConfig;
   ChannelIndex: integer;
   Bounds: TDocumentRegion;
-  PreviousDepthTest: boolean;
 begin
   if ((PreviewDeviceIndex >= 0) and
       (PreviewDeviceIndex <= High(AudioInputProcessor.DeviceList))) then
@@ -896,19 +895,13 @@ begin
   Result := inherited;
   if HasDocumentUI then
   begin
-    PreviousDepthTest := Renderer.DepthTest;
-    Renderer.DepthTest := false;
-    try
-      if (VolumeMeter <> nil) and DocumentRegion('field-surface-' + IntToStr(SelectInputSourceID), Bounds) then
-      begin
-        VolumeMeter.SetBounds(Bounds); VolumeMeter.Draw;
-      end;
-      if (VUMeter <> nil) and (PreviewChannel <> nil) and DocumentRegion('field-surface-' + IntToStr(SelectAssigneeID), Bounds) then
-      begin
-        VUMeter.SetBounds(Bounds); VUMeter.Draw;
-      end;
-    finally
-      Renderer.DepthTest := PreviousDepthTest;
+    if (VolumeMeter <> nil) and DocumentRegion('field-surface-' + IntToStr(SelectInputSourceID), Bounds) then
+    begin
+      VolumeMeter.SetBounds(Bounds); VolumeMeter.Draw;
+    end;
+    if (VUMeter <> nil) and (PreviewChannel <> nil) and DocumentRegion('field-surface-' + IntToStr(SelectAssigneeID), Bounds) then
+    begin
+      VUMeter.SetBounds(Bounds); VUMeter.Draw;
     end;
   end;
 end;

@@ -73,6 +73,7 @@ implementation
 
 uses 
   UGraphic,
+  UDocumentUI,
   UHelp,
   ULanguage,
   ULog,
@@ -215,6 +216,7 @@ end;
 constructor TScreenOptionsThemes.Create;
 begin
   inherited Create;
+  DocumentRole := 'settings-themes';
   Description := Language.Translate('SING_OPTIONS_THEMES_DESC');
   WhereAmI := Language.Translate('SING_OPTIONS_THEMES_WHEREAMI');
   Load;

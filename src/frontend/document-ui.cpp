@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The C boundary keeps RmlUi's C++ objects out of the Pascal game.
 #include <RmlUi/Core.h>
+#include <RmlUi/Core/Factory.h>
+#include <RmlUi/Core/StyleSheetContainer.h>
 #include "RmlUi_Renderer_GL3.h"
 #include "document-model.h"
 #include <SDL.h>
@@ -175,6 +177,16 @@ UI_EXPORT int ui_open(const char* filename) {
     document->AddEventListener(Rml::EventId::Mouseover, &actions);
     document->Show(); context->Update();
     if (!controls.empty()) controls.front()->Focus();
+    return 1;
+}
+UI_EXPORT int ui_style(const char* filename) {
+    if (!document || !filename) return 0;
+    auto sheet = Rml::Factory::InstanceStyleSheetFile(filename);
+    if (!sheet) { last_error = std::string("Cannot load frontend stylesheet: ") + filename; return 0; }
+    if (const auto* current = document->GetStyleSheetContainer())
+        sheet = current->CombineStyleSheetContainer(*sheet);
+    document->SetStyleSheetContainer(std::move(sheet));
+    context->Update();
     return 1;
 }
 UI_EXPORT void ui_set(const char* name, const char* value) {

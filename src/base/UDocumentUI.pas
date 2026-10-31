@@ -50,6 +50,7 @@ type
   TDocumentUI = class
   private
     FileName: UTF8String;
+    ColorStyle, SkinStyle: UTF8String;
     Values: TStringList;
     LastActionTarget: UTF8String;
     function Activate: boolean;
@@ -74,7 +75,7 @@ type
   end;
 procedure ShutdownDocumentUI;
 implementation
-uses DynLibs, IniFiles, ULanguage, ULog, UGraphic, UMenuBackground;
+uses DynLibs, IniFiles, ULanguage, ULog, UGraphic, UMenuBackground, UIni, URenderer;
 type
   TTranslate = function(Key: PAnsiChar): PAnsiChar; cdecl;
   TLogger = procedure(Severity: integer; Message: PAnsiChar); cdecl;
@@ -83,7 +84,7 @@ var
   Current: TDocumentUI;
   TranslationBuffer: UTF8String;
   Initialize: function(Translate: TTranslate; Logger: TLogger; Font, BoldFont: PAnsiChar): integer; cdecl;
-  OpenDocument: function(FileName: PAnsiChar): integer; cdecl;
+  OpenDocument, ApplyStyle: function(FileName: PAnsiChar): integer; cdecl;
   SetBinding: procedure(Name, Value: PAnsiChar); cdecl;
   Render: procedure(Width, Height, ForegroundOnly: integer); cdecl;
   ProcessMouse: procedure(X, Y, Button, Down: integer); cdecl;
@@ -136,6 +137,7 @@ begin
     @Initialize := Symbol('ui_initialize');
     @Shutdown := Symbol('ui_shutdown');
     @OpenDocument := Symbol('ui_open');
+    @ApplyStyle := Symbol('ui_style');
     @SetBinding := Symbol('ui_set');
     @Render := Symbol('ui_render');
     @ProcessMouse := Symbol('ui_mouse');
@@ -161,7 +163,7 @@ begin
 end;
 
 class function TDocumentUI.Open(const ScreenName: string; const ArrayBinding: UTF8String): TDocumentUI;
-var Root, DocumentFile, Font, BoldFont: UTF8String; Manifest: TMemIniFile;
+var Root, DocumentFile, Font, BoldFont, Style, SkinSheet, CompatibleTheme: UTF8String; Manifest: TMemIniFile;
 begin
   Result := nil;
   if Screens <> 1 then Exit;
@@ -172,6 +174,17 @@ begin
   Manifest := TMemIniFile.Create(Root + 'frontend.ini');
   try
     if Manifest.ReadInteger('Frontend', 'API', 0) <> 1 then Exit;
+    CompatibleTheme := Manifest.ReadString('Frontend', 'LegacyTheme', '');
+    if (CompatibleTheme <> '') and ((Ini.Theme < 0) or (Ini.Theme >= Length(ITheme)) or
+      not SameText(CompatibleTheme, ITheme[Ini.Theme])) then Exit;
+    SkinSheet := '';
+    if (Ini.SkinNo >= 0) and (Ini.SkinNo < Length(ISkin)) then
+      SkinSheet := Manifest.ReadString('Styles', 'Skin.' + ISkin[Ini.SkinNo], '');
+    if SkinSheet <> '' then SkinSheet := ExpandFileName(Root + SkinSheet);
+    Style := '';
+    if (Ini.Color >= Low(IColor)) and (Ini.Color <= High(IColor)) then
+      Style := Manifest.ReadString('Styles', 'Color.' + IColor[Ini.Color], '');
+    if Style <> '' then Style := ExpandFileName(Root + Style);
     DocumentFile := Manifest.ReadString('Screens', ScreenName, '');
     if DocumentFile = '' then Exit;
     DocumentFile := ExpandFileName(Root + DocumentFile);
@@ -184,6 +197,8 @@ begin
   if not FileExists(DocumentFile) or not LoadRuntime(Font, BoldFont) then Exit;
   if ArrayBinding <> '' then SetModelArray(PAnsiChar(ArrayBinding), 0);
   Result := TDocumentUI.Create(DocumentFile);
+  Result.ColorStyle := Style;
+  Result.SkinStyle := SkinSheet;
   if not Result.Activate then FreeAndNil(Result);
 end;
 
@@ -209,6 +224,16 @@ begin
   Current := nil;
   Result := OpenDocument(PAnsiChar(FileName)) <> 0;
   if not Result then begin Log.LogWarn(UTF8String(GetError()), 'DocumentUI'); Exit; end;
+  if (SkinStyle <> '') and (ApplyStyle(PAnsiChar(SkinStyle)) = 0) then
+  begin
+    Log.LogWarn(UTF8String(GetError()), 'DocumentUI');
+    Exit(false);
+  end;
+  if (ColorStyle <> '') and (ApplyStyle(PAnsiChar(ColorStyle)) = 0) then
+  begin
+    Log.LogWarn(UTF8String(GetError()), 'DocumentUI');
+    Exit(false);
+  end;
   Current := Self;
   for I := 0 to Values.Count - 1 do
     SetBinding(PAnsiChar(UTF8String(Values.Names[I])), PAnsiChar(UTF8String(Values.ValueFromIndex[I])));
@@ -225,8 +250,12 @@ function TDocumentUI.Draw(BackgroundOnly, ForegroundOnly: boolean): boolean;
 begin
   Result := Activate;
   if Result then
+  begin
+    if not ForegroundOnly and not TMenuBackground.SuppressDrawing then
+      Renderer.ClearFrameBuffer(CLEAR_DEPTH);
     if BackgroundOnly then Render(ScreenW, ScreenH, 2)
     else Render(ScreenW, ScreenH, Ord(ForegroundOnly or TMenuBackground.SuppressDrawing));
+  end;
 end;
 
 procedure TDocumentUI.SetNumber(const Name: UTF8String; Value: double);

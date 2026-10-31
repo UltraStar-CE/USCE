@@ -1,10 +1,13 @@
 /* Modern's 800x600 composition, expressed entirely by the theme. */
 body { margin: 0; width: 100%; height: 100%; font-family: ui; color: white; }
-.background-edge { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
-.background { position: absolute; left: 50%; margin-left: -66.666667vh; top: 0; width: 133.333333vh; height: 100%; }
+.background-layer { position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; display: flex; }
+.background-edge { position: relative; flex: 1; height: 100vh; }
+.background-edge-left { decorator: image(main-edge-left flip-horizontal); }
+.background-edge-right { decorator: image(main-edge-right flip-horizontal); }
+.background { decorator: image("../../themes/Modern/[bg-main]blue.jpg"); position: relative; width: 133.333333vh; max-width: 100vw; height: 100vh; flex-shrink: 0; }
 .foreground-only .background, .foreground-only .background-edge { visibility: hidden; }
 .background-only .foreground { visibility: hidden; }
-.footer { position: absolute; left: 0; top: 90.833333vh; width: 100%; height: 8vh; }
+.footer { decorator: image(footer.svg); position: absolute; left: 0; top: 90.833333vh; width: 100%; height: 8vh; }
 .where { position: absolute; right: 70.25vw; top: 91.666667vh; font-size: 3vh; white-space: nowrap; color: #bfe8f5; }
 .version { position: absolute; right: 1.25vw; top: 91.611111vh; font-size: 3vh; color: black; }
 .status { position: absolute; right: 70.25vw; top: 91.944444vh; font-size: 3vh; white-space: pre; }
@@ -22,8 +25,7 @@ progress fill { background-color: transparent; }
 button { position: relative; display: block; box-sizing: border-box; border-width: 0; padding: 0; text-align: center;
   color: white; font-family: ui; background-color: #42a3e7e6; }
 button svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; }
-button:focus svg, button:hover svg { opacity: 0.9; }
-button:focus, button:hover { background-color: transparent; }
+button:focus, button:hover { background-color: #7ec5eae6; }
 button span { position: relative; display: block; }
 .buttons button { flex-shrink: 0; width: 18.75vw; height: 8.333333vh; margin-right: 0.625vw; font-size: 3.75vh; }
 .buttons button span { margin-top: 1.944444vh; }
@@ -102,7 +104,7 @@ button:focus span { font-weight: bold; }
 
 .form-choices { display: none; }
 .form-row.inline .form-value { display: none; }
-.form-row.inline .form-choices { box-sizing: border-box; padding-left: 3.125vw; padding-right: 3.125vw; display: flex; width: 50vw; height: 5.833333vh; margin-left: 1.25vw; background-color: #42a3e7e6; overflow-x: auto; overflow-y: hidden; }
+.form-row.inline .form-choices { display: flex; width: 50vw; height: 5.833333vh; margin-left: 1.25vw; background-color: #42a3e7e6; }
 .form-choices scrollbarhorizontal { height: 0; }
 .form-choices button { width: 6.25vw; text-align: left; flex-shrink: 0; background-color: transparent; color: #3c4b54; }
 .form-choices button.chosen { color: white; }
@@ -123,3 +125,21 @@ button:focus span { font-weight: bold; }
 .form-extra-command span { margin-top: 0.5vh; }
 .form-extra-command.selected { background-color: #7ec5eae6; font-weight: bold; }
 .network-notice { position: absolute; left: 26.25vw; top: 35.833333vh; width: 47.5vw; text-align: center; font-size: 3vh; }
+
+.loading-screen .background { decorator: image("../../themes/Modern/[bg-load]blue.png"); }
+.loading-screen .background-edge-left { decorator: image(load-edge-left flip-horizontal); }
+.loading-screen .background-edge-right { decorator: image(load-edge-right flip-horizontal); }
+
+@spritesheet main-edge-source {
+  src: "../../themes/Modern/[bg-main]blue.jpg";
+  main-edge-left: 0.5px 0px 15.5px 600px;
+  main-edge-right: 784px 0px 15.5px 600px;
+}
+@spritesheet load-edge-source {
+  src: "../../themes/Modern/[bg-load]blue.png";
+  load-edge-left: 0.5px 0px 15.5px 600px;
+  load-edge-right: 784px 0px 15.5px 600px;
+}
+
+.choices-scroll { display: flex; width: 43.75vw; margin-left: 3.125vw; height: 5.833333vh; overflow-x: auto; overflow-y: hidden; flex-shrink: 0; }
+.form-row.selected .form-choices button.chosen span { font-weight: bold; }

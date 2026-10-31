@@ -11,6 +11,7 @@
 extern "C" {
 int ui_initialize(const char* (*)(const char*), void (*)(int, const char*), const char*, const char*);
 int ui_open(const char*);
+int ui_style(const char*);
 void ui_set(const char*, const char*);
 void ui_render(int, int, int);
 void ui_mouse(int, int, int, int);
@@ -223,6 +224,25 @@ int main(int argc, char** argv) {
             ui_clear_action();
             ui_mouse(1100, 530, 0, 1); ui_mouse(1100, 530, 0, 0);
             require(std::string(ui_action()) == "credits.open", "About credits action");
+            for (const char* variant : {"blue", "green", "pink", "red", "violet", "orange", "yellow", "brown", "black"}) {
+                require(ui_open(main_document.c_str()) != 0, "Color variant document");
+                const auto sheet = utf8(root / "frontends/modern/colors" / (std::string(variant) + ".rcss"));
+                require(ui_style(sheet.c_str()) != 0, "Theme stylesheet overlay");
+                ui_render(1280, 720, 0);
+                if (std::string(variant) == "green") {
+                    glReadPixels(200, 720-350, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+                    require(pixel[1] > pixel[0] + 30 && pixel[1] > pixel[2] + 20, "Theme stylesheet changes selected control color");
+                }
+            }
+            require(ui_open(main_document.c_str()) != 0, "Skin variant document");
+            ui_render(1280, 720, 0);
+            unsigned char blue_background[4];
+            glReadPixels(640, 720-420, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, blue_background);
+            const auto winter_sheet = utf8(root / "frontends/modern/skins/winter.rcss");
+            require(ui_style(winter_sheet.c_str()) != 0, "Winter skin stylesheet");
+            ui_render(1280, 720, 0);
+            glReadPixels(640, 720-420, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+            require(std::abs(int(pixel[0])-blue_background[0]) + std::abs(int(pixel[1])-blue_background[1]) + std::abs(int(pixel[2])-blue_background[2]) > 40, "Skin stylesheet changes artwork");
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
             glDeleteFramebuffers(1, &framebuffer); glDeleteTextures(1, &texture);
             ui_shutdown();

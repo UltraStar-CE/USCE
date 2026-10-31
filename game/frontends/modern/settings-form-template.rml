@@ -5,8 +5,11 @@
   <link type="text/template" href="footer-form.rml" />
 </head>
 <body class="settings-form">
-  <svg class="background-edge" src="edge-main.svg" />
-  <img class="background" src="../../themes/Modern/[bg-main]blue.jpg" />
+  <div class="background-layer">
+    <div class="background-edge background-edge-left" />
+    <div class="background" />
+    <div class="background-edge background-edge-right" />
+  </div>
   <div data-model="game">
   <div class="foreground" data-class-preview="data.form.preview">
     <img class="heading-icon" src="../../themes/Modern/[icon]options.png" />
@@ -21,9 +24,9 @@
             <button class="form-current" action="form.activate" data-attr-target="field.id"><span>{{ field.value }}</span></button>
             <button class="form-next" action="form.increment" data-attr-target="field.id" data-class-available="field.next"><svg src="arrow-right.svg" /></button>
           </div>
-          <div class="form-choices">
+          <div class="form-choices"><div class="choices-scroll">
             <button data-for="choice : field.choices" action="form.choose" data-attr-id="choice.id" data-attr-target="choice.target" data-class-chosen="choice.selected"><span>{{ choice.label }}</span></button>
-          </div>
+          </div></div>
           <div class="form-surface" data-attr-id="'field-surface-' + field.id" />
         </div>
       </div>
@@ -34,7 +37,7 @@
       <div id="form-back-reflection" class="form-back-reflection" data-class-selected="data.form.backSelected" />
     </div>
     <div id="form-components" />
-    <svg class="footer" src="footer.svg" />
+    <div class="footer" />
     <div class="footer-labels"><template src="footer-form" /></div>
     <div class="reflection-clip"><div class="footer-labels"><template src="footer-form" /></div></div>
   </div>

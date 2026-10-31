@@ -1953,7 +1953,7 @@ end;
 procedure TMenu.OnHide;
 begin
   // nothing
-  Background.OnFinish;
+  if Background <> nil then Background.OnFinish;
 end;
 
 procedure TMenu.OnWindowResized;
