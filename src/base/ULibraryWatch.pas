@@ -33,7 +33,7 @@ implementation
 uses
   {$IFDEF MSWINDOWS}Windows{$ENDIF}
   {$IFDEF LINUX}BaseUnix, Linux{$ENDIF}
-  {$IFDEF DARWIN}MacOSAll, FSEvents{$ENDIF};
+  {$IFDEF DARWIN}MacTypes, CFBase, CFArray, CFString, CFRunLoop, FSEvents{$ENDIF};
 
 type EWatchOverflow = class(Exception);
 
