@@ -1,0 +1,18 @@
+/* Four identity fields and two actions, matching Modern's existing dialog. */
+.duplicate-panel { position: absolute; left: 10vw; top: 21.666667vh; width: 80vw; height: 60vh; decorator: image("../../themes/Modern/[interface]dialog_background.png"); }
+.duplicate-heading { position: absolute; left: 3vw; top: 3vh; width: 74vw; height: 5.333333vh; font-size: 4.25vh; white-space: nowrap; overflow: hidden; }
+.duplicate-label { position: absolute; top: 11vh; width: 35.5vw; font-size: 3vh; }
+.duplicate-artist { left: 3vw; } .duplicate-title { left: 41.5vw; }
+.duplicate-fields { position: absolute; display: flex; flex-wrap: wrap; left: 3vw; top: 15.333333vh; width: 74vw; column-gap: 3vw; row-gap: 9vh; }
+.duplicate-field { position: relative; display: flex; flex-shrink: 0; width: 35.5vw; height: 5.666667vh; padding-left: 1vw; text-align: left; overflow-x: auto; overflow-y: hidden; }
+.duplicate-field span { display: inline-block; flex-shrink: 0; font-size: 3.25vh; white-space: pre; margin-top: 0.333333vh; }
+.duplicate-field scrollbarhorizontal { height: 0; }
+.duplicate-caret { animation: 0.5s linear-in-out alternate infinite duplicate-blink; }
+.duplicate-screen .hidden { display: none; }
+.duplicate-path { position: absolute; left: 3vw; width: 74vw; height: 3.333333vh; font-size: 2.125vh; white-space: nowrap; overflow: hidden; pointer-events: none; }
+.duplicate-path-first { top: 21vh; } .duplicate-path-second { top: 35.666667vh; }
+.duplicate-actions { position: absolute; display: flex; left: 3vw; top: 44.666667vh; width: 74vw; column-gap: 3vw; }
+.duplicate-actions button { position: relative; flex-shrink: 0; width: 35.5vw; min-height: 5.666667vh; font-size: 3vh; padding: 0.333333vh 0.5vw; }
+.duplicate-actions button span { margin-top: 0; }
+.duplicate-hint { position: absolute; left: 3vw; top: 54.333333vh; width: 74vw; height: 4.5vh; font-size: 2vh; overflow: hidden; }
+@keyframes duplicate-blink { from { opacity: 1; } to { opacity: 0; } }

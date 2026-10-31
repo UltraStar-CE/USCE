@@ -1,0 +1,38 @@
+<rml>
+<head>
+  <title>Modern send score dialog</title>
+  <link type="text/rcss" href="modern.rcss" />
+  <link type="text/rcss" href="popup-error.rcss" />
+  <link type="text/rcss" href="popup-send-score.rcss" />
+</head>
+<body class="popup-error-screen popup-send-score-screen">
+  <div data-model="game" class="popup-positioner">
+    <div class="popup-dialog send-score-dialog">
+      <div class="send-score-reflection"><div /></div>
+      <span class="popup-error-title description">{{ data.sendScore.title }}</span>
+      <div class="send-score-choices">
+        <div data-for="choice : data.sendScore.choices" class="send-score-choice" data-class-selected="data.sendScore.focus == choice.id">
+          <button class="choice-label" action="score.send.select" data-attr-target="choice.id"><span>{{ choice.caption }}</span></button>
+          <div class="choice-value">
+            <button class="choice-previous" data-class-hidden="choice.index == 0" action="score.send.previous" data-attr-target="choice.id"></button>
+            <button class="choice-current" data-attr-id="'send-score-field-' + choice.id" action="score.send.select" data-attr-target="choice.id"><span>{{ choice.value }}</span></button>
+            <button class="choice-next" data-class-hidden="choice.index + 1 >= choice.count" action="score.send.next" data-attr-target="choice.id"></button>
+          </div>
+        </div>
+      </div>
+      <div class="send-score-entry" data-class-unavailable="!data.sendScore.editable" data-class-selected="data.sendScore.focus == 3">
+        <span class="entry-label" lang="SING_OPTIONS_NETWORK_USERNAME" />
+        <button id="send-score-field-3" action="score.send.select" target="3"><span>{{ data.sendScore.username }}</span></button>
+      </div>
+      <div class="send-score-entry password-entry" data-class-unavailable="!data.sendScore.editable" data-class-selected="data.sendScore.focus == 4">
+        <span class="entry-label" lang="SING_OPTIONS_NETWORK_PASSWORD" />
+        <button id="send-score-field-4" action="score.send.select" target="4"><span>{{ data.sendScore.passwordMask }}</span></button>
+      </div>
+      <div class="popup-error-actions send-score-actions" data-class-unavailable="!data.sendScore.canSend">
+        <button id="send-score-field-5" class="popup-choice" data-class-selected="data.sendScore.focus == 5" action="score.send.submit"><span lang="SCORE_SEND" /></button>
+        <button id="send-score-field-6" class="popup-choice" data-class-selected="data.sendScore.focus == 6" action="score.send.save"><span lang="SCORE_SAVE" /></button>
+      </div>
+    </div>
+  </div>
+</body>
+</rml>

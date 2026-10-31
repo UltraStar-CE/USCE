@@ -1,0 +1,38 @@
+/* Modern score-sharing form, with its original panel, rows and reflection. */
+.popup-send-score-screen .popup-positioner { height: 96.666667vh; }
+.send-score-dialog { width: 50vw; height: 46.666667vh; min-height: 46.666667vh; max-height: 46.666667vh; padding: 0; display: block; decorator: image("../../themes/Modern/[interface]dialog_background2.png"); }
+.send-score-dialog .popup-error-title { position: absolute; left: 0; top: 1.166667vh; width: 100%; height: 5vh; color: #7ec5ea; }
+.send-score-reflection { position: absolute; left: 0; top: 100%; width: 100%; height: 50%; margin-top: 2.5vh; overflow: hidden; opacity: 0.5; pointer-events: none; mask-image: vertical-gradient(#fff #0000); }
+.send-score-reflection > div { position: absolute; left: 0; top: 0; width: 100%; height: 200%; transform: scaleY(-1); decorator: image("../../themes/Modern/[interface]dialog_background2.png"); }
+.send-score-choices { position: absolute; left: 5vw; top: 11.666667vh; width: 41.25vw; }
+.send-score-choice { position: relative; width: 100%; height: 5vh; display: flex; align-items: flex-start; }
+.send-score-choice button { background-color: transparent; height: 4.166667vh; font-size: 3vh; }
+.send-score-choice button:focus { background-color: transparent; }
+.send-score-choice button span { white-space: nowrap; overflow: hidden; }
+.choice-label { width: 13.75vw; text-align: left; }
+.choice-value { position: relative; width: 27.5vw; height: 4.166667vh; background-color: transparent; }
+.choice-current { position: absolute; left: 0; top: 0; width: 100%; }
+.choice-previous, .choice-next { position: absolute; top: 0; width: 2.5vw; z-index: 1; }
+.choice-previous { left: 0; }
+.choice-next { right: 0; }
+.choice-previous img, .choice-next img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.send-score-choice.selected .choice-value { background-color: #00a8fe; }
+.send-score-choice.selected .choice-label, .send-score-choice.selected .choice-current { font-weight: bold; }
+.send-score-entry { position: absolute; left: 7.5vw; top: 28.333333vh; width: 35vw; height: 5vh; display: flex; align-items: flex-start; }
+.send-score-entry.password-entry { top: 33.333333vh; }
+.send-score-entry .entry-label { width: 15vw; font-size: 3vh; color: #b3b3b3; white-space: nowrap; overflow: hidden; }
+.send-score-entry button, .send-score-entry button:focus { width: 20vw; height: 4.166667vh; background-color: #333; color: black; text-align: left; font-size: 3vh; padding-left: 0.625vw; }
+.send-score-entry button span { white-space: nowrap; overflow: hidden; }
+.send-score-entry.selected button { background-color: #aaa; font-weight: bold; }
+.send-score-entry.selected .entry-label { font-weight: bold; }
+.send-score-entry.unavailable { pointer-events: none; }
+.send-score-entry.unavailable button { background-color: transparent; }
+.send-score-entry.unavailable .entry-label { color: #444; }
+.send-score-actions { position: absolute; left: 11.25vw; top: 40vh; width: 27.5vw; justify-content: space-between; margin: 0; }
+.send-score-actions .popup-choice { width: 12.5vw; min-width: 12.5vw; min-height: 4.166667vh; height: 4.166667vh; margin: 0; padding: 0; font-size: 3vh; background-color: #3c94d0; }
+.send-score-actions .popup-choice.selected { background-color: #00a8fe; font-weight: bold; }
+.send-score-actions.unavailable { opacity: 0.5; pointer-events: none; }
+.popup-send-score-screen .hidden { visibility: hidden; pointer-events: none; }
+
+.choice-previous { decorator: image(arrow-left.svg); }
+.choice-next { decorator: image(arrow-right.svg); }

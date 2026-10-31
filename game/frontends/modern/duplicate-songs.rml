@@ -1,0 +1,16 @@
+<rml>
+<head><title>Modern duplicate songs</title><link type="text/rcss" href="modern.rcss" /><link type="text/rcss" href="popup-error.rcss" /><link type="text/rcss" href="duplicate-songs.rcss" /></head>
+<body class="popup-error-screen duplicate-screen">
+  <div class="popup-shade" />
+  <div data-model="game"><div id="duplicate-panel" class="duplicate-panel">
+    <span class="duplicate-heading" lang="DUPLICATE_HEADING" />
+    <span class="duplicate-label duplicate-artist" lang="DUPLICATE_ARTIST" /><span class="duplicate-label duplicate-title" lang="DUPLICATE_TITLE" />
+    <div class="duplicate-fields">
+      <button data-for="field : data.duplicate.fields" class="duplicate-field" data-attr-id="'duplicate-control-' + field.id" action="duplicate.focus" data-attr-target="field.id" data-class-selected="field.selected"><span>{{ field.value }}</span><span class="duplicate-caret" data-attr-id="'duplicate-caret-' + field.id" data-class-hidden="!field.selected">|</span></button>
+    </div>
+    <span class="duplicate-path duplicate-path-first" bind-text="duplicate.path1" /><span class="duplicate-path duplicate-path-second" bind-text="duplicate.path2" />
+    <div class="duplicate-actions"><button id="duplicate-control-4" action="duplicate.save" target="4"><span lang="DUPLICATE_SAVE" /></button><button id="duplicate-control-5" action="duplicate.ignore" target="5"><span lang="DUPLICATE_START_ANYWAY" /></button></div>
+    <span id="duplicate-hint" class="duplicate-hint" bind-text="duplicate.hint" />
+  </div></div>
+</body>
+</rml>

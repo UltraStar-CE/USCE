@@ -1,7 +1,7 @@
 unit UDuplicateSongUI;
 {$mode delphi}{$codepage utf8}
 interface
-uses UMenu, USong, sdl2;
+uses UMenu, UDocumentUI, USong, sdl2;
 type
   TStartupContinuation = procedure;
   TDuplicateSongPopup = class(TMenu)
@@ -10,12 +10,23 @@ type
     fMouseInput, Changed: boolean;
     ContinueAfterCheck: TStartupContinuation;
     ErrorText: integer;
+    DocumentUI: TDocumentUI;
+    Fields: array[0..3] of UTF8String;
+    function Field(Index: integer): UTF8String;
+    procedure SetField(Index: integer; const Value: UTF8String);
+    procedure SetHint(const Value: UTF8String);
+    procedure SyncDocument;
+    procedure ReadDocumentSelection;
     procedure ShowPair;
     procedure Complete;
     procedure Save;
   public
     Visible: boolean;
     constructor Create; override;
+    destructor Destroy; override;
+    procedure SetInteraction(Num: integer); override;
+    procedure InteractNext; override;
+    procedure InteractPrev; override;
     procedure Start(Continuation: TStartupContinuation);
     function Draw: boolean; override;
     function ParseInput(Key: cardinal; Ch: UCS4Char; Down: boolean;
@@ -27,10 +38,68 @@ procedure CheckStartupSongIdentities(ContinueStartup: TStartupContinuation);
 implementation
 uses SysUtils, USongs, USongIdentity, UGraphic, ULanguage, UScreenPopup, UPlaylist,
   UThemes, UUnicodeUtils, UMain, URenderer, UCommon;
+const
+  uiDuplicateRole = 'duplicate-songs';
+  uiDuplicateFields = 'duplicate.fields';
+  uiDuplicateFocus = 'duplicate.focus';
+  uiDuplicateSave = 'duplicate.save';
+  uiDuplicateIgnore = 'duplicate.ignore';
+
+function TDuplicateSongPopup.Field(Index: integer): UTF8String;
+begin
+  if DocumentUI<>nil then Result:=Fields[Index] else Result:=Button[Index].Text[0].Text;
+end;
+procedure TDuplicateSongPopup.SetField(Index: integer; const Value: UTF8String);
+begin
+  if DocumentUI<>nil then Fields[Index]:=Value else Button[Index].Text[0].Text:=Value;
+end;
+procedure TDuplicateSongPopup.SetHint(const Value: UTF8String);
+begin
+  if DocumentUI<>nil then DocumentUI.SetValue('duplicate.hint',Value) else Text[ErrorText].Text:=Value;
+end;
+procedure TDuplicateSongPopup.SetInteraction(Num: integer);
+begin
+  if DocumentUI=nil then inherited SetInteraction(Num)
+  else if (Num>=0) and (Num<=5) then begin
+    SelInteraction:=Num;
+    if Visible then DocumentUI.Focus('duplicate-control-'+IntToStr(Num));
+  end;
+end;
+procedure TDuplicateSongPopup.InteractNext;
+begin
+  if DocumentUI=nil then inherited else Interaction:=(Interaction+1) mod 6;
+end;
+procedure TDuplicateSongPopup.InteractPrev;
+begin
+  if DocumentUI=nil then inherited else Interaction:=(Interaction+5) mod 6;
+end;
+procedure TDuplicateSongPopup.ReadDocumentSelection;
+var Selected:integer;
+begin
+  if TryStrToInt(DocumentUI.FocusedTarget,Selected) then Interaction:=Selected;
+end;
+procedure TDuplicateSongPopup.SyncDocument;
+var I:integer; Prefix:UTF8String;
+begin
+  DocumentUI.SetArray(uiDuplicateFields,4);
+  for I:=0 to 3 do begin
+    Prefix:=uiDuplicateFields+'['+IntToStr(I)+'].';
+    DocumentUI.SetModel(Prefix+'id',IntToStr(I),1);
+    DocumentUI.SetModel(Prefix+'value',Fields[I]);
+    DocumentUI.SetModel(Prefix+'selected',IntToStr(Ord(Interaction=I)),2);
+  end;
+  DocumentUI.PrepareLayout;
+  DocumentUI.Focus('duplicate-control-'+IntToStr(Interaction));
+  if Interaction<4 then DocumentUI.Reveal('duplicate-caret-'+IntToStr(Interaction));
+end;
+destructor TDuplicateSongPopup.Destroy;
+begin DocumentUI.Free; inherited; end;
 constructor TDuplicateSongPopup.Create;
 var I: integer; Basic: TThemeBasic;
 begin
   inherited;
+  DocumentUI:=TDocumentUI.Open(uiDuplicateRole,uiDuplicateFields);
+  if DocumentUI<>nil then Exit;
   Basic := TThemeBasic.Create;
   try
     Basic.Background := Theme.SongJumpto.Background;
@@ -69,12 +138,12 @@ end;
 procedure TDuplicateSongPopup.ShowPair;
 begin
   if not FindDuplicateIdentity(Songs.SongList, First, Second) then begin Complete; Exit; end;
-  Button[0].Text[0].Text := First.Artist;
-  Button[1].Text[0].Text := First.Title;
-  Button[2].Text[0].Text := Second.Artist;
-  Button[3].Text[0].Text := Second.Title;
-  Text[3].Text := ShortPath(First); Text[4].Text := ShortPath(Second);
-  Text[ErrorText].Text := Language.Translate('DUPLICATE_HINT');
+  SetField(0,First.Artist); SetField(1,First.Title);
+  SetField(2,Second.Artist); SetField(3,Second.Title);
+  if DocumentUI<>nil then begin
+    DocumentUI.SetValue('duplicate.path1',ShortPath(First)); DocumentUI.SetValue('duplicate.path2',ShortPath(Second));
+  end else begin Text[3].Text := ShortPath(First); Text[4].Text := ShortPath(Second); end;
+  SetHint(Language.Translate('DUPLICATE_HINT'));
   Visible := true; Interaction := 1; StartTextInput;
 end;
 procedure TDuplicateSongPopup.Complete;
@@ -105,21 +174,21 @@ begin
     // Rebuild dependent lists even if a later file write fails after an earlier save.
     Changed := true;
     RenameSongIdentityPair(Songs.SongList, First, Second,
-      Button[0].Text[0].Text, Button[1].Text[0].Text,
-      Button[2].Text[0].Text, Button[3].Text[0].Text);
+      Field(0), Field(1), Field(2), Field(3));
     ShowPair;
-  except on E: Exception do Text[ErrorText].Text := Language.Translate(E.Message); end;
+  except on E: Exception do SetHint(Language.Translate(E.Message)); end;
 end;
 function TDuplicateSongPopup.ParseInput(Key: cardinal; Ch: UCS4Char; Down: boolean; Repeated: boolean): boolean;
 begin
   Result := true;
   if not Down then Exit;
+  if DocumentUI<>nil then ReadDocumentSelection;
   if (Interaction < 4) and (Key = SDLK_a) and (SDL_GetModState and KMOD_CTRL <> 0) then
-  begin Button[Interaction].Text[0].Text := ''; Exit; end;
+  begin SetField(Interaction,''); Exit; end;
   if (Interaction < 4) and IsPrintableChar(Ch) and (SDL_GetModState and (KMOD_CTRL or KMOD_ALT) = 0) then
-  begin Button[Interaction].Text[0].Text := Button[Interaction].Text[0].Text + UCS4ToUTF8String(Ch); Exit; end;
+  begin SetField(Interaction,Field(Interaction)+UCS4ToUTF8String(Ch)); Exit; end;
   case Key of
-    SDLK_BACKSPACE: if Interaction < 4 then Button[Interaction].Text[0].DeleteLastLetter;
+    SDLK_BACKSPACE: if Interaction < 4 then SetField(Interaction,UTF8Copy(Field(Interaction),1,LengthUTF8(Field(Interaction))-1));
     SDLK_TAB: if SDL_GetModState and KMOD_SHIFT <> 0 then InteractPrev else InteractNext;
     SDLK_UP: if Interaction in [2,3] then Interaction := Interaction - 2 else InteractPrev;
     SDLK_DOWN: if Interaction in [0,1] then Interaction := Interaction + 2 else InteractNext;
@@ -139,7 +208,17 @@ begin
   end;
 end;
 function TDuplicateSongPopup.ParseMouse(MouseButton: integer; Down: boolean; X, Y: integer): boolean;
+var Action:UTF8String; Selected:integer;
 begin
+  if DocumentUI<>nil then begin
+    if MouseButton=SDL_BUTTON_LEFT then DocumentUI.Mouse(X,Y,0,Down) else DocumentUI.Mouse(X,Y);
+    ReadDocumentSelection; Action:=DocumentUI.TakeAction; Result:=true;
+    if Action=uiDuplicateFocus then begin
+      if TryStrToInt(DocumentUI.ActionTarget,Selected) and (Selected>=0) and (Selected<=3) then Interaction:=Selected;
+    end else if Action=uiDuplicateSave then begin Interaction:=4; Result:=ParseInput(SDLK_RETURN,0,true); end
+    else if Action=uiDuplicateIgnore then begin Interaction:=5; Result:=ParseInput(SDLK_RETURN,0,true); end;
+    Exit;
+  end;
   fMouseInput := true;
   try Result := inherited ParseMouse(MouseButton, Down, X, Y);
   finally fMouseInput := false; end;
@@ -147,6 +226,7 @@ end;
 function TDuplicateSongPopup.Draw: boolean;
 begin
   Renderer.ClearFrameBuffer(CLEAR_DEPTH);
+  if DocumentUI<>nil then begin SyncDocument; Exit(DocumentUI.Draw(false,true)); end;
   Result := inherited Draw;
 end;
 procedure CheckStartupSongIdentities(ContinueStartup: TStartupContinuation);

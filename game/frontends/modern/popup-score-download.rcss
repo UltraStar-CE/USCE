@@ -1,0 +1,12 @@
+/* Counts and workflow remain game data; the document defines progress geometry. */
+.download-dialog { min-height: 33.333333vh; max-height: 80vh; padding: 1.666667vh 2.5vw 2.5vh; }
+.download-status-row { position: relative; display: flex; width: 100%; margin-top: 3.5vh; min-height: 5vh; font-size: 3.75vh; }
+.download-song-status { position: relative; flex-grow: 1; white-space: normal; }
+.download-website-status { position: relative; margin-left: 1.25vw; white-space: nowrap; text-align: right; }
+.download-progress { position: relative; width: 45vw; height: 3.333333vh; margin-top: 1.333333vh; background-color: #808080; }
+.download-progress-fill { position: absolute; left: 0; top: 0; width: 0; height: 100%; background-color: #297bb0; }
+.download-website-progress { margin-top: 0.833333vh; }
+.download-actions { position: relative; margin-top: 2.5vh; }
+.download-actions .popup-choice { min-width: 12.5vw; min-height: 4.166667vh; font-size: 3vh; }
+.download-actions .popup-choice span { white-space: nowrap; }
+.download-website-status.hidden, .download-progress.hidden, .download-actions span.hidden { display: none; }

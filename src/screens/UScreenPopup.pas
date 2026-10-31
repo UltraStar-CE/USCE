@@ -124,6 +124,14 @@ type
 
   TScreenPopupSendScore = class(TMenu)
     private
+      DocumentUI: TDocumentUI;
+      DocumentTitle: UTF8String;
+      procedure SyncSendScoreDocument;
+      procedure RefreshSendScoreUsers(KeepOther: boolean);
+      procedure ChangeSendScoreChoice(Field, Direction: integer);
+      function ParseDocumentInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean): boolean;
+      procedure MoveSendScoreFocus(Direction: integer);
+    private
       fHandler: TPopupSendScoreHandler;
       fHandlerData: Pointer;
 
@@ -148,6 +156,9 @@ type
       SelectValueU: integer;
 
       constructor Create; override;
+      destructor Destroy; override;
+      procedure SetInteraction(Num: integer); override;
+      function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       procedure OnShow; override;
       procedure ShowPopup(const Title: UTF8String; Handler: TPopupSendScoreHandler;
@@ -207,6 +218,11 @@ type
 
 type
   TScreenPopupScoreDownload = class(TMenu)
+    private
+      DocumentUI: TDocumentUI;
+      DocumentComplete: boolean;
+      procedure SyncDownloadDocument;
+      procedure MarkDownloadComplete;
     public
       Visible: boolean; // whether the menu should be drawn
       Actual_Song: integer;
@@ -232,6 +248,8 @@ type
       Position_Receive_List: array[0..2] of integer;
 
       constructor Create; override;
+      procedure SetInteraction(Num: integer); override;
+      function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
       destructor Destroy; override;
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       procedure OnShow; override;
@@ -850,12 +868,165 @@ end;
 
 { TScreenPopupSendScore }
 
+procedure TScreenPopupSendScore.SetInteraction(Num: integer);
+begin
+  if DocumentUI = nil then begin inherited; Exit; end;
+  SelInteraction := EnsureRange(Num, 0, 6);
+  if (SelInteraction >= 3) and (SelInteraction <= 4) and (SelectValueU <> High(IUsername)) then
+    SelInteraction := 5;
+  DocumentUI.Focus('send-score-field-' + IntToStr(SelInteraction));
+  SyncSendScoreDocument;
+end;
+
+procedure TScreenPopupSendScore.MoveSendScoreFocus(Direction: integer);
+var Next: integer;
+begin
+  Next := (SelInteraction + Direction + 7) mod 7;
+  while (Next >= 3) and (Next <= 4) and (SelectValueU <> High(IUsername)) do
+    Next := (Next + Direction + 7) mod 7;
+  SetInteraction(Next);
+end;
+
+procedure TScreenPopupSendScore.RefreshSendScoreUsers(KeepOther: boolean);
+var I: integer;
+begin
+  SetLength(IUsername, 0);
+  if (SelectValueW >= 0) and (SelectValueW <= High(DataBase.NetworkUser)) then
+  begin
+    SetLength(IUsername, Length(DataBase.NetworkUser[SelectValueW].UserList));
+    for I := 0 to High(IUsername) do
+      IUsername[I] := DataBase.NetworkUser[SelectValueW].UserList[I].Username;
+  end;
+  SetLength(IUsername, Length(IUsername) + 1);
+  IUsername[High(IUsername)] := Language.Translate('SCORE_SEND_OTHER_USER');
+  if KeepOther then SelectValueU := High(IUsername) else SelectValueU := 0;
+end;
+
+procedure TScreenPopupSendScore.ChangeSendScoreChoice(Field, Direction: integer);
+var Count: integer; KeepOther: boolean;
+begin
+  case Field of
+    0: begin
+      Count := Length(IPlayersPlay);
+      if Count > 0 then SelectValueP := (SelectValueP + Direction + Count) mod Count;
+    end;
+    1: begin
+      Count := Length(IWebsite);
+      KeepOther := SelectValueU = High(IUsername);
+      if Count > 0 then SelectValueW := (SelectValueW + Direction + Count) mod Count;
+      RefreshSendScoreUsers(KeepOther);
+    end;
+    2: begin
+      Count := Length(IUsername);
+      if Count > 0 then SelectValueU := (SelectValueU + Direction + Count) mod Count;
+    end;
+  end;
+  SetInteraction(Field);
+end;
+
+procedure TScreenPopupSendScore.SyncSendScoreDocument;
+var I: integer; Prefix, Caption, Value: UTF8String; Editable: boolean;
+begin
+  DocumentUI.SetModel('sendScore.title', DocumentTitle);
+  Editable := SelectValueU = High(IUsername);
+  DocumentUI.SetModel('sendScore.editable', IntToStr(Ord(Editable)), 2);
+  DocumentUI.SetModel('sendScore.focus', IntToStr(SelInteraction), 1);
+  DocumentUI.SetModel('sendScore.canSend', IntToStr(Ord((Length(IWebsite) > 0) and (Length(IPlayersPlay) > 0))), 2);
+  DocumentUI.SetArray('sendScore.choices', 3);
+  for I := 0 to 2 do
+  begin
+    Prefix := 'sendScore.choices[' + IntToStr(I) + '].';
+    Value := '';
+    case I of
+      0: begin Caption := 'SCORE_SEND_PLAYER'; if Length(IPlayersPlay) > 0 then Value := IPlayersPlay[SelectValueP]; end;
+      1: begin Caption := 'SING_OPTIONS_NETWORK_WEBSITE'; if Length(IWebsite) > 0 then Value := IWebsite[SelectValueW]; end;
+      2: begin Caption := 'SING_OPTIONS_NETWORK_USERNAME'; if Length(IUsername) > 0 then Value := IUsername[SelectValueU]; end;
+    end;
+    DocumentUI.SetModel(Prefix + 'id', IntToStr(I), 1);
+    DocumentUI.SetModel(Prefix + 'caption', Language.Translate(Caption));
+    DocumentUI.SetModel(Prefix + 'value', Value);
+    case I of
+      0: begin DocumentUI.SetModel(Prefix + 'index', IntToStr(SelectValueP), 1); DocumentUI.SetModel(Prefix + 'count', IntToStr(Length(IPlayersPlay)), 1); end;
+      1: begin DocumentUI.SetModel(Prefix + 'index', IntToStr(SelectValueW), 1); DocumentUI.SetModel(Prefix + 'count', IntToStr(Length(IWebsite)), 1); end;
+      2: begin DocumentUI.SetModel(Prefix + 'index', IntToStr(SelectValueU), 1); DocumentUI.SetModel(Prefix + 'count', IntToStr(Length(IUsername)), 1); end;
+    end;
+  end;
+  DocumentUI.SetModel('sendScore.username', Username);
+  DocumentUI.SetModel('sendScore.passwordMask', StringOfChar('*', LengthUTF8(Password)));
+end;
+
+function TScreenPopupSendScore.ParseDocumentInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean): boolean;
+var Value: integer;
+begin
+  Result := true;
+  if not PressedDown then Exit;
+  Value := -1;
+  if IsPrintableChar(CharCode) and (SelectValueU = High(IUsername)) then
+  begin
+    if SelInteraction = 3 then Username := Username + UCS4ToUTF8String(CharCode);
+    if SelInteraction = 4 then Password := Password + UCS4ToUTF8String(CharCode);
+  end;
+  case PressedKey of
+    SDLK_ESCAPE: Value := 0;
+    SDLK_BACKSPACE:
+      if SelInteraction = 3 then UTF8Delete(Username, LengthUTF8(Username), 1)
+      else if SelInteraction = 4 then UTF8Delete(Password, LengthUTF8(Password), 1)
+      else Value := 0;
+    SDLK_UP: MoveSendScoreFocus(-1);
+    SDLK_DOWN, SDLK_TAB: MoveSendScoreFocus(1);
+    SDLK_LEFT: if SelInteraction < 3 then ChangeSendScoreChoice(SelInteraction, -1);
+    SDLK_RIGHT: if SelInteraction < 3 then ChangeSendScoreChoice(SelInteraction, 1);
+    SDLK_RETURN:
+      if (SelInteraction >= 5) and (Length(IWebsite) > 0) and (Length(IPlayersPlay) > 0) then
+        Value := SelInteraction - 4
+      else MoveSendScoreFocus(1);
+  end;
+  SyncSendScoreDocument;
+  if Value >= 0 then
+  begin
+    Visible := false;
+    StopTextInput;
+    Result := false;
+    if Assigned(fHandler) then fHandler(Value, fHandlerData);
+  end;
+end;
+
+function TScreenPopupSendScore.ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
+var Action, Target: UTF8String; Field: integer;
+begin
+  if DocumentUI = nil then Exit(inherited);
+  if RightMbESC and (MouseButton = SDL_BUTTON_RIGHT) and BtnDown then
+    Exit(ParseDocumentInput(SDLK_ESCAPE, 0, true));
+  if MouseButton = SDL_BUTTON_LEFT then DocumentUI.Mouse(X, Y, 0, BtnDown)
+  else DocumentUI.Mouse(X, Y);
+  Action := DocumentUI.TakeAction;
+  Target := DocumentUI.ActionTarget;
+  if TryStrToInt(Target, Field) then
+  begin
+    if Action = 'score.send.select' then SetInteraction(Field);
+    if Action = 'score.send.previous' then ChangeSendScoreChoice(Field, -1);
+    if Action = 'score.send.next' then ChangeSendScoreChoice(Field, 1);
+  end;
+  if Action = 'score.send.submit' then begin SetInteraction(5); Exit(ParseDocumentInput(SDLK_RETURN, 0, true)); end;
+  if Action = 'score.send.save' then begin SetInteraction(6); Exit(ParseDocumentInput(SDLK_RETURN, 0, true)); end;
+  Result := true;
+end;
+
+destructor TScreenPopupSendScore.Destroy;
+begin
+  DocumentUI.Free;
+  inherited;
+end;
+
+
+
 function TScreenPopupSendScore.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
 var
   New_User: boolean;
   I, Value: integer;
   Password_TMP: UTF8String;
 begin
+  if DocumentUI <> nil then Exit(ParseDocumentInput(PressedKey, CharCode, PressedDown));
   Result := true;
   if (PressedDown) then
   begin // Key Down
@@ -1075,6 +1246,14 @@ begin
   SelectValueW := 0;
   SelectValueU := 0;
 
+  DocumentUI := TDocumentUI.Open('popup-send-score');
+  if DocumentUI <> nil then
+  begin
+    SetLength(IWebsite, Length(DataBase.NetworkUser));
+    for I := 0 to High(IWebsite) do IWebsite[I] := DataBase.NetworkUser[I].Website;
+    Exit;
+  end;
+
   LoadFromTheme(Theme.SendScorePopup);
 
   SetLength(IWebsite, 0);
@@ -1108,12 +1287,13 @@ end;
 function TScreenPopupSendScore.Draw: boolean;
 begin
   Renderer.ClearFrameBuffer(CLEAR_DEPTH);
+  if DocumentUI <> nil then Exit(DocumentUI.Draw(false, true));
   Result := inherited Draw;
 end;
 
 procedure TScreenPopupSendScore.OnShow;
 begin
-  inherited;
+  if DocumentUI = nil then inherited;
 end;
 
 procedure TScreenPopupSendScore.ShowPopup(const Title: UTF8String; Handler: TPopupSendScoreHandler;
@@ -1132,6 +1312,16 @@ begin
   SelectValueP := 0;
   SelectValueW := 0;
   SelectValueU := 0;
+
+  if DocumentUI <> nil then
+  begin
+    DocumentTitle := Language.Translate(Title);
+    SetLength(IPlayersPlay, PlayersPlay);
+    for I := 0 to PlayersPlay - 1 do IPlayersPlay[I] := Player[I].Name;
+    RefreshSendScoreUsers(false);
+    SetInteraction(0);
+    Exit;
+  end;
 
   Interaction := 0;
 
@@ -1203,10 +1393,75 @@ end;
 
 { TScreenPopupScoreDownload }
 
+procedure TScreenPopupScoreDownload.SyncDownloadDocument;
+begin
+  DocumentUI.SetModel('scoreDownload.songStatus', Text_SongSituation);
+  DocumentUI.SetModel('scoreDownload.websiteStatus', Text_WebSituation);
+  DocumentUI.SetModel('scoreDownload.songsDone', IntToStr(Actual_Song), 1);
+  DocumentUI.SetModel('scoreDownload.songsTotal', IntToStr(Num_Songs), 1);
+  DocumentUI.SetModel('scoreDownload.websitesDone', IntToStr(Actual_Web - 1), 1);
+  DocumentUI.SetModel('scoreDownload.websitesTotal', IntToStr(Num_Webs), 1);
+  DocumentUI.SetModel('scoreDownload.phase', IntToStr(Download_Phase), 1);
+  DocumentUI.SetModel('scoreDownload.fromFile', IntToStr(Ord(OpScoreFile)), 2);
+  DocumentUI.SetModel('scoreDownload.complete', IntToStr(Ord(DocumentComplete)), 2);
+  DocumentUI.SetModel('scoreDownload.selected', IntToStr(Ord(SelInteraction = 0)), 2);
+end;
+
+procedure TScreenPopupScoreDownload.SetInteraction(Num: integer);
+begin
+  if DocumentUI = nil then begin inherited; Exit; end;
+  if Num < 0 then SelInteraction := -1 else SelInteraction := 0;
+  if SelInteraction < 0 then DocumentUI.Focus('score-download-stage')
+  else DocumentUI.Focus('score-download-close');
+end;
+
+procedure TScreenPopupScoreDownload.MarkDownloadComplete;
+begin
+  DocumentComplete := true;
+  if DocumentUI = nil then Button[0].Text[0].Text := Language.Translate('SCORE_DOWNLOAD_OK');
+end;
+
+function TScreenPopupScoreDownload.ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
+var Action: UTF8String;
+begin
+  if DocumentUI = nil then Exit(inherited);
+  if RightMbESC and (MouseButton = SDL_BUTTON_RIGHT) and BtnDown then
+    Exit(ParseInput(SDLK_ESCAPE, 0, true));
+  if MouseButton = SDL_BUTTON_LEFT then DocumentUI.Mouse(X, Y, 0, BtnDown)
+  else DocumentUI.Mouse(X, Y);
+  Action := DocumentUI.TakeAction;
+  if Action = 'score.download.close' then
+  begin
+    SetInteraction(0);
+    Exit(ParseInput(SDLK_RETURN, 0, true));
+  end;
+  Result := true;
+end;
+
+
+
 function TScreenPopupScoreDownload.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
 var
   Value: boolean;
 begin
+  if DocumentUI <> nil then
+  begin
+    Result := true;
+    if not PressedDown then Exit;
+    case PressedKey of
+      SDLK_ESCAPE, SDLK_BACKSPACE: Result := false;
+      SDLK_RETURN: Result := SelInteraction <> 0;
+      SDLK_UP, SDLK_DOWN: SetInteraction(-1);
+      SDLK_LEFT, SDLK_RIGHT: SetInteraction(0);
+    end;
+    if not Result then
+    begin
+      Visible := false;
+      Text_SongSituation := Language.Translate('SCORE_DOWNLOAD_RECEIVE_LIST');
+      Text_WebSituation := '';
+    end;
+    Exit;
+  end;
   Result := true;
   if (PressedDown) then
   begin // Key Down
@@ -1246,6 +1501,9 @@ constructor TScreenPopupScoreDownload.Create;
 begin
   inherited Create;
 
+  DocumentUI := TDocumentUI.Open('popup-score-download');
+  if DocumentUI <> nil then Exit;
+
   Texture_ProgressBar := Renderer.LoadTexture(Skin.GetTextureFileName('ProgressBar'));
 
   Theme.ScoreDownloadPopup.TextSongScoreDownload.Text := Language.Translate('SCORE_DOWNLOAD_RECEIVE_LIST');
@@ -1265,7 +1523,8 @@ end;
 
 destructor TScreenPopupScoreDownload.Destroy;
 begin
-  Texture_ProgressBar.Free;
+  if DocumentUI = nil then Texture_ProgressBar.Free;
+  DocumentUI.Free;
   inherited;
 end;
 
@@ -1491,15 +1750,19 @@ var
   I: integer;
 begin
   Renderer.ClearFrameBuffer(CLEAR_DEPTH);
-  inherited Draw;
-
-  Text[0].Text := Text_SongSituation;
-  Text[1].Text := Text_WebSituation;
-
-  DownloadTimeBarSong();
-
-  if (Num_Webs > 1) then
-    DownloadTimeBarWeb();
+  if DocumentUI <> nil then
+  begin
+    SyncDownloadDocument;
+    DocumentUI.Draw(false, true);
+  end
+  else
+  begin
+    inherited Draw;
+    Text[0].Text := Text_SongSituation;
+    Text[1].Text := Text_WebSituation;
+    DownloadTimeBarSong();
+    if Num_Webs > 1 then DownloadTimeBarWeb();
+  end;
 
   if (Download_Phase = 0) then
   begin
@@ -1552,7 +1815,7 @@ begin
           end
           else
           begin
-            Button[0].Text[0].Text := Language.Translate('SCORE_DOWNLOAD_OK');
+            MarkDownloadComplete;
             if (CountSongsUpdate > 0) then
             begin
               Visible := false;
@@ -1584,7 +1847,7 @@ begin
         end
         else
         begin
-          Button[0].Text[0].Text := Language.Translate('SCORE_DOWNLOAD_OK');
+          MarkDownloadComplete;
 
           if (CountSongsUpdate > 0) then
           begin
@@ -1605,7 +1868,7 @@ end;
 
 procedure TScreenPopupScoreDownload.OnShow;
 begin
-  inherited;
+  if DocumentUI = nil then inherited;
 end;
 
 procedure TScreenPopupScoreDownload.DownloadTimeBarSong();
@@ -1615,6 +1878,7 @@ var
   Progress:       real;
   CurProgress:    real;
 begin
+  if DocumentUI <> nil then Exit;
   x := Theme.ScoreDownloadPopup.DownloadProgressSong.X;
   y := Theme.ScoreDownloadPopup.DownloadProgressSong.Y;
 
@@ -1622,7 +1886,7 @@ begin
   height := Theme.ScoreDownloadPopup.DownloadProgressSong.H;
 
   CurProgress := Actual_Song;
-  if (CurProgress > 0) then
+  if (CurProgress > 0) and (Num_Songs > 0) then
     Progress := CurProgress / Num_Songs
   else
     Progress := 0;
@@ -1649,6 +1913,7 @@ var
   Progress:       real;
   CurProgress:    real;
 begin
+  if DocumentUI <> nil then Exit;
   x := Theme.ScoreDownloadPopup.DownloadProgressWeb.X;
   y := Theme.ScoreDownloadPopup.DownloadProgressWeb.Y;
 
@@ -1656,8 +1921,8 @@ begin
   height := Theme.ScoreDownloadPopup.DownloadProgressWeb.H;
 
   CurProgress := Actual_Song + ((Actual_Web - 1) * Num_Songs);
-  if (CurProgress > 0) then
-    Progress := CurProgress / (Num_Songs * Num_Webs)
+  if (CurProgress > 0) and (Num_Songs > 0) and (Num_Webs > 0) then
+    Progress := CurProgress / ((Num_Songs * 1.0) * Num_Webs)
   else
     Progress := 0;
 
@@ -1681,7 +1946,8 @@ procedure TScreenPopupScoreDownload.ShowPopup(optmode: integer; optsong: integer
 var
   I: integer;
 begin
-  Background.OnShow;
+  if DocumentUI = nil then Background.OnShow;
+  DocumentComplete := false;
 
   //reset vars
   Actual_Song := 0;
@@ -1713,6 +1979,7 @@ begin
   if (optweb = 0) then
   begin
     Num_Webs := High(DataBase.NetworkUser) + 1;
+    if DocumentUI = nil then
     if (Num_Webs > 1) then
     begin
       Statics[2].Visible := true;
@@ -1728,15 +1995,22 @@ begin
   begin
     Num_Webs := 1;
     Actual_Web := optweb;
-    Text[1].Visible := false;
-    Statics[2].Visible := false;
+    if DocumentUI = nil then
+    begin
+      Text[1].Visible := false;
+      Statics[2].Visible := false;
+    end;
   end;
 
   Visible := true;  //Set Visible
-  Button[0].Visible := true;
-  Button[0].Text[0].Text := Language.Translate('SCORE_DOWNLOAD_CANCEL');
+  if DocumentUI = nil then
+  begin
+    Button[0].Visible := true;
+    Button[0].Text[0].Text := Language.Translate('SCORE_DOWNLOAD_CANCEL');
+  end;
 
   Interaction := -1;
+  if DocumentUI <> nil then SyncDownloadDocument;
 
 end;
 

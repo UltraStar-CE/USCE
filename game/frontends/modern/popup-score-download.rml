@@ -1,0 +1,30 @@
+<rml>
+<head>
+  <title>Modern score download progress</title>
+  <link type="text/rcss" href="modern.rcss" />
+  <link type="text/rcss" href="popup-error.rcss" />
+  <link type="text/rcss" href="popup-score-download.rcss" />
+</head>
+<body class="popup-error-screen popup-score-download-screen">
+  <div class="popup-shade" />
+  <div data-model="game" class="popup-positioner">
+    <div id="score-download-stage" tabindex="0" class="popup-dialog download-dialog">
+      <div class="popup-dialog-reflection" />
+      <span class="popup-error-title description" lang="SCORE_DOWNLOAD_TITLE" />
+      <div class="download-status-row">
+        <span id="download-song-status" class="download-song-status">{{ data.scoreDownload.songStatus }}</span>
+        <span class="download-website-status" data-class-hidden="data.scoreDownload.websitesTotal &lt;= 1">{{ data.scoreDownload.websiteStatus }}</span>
+      </div>
+      <div id="download-song-progress" class="download-progress">
+        <div class="download-progress-fill" data-style-width="(data.scoreDownload.songsTotal &gt; 0 ? ((1.0 * data.scoreDownload.songsDone / (data.scoreDownload.songsTotal | max(1))) | max(0) | min(1)) * 100 : 0) + '%'" />
+      </div>
+      <div id="download-website-progress" class="download-progress download-website-progress" data-class-hidden="data.scoreDownload.websitesTotal &lt;= 1">
+        <div class="download-progress-fill" data-style-width="(data.scoreDownload.songsTotal &gt; 0 ? ((1.0 * (data.scoreDownload.songsDone + data.scoreDownload.websitesDone * data.scoreDownload.songsTotal) / ((data.scoreDownload.songsTotal * data.scoreDownload.websitesTotal) | max(1))) | max(0) | min(1)) * 100 : 0) + '%'" />
+      </div>
+      <div class="popup-error-actions download-actions">
+        <button id="score-download-close" class="popup-choice" action="score.download.close" data-class-selected="data.scoreDownload.selected"><span data-class-hidden="data.scoreDownload.complete" lang="SCORE_DOWNLOAD_CANCEL" /><span data-class-hidden="!data.scoreDownload.complete" lang="SCORE_DOWNLOAD_OK" /></button>
+      </div>
+    </div>
+  </div>
+</body>
+</rml>
