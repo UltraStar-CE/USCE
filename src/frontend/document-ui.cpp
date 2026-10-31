@@ -225,7 +225,10 @@ UI_EXPORT int ui_open(const char* filename) {
     if (!initialized) return 0;
     ui_close_document();
     active->text_fit_dirty = true;
-    active->document = active->context->LoadDocument(filename);
+    // RmlUi resolves image URLs using forward slashes, including cloned rows.
+    const auto source_path = std::filesystem::u8path(filename).generic_u8string();
+    const std::string source(source_path.begin(), source_path.end());
+    active->document = active->context->LoadDocument(source);
     if (!active->document) { last_error = std::string("Cannot load frontend document: ") + filename; return 0; }
     bind_tree(active->document);
     active->document->AddEventListener(Rml::EventId::Click, &active->actions);

@@ -548,6 +548,54 @@ int main(int argc, char** argv) {
             ui_render(1280, 720, 0);
             require(ui_bounds("language-row-1", &player_x, &player_y, &player_w, &player_h) != 0 && player_w > 190,
                 "Recreated repeated labels must receive their translation");
+            // Open through the platform-native path, from outside the asset directory.
+            // A missing relative texture can still produce a white rectangle, so assert
+            // its rendered color, both before and after a repeated row is recreated.
+            const auto relative_root = std::filesystem::current_path() /
+                ("document-relative-assets-" + std::to_string(SDL_GetPerformanceCounter()));
+            std::filesystem::create_directories(relative_root / "images");
+            const auto relative_document = relative_root / "screen.rml";
+            {
+                std::ofstream red(relative_root / "images/red.svg");
+                red << R"(<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><path fill="#ff0000" d="M0 0h32v32H0z"/></svg>)";
+                std::ofstream green(relative_root / "images/green.svg");
+                green << R"(<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><path fill="#00ff00" d="M0 0h32v32H0z"/></svg>)";
+                std::ofstream blue(relative_root / "images/blue.svg");
+                blue << R"(<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><path fill="#0000ff" d="M0 0h32v32H0z"/></svg>)";
+                std::ofstream fixture(relative_document);
+                fixture << R"(<rml><head><style>img{position:absolute;width:32px;height:32px;} .row{position:absolute;left:70px;top:10px;}</style></head>
+<body><div data-model="game"><img src="images/red.svg" style="left:10px;top:10px;" />
+<div data-for="row : data.relativeAssets.rows" class="row"><img src="images/green.svg" /></div>
+<img data-attr-src="data.relativeAssets.absoluteSource" style="left:130px;top:10px;" /></div></body></rml>)";
+            }
+            auto native_document = utf8(relative_document);
+#ifdef _WIN32
+            for (auto& c : native_document) if (c == '/') c = '\\';
+#endif
+            ui_model_array("relativeAssets.rows", 0);
+            ui_model_set("relativeAssets.absoluteSource", utf8(relative_root / "images/blue.svg").c_str(), 0);
+            const int relative_warnings = warnings;
+            require(ui_open(native_document.c_str()) != 0, "Native-separator image document");
+            for (int recreation = 0; recreation < 2; ++recreation) {
+                ui_model_array("relativeAssets.rows", 1);
+                glClear(GL_COLOR_BUFFER_BIT); ui_render(1280,720,0);
+                glReadPixels(20,720-20,1,1,GL_RGBA,GL_UNSIGNED_BYTE,pixel);
+                require(pixel[0]>240 && pixel[1]<10 && pixel[2]<10 && pixel[3]>240,
+                    "Static image must resolve relative to the native-path document");
+                glReadPixels(80,720-20,1,1,GL_RGBA,GL_UNSIGNED_BYTE,pixel);
+                require(pixel[0]<10 && pixel[1]>240 && pixel[2]<10 && pixel[3]>240,
+                    "Repeated image must retain the owning document's asset directory");
+                glReadPixels(140,720-20,1,1,GL_RGBA,GL_UNSIGNED_BYTE,pixel);
+                require(pixel[0]<10 && pixel[1]<10 && pixel[2]>240 && pixel[3]>240,
+                    "An absolute model image path must keep working");
+                ui_model_array("relativeAssets.rows", 0); ui_render(1280,720,0);
+            }
+            require(warnings == relative_warnings, "Native-path relative images emitted loading diagnostics");
+            require(ui_open(main_document.c_str()) != 0, "Release relative image fixture");
+            for (const char* name : {"red.svg", "green.svg", "blue.svg"})
+                std::filesystem::remove(relative_root / "images" / name);
+            std::filesystem::remove(relative_document);
+            std::filesystem::remove(relative_root / "images"); std::filesystem::remove(relative_root);
             {
                 std::ofstream fixture(language_fixture);
                 fixture << R"(<rml><head><style>div{display:block;} .probe{position:absolute;height:10px;}</style></head>
