@@ -2949,6 +2949,7 @@ end;
 
 procedure TScreenSong.SetChessboardScrollRefresh;
 begin
+  Statics[StaticActual].Visible := true;
   Statics[StaticActual].Texture.Free;
   if (Button[Interaction].Texture.Name.IsUnset) then
     Statics[StaticActual].Texture := Renderer.GetTexture(Skin.GetTextureFileName('SongCover'), TEXTURE_TYPE_PLAIN)
