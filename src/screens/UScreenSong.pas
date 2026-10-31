@@ -944,6 +944,7 @@ begin
     //Jump to Artist/Title (either Alt/Option key)
     if not ModernKeyboard and (SDL_ModState and KMOD_ALT <> 0) and (SDL_ModState and KMOD_CTRL = 0) and FreeListMode then
     begin
+      if not HasSelection then Exit;
       if(PressedKey > 1114111) then
       begin
         Exit;
@@ -1058,6 +1059,7 @@ begin
     end
     else if (((PressedKey = SDLK_PAGEUP) or (PressedKey = SDLK_PAGEDOWN)) and (FreeListMode)) then
     begin
+      if not HasSelection then Exit;
       I2 := Length(CatSongs.Song);
       //get first letter of artist of currently selected song
       UpperLetter := UCS4UpperCase(UTF8ToUCS4String(CatSongs.Song[(Interaction) mod I2].Artist)[0]);
@@ -3862,7 +3864,7 @@ begin
     end;
   end;
 
-  if (TSongMenuMode(Ini.SongMenu) = smRoulette) then
+  if HasSelection and (TSongMenuMode(Ini.SongMenu) = smRoulette) then
     VideoAlpha := Button[interaction].Texture.Alpha * (CoverTime-1)
   else
     VideoAlpha := 1;
@@ -4009,7 +4011,7 @@ var
   NextInt: integer;
   OriginalInteraction: integer;
 begin
-  if not HasSelection then Exit;
+  if (Interaction < 0) or (Interaction >= Length(CatSongs.Song)) then Exit;
   VS := CatSongs.VisibleSongs;
 
   if VS > 0 then
@@ -4064,7 +4066,7 @@ var
   PrevInt: integer;
   OriginalInteraction: integer;
 begin
-  if not HasSelection then Exit;
+  if (Interaction < 0) or (Interaction >= Length(CatSongs.Song)) then Exit;
   VS := CatSongs.VisibleSongs;
 
   if (VS > 0) then
@@ -4597,7 +4599,7 @@ end;
 
 function TScreenSong.SelectRandomSong: boolean;
 var
-  I, Category, Target: integer;
+  I, Target: integer;
   AllCategories: boolean;
   Candidates: CardinalArray;
 begin
@@ -4638,17 +4640,7 @@ begin
   end;
 
   if AllCategories then
-  begin
-    Category := Target;
-    while (Category >= 0) and not CatSongs.Song[Category].Main do Dec(Category);
-    if Category >= 0 then
-    begin
-      CatSongs.ShowCategoryList;
-      ShowCatTL(Category);
-      CatSongs.ClickCategoryButton(Category);
-      SelectNext;
-    end;
-  end;
+    ScreenSongJumpto.SetFolderFilter(CatSongs.Song[Target].FolderPath);
   FilterDuetsInPartyMode;
   SkipTo(CatSongs.VisibleIndex(Target), Target, CatSongs.VisibleSongs);
   FixSelected2;
