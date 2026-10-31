@@ -495,8 +495,6 @@ begin
       FSEventStreamScheduleWithRunLoop(Stream, CFRunLoopGetCurrent, kCFRunLoopDefaultMode);
       if not FSEventStreamStart(Stream) then raise Exception.Create('Cannot start FSEvents stream');
       try
-        // Fold delayed root-creation notifications into the initial full scan.
-        FSEventStreamFlushSync(Stream);
         Recover;
         while not Terminated do CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.1, true);
       finally FSEventStreamStop(Stream); end;
