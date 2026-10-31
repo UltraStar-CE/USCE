@@ -107,7 +107,7 @@ type
       LastRemoteStateInteraction: integer;
       LastRemoteStateVisibleSongs: integer;
       LastRemoteStateTick: cardinal;
-      SearchOverlay, ModernFooter: TMenu;
+      ModernFooter: TMenu;
       function SuppressTransitionPreview(Song: TSong): boolean;
       function ModernKeyboard: boolean;
       procedure DrawSearchField;
@@ -370,7 +370,7 @@ uses
   URemoteBridgeIPC,
   UScreenSongMenu,
   USkins,
-  UUnicodeUtils,
+  UFont, UText, UUnicodeUtils,
   Math;
 
 function GetSongPlayerColor(PlayerIndex: integer): TRGB;
@@ -2094,8 +2094,6 @@ begin
   MarkedPlaylistSong := -1;
 
   LoadFromTheme(Theme.Song);
-  SearchOverlay := TMenu.Create;
-  SearchOverlay.AddText(Theme.Song.SearchText);
   ModernFooter := TMenu.Create;
   for I := 0 to High(Theme.Song.ModernFooter) do ModernFooter.AddKeyHint(Theme.Song.ModernFooter[I]);
 
@@ -3445,7 +3443,6 @@ end;
 
 destructor TScreenSong.Destroy;
 begin
-  SearchOverlay.Free;
   ModernFooter.Free;
   inherited;
 end;
@@ -3481,7 +3478,17 @@ begin
 end;
 
 procedure TScreenSong.DrawSearchField;
-var X, Y, W, H: real; Query: UTF8String; Panel: TThemeStatic;
+var
+  Query, Shown: UTF8String;
+  X, Y, W, H, TX, TY, TW, TH, FontSize: real;
+  Panel: TThemeStatic; Bounds: TBoundsDbl;
+  LowChar, HighChar, MidChar, Count: integer;
+  KeepEnd: boolean;
+  function Abbreviated(Chars: integer): UTF8String;
+  begin
+    if KeepEnd then Result := '...' + UTF8Copy(Query, Count - Chars + 1, Chars)
+    else Result := UTF8Copy(Query, 1, Chars) + '...';
+  end;
 begin
   if not ModernKeyboard or CoverFull or ScreenSongJumpto.Visible or ScreenSongMenu.Visible then Exit;
   Panel := Theme.Song.SearchPanel;
@@ -3490,11 +3497,43 @@ begin
   Renderer.DrawQuad(X, Y, Panel.Z, W, H, Panel.ColR, Panel.ColG, Panel.ColB, Panel.Alpha);
   Renderer.DrawLine(X, Y+H, X+W, Y+H, Panel.Z+0.001, 1, 1, 1, 1, 0.5);
   Query := ScreenSongJumpto.TypingQuery;
-  if Query <> '' then Query := Language.Translate('SONG_TYPING_SEARCH') + ': ' + Query
+  KeepEnd := Query <> '';
+  if KeepEnd then Query := Language.Translate('SONG_TYPING_SEARCH') + ': ' + Query
   else if CatSongs.CatNumShow = -2 then Query := ScreenSongJumpto.SearchSummary;
   if Query = '' then Query := Language.Translate('SONG_TYPING_SEARCH_HINT');
-  SearchOverlay.Text[0].Text := Query;
-  SearchOverlay.DrawFG;
+  Query := StringReplace(StringReplace(Query, #13, ' ', [rfReplaceAll]), #10, ' ', [rfReplaceAll]);
+  TX := Theme.Song.SearchText.X; TY := Theme.Song.SearchText.Y;
+  TW := Theme.Song.SearchText.W; TH := Theme.Song.SearchText.H;
+  ResolveLayoutRect(TX, TY, TW, TH, Theme.Song.SearchText.ScaleMode);
+  TW := Max(0, Min(TW, X+W-TX-4));
+  if (TW <= 0) or (TH <= 0) then Exit;
+  SetFontFamily(Theme.Song.SearchText.Font);
+  SetFontStyle(Theme.Song.SearchText.Style);
+  FontSize := Min(Theme.Song.SearchText.Size, TH);
+  SetFontSize(FontSize);
+  Shown := Query;
+  if TextWidth(Shown) > TW then
+  begin
+    Count := LengthUTF8(Query); LowChar := 0; HighChar := Count;
+    while LowChar < HighChar do
+    begin
+      MidChar := (LowChar + HighChar + 1) div 2;
+      if TextWidth(Abbreviated(MidChar)) <= TW then LowChar := MidChar
+      else HighChar := MidChar - 1;
+    end;
+    Shown := Abbreviated(LowChar);
+    if TextWidth(Shown) > TW then Shown := '';
+  end;
+  Bounds := Fonts[CurrentFont.FontFamily][CurrentFont.FontStyle].Font.BBox(UTF8String('M'), false);
+  // Draw a single literal line; the general menu text renderer treats \n as
+  // a line break, which is inappropriate for Windows paths and filter queries.
+  SetFontPos(TX, TY + TH / 2 - Fonts[CurrentFont.FontFamily][CurrentFont.FontStyle].Font.Ascender +
+    (Bounds.Top + Bounds.Bottom) / 2);
+  SetFontZ(Theme.Song.SearchText.Z);
+  SetFontColor(Theme.Song.SearchText.ColR, Theme.Song.SearchText.ColG, Theme.Song.SearchText.ColB, 1);
+  SetFontItalic(false); SetFontReflection(false, 0);
+  PrintText(Shown);
+  ResetFont;
 end;
 
 procedure TScreenSong.DrawExtensions;
