@@ -188,10 +188,13 @@ begin
     Relay('{"type":"bridge.disconnected"}');
     Relay('{"type":"player.left","playerId":"original"}');
     Relay('{"type":"player.joined","playerId":"replacement","name":"Other singer","slot":2}');
+    Relay('{"type":"player.joined","playerId":"late","name":"Late singer","slot":3}');
+    Game('{"type":"game.state","state":"singing","songSeq":31,"players":[{"playerId":"replacement","name":"Other singer","slot":2},{"playerId":"late","name":"Late singer","slot":3}]}');
+    Relay('{"type":"player.left","playerId":"late"}');
     Game('{"type":"ack","commandId":99,"accepted":true}');
     Game('{"type":"p2p.ice","playerId":"original"}');
     Game('{"type":"score.snapshot","songSeq":31,"players":[{"slot":2,"scoreTotal":9000}]}');
-    Game('{"type":"song.ended","songSeq":31,"players":[{"slot":2,"scoreTotal":9000}]}');
+    Game('{"type":"song.ended","songSeq":31,"players":[{"slot":2,"scoreTotal":9000},{"slot":3,"scoreTotal":4000}]}');
     Game('{"type":"continuous.state","active":false,"reason":"exhausted"}');
     Before := Probe.Sent.Count;
     Relay('{"type":"room.resumed","roomId":"room","displayCode":"TEST"}');
@@ -203,7 +206,12 @@ begin
         Assert(Snapshot.Arrays['rounds'].Objects[0].Get('catalogKey', '') = 'stable-file');
         Assert(Snapshot.Arrays['rounds'].Objects[0].Arrays['participants'].Objects[0].Get('playerId', '') = 'original',
           'Results retain the singer at song start, not the replacement in the slot');
+          Assert(Snapshot.Arrays['rounds'].Objects[0].Arrays['participants'].Count = 2);
+          Assert(Snapshot.Arrays['rounds'].Objects[0].Arrays['participants'].Objects[1].Get('playerId', '') = 'late',
+            'Results retain newly admitted singers after they leave');
         Assert(Snapshot.Arrays['rounds'].Objects[0].Arrays['players'].Objects[0].Get('scoreTotal', 0) = 9000);
+          Assert(Snapshot.Arrays['rounds'].Objects[0].Arrays['players'].Objects[1].Get('slot', 0) = 3);
+          Assert(Snapshot.Arrays['rounds'].Objects[0].Arrays['players'].Objects[1].Get('scoreTotal', 0) = 4000);
       end;
     Assert(Assigned(Snapshot), 'Reconnect must contain the result journal');
     Before := Probe.Sent.Count;

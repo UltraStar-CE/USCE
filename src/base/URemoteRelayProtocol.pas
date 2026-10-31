@@ -34,6 +34,7 @@ type
     procedure Cache(Message: TJSONObject);
     procedure Replay;
     procedure UpdateResults;
+    function AddRoundParticipant(Player: TJSONObject): boolean;
     procedure RecordRound(Message: TJSONObject);
     procedure PlayerUpdate(Message: TJSONObject; Notify: boolean = true);
     function CopyPublic(Message: TJSONObject): TJSONObject;
@@ -192,9 +193,24 @@ begin
   finally Snapshot.Free; end;
 end;
 
+function TRemoteRelayProtocol.AddRoundParticipant(Player: TJSONObject): boolean;
+var Participants: TJSONArray; I, Slot: integer;
+begin
+  Result := false;
+  Slot := Player.Get('slot', 0);
+  if (FCurrentRound = nil) or (Slot <= 0) or not Player.Get('connected', true) then Exit;
+  Participants := FCurrentRound.Arrays['participants'];
+  for I := 0 to Participants.Count - 1 do
+    if Participants.Objects[I].Get('slot', 0) = Slot then Exit;
+  Participants.Add(TJSONObject.Create(['playerId', Player.Get('playerId', ''),
+    'name', Player.Get('name', ''), 'slot', Slot]));
+  Result := true;
+end;
+
 procedure TRemoteRelayProtocol.RecordRound(Message: TJSONObject);
-var Kind: string; Active: TJSONData; Participants: TJSONArray;
+var Kind: string; Active, Players: TJSONData;
     I, Seq: integer; Player, Round: TJSONObject;
+    Changed: boolean;
 begin
   Kind := Message.Get('type', '');
   if Kind = 'song.started' then
@@ -206,16 +222,27 @@ begin
       FCurrentRound := TJSONObject.Create(['songSeq', Message.Get('songSeq', -1),
         'sessionSeq', FContinuousSeq, 'songId', Message.Get('songId', -1),
         'catalogKey', FSongs.IdentityForSong(Message.Get('songId', -1))]);
-      Participants := TJSONArray.Create;
-      FCurrentRound.Add('participants', Participants);
+      FCurrentRound.Add('participants', TJSONArray.Create);
       for I := 0 to FPlayers.Count - 1 do
       begin
         Player := TJSONObject(FPlayers.Items[I]);
-        if Player.Get('slot', 0) > 0 then Participants.Add(TJSONObject.Create([
-          'playerId', Player.Get('playerId', ''), 'name', Player.Get('name', ''), 'slot', Player.Get('slot', 0)]));
+        AddRoundParticipant(Player);
       end;
     end;
     UpdateResults;
+  end
+  else if (Kind = 'game.state') and Assigned(FCurrentRound) and
+    (Message.Get('state', '') = 'singing') and
+    (FCurrentRound.Get('songSeq', -1) = Message.Get('songSeq', -2)) then
+  begin
+    // Roster admission comes from the game thread; retain existing slot identities.
+    Players := Message.Find('players');
+    Changed := false;
+    if (Players <> nil) and (Players.JSONType = jtArray) then
+      for I := 0 to Players.Count - 1 do
+        if Players.Items[I].JSONType = jtObject then
+          if AddRoundParticipant(TJSONObject(Players.Items[I])) then Changed := true;
+    if Changed then UpdateResults;
   end
   else if (Kind = 'song.ended') and Assigned(FCurrentRound) and
     (FCurrentRound.Get('songSeq', -1) = Message.Get('songSeq', -2)) then
