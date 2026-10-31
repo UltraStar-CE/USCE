@@ -219,6 +219,7 @@ type
       property PositionCount: byte         read oPositionCount;
       property PlayerCount:   byte         read oPlayerCount;
       property Players:       aScorePlayer read aPlayers;
+      property PendingPopUpPoints[Index: integer]: integer read GetPopUpPoints;
       property Positions: aScorePosition read aPositions;
 
       // constructor just sets some standard settings

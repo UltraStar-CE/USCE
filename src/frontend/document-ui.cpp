@@ -43,6 +43,18 @@ public:
         if (log_message) log_message(int(type), message.c_str());
         return true;
     }
+    void JoinPath(Rml::String& translated_path, const Rml::String& document_path, const Rml::String& path) override {
+        // Game models contain native absolute file paths. RmlUi's default
+        // treats a leading slash as an application-root marker and drops it,
+        // which loses the filesystem root on Linux and macOS.
+        const auto asset_path = std::filesystem::u8path(path);
+        if (asset_path.is_absolute()) {
+            const auto normalized = asset_path.generic_u8string();
+            translated_path.assign(normalized.begin(), normalized.end());
+            return;
+        }
+        Rml::SystemInterface::JoinPath(translated_path, document_path, path);
+    }
 };
 class Renderer final : public RenderInterface_GL3 {
     Rml::TextureHandle LoadTexture(Rml::Vector2i& dimensions, const Rml::String& source) override {

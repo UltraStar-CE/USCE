@@ -199,6 +199,7 @@ type
 
     procedure Finish; virtual;
     procedure Pause; // toggle pause
+    procedure CycleTimebarMode;
     procedure UpdateMedleyStats(medley_end: boolean);
     procedure OnSentenceEnd(Track: integer; SentenceIndex: cardinal; OnlyPlayer: integer = -1);     // for linebonus + singbar
     procedure ClearVoiceLyrics;
@@ -382,13 +383,7 @@ begin
         end
         else
         begin
-          if (fTimebarMode = High(TTimebarMode)) then
-            fTimebarMode := Low(TTimebarMode)
-          else
-            Inc(fTimebarMode);
-
-          Ini.SingTimebarMode := Ord(fTimebarMode);
-          Ini.SaveSingTimebarMode;
+          CycleTimebarMode;
           Exit;
         end;
       end;
@@ -602,8 +597,13 @@ end;
 
 function TScreenSingController.ParseMouse(MouseButton: integer; BtnDown: boolean;
   MouseX, MouseY: integer): boolean;
-var LocalX, LocalY, StartTime, EndTime: real;
+var LocalX, LocalY, StartTime, EndTime, DocumentSeek: real;
 begin
+  if screenSingViewRef.DocumentActive then
+  begin
+    if screenSingViewRef.DocumentMouse(MouseButton, BtnDown, MouseX, MouseY, DocumentSeek) then SeekTo(DocumentSeek);
+    Exit(true);
+  end;
   if (MouseButton = SDL_BUTTON_LEFT) and BtnDown and ShowFinish and
      not FadeOut and Settings.TimeBarVisible and (ScreenWPerScreen > 0) then
   begin
@@ -638,6 +638,7 @@ begin
       Player[I].LastSentencePerfect := false;
     end;
     Scores.KillAllPopUps;
+    screenSingViewRef.ResetScoreFeedback;
     Scores.ClearPlayers;
     Color.R := 0; Color.G := 0; Color.B := 0;
     for I := 0 to PlayersPlay - 1 do Scores.AddPlayer(Tex_ScoreBG[I], Color);
@@ -726,7 +727,7 @@ var
   BadPlayer, I: integer;
   Col: TRGB;
 begin
-  inherited;
+  if not screenSingViewRef.DocumentActive then inherited;
 
   ScoringTailActive := false;
   Log.LogStatus('Begin', 'OnShow');
@@ -771,10 +772,15 @@ begin
 
   {for I := 0 to High(screenSingViewRef.StaticDuet) do
     Statics[screenSingViewRef.StaticDuet[I]].Visible := CurrentSong.isDuet;}
+  screenSingViewRef.ResetHUD;
+  if not screenSingViewRef.DocumentActive then
+  begin
   Statics[screenSingViewRef.StaticLyricsBarDuet].Visible := CurrentSong.isDuet;
 
   Statics[screenSingViewRef.SongNameStatic].Visible := false;
   Text[screenSingViewRef.SongNameText].Visible := false;
+
+  end;
 
   BadPlayer := 0;
   if PlayersPlay > 0 then BadPlayer := AudioInputProcessor.CheckPlayersConfig(PlayersPlay);
@@ -1068,6 +1074,7 @@ begin
   end;
 
   CurrentSong := CatSongs.Song[CatSongs.Selected];
+  screenSingViewRef.ResetHUD;
   if (not Assigned(AudioPlayback)) or (AudioPlayback.Length = 0) or (CurrentSong.Path.Append(CurrentSong.Audio).ToNative <> AudioPlayback.GetFileName) then
   begin
     if (not Assigned(CurrentSong.Karaoke)) or (CurrentSong.Karaoke = PATH_NONE) then
@@ -1137,11 +1144,11 @@ begin
     CurrentSong.SetMedleyMode();
 
     if (PlaylistMedley.NumMedleySongs > 1) then
-      Text[screenSingViewRef.SongNameText].Text := IntToStr(PlaylistMedley.CurrentMedleySong) +
+      screenSingViewRef.SongTitle := IntToStr(PlaylistMedley.CurrentMedleySong) +
         '/' + IntToStr(PlaylistMedley.NumMedleySongs) + ': ' +
         CurrentSong.Artist + ' - ' + CurrentSong.Title
     else
-      Text[screenSingViewRef.SongNameText].Text := CurrentSong.Artist + ' - ' + CurrentSong.Title;
+      screenSingViewRef.SongTitle := CurrentSong.Artist + ' - ' + CurrentSong.Title;
 
     //medley start and end timestamps
     StartNote := FindNote(CurrentSong.Medley.StartBeat - round(CurrentSong.BPM*CurrentSong.Medley.FadeIn_time/60));
@@ -1376,8 +1383,8 @@ begin
   CenterBank := 0;
   for J := 0 to LocalPlayers - 1 do
   begin
-    with Statics[screenSingViewRef.PlayerFrameSlots[LocalPlayers, J]].Texture do
-      CenterY := Y + H / 2;
+    if screenSingViewRef.DocumentActive then CenterY := screenSingViewRef.PlayerHeaderCenter(J)
+    else with Statics[screenSingViewRef.PlayerFrameSlots[LocalPlayers, J]].Texture do CenterY := Y + H / 2;
     if CenterY < RenderH / 2 - 0.01 then PlayerBanks[J] := 0
     else if CenterY > RenderH / 2 + 0.01 then PlayerBanks[J] := 1
     else
@@ -1427,6 +1434,8 @@ var
   X, Y, W, H, Gutter: real;
   Engine: TLyricEngine;
 begin
+  if screenSingViewRef.DocumentActive then
+  begin screenSingViewRef.PositionDocumentVoice(DisplayIndex); Exit; end;
   Engine := VoiceLyrics[DisplayedVoices[DisplayIndex]];
   Bank := DisplayedVoiceBanks[DisplayIndex];
   Count := VoiceBankCounts[Bank];
@@ -1552,7 +1561,7 @@ begin
           Webcam.Release;
           fShowWebCam:=false;
         end;
-  Background.OnFinish;
+  if Background <> nil then Background.OnFinish;
   Display.SetCursor;
 end;
 
@@ -1568,6 +1577,14 @@ end;
 function TScreenSingController.FinishedMusic: boolean;
 begin
   Result := AudioPlayback.Finished;
+end;
+
+procedure TScreenSingController.CycleTimebarMode;
+begin
+  if fTimebarMode = High(TTimebarMode) then fTimebarMode := Low(TTimebarMode)
+  else Inc(fTimebarMode);
+  Ini.SingTimebarMode := Ord(fTimebarMode);
+  Ini.SaveSingTimebarMode;
 end;
 
 procedure TScreenSingController.ResumeAfterScoringTail;
@@ -1849,6 +1866,7 @@ begin
       // spawn rating pop-up
       Rating := Round(LinePerfection * MAX_LINE_RATING);
       Scores.SpawnPopUp(PlayerIndex, Rating, CurrentPlayer.ScoreTotalInt);
+      screenSingViewRef.NotifyRating(PlayerIndex, Rating, CurrentPlayer.ScoreTotalInt);
 
       if (Scores <> nil) then
         Scores.SetRemainingScore(PlayerIndex,

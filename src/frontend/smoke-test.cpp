@@ -475,6 +475,41 @@ int main(int argc, char** argv) {
             ui_focus("players-avatar");
             ui_mouse(640, 550, -1, 0);
             require(std::string(ui_focused_target()) == "avatar", "A stationary pointer must not steal keyboard focus");
+            // Absolute native paths must not lose the POSIX root. Keep the
+            // image outside cwd and assert its actual pixels, not just bounds:
+            // a failed texture can still paint an opaque white rectangle.
+            const auto absolute_fixture_root = std::filesystem::current_path() /
+                ("document-absolute-assets-" + std::to_string(SDL_GetPerformanceCounter()));
+            std::filesystem::create_directories(absolute_fixture_root);
+            const auto absolute_fixture_image = absolute_fixture_root / "green.svg";
+            const auto absolute_fixture_document = absolute_fixture_root / "screen.rml";
+            {
+                std::ofstream image(absolute_fixture_image);
+                image << R"(<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><path fill="#00ff00" d="M0 0h32v32H0z"/></svg>)";
+                std::ofstream fixture(absolute_fixture_document);
+                fixture << R"(<rml><head><style>img{position:absolute;top:10px;width:32px;height:32px;}</style></head>
+<body><div data-model="game"><img data-attr-src="data.absoluteAssets.source" style="left:10px;" />
+<img src="green.svg" style="left:70px;" /></div></body></rml>)";
+            }
+            const auto absolute_fixture_source = utf8(absolute_fixture_image);
+#ifndef _WIN32
+            require(!absolute_fixture_source.empty() && absolute_fixture_source[0] == '/',
+                "POSIX fixture must exercise a leading-slash absolute image path");
+#endif
+            const int absolute_fixture_warnings = warnings;
+            ui_model_set("absoluteAssets.source", absolute_fixture_source.c_str(), 0);
+            require(ui_open(utf8(absolute_fixture_document).c_str()) != 0, "Absolute image fixture");
+            glClear(GL_COLOR_BUFFER_BIT); ui_render(1280,720,0);
+            glReadPixels(20,720-20,1,1,GL_RGBA,GL_UNSIGNED_BYTE,pixel);
+            require(pixel[0]<10 && pixel[1]>240 && pixel[2]<10 && pixel[3]>240,
+                "Absolute model image must preserve its native filesystem root");
+            glReadPixels(80,720-20,1,1,GL_RGBA,GL_UNSIGNED_BYTE,pixel);
+            require(pixel[0]<10 && pixel[1]>240 && pixel[2]<10 && pixel[3]>240,
+                "Sibling image must still resolve relative to the document");
+            require(warnings == absolute_fixture_warnings, "Absolute image emitted loading diagnostics");
+            require(ui_open(players_document.c_str()) != 0, "Release absolute image fixture");
+            std::filesystem::remove(absolute_fixture_image); std::filesystem::remove(absolute_fixture_document);
+            std::filesystem::remove(absolute_fixture_root);
             // Offstage entries have deliberately absent files. Only the visible window may request pixels.
             ui_model_set("players.avatarCount", "101", 1);
             ui_model_set("players.avatarSelected", "50", 1);

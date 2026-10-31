@@ -34,6 +34,8 @@ interface
 {$I switches.inc}
 
 uses
+  UDocumentUI,
+  UPath,
   SysUtils,
   sdl2,
   UText,
@@ -57,12 +59,37 @@ uses
   USkins;
 
 type
+  TSingDocumentNotice = record
+    PlayerIndex, Rating, TotalScore, Gain: integer;
+    Started: cardinal;
+  end;
   TScreenSingView = class
   private
+    DocumentUI: TDocumentUI;
+    DocumentPlayerCount: integer;
+    DocumentVoiceKey: UTF8String;
+    MessageValue, SongTitleValue, DisplayClock: UTF8String;
+    MessageVisible, SongTitleVisible: boolean;
+    MessageAlpha, SongTitleAlpha, CountdownPhase: real;
+    CountdownValue: integer;
+    DocumentNotices: array of TSingDocumentNotice;
+    PreviousNoticeScore: array[0..IMaxPlayerCount-1] of integer;
+    BestScore, AverageScore: array[0..2] of integer;
+    HighscoresReady: boolean;
     GapCountdown: TGapCountdown;
     LanePanelTexture: TTexture;
     HeaderTexture: TTexture;
     DefaultAvatarTexture: TTexture;
+    procedure SetDocumentNumber(const Name: UTF8String; Value: real);
+    procedure PrepareDocumentSegments;
+    procedure EnsureDocumentPlayers;
+    procedure EnsureDocumentVoices;
+    procedure SyncDocumentHUD;
+    procedure DrawDocumentCanvases;
+    procedure PositionDocumentVideo;
+    function GetDocumentActive: boolean;
+    function GetSongTitle: UTF8String;
+    procedure SetSongTitle(const Value: UTF8String);
     procedure DrawHeaders;
     procedure DrawLanePanels;
     procedure DrawGapCountdown;
@@ -91,6 +118,14 @@ type
 
 
 
+    property DocumentActive: boolean read GetDocumentActive;
+    property SongTitle: UTF8String read GetSongTitle write SetSongTitle;
+    procedure ResetHUD;
+    procedure ResetScoreFeedback;
+    function PlayerHeaderCenter(PlayerIndex: integer): real;
+    procedure PositionDocumentVoice(DisplayIndex: integer);
+    function DocumentMouse(Button: integer; Down: boolean; X, Y: integer; out SeekPosition: real): boolean;
+    procedure NotifyRating(PlayerIndex, Rating, TotalScore: integer);
     constructor Create;
     destructor Destroy; override;
 
@@ -137,6 +172,10 @@ uses
   UWebSDK, UMenuBackground;
 
 const
+  uiSingingScreen = 'singing';
+  uiSingingPause = 'singing.pause.toggle';
+  uiSingingTimeMode = 'singing.time.mode';
+  uiSingingSeek = 'singing.seek';
   MAX_MESSAGE = 3;
 
 type
@@ -174,6 +213,424 @@ end;
 function IsCurrentSongDuet: boolean;
 begin
   Result := Assigned(CurrentSong) and CurrentSong.isDuet;
+end;
+
+procedure TScreenSingView.SetDocumentNumber(const Name: UTF8String; Value: real);
+var F: TFormatSettings;
+begin
+  F := DefaultFormatSettings; F.DecimalSeparator := '.';
+  DocumentUI.SetModel(Name, FloatToStr(Value, F), 3);
+end;
+
+procedure TScreenSingView.PrepareDocumentSegments;
+var Track, Line, Count: integer; Prefix: UTF8String; Col: TRGB;
+begin
+  if not DocumentActive then Exit;
+  Count := 0;
+  for Track := 0 to High(CurrentSong.Tracks) do
+    for Line := 0 to High(CurrentSong.Tracks[Track].Lines) do
+      with CurrentSong.Tracks[Track].Lines[Line] do
+        if (Length(Notes) > 0) and ((ScreenSong.Mode <> smMedley) or
+          (Notes[0].StartBeat >= CurrentSong.Medley.StartBeat)) then Inc(Count);
+  DocumentUI.SetArray('singing.segments', Count);
+  Count := 0;
+  for Track := 0 to High(CurrentSong.Tracks) do
+    for Line := 0 to High(CurrentSong.Tracks[Track].Lines) do
+      with CurrentSong.Tracks[Track].Lines[Line] do
+        if (Length(Notes) > 0) and ((ScreenSong.Mode <> smMedley) or
+          (Notes[0].StartBeat >= CurrentSong.Medley.StartBeat)) then
+        begin
+          Prefix := 'singing.segments[' + IntToStr(Count) + '].';
+          DocumentUI.SetModel(Prefix + 'id', IntToStr(Count), 1);
+          SetDocumentNumber(Prefix + 'start', GetTimeFromBeat(Notes[0].StartBeat));
+          SetDocumentNumber(Prefix + 'end', GetTimeFromBeat(Notes[HighNote].EndBeat));
+          Col := GetLyricColor(Ini.SingColor[Track mod IMaxPlayerCount]);
+          DocumentUI.SetModel(Prefix + 'color', Format('#%.2x%.2x%.2x', [Round(Col.R*255), Round(Col.G*255), Round(Col.B*255)]));
+          Inc(Count);
+        end;
+end;
+
+function TScreenSingView.GetDocumentActive: boolean;
+begin Result := DocumentUI <> nil; end;
+
+function TScreenSingView.GetSongTitle: UTF8String;
+begin
+  if DocumentActive then Result := SongTitleValue
+  else Result := ScreenSing.Text[SongNameText].Text;
+end;
+
+procedure TScreenSingView.SetSongTitle(const Value: UTF8String);
+begin
+  SongTitleValue := Value;
+  if not DocumentActive then ScreenSing.Text[SongNameText].Text := Value;
+end;
+
+procedure TScreenSingView.ResetHUD;
+begin
+  if not DocumentActive then Exit;
+  MessageVisible := false; MessageValue := ''; MessageAlpha := 0;
+  SongTitleVisible := false; SongTitleValue := ''; SongTitleAlpha := 0;
+  CountdownValue := 0; CountdownPhase := 0;
+  HighscoresReady := false;
+  DocumentPlayerCount := -1; DocumentVoiceKey := '';
+  ResetScoreFeedback;
+  FillChar(BestScore, SizeOf(BestScore), 0);
+  FillChar(AverageScore, SizeOf(AverageScore), 0);
+end;
+
+procedure TScreenSingView.ResetScoreFeedback;
+begin
+  if not DocumentActive then Exit;
+  SetLength(DocumentNotices, 0);
+  FillChar(PreviousNoticeScore, SizeOf(PreviousNoticeScore), 0);
+end;
+
+procedure TScreenSingView.EnsureDocumentPlayers;
+var I: integer; Prefix: UTF8String;
+begin
+  if not DocumentActive then Exit;
+  DocumentUI.SetModel('singing.count', IntToStr(PlayersPlay), 1);
+  DocumentUI.SetModel('singing.duet', IntToStr(Ord(IsCurrentSongDuet)), 2);
+  if DocumentPlayerCount = PlayersPlay then Exit;
+  DocumentPlayerCount := PlayersPlay;
+  DocumentUI.SetArray('singing.players', PlayersPlay);
+  if not IsCurrentSongDuet then
+  begin
+    DocumentUI.SetArray('singing.upperVoices', 0); DocumentUI.SetArray('singing.lowerVoices', 0);
+    DocumentUI.SetModel('singing.upperVoicesCount', '0', 1); DocumentUI.SetModel('singing.lowerVoicesCount', '0', 1);
+  end;
+  for I := 0 to PlayersPlay - 1 do
+  begin
+    Prefix := 'singing.players[' + IntToStr(I) + '].';
+    DocumentUI.SetModel(Prefix + 'id', IntToStr(I), 1);
+  end;
+end;
+
+function TScreenSingView.PlayerHeaderCenter(PlayerIndex: integer): real;
+var Bounds: TDocumentRegion;
+begin
+  EnsureDocumentPlayers;
+  if DocumentUI.Region('singing-player-header-' + IntToStr(PlayerIndex), Bounds) then
+    Result := Bounds.Y + Bounds.H / 2
+  else Result := RenderH / 2;
+end;
+
+procedure TScreenSingView.EnsureDocumentVoices;
+var I, Voice, Bank, Index: integer; Key, Prefix, GroupName: UTF8String; Col: TRGB;
+begin
+  Key := '';
+  for I := 0 to High(ScreenSing.DisplayedVoices) do
+    Key := Key + IntToStr(ScreenSing.DisplayedVoices[I]) + ':' + IntToStr(ScreenSing.DisplayedVoiceBanks[I]) + ';';
+  if Key = DocumentVoiceKey then Exit;
+  DocumentVoiceKey := Key;
+  for Bank := 0 to 1 do
+  begin
+    if Bank = 0 then GroupName := 'upperVoices' else GroupName := 'lowerVoices';
+    DocumentUI.SetModel('singing.' + GroupName + 'Count', IntToStr(ScreenSing.VoiceBankCounts[Bank]), 1);
+    DocumentUI.SetArray('singing.' + GroupName, ScreenSing.VoiceBankCounts[Bank]);
+    Index := 0;
+    for I := 0 to High(ScreenSing.DisplayedVoices) do
+      if ScreenSing.DisplayedVoiceBanks[I] = Bank then
+      begin
+        Voice := ScreenSing.DisplayedVoices[I];
+        Prefix := 'singing.' + GroupName + '[' + IntToStr(Index) + '].';
+        DocumentUI.SetModel(Prefix + 'id', IntToStr(Voice), 1);
+        DocumentUI.SetModel(Prefix + 'number', IntToStr(Voice + 1), 1);
+        DocumentUI.SetModel(Prefix + 'bank', IntToStr(Bank), 1);
+        Col.R := ScreenSing.VoiceLyrics[Voice].LineColor_act.R;
+        Col.G := ScreenSing.VoiceLyrics[Voice].LineColor_act.G;
+        Col.B := ScreenSing.VoiceLyrics[Voice].LineColor_act.B;
+        DocumentUI.SetModel(Prefix + 'color', Format('#%.2x%.2x%.2x', [Round(Col.R * 255), Round(Col.G * 255), Round(Col.B * 255)]));
+        Inc(Index);
+      end;
+  end;
+end;
+
+procedure TScreenSingView.PositionDocumentVoice(DisplayIndex: integer);
+var Bounds: TDocumentRegion; Voice, Bank: integer; Engine: TLyricEngine;
+begin
+  EnsureDocumentVoices;
+  Voice := ScreenSing.DisplayedVoices[DisplayIndex];
+  Bank := ScreenSing.DisplayedVoiceBanks[DisplayIndex];
+  if not DocumentUI.Region('singing-voice-' + IntToStr(Voice) + '-' + IntToStr(Bank), Bounds) then Exit;
+  Engine := ScreenSing.VoiceLyrics[Voice];
+  Engine.Compact := ScreenSing.VoiceBankCounts[Bank] > 1;
+  Engine.UpperLineX := Bounds.X; Engine.UpperLineY := Bounds.Y;
+  Engine.UpperLineW := Bounds.W; Engine.UpperLineH := Bounds.H;
+  Engine.LowerLineX := Bounds.X; Engine.LowerLineY := Bounds.Y;
+  Engine.LowerLineW := Bounds.W; Engine.LowerLineH := Bounds.H;
+  if not Engine.Compact then
+  begin
+    Engine.UpperLineH := Bounds.H / 2;
+    Engine.LowerLineY := Bounds.Y + Bounds.H / 2;
+    Engine.LowerLineH := Bounds.H / 2;
+  end;
+  Engine.UpdateLineMetrics;
+end;
+
+procedure TScreenSingView.PositionDocumentVideo;
+var Bounds: TDocumentRegion;
+begin
+  if not DocumentUI.Region('singing-video', Bounds) then Exit;
+  ScreenSing.fCurrentVideo.SetScreenPosition(Bounds.X, Bounds.Y, 0);
+  ScreenSing.fCurrentVideo.Width := Bounds.W;
+  ScreenSing.fCurrentVideo.Height := Bounds.H;
+end;
+
+procedure TScreenSingView.NotifyRating(PlayerIndex, Rating, TotalScore: integer);
+var N: integer;
+begin
+  if not DocumentActive then Exit;
+  N := Length(DocumentNotices);
+  SetLength(DocumentNotices, N + 1);
+  DocumentNotices[N].PlayerIndex := PlayerIndex;
+  DocumentNotices[N].Rating := Rating;
+  DocumentNotices[N].TotalScore := TotalScore;
+  DocumentNotices[N].Gain := TotalScore - PreviousNoticeScore[PlayerIndex];
+  DocumentNotices[N].Started := SDL_GetTicks;
+  PreviousNoticeScore[PlayerIndex] := TotalScore;
+end;
+
+function TScreenSingView.DocumentMouse(Button: integer; Down: boolean; X, Y: integer;
+  out SeekPosition: real): boolean;
+var Bounds: TDocumentRegion; GX, GY, StartTime, EndTime: real; Action: UTF8String;
+begin
+  Result := false;
+  SeekPosition := 0;
+  if Button = SDL_BUTTON_LEFT then DocumentUI.Mouse(X, Y, 0, Down)
+  else DocumentUI.Mouse(X, Y);
+  Action := DocumentUI.TakeAction;
+  if Action = uiSingingSeek then Exit;
+  if (Button = SDL_BUTTON_LEFT) and Down and ScreenSing.ShowFinish and
+    not ScreenSing.FadeOut and ScreenSing.Settings.TimeBarVisible and
+    DocumentUI.Region('singing-progress', Bounds) and (Bounds.W > 0) then
+  begin
+    GX := X * RenderW / ScreenW; GY := Y * RenderH / ScreenH;
+    if (GX >= Bounds.X) and (GX <= Bounds.X + Bounds.W) and
+      (GY >= Bounds.Y - 4) and (GY <= Bounds.Y + Bounds.H + 4) then
+    begin
+      StartTime := CurrentSong.Start; EndTime := LyricsState.TotalTime;
+      if ScreenSong.Mode = smMedley then StartTime := ScreenSing.MedleyStart;
+      if EndTime > StartTime then
+      begin SeekPosition := StartTime + (EndTime - StartTime) * (GX - Bounds.X) / Bounds.W; Exit(true); end;
+    end;
+  end;
+  if Action = uiSingingPause then ScreenSing.Pause
+  else if Action = uiSingingTimeMode then ScreenSing.CycleTimebarMode;
+end;
+
+procedure TScreenSingView.SyncDocumentHUD;
+const RatingKeys: array[0..8] of UTF8String = ('POPUP_AWFUL', 'POPUP_AWFUL', 'POPUP_POOR',
+  'POPUP_BAD', 'POPUP_NOTBAD', 'POPUP_GOOD', 'POPUP_GREAT', 'POPUP_AWESOME', 'POPUP_PERFECT');
+var I, J, Level: integer; Prefix, Name, ImagePath: UTF8String;
+    Color: TRGB; ScorePlayer: TScorePlayer; CurrentTime, StartTime, EndTime: real;
+    Age, Lifetime, Potential, ClockPosition, ClockDuration, ClockValue: real; ClockPrefix: UTF8String; UpperText, LowerText: boolean;
+  procedure Bool(const Name: UTF8String; Value: boolean);
+  begin DocumentUI.SetModel('singing.' + Name, IntToStr(Ord(Value)), 2); end;
+  function ColorText(const C: TRGB): UTF8String;
+  begin Result := Format('#%.2x%.2x%.2x', [Round(C.R * 255), Round(C.G * 255), Round(C.B * 255)]); end;
+begin
+  EnsureDocumentPlayers;
+  if CurrentSong = nil then Exit;
+  if not HighscoresReady and Assigned(DataBase) and ScreenSing.Settings.ScoresVisible and
+    ((Ini.SingScores = Ord(sibBoth)) or (Ini.SingScores = Ord(sibRemainingOnly))) then
+  begin
+    for I := 0 to 2 do
+      try
+        BestScore[I] := DataBase.ReadMax_ScoreLocal(CurrentSong, I);
+        AverageScore[I] := DataBase.ReadMedia_ScoreLocal(CurrentSong, I);
+      except
+        on E: Exception do begin BestScore[I] := 0; AverageScore[I] := 0; Log.LogWarn(E.Message, 'Document singing highscores'); end;
+      end;
+    HighscoresReady := true;
+  end;
+  DocumentUI.SetModel('singing.artist', CurrentSong.Artist);
+  DocumentUI.SetModel('singing.title', CurrentSong.Title);
+  DocumentUI.SetModel('singing.voices', IntToStr(CurrentSong.VoiceCount), 1);
+  SetDocumentNumber('singing.aspect', (ScreenW / Max(1, ScreenH)) / (RenderW / Max(1, RenderH)));
+  DocumentUI.SetModel('singing.medley.index', IntToStr(PlaylistMedley.CurrentMedleySong), 1);
+  DocumentUI.SetModel('singing.medley.count', IntToStr(PlaylistMedley.NumMedleySongs), 1);
+  Bool('medley.active', ScreenSong.Mode = smMedley);
+  Bool('avatars', ScreenSing.Settings.AvatarsVisible);
+  Bool('scores', ScreenSing.Settings.ScoresVisible and ScreenSing.Scores.Visible);
+  Bool('bars', ScreenSing.Scores.RBVisible);
+  Bool('ratingFeedback', ScreenSing.Settings.FeedbackVisible and ScreenSing.Scores.Visible);
+  Bool('lyrics', ScreenSing.Settings.LyricsVisible);
+  Bool('soloText', (not CurrentSong.isDuet) and ScreenSing.Lyrics.HasVisibleText(LyricsState.MidBeat));
+  UpperText := false; LowerText := false;
+  if CurrentSong.isDuet then
+  for I := 0 to High(ScreenSing.DisplayedVoices) do
+  begin
+    if (ScreenSing.DisplayedVoices[I] < 0) or
+      (ScreenSing.DisplayedVoices[I] >= Length(ScreenSing.VoiceLyrics)) then Continue;
+    if ScreenSing.DisplayedVoiceBanks[I] = 0 then
+    begin
+      UpperText := UpperText or ScreenSing.VoiceLyrics[ScreenSing.DisplayedVoices[I]].HasVisibleText(LyricsState.MidBeat);
+    end
+    else
+    begin
+      LowerText := LowerText or ScreenSing.VoiceLyrics[ScreenSing.DisplayedVoices[I]].HasVisibleText(LyricsState.MidBeat);
+    end;
+  end;
+  Bool('upperText', UpperText); Bool('lowerText', LowerText);
+  Bool('timebar', ScreenSing.Settings.TimeBarVisible);
+  Bool('feedback', ScreenSing.Settings.FeedbackVisible);
+  Bool('paused', ScreenSing.Paused);
+  Bool('video', Assigned(ScreenSing.fCurrentVideo));
+  Bool('picture', ScreenSing.fShowBackground);
+  Bool('webcam', ScreenSing.fShowWebcam);
+  Bool('visualization', ScreenSing.fShowVisualization);
+  Bool('messageVisible', MessageVisible and (MessageAlpha > 0));
+  Bool('titleVisible', SongTitleVisible and (SongTitleAlpha > 0));
+  DocumentUI.SetModel('singing.message', MessageValue);
+  SetDocumentNumber('singing.messageAlpha', MessageAlpha);
+  DocumentUI.SetModel('singing.songTitle', SongTitleValue);
+  SetDocumentNumber('singing.titleAlpha', SongTitleAlpha);
+  DocumentUI.SetModel('singing.countdown', IntToStr(CountdownValue), 1);
+  SetDocumentNumber('singing.countdownPhase', CountdownPhase);
+  DocumentUI.SetModel('singing.scoreMode', IntToStr(Ord(TSingInfoBarMode(EnsureRange(Ini.SingScores, 0, 3)))), 1);
+  if Party.bPartyGame and (Ini.SingScores = 0) then DocumentUI.SetModel('singing.scoreMode', '2', 1);
+  StartTime := CurrentSong.Start; EndTime := LyricsState.TotalTime;
+  if ScreenSong.Mode = smMedley then begin StartTime := ScreenSing.MedleyStart; EndTime := ScreenSing.MedleyEnd; end;
+  CurrentTime := LyricsState.GetCurrentTime;
+  ClockPosition := CurrentTime; ClockDuration := LyricsState.TotalTime;
+  if ScreenSong.Mode = smMedley then
+  begin ClockPosition := CurrentTime - ScreenSing.MedleyStart; ClockDuration := ScreenSing.MedleyEnd - ScreenSing.MedleyStart; end;
+  ClockPrefix := '';
+  case ScreenSing.fTimebarMode of
+    tbmRemaining: begin ClockValue := ClockDuration - Max(ClockPosition, CurrentSong.Start); ClockPrefix := '-'; end;
+    tbmTotal: begin ClockValue := ClockDuration; ClockPrefix := '#'; end;
+    else ClockValue := Max(ClockPosition, CurrentSong.Start);
+  end;
+  DisplayClock := Format('%s%.2d:%.2d', [ClockPrefix, Round(ClockValue) div 60, Round(ClockValue) mod 60]);
+  DocumentUI.SetModel('singing.clock', DisplayClock);
+  SetDocumentNumber('singing.position', CurrentTime);
+  SetDocumentNumber('singing.start', StartTime);
+  SetDocumentNumber('singing.end', EndTime);
+  SetDocumentNumber('singing.duration', Max(0.001, EndTime - StartTime));
+  SetDocumentNumber('singing.progress', EnsureRange((CurrentTime - StartTime) / Max(0.001, EndTime - StartTime), 0.0, 1.0));
+  for I := 0 to PlayersPlay - 1 do
+  begin
+    Prefix := 'singing.players[' + IntToStr(I) + '].';
+    Name := Player[I].Name;
+    if Party.bPartyGame then Name := Ini.NameTeam[I];
+    DocumentUI.SetModel(Prefix + 'name', Name);
+    DocumentUI.SetModel(Prefix + 'voice', IntToStr(Player[I].Track + 1), 1);
+    Level := Player[I].Level;
+    if (ScreenSong.Mode <> smNormal) and (ScreenSong.Mode <> smMedley) then Level := Ini.Difficulty;
+    DocumentUI.SetModel(Prefix + 'level', IntToStr(EnsureRange(Level, 0, 2)), 1);
+    Color := GetPlayerColor(Ini.SingColor[I]);
+    DocumentUI.SetModel(Prefix + 'color', ColorText(Color));
+    ImagePath := DefaultAvatarFile(I).ToUTF8(false);
+    if AvatarPlayerTextures[I + 1] <> nil then ImagePath := AvatarPlayerTextures[I + 1].Name.ToUTF8(false);
+    DocumentUI.SetModel(Prefix + 'avatar', ImagePath);
+    DocumentUI.SetModel(Prefix + 'avatarTint', '#ffffff');
+    if (AvatarPlayerTextures[I + 1] = NoAvatarTexture[I + 1]) and Skin.ColorizeDefaultAvatars then
+      DocumentUI.SetModel(Prefix + 'avatarTint', ColorText(Color));
+    DocumentUI.SetModel(Prefix + 'notesVisible', IntToStr(Ord(ScreenSing.Settings.NotesVisible[I])), 2);
+    DocumentUI.SetModel(Prefix + 'inputVisible', IntToStr(Ord(ScreenSing.Settings.OscilloscopeVisible)), 2);
+    if I >= ScreenSing.Scores.PlayerCount then Continue;
+    ScorePlayer := ScreenSing.Scores.Players[I];
+    DocumentUI.SetModel(Prefix + 'enabled', IntToStr(Ord(ScorePlayer.Visible)), 2);
+    DocumentUI.SetModel(Prefix + 'barsVisible', IntToStr(Ord(ScorePlayer.RBVisible)), 2);
+    DocumentUI.SetModel(Prefix + 'pendingScore', IntToStr(ScreenSing.Scores.PendingPopUpPoints[I]), 1);
+    DocumentUI.SetModel(Prefix + 'score', IntToStr(Player[I].ScoreTotalInt), 1);
+    DocumentUI.SetModel(Prefix + 'displayedScore', IntToStr(ScorePlayer.ScoreDisplayed), 1);
+    DocumentUI.SetModel(Prefix + 'scoreText', Format('%.5d', [ScorePlayer.ScoreDisplayed]));
+    SetDocumentNumber(Prefix + 'rating', ScorePlayer.RBTarget);
+    SetDocumentNumber(Prefix + 'actual', ScorePlayer.ScoreActual);
+    SetDocumentNumber(Prefix + 'remaining', ScorePlayer.RemainingPossibleScore);
+    Potential := EnsureRange((ScorePlayer.ScoreActual + ScorePlayer.RemainingPossibleScore) / MAX_SONG_SCORE, 0.0, 1.0);
+    SetDocumentNumber(Prefix + 'potential', Potential);
+    Level := EnsureRange(Ini.PlayerLevel[I], 0, 2);
+    DocumentUI.SetModel(Prefix + 'best', IntToStr(BestScore[Level]), 1);
+    DocumentUI.SetModel(Prefix + 'average', IntToStr(AverageScore[Level]), 1);
+  end;
+  Lifetime := ScreenSing.Scores.Settings.Phase1Time + ScreenSing.Scores.Settings.Phase2Time + ScreenSing.Scores.Settings.Phase3Time;
+  I := 0;
+  while I < Length(DocumentNotices) do
+    if SDL_GetTicks - DocumentNotices[I].Started > Lifetime then
+    begin
+      for J := I to High(DocumentNotices) - 1 do DocumentNotices[J] := DocumentNotices[J + 1];
+      SetLength(DocumentNotices, Length(DocumentNotices) - 1);
+    end
+    else Inc(I);
+  DocumentUI.SetArray('singing.notices', Length(DocumentNotices));
+  for I := 0 to High(DocumentNotices) do
+  begin
+    Prefix := 'singing.notices[' + IntToStr(I) + '].';
+    Age := (SDL_GetTicks - DocumentNotices[I].Started) / 1000;
+    DocumentUI.SetModel(Prefix + 'player', IntToStr(DocumentNotices[I].PlayerIndex), 1);
+    DocumentUI.SetModel(Prefix + 'rating', IntToStr(DocumentNotices[I].Rating), 1);
+    DocumentUI.SetModel(Prefix + 'label', RatingKeys[EnsureRange(DocumentNotices[I].Rating, 0, 8)]);
+    DocumentUI.SetModel(Prefix + 'gain', IntToStr(DocumentNotices[I].Gain), 1);
+    SetDocumentNumber(Prefix + 'age', Age);
+    SetDocumentNumber(Prefix + 'lifetime', Max(0.001, Lifetime / 1000));
+  end;
+end;
+
+procedure TScreenSingView.DrawDocumentCanvases;
+var I, Track, Spacing: integer; Bounds, Guide, Anchor, NoteSize: TDocumentRegion;
+    Engine: TLyricEngine; Position: TThemePosition;
+begin
+  if CurrentSong.isDuet then
+  begin
+    ScreenSing.LayoutVoiceLyrics;
+    EnsureDocumentVoices;
+    if ScreenSing.Settings.LyricsVisible then
+      for I := 0 to High(ScreenSing.DisplayedVoices) do
+      begin
+        PositionDocumentVoice(I);
+        Track := ScreenSing.DisplayedVoices[I];
+        Engine := ScreenSing.VoiceLyrics[Track];
+        Engine.Draw(LyricsState.MidBeat);
+        SingDrawLyricHelper(Track, Engine.UpperLineX, Engine.UpperLineW / 2, 0);
+      end;
+  end
+  else if ScreenSing.Settings.LyricsVisible then
+  begin
+    Engine := ScreenSing.Lyrics;
+    if DocumentUI.Region('singing-lyrics-upper', Bounds) then
+    begin
+      Engine.UpperLineX := Bounds.X; Engine.UpperLineY := Bounds.Y;
+      Engine.UpperLineW := Bounds.W; Engine.UpperLineH := Bounds.H;
+    end;
+    if DocumentUI.Region('singing-lyrics-lower', Bounds) then
+    begin
+      Engine.LowerLineX := Bounds.X; Engine.LowerLineY := Bounds.Y;
+      Engine.LowerLineW := Bounds.W; Engine.LowerLineH := Bounds.H;
+    end;
+    Engine.UpdateLineMetrics;
+    Engine.Draw(LyricsState.MidBeat);
+    SingDrawLyricHelper(0, Engine.UpperLineX, Engine.UpperLineW / 2, 0);
+  end;
+  for I := 0 to PlayersPlay - 1 do
+  begin
+    if ScreenSing.Settings.OscilloscopeVisible and DocumentUI.Region('singing-input-' + IntToStr(I), Bounds) then
+    begin
+      Position.X := Round(Bounds.X); Position.Y := Round(Bounds.Y);
+      Position.W := Round(Bounds.W); Position.H := Round(Bounds.H); Position.ScaleMode := lsStretch;
+      SingDrawOscilloscope(Position, I);
+    end;
+    if not DocumentUI.Region('singing-notes-' + IntToStr(I), Bounds) then Continue;
+    if not DocumentUI.Region('singing-guide-' + IntToStr(I), Guide) then Continue;
+    if not DocumentUI.Region('singing-note-anchor-' + IntToStr(I), Anchor) then Continue;
+    Spacing := Max(1, Round(Guide.H / 9));
+    if DocumentUI.Region('singing-note-size-' + IntToStr(I), NoteSize) then
+    begin NotesW[I] := Max(1, NoteSize.W); NotesH[I] := Max(2, NoteSize.H); end;
+    if ScreenSing.Settings.InputVisible and ScreenSing.Settings.NotesVisible[I] and (Ini.NoteLines = 1) then
+      SingDrawNoteLines(Guide.X, Guide.Y, Guide.X + Guide.W, Spacing);
+    Track := Player[I].Track;
+    if CurrentSong.isDuet then Engine := ScreenSing.VoiceLyrics[Track] else Engine := ScreenSing.Lyrics;
+    if Engine.GetUpperLine.LastLine and not Engine.HasVisibleText(LyricsState.MidBeat) then
+    begin
+      if Ini.PitchTrace <> 0 then SingDrawPlayerLine(Bounds.X, Anchor.Y, Bounds.W, Track, I, Spacing, true);
+      Continue;
+    end;
+    SingDrawPlayerBGLine(Bounds.X, Anchor.Y, Bounds.X + Bounds.W, Track, I, Spacing);
+    SingDrawLine(Bounds.X, Anchor.Y, Bounds.X + Bounds.W, Track, I, Spacing);
+    SingDrawPlayerLine(Bounds.X, Anchor.Y, Bounds.W, Track, I, Spacing);
+  end;
 end;
 
 function BuildSingPlayerTemplate(const PlayerCountOnScreen, PlayerIndexOnScreen: integer): TThemeSingPlayer;
@@ -368,6 +825,7 @@ var
     end;
   end;
 begin
+  if DocumentActive then Exit;
   for IterLayoutPlayerCount := 1 to UIni.IMaxPlayerCount do
     hideGroup(IterLayoutPlayerCount);
 
@@ -504,6 +962,27 @@ var
     end;
   end;
 begin
+  DocumentUI := TDocumentUI.Open(uiSingingScreen);
+  DocumentPlayerCount := -1;
+  if DocumentUI <> nil then
+  begin
+    lastVolume := -1;
+    ScreenSing.RightMbESC := false;
+    ScreenSing.fShowVisualization := false;
+    ScreenSing.fShowWebcam := false;
+    ScreenSing.fShowBackground := false;
+    ScreenSing.fCurrentVideo := nil;
+    GapCountdown := TGapCountdown.Create;
+    ScreenSing.Scores := TSingScores.Create;
+    ScreenSing.Scores.LoadfromTheme;
+    LoadSingScreenTextures(true);
+    ScreenSing.Lyrics := TLyricEngine.Create(0, 0, 1, 1, 0, 0, 1, 1);
+    ScreenSing.fLyricsSync := TLyricsSyncSource.Create;
+    ScreenSing.fMusicSync := TMusicSyncSource.Create;
+    ScreenSing.eSongLoaded := THookableEvent.Create('ScreenSing.SongLoaded');
+    ResetHUD;
+    Exit;
+  end;
   lastVolume:= -1;
   //too dangerous, a mouse button is quickly pressed by accident
   ScreenSing.RightMbESC := false;
@@ -602,6 +1081,7 @@ begin
   HeaderTexture.Free;
   LanePanelTexture.Free;
   GapCountdown.Free;
+  DocumentUI.Free;
   UnloadSingScreenTextures;
   inherited;
 end;
@@ -746,7 +1226,24 @@ var
     end;
   end;
 begin
-  ScreenSing.Background.Draw;
+  CountdownValue := 0;
+  if DocumentUI = nil then ScreenSing.Background.Draw
+  else
+  begin
+    SyncDocumentHUD;
+    DocumentUI.PrepareLayout;
+    // Reset the render target before drawing native media into the document stage.
+    if not TMenuBackground.SuppressDrawing then
+    begin
+      Renderer.SetClearColor(0, 0, 0, 1);
+      Renderer.ClearFrameBuffer(CLEAR_COLOR or CLEAR_DEPTH);
+    end;
+    if IsCurrentSongDuet then
+    begin
+      ScreenSing.LayoutVoiceLyrics;
+      EnsureDocumentVoices;
+    end;
+  end;
 
   // sound enabled/disabled (Party plugins)
   if not(ScreenSing.Settings.SoundEnabled) and not(lastVolume=0) then
@@ -761,7 +1258,7 @@ begin
   end;
 
   // swap static textures to current screen ones
-  SwapToScreen(ScreenAct);
+  if DocumentUI = nil then SwapToScreen(ScreenAct);
 
   // draw background picture (if any, and if no visualizations)
   // when we don't check for visualizations the visualizations would
@@ -776,6 +1273,8 @@ begin
   LocalPlayerCount := GetScreenPlayerCount(PlayersPlay, Screens, ScreenAct);
   LocalStartIndex := GetFirstPlayerIndexForScreen(PlayersPlay, Screens, ScreenAct) + 1;
 
+  if DocumentUI = nil then
+  begin
   for IterLayoutPlayerCount := 1 to UIni.IMaxPlayerCount do
   begin
     GetSingTextSlots(Self, IterLayoutPlayerCount, TextSlots);
@@ -795,6 +1294,9 @@ begin
   end;
   SetPlayerNameTexts(TextSlots, LocalStartIndex, IsCurrentSongDuet and (LocalPlayerCount >= 3));
   SetTextVisibility(TextSlots, LocalPlayerCount, true);
+
+  end
+  else EnsureDocumentPlayers;
 
   // Voice colors remain stable when players choose or share voices.
 
@@ -829,6 +1331,9 @@ begin
   DisplayMin := Round(DisplayTime) div 60;
   DisplaySec := Round(DisplayTime) mod 60;
 
+  DisplayClock := Format('%s%.2d:%.2d', [DisplayPrefix, DisplayMin, DisplaySec]);
+  if DocumentUI = nil then
+  begin
   // update static menu with time ...
   ScreenSing.Text[TextTimeLabelText].Visible := ScreenSing.Settings.TimeBarVisible and
     (Theme.Sing.TextTimeLabelText.Size > 0);
@@ -836,6 +1341,8 @@ begin
   if Theme.Sing.TimeShowTitle then
     ScreenSing.Text[TextTimeText].Text := CurrentSong.Title + '   ' + ScreenSing.Text[TextTimeText].Text;
   ScreenSing.Text[TextTimeText].Visible := ScreenSing.Settings.TimeBarVisible;
+
+  end;
 
   // Only voices actually assigned to players determine scoring completion.
   if not ScreenSing.SungToEnd then
@@ -889,6 +1396,7 @@ begin
       end;
     end;
 
+    if DocumentUI <> nil then PositionDocumentVideo;
     ScreenSing.fCurrentVideo.SetScreen(ScreenAct);
     ScreenSing.fCurrentVideo.Draw;
   end;
@@ -898,9 +1406,11 @@ begin
     ScoreMode := sibRatingOnly;
   ScreenSing.Scores.SetInfoBarMode(ScoreMode);
   DrawScorePanel := ScreenSing.Settings.ScoresVisible and (ScoreMode <> sibOff);
-  if DrawScorePanel then
+  if DrawScorePanel and (DocumentUI = nil) then
     HidePlayerAvatarsForScorePanel;
 
+  if DocumentUI = nil then
+  begin
   // Match both themed lyric banks to every visible voice, including last-line fades.
   if IsCurrentSongDuet then
   begin
@@ -931,6 +1441,13 @@ begin
 
   // draw static menu (FG)
   ScreenSing.DrawFG;
+
+  end
+  else
+  begin
+    SyncDocumentHUD;
+    DocumentUI.Draw(true);
+  end;
 
   //Medley Countdown
   if ScreenSong.Mode = smMedley then
@@ -979,26 +1496,39 @@ begin
   if DrawScorePanel or ScreenSing.Settings.FeedbackVisible then
   begin
     // Keep popup/score animation state advancing even when its rendering is hidden.
-    ScreenSing.Scores.Draw(DrawScorePanel, ScreenSing.Settings.FeedbackVisible);
-    if DrawScorePanel then DrawPlayerAvatarsAfterScorePanel;
+    if DocumentUI = nil then
+    begin
+      ScreenSing.Scores.Draw(DrawScorePanel, ScreenSing.Settings.FeedbackVisible);
+      if DrawScorePanel then DrawPlayerAvatarsAfterScorePanel;
+    end
+    else ScreenSing.Scores.Draw(false, false);
   end;
 
-  SingDraw;
+  if DocumentUI = nil then SingDraw
+  else DrawDocumentCanvases;
 
   // goldennotestarstwinkle
   if (PlayersPlay > 0) and ScreenSing.Settings.FeedbackVisible then GoldenRec.SpawnRec;
 
   FadeMessage();
+  if DocumentUI <> nil then
+  begin
+    SyncDocumentHUD;
+    DocumentUI.Draw(false, true);
+  end;
 
   // draw pausepopup
   // FIXME: this is a workaround that the static is drawn over the lyrics, lines, scores and effects
   // maybe someone could find a better solution
   if ScreenSing.Paused then
   begin
+    if DocumentUI = nil then
+    begin
     ScreenSing.Statics[StaticPausePopup].Texture.Z := 1;
     ScreenSing.Statics[StaticPausePopup].Visible := true;
     ScreenSing.Statics[StaticPausePopup].Draw;
     ScreenSing.Statics[StaticPausePopup].Visible := false;
+    end;
     SDL_Delay(33);//wait a bit to save electricity...
   end;
 
@@ -1011,11 +1541,15 @@ begin
   begin
     ScreenSing.TextMedleyFadeOut := false;
 
+    if DocumentUI <> nil then begin SongTitleVisible := true; SongTitleAlpha := 1; end
+    else
+    begin
     ScreenSing.Statics[SongNameStatic].Texture.Alpha := 1;
     ScreenSing.Text[SongNameText].Alpha := 1;
 
     ScreenSing.Statics[SongNameStatic].Visible := true;
     ScreenSing.Text[SongNameText].Visible := true;
+    end;
     DrawCountdown(GetTimeFromBeat(CurrentSong.Medley.StartBeat) - AudioPlayback.Position);
   end else
   begin
@@ -1048,6 +1582,7 @@ begin
           GapCountdown.Add(StartTime, EndTime);
         end;
   GapCountdown.Prepare;
+  PrepareDocumentSegments;
 end;
 
 procedure TScreenSingView.DrawGapCountdown;
@@ -1078,6 +1613,12 @@ var
 begin
   if not ScreenSing.Settings.FeedbackVisible then Exit;
   t := frac(timeDiff);
+  if DocumentUI <> nil then
+  begin
+    CountdownValue := Round(timeDiff - t + 1);
+    CountdownPhase := t;
+    Exit;
+  end;
 
   h := Theme.Sing.Countdown.Size*t*ScreenH/RenderH;
   SetFontFamily(Theme.Sing.Countdown.Font);
@@ -1098,6 +1639,8 @@ end;
 procedure TScreenSingView.WriteMessage(msg: UTF8String);
 begin
   ScreenSing.MessageTime := SDL_GetTicks();
+  if DocumentUI <> nil then
+  begin MessageValue := msg; MessageVisible := true; MessageAlpha := 1; Exit; end;
 
   ScreenSing.Statics[ScreenSing.InfoMessageBG].Texture.Alpha := 1;
   ScreenSing.Text[ScreenSing.InfoMessageText].Alpha := 1;
@@ -1111,6 +1654,11 @@ procedure TScreenSingView.FadeMessage();
 var
   factor: real;
 begin
+  if DocumentUI <> nil then
+  begin
+    MessageAlpha := EnsureRange(1 - Max(0, (SDL_GetTicks - ScreenSing.MessageTime) / 1000 - MAX_MESSAGE) / 2, 0.0, 1.0);
+    Exit;
+  end;
   if ((SDL_GetTicks - ScreenSing.MessageTime)/1000 > MAX_MESSAGE) then
   begin
     if (ScreenSing.MessageTimeFade = 0) then
@@ -1130,6 +1678,7 @@ end;
 
 procedure TScreenSingView.CloseMessage();
 begin
+  if DocumentUI <> nil then begin MessageVisible := false; Exit; end;
   ScreenSing.Statics[ScreenSing.InfoMessageBG].Visible := false;
   ScreenSing.Text[ScreenSing.InfoMessageText].Visible := false;
 end;
@@ -1143,6 +1692,8 @@ begin
   CTime := SDL_GetTicks() - ScreenSing.TextMedleyFadeTime;
   Alpha := CTime/3000;
 
+  if DocumentUI <> nil then
+  begin SongTitleAlpha := EnsureRange(1 - Alpha, 0.0, 1.0); SongTitleVisible := Alpha < 1; Exit; end;
   if (Alpha >= 1) then
   begin
     ScreenSing.Statics[SongNameStatic].Visible := false;
@@ -1282,6 +1833,7 @@ var
   QuadList:        TQuadList;
   NumQuads, I:     integer;
 begin
+  if DocumentUI <> nil then Exit;
   x := Theme.Sing.StaticTimeProgress.x;
   y := Theme.Sing.StaticTimeProgress.y;
 

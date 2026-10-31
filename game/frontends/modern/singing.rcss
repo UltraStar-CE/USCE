@@ -1,0 +1,854 @@
+/* Modern singing HUD. Every player and specialized canvas is positioned by this theme. */
+.singing-screen, .singing-stage, #singing-video, .players { position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; }
+.singing-screen { background-color: transparent; }
+.singing-screen .background-layer { display: block; pointer-events: none; }
+.singing-screen .foreground { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.singing-screen .hidden { display: none; }
+.foreground-only .background-layer { visibility: hidden; }
+.singing-screen button { background-color: transparent; color: white; padding: 0; border: 0; }
+.players { display: flex; flex-direction: column; flex-wrap: wrap; }
+.player-slot { position: relative; flex-shrink: 0; }
+.player-slot, .player-slot .foreground { pointer-events: none; }
+.player-header, .player-name, .score-card, .score-bars, .note-lane, .input-surface, .note-guide, .note-anchor, .note-size, .rating-notices { position: absolute; }
+.player-frame { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.player-avatar { position: absolute; left: 10%; top: 10%; width: 80%; height: 80%; }
+.player-name { color: white; font-weight: bold; white-space: nowrap; overflow: hidden; }
+.score-card, .score-bars, .rating-bar, .remaining-bar, .time-segment, .time-progress { display: block; }
+.score-card img { position: absolute; width: 100%; height: 100%; }
+.score-value { transform-origin: 0 0; position: absolute; left: 18%; top: 5.555556%; width: 82%; height: 88%; white-space: nowrap; }
+.rating-bar, .remaining-bar { position: relative; width: 100%; height: 50%; background-color: #ffffff30; overflow: hidden; }
+.rating-value, .remaining-value, .potential { position: absolute; left: 0; top: 0; height: 100%; transition: width 0.15s; }
+.potential { background-color: #ffffff66; }
+.score-bars.mode-2 .remaining-bar, .score-bars.mode-3 .rating-bar { display: none; }
+.score-bars.mode-2 .rating-bar, .score-bars.mode-3 .remaining-bar { height: 100%; }
+.note-guide { left: 0; top: 0; width: 100%; height: 100%; }
+.note-anchor { left: 0; top: 77.777778%; width: 100%; height: 1px; }
+.note-size { left: 0; top: 0; }
+.rating-notice { position: absolute; left: 0; top: 0; width: 100%; height: 5vh; text-align: center; font-size: 2.25vh; font-weight: bold; }
+.rating-notice img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.rating-notice span { position: relative; top: 20%; }
+.solo-lyrics-back, .upper-lyrics-back, .lower-lyrics-back { position: absolute; left: 1.25vw; width: 97.5vw; }
+.solo-lyrics-back { top: 82vh; height: 14.166667vh; }
+.upper-lyrics-back { top: 0.833333vh; height: 14.166667vh; }
+.lower-lyrics-back { top: 82vh; height: 14.166667vh; }
+.solo-lyrics-back img, .upper-lyrics-back img, .lower-lyrics-back img { width: 100%; height: 100%; }
+#singing-lyrics-upper, #singing-lyrics-lower { position: absolute; left: 10vw; width: 80vw; height: 6.833333vh; }
+#singing-lyrics-upper { top: 82.166667vh; }
+#singing-lyrics-lower { top: 89.166667vh; }
+.voice-bank { position: absolute; left: 10vw; width: 80vw; height: 13.666667vh; display: flex; flex-wrap: wrap; }
+.upper-voices { top: 1.166667vh; }
+.lower-voices { top: 82.166667vh; }
+.voice-cell { position: relative; }
+.voice-surface { position: absolute; left: 3vw; top: 0; right: 1vw; height: 100%; }
+.voice-bank .voice-cell .voice-label { position: absolute; left: 0; top: 0; width: 4vw; height: 100%; font-size: 1.5vh; font-weight: normal; }
+.timebar { position: absolute; left: 1.25vw; top: 96.166667vh; width: 97.5vw; height: 3.333333vh; }
+.timebar > img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.time-label, .time-clock { position: absolute; top: 0; height: 100%; font-size: 2.25vh; font-weight: bold; }
+.time-label { left: 0; width: 8.25vw; }
+.time-clock { left: 88.75vw; width: 10vw; }
+#singing-progress { position: absolute; left: 9.625vw; top: 1.166667vh; width: 79.125vw; height: 1vh; overflow: hidden; }
+.time-segment, .time-progress { position: absolute; top: 0; height: 100%; }
+.time-segment { opacity: 0.6; }
+.time-segment { background-color: #ffff00; }
+.time-progress { left: 0; background-color: #ffffffcc; }
+.message { position: absolute; left: 31.25vw; top: 6.666667vh; width: 37.5vw; height: 4.166667vh; text-align: center; background-color: #444444dd; color: white; font-weight: bold; font-size: 2.5vh; }
+.song-title { position: absolute; left: 1.25vw; top: 1.666667vh; width: 97.5vw; height: 4.833333vh; color: black; background-color: #ffffffdd; text-align: center; font-size: 3.125vh; }
+.countdown { position: absolute; left: 50vw; top: 50vh; font-size: 12vh; font-weight: bold; color: white; }
+.pause { position: absolute; left: 37.5vw; top: 40vh; width: 25vw; height: 20vh; }
+.pause img { width: 100%; height: 100%; }
+.count-1.mode-solo .players { left:2.5vw; top:8.333333vh; width:97.5vw; height:74.183333vh; }
+.count-1.mode-solo .player-slot { width:95.000000vw; height:70.833333vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-1.mode-solo .player-slot .note-lane { left:-0.125000vw; top:24.166667vh; width:95.125000vw; height:22.500000vh; }
+.count-1.mode-solo .player-slot .player-header { left:0.000000vw; top:17.000000vh; width:6.250000vw; height:8.333333vh; }
+.count-1.mode-solo .player-slot .player-name { left:7.500000vw; top:21.166667vh; width:75.000000vw; height:3.333333vh; }
+.count-1.mode-solo .player-slot .player-name { font-size:1.833333vh; }
+.count-1.mode-solo .player-slot .score-card { left:82.500000vw; top:18.166667vh; width:12.500000vw; height:6.000000vh; }
+.count-1.mode-solo .player-slot .score-value { font-size:3.750000vh; }
+.count-1.mode-solo .player-slot .score-bars { left:82.500000vw; top:23.833333vh; width:12.500000vw; height:1.333333vh; }
+.count-1.mode-solo .player-slot .rating-notices { left:82.500000vw; top:24.833333vh; width:12.500000vw; height:4.166667vh; }
+.count-1.mode-solo .player-slot .input-surface { left:7.500000vw; top:24.500000vh; width:12.500000vw; height:1.666667vh; }
+.count-1.mode-solo .player-slot.level-0 .note-size { width:0.750000vw; height:1.833333vh; }
+.count-1.mode-solo .player-slot.level-1 .note-size { width:0.500000vw; height:1.333333vh; }
+.count-1.mode-solo .player-slot.level-2 .note-size { width:0.375000vw; height:0.833333vh; }
+.count-2.mode-solo .players { left:2.5vw; top:8.333333vh; width:97.5vw; height:74.183333vh; }
+.count-2.mode-solo .player-slot { width:95.000000vw; height:33.750000vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-2.mode-solo .player-slot .note-lane { left:-0.125000vw; top:5.625000vh; width:95.125000vw; height:22.500000vh; }
+.count-2.mode-solo .player-slot .player-header { left:0.000000vw; top:-1.041667vh; width:6.125000vw; height:8.166667vh; }
+.count-2.mode-solo .player-slot .player-name { left:7.375000vw; top:2.958333vh; width:75.375000vw; height:3.333333vh; }
+.count-2.mode-solo .player-slot .player-name { font-size:1.833333vh; }
+.count-2.mode-solo .player-slot .score-card { left:82.750000vw; top:0.125000vh; width:12.250000vw; height:5.833333vh; }
+.count-2.mode-solo .player-slot .score-value { font-size:3.625000vh; }
+.count-2.mode-solo .player-slot .score-bars { left:82.750000vw; top:5.625000vh; width:12.250000vw; height:1.333333vh; }
+.count-2.mode-solo .player-slot .rating-notices { left:82.750000vw; top:6.791667vh; width:12.250000vw; height:4.083333vh; }
+.count-2.mode-solo .player-slot .input-surface { left:7.375000vw; top:6.291667vh; width:12.250000vw; height:1.666667vh; }
+.count-2.mode-solo .player-slot.level-0 .note-size { width:0.735000vw; height:1.796667vh; }
+.count-2.mode-solo .player-slot.level-1 .note-size { width:0.490000vw; height:1.306667vh; }
+.count-2.mode-solo .player-slot.level-2 .note-size { width:0.367500vw; height:0.816667vh; }
+.count-3.mode-solo .players { left:2.5vw; top:8.333333vh; width:97.5vw; height:74.183333vh; }
+.count-3.mode-solo .player-slot { width:95.000000vw; height:21.388889vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-3.mode-solo .player-slot .note-lane { left:-0.125000vw; top:0.944444vh; width:95.125000vw; height:19.500000vh; }
+.count-3.mode-solo .player-slot .player-header { left:0.000000vw; top:-6.055556vh; width:5.625000vw; height:7.500000vh; }
+.count-3.mode-solo .player-slot .player-name { left:6.750000vw; top:-2.388889vh; width:77.000000vw; height:3.000000vh; }
+.count-3.mode-solo .player-slot .player-name { font-size:1.666667vh; }
+.count-3.mode-solo .player-slot .score-card { left:83.750000vw; top:-5.055556vh; width:11.250000vw; height:5.333333vh; }
+.count-3.mode-solo .player-slot .score-value { font-size:3.375000vh; }
+.count-3.mode-solo .player-slot .score-bars { left:83.750000vw; top:0.111111vh; width:11.250000vw; height:1.166667vh; }
+.count-3.mode-solo .player-slot .rating-notices { left:83.750000vw; top:1.611111vh; width:11.250000vw; height:3.733333vh; }
+.count-3.mode-solo .player-slot .input-surface { left:6.750000vw; top:0.611111vh; width:11.250000vw; height:1.500000vh; }
+.count-3.mode-solo .player-slot.level-0 .note-size { width:0.672000vw; height:1.642667vh; }
+.count-3.mode-solo .player-slot.level-1 .note-size { width:0.448000vw; height:1.194667vh; }
+.count-3.mode-solo .player-slot.level-2 .note-size { width:0.336000vw; height:0.746667vh; }
+.count-4.mode-solo .players { left:2.5vw; top:8.333333vh; width:97.5vw; height:74.183333vh; }
+.count-4.mode-solo .player-slot { width:46.250000vw; height:33.750000vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-4.mode-solo .player-slot .note-lane { left:-0.125000vw; top:6.375000vh; width:46.375000vw; height:21.000000vh; }
+.count-4.mode-solo .player-slot .player-header { left:0.000000vw; top:-0.458333vh; width:5.875000vw; height:7.833333vh; }
+.count-4.mode-solo .player-slot .player-name { left:7.000000vw; top:3.541667vh; width:27.500000vw; height:3.166667vh; }
+.count-4.mode-solo .player-slot .player-name { font-size:1.750000vh; }
+.count-4.mode-solo .player-slot .score-card { left:34.500000vw; top:0.708333vh; width:11.750000vw; height:5.666667vh; }
+.count-4.mode-solo .player-slot .score-value { font-size:3.500000vh; }
+.count-4.mode-solo .player-slot .score-bars { left:34.500000vw; top:6.041667vh; width:11.750000vw; height:1.333333vh; }
+.count-4.mode-solo .player-slot .rating-notices { left:34.500000vw; top:7.375000vh; width:11.750000vw; height:3.916667vh; }
+.count-4.mode-solo .player-slot .input-surface { left:7.000000vw; top:6.541667vh; width:11.750000vw; height:1.500000vh; }
+.count-4.mode-solo .player-slot.level-0 .note-size { width:0.705000vw; height:1.723333vh; }
+.count-4.mode-solo .player-slot.level-1 .note-size { width:0.470000vw; height:1.253333vh; }
+.count-4.mode-solo .player-slot.level-2 .note-size { width:0.352500vw; height:0.783333vh; }
+.count-5.mode-solo .players { left:2.5vw; top:8.333333vh; width:97.5vw; height:74.183333vh; }
+.count-5.mode-solo .player-slot { width:46.250000vw; height:21.388889vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-5.mode-solo .player-slot .note-lane { left:-0.125000vw; top:0.944444vh; width:46.375000vw; height:19.500000vh; }
+.count-5.mode-solo .player-slot .player-header { left:0.000000vw; top:-5.055556vh; width:5.375000vw; height:7.166667vh; }
+.count-5.mode-solo .player-slot .player-name { left:6.500000vw; top:-1.555556vh; width:29.000000vw; height:2.833333vh; }
+.count-5.mode-solo .player-slot .player-name { font-size:1.583333vh; }
+.count-5.mode-solo .player-slot .score-card { left:35.500000vw; top:-4.055556vh; width:10.750000vw; height:5.166667vh; }
+.count-5.mode-solo .player-slot .score-value { font-size:3.250000vh; }
+.count-5.mode-solo .player-slot .score-bars { left:35.500000vw; top:0.777778vh; width:10.750000vw; height:1.166667vh; }
+.count-5.mode-solo .player-slot .rating-notices { left:35.500000vw; top:2.611111vh; width:10.750000vw; height:3.577778vh; }
+.count-5.mode-solo .player-slot .input-surface { left:6.500000vw; top:1.444444vh; width:10.750000vw; height:1.500000vh; }
+.count-5.mode-solo .player-slot.level-0 .note-size { width:0.644000vw; height:1.574222vh; }
+.count-5.mode-solo .player-slot.level-1 .note-size { width:0.429333vw; height:1.144889vh; }
+.count-5.mode-solo .player-slot.level-2 .note-size { width:0.322000vw; height:0.715556vh; }
+.count-6.mode-solo .players { left:2.5vw; top:8.333333vh; width:97.5vw; height:74.183333vh; }
+.count-6.mode-solo .player-slot { width:46.250000vw; height:21.388889vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-6.mode-solo .player-slot .note-lane { left:-0.125000vw; top:0.944444vh; width:46.375000vw; height:19.500000vh; }
+.count-6.mode-solo .player-slot .player-header { left:0.000000vw; top:-4.555556vh; width:5.250000vw; height:7.000000vh; }
+.count-6.mode-solo .player-slot .player-name { left:6.250000vw; top:-1.055556vh; width:29.500000vw; height:2.833333vh; }
+.count-6.mode-solo .player-slot .player-name { font-size:1.500000vh; }
+.count-6.mode-solo .player-slot .score-card { left:35.750000vw; top:-3.555556vh; width:10.500000vw; height:5.000000vh; }
+.count-6.mode-solo .player-slot .score-value { font-size:3.125000vh; }
+.count-6.mode-solo .player-slot .score-bars { left:35.750000vw; top:1.111111vh; width:10.500000vw; height:1.166667vh; }
+.count-6.mode-solo .player-slot .rating-notices { left:35.750000vw; top:3.111111vh; width:10.500000vw; height:3.500000vh; }
+.count-6.mode-solo .player-slot .input-surface { left:6.250000vw; top:1.777778vh; width:10.500000vw; height:1.333333vh; }
+.count-6.mode-solo .player-slot.level-0 .note-size { width:0.630000vw; height:1.540000vh; }
+.count-6.mode-solo .player-slot.level-1 .note-size { width:0.420000vw; height:1.120000vh; }
+.count-6.mode-solo .player-slot.level-2 .note-size { width:0.315000vw; height:0.700000vh; }
+.count-7.mode-solo .players { left:2.5vw; top:8.333333vh; width:97.5vw; height:74.183333vh; }
+.count-7.mode-solo .player-slot { width:30.000000vw; height:21.388889vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-7.mode-solo .player-slot .note-lane { left:-0.125000vw; top:2.444444vh; width:30.125000vw; height:16.500000vh; }
+.count-7.mode-solo .player-slot .player-header { left:0.000000vw; top:-2.055556vh; width:4.375000vw; height:5.833333vh; }
+.count-7.mode-solo .player-slot .player-name { left:5.250000vw; top:0.944444vh; width:16.000000vw; height:2.333333vh; }
+.count-7.mode-solo .player-slot .player-name { font-size:1.250000vh; }
+.count-7.mode-solo .player-slot .score-card { left:21.250000vw; top:-1.222222vh; width:8.750000vw; height:4.166667vh; }
+.count-7.mode-solo .player-slot .score-value { font-size:2.625000vh; }
+.count-7.mode-solo .player-slot .score-bars { left:21.250000vw; top:2.777778vh; width:8.750000vw; height:1.000000vh; }
+.count-7.mode-solo .player-slot .rating-notices { left:21.250000vw; top:5.444444vh; width:8.750000vw; height:2.933333vh; }
+.count-7.mode-solo .player-slot .input-surface { left:5.250000vw; top:3.277778vh; width:8.750000vw; height:1.333333vh; }
+.count-7.mode-solo .player-slot.level-0 .note-size { width:0.528000vw; height:1.290667vh; }
+.count-7.mode-solo .player-slot.level-1 .note-size { width:0.352000vw; height:0.938667vh; }
+.count-7.mode-solo .player-slot.level-2 .note-size { width:0.264000vw; height:0.586667vh; }
+.count-8.mode-solo .players { left:2.5vw; top:8.333333vh; width:97.5vw; height:74.183333vh; }
+.count-8.mode-solo .player-slot { width:30.000000vw; height:21.388889vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-8.mode-solo .player-slot .note-lane { left:-0.125000vw; top:3.194444vh; width:30.125000vw; height:15.000000vh; }
+.count-8.mode-solo .player-slot .player-header { left:0.000000vw; top:-2.138889vh; width:4.250000vw; height:5.666667vh; }
+.count-8.mode-solo .player-slot .player-name { left:5.125000vw; top:0.694444vh; width:16.250000vw; height:2.333333vh; }
+.count-8.mode-solo .player-slot .player-name { font-size:1.250000vh; }
+.count-8.mode-solo .player-slot .score-card { left:21.375000vw; top:-1.305556vh; width:8.625000vw; height:4.166667vh; }
+.count-8.mode-solo .player-slot .score-value { font-size:2.625000vh; }
+.count-8.mode-solo .player-slot .score-bars { left:21.375000vw; top:2.527778vh; width:8.625000vw; height:1.000000vh; }
+.count-8.mode-solo .player-slot .rating-notices { left:21.375000vw; top:5.361111vh; width:8.625000vw; height:2.866667vh; }
+.count-8.mode-solo .player-slot .input-surface { left:5.125000vw; top:3.027778vh; width:8.625000vw; height:1.333333vh; }
+.count-8.mode-solo .player-slot.level-0 .note-size { width:0.516000vw; height:1.261333vh; }
+.count-8.mode-solo .player-slot.level-1 .note-size { width:0.344000vw; height:0.917333vh; }
+.count-8.mode-solo .player-slot.level-2 .note-size { width:0.258000vw; height:0.573333vh; }
+.count-9.mode-solo .players { left:2.5vw; top:8.333333vh; width:97.5vw; height:74.183333vh; }
+.count-9.mode-solo .player-slot { width:30.000000vw; height:21.388889vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-9.mode-solo .player-slot .note-lane { left:-0.125000vw; top:3.194444vh; width:30.125000vw; height:15.000000vh; }
+.count-9.mode-solo .player-slot .player-header { left:0.000000vw; top:-1.638889vh; width:4.250000vw; height:5.666667vh; }
+.count-9.mode-solo .player-slot .player-name { left:5.000000vw; top:1.194444vh; width:16.625000vw; height:2.333333vh; }
+.count-9.mode-solo .player-slot .player-name { font-size:1.250000vh; }
+.count-9.mode-solo .player-slot .score-card { left:21.625000vw; top:-0.805556vh; width:8.375000vw; height:4.000000vh; }
+.count-9.mode-solo .player-slot .score-value { font-size:2.500000vh; }
+.count-9.mode-solo .player-slot .score-bars { left:21.625000vw; top:3.027778vh; width:8.375000vw; height:0.833333vh; }
+.count-9.mode-solo .player-slot .rating-notices { left:21.625000vw; top:5.861111vh; width:8.375000vw; height:2.800000vh; }
+.count-9.mode-solo .player-slot .input-surface { left:5.000000vw; top:3.361111vh; width:8.375000vw; height:1.333333vh; }
+.count-9.mode-solo .player-slot.level-0 .note-size { width:0.504000vw; height:1.232000vh; }
+.count-9.mode-solo .player-slot.level-1 .note-size { width:0.336000vw; height:0.896000vh; }
+.count-9.mode-solo .player-slot.level-2 .note-size { width:0.252000vw; height:0.560000vh; }
+.count-10.mode-solo .players { left:2.5vw; top:8.333333vh; width:97.5vw; height:74.183333vh; }
+.count-10.mode-solo .player-slot { width:30.000000vw; height:15.208333vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-10.mode-solo .player-slot .note-lane { left:-0.125000vw; top:1.604167vh; width:30.125000vw; height:12.000000vh; }
+.count-10.mode-solo .player-slot .player-header { left:0.000000vw; top:-2.562500vh; width:3.375000vw; height:4.500000vh; }
+.count-10.mode-solo .player-slot .player-name { left:4.125000vw; top:-0.229167vh; width:19.000000vw; height:2.333333vh; }
+.count-10.mode-solo .player-slot .player-name { font-size:1.000000vh; }
+.count-10.mode-solo .player-slot .score-card { left:23.125000vw; top:-1.895833vh; width:6.875000vw; height:3.333333vh; }
+.count-10.mode-solo .player-slot .score-value { font-size:2.000000vh; }
+.count-10.mode-solo .player-slot .score-bars { left:23.125000vw; top:1.104167vh; width:6.875000vw; height:0.666667vh; }
+.count-10.mode-solo .player-slot .rating-notices { left:23.125000vw; top:4.770833vh; width:6.875000vw; height:2.277778vh; }
+.count-10.mode-solo .player-slot .input-surface { left:4.125000vw; top:1.604167vh; width:6.875000vw; height:1.333333vh; }
+.count-10.mode-solo .player-slot.level-0 .note-size { width:0.410000vw; height:1.002222vh; }
+.count-10.mode-solo .player-slot.level-1 .note-size { width:0.273333vw; height:0.728889vh; }
+.count-10.mode-solo .player-slot.level-2 .note-size { width:0.205000vw; height:0.455556vh; }
+.count-11.mode-solo .players { left:2.5vw; top:8.333333vh; width:97.5vw; height:74.183333vh; }
+.count-11.mode-solo .player-slot { width:30.000000vw; height:15.208333vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-11.mode-solo .player-slot .note-lane { left:-0.125000vw; top:1.604167vh; width:30.125000vw; height:12.000000vh; }
+.count-11.mode-solo .player-slot .player-header { left:0.000000vw; top:-2.562500vh; width:3.375000vw; height:4.500000vh; }
+.count-11.mode-solo .player-slot .player-name { left:4.125000vw; top:-0.229167vh; width:19.000000vw; height:2.333333vh; }
+.count-11.mode-solo .player-slot .player-name { font-size:1.000000vh; }
+.count-11.mode-solo .player-slot .score-card { left:23.125000vw; top:-1.895833vh; width:6.875000vw; height:3.333333vh; }
+.count-11.mode-solo .player-slot .score-value { font-size:2.000000vh; }
+.count-11.mode-solo .player-slot .score-bars { left:23.125000vw; top:1.104167vh; width:6.875000vw; height:0.666667vh; }
+.count-11.mode-solo .player-slot .rating-notices { left:23.125000vw; top:4.770833vh; width:6.875000vw; height:2.277778vh; }
+.count-11.mode-solo .player-slot .input-surface { left:4.125000vw; top:1.604167vh; width:6.875000vw; height:1.333333vh; }
+.count-11.mode-solo .player-slot.level-0 .note-size { width:0.410000vw; height:1.002222vh; }
+.count-11.mode-solo .player-slot.level-1 .note-size { width:0.273333vw; height:0.728889vh; }
+.count-11.mode-solo .player-slot.level-2 .note-size { width:0.205000vw; height:0.455556vh; }
+.count-12.mode-solo .players { left:2.5vw; top:8.333333vh; width:97.5vw; height:74.183333vh; }
+.count-12.mode-solo .player-slot { width:30.000000vw; height:15.208333vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-12.mode-solo .player-slot .note-lane { left:-0.125000vw; top:1.604167vh; width:30.125000vw; height:12.000000vh; }
+.count-12.mode-solo .player-slot .player-header { left:0.000000vw; top:-2.562500vh; width:3.375000vw; height:4.500000vh; }
+.count-12.mode-solo .player-slot .player-name { left:4.125000vw; top:-0.229167vh; width:19.000000vw; height:2.333333vh; }
+.count-12.mode-solo .player-slot .player-name { font-size:1.000000vh; }
+.count-12.mode-solo .player-slot .score-card { left:23.125000vw; top:-1.895833vh; width:6.875000vw; height:3.333333vh; }
+.count-12.mode-solo .player-slot .score-value { font-size:2.000000vh; }
+.count-12.mode-solo .player-slot .score-bars { left:23.125000vw; top:1.104167vh; width:6.875000vw; height:0.666667vh; }
+.count-12.mode-solo .player-slot .rating-notices { left:23.125000vw; top:4.770833vh; width:6.875000vw; height:2.277778vh; }
+.count-12.mode-solo .player-slot .input-surface { left:4.125000vw; top:1.604167vh; width:6.875000vw; height:1.333333vh; }
+.count-12.mode-solo .player-slot.level-0 .note-size { width:0.410000vw; height:1.002222vh; }
+.count-12.mode-solo .player-slot.level-1 .note-size { width:0.273333vw; height:0.728889vh; }
+.count-12.mode-solo .player-slot.level-2 .note-size { width:0.205000vw; height:0.455556vh; }
+.count-13.mode-solo .players { left:2.5vw; top:8.333333vh; width:97.5vw; height:74.183333vh; }
+.count-13.mode-solo .player-slot { width:21.875000vw; height:15.208333vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-13.mode-solo .player-slot .note-lane { left:-0.125000vw; top:2.354167vh; width:22.000000vw; height:10.500000vh; }
+.count-13.mode-solo .player-slot .player-header { left:0.000000vw; top:-1.312500vh; width:3.000000vw; height:4.000000vh; }
+.count-13.mode-solo .player-slot .player-name { left:3.625000vw; top:0.687500vh; width:12.250000vw; height:2.333333vh; }
+.count-13.mode-solo .player-slot .player-name { font-size:0.916667vh; }
+.count-13.mode-solo .player-slot .score-card { left:15.875000vw; top:-0.812500vh; width:6.000000vw; height:2.833333vh; }
+.count-13.mode-solo .player-slot .score-value { font-size:1.750000vh; }
+.count-13.mode-solo .player-slot .score-bars { left:15.875000vw; top:2.020833vh; width:6.000000vw; height:0.666667vh; }
+.count-13.mode-solo .player-slot .rating-notices { left:15.875000vw; top:5.854167vh; width:6.000000vw; height:1.993056vh; }
+.count-13.mode-solo .player-slot .input-surface { left:3.625000vw; top:2.354167vh; width:6.000000vw; height:1.333333vh; }
+.count-13.mode-solo .player-slot.level-0 .note-size { width:0.358750vw; height:0.876944vh; }
+.count-13.mode-solo .player-slot.level-1 .note-size { width:0.239167vw; height:0.637778vh; }
+.count-13.mode-solo .player-slot.level-2 .note-size { width:0.179375vw; height:0.398611vh; }
+.count-14.mode-solo .players { left:2.5vw; top:8.333333vh; width:97.5vw; height:74.183333vh; }
+.count-14.mode-solo .player-slot { width:21.875000vw; height:15.208333vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-14.mode-solo .player-slot .note-lane { left:-0.125000vw; top:2.354167vh; width:22.000000vw; height:10.500000vh; }
+.count-14.mode-solo .player-slot .player-header { left:0.000000vw; top:-1.312500vh; width:3.000000vw; height:4.000000vh; }
+.count-14.mode-solo .player-slot .player-name { left:3.625000vw; top:0.687500vh; width:12.250000vw; height:2.333333vh; }
+.count-14.mode-solo .player-slot .player-name { font-size:0.916667vh; }
+.count-14.mode-solo .player-slot .score-card { left:15.875000vw; top:-0.812500vh; width:6.000000vw; height:2.833333vh; }
+.count-14.mode-solo .player-slot .score-value { font-size:1.750000vh; }
+.count-14.mode-solo .player-slot .score-bars { left:15.875000vw; top:2.020833vh; width:6.000000vw; height:0.666667vh; }
+.count-14.mode-solo .player-slot .rating-notices { left:15.875000vw; top:5.854167vh; width:6.000000vw; height:1.993056vh; }
+.count-14.mode-solo .player-slot .input-surface { left:3.625000vw; top:2.354167vh; width:6.000000vw; height:1.333333vh; }
+.count-14.mode-solo .player-slot.level-0 .note-size { width:0.358750vw; height:0.876944vh; }
+.count-14.mode-solo .player-slot.level-1 .note-size { width:0.239167vw; height:0.637778vh; }
+.count-14.mode-solo .player-slot.level-2 .note-size { width:0.179375vw; height:0.398611vh; }
+.count-15.mode-solo .players { left:2.5vw; top:8.333333vh; width:97.5vw; height:74.183333vh; }
+.count-15.mode-solo .player-slot { width:21.875000vw; height:15.208333vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-15.mode-solo .player-slot .note-lane { left:-0.125000vw; top:2.354167vh; width:22.000000vw; height:10.500000vh; }
+.count-15.mode-solo .player-slot .player-header { left:0.000000vw; top:-1.312500vh; width:3.000000vw; height:4.000000vh; }
+.count-15.mode-solo .player-slot .player-name { left:3.625000vw; top:0.687500vh; width:12.250000vw; height:2.333333vh; }
+.count-15.mode-solo .player-slot .player-name { font-size:0.916667vh; }
+.count-15.mode-solo .player-slot .score-card { left:15.875000vw; top:-0.812500vh; width:6.000000vw; height:2.833333vh; }
+.count-15.mode-solo .player-slot .score-value { font-size:1.750000vh; }
+.count-15.mode-solo .player-slot .score-bars { left:15.875000vw; top:2.020833vh; width:6.000000vw; height:0.666667vh; }
+.count-15.mode-solo .player-slot .rating-notices { left:15.875000vw; top:5.854167vh; width:6.000000vw; height:1.993056vh; }
+.count-15.mode-solo .player-slot .input-surface { left:3.625000vw; top:2.354167vh; width:6.000000vw; height:1.333333vh; }
+.count-15.mode-solo .player-slot.level-0 .note-size { width:0.358750vw; height:0.876944vh; }
+.count-15.mode-solo .player-slot.level-1 .note-size { width:0.239167vw; height:0.637778vh; }
+.count-15.mode-solo .player-slot.level-2 .note-size { width:0.179375vw; height:0.398611vh; }
+.count-16.mode-solo .players { left:2.5vw; top:8.333333vh; width:97.5vw; height:74.183333vh; }
+.count-16.mode-solo .player-slot { width:21.875000vw; height:15.208333vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-16.mode-solo .player-slot .note-lane { left:-0.125000vw; top:2.354167vh; width:22.000000vw; height:10.500000vh; }
+.count-16.mode-solo .player-slot .player-header { left:0.000000vw; top:-1.312500vh; width:3.000000vw; height:4.000000vh; }
+.count-16.mode-solo .player-slot .player-name { left:3.625000vw; top:0.687500vh; width:12.250000vw; height:2.333333vh; }
+.count-16.mode-solo .player-slot .player-name { font-size:0.916667vh; }
+.count-16.mode-solo .player-slot .score-card { left:15.875000vw; top:-0.812500vh; width:6.000000vw; height:2.833333vh; }
+.count-16.mode-solo .player-slot .score-value { font-size:1.750000vh; }
+.count-16.mode-solo .player-slot .score-bars { left:15.875000vw; top:2.020833vh; width:6.000000vw; height:0.666667vh; }
+.count-16.mode-solo .player-slot .rating-notices { left:15.875000vw; top:5.854167vh; width:6.000000vw; height:1.993056vh; }
+.count-16.mode-solo .player-slot .input-surface { left:3.625000vw; top:2.354167vh; width:6.000000vw; height:1.333333vh; }
+.count-16.mode-solo .player-slot.level-0 .note-size { width:0.358750vw; height:0.876944vh; }
+.count-16.mode-solo .player-slot.level-1 .note-size { width:0.239167vw; height:0.637778vh; }
+.count-16.mode-solo .player-slot.level-2 .note-size { width:0.179375vw; height:0.398611vh; }
+.count-17.mode-solo .players { left:2.5vw; top:8.333333vh; width:97.5vw; height:74.183333vh; }
+.count-17.mode-solo .player-slot { width:21.875000vw; height:11.500000vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-17.mode-solo .player-slot .note-lane { left:-0.125000vw; top:1.250000vh; width:22.000000vw; height:9.000000vh; }
+.count-17.mode-solo .player-slot .player-header { left:0.000000vw; top:-1.250000vh; width:2.375000vw; height:3.166667vh; }
+.count-17.mode-solo .player-slot .player-name { left:2.875000vw; top:0.416667vh; width:14.250000vw; height:2.333333vh; }
+.count-17.mode-solo .player-slot .player-name { font-size:0.833333vh; }
+.count-17.mode-solo .player-slot .score-card { left:17.125000vw; top:-0.750000vh; width:4.750000vw; height:2.333333vh; }
+.count-17.mode-solo .player-slot .score-value { font-size:1.375000vh; }
+.count-17.mode-solo .player-slot .score-bars { left:17.125000vw; top:1.416667vh; width:4.750000vw; height:0.500000vh; }
+.count-17.mode-solo .player-slot .rating-notices { left:17.125000vw; top:5.916667vh; width:4.750000vw; height:1.594444vh; }
+.count-17.mode-solo .player-slot .input-surface { left:2.875000vw; top:1.583333vh; width:5.000000vw; height:1.333333vh; }
+.count-17.mode-solo .player-slot.level-0 .note-size { width:0.287000vw; height:0.701556vh; }
+.count-17.mode-solo .player-slot.level-1 .note-size { width:0.191333vw; height:0.510222vh; }
+.count-17.mode-solo .player-slot.level-2 .note-size { width:0.143500vw; height:0.333333vh; }
+.count-18.mode-solo .players { left:2.5vw; top:8.333333vh; width:97.5vw; height:74.183333vh; }
+.count-18.mode-solo .player-slot { width:21.875000vw; height:11.500000vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-18.mode-solo .player-slot .note-lane { left:-0.125000vw; top:1.250000vh; width:22.000000vw; height:9.000000vh; }
+.count-18.mode-solo .player-slot .player-header { left:0.000000vw; top:-1.250000vh; width:2.375000vw; height:3.166667vh; }
+.count-18.mode-solo .player-slot .player-name { left:2.875000vw; top:0.416667vh; width:14.250000vw; height:2.333333vh; }
+.count-18.mode-solo .player-slot .player-name { font-size:0.833333vh; }
+.count-18.mode-solo .player-slot .score-card { left:17.125000vw; top:-0.750000vh; width:4.750000vw; height:2.333333vh; }
+.count-18.mode-solo .player-slot .score-value { font-size:1.375000vh; }
+.count-18.mode-solo .player-slot .score-bars { left:17.125000vw; top:1.416667vh; width:4.750000vw; height:0.500000vh; }
+.count-18.mode-solo .player-slot .rating-notices { left:17.125000vw; top:5.916667vh; width:4.750000vw; height:1.594444vh; }
+.count-18.mode-solo .player-slot .input-surface { left:2.875000vw; top:1.583333vh; width:5.000000vw; height:1.333333vh; }
+.count-18.mode-solo .player-slot.level-0 .note-size { width:0.287000vw; height:0.701556vh; }
+.count-18.mode-solo .player-slot.level-1 .note-size { width:0.191333vw; height:0.510222vh; }
+.count-18.mode-solo .player-slot.level-2 .note-size { width:0.143500vw; height:0.333333vh; }
+.count-19.mode-solo .players { left:2.5vw; top:8.333333vh; width:97.5vw; height:74.183333vh; }
+.count-19.mode-solo .player-slot { width:21.875000vw; height:11.500000vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-19.mode-solo .player-slot .note-lane { left:-0.125000vw; top:1.250000vh; width:22.000000vw; height:9.000000vh; }
+.count-19.mode-solo .player-slot .player-header { left:0.000000vw; top:-1.250000vh; width:2.375000vw; height:3.166667vh; }
+.count-19.mode-solo .player-slot .player-name { left:2.875000vw; top:0.416667vh; width:14.250000vw; height:2.333333vh; }
+.count-19.mode-solo .player-slot .player-name { font-size:0.833333vh; }
+.count-19.mode-solo .player-slot .score-card { left:17.125000vw; top:-0.750000vh; width:4.750000vw; height:2.333333vh; }
+.count-19.mode-solo .player-slot .score-value { font-size:1.375000vh; }
+.count-19.mode-solo .player-slot .score-bars { left:17.125000vw; top:1.416667vh; width:4.750000vw; height:0.500000vh; }
+.count-19.mode-solo .player-slot .rating-notices { left:17.125000vw; top:5.916667vh; width:4.750000vw; height:1.594444vh; }
+.count-19.mode-solo .player-slot .input-surface { left:2.875000vw; top:1.583333vh; width:5.000000vw; height:1.333333vh; }
+.count-19.mode-solo .player-slot.level-0 .note-size { width:0.287000vw; height:0.701556vh; }
+.count-19.mode-solo .player-slot.level-1 .note-size { width:0.191333vw; height:0.510222vh; }
+.count-19.mode-solo .player-slot.level-2 .note-size { width:0.143500vw; height:0.333333vh; }
+.count-20.mode-solo .players { left:2.5vw; top:8.333333vh; width:97.5vw; height:74.183333vh; }
+.count-20.mode-solo .player-slot { width:21.875000vw; height:11.500000vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-20.mode-solo .player-slot .note-lane { left:-0.125000vw; top:1.250000vh; width:22.000000vw; height:9.000000vh; }
+.count-20.mode-solo .player-slot .player-header { left:0.000000vw; top:-1.250000vh; width:2.375000vw; height:3.166667vh; }
+.count-20.mode-solo .player-slot .player-name { left:2.875000vw; top:0.416667vh; width:14.250000vw; height:2.333333vh; }
+.count-20.mode-solo .player-slot .player-name { font-size:0.833333vh; }
+.count-20.mode-solo .player-slot .score-card { left:17.125000vw; top:-0.750000vh; width:4.750000vw; height:2.333333vh; }
+.count-20.mode-solo .player-slot .score-value { font-size:1.375000vh; }
+.count-20.mode-solo .player-slot .score-bars { left:17.125000vw; top:1.416667vh; width:4.750000vw; height:0.500000vh; }
+.count-20.mode-solo .player-slot .rating-notices { left:17.125000vw; top:5.916667vh; width:4.750000vw; height:1.594444vh; }
+.count-20.mode-solo .player-slot .input-surface { left:2.875000vw; top:1.583333vh; width:5.000000vw; height:1.333333vh; }
+.count-20.mode-solo .player-slot.level-0 .note-size { width:0.287000vw; height:0.701556vh; }
+.count-20.mode-solo .player-slot.level-1 .note-size { width:0.191333vw; height:0.510222vh; }
+.count-20.mode-solo .player-slot.level-2 .note-size { width:0.143500vw; height:0.333333vh; }
+.count-21.mode-solo .players { left:2.5vw; top:8.333333vh; width:97.5vw; height:74.183333vh; }
+.count-21.mode-solo .player-slot { width:17.000000vw; height:11.500000vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-21.mode-solo .player-slot .note-lane { left:-0.125000vw; top:1.250000vh; width:17.125000vw; height:9.000000vh; }
+.count-21.mode-solo .player-slot .player-header { left:0.000000vw; top:-0.916667vh; width:2.375000vw; height:3.166667vh; }
+.count-21.mode-solo .player-slot .player-name { left:2.750000vw; top:0.583333vh; width:9.625000vw; height:2.333333vh; }
+.count-21.mode-solo .player-slot .player-name { font-size:0.833333vh; }
+.count-21.mode-solo .player-slot .score-card { left:12.375000vw; top:-0.416667vh; width:4.625000vw; height:2.166667vh; }
+.count-21.mode-solo .player-slot .score-value { font-size:1.375000vh; }
+.count-21.mode-solo .player-slot .score-bars { left:12.375000vw; top:1.583333vh; width:4.625000vw; height:0.500000vh; }
+.count-21.mode-solo .player-slot .rating-notices { left:12.375000vw; top:6.250000vh; width:4.625000vw; height:1.548889vh; }
+.count-21.mode-solo .player-slot .input-surface { left:2.750000vw; top:1.916667vh; width:5.000000vw; height:1.333333vh; }
+.count-21.mode-solo .player-slot.level-0 .note-size { width:0.278800vw; height:0.681511vh; }
+.count-21.mode-solo .player-slot.level-1 .note-size { width:0.185867vw; height:0.495644vh; }
+.count-21.mode-solo .player-slot.level-2 .note-size { width:0.139400vw; height:0.333333vh; }
+.count-22.mode-solo .players { left:2.5vw; top:8.333333vh; width:97.5vw; height:74.183333vh; }
+.count-22.mode-solo .player-slot { width:17.000000vw; height:11.500000vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-22.mode-solo .player-slot .note-lane { left:-0.125000vw; top:1.250000vh; width:17.125000vw; height:9.000000vh; }
+.count-22.mode-solo .player-slot .player-header { left:0.000000vw; top:-0.916667vh; width:2.375000vw; height:3.166667vh; }
+.count-22.mode-solo .player-slot .player-name { left:2.750000vw; top:0.583333vh; width:9.625000vw; height:2.333333vh; }
+.count-22.mode-solo .player-slot .player-name { font-size:0.833333vh; }
+.count-22.mode-solo .player-slot .score-card { left:12.375000vw; top:-0.416667vh; width:4.625000vw; height:2.166667vh; }
+.count-22.mode-solo .player-slot .score-value { font-size:1.375000vh; }
+.count-22.mode-solo .player-slot .score-bars { left:12.375000vw; top:1.583333vh; width:4.625000vw; height:0.500000vh; }
+.count-22.mode-solo .player-slot .rating-notices { left:12.375000vw; top:6.250000vh; width:4.625000vw; height:1.548889vh; }
+.count-22.mode-solo .player-slot .input-surface { left:2.750000vw; top:1.916667vh; width:5.000000vw; height:1.333333vh; }
+.count-22.mode-solo .player-slot.level-0 .note-size { width:0.278800vw; height:0.681511vh; }
+.count-22.mode-solo .player-slot.level-1 .note-size { width:0.185867vw; height:0.495644vh; }
+.count-22.mode-solo .player-slot.level-2 .note-size { width:0.139400vw; height:0.333333vh; }
+.count-23.mode-solo .players { left:2.5vw; top:8.333333vh; width:97.5vw; height:74.183333vh; }
+.count-23.mode-solo .player-slot { width:17.000000vw; height:11.500000vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-23.mode-solo .player-slot .note-lane { left:-0.125000vw; top:1.250000vh; width:17.125000vw; height:9.000000vh; }
+.count-23.mode-solo .player-slot .player-header { left:0.000000vw; top:-0.916667vh; width:2.375000vw; height:3.166667vh; }
+.count-23.mode-solo .player-slot .player-name { left:2.750000vw; top:0.583333vh; width:9.625000vw; height:2.333333vh; }
+.count-23.mode-solo .player-slot .player-name { font-size:0.833333vh; }
+.count-23.mode-solo .player-slot .score-card { left:12.375000vw; top:-0.416667vh; width:4.625000vw; height:2.166667vh; }
+.count-23.mode-solo .player-slot .score-value { font-size:1.375000vh; }
+.count-23.mode-solo .player-slot .score-bars { left:12.375000vw; top:1.583333vh; width:4.625000vw; height:0.500000vh; }
+.count-23.mode-solo .player-slot .rating-notices { left:12.375000vw; top:6.250000vh; width:4.625000vw; height:1.548889vh; }
+.count-23.mode-solo .player-slot .input-surface { left:2.750000vw; top:1.916667vh; width:5.000000vw; height:1.333333vh; }
+.count-23.mode-solo .player-slot.level-0 .note-size { width:0.278800vw; height:0.681511vh; }
+.count-23.mode-solo .player-slot.level-1 .note-size { width:0.185867vw; height:0.495644vh; }
+.count-23.mode-solo .player-slot.level-2 .note-size { width:0.139400vw; height:0.333333vh; }
+.count-24.mode-solo .players { left:2.5vw; top:8.333333vh; width:97.5vw; height:74.183333vh; }
+.count-24.mode-solo .player-slot { width:17.000000vw; height:11.500000vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-24.mode-solo .player-slot .note-lane { left:-0.125000vw; top:1.250000vh; width:17.125000vw; height:9.000000vh; }
+.count-24.mode-solo .player-slot .player-header { left:0.000000vw; top:-0.916667vh; width:2.375000vw; height:3.166667vh; }
+.count-24.mode-solo .player-slot .player-name { left:2.750000vw; top:0.583333vh; width:9.625000vw; height:2.333333vh; }
+.count-24.mode-solo .player-slot .player-name { font-size:0.833333vh; }
+.count-24.mode-solo .player-slot .score-card { left:12.375000vw; top:-0.416667vh; width:4.625000vw; height:2.166667vh; }
+.count-24.mode-solo .player-slot .score-value { font-size:1.375000vh; }
+.count-24.mode-solo .player-slot .score-bars { left:12.375000vw; top:1.583333vh; width:4.625000vw; height:0.500000vh; }
+.count-24.mode-solo .player-slot .rating-notices { left:12.375000vw; top:6.250000vh; width:4.625000vw; height:1.548889vh; }
+.count-24.mode-solo .player-slot .input-surface { left:2.750000vw; top:1.916667vh; width:5.000000vw; height:1.333333vh; }
+.count-24.mode-solo .player-slot.level-0 .note-size { width:0.278800vw; height:0.681511vh; }
+.count-24.mode-solo .player-slot.level-1 .note-size { width:0.185867vw; height:0.495644vh; }
+.count-24.mode-solo .player-slot.level-2 .note-size { width:0.139400vw; height:0.333333vh; }
+.count-1.mode-duet .players { left:2.5vw; top:18.333333vh; width:97.5vw; height:64.183333vh; }
+.count-1.mode-duet .player-slot { width:95.000000vw; height:60.833333vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-1.mode-duet .player-slot .note-lane { left:-0.125000vw; top:19.166667vh; width:95.125000vw; height:22.500000vh; }
+.count-1.mode-duet .player-slot .player-header { left:0.000000vw; top:12.000000vh; width:6.250000vw; height:8.333333vh; }
+.count-1.mode-duet .player-slot .player-name { left:7.500000vw; top:16.166667vh; width:75.000000vw; height:3.333333vh; }
+.count-1.mode-duet .player-slot .player-name { font-size:1.833333vh; }
+.count-1.mode-duet .player-slot .score-card { left:82.500000vw; top:13.166667vh; width:12.500000vw; height:6.000000vh; }
+.count-1.mode-duet .player-slot .score-value { font-size:3.750000vh; }
+.count-1.mode-duet .player-slot .score-bars { left:82.500000vw; top:18.833333vh; width:12.500000vw; height:1.333333vh; }
+.count-1.mode-duet .player-slot .rating-notices { left:82.500000vw; top:19.833333vh; width:12.500000vw; height:4.166667vh; }
+.count-1.mode-duet .player-slot .input-surface { left:7.500000vw; top:19.500000vh; width:12.500000vw; height:1.666667vh; }
+.count-1.mode-duet .player-slot.level-0 .note-size { width:0.750000vw; height:1.833333vh; }
+.count-1.mode-duet .player-slot.level-1 .note-size { width:0.500000vw; height:1.333333vh; }
+.count-1.mode-duet .player-slot.level-2 .note-size { width:0.375000vw; height:0.833333vh; }
+.count-2.mode-duet .players { left:2.5vw; top:18.333333vh; width:97.5vw; height:64.183333vh; }
+.count-2.mode-duet .player-slot { width:95.000000vw; height:28.750000vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-2.mode-duet .player-slot .note-lane { left:-0.125000vw; top:3.125000vh; width:95.125000vw; height:22.500000vh; }
+.count-2.mode-duet .player-slot .player-header { left:0.000000vw; top:-3.541667vh; width:6.125000vw; height:8.166667vh; }
+.count-2.mode-duet .player-slot .player-name { left:7.375000vw; top:0.458333vh; width:75.375000vw; height:3.333333vh; }
+.count-2.mode-duet .player-slot .player-name { font-size:1.833333vh; }
+.count-2.mode-duet .player-slot .score-card { left:82.750000vw; top:-2.375000vh; width:12.250000vw; height:5.833333vh; }
+.count-2.mode-duet .player-slot .score-value { font-size:3.625000vh; }
+.count-2.mode-duet .player-slot .score-bars { left:82.750000vw; top:3.125000vh; width:12.250000vw; height:1.333333vh; }
+.count-2.mode-duet .player-slot .rating-notices { left:82.750000vw; top:4.291667vh; width:12.250000vw; height:4.083333vh; }
+.count-2.mode-duet .player-slot .input-surface { left:7.375000vw; top:3.791667vh; width:12.250000vw; height:1.666667vh; }
+.count-2.mode-duet .player-slot.level-0 .note-size { width:0.735000vw; height:1.796667vh; }
+.count-2.mode-duet .player-slot.level-1 .note-size { width:0.490000vw; height:1.306667vh; }
+.count-2.mode-duet .player-slot.level-2 .note-size { width:0.367500vw; height:0.816667vh; }
+.count-3.mode-duet .players { left:2.5vw; top:18.333333vh; width:97.5vw; height:64.183333vh; }
+.count-3.mode-duet .player-slot { width:95.000000vw; height:18.055556vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-3.mode-duet .player-slot .note-lane { left:-0.125000vw; top:0.027778vh; width:95.125000vw; height:18.000000vh; }
+.count-3.mode-duet .player-slot .player-header { left:0.000000vw; top:-4.972222vh; width:4.750000vw; height:6.333333vh; }
+.count-3.mode-duet .player-slot .player-name { left:5.750000vw; top:-1.805556vh; width:79.625000vw; height:2.500000vh; }
+.count-3.mode-duet .player-slot .player-name { font-size:1.416667vh; }
+.count-3.mode-duet .player-slot .score-card { left:85.375000vw; top:-4.138889vh; width:9.625000vw; height:4.666667vh; }
+.count-3.mode-duet .player-slot .score-value { font-size:2.875000vh; }
+.count-3.mode-duet .player-slot .score-bars { left:85.375000vw; top:0.194444vh; width:9.625000vw; height:1.000000vh; }
+.count-3.mode-duet .player-slot .rating-notices { left:85.375000vw; top:2.527778vh; width:9.625000vw; height:3.200000vh; }
+.count-3.mode-duet .player-slot .input-surface { left:5.750000vw; top:0.861111vh; width:9.625000vw; height:1.333333vh; }
+.count-3.mode-duet .player-slot.level-0 .note-size { width:0.576000vw; height:1.408000vh; }
+.count-3.mode-duet .player-slot.level-1 .note-size { width:0.384000vw; height:1.024000vh; }
+.count-3.mode-duet .player-slot.level-2 .note-size { width:0.288000vw; height:0.640000vh; }
+.count-4.mode-duet .players { left:2.5vw; top:18.333333vh; width:97.5vw; height:64.183333vh; }
+.count-4.mode-duet .player-slot { width:46.250000vw; height:28.750000vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-4.mode-duet .player-slot .note-lane { left:-0.125000vw; top:3.875000vh; width:46.375000vw; height:21.000000vh; }
+.count-4.mode-duet .player-slot .player-header { left:0.000000vw; top:-2.958333vh; width:5.875000vw; height:7.833333vh; }
+.count-4.mode-duet .player-slot .player-name { left:7.000000vw; top:1.041667vh; width:27.500000vw; height:3.166667vh; }
+.count-4.mode-duet .player-slot .player-name { font-size:1.750000vh; }
+.count-4.mode-duet .player-slot .score-card { left:34.500000vw; top:-1.791667vh; width:11.750000vw; height:5.666667vh; }
+.count-4.mode-duet .player-slot .score-value { font-size:3.500000vh; }
+.count-4.mode-duet .player-slot .score-bars { left:34.500000vw; top:3.541667vh; width:11.750000vw; height:1.333333vh; }
+.count-4.mode-duet .player-slot .rating-notices { left:34.500000vw; top:4.875000vh; width:11.750000vw; height:3.916667vh; }
+.count-4.mode-duet .player-slot .input-surface { left:7.000000vw; top:4.041667vh; width:11.750000vw; height:1.500000vh; }
+.count-4.mode-duet .player-slot.level-0 .note-size { width:0.705000vw; height:1.723333vh; }
+.count-4.mode-duet .player-slot.level-1 .note-size { width:0.470000vw; height:1.253333vh; }
+.count-4.mode-duet .player-slot.level-2 .note-size { width:0.352500vw; height:0.783333vh; }
+.count-5.mode-duet .players { left:2.5vw; top:18.333333vh; width:97.5vw; height:64.183333vh; }
+.count-5.mode-duet .player-slot { width:30.000000vw; height:28.750000vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-5.mode-duet .player-slot .note-lane { left:-0.125000vw; top:6.125000vh; width:30.125000vw; height:16.500000vh; }
+.count-5.mode-duet .player-slot .player-header { left:0.000000vw; top:0.791667vh; width:4.625000vw; height:6.166667vh; }
+.count-5.mode-duet .player-slot .player-name { left:5.500000vw; top:3.791667vh; width:15.250000vw; height:2.500000vh; }
+.count-5.mode-duet .player-slot .player-name { font-size:1.333333vh; }
+.count-5.mode-duet .player-slot .score-card { left:20.750000vw; top:1.625000vh; width:9.250000vw; height:4.333333vh; }
+.count-5.mode-duet .player-slot .score-value { font-size:2.750000vh; }
+.count-5.mode-duet .player-slot .score-bars { left:20.750000vw; top:5.791667vh; width:9.250000vw; height:1.000000vh; }
+.count-5.mode-duet .player-slot .rating-notices { left:20.750000vw; top:8.291667vh; width:9.250000vw; height:3.066667vh; }
+.count-5.mode-duet .player-slot .input-surface { left:5.500000vw; top:6.291667vh; width:9.250000vw; height:1.333333vh; }
+.count-5.mode-duet .player-slot.level-0 .note-size { width:0.552000vw; height:1.349333vh; }
+.count-5.mode-duet .player-slot.level-1 .note-size { width:0.368000vw; height:0.981333vh; }
+.count-5.mode-duet .player-slot.level-2 .note-size { width:0.276000vw; height:0.613333vh; }
+.count-6.mode-duet .players { left:2.5vw; top:18.333333vh; width:97.5vw; height:64.183333vh; }
+.count-6.mode-duet .player-slot { width:30.000000vw; height:28.750000vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-6.mode-duet .player-slot .note-lane { left:-0.125000vw; top:6.125000vh; width:30.125000vw; height:16.500000vh; }
+.count-6.mode-duet .player-slot .player-header { left:0.000000vw; top:1.125000vh; width:4.500000vw; height:6.000000vh; }
+.count-6.mode-duet .player-slot .player-name { left:5.375000vw; top:4.125000vh; width:15.625000vw; height:2.333333vh; }
+.count-6.mode-duet .player-slot .player-name { font-size:1.333333vh; }
+.count-6.mode-duet .player-slot .score-card { left:21.000000vw; top:1.958333vh; width:9.000000vw; height:4.333333vh; }
+.count-6.mode-duet .player-slot .score-value { font-size:2.750000vh; }
+.count-6.mode-duet .player-slot .score-bars { left:21.000000vw; top:6.125000vh; width:9.000000vw; height:1.000000vh; }
+.count-6.mode-duet .player-slot .rating-notices { left:21.000000vw; top:8.625000vh; width:9.000000vw; height:3.000000vh; }
+.count-6.mode-duet .player-slot .input-surface { left:5.375000vw; top:6.458333vh; width:9.000000vw; height:1.333333vh; }
+.count-6.mode-duet .player-slot.level-0 .note-size { width:0.540000vw; height:1.320000vh; }
+.count-6.mode-duet .player-slot.level-1 .note-size { width:0.360000vw; height:0.960000vh; }
+.count-6.mode-duet .player-slot.level-2 .note-size { width:0.270000vw; height:0.600000vh; }
+.count-7.mode-duet .players { left:2.5vw; top:18.333333vh; width:97.5vw; height:64.183333vh; }
+.count-7.mode-duet .player-slot { width:30.000000vw; height:18.055556vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-7.mode-duet .player-slot .note-lane { left:-0.125000vw; top:0.777778vh; width:30.125000vw; height:16.500000vh; }
+.count-7.mode-duet .player-slot .player-header { left:0.000000vw; top:-3.722222vh; width:4.375000vw; height:5.833333vh; }
+.count-7.mode-duet .player-slot .player-name { left:5.250000vw; top:-0.722222vh; width:16.000000vw; height:2.333333vh; }
+.count-7.mode-duet .player-slot .player-name { font-size:1.250000vh; }
+.count-7.mode-duet .player-slot .score-card { left:21.250000vw; top:-2.888889vh; width:8.750000vw; height:4.166667vh; }
+.count-7.mode-duet .player-slot .score-value { font-size:2.625000vh; }
+.count-7.mode-duet .player-slot .score-bars { left:21.250000vw; top:1.111111vh; width:8.750000vw; height:1.000000vh; }
+.count-7.mode-duet .player-slot .rating-notices { left:21.250000vw; top:3.777778vh; width:8.750000vw; height:2.933333vh; }
+.count-7.mode-duet .player-slot .input-surface { left:5.250000vw; top:1.611111vh; width:8.750000vw; height:1.333333vh; }
+.count-7.mode-duet .player-slot.level-0 .note-size { width:0.528000vw; height:1.290667vh; }
+.count-7.mode-duet .player-slot.level-1 .note-size { width:0.352000vw; height:0.938667vh; }
+.count-7.mode-duet .player-slot.level-2 .note-size { width:0.264000vw; height:0.586667vh; }
+.count-8.mode-duet .players { left:2.5vw; top:18.333333vh; width:97.5vw; height:64.183333vh; }
+.count-8.mode-duet .player-slot { width:30.000000vw; height:18.055556vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-8.mode-duet .player-slot .note-lane { left:-0.125000vw; top:1.527778vh; width:30.125000vw; height:15.000000vh; }
+.count-8.mode-duet .player-slot .player-header { left:0.000000vw; top:-3.805556vh; width:4.250000vw; height:5.666667vh; }
+.count-8.mode-duet .player-slot .player-name { left:5.125000vw; top:-0.972222vh; width:16.250000vw; height:2.333333vh; }
+.count-8.mode-duet .player-slot .player-name { font-size:1.250000vh; }
+.count-8.mode-duet .player-slot .score-card { left:21.375000vw; top:-2.972222vh; width:8.625000vw; height:4.166667vh; }
+.count-8.mode-duet .player-slot .score-value { font-size:2.625000vh; }
+.count-8.mode-duet .player-slot .score-bars { left:21.375000vw; top:0.861111vh; width:8.625000vw; height:1.000000vh; }
+.count-8.mode-duet .player-slot .rating-notices { left:21.375000vw; top:3.694444vh; width:8.625000vw; height:2.866667vh; }
+.count-8.mode-duet .player-slot .input-surface { left:5.125000vw; top:1.361111vh; width:8.625000vw; height:1.333333vh; }
+.count-8.mode-duet .player-slot.level-0 .note-size { width:0.516000vw; height:1.261333vh; }
+.count-8.mode-duet .player-slot.level-1 .note-size { width:0.344000vw; height:0.917333vh; }
+.count-8.mode-duet .player-slot.level-2 .note-size { width:0.258000vw; height:0.573333vh; }
+.count-9.mode-duet .players { left:2.5vw; top:18.333333vh; width:97.5vw; height:64.183333vh; }
+.count-9.mode-duet .player-slot { width:30.000000vw; height:18.055556vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-9.mode-duet .player-slot .note-lane { left:-0.125000vw; top:1.527778vh; width:30.125000vw; height:15.000000vh; }
+.count-9.mode-duet .player-slot .player-header { left:0.000000vw; top:-3.305556vh; width:4.250000vw; height:5.666667vh; }
+.count-9.mode-duet .player-slot .player-name { left:5.000000vw; top:-0.472222vh; width:16.625000vw; height:2.333333vh; }
+.count-9.mode-duet .player-slot .player-name { font-size:1.250000vh; }
+.count-9.mode-duet .player-slot .score-card { left:21.625000vw; top:-2.472222vh; width:8.375000vw; height:4.000000vh; }
+.count-9.mode-duet .player-slot .score-value { font-size:2.500000vh; }
+.count-9.mode-duet .player-slot .score-bars { left:21.625000vw; top:1.361111vh; width:8.375000vw; height:0.833333vh; }
+.count-9.mode-duet .player-slot .rating-notices { left:21.625000vw; top:4.194444vh; width:8.375000vw; height:2.800000vh; }
+.count-9.mode-duet .player-slot .input-surface { left:5.000000vw; top:1.694444vh; width:8.375000vw; height:1.333333vh; }
+.count-9.mode-duet .player-slot.level-0 .note-size { width:0.504000vw; height:1.232000vh; }
+.count-9.mode-duet .player-slot.level-1 .note-size { width:0.336000vw; height:0.896000vh; }
+.count-9.mode-duet .player-slot.level-2 .note-size { width:0.252000vw; height:0.560000vh; }
+.count-10.mode-duet .players { left:2.5vw; top:18.333333vh; width:97.5vw; height:64.183333vh; }
+.count-10.mode-duet .player-slot { width:21.875000vw; height:18.055556vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-10.mode-duet .player-slot .note-lane { left:-0.125000vw; top:3.777778vh; width:22.000000vw; height:10.500000vh; }
+.count-10.mode-duet .player-slot .player-header { left:0.000000vw; top:0.111111vh; width:3.000000vw; height:4.000000vh; }
+.count-10.mode-duet .player-slot .player-name { left:3.625000vw; top:2.111111vh; width:12.250000vw; height:2.333333vh; }
+.count-10.mode-duet .player-slot .player-name { font-size:0.916667vh; }
+.count-10.mode-duet .player-slot .score-card { left:15.875000vw; top:0.611111vh; width:6.000000vw; height:2.833333vh; }
+.count-10.mode-duet .player-slot .score-value { font-size:1.750000vh; }
+.count-10.mode-duet .player-slot .score-bars { left:15.875000vw; top:3.444444vh; width:6.000000vw; height:0.666667vh; }
+.count-10.mode-duet .player-slot .rating-notices { left:15.875000vw; top:7.277778vh; width:6.000000vw; height:1.993056vh; }
+.count-10.mode-duet .player-slot .input-surface { left:3.625000vw; top:3.777778vh; width:6.000000vw; height:1.333333vh; }
+.count-10.mode-duet .player-slot.level-0 .note-size { width:0.358750vw; height:0.876944vh; }
+.count-10.mode-duet .player-slot.level-1 .note-size { width:0.239167vw; height:0.637778vh; }
+.count-10.mode-duet .player-slot.level-2 .note-size { width:0.179375vw; height:0.398611vh; }
+.count-11.mode-duet .players { left:2.5vw; top:18.333333vh; width:97.5vw; height:64.183333vh; }
+.count-11.mode-duet .player-slot { width:21.875000vw; height:18.055556vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-11.mode-duet .player-slot .note-lane { left:-0.125000vw; top:3.777778vh; width:22.000000vw; height:10.500000vh; }
+.count-11.mode-duet .player-slot .player-header { left:0.000000vw; top:0.111111vh; width:3.000000vw; height:4.000000vh; }
+.count-11.mode-duet .player-slot .player-name { left:3.625000vw; top:2.111111vh; width:12.250000vw; height:2.333333vh; }
+.count-11.mode-duet .player-slot .player-name { font-size:0.916667vh; }
+.count-11.mode-duet .player-slot .score-card { left:15.875000vw; top:0.611111vh; width:6.000000vw; height:2.833333vh; }
+.count-11.mode-duet .player-slot .score-value { font-size:1.750000vh; }
+.count-11.mode-duet .player-slot .score-bars { left:15.875000vw; top:3.444444vh; width:6.000000vw; height:0.666667vh; }
+.count-11.mode-duet .player-slot .rating-notices { left:15.875000vw; top:7.277778vh; width:6.000000vw; height:1.993056vh; }
+.count-11.mode-duet .player-slot .input-surface { left:3.625000vw; top:3.777778vh; width:6.000000vw; height:1.333333vh; }
+.count-11.mode-duet .player-slot.level-0 .note-size { width:0.358750vw; height:0.876944vh; }
+.count-11.mode-duet .player-slot.level-1 .note-size { width:0.239167vw; height:0.637778vh; }
+.count-11.mode-duet .player-slot.level-2 .note-size { width:0.179375vw; height:0.398611vh; }
+.count-12.mode-duet .players { left:2.5vw; top:18.333333vh; width:97.5vw; height:64.183333vh; }
+.count-12.mode-duet .player-slot { width:21.875000vw; height:18.055556vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-12.mode-duet .player-slot .note-lane { left:-0.125000vw; top:3.777778vh; width:22.000000vw; height:10.500000vh; }
+.count-12.mode-duet .player-slot .player-header { left:0.000000vw; top:0.111111vh; width:3.000000vw; height:4.000000vh; }
+.count-12.mode-duet .player-slot .player-name { left:3.625000vw; top:2.111111vh; width:12.250000vw; height:2.333333vh; }
+.count-12.mode-duet .player-slot .player-name { font-size:0.916667vh; }
+.count-12.mode-duet .player-slot .score-card { left:15.875000vw; top:0.611111vh; width:6.000000vw; height:2.833333vh; }
+.count-12.mode-duet .player-slot .score-value { font-size:1.750000vh; }
+.count-12.mode-duet .player-slot .score-bars { left:15.875000vw; top:3.444444vh; width:6.000000vw; height:0.666667vh; }
+.count-12.mode-duet .player-slot .rating-notices { left:15.875000vw; top:7.277778vh; width:6.000000vw; height:1.993056vh; }
+.count-12.mode-duet .player-slot .input-surface { left:3.625000vw; top:3.777778vh; width:6.000000vw; height:1.333333vh; }
+.count-12.mode-duet .player-slot.level-0 .note-size { width:0.358750vw; height:0.876944vh; }
+.count-12.mode-duet .player-slot.level-1 .note-size { width:0.239167vw; height:0.637778vh; }
+.count-12.mode-duet .player-slot.level-2 .note-size { width:0.179375vw; height:0.398611vh; }
+.count-13.mode-duet .players { left:2.5vw; top:18.333333vh; width:97.5vw; height:64.183333vh; }
+.count-13.mode-duet .player-slot { width:21.875000vw; height:12.708333vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-13.mode-duet .player-slot .note-lane { left:-0.125000vw; top:1.104167vh; width:22.000000vw; height:10.500000vh; }
+.count-13.mode-duet .player-slot .player-header { left:0.000000vw; top:-1.562500vh; width:2.750000vw; height:3.666667vh; }
+.count-13.mode-duet .player-slot .player-name { left:3.250000vw; top:0.270833vh; width:13.125000vw; height:2.333333vh; }
+.count-13.mode-duet .player-slot .player-name { font-size:0.833333vh; }
+.count-13.mode-duet .player-slot .score-card { left:16.375000vw; top:-1.062500vh; width:5.500000vw; height:2.666667vh; }
+.count-13.mode-duet .player-slot .score-value { font-size:1.625000vh; }
+.count-13.mode-duet .player-slot .score-bars { left:16.375000vw; top:1.437500vh; width:5.500000vw; height:0.500000vh; }
+.count-13.mode-duet .player-slot .rating-notices { left:16.375000vw; top:5.604167vh; width:5.500000vw; height:1.822222vh; }
+.count-13.mode-duet .player-slot .input-surface { left:3.250000vw; top:1.770833vh; width:5.500000vw; height:1.333333vh; }
+.count-13.mode-duet .player-slot.level-0 .note-size { width:0.328000vw; height:0.801778vh; }
+.count-13.mode-duet .player-slot.level-1 .note-size { width:0.218667vw; height:0.583111vh; }
+.count-13.mode-duet .player-slot.level-2 .note-size { width:0.164000vw; height:0.364444vh; }
+.count-14.mode-duet .players { left:2.5vw; top:18.333333vh; width:97.5vw; height:64.183333vh; }
+.count-14.mode-duet .player-slot { width:21.875000vw; height:12.708333vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-14.mode-duet .player-slot .note-lane { left:-0.125000vw; top:1.104167vh; width:22.000000vw; height:10.500000vh; }
+.count-14.mode-duet .player-slot .player-header { left:0.000000vw; top:-1.562500vh; width:2.750000vw; height:3.666667vh; }
+.count-14.mode-duet .player-slot .player-name { left:3.250000vw; top:0.270833vh; width:13.125000vw; height:2.333333vh; }
+.count-14.mode-duet .player-slot .player-name { font-size:0.833333vh; }
+.count-14.mode-duet .player-slot .score-card { left:16.375000vw; top:-1.062500vh; width:5.500000vw; height:2.666667vh; }
+.count-14.mode-duet .player-slot .score-value { font-size:1.625000vh; }
+.count-14.mode-duet .player-slot .score-bars { left:16.375000vw; top:1.437500vh; width:5.500000vw; height:0.500000vh; }
+.count-14.mode-duet .player-slot .rating-notices { left:16.375000vw; top:5.604167vh; width:5.500000vw; height:1.822222vh; }
+.count-14.mode-duet .player-slot .input-surface { left:3.250000vw; top:1.770833vh; width:5.500000vw; height:1.333333vh; }
+.count-14.mode-duet .player-slot.level-0 .note-size { width:0.328000vw; height:0.801778vh; }
+.count-14.mode-duet .player-slot.level-1 .note-size { width:0.218667vw; height:0.583111vh; }
+.count-14.mode-duet .player-slot.level-2 .note-size { width:0.164000vw; height:0.364444vh; }
+.count-15.mode-duet .players { left:2.5vw; top:18.333333vh; width:97.5vw; height:64.183333vh; }
+.count-15.mode-duet .player-slot { width:21.875000vw; height:12.708333vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-15.mode-duet .player-slot .note-lane { left:-0.125000vw; top:1.104167vh; width:22.000000vw; height:10.500000vh; }
+.count-15.mode-duet .player-slot .player-header { left:0.000000vw; top:-1.562500vh; width:2.750000vw; height:3.666667vh; }
+.count-15.mode-duet .player-slot .player-name { left:3.250000vw; top:0.270833vh; width:13.125000vw; height:2.333333vh; }
+.count-15.mode-duet .player-slot .player-name { font-size:0.833333vh; }
+.count-15.mode-duet .player-slot .score-card { left:16.375000vw; top:-1.062500vh; width:5.500000vw; height:2.666667vh; }
+.count-15.mode-duet .player-slot .score-value { font-size:1.625000vh; }
+.count-15.mode-duet .player-slot .score-bars { left:16.375000vw; top:1.437500vh; width:5.500000vw; height:0.500000vh; }
+.count-15.mode-duet .player-slot .rating-notices { left:16.375000vw; top:5.604167vh; width:5.500000vw; height:1.822222vh; }
+.count-15.mode-duet .player-slot .input-surface { left:3.250000vw; top:1.770833vh; width:5.500000vw; height:1.333333vh; }
+.count-15.mode-duet .player-slot.level-0 .note-size { width:0.328000vw; height:0.801778vh; }
+.count-15.mode-duet .player-slot.level-1 .note-size { width:0.218667vw; height:0.583111vh; }
+.count-15.mode-duet .player-slot.level-2 .note-size { width:0.164000vw; height:0.364444vh; }
+.count-16.mode-duet .players { left:2.5vw; top:18.333333vh; width:97.5vw; height:64.183333vh; }
+.count-16.mode-duet .player-slot { width:21.875000vw; height:12.708333vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-16.mode-duet .player-slot .note-lane { left:-0.125000vw; top:1.104167vh; width:22.000000vw; height:10.500000vh; }
+.count-16.mode-duet .player-slot .player-header { left:0.000000vw; top:-1.562500vh; width:2.750000vw; height:3.666667vh; }
+.count-16.mode-duet .player-slot .player-name { left:3.250000vw; top:0.270833vh; width:13.125000vw; height:2.333333vh; }
+.count-16.mode-duet .player-slot .player-name { font-size:0.833333vh; }
+.count-16.mode-duet .player-slot .score-card { left:16.375000vw; top:-1.062500vh; width:5.500000vw; height:2.666667vh; }
+.count-16.mode-duet .player-slot .score-value { font-size:1.625000vh; }
+.count-16.mode-duet .player-slot .score-bars { left:16.375000vw; top:1.437500vh; width:5.500000vw; height:0.500000vh; }
+.count-16.mode-duet .player-slot .rating-notices { left:16.375000vw; top:5.604167vh; width:5.500000vw; height:1.822222vh; }
+.count-16.mode-duet .player-slot .input-surface { left:3.250000vw; top:1.770833vh; width:5.500000vw; height:1.333333vh; }
+.count-16.mode-duet .player-slot.level-0 .note-size { width:0.328000vw; height:0.801778vh; }
+.count-16.mode-duet .player-slot.level-1 .note-size { width:0.218667vw; height:0.583111vh; }
+.count-16.mode-duet .player-slot.level-2 .note-size { width:0.164000vw; height:0.364444vh; }
+.count-17.mode-duet .players { left:2.5vw; top:18.333333vh; width:97.5vw; height:64.183333vh; }
+.count-17.mode-duet .player-slot { width:17.000000vw; height:12.708333vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-17.mode-duet .player-slot .note-lane { left:-0.125000vw; top:1.854167vh; width:17.125000vw; height:9.000000vh; }
+.count-17.mode-duet .player-slot .player-header { left:0.000000vw; top:-0.312500vh; width:2.375000vw; height:3.166667vh; }
+.count-17.mode-duet .player-slot .player-name { left:2.750000vw; top:1.187500vh; width:9.625000vw; height:2.333333vh; }
+.count-17.mode-duet .player-slot .player-name { font-size:0.833333vh; }
+.count-17.mode-duet .player-slot .score-card { left:12.375000vw; top:0.187500vh; width:4.625000vw; height:2.166667vh; }
+.count-17.mode-duet .player-slot .score-value { font-size:1.375000vh; }
+.count-17.mode-duet .player-slot .score-bars { left:12.375000vw; top:2.187500vh; width:4.625000vw; height:0.500000vh; }
+.count-17.mode-duet .player-slot .rating-notices { left:12.375000vw; top:6.854167vh; width:4.625000vw; height:1.548889vh; }
+.count-17.mode-duet .player-slot .input-surface { left:2.750000vw; top:2.520833vh; width:5.000000vw; height:1.333333vh; }
+.count-17.mode-duet .player-slot.level-0 .note-size { width:0.278800vw; height:0.681511vh; }
+.count-17.mode-duet .player-slot.level-1 .note-size { width:0.185867vw; height:0.495644vh; }
+.count-17.mode-duet .player-slot.level-2 .note-size { width:0.139400vw; height:0.333333vh; }
+.count-18.mode-duet .players { left:2.5vw; top:18.333333vh; width:97.5vw; height:64.183333vh; }
+.count-18.mode-duet .player-slot { width:17.000000vw; height:12.708333vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-18.mode-duet .player-slot .note-lane { left:-0.125000vw; top:1.854167vh; width:17.125000vw; height:9.000000vh; }
+.count-18.mode-duet .player-slot .player-header { left:0.000000vw; top:-0.312500vh; width:2.375000vw; height:3.166667vh; }
+.count-18.mode-duet .player-slot .player-name { left:2.750000vw; top:1.187500vh; width:9.625000vw; height:2.333333vh; }
+.count-18.mode-duet .player-slot .player-name { font-size:0.833333vh; }
+.count-18.mode-duet .player-slot .score-card { left:12.375000vw; top:0.187500vh; width:4.625000vw; height:2.166667vh; }
+.count-18.mode-duet .player-slot .score-value { font-size:1.375000vh; }
+.count-18.mode-duet .player-slot .score-bars { left:12.375000vw; top:2.187500vh; width:4.625000vw; height:0.500000vh; }
+.count-18.mode-duet .player-slot .rating-notices { left:12.375000vw; top:6.854167vh; width:4.625000vw; height:1.548889vh; }
+.count-18.mode-duet .player-slot .input-surface { left:2.750000vw; top:2.520833vh; width:5.000000vw; height:1.333333vh; }
+.count-18.mode-duet .player-slot.level-0 .note-size { width:0.278800vw; height:0.681511vh; }
+.count-18.mode-duet .player-slot.level-1 .note-size { width:0.185867vw; height:0.495644vh; }
+.count-18.mode-duet .player-slot.level-2 .note-size { width:0.139400vw; height:0.333333vh; }
+.count-19.mode-duet .players { left:2.5vw; top:18.333333vh; width:97.5vw; height:64.183333vh; }
+.count-19.mode-duet .player-slot { width:17.000000vw; height:12.708333vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-19.mode-duet .player-slot .note-lane { left:-0.125000vw; top:1.854167vh; width:17.125000vw; height:9.000000vh; }
+.count-19.mode-duet .player-slot .player-header { left:0.000000vw; top:-0.312500vh; width:2.375000vw; height:3.166667vh; }
+.count-19.mode-duet .player-slot .player-name { left:2.750000vw; top:1.187500vh; width:9.625000vw; height:2.333333vh; }
+.count-19.mode-duet .player-slot .player-name { font-size:0.833333vh; }
+.count-19.mode-duet .player-slot .score-card { left:12.375000vw; top:0.187500vh; width:4.625000vw; height:2.166667vh; }
+.count-19.mode-duet .player-slot .score-value { font-size:1.375000vh; }
+.count-19.mode-duet .player-slot .score-bars { left:12.375000vw; top:2.187500vh; width:4.625000vw; height:0.500000vh; }
+.count-19.mode-duet .player-slot .rating-notices { left:12.375000vw; top:6.854167vh; width:4.625000vw; height:1.548889vh; }
+.count-19.mode-duet .player-slot .input-surface { left:2.750000vw; top:2.520833vh; width:5.000000vw; height:1.333333vh; }
+.count-19.mode-duet .player-slot.level-0 .note-size { width:0.278800vw; height:0.681511vh; }
+.count-19.mode-duet .player-slot.level-1 .note-size { width:0.185867vw; height:0.495644vh; }
+.count-19.mode-duet .player-slot.level-2 .note-size { width:0.139400vw; height:0.333333vh; }
+.count-20.mode-duet .players { left:2.5vw; top:18.333333vh; width:97.5vw; height:64.183333vh; }
+.count-20.mode-duet .player-slot { width:17.000000vw; height:12.708333vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-20.mode-duet .player-slot .note-lane { left:-0.125000vw; top:1.854167vh; width:17.125000vw; height:9.000000vh; }
+.count-20.mode-duet .player-slot .player-header { left:0.000000vw; top:-0.312500vh; width:2.375000vw; height:3.166667vh; }
+.count-20.mode-duet .player-slot .player-name { left:2.750000vw; top:1.187500vh; width:9.625000vw; height:2.333333vh; }
+.count-20.mode-duet .player-slot .player-name { font-size:0.833333vh; }
+.count-20.mode-duet .player-slot .score-card { left:12.375000vw; top:0.187500vh; width:4.625000vw; height:2.166667vh; }
+.count-20.mode-duet .player-slot .score-value { font-size:1.375000vh; }
+.count-20.mode-duet .player-slot .score-bars { left:12.375000vw; top:2.187500vh; width:4.625000vw; height:0.500000vh; }
+.count-20.mode-duet .player-slot .rating-notices { left:12.375000vw; top:6.854167vh; width:4.625000vw; height:1.548889vh; }
+.count-20.mode-duet .player-slot .input-surface { left:2.750000vw; top:2.520833vh; width:5.000000vw; height:1.333333vh; }
+.count-20.mode-duet .player-slot.level-0 .note-size { width:0.278800vw; height:0.681511vh; }
+.count-20.mode-duet .player-slot.level-1 .note-size { width:0.185867vw; height:0.495644vh; }
+.count-20.mode-duet .player-slot.level-2 .note-size { width:0.139400vw; height:0.333333vh; }
+.count-21.mode-duet .players { left:2.5vw; top:18.333333vh; width:97.5vw; height:64.183333vh; }
+.count-21.mode-duet .player-slot { width:17.000000vw; height:9.500000vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-21.mode-duet .player-slot .note-lane { left:-0.125000vw; top:0.250000vh; width:17.125000vw; height:9.000000vh; }
+.count-21.mode-duet .player-slot .player-header { left:0.000000vw; top:-0.916667vh; width:2.000000vw; height:2.666667vh; }
+.count-21.mode-duet .player-slot .player-name { left:2.500000vw; top:0.416667vh; width:10.375000vw; height:2.333333vh; }
+.count-21.mode-duet .player-slot .player-name { font-size:0.833333vh; }
+.count-21.mode-duet .player-slot .score-card { left:12.875000vw; top:-0.583333vh; width:4.125000vw; height:2.000000vh; }
+.count-21.mode-duet .player-slot .score-value { font-size:1.250000vh; }
+.count-21.mode-duet .player-slot .score-bars { left:12.875000vw; top:1.250000vh; width:4.125000vw; height:0.500000vh; }
+.count-21.mode-duet .player-slot .rating-notices { left:12.875000vw; top:6.083333vh; width:4.125000vw; height:1.366667vh; }
+.count-21.mode-duet .player-slot .input-surface { left:2.500000vw; top:1.583333vh; width:5.000000vw; height:1.333333vh; }
+.count-21.mode-duet .player-slot.level-0 .note-size { width:0.246000vw; height:0.601333vh; }
+.count-21.mode-duet .player-slot.level-1 .note-size { width:0.164000vw; height:0.437333vh; }
+.count-21.mode-duet .player-slot.level-2 .note-size { width:0.125000vw; height:0.333333vh; }
+.count-22.mode-duet .players { left:2.5vw; top:18.333333vh; width:97.5vw; height:64.183333vh; }
+.count-22.mode-duet .player-slot { width:17.000000vw; height:9.500000vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-22.mode-duet .player-slot .note-lane { left:-0.125000vw; top:0.250000vh; width:17.125000vw; height:9.000000vh; }
+.count-22.mode-duet .player-slot .player-header { left:0.000000vw; top:-0.916667vh; width:2.000000vw; height:2.666667vh; }
+.count-22.mode-duet .player-slot .player-name { left:2.500000vw; top:0.416667vh; width:10.375000vw; height:2.333333vh; }
+.count-22.mode-duet .player-slot .player-name { font-size:0.833333vh; }
+.count-22.mode-duet .player-slot .score-card { left:12.875000vw; top:-0.583333vh; width:4.125000vw; height:2.000000vh; }
+.count-22.mode-duet .player-slot .score-value { font-size:1.250000vh; }
+.count-22.mode-duet .player-slot .score-bars { left:12.875000vw; top:1.250000vh; width:4.125000vw; height:0.500000vh; }
+.count-22.mode-duet .player-slot .rating-notices { left:12.875000vw; top:6.083333vh; width:4.125000vw; height:1.366667vh; }
+.count-22.mode-duet .player-slot .input-surface { left:2.500000vw; top:1.583333vh; width:5.000000vw; height:1.333333vh; }
+.count-22.mode-duet .player-slot.level-0 .note-size { width:0.246000vw; height:0.601333vh; }
+.count-22.mode-duet .player-slot.level-1 .note-size { width:0.164000vw; height:0.437333vh; }
+.count-22.mode-duet .player-slot.level-2 .note-size { width:0.125000vw; height:0.333333vh; }
+.count-23.mode-duet .players { left:2.5vw; top:18.333333vh; width:97.5vw; height:64.183333vh; }
+.count-23.mode-duet .player-slot { width:17.000000vw; height:9.500000vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-23.mode-duet .player-slot .note-lane { left:-0.125000vw; top:0.250000vh; width:17.125000vw; height:9.000000vh; }
+.count-23.mode-duet .player-slot .player-header { left:0.000000vw; top:-0.916667vh; width:2.000000vw; height:2.666667vh; }
+.count-23.mode-duet .player-slot .player-name { left:2.500000vw; top:0.416667vh; width:10.375000vw; height:2.333333vh; }
+.count-23.mode-duet .player-slot .player-name { font-size:0.833333vh; }
+.count-23.mode-duet .player-slot .score-card { left:12.875000vw; top:-0.583333vh; width:4.125000vw; height:2.000000vh; }
+.count-23.mode-duet .player-slot .score-value { font-size:1.250000vh; }
+.count-23.mode-duet .player-slot .score-bars { left:12.875000vw; top:1.250000vh; width:4.125000vw; height:0.500000vh; }
+.count-23.mode-duet .player-slot .rating-notices { left:12.875000vw; top:6.083333vh; width:4.125000vw; height:1.366667vh; }
+.count-23.mode-duet .player-slot .input-surface { left:2.500000vw; top:1.583333vh; width:5.000000vw; height:1.333333vh; }
+.count-23.mode-duet .player-slot.level-0 .note-size { width:0.246000vw; height:0.601333vh; }
+.count-23.mode-duet .player-slot.level-1 .note-size { width:0.164000vw; height:0.437333vh; }
+.count-23.mode-duet .player-slot.level-2 .note-size { width:0.125000vw; height:0.333333vh; }
+.count-24.mode-duet .players { left:2.5vw; top:18.333333vh; width:97.5vw; height:64.183333vh; }
+.count-24.mode-duet .player-slot { width:17.000000vw; height:9.500000vh; margin-right:2.5vw; margin-bottom:3.333333vh; }
+.count-24.mode-duet .player-slot .note-lane { left:-0.125000vw; top:0.250000vh; width:17.125000vw; height:9.000000vh; }
+.count-24.mode-duet .player-slot .player-header { left:0.000000vw; top:-0.916667vh; width:2.000000vw; height:2.666667vh; }
+.count-24.mode-duet .player-slot .player-name { left:2.500000vw; top:0.416667vh; width:10.375000vw; height:2.333333vh; }
+.count-24.mode-duet .player-slot .player-name { font-size:0.833333vh; }
+.count-24.mode-duet .player-slot .score-card { left:12.875000vw; top:-0.583333vh; width:4.125000vw; height:2.000000vh; }
+.count-24.mode-duet .player-slot .score-value { font-size:1.250000vh; }
+.count-24.mode-duet .player-slot .score-bars { left:12.875000vw; top:1.250000vh; width:4.125000vw; height:0.500000vh; }
+.count-24.mode-duet .player-slot .rating-notices { left:12.875000vw; top:6.083333vh; width:4.125000vw; height:1.366667vh; }
+.count-24.mode-duet .player-slot .input-surface { left:2.500000vw; top:1.583333vh; width:5.000000vw; height:1.333333vh; }
+.count-24.mode-duet .player-slot.level-0 .note-size { width:0.246000vw; height:0.601333vh; }
+.count-24.mode-duet .player-slot.level-1 .note-size { width:0.164000vw; height:0.437333vh; }
+.count-24.mode-duet .player-slot.level-2 .note-size { width:0.125000vw; height:0.333333vh; }
+.voice-bank.count-1 .voice-cell { width:100.000000%; height:100.000000%; }
+.voice-bank.count-2 .voice-cell { width:100.000000%; height:50.000000%; }
+.voice-bank.count-3 .voice-cell { width:50.000000%; height:50.000000%; }
+.voice-bank.count-4 .voice-cell { width:50.000000%; height:50.000000%; }
+.voice-bank.count-5 .voice-cell { width:33.333333%; height:50.000000%; }
+.voice-bank.count-6 .voice-cell { width:33.333333%; height:50.000000%; }
+.voice-bank.count-7 .voice-cell { width:33.333333%; height:33.333333%; }
+.voice-bank.count-8 .voice-cell { width:33.333333%; height:33.333333%; }
+.voice-bank.count-9 .voice-cell { width:33.333333%; height:33.333333%; }
+.voice-bank.count-10 .voice-cell { width:25.000000%; height:33.333333%; }
+.voice-bank.count-11 .voice-cell { width:25.000000%; height:33.333333%; }
+.voice-bank.count-12 .voice-cell { width:25.000000%; height:33.333333%; }
+.voice-bank.count-13 .voice-cell { width:25.000000%; height:25.000000%; }
+.voice-bank.count-14 .voice-cell { width:25.000000%; height:25.000000%; }
+.voice-bank.count-15 .voice-cell { width:25.000000%; height:25.000000%; }
+.voice-bank.count-16 .voice-cell { width:25.000000%; height:25.000000%; }
+.voice-bank.count-17 .voice-cell { width:20.000000%; height:25.000000%; }
+.voice-bank.count-18 .voice-cell { width:20.000000%; height:25.000000%; }
+.voice-bank.count-19 .voice-cell { width:20.000000%; height:25.000000%; }
+.voice-bank.count-20 .voice-cell { width:20.000000%; height:25.000000%; }
+.voice-bank.count-21 .voice-cell { width:20.000000%; height:20.000000%; }
+.voice-bank.count-22 .voice-cell { width:20.000000%; height:20.000000%; }
+.voice-bank.count-23 .voice-cell { width:20.000000%; height:20.000000%; }
+.voice-bank.count-24 .voice-cell { width:20.000000%; height:20.000000%; }
+
+.header-measure { pointer-events: none; background-color: transparent; }
+
+.count-1.mode-solo .player-slot .player-avatar { left:10.000000%; top:10.000000%; width:80.000000%; height:80.000000%; }
+.count-2.mode-solo .player-slot .player-avatar { left:8.163265%; top:8.163265%; width:83.673469%; height:83.673469%; }
+.count-3.mode-solo .player-slot .player-avatar { left:8.888889%; top:8.888889%; width:82.222222%; height:82.222222%; }
+.count-4.mode-solo .player-slot .player-avatar { left:8.510638%; top:8.510638%; width:82.978723%; height:82.978723%; }
+.count-5.mode-solo .player-slot .player-avatar { left:9.302326%; top:9.302326%; width:81.395349%; height:81.395349%; }
+.count-6.mode-solo .player-slot .player-avatar { left:9.523810%; top:9.523810%; width:80.952381%; height:80.952381%; }
+.count-7.mode-solo .player-slot .player-avatar { left:8.571429%; top:8.571429%; width:82.857143%; height:82.857143%; }
+.count-8.mode-solo .player-slot .player-avatar { left:8.823529%; top:8.823529%; width:82.352941%; height:82.352941%; }
+.count-9.mode-solo .player-slot .player-avatar { left:8.823529%; top:8.823529%; width:82.352941%; height:82.352941%; }
+.count-10.mode-solo .player-slot .player-avatar { left:7.407407%; top:7.407407%; width:85.185185%; height:85.185185%; }
+.count-11.mode-solo .player-slot .player-avatar { left:7.407407%; top:7.407407%; width:85.185185%; height:85.185185%; }
+.count-12.mode-solo .player-slot .player-avatar { left:7.407407%; top:7.407407%; width:85.185185%; height:85.185185%; }
+.count-13.mode-solo .player-slot .player-avatar { left:8.333333%; top:8.333333%; width:83.333333%; height:83.333333%; }
+.count-14.mode-solo .player-slot .player-avatar { left:8.333333%; top:8.333333%; width:83.333333%; height:83.333333%; }
+.count-15.mode-solo .player-slot .player-avatar { left:8.333333%; top:8.333333%; width:83.333333%; height:83.333333%; }
+.count-16.mode-solo .player-slot .player-avatar { left:8.333333%; top:8.333333%; width:83.333333%; height:83.333333%; }
+.count-17.mode-solo .player-slot .player-avatar { left:5.263158%; top:5.263158%; width:89.473684%; height:89.473684%; }
+.count-18.mode-solo .player-slot .player-avatar { left:5.263158%; top:5.263158%; width:89.473684%; height:89.473684%; }
+.count-19.mode-solo .player-slot .player-avatar { left:5.263158%; top:5.263158%; width:89.473684%; height:89.473684%; }
+.count-20.mode-solo .player-slot .player-avatar { left:5.263158%; top:5.263158%; width:89.473684%; height:89.473684%; }
+.count-21.mode-solo .player-slot .player-avatar { left:5.263158%; top:5.263158%; width:84.210526%; height:84.210526%; }
+.count-22.mode-solo .player-slot .player-avatar { left:5.263158%; top:5.263158%; width:84.210526%; height:84.210526%; }
+.count-23.mode-solo .player-slot .player-avatar { left:5.263158%; top:5.263158%; width:84.210526%; height:84.210526%; }
+.count-24.mode-solo .player-slot .player-avatar { left:5.263158%; top:5.263158%; width:84.210526%; height:84.210526%; }
+.count-1.mode-duet .player-slot .player-avatar { left:10.000000%; top:10.000000%; width:80.000000%; height:80.000000%; }
+.count-2.mode-duet .player-slot .player-avatar { left:8.163265%; top:8.163265%; width:83.673469%; height:83.673469%; }
+.count-3.mode-duet .player-slot .player-avatar { left:7.894737%; top:7.894737%; width:84.210526%; height:84.210526%; }
+.count-4.mode-duet .player-slot .player-avatar { left:8.510638%; top:8.510638%; width:82.978723%; height:82.978723%; }
+.count-5.mode-duet .player-slot .player-avatar { left:8.108108%; top:8.108108%; width:83.783784%; height:83.783784%; }
+.count-6.mode-duet .player-slot .player-avatar { left:8.333333%; top:8.333333%; width:83.333333%; height:83.333333%; }
+.count-7.mode-duet .player-slot .player-avatar { left:8.571429%; top:8.571429%; width:82.857143%; height:82.857143%; }
+.count-8.mode-duet .player-slot .player-avatar { left:8.823529%; top:8.823529%; width:82.352941%; height:82.352941%; }
+.count-9.mode-duet .player-slot .player-avatar { left:8.823529%; top:8.823529%; width:82.352941%; height:82.352941%; }
+.count-10.mode-duet .player-slot .player-avatar { left:8.333333%; top:8.333333%; width:83.333333%; height:83.333333%; }
+.count-11.mode-duet .player-slot .player-avatar { left:8.333333%; top:8.333333%; width:83.333333%; height:83.333333%; }
+.count-12.mode-duet .player-slot .player-avatar { left:8.333333%; top:8.333333%; width:83.333333%; height:83.333333%; }
+.count-13.mode-duet .player-slot .player-avatar { left:9.090909%; top:9.090909%; width:81.818182%; height:81.818182%; }
+.count-14.mode-duet .player-slot .player-avatar { left:9.090909%; top:9.090909%; width:81.818182%; height:81.818182%; }
+.count-15.mode-duet .player-slot .player-avatar { left:9.090909%; top:9.090909%; width:81.818182%; height:81.818182%; }
+.count-16.mode-duet .player-slot .player-avatar { left:9.090909%; top:9.090909%; width:81.818182%; height:81.818182%; }
+.count-17.mode-duet .player-slot .player-avatar { left:5.263158%; top:5.263158%; width:84.210526%; height:84.210526%; }
+.count-18.mode-duet .player-slot .player-avatar { left:5.263158%; top:5.263158%; width:84.210526%; height:84.210526%; }
+.count-19.mode-duet .player-slot .player-avatar { left:5.263158%; top:5.263158%; width:84.210526%; height:84.210526%; }
+.count-20.mode-duet .player-slot .player-avatar { left:5.263158%; top:5.263158%; width:84.210526%; height:84.210526%; }
+.count-21.mode-duet .player-slot .player-avatar { left:6.250000%; top:6.250000%; width:87.500000%; height:87.500000%; }
+.count-22.mode-duet .player-slot .player-avatar { left:6.250000%; top:6.250000%; width:87.500000%; height:87.500000%; }
+.count-23.mode-duet .player-slot .player-avatar { left:6.250000%; top:6.250000%; width:87.500000%; height:87.500000%; }
+.count-24.mode-duet .player-slot .player-avatar { left:6.250000%; top:6.250000%; width:87.500000%; height:87.500000%; }
+
+.count-1.mode-solo .player-slot .player-avatar { left:10.000000%; top:10.000000%; width:80.000000%; height:80.000003%; }
+.count-2.mode-solo .player-slot .player-avatar { left:8.163265%; top:8.163265%; width:83.673469%; height:83.673466%; }
+.count-3.mode-solo .player-slot .player-avatar { left:8.888889%; top:8.888889%; width:82.222222%; height:82.222222%; }
+.count-4.mode-solo .player-slot .player-avatar { left:8.510638%; top:8.510639%; width:82.978723%; height:82.978727%; }
+.count-5.mode-solo .player-slot .player-avatar { left:9.302326%; top:9.302325%; width:81.395349%; height:81.395345%; }
+.count-6.mode-solo .player-slot .player-avatar { left:9.523810%; top:9.523810%; width:80.952381%; height:80.952381%; }
+.count-7.mode-solo .player-slot .player-avatar { left:8.571429%; top:8.571429%; width:82.857143%; height:82.857148%; }
+.count-8.mode-solo .player-slot .player-avatar { left:8.823529%; top:8.823529%; width:82.352941%; height:82.352936%; }
+.count-9.mode-solo .player-slot .player-avatar { left:8.823529%; top:8.823529%; width:82.352941%; height:82.352936%; }
+.count-10.mode-solo .player-slot .player-avatar { left:7.407407%; top:7.407407%; width:85.185185%; height:85.185185%; }
+.count-11.mode-solo .player-slot .player-avatar { left:7.407407%; top:7.407407%; width:85.185185%; height:85.185185%; }
+.count-12.mode-solo .player-slot .player-avatar { left:7.407407%; top:7.407407%; width:85.185185%; height:85.185185%; }
+.count-13.mode-solo .player-slot .player-avatar { left:8.333333%; top:8.333333%; width:83.333333%; height:83.333333%; }
+.count-14.mode-solo .player-slot .player-avatar { left:8.333333%; top:8.333333%; width:83.333333%; height:83.333333%; }
+.count-15.mode-solo .player-slot .player-avatar { left:8.333333%; top:8.333333%; width:83.333333%; height:83.333333%; }
+.count-16.mode-solo .player-slot .player-avatar { left:8.333333%; top:8.333333%; width:83.333333%; height:83.333333%; }
+.count-17.mode-solo .player-slot .player-avatar { left:5.263158%; top:5.263157%; width:89.473684%; height:89.473675%; }
+.count-18.mode-solo .player-slot .player-avatar { left:5.263158%; top:5.263157%; width:89.473684%; height:89.473675%; }
+.count-19.mode-solo .player-slot .player-avatar { left:5.263158%; top:5.263157%; width:89.473684%; height:89.473675%; }
+.count-20.mode-solo .player-slot .player-avatar { left:5.263158%; top:5.263157%; width:89.473684%; height:89.473675%; }
+.count-21.mode-solo .player-slot .player-avatar { left:5.263158%; top:5.263157%; width:89.473684%; height:89.473675%; }
+.count-22.mode-solo .player-slot .player-avatar { left:5.263158%; top:5.263157%; width:89.473684%; height:89.473675%; }
+.count-23.mode-solo .player-slot .player-avatar { left:5.263158%; top:5.263157%; width:89.473684%; height:89.473675%; }
+.count-24.mode-solo .player-slot .player-avatar { left:5.263158%; top:5.263157%; width:89.473684%; height:89.473675%; }
+.count-1.mode-duet .player-slot .player-avatar { left:10.000000%; top:10.000000%; width:80.000000%; height:80.000003%; }
+.count-2.mode-duet .player-slot .player-avatar { left:8.163265%; top:8.163265%; width:83.673469%; height:83.673466%; }
+.count-3.mode-duet .player-slot .player-avatar { left:7.894737%; top:7.894737%; width:84.210526%; height:84.210531%; }
+.count-4.mode-duet .player-slot .player-avatar { left:8.510638%; top:8.510639%; width:82.978723%; height:82.978727%; }
+.count-5.mode-duet .player-slot .player-avatar { left:8.108108%; top:8.108108%; width:83.783784%; height:83.783779%; }
+.count-6.mode-duet .player-slot .player-avatar { left:8.333333%; top:8.333333%; width:83.333333%; height:83.333333%; }
+.count-7.mode-duet .player-slot .player-avatar { left:8.571429%; top:8.571429%; width:82.857143%; height:82.857148%; }
+.count-8.mode-duet .player-slot .player-avatar { left:8.823529%; top:8.823529%; width:82.352941%; height:82.352936%; }
+.count-9.mode-duet .player-slot .player-avatar { left:8.823529%; top:8.823529%; width:82.352941%; height:82.352936%; }
+.count-10.mode-duet .player-slot .player-avatar { left:8.333333%; top:8.333333%; width:83.333333%; height:83.333333%; }
+.count-11.mode-duet .player-slot .player-avatar { left:8.333333%; top:8.333333%; width:83.333333%; height:83.333333%; }
+.count-12.mode-duet .player-slot .player-avatar { left:8.333333%; top:8.333333%; width:83.333333%; height:83.333333%; }
+.count-13.mode-duet .player-slot .player-avatar { left:9.090909%; top:9.090908%; width:81.818182%; height:81.818174%; }
+.count-14.mode-duet .player-slot .player-avatar { left:9.090909%; top:9.090908%; width:81.818182%; height:81.818174%; }
+.count-15.mode-duet .player-slot .player-avatar { left:9.090909%; top:9.090908%; width:81.818182%; height:81.818174%; }
+.count-16.mode-duet .player-slot .player-avatar { left:9.090909%; top:9.090908%; width:81.818182%; height:81.818174%; }
+.count-17.mode-duet .player-slot .player-avatar { left:5.263158%; top:5.263157%; width:89.473684%; height:89.473675%; }
+.count-18.mode-duet .player-slot .player-avatar { left:5.263158%; top:5.263157%; width:89.473684%; height:89.473675%; }
+.count-19.mode-duet .player-slot .player-avatar { left:5.263158%; top:5.263157%; width:89.473684%; height:89.473675%; }
+.count-20.mode-duet .player-slot .player-avatar { left:5.263158%; top:5.263157%; width:89.473684%; height:89.473675%; }
+.count-21.mode-duet .player-slot .player-avatar { left:6.250000%; top:6.249999%; width:87.500000%; height:87.499989%; }
+.count-22.mode-duet .player-slot .player-avatar { left:6.250000%; top:6.249999%; width:87.500000%; height:87.499989%; }
+.count-23.mode-duet .player-slot .player-avatar { left:6.250000%; top:6.249999%; width:87.500000%; height:87.499989%; }
+.count-24.mode-duet .player-slot .player-avatar { left:6.250000%; top:6.249999%; width:87.500000%; height:87.499989%; }
