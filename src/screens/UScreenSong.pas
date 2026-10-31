@@ -1217,9 +1217,14 @@ begin
             if not HasSelection then
             begin
               ScreenSongJumpto.ResetFilters;
-              CatSongs.ShowCategoryList;
-              if Length(Button) > 0 then
-              begin Interaction := 0; FixSelected; end;
+              if (CatSongs.CatNumShow = -2) and (PlaylistMan.CurPlaylist <> -1) then
+                PlaylistMan.SetPlayList(PlaylistMan.CurPlaylist)
+              else
+              begin
+                CatSongs.ShowCategoryList;
+                if Length(Button) > 0 then
+                begin Interaction := 0; FixSelected; end;
+              end;
               SetScroll;
               SetScrollRefresh;
               Exit;
