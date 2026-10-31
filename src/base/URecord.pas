@@ -98,6 +98,7 @@ type
       AnalysisBuffer:  array[0..4095] of smallint; // newest 4096 samples (MUST BE POWER OF TWO!)
       AnalysisBufferSize: integer; // number of samples of BufferArray to analyze
 
+      MonitorOnly: boolean; // level preview: no voice playback or recording
       LogBuffer:   TMemoryStream;              // full buffer
 
       // pitch detection
@@ -209,6 +210,7 @@ type
   TAudioInputBase = class( TInterfacedObject, IAudioInput )
     private
       Started: boolean;
+      Monitoring: boolean;
     protected
       ScanMode: TAudioInputScanMode;
       SeenDeviceNames: array of UTF8String;
@@ -223,8 +225,8 @@ type
       function FinalizeRecord: boolean;   virtual;
 
       function IsCapturing: boolean;
-      procedure CaptureStart;
-      procedure CaptureStop;
+      procedure CaptureStart(PlayerCount: integer = -1; MonitorOnly: boolean = false);
+      procedure CaptureStop(MonitorOnly: boolean = false);
   end;
 
   TSmallIntArray = array [0..(MaxInt div SizeOf(SmallInt))-1] of SmallInt;
@@ -399,7 +401,7 @@ begin
   end;
 
   // save capture-data to BufferLong if enabled
-  if (Ini.SavePlayback = 1) then
+  if (Ini.SavePlayback = 1) and not MonitorOnly then
   begin
     // this is just for debugging (approx 15MB per player for a 3min song!!!)
     // For an in-game replay-mode we need to compress data so we do not
@@ -724,7 +726,7 @@ begin
   // and adjust it because capture buffers are always mono
   fAudioFormat.Channels := 1;
 
-  if (Ini.VoicePassthrough = 1) then
+  if (Ini.VoicePassthrough = 1) and not MonitorOnly then
   begin
     // TODO: map odd players to the left and even players to the right speaker
     fVoiceStream := AudioPlayback.CreateVoiceStream(CHANNELMAP_FRONT, fAudioFormat);
@@ -1059,7 +1061,7 @@ begin
   Result := Started;
 end;
 
-procedure TAudioInputBase.CaptureStart;
+procedure TAudioInputBase.CaptureStart(PlayerCount: integer; MonitorOnly: boolean);
 var
   S:            integer;
   DeviceIndex:  integer;
@@ -1072,9 +1074,15 @@ begin
   if (Started) then
     CaptureStop();
 
+  if PlayerCount < 0 then PlayerCount := PlayersPlay;
+  PlayerCount := EnsureRange(PlayerCount, 0, Length(AudioInputProcessor.Sound));
+
   // reset buffers
   for S := 0 to High(AudioInputProcessor.Sound) do
+  begin
     AudioInputProcessor.Sound[S].Clear;
+    AudioInputProcessor.Sound[S].MonitorOnly := MonitorOnly;
+  end;
 
   // start capturing on each used device
   for DeviceIndex := 0 to High(AudioInputProcessor.DeviceList) do
@@ -1090,7 +1098,7 @@ begin
     for ChannelIndex := 0 to High(DeviceCfg.ChannelToPlayerMap) do
     begin
       Player := DeviceCfg.ChannelToPlayerMap[ChannelIndex] - 1;
-      if (Player < 0) or (Player >= PlayersPlay) then
+      if (Player < 0) or (Player >= PlayerCount) then
       begin
         Device.LinkCaptureBuffer(ChannelIndex, nil);
       end
@@ -1111,19 +1119,22 @@ begin
     end;
   end;
 
+  Monitoring := MonitorOnly;
   Started := true;
 end;
 
 {*
  * Stop input-capturing on all soundcards.
  *}
-procedure TAudioInputBase.CaptureStop;
+procedure TAudioInputBase.CaptureStop(MonitorOnly: boolean);
 var
   DeviceIndex:  integer;
   ChannelIndex: integer;
   Device:       TAudioInputDevice;
   DeviceCfg:    PInputDeviceConfig;
 begin
+  // A screen finishing its fade must not stop the next screen's song capture.
+  if MonitorOnly and not Monitoring then Exit;
   for DeviceIndex := 0 to High(AudioInputProcessor.DeviceList) do
   begin
     Device := AudioInputProcessor.DeviceList[DeviceIndex];
@@ -1139,6 +1150,7 @@ begin
   end;
 
   Started := false;
+  Monitoring := false;
 end;
 
 function TAudioInputBase.UnifyDeviceName(const name: UTF8String; deviceIndex: integer): UTF8String;
