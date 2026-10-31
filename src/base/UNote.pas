@@ -99,6 +99,8 @@ type
     LengthNote:     integer; // number of notes (= Length(Note)?).
     Note:           array of TPlayerNote;
     SentenceScore:  array of array of real;
+    SentenceBonus: array of array of real;
+    SentenceFinalized: array of array of boolean;
     InputSource: integer;
     LastSungTone: integer;
     HasLastSungTone: boolean;
@@ -273,6 +275,8 @@ begin
   _ScoreTotalInt := 0;
   ScorePerfectRemaining := MAX_SONG_SCORE;
   SetLength(SentenceScore, 0);
+  SetLength(SentenceBonus, 0);
+  SetLength(SentenceFinalized, 0);
 end;
 
 procedure EnsurePlayerSentenceScores(PlayerIndex: integer);
@@ -284,11 +288,15 @@ begin
 
   if (Length(Player[PlayerIndex].SentenceScore) <> Length(CurrentSong.Tracks)) then
     SetLength(Player[PlayerIndex].SentenceScore, Length(CurrentSong.Tracks));
+  SetLength(Player[PlayerIndex].SentenceBonus, Length(CurrentSong.Tracks));
+  SetLength(Player[PlayerIndex].SentenceFinalized, Length(CurrentSong.Tracks));
 
   for TrackIndex := 0 to High(CurrentSong.Tracks) do
   begin
     if (Length(Player[PlayerIndex].SentenceScore[TrackIndex]) <> Length(CurrentSong.Tracks[TrackIndex].Lines)) then
       SetLength(Player[PlayerIndex].SentenceScore[TrackIndex], Length(CurrentSong.Tracks[TrackIndex].Lines));
+    SetLength(Player[PlayerIndex].SentenceBonus[TrackIndex], Length(CurrentSong.Tracks[TrackIndex].Lines));
+    SetLength(Player[PlayerIndex].SentenceFinalized[TrackIndex], Length(CurrentSong.Tracks[TrackIndex].Lines));
   end;
 end;
 
