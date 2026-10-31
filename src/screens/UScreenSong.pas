@@ -2273,6 +2273,7 @@ begin
       CoverFile := Skin.GetTextureFileName('SongCover');
 
     CoverButton.Texture.Name := CoverFile;
+    Song.CoverTex.Free;
     Song.CoverTex := CoverButton.Texture.Clone();
     CoverButton.Selected := False;
   end;
@@ -3742,7 +3743,8 @@ var
   NextInt: integer;
   OriginalInteraction: integer;
 begin
-  if not HasSelection then Exit;
+  if (Interaction < 0) or (Interaction >= Length(Interactions)) or
+     (Interaction > High(CatSongs.Song)) then Exit;
   VS := CatSongs.VisibleSongs;
 
   if VS > 0 then
@@ -4836,6 +4838,7 @@ begin
         end
         else SkipTo(CatSongs.VisibleIndex(Interaction), Interaction);
         CatSongs.Selected := Interaction;
+        SetScrollRefresh;
       end;
       ResetRandomSongState;
       if Interaction < 0 then
