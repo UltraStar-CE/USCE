@@ -575,8 +575,8 @@ type
       function FinalizeRecord(): boolean;
 
       function IsCapturing: boolean;
-      procedure CaptureStart;
-      procedure CaptureStop;
+      procedure CaptureStart(PlayerCount: integer = -1; MonitorOnly: boolean = false);
+      procedure CaptureStop(MonitorOnly: boolean = false);
   end;
 
 type

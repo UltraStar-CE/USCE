@@ -74,8 +74,8 @@ type
       function InitializeRecord(ScanMode: TAudioInputScanMode): boolean;
       function FinalizeRecord: boolean;
       function IsCapturing: boolean;
-      procedure CaptureStart;
-      procedure CaptureStop;
+      procedure CaptureStart(PlayerCount: integer = -1; MonitorOnly: boolean = false);
+      procedure CaptureStop(MonitorOnly: boolean = false);
       procedure GetFFTData(var data: TFFTData);
       function GetPCMData(var data: TPCMData): Cardinal;
       function GetFormatInfo(): TAudioFormatInfo;
@@ -269,11 +269,11 @@ begin
   Result := false;
 end;
 
-procedure TAudio_Dummy.CaptureStart;
+procedure TAudio_Dummy.CaptureStart(PlayerCount: integer; MonitorOnly: boolean);
 begin
 end;
 
-procedure TAudio_Dummy.CaptureStop;
+procedure TAudio_Dummy.CaptureStop(MonitorOnly: boolean);
 begin
 end;
 

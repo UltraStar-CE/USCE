@@ -34,6 +34,7 @@ interface
 {$I switches.inc}
 
 uses
+  UCommon,
   UPlayerLayout,
   UVoiceAssignments,
   UAvatars,
@@ -98,7 +99,12 @@ type
       APlayerColor: array of integer;
 
       PlayerAvatarButton: array of integer;
-      CardPanel, CardFocus: integer;
+      CardPanel, CardFocus, MicFrame: integer;
+      MicPreviewCount: integer;
+      OwnsMicPreview: boolean;
+      MicActivity: array[0..UIni.IMaxPlayerCount-1] of single;
+      procedure UpdateMicActivity;
+      function MicColor(PlayerID: integer): TRGB;
       function SelectedPlayerCount: integer;
       function CardRect(Index: integer): TPlayerSlotRect;
       function DifficultySegmentRect(PlayerID, Segment: integer): TMouseOverRect;
@@ -146,7 +152,7 @@ implementation
 
 uses
 
-  UCommon,
+  URecord,
   UText,
   UParty,
   UGraphic,
@@ -1071,6 +1077,7 @@ end;
 constructor TScreenName.Create;
 var
   I: integer;
+  WhitePixel: cardinal;
 begin
   inherited Create;
 
@@ -1086,6 +1093,12 @@ begin
     CardFocus := AddStatic(Theme.Name.Cards.Focus);
     Statics[CardPanel].Visible := false;
     Statics[CardFocus].Visible := false;
+    MicFrame := AddStatic(Theme.Name.Cards.Focus);
+    Statics[MicFrame].Texture.Free;
+    WhitePixel := $FFFFFFFF;
+    Statics[MicFrame].Texture := Renderer.CreateTexture(PChar(@WhitePixel),
+      PATH_NONE, 1, 1, TEXTURE_TYPE_TRANSPARENT, false);
+    Statics[MicFrame].Visible := false;
   end;
   PlayersCount := AddSelectSlide(Theme.Name.SelectPlayersCount, CountIndex, IPlayers);
   PlayersCountIID := High(Interactions);
@@ -1231,6 +1244,9 @@ end;
 procedure TScreenName.OnHide;
 begin
   StopTextInput;
+  if OwnsMicPreview then AudioInput.CaptureStop(true);
+  OwnsMicPreview := false;
+  FillChar(MicActivity, SizeOf(MicActivity), 0);
   inherited;
 end;
 
@@ -1282,6 +1298,8 @@ begin
   Button[PlayerName].Text[0].Text := PlayerNames[PlayerIndex];
 
   isScrolling := false;
+  if not OwnsMicPreview then MicPreviewCount := -1;
+  UpdateMicActivity;
 
   Interaction := 0;
 
@@ -1449,11 +1467,61 @@ begin
   Result.Y := Theme.Name.Cards.Area.Y + (LocalIndex div Columns) * (Result.H + Theme.Name.Cards.Gap);
 end;
 
+procedure TScreenName.UpdateMicActivity;
+var
+  I, Count: integer;
+  Target, Threshold, Blend: single;
+  C: TRGB;
+begin
+  Count := SelectedPlayerCount;
+  if Count <> MicPreviewCount then
+  begin
+    if OwnsMicPreview then AudioInput.CaptureStop(true);
+    OwnsMicPreview := false;
+    MicPreviewCount := Count;
+    FillChar(MicActivity, SizeOf(MicActivity), 0);
+  end;
+  // Retry after an outgoing singing screen releases its capture at fade end.
+  if (Count > 0) and not AudioInput.IsCapturing then
+  begin
+    AudioInput.CaptureStart(Count, true);
+    OwnsMicPreview := true;
+  end;
+  Threshold := IThresholdVals[EnsureRange(Ini.ThresholdIndex, 0, High(IThresholdVals))];
+  for I := 0 to Count - 1 do
+  begin
+    Target := 0;
+    if OwnsMicPreview then
+      Target := AudioInputProcessor.Sound[I].MaxSampleVolume;
+    // Ignore background hiss; reserve white for peaks near full input level.
+    Target := EnsureRange((Target - Threshold) / (1 - Threshold), 0, 1);
+    if Target > MicActivity[I] then Blend := 1 - Exp(-Max(0, TimeSkip) / 0.04)
+    else Blend := 1 - Exp(-Max(0, TimeSkip) / 0.25);
+    MicActivity[I] := MicActivity[I] + (Target - MicActivity[I]) * Blend;
+    C := MicColor(I);
+    with Statics[PlayerCurrent[I]].Texture do
+    begin
+      ColR := C.R;
+      ColG := C.G;
+      ColB := C.B;
+    end;
+  end;
+end;
+
+function TScreenName.MicColor(PlayerID: integer): TRGB;
+begin
+  Result := GetPlayerColor(Num[PlayerID]);
+  Result.R := Result.R + (1 - Result.R) * MicActivity[PlayerID];
+  Result.G := Result.G + (1 - Result.G) * MicActivity[PlayerID];
+  Result.B := Result.B + (1 - Result.B) * MicActivity[PlayerID];
+end;
+
 procedure TScreenName.DrawCards;
 var I, First, Last, J: integer;
   R: TPlayerSlotRect;
   SX, SY, AvatarSide: real;
   Panel: TTexture;
+  C: TRGB;
   LabelText: UTF8String;
   procedure Difficulty(PlayerID: integer);
   var K: integer; T: TTexture; C: TRGB; BaseX, BaseY, SegmentW: real;
@@ -1558,6 +1626,20 @@ begin
       CornerRadius := Theme.Name.PlayerSelectTemplateAvatar.CornerRadius;
     end;
     Statics[PlayerCurrentAvatar[I]].Draw;
+    C := MicColor(I);
+    Panel := Statics[MicFrame].Texture;
+    with Statics[PlayerCurrentAvatar[I]].Texture do
+    begin
+      Panel.X := X; Panel.Y := Y; Panel.W := W; Panel.H := H;
+      Panel.Z := Z; Panel.Alpha := Alpha;
+      Panel.ScaleMode := ScaleMode; Panel.CornerRadius := CornerRadius;
+    end;
+    // Initials themes use a circular default avatar; keep its outline circular.
+    if Theme.Name.Cards.Initials and (PlayerAvatars[I] = 0) then
+      Panel.CornerRadius := 0.5;
+    Panel.OutlineWidth := 0.05;
+    Panel.ColR := C.R; Panel.ColG := C.G; Panel.ColB := C.B;
+    Renderer.DrawTexture(Panel);
     if Theme.Name.Cards.Initials and (PlayerAvatars[I] = 0) then
     begin
       LabelText := UTF8UpperCase(UTF8Copy(PlayerNames[I], 1, 1));
@@ -1674,6 +1756,7 @@ begin
     end;
   end;
 
+  UpdateMicActivity;
   if Theme.Name.Cards.Enabled then
   begin
     DrawCards;
