@@ -4,6 +4,7 @@
 #define GLAD_GL_IMPLEMENTATION
 #include "RmlUi_Include_GL3.h"
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -276,6 +277,26 @@ int main(int argc, char** argv) {
                 ui_model_set((prefix + "image").c_str(), avatar_image.c_str(), 0);
                 ui_model_set((prefix + "tint").c_str(), "#008fbe", 0);
             }
+            const auto mask_fixture = std::filesystem::current_path() / ("document-mask-test-" + std::to_string(SDL_GetPerformanceCounter()) + ".rml");
+            {
+                std::ofstream fixture(mask_fixture);
+                fixture << R"(<rml><head><style>
+                    body { margin: 0; width: 100%; height: 100%; }
+                    div { display: block; position: absolute; top: 100px; width: 100px; height: 100px; }
+                    #gradient { left: 100px; decorator: vertical-gradient(#ff0000b3 #f000); }
+                    #masked { left: 300px; overflow: hidden; background-color: red; mask-image: vertical-gradient(#000000b3 #0000); }
+                    #masked span { display: block; position: absolute; width: 100px; height: 200px; transform: scaleY(-1); }
+                    </style></head><body><div id="gradient"/><div id="masked"><span/></div></body></rml>)";
+            }
+            require(ui_open(utf8(mask_fixture).c_str()) != 0, "Mask fixture");
+            glClear(GL_COLOR_BUFFER_BIT); ui_render(1280, 720, 0);
+            glReadPixels(150, 720-150, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+            const int gradient_alpha = pixel[3];
+            require(gradient_alpha > 60 && gradient_alpha < 120, "Gradient fixture must render a fading alpha");
+            glReadPixels(350, 720-150, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+
+            std::filesystem::remove(mask_fixture);
+            require(std::abs(int(pixel[3]) - gradient_alpha) < 3, "A flipped child must not move its parent mask outside the clipping region");
             const auto players_document = utf8(root / "frontends/modern/players.rml");
             require(ui_open(players_document.c_str()) != 0, "Player setup document");
             ui_render(1280, 720, 0);
