@@ -124,6 +124,7 @@ type
     FileLineNo  : integer;  // line, which is read last, for error reporting
     FMD5        : string;
     FMD5Cached  : boolean;
+    fFolderPath: UTF8String;
 
     function DecodeFilename(Filename: RawByteString): IPath;
     procedure ParseNote(Track: integer; TypeP: char; StartP, DurationP, NoteP: integer; LyricS: UTF8String; Excluded: boolean = false);
@@ -141,6 +142,7 @@ type
     function ReadTXTHeader(SongFile: TTextFileStream; ReadCustomTags: Boolean): boolean;
 
     function GetFolderCategory(const aFileName: IPath): UTF8String;
+    function GetFolderPath: UTF8String;
     function LoadOpenedSong(SongFile: TTextFileStream; FileNamePath: IPath; DuetChange: boolean; OutOfBoundsToFreestyle: boolean; AudioLength: real): boolean;
     function GetMD5: string;
     procedure SetMD5(const Value: string);
@@ -223,6 +225,7 @@ type
 
     LastError:  AnsiString;
     function    GetErrorLineNo: integer;
+    property    FolderPath: UTF8String read GetFolderPath write fFolderPath;
     property    ErrorLineNo: integer read GetErrorLineNo;
     property    MD5: string read GetMD5 write SetMD5; //MD5 Hash of Current Song
 
@@ -267,7 +270,7 @@ uses
   StrUtils,
   UText,
   UIni,
-  UPathUtils,
+  UFolderFilter, UPathUtils,
   USongs,
   UNote;   //needed for Player
 
@@ -424,6 +427,24 @@ end;
 // category as songs in shared/ultrastardx/songs are.
 // note: folder is just the name of a category it has
 //       nothing to do with the path used for file loading
+function TSong.GetFolderPath: UTF8String;
+var I: integer; Root: IPath;
+begin
+  if Main or (fFolderPath <> '') then Exit(fFolderPath);
+  Result := '/';
+  for I := 0 to SongPaths.Count - 1 do
+  begin
+    Root := (SongPaths[I] as IPath).GetAbsolutePath.AppendPathDelim;
+    if Path.GetAbsolutePath.Equals(Root.RemovePathDelim) or
+       Path.GetAbsolutePath.IsChildOf(Root, false) then
+    begin
+      Result := NormalizeFolderPath(Path.GetAbsolutePath.GetRelativePath(Root).ToUTF8);
+      Break;
+    end;
+  end;
+  fFolderPath := Result;
+end;
+
 function TSong.GetFolderCategory(const aFileName: IPath): UTF8String;
 var
   I: Integer;
@@ -467,6 +488,7 @@ begin
   Self.Path     := aFileName.GetPath;
   Self.FileName := aFileName.GetName;
   Self.Folder   := GetFolderCategory(aFileName);
+  Self.FolderPath := GetFolderPath;
   Self.FormatVersion := TVersion.Create();
 
   (*

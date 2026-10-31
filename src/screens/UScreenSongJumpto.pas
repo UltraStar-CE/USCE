@@ -66,6 +66,7 @@ type
     fTypingRow: integer;
     fPresetNames: TFilterPresetNames;
     fPresetName: UTF8String;
+    fFolderReturn: UTF8String;
     fPresetPage: integer;
     fSlotKinds: array[0..FILTER_SLOTS-1] of integer;
     fInputs, fCategories: array[0..FILTER_SLOTS-1] of integer;
@@ -98,6 +99,8 @@ type
     function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
     procedure OnShow; override;
     procedure ResetFilters;
+    procedure SetFolderFilter(const Query: UTF8String);
+    function LeaveFolder: boolean;
     procedure SetTypingQuery(const Query: UTF8String);
     function SearchSummary: UTF8String;
     property TypingQuery: UTF8String read GetTypingQuery;
@@ -107,7 +110,7 @@ type
 
 implementation
 
-uses Math, UCommon, UDisplay, UFiles, UMusic, UGraphic, ULibraryLockdown, ULockdownUI,
+uses UFolderFilter, Math, UCommon, UDisplay, UFiles, UMusic, UGraphic, ULibraryLockdown, ULockdownUI,
   UHelp, UIni, ULanguage, ULog, UMain, UParty, URenderer, UPlaylist,
   UScreenSong, UUnicodeUtils, UPath, UMenuInteract, UMenuText, UAge, UFilterTerms, Contnrs, sha1, UPlatform, UPathUtils, UScreenPopup;
 
@@ -528,6 +531,8 @@ begin
         S := Ord(fRows[fFocus].Kind);
         if PressedKey = SDLK_LEFT then S := (S + Ord(High(TSongFilter))) mod (Ord(High(TSongFilter)) + 1)
         else S := (S + 1) mod (Ord(High(TSongFilter)) + 1);
+        if (S = Ord(fltFolder)) and (Ini.FolderFiltering = 0) then
+          if PressedKey = SDLK_LEFT then S := Ord(fltAge) else S := Ord(fltAll);
         fRows[fFocus].Kind := TSongFilter(S);
         Changed;
         FlushChanges;
@@ -627,6 +632,7 @@ end;
 procedure TScreenSongJumpto.ResetFilters;
 begin
   fTypingRow := -1;
+  fFolderReturn := '';
   // Search rows are temporary. Lockdown freezes the library, not these queries.
   SetLength(fRows, 1);
   fRows[0].Query := '';
@@ -636,11 +642,57 @@ begin
   fFocus := 0; fFirst := 0;
 end;
 
+procedure TScreenSongJumpto.SetFolderFilter(const Query: UTF8String);
+var I, Row: integer;
+begin
+  if CatSongs.CatNumShow <> -2 then ResetFilters;
+  I := ScreenSong.Interaction;
+  if (I >= 0) and (I < Length(CatSongs.Song)) and CatSongs.Song[I].Main then
+    fFolderReturn := CatSongs.Song[I].FolderPath;
+  Row := -1;
+  for I := 0 to High(fRows) do
+    if fRows[I].Kind = fltFolder then begin Row := I; Break; end;
+  if Row < 0 then
+  begin
+    Row := Length(fRows); SetLength(fRows, Row + 1);
+  end;
+  fRows[Row].Kind := fltFolder;
+  fRows[Row].Query := FolderQueryValue(NormalizeFolderPath(Query));
+  fLastPlayed := ScreenSong.Interaction;
+  fPending := true; FlushChanges;
+end;
+
+function TScreenSongJumpto.LeaveFolder: boolean;
+var I: integer; ReturnPath: UTF8String;
+begin
+  Result := false;
+  ReturnPath := fFolderReturn;
+  for I := High(fRows) downto 0 do
+    if (fRows[I].Kind = fltFolder) and (fRows[I].Query <> '') then
+    begin RemoveRow(I); Result := true; end;
+  if Result then
+  begin
+    fTypingRow := -1;
+    fLastPlayed := ScreenSong.Interaction;
+    fPending := true; FlushChanges;
+    // Restore by path: row removal can rebuild and reorder the category objects.
+    for I := 0 to High(CatSongs.Song) do
+      if CatSongs.Song[I].Main and CatSongs.Song[I].Visible and
+         (CatSongs.Song[I].FolderPath = ReturnPath) then
+      begin
+        ScreenSong.SkipTo(CatSongs.VisibleIndex(I), I, CatSongs.VisibleSongs);
+        ScreenSong.FixSelected;
+        ScreenSong.SetScrollRefresh;
+        Break;
+      end;
+    fFolderReturn := '';
+  end;
+end;
+
 procedure TScreenSongJumpto.OnShow;
-var Country: UTF8String; Kind: TSongFilter; TypingFocus: integer;
+var Country: UTF8String; Kind: TSongFilter;
 begin
   inherited;
-  TypingFocus := fTypingRow;
   // The typed query is now an ordinary, editable All row in the full dialog.
   fTypingRow := -1;
   for Kind := Low(TSongFilter) to High(TSongFilter) do
@@ -659,7 +711,7 @@ begin
     fPlaylist := PlaylistMan.CurPlayList;
     Text[0].Text := Format(Theme.SongJumpto.SongsFound, [CatSongs.VisibleSongs]);
   end;
-  fFocus := EnsureRange(TypingFocus, 0, High(fRows)); fFirst := 0;
+  fFocus := High(fRows); fFirst := 0;
   fLastPlayed := ScreenSong.Interaction;
   RefreshRows;
 end;
@@ -824,6 +876,18 @@ begin
           fltYear: if Song.Year > 0 then Value := IntToStr(Song.Year);
           fltCreator: Value := Song.Creator;
           fltTags: Value := Song.Tags;
+          fltFolder:
+            begin
+              Parts.Clear; AddFolderChoices(Song.FolderPath, Ini.FolderFiltering, Parts);
+              for J := 0 to Parts.Count - 1 do
+              begin
+                AddValue(FolderQueryValue(Parts[J]));
+                Value := Copy(Parts[J], 1, Length(Parts[J]) - 1);
+                Value := Copy(Value, LastDelimiter('/', Value) + 1, MaxInt);
+                AddValue(FolderQueryValue(Value));
+              end;
+              Continue;
+            end;
           fltAge: begin Age := AgeForRegion(Song.AgeRaw, Region);
             if Age < 0 then Value := '?' else Value := IntToStr(Age); end;
         end;
@@ -862,7 +926,7 @@ begin
   SetLength(fMatches, 0);
   fSuggestionFirst := 0;
   fSuggestionIndex := 0;
-  Query := Copy(Query, FilterTermStart(Query, Kind = fltYear), MaxInt);
+  Query := Copy(Query, FilterTermStart(Query, Kind = fltYear, Kind = fltFolder), MaxInt);
   if Kind = fltAge then Delete(Query, 1, Length(SuggestionPrefix));
   Query := LowerCase(TransliterateToASCII(Trim(Query)));
   SetLength(fMatches, fValues.Count);
@@ -870,7 +934,8 @@ begin
   for I := 0 to fValues.Count - 1 do
   begin
     Key := fValueKeys[I];
-    if MatchesFilterTerms(Key, Query, false) then
+    if ((Kind = fltFolder) and (Pos(Query, Key) > 0)) or
+       ((Kind <> fltFolder) and MatchesFilterTerms(Key, Query, false)) then
     begin
       fMatches[K] := I;
       Inc(K);
@@ -886,7 +951,7 @@ begin
   if (fFocus >= Length(fRows)) or (fSuggestionIndex < 0) or
     (fSuggestionIndex >= Length(fMatches)) then Exit;
   fRows[fFocus].Query := CompleteFilterTerm(fRows[fFocus].Query,
-    SuggestionPrefix + fValues[fMatches[fSuggestionIndex]], fRows[fFocus].Kind = fltYear);
+    SuggestionPrefix + fValues[fMatches[fSuggestionIndex]], fRows[fFocus].Kind = fltYear, fRows[fFocus].Kind = fltFolder);
   Changed;
   FlushChanges;
 end;
@@ -995,6 +1060,7 @@ begin
   end
   else
   begin
+    ScreenSong.ClearSelection;
     ScreenSong.ChessboardMinLine := 0;
     ScreenSong.ListMinLine := 0;
   end;

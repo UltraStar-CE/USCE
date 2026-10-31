@@ -807,7 +807,7 @@ type
     Songsfound:       UTF8String;
     NoSongsfound:     UTF8String;
     CatText:          UTF8String;
-    IType:            array [0..9] of UTF8String;
+    IType:            array [0..10] of UTF8String;
     constructor Create;
     destructor Destroy; override;
   end;
@@ -2423,6 +2423,7 @@ begin
       SongJumpto.IType[7] := Language.Translate('SONG_JUMPTO_TYPE8');
       SongJumpto.IType[8] := Language.Translate('SONG_JUMPTO_TYPE9');
       SongJumpto.IType[9] := Language.Translate('SONG_JUMPTO_TYPE10');
+      SongJumpto.IType[10] := Language.Translate('SONG_JUMPTO_TYPE_FOLDER');
       SongJumpto.SongsFound := Language.Translate('SONG_JUMPTO_SONGSFOUND');
       SongJumpto.NoSongsFound := Language.Translate('SONG_JUMPTO_NOSONGSFOUND');
       SongJumpto.CatText := Language.Translate('SONG_JUMPTO_CATTEXT');
@@ -4719,7 +4720,7 @@ begin
   Song.SearchPanel := Default(TThemeStatic);
   with Song.SearchPanel do
   begin
-    X := 335; Y := 20; W := 250; H := 36; Z := 0.97;
+    X := 335; Y := 20; W := 320; H := 26; Z := 0.97;
     ColR := 0.02; ColG := 0.03; ColB := 0.06; Alpha := 0.7;
     ScaleMode := lsStretch;
   end;
@@ -4729,8 +4730,8 @@ begin
   with Song.SearchText do
   begin
     X := Song.SearchPanel.X + 8; Y := Song.SearchPanel.Y + 4;
-    W := Song.SearchPanel.W - 16; H := Song.SearchPanel.H - 8;
-    Z := 0.98; Size := 18; Align := 0; Reflection := false;
+    W := Song.SearchPanel.W - 16; H := Song.SearchPanel.H - 4;
+    Z := 0.98; Size := 22; Align := 0; Reflection := false;
     ColR := 1; ColG := 1; ColB := 1; ScaleMode := lsStretch;
   end;
   if SectionExists('SongSearchText', Enabled) then
