@@ -7,11 +7,12 @@
 <body class="settings-form">
   <svg class="background-edge" src="edge-main.svg" />
   <img class="background" src="../../themes/Modern/[bg-main]blue.jpg" />
-  <div class="foreground">
+  <div data-model="game">
+  <div class="foreground" data-class-preview="data.form.preview">
     <img class="heading-icon" src="../../themes/Modern/[icon]options.png" />
     <span class="heading" lang="SING_OPTIONS" />
     <span class="description" bind-text="form.description" />
-    <div class="form-area" data-model="game">
+    <div class="form-area">
       <div class="form-fields">
         <div data-for="field : data.form.fields" class="form-row" data-class-selected="field.selected" data-class-section="field.kind == 2" data-class-command="field.kind == 1">
           <button class="form-label" action="form.activate" data-attr-id="'field-' + field.id" data-attr-target="field.id"><span>{{ field.label }}</span></button>
@@ -23,12 +24,13 @@
         </div>
       </div>
       <button id="form-back" class="form-back" action="navigation.back" data-class-selected="data.form.backSelected"><span lang="SING_OPTIONS_EXIT" /></button>
-      <div class="form-back-reflection" data-class-selected="data.form.backSelected"><span lang="SING_OPTIONS_EXIT" /></div>
+      <div class="form-back-reflection" data-class-selected="data.form.backSelected" />
     </div>
     <div id="form-components" />
     <svg class="footer" src="footer.svg" />
     <div class="footer-labels"><template src="footer-form" /></div>
     <div class="reflection-clip"><div class="footer-labels"><template src="footer-form" /></div></div>
+  </div>
   </div>
 </body>
 </template>

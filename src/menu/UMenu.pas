@@ -230,6 +230,7 @@ TOptionsMenu = class(TMenu)
   private
     DocumentUI: TDocumentUI;
     Fields: array of TOptionModel;
+    DocumentPreview: boolean;
     function AddField(const Key: UTF8String; Kind: TOptionKind): integer;
     procedure SyncDocument;
   protected
@@ -238,6 +239,9 @@ TOptionsMenu = class(TMenu)
     Description: AnsiString;
     WhereAmI:    AnsiString;
     function DocumentRegion(const ID: UTF8String; out Bounds: TDocumentRegion): boolean;
+    function HasDocumentUI: boolean;
+    procedure SetDocumentPreview(Value: boolean);
+    procedure SetOptionLabel(InteractionID: integer; const Key: UTF8String);
     procedure Load;
     procedure LoadWidgets; virtual; abstract;
     procedure LoadLegend; virtual;
@@ -2406,6 +2410,24 @@ begin
   else if (SelectNum >= 0) and (SelectNum < Length(Fields)) then Fields[SelectNum].Bind(Data, Values);
 end;
 
+function TOptionsMenu.HasDocumentUI: boolean;
+begin
+  Result := DocumentUI <> nil;
+end;
+
+procedure TOptionsMenu.SetDocumentPreview(Value: boolean);
+begin
+  DocumentPreview := Value;
+end;
+
+procedure TOptionsMenu.SetOptionLabel(InteractionID: integer; const Key: UTF8String);
+begin
+  if (InteractionID < 0) or (InteractionID >= Length(Interactions)) then Exit;
+  if DocumentUI <> nil then Fields[InteractionID].Key := Key
+  else if Interactions[InteractionID].Typ = iButton then
+    Button[Interactions[InteractionID].Num].Text[0].Text := Language.Translate(Key);
+end;
+
 function TOptionsMenu.DocumentRegion(const ID: UTF8String; out Bounds: TDocumentRegion): boolean;
 begin
   Result := (DocumentUI <> nil) and DocumentUI.Region(ID, Bounds);
@@ -2483,6 +2505,7 @@ end;
 procedure TOptionsMenu.SyncDocument;
 var I: integer; Prefix: UTF8String;
 begin
+  DocumentUI.SetModel(uiFormPreview, IntToStr(Ord(DocumentPreview)), 2);
   DocumentUI.SetArray(uiFormFields, Length(Fields) - 1);
   for I := 0 to High(Fields) - 1 do
   begin
@@ -2541,6 +2564,12 @@ function TOptionsMenu.DrawFG;
 var
   J: integer;
 begin
+  if DocumentUI <> nil then
+  begin
+    SyncDocument;
+    Exit(DocumentUI.Draw(false, true));
+  end;
+
   for J := 0 to High(Statics) do
     Statics[J].Draw;
   for J := 0 to High(Text) do

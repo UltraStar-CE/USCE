@@ -90,8 +90,6 @@ int main(int argc, char** argv) {
             require(std::string(ui_action()) == "game.sing", "Named mouse action");
             ui_clear_action(); ui_key(1); ui_key(0);
             require(std::string(ui_action()) == "game.party", "Document-order keyboard action");
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
-            glDeleteFramebuffers(1, &framebuffer); glDeleteTextures(1, &texture);
             require(ui_open(settings_document.c_str()) != 0, "Settings document");
             ui_render(1280, 720, 0);
             ui_key(2); ui_key(0);
@@ -143,6 +141,28 @@ int main(int argc, char** argv) {
             ui_render(1024, 768, 0);
             require(ui_bounds("lyrics-preview-0", &x, &y, &width, &height) != 0 && std::abs(width - 819.2f) < 1 && std::abs(height - 51.2f) < 1, "Preview geometry follows theme resizing");
             require(ui_bounds("missing-region", &x, &y, &width, &height) == 0, "Missing preview region is optional");
+            ui_model_array("form.fields", 1);
+            ui_model_set("form.fields[0].id", "0", 1);
+            ui_model_set("form.fields[0].label", "Camera", 0);
+            ui_model_set("form.fields[0].value", "Off", 0);
+            ui_model_set("form.fields[0].kind", "0", 1);
+            ui_model_set("form.fields[0].selected", "1", 2);
+            ui_model_set("form.fields[0].previous", "0", 2);
+            ui_model_set("form.fields[0].next", "1", 2);
+            const auto webcam_document = utf8(root / "frontends/modern/settings-webcam.rml");
+            require(ui_open(webcam_document.c_str()) != 0, "Webcam document");
+            ui_model_set("form.preview", "1", 2);
+            glClear(GL_COLOR_BUFFER_BIT);
+            ui_render(1280, 720, 1);
+            glReadPixels(300, 720-180, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+            require(pixel[3] > 80 && pixel[3] < 150, "Theme dims controls during camera preview");
+            ui_model_set("form.preview", "0", 2);
+            glClear(GL_COLOR_BUFFER_BIT); ui_render(1280, 720, 1);
+            glReadPixels(300, 720-180, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+            require(pixel[3] > 200, "Leaving camera preview restores control opacity");
+            require(ui_bounds("webcam-preview", &x, &y, &width, &height) != 0 && width == 1280 && height == 720, "Theme-defined webcam surface");
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glDeleteFramebuffers(1, &framebuffer); glDeleteTextures(1, &texture);
             ui_shutdown();
         }
         SDL_GL_DeleteContext(gl_context); SDL_DestroyWindow(window); SDL_Quit();

@@ -34,6 +34,8 @@ const
   uiFormActivate = 'form.activate';
   uiScreenSettingsGame = 'settings-game';
   uiScreenSettingsGraphics = 'settings-graphics';
+  uiFormPreview = 'form.preview';
+  uiScreenSettingsWebcam = 'settings-webcam';
   uiScreenSettingsLyrics = 'settings-lyrics';
   uiScreenSettingsSound = 'settings-sound';
   uiScreenSettingsInput = 'settings-input';
@@ -54,7 +56,7 @@ type
     destructor Destroy; override;
     procedure SetValue(const Name, Value: UTF8String);
     procedure SetNumber(const Name: UTF8String; Value: double);
-    function Draw(BackgroundOnly: boolean = false): boolean;
+    function Draw(BackgroundOnly: boolean = false; ForegroundOnly: boolean = false): boolean;
     procedure Mouse(X, Y: integer; Button: integer = -1; Down: boolean = false);
     procedure Key(Direction: integer);
     procedure Scroll(Delta: single);
@@ -214,12 +216,12 @@ begin
   if Current = Self then SetBinding(PAnsiChar(Name), PAnsiChar(Value));
 end;
 
-function TDocumentUI.Draw(BackgroundOnly: boolean): boolean;
+function TDocumentUI.Draw(BackgroundOnly, ForegroundOnly: boolean): boolean;
 begin
   Result := Activate;
   if Result then
     if BackgroundOnly then Render(ScreenW, ScreenH, 2)
-    else Render(ScreenW, ScreenH, Ord(TMenuBackground.SuppressDrawing));
+    else Render(ScreenW, ScreenH, Ord(ForegroundOnly or TMenuBackground.SuppressDrawing));
 end;
 
 procedure TDocumentUI.SetNumber(const Name: UTF8String; Value: double);
