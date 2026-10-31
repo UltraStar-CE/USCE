@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.22)
 project(usce_phone_audio LANGUAGES C CXX)
 include(FetchContent)
 set(CMAKE_CXX_STANDARD 17)

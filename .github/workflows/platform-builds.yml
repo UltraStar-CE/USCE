@@ -376,7 +376,13 @@ jobs:
       - name: Install native build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y fpc automake build-essential pkg-config libsdl2-image-dev libavformat-dev libavcodec-dev libavutil-dev libswresample-dev libswscale-dev libsqlite3-dev libfreetype6-dev portaudio19-dev liblua5.3-dev fonts-dejavu-core dpkg-dev desktop-file-utils
+          sudo apt-get install -y fpc automake build-essential cmake ninja-build libssl-dev pkg-config libsdl2-image-dev libavformat-dev libavcodec-dev libavutil-dev libswresample-dev libswscale-dev libsqlite3-dev libfreetype6-dev portaudio19-dev liblua5.3-dev fonts-dejavu-core dpkg-dev desktop-file-utils
+      - name: Stage native phone receiver
+        run: |
+          cmake -S native/phone-audio -B build/phone-audio -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/phone-audio --parallel 2
+          ctest --test-dir build/phone-audio --output-on-failure
+          python3 tools/stage-phone-audio.py --platform linux --openssl-license /usr/share/doc/libssl-dev/copyright
       - name: Build native game
         run: |
           ./autogen.sh

@@ -156,7 +156,6 @@ uses
   URecord,
   UText,
   UParty,
-  URecord,
   URemoteBridgeIPC,
   UInputSource,
   UGraphic,

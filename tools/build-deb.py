@@ -35,7 +35,11 @@ def build(version, output, themes):
         shutil.copyfile(ROOT / 'icons/usce-icon_256.png', icon)
         (work / 'debian').mkdir()
         (work / 'debian/control').write_text('Source: usce\nSection: games\nPriority: optional\nMaintainer: UltraStar Community Edition contributors <noreply@github.com>\n\nPackage: usce\nArchitecture: any\nDescription: UltraStar Community Edition karaoke game\n')
-        result = subprocess.check_output(['dpkg-shlibdeps', '-O', '-S' + str(stage), '-e' + str(executable)], cwd=work, text=True)
+        receiver = stage / 'usr/bin/libusce-phone-audio.so'
+        if not receiver.is_file():
+            raise ValueError('Build and stage the native phone receiver before packaging')
+        result = subprocess.check_output(['dpkg-shlibdeps', '-O', '-S' + str(stage),
+                                          '-e' + str(executable), '-e' + str(receiver)], cwd=work, text=True)
         dependencies = result.strip().removeprefix('shlibs:Depends=')
         # These are loaded dynamically and therefore absent from ELF NEEDED.
         linked = {part.strip().split()[0] for part in dependencies.split(',')}
