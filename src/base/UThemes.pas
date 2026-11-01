@@ -712,6 +712,8 @@ type
   TThemeEditSub = class(TThemeBasic)
       InactiveVoiceColor: TRGB;
       InactiveVoiceAlpha: real;
+      SelectedUnpitchedNoteAlpha: real;
+      SelectedUnpitchedNoteFilled: boolean;
       VoiceFieldPadding: integer;
       // statics
       BackgroundImage:              TThemeStatic;
@@ -2476,6 +2478,9 @@ begin
       EditSub.InactiveVoiceColor.B := EnsureRange(ReadFloat(SectionList, 'Blue', 0.45), 0.0, 1.0);
       EditSub.InactiveVoiceAlpha := EnsureRange(ReadFloat(SectionList, 'Alpha', 0.4), 0.0, 1.0);
       EditSub.VoiceFieldPadding := Max(0, ReadInteger(SectionList, 'FieldPadding', 4));
+      SectionList := GetSectionList('EditSubSelectedUnpitchedNote');
+      EditSub.SelectedUnpitchedNoteAlpha := EnsureRange(ReadFloat(SectionList, 'Alpha', 1), 0.0, 1.0);
+      EditSub.SelectedUnpitchedNoteFilled := ReadInteger(SectionList, 'Filled', 1) <> 0;
       ThemeLoadStatic(EditSub.BackgroundImage, 'EditSubBackgroundImage');
       ThemeLoadStatic(EditSub.HeaderBackground, 'EditSubHeaderBackground');
       ThemeLoadStatic(EditSub.CurrentNoteInfoBackground, 'EditSubCurrentNoteInfoBackground');
