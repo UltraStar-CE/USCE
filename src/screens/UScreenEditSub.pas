@@ -476,6 +476,7 @@ type
       constructor Create; override;
       destructor Destroy; override;
       procedure OnShow; override;
+      procedure OnShowFinish; override;
       function  ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       function  ParseInputEditText(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
       function  ParseInputEditBPM(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
@@ -6608,6 +6609,14 @@ begin
 
   editLengthText := 0;
   TextPosition := -1;
+end;
+
+procedure TScreenEditSub.OnShowFinish;
+begin
+  inherited;
+  // The outgoing song screen resets the shared playback volume in OnHide,
+  // after this editor's OnShow opened its audio. Reapply the editor's setting.
+  AudioPlayback.SetVolume(EnsureRange(Ini.AudioVolume, 0, 100) / 100);
 end;
 
 procedure TScreenEditSub.SyncVolumeSlidersFromIni;
