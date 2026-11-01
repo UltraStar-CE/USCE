@@ -3443,6 +3443,7 @@ begin
   begin
     if ((MouseButton = SDL_BUTTON_RIGHT) or (MouseButton = SDL_BUTTON_LEFT)) and (NoteIndex >= 0) then
     begin
+      StopPreviewPlayback;
       LastPressedMouseType := MouseButton;
       LastX := CurrentX;
       LastY := CurrentY;
