@@ -12,7 +12,7 @@ type
   protected
     procedure Execute; override;
   public
-    Entries, Seen: TStringList;
+    Entries, Seen, Failed: TStringList;
     Failure, AgeCountry: UTF8String;
     DefaultEncoding: UTextEncoding.TEncoding;
     constructor Create(const Paths, LibraryRoots: TPathDynArray; Encoding: UTextEncoding.TEncoding; const Country: UTF8String);
@@ -49,6 +49,7 @@ begin
   Seen := TStringList.Create;
   Seen.Sorted := true;
   Seen.CaseSensitive := true;
+  Failed := TStringList.Create;
   Start;
 end;
 destructor TLibraryRefresh.Destroy;
@@ -59,6 +60,7 @@ begin
   for I := 0 to Entries.Count - 1 do Entries.Objects[I].Free;
   Entries.Free;
   Seen.Free;
+  Failed.Free;
   inherited;
 end;
 class function TLibraryRefresh.Key(const Name: IPath): string;
@@ -106,12 +108,21 @@ begin
       begin
         Entries.AddObject(Key(Name), Song);
         Song := nil;
+      end
+      else
+      begin
+        Failed.Add(Key(Name));
+        Log.LogSongError('Could not load song headers: ' + Name.ToUTF8);
       end;
     finally
       Stream.Free;
     end;
   except
-    on E: Exception do Log.LogError(Name.ToUTF8 + ': ' + E.Message, 'Library refresh');
+    on E: Exception do
+    begin
+      Failed.Add(Key(Name));
+      Log.LogSongError(Name.ToUTF8 + ': ' + E.Message);
+    end;
   end;
   Song.Free;
 end;
