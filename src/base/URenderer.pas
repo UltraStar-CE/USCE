@@ -177,6 +177,7 @@ type
       OutlineWidth: single; // fraction of the shorter side; 0 keeps a filled texture
       CornerRadius: single; // fraction of the shorter displayed side, 0..0.5
       EdgeExtend: boolean;
+      EdgeExtendAllowUpscale: boolean;
       EdgeExtendSolidFill: boolean;
       EdgeExtendPixels: single;
       EdgeExtendFillR: single;
@@ -370,6 +371,7 @@ begin
   CornerRadius := 0;
   OutlineWidth := 0;
   EdgeExtend := false;
+  EdgeExtendAllowUpscale := true;
   EdgeExtendSolidFill := false;
   EdgeExtendPixels := 1;
   EdgeExtendFillR := 0;
@@ -410,6 +412,7 @@ begin
   T.CornerRadius := CornerRadius;
   T.OutlineWidth := OutlineWidth;
   T.EdgeExtend := EdgeExtend;
+  T.EdgeExtendAllowUpscale := EdgeExtendAllowUpscale;
   T.EdgeExtendSolidFill := EdgeExtendSolidFill;
   T.EdgeExtendPixels := EdgeExtendPixels;
   T.EdgeExtendFillR := EdgeExtendFillR;

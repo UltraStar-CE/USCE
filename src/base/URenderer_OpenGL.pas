@@ -187,6 +187,7 @@ uses
   Math,
   UGraphic,
   ULog,
+  UImageFit,
   SysUtils;
 
 const
@@ -970,11 +971,14 @@ var
   Scale: single;
   CropAmount: single;
   U1, U2, V1, V2: single;
-  EdgeU: single;
-  BlurU: single;
+  EdgeU, EdgeV: single;
+  BlurU, BlurV: single;
   LayoutScaleCorrection: single;
-  DrawX, DrawW: single;
-  LeftPad, RightPad: single;
+  Target, Fitted: TImageFitRect;
+  GridX, GridY: array[0..3] of single;
+  FromU, ToU, FromV, ToV: array[0..2] of single;
+  Column, Row: integer;
+  PadX, PadY, PadW, PadH: single;
 
   procedure DrawEdge(X, Y, W, H, TexX1, TexY1, TexX2, TexY2: single);
   begin
@@ -1032,48 +1036,63 @@ begin
       begin
         if MainTexture.EdgeExtend then
         begin
-          // Logical coordinates are stretched independently on each axis.
-          // Preserve the source aspect in physical pixels, then fill only
-          // the horizontal remainder with the requested edge treatment.
-          DrawW := SourceAspect * MainTexture.H * LayoutScaleCorrection;
-          if DrawW > MainTexture.W then
-            DrawW := MainTexture.W;
-          DrawX := MainTexture.X + (MainTexture.W - DrawW) / 2;
+          Target.X := MainTexture.X;
+          Target.Y := MainTexture.Y;
+          Target.W := MainTexture.W;
+          Target.H := MainTexture.H;
+          if not FitImageInside(MainTexture.SourceW * Abs(U2 - U1),
+            MainTexture.SourceH * Abs(V2 - V1), GetLayoutScaleX, GetLayoutScaleY,
+            Target, Fitted, MainTexture.EdgeExtendAllowUpscale) then Exit;
 
-          // Keep the edge next to the image sharp, but gradually sample
-          // farther into the image toward the outside of each pad.  This is
-          // the legacy background behaviour; stretching one wide strip here
-          // makes the extension visibly harsher.
-          EdgeU := (1 / MainTexture.SourceW) * Abs(U2 - U1);
-          BlurU := (MainTexture.EdgeExtendPixels / MainTexture.SourceW) *
-            Abs(U2 - U1);
-          if BlurU <= EdgeU then
-            BlurU := EdgeU * 2;
+          // Extend a narrow strip at each exposed side, preserving the entire
+          // image at its fitted size. Small images can leave all four sides.
+          EdgeU := Abs(U2 - U1) / MainTexture.SourceW;
+          EdgeV := Abs(V2 - V1) / MainTexture.SourceH;
+          BlurU := Max(MainTexture.EdgeExtendPixels, 2) * EdgeU;
+          BlurV := Max(MainTexture.EdgeExtendPixels, 2) * EdgeV;
+          GridX[0] := Target.X;
+          GridX[1] := Fitted.X;
+          GridX[2] := Fitted.X + Fitted.W;
+          GridX[3] := Target.X + Target.W;
+          GridY[0] := Target.Y;
+          GridY[1] := Fitted.Y;
+          GridY[2] := Fitted.Y + Fitted.H;
+          GridY[3] := Target.Y + Target.H;
+          FromU[0] := Min(U1 + BlurU, U2); ToU[0] := Min(U1 + EdgeU * 0.5, U2);
+          FromU[1] := U1; ToU[1] := U2;
+          FromU[2] := Max(U2 - EdgeU * 0.5, U1); ToU[2] := Max(U2 - BlurU, U1);
+          FromV[0] := Min(V1 + BlurV, V2); ToV[0] := Min(V1 + EdgeV * 0.5, V2);
+          FromV[1] := V1; ToV[1] := V2;
+          FromV[2] := Max(V2 - EdgeV * 0.5, V1); ToV[2] := Max(V2 - BlurV, V1);
 
-          LeftPad := DrawX - MainTexture.X;
-          RightPad := MainTexture.X + MainTexture.W - (DrawX + DrawW);
+          // The eight cells around the image include the corners when both
+          // axes need padding. Each samples its neighbouring image edge.
+          for Row := 0 to 2 do
+            for Column := 0 to 2 do
+              if (Column <> 1) or (Row <> 1) then
+              begin
+                PadX := GridX[Column]; PadY := GridY[Row];
+                PadW := GridX[Column + 1] - PadX;
+                PadH := GridY[Row + 1] - PadY;
+                if (PadW <= 0) or (PadH <= 0) then Continue;
+                if MainTexture.EdgeExtendSolidFill then
+                  DrawSolidEdge(PadX, PadY, PadW, PadH)
+                else
+                begin
+                  // Overlap one logical pixel to avoid seams at the image.
+                  if Column = 0 then PadW := PadW + 1;
+                  if Column = 2 then begin PadX := PadX - 1; PadW := PadW + 1; end;
+                  if Row = 0 then PadH := PadH + 1;
+                  if Row = 2 then begin PadY := PadY - 1; PadH := PadH + 1; end;
+                  DrawEdge(PadX, PadY, PadW, PadH,
+                    FromU[Column], FromV[Row], ToU[Column], ToV[Row]);
+                end;
+              end;
 
-          if MainTexture.EdgeExtendSolidFill then
-          begin
-            DrawSolidEdge(MainTexture.X, MainTexture.Y,
-              LeftPad, MainTexture.H);
-            DrawSolidEdge(DrawX + DrawW, MainTexture.Y,
-              RightPad, MainTexture.H);
-          end
-          else
-          begin
-            // The one logical-pixel overlap avoids a seam between the edge
-            // strip and the centred image.
-            DrawEdge(MainTexture.X, MainTexture.Y,
-              LeftPad + 1, MainTexture.H,
-              Min(U1 + BlurU, U2), V1, Min(U1 + EdgeU * 0.5, U2), V2);
-            DrawEdge(DrawX + DrawW - 1, MainTexture.Y,
-              RightPad + 1, MainTexture.H,
-              Max(U2 - EdgeU * 0.5, U1), V1, Max(U2 - BlurU, U1), V2);
-          end;
-
-          MainTexture.X := DrawX;
-          MainTexture.W := DrawW;
+          MainTexture.X := Fitted.X;
+          MainTexture.Y := Fitted.Y;
+          MainTexture.W := Fitted.W;
+          MainTexture.H := Fitted.H;
           MainTexture.ScaleMode := lsStretch;
           MainTexture.EdgeExtend := false;
         end
