@@ -26,7 +26,7 @@ var DuplicateSongPopup: TDuplicateSongPopup;
 procedure CheckStartupSongIdentities(ContinueStartup: TStartupContinuation);
 implementation
 uses SysUtils, USongs, USongIdentity, UGraphic, ULanguage, UScreenPopup, UPlaylist,
-  UThemes, UUnicodeUtils, UMain, URenderer, UCommon;
+  UThemes, UUnicodeUtils, UMain, URenderer, UCommon, UCommandLine;
 constructor TDuplicateSongPopup.Create;
 var I: integer; Basic: TThemeBasic;
 begin
@@ -152,6 +152,11 @@ end;
 procedure CheckStartupSongIdentities(ContinueStartup: TStartupContinuation);
 begin
   FreeAndNil(DuplicateSongPopup);
+  if Params.IgnoreDuplicateSongs then
+  begin
+    ContinueStartup;
+    Exit;
+  end;
   DuplicateSongPopup := TDuplicateSongPopup.Create;
   DuplicateSongPopup.Start(ContinueStartup);
 end;
