@@ -123,6 +123,8 @@ type
       MidiPos:                 real;
       MidiSyncToAudio:         boolean;
       CuePlaybackActive:       boolean;
+      CueStartLine, CueStopLine, CueNoteIndex: Integer;
+      CueIncludeMidi, CueIncludeClicks: boolean;
       EditorMidiPitchOffset:   Integer;
 
       //for mouse move
@@ -455,6 +457,7 @@ type
       procedure ScheduleCuePlayback(StartTime, StopTime: real; StartLine, StopLine: Integer; IncludeMidi, IncludeClicks, SyncToAudio: boolean);
       procedure ScheduleCueNotePlayback(StartTime, StopTime: real; IncludeMidi, IncludeClick, SyncToAudio: boolean);
       procedure PlayScheduledCue;
+      procedure RescheduleCuePlayback(GapDelta: real);
       procedure LoadCurrentLyricForTextEdit(CursorPosition: Integer);
       function  GetInteractiveNoteIndex(InteractionIndex: Integer): Integer;
       procedure CancelPendingNoteClick;
@@ -578,9 +581,19 @@ begin
   SDL_ModState := SDL_GetModState and (KMOD_LSHIFT + KMOD_RSHIFT
     + KMOD_LCTRL + KMOD_RCTRL + KMOD_LALT + KMOD_RALT {+ KMOD_CAPS});
 
+  // Modifier keys and the system task switch are not editor commands.
+  // In particular, pressing Alt must not stop synth playback before Alt+Tab.
+  case PressedKey of
+    SDLK_LSHIFT, SDLK_RSHIFT, SDLK_LCTRL, SDLK_RCTRL,
+    SDLK_LALT, SDLK_RALT, SDLK_LGUI, SDLK_RGUI: Exit;
+    SDLK_TAB: if (SDL_ModState and KMOD_ALT) <> 0 then Exit;
+  end;
+
   if PressedDown and
      not ((((PressedKey = SDLK_LEFT) or (PressedKey = SDLK_RIGHT)) and (SDL_ModState = 0)) or
-          (PressedKey = SDLK_SPACE)) then
+          (PressedKey = SDLK_SPACE) or
+          (((PressedKey = SDLK_9) or (PressedKey = SDLK_0)) and
+           ((SDL_ModState = 0) or (SDL_ModState = KMOD_LSHIFT)))) then
     StopMidiPlayback;
 
   if PianoEditMode then
@@ -1070,6 +1083,11 @@ begin
   MidiStart := StartTime;
   MidiStop := StopTime;
   MidiSyncToAudio := SyncToAudio;
+  CueStartLine := StartLine;
+  CueStopLine := StopLine;
+  CueNoteIndex := -1;
+  CueIncludeMidi := IncludeMidi;
+  CueIncludeClicks := IncludeClicks;
 
   MidiOut.Stop;
   MidiOut.SetPosition(StartTime);
@@ -1083,6 +1101,9 @@ begin
     CurrentSong.Tracks[CurrentTrack].CurrentLine,
     CurrentSong.Tracks[CurrentTrack].CurrentLine,
     false, false, SyncToAudio);
+  CueNoteIndex := CurrentNote[CurrentTrack];
+  CueIncludeMidi := IncludeMidi;
+  CueIncludeClicks := IncludeClick;
   ScheduleCueNote(CurrentSong.Tracks[CurrentTrack].CurrentLine, CurrentNote[CurrentTrack],
     StartTime, StopTime, IncludeMidi, IncludeClick);
 end;
@@ -1094,6 +1115,38 @@ begin
     MidiOut.Play;
     CuePlaybackActive := true;
   end;
+end;
+
+procedure TScreenEditSub.RescheduleCuePlayback(GapDelta: real);
+var
+  Position: real;
+begin
+  if not CuePlaybackActive or not Assigned(MidiOut) then
+    Exit;
+
+  // Keep the music clock running. Replace old events with the remaining part
+  // of the same preview, whose note times now include the edited GAP.
+  Position := GetPreviewPosition;
+  MidiStop := MidiStop + GapDelta;
+  if MidiSyncToAudio then
+    PlayStopTime := PlayStopTime + GapDelta;
+  if Position >= MidiStop then
+  begin
+    StopMidiPlayback;
+    Exit;
+  end;
+
+  MidiOut.Stop;
+  MidiOut.SetPosition(Position); // clears queued events and sounding notes
+  MidiStart := Position;
+  MidiTime := USTime.GetTime;
+  if CueNoteIndex >= 0 then
+    ScheduleCueNote(CueStartLine, CueNoteIndex, Position, MidiStop,
+      CueIncludeMidi, CueIncludeClicks)
+  else
+    ScheduleCueRange(CueStartLine, CueStopLine, Position, MidiStop,
+      CueIncludeMidi, CueIncludeClicks);
+  PlayScheduledCue;
 end;
 
 procedure TScreenEditSub.UpdateMidiPitchOffset;
@@ -1692,11 +1745,13 @@ begin
   if SDL_ModState = 0 then
   begin
     CurrentSong.GAP := CurrentSong.GAP - 10;
+    RescheduleCuePlayback(-0.01);
     Text[TextInfo].Text := Language.Translate('EDIT_INFO_GAP_DECREASED_BY') + ' 10 ms';
   end;
   if SDL_ModState = KMOD_LSHIFT then
   begin
     CurrentSong.GAP := CurrentSong.GAP - 1000;
+    RescheduleCuePlayback(-1.0);
     Text[TextInfo].Text := Language.Translate('EDIT_INFO_GAP_DECREASED_BY') + ' 1000 ms';
   end;
 end;
@@ -1709,11 +1764,13 @@ begin
   if SDL_ModState = 0 then
   begin
     CurrentSong.GAP := CurrentSong.GAP + 10;
+    RescheduleCuePlayback(0.01);
     Text[TextInfo].Text := Language.Translate('EDIT_INFO_GAP_INCREASED_BY') + ' 10 ms';
   end;
   if SDL_ModState = KMOD_LSHIFT then
   begin
     CurrentSong.GAP := CurrentSong.GAP + 1000;
+    RescheduleCuePlayback(1.0);
     Text[TextInfo].Text := Language.Translate('EDIT_INFO_GAP_INCREASED_BY') + ' 1000 ms';
   end;
 end;
