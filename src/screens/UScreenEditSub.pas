@@ -590,7 +590,8 @@ begin
   end;
 
   if PressedDown and
-     not ((((PressedKey = SDLK_LEFT) or (PressedKey = SDLK_RIGHT)) and (SDL_ModState = 0)) or
+     not ((((PressedKey = SDLK_LEFT) or (PressedKey = SDLK_RIGHT) or
+            (PressedKey = SDLK_UP) or (PressedKey = SDLK_DOWN)) and (SDL_ModState = 0)) or
           (PressedKey = SDLK_SPACE) or
           (((PressedKey = SDLK_9) or (PressedKey = SDLK_0)) and
            ((SDL_ModState = 0) or (SDL_ModState = KMOD_LSHIFT)))) then
@@ -2373,11 +2374,6 @@ begin
   begin
     // clear debug text
     Text[TextInfo].Text := '';
-    AudioPlayback.Stop;
-    PlaySentence := false;
-    PlayOne := false;
-    PlaySentenceMidi := false;
-    PlayVideo := false;
     CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Color := 1;
     Inc(CurrentNote[CurrentTrack]);
     if CurrentNote[CurrentTrack] > CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].HighNote then
@@ -2450,11 +2446,6 @@ begin
   begin
     // clear debug text
     Text[TextInfo].Text := '';
-    AudioPlayback.Stop();
-    PlaySentence := false;
-    PlayOne := false;
-    PlaySentenceMidi := false;
-    PlayVideo := false;
 
     CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Color := 1;
     Dec(CurrentNote[CurrentTrack]);
@@ -4118,6 +4109,7 @@ end;
 
 procedure TScreenEditSub.NextSentence;
 begin
+  if CurrentSong.Tracks[CurrentTrack].High <= 0 then Exit;
   PlayOne := false;
   CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Color := 1;
   Inc(CurrentSong.Tracks[CurrentTrack].CurrentLine);
@@ -4129,7 +4121,8 @@ begin
 
   EditorLyrics[CurrentTrack].AddLine(CurrentTrack, CurrentSong.Tracks[CurrentTrack].CurrentLine);
   EditorLyrics[CurrentTrack].Selected := 0;
-  AudioPlayback.Stop();
+  AudioPlayback.Stop;
+  StopMidiPlayback;
   PlaySentence := false;
   PlaySentenceMidi := false;
   PlayVideo := false;
@@ -4138,7 +4131,9 @@ end;
 
 procedure TScreenEditSub.PreviousSentence;
 begin
-  AudioPlayback.Stop();
+  if CurrentSong.Tracks[CurrentTrack].High <= 0 then Exit;
+  AudioPlayback.Stop;
+  StopMidiPlayback;
   PlayVideo := false;
   PlaySentence := false;
   PlaySentenceMidi := false;
@@ -5756,9 +5751,7 @@ begin
   PlayOne := false;
   PlayVideo := false;
   StopVideoPreview;
-  {$IFDEF UseMIDIPort}
   StopMidiPlayback;
-  {$ENDIF}
 
   CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Color := 1;
   CurrentTrack := TrackIndex;
