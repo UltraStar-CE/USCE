@@ -1909,6 +1909,7 @@ end;
       // SDLK_F4: EnterTextEditMode
 procedure TScreenEditSub.EnterTextEditMode(SDL_ModState: word);
 begin
+  StopPreviewPlayback;
   // Enter Text Edit Mode
   LoadCurrentLyricForTextEdit(-1);
   TextEditMode := true;
@@ -2189,6 +2190,7 @@ begin
 
     if Interaction = LyricSlideId then
     begin
+      StopPreviewPlayback;
       BackupEditText := CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Text;
       CurrentEditText := BackupEditText;
       editLengthText := LengthUTF8(BackupEditText);
@@ -3325,6 +3327,7 @@ begin
       CursorWordIndex, CursorCharIndex) then
     begin
       CancelPendingNoteClick;
+      StopPreviewPlayback;
       CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Color := 1;
       CurrentNote[CurrentTrack] := CursorWordIndex;
       CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Color := P1_INVERTED;
