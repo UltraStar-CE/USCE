@@ -608,8 +608,9 @@ begin
 end;
 
 procedure TScreenSongJumpto.LibraryChanged(PreviousCategory: integer);
-var Kind: TSongFilter;
+var Kind: TSongFilter; HadPending: boolean;
 begin
+  HadPending := fPending;
   for Kind := Low(TSongFilter) to High(TSongFilter) do
   begin FreeAndNil(fValueCache[Kind].Values); FreeAndNil(fValueCache[Kind].Keys); end;
   fValues := nil;
@@ -618,7 +619,7 @@ begin
   fSuggestionFocus := false;
   SetLength(fMatches, 0);
   fSuggestionContext := #1;
-  if (PreviousCategory = -2) or ((PreviousCategory = -3) and fPlaylistSearch) then
+  if HadPending or (PreviousCategory = -2) or ((PreviousCategory = -3) and fPlaylistSearch) then
     ApplyFilter;
 end;
 
