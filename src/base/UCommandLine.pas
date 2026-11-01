@@ -99,7 +99,7 @@ const
   cHelp            = 'help';
   cDebug           = 'debug';
   cCheckSongs      = 'check-songs';
-  cIgnoreDuplicateSongs = 'ignore-duplicate-songs';
+  cIgnoreDuplicateSongs = 'ignore-duplicate-song-warnings';
   cMediaInterfaces = 'showinterfaces';
   cSong            = 'song';
 
@@ -279,7 +279,8 @@ begin
         Debug       := True
       else if (Command = cCheckSongs) then
         CheckSongs  := True
-      else if (Command = cIgnoreDuplicateSongs) or (Command = '-' + cIgnoreDuplicateSongs) then
+      else if (Command = cIgnoreDuplicateSongs) or (Command = '-' + cIgnoreDuplicateSongs) or
+        (Command = 'ignore-duplicate-songs') or (Command = '-ignore-duplicate-songs') then
         IgnoreDuplicateSongs := True
       else if (Command = 'benchmark') then
         Benchmark   := True
