@@ -593,6 +593,7 @@ begin
      not ((((PressedKey = SDLK_LEFT) or (PressedKey = SDLK_RIGHT) or
             (PressedKey = SDLK_UP) or (PressedKey = SDLK_DOWN)) and (SDL_ModState = 0)) or
           (PressedKey = SDLK_SPACE) or
+          ((PressedKey = SDLK_S) and not PianoEditMode) or
           (((PressedKey = SDLK_9) or (PressedKey = SDLK_0)) and
            ((SDL_ModState = 0) or (SDL_ModState = KMOD_LSHIFT)))) then
     StopMidiPlayback;
