@@ -1225,6 +1225,7 @@ var
   Space: real;
   Texture: TTexture;
   ColorR, ColorG, ColorB, A: single;
+  UseRapTexture: boolean;
 begin
   Space := H / (NumLines - 1);
 
@@ -1297,12 +1298,19 @@ begin
           end;
         end; // case
 
+        UseRapTexture := IsUnpitchedNote(NoteType);
+        if UseRapTexture and (Color = P1_INVERTED) then
+        begin
+          A := Theme.EditSub.SelectedUnpitchedNoteAlpha;
+          UseRapTexture := not Theme.EditSub.SelectedUnpitchedNoteFilled;
+        end;
+
         // left part
         Rec.Left  := (StartBeat - CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine].Notes[0].StartBeat) * TempR + X + 0.5;
         Rec.Right := Rec.Left + NotesW[0];
         Rec.Top := YBaseNote - (Tone-BaseNote)*Space/2 - NotesH[0];
         Rec.Bottom := Rec.Top + 2 * NotesH[0];
-        If IsUnpitchedNote(NoteType) then
+        if UseRapTexture then
         begin
           If Color = P1_INVERTED then
             Texture := Tex_Left_Rap_Inv
@@ -1338,7 +1346,7 @@ begin
         Rec.Left  := Rec.Right;
         Rec.Right := (StartBeat + Duration - CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine].Notes[0].StartBeat) * TempR + X - NotesW[0] - 0.5;
 
-        If IsUnpitchedNote(NoteType) then
+        if UseRapTexture then
         begin
           If Color = P1_INVERTED then
             Texture := Tex_Mid_Rap_Inv
@@ -1373,7 +1381,7 @@ begin
         Rec.Left  := Rec.Right;
         Rec.Right := Rec.Right + NotesW[0];
 
-        If IsUnpitchedNote(NoteType) then
+        if UseRapTexture then
         begin
           If Color = P1_INVERTED then
             Texture := Tex_Right_Rap_Inv
