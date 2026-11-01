@@ -61,6 +61,7 @@ type
       Benchmark:  boolean;
       NoLog:      boolean;
       CheckSongs: boolean;
+      IgnoreDuplicateSongs: boolean;
       ScreenMode: TScreenMode;
       Joypad:     boolean;
       Split:      TSplitMode;
@@ -98,6 +99,7 @@ const
   cHelp            = 'help';
   cDebug           = 'debug';
   cCheckSongs      = 'check-songs';
+  cIgnoreDuplicateSongs = 'ignore-duplicate-songs';
   cMediaInterfaces = 'showinterfaces';
   cSong            = 'song';
 
@@ -139,6 +141,7 @@ begin
   writeln('  '+ Fmt(cMediaInterfaces) +' : Show in-use media interfaces');
   writeln('  '+ Fmt(cDebug) +' : Display Debugging info');
   writeln('  '+ Fmt(cCheckSongs) +' : Fully validate song files during startup');
+  writeln('  --'+ cIgnoreDuplicateSongs +' : Skip the duplicate-song dialog without changing song files');
   writeln('  '+ Fmt(cSong + ' <file>') +' : Sing only the given song file, then exit');
   writeln('  -lockdown -playlist <name> -password <password> (always repeats)');
   writeln('  -results / -highscores <manual|skip|5|10|20|30|40|50|60>');
@@ -167,6 +170,7 @@ begin
   Benchmark   := False;
   NoLog       := false;
   CheckSongs  := false;
+  IgnoreDuplicateSongs := false;
   ScreenMode  := scmDefault;
   Joypad      := False;
   Split       := spmDefault;
@@ -275,6 +279,8 @@ begin
         Debug       := True
       else if (Command = cCheckSongs) then
         CheckSongs  := True
+      else if (Command = cIgnoreDuplicateSongs) or (Command = '-' + cIgnoreDuplicateSongs) then
+        IgnoreDuplicateSongs := True
       else if (Command = 'benchmark') then
         Benchmark   := True
       else if (Command = 'nolog') then
