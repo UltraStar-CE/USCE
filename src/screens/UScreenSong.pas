@@ -1591,6 +1591,27 @@ begin
           end;
         end;
 
+      SDLK_HOME, SDLK_END:
+        begin
+          if not FreeListMode or (VS = 0) then Exit;
+          if PressedKey = SDLK_HOME then
+          begin
+            I := 0;
+            while not CatSongs.Song[I].Visible do Inc(I);
+          end
+          else
+          begin
+            I := High(CatSongs.Song);
+            while not CatSongs.Song[I].Visible do Dec(I);
+          end;
+          if I = Interaction then Exit;
+          CloseMessage;
+          LastSelectTime := SDL_GetTicks;
+          SkipTo(CatSongs.VisibleIndex(I), I, VS);
+          AudioPlayback.PlaySound(SoundLib.Change);
+          SetScrollRefresh;
+        end;
+
       SDLK_DOWN:
         begin
           LastSelectTime := SDL_GetTicks;
