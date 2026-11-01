@@ -5056,7 +5056,7 @@ var
   Retired: TList;
   SelectedPath, Category: UTF8String;
   OldCategory, P, Item, I, Index, NewIndex: integer;
-  OldPosition, ListOffset, GridOffset, Candidate: integer;
+  OldPosition, OldListTop, GridOffset, Candidate: integer;
   PlaylistPaths, NewIds, VisiblePaths: TStringList;
   Song: TSong;
   EmptyMainMenu: boolean;
@@ -5073,6 +5073,23 @@ var
     if Found < 0 then Exit;
     Found := PtrInt(NewIds.Objects[Found]) - 1;
     if CatSongs.Song[Found].Visible then Result := Found;
+  end;
+  function RestoredListTop: integer;
+  var Position, Found: integer;
+  begin
+    Result := 0;
+    if VisiblePaths.Count = 0 then Exit;
+    // Keep the first visible song, or its next surviving neighbour if removed.
+    for Position := EnsureRange(OldListTop, 0, VisiblePaths.Count - 1) to VisiblePaths.Count - 1 do
+    begin
+      Found := VisiblePathIndex(VisiblePaths[Position]);
+      if Found >= 0 then Exit(CatSongs.VisibleIndex(Found));
+    end;
+    for Position := Min(OldListTop - 1, VisiblePaths.Count - 1) downto 0 do
+    begin
+      Found := VisiblePathIndex(VisiblePaths[Position]);
+      if Found >= 0 then Exit(CatSongs.VisibleIndex(Found));
+    end;
   end;
 begin
   EmptyMainMenu := (Display.CurrentScreen = @ScreenMain) and (Songs.SongList.Count = 0);
@@ -5098,7 +5115,7 @@ begin
     SelectedPath := SelectionKey(Song);
     OldPosition := Max(0, CatSongs.VisibleIndex(Interaction));
   end;
-  ListOffset := EnsureRange(OldPosition - ListMinLine, 0, Max(0, Theme.Song.ListCover.Rows - 1));
+  OldListTop := ListMinLine;
   GridOffset := EnsureRange(OldPosition div Max(1, Theme.Song.Cover.Cols) - ChessboardMinLine,
     0, Max(0, Theme.Song.Cover.Rows - 1));
   if OldCategory >= 0 then
@@ -5203,7 +5220,7 @@ begin
       if Interaction >= 0 then
       begin
         I := CatSongs.VisibleIndex(Interaction);
-        ListMinLine := I - ListOffset;
+        ListMinLine := RestoredListTop;
         ChessboardMinLine := I div Max(1, Theme.Song.Cover.Cols) - GridOffset;
         FixSelected;
         if TSongMenuMode(Ini.SongMenu) = smRoulette then
