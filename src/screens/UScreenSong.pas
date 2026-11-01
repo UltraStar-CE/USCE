@@ -5245,7 +5245,8 @@ begin
         Text[TextYear].Text := '';
         SongScore;
       end;
-      WriteMessage(Language.Translate('LIBRARY_REFRESH_FINISHED'));
+      if Songs.LastRefreshChanged then
+        WriteMessage(Language.Translate('LIBRARY_REFRESH_FINISHED'));
     finally
       for I := 0 to Retired.Count - 1 do TObject(Retired[I]).Free;
       Retired.Free;
