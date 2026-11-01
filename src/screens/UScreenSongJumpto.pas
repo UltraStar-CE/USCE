@@ -79,7 +79,6 @@ type
     procedure UpdateSuggestions;
     procedure DrawSuggestions;
     procedure AcceptSuggestion;
-    procedure FlushChanges;
     function SuggestionPrefix: UTF8String;
     procedure SetVisible(Value: boolean);
     procedure SetTextFound(Count: cardinal; SelectedSong: TSong);
@@ -91,6 +90,8 @@ type
     procedure ActivateAction(Action: integer);
     procedure MoveFocus(Direction: integer);
   public
+    procedure UpdateFilter;
+    procedure FlushChanges;
     procedure LibraryChanged(PreviousCategory: integer);
     function ApplyFilter: cardinal;
     constructor Create; override;
@@ -177,7 +178,7 @@ end;
 function TScreenSongJumpto.GetTypingQuery: UTF8String;
 begin
   Result := '';
-  if (CatSongs.CatNumShow = -2) and (fTypingRow >= 0) and (fTypingRow < Length(fRows)) then
+  if ((CatSongs.CatNumShow = -2) or fPending) and (fTypingRow >= 0) and (fTypingRow < Length(fRows)) then
     Result := fRows[fTypingRow].Query;
 end;
 
@@ -189,7 +190,8 @@ end;
 procedure TScreenSongJumpto.SetTypingQuery(const Query: UTF8String);
 var I: integer;
 begin
-  if CatSongs.CatNumShow <> -2 then
+  if Query = TypingQuery then Exit;
+  if (CatSongs.CatNumShow <> -2) and not (fPending and (fTypingRow >= 0)) then
   begin
     ResetFilters;
     fPlaylistSearch := (CatSongs.CatNumShow = -3) and (PlaylistMan.CurPlayList <> -1);
@@ -220,7 +222,7 @@ begin
   end;
   fLastPlayed := ScreenSong.Interaction;
   fPending := true;
-  FlushChanges;
+  fChangedTick := SDL_GetTicks;
 end;
 
 function TScreenSongJumpto.FilterSummary: UTF8String;
@@ -302,6 +304,11 @@ begin
   fChangedTick := SDL_GetTicks;
   fSuggestionFocus := false;
   RefreshRows;
+end;
+
+procedure TScreenSongJumpto.UpdateFilter;
+begin
+  if fPending and (SDL_GetTicks - fChangedTick >= SEARCH_DEBOUNCE_MS) then FlushChanges;
 end;
 
 procedure TScreenSongJumpto.FlushChanges;
@@ -649,6 +656,7 @@ end;
 
 procedure TScreenSongJumpto.ResetFilters;
 begin
+  fPending := false;
   fTypingRow := -1;
   fFolderReturn := '';
   // Search rows are temporary. Lockdown freezes the library, not these queries.
@@ -722,7 +730,7 @@ begin
   Country := Ini.AgeCountry;
   if Country = '' then Country := Language.Translate('OPTION_VALUE_AGE_DEFAULT');
   Theme.SongJumpto.IType[9] := Language.Translate('SONG_JUMPTO_TYPE10') + ' (' + Country + ')';
-  if CatSongs.CatNumShow <> -2 then
+  if (CatSongs.CatNumShow <> -2) and not fPending then
   begin
     ResetFilters;
     fPlaylistSearch := (CatSongs.CatNumShow = -3) and (PlaylistMan.CurPlayList <> -1);
@@ -733,7 +741,7 @@ begin
   fFocus := High(fRows); fFirst := 0;
   fLastPlayed := ScreenSong.Interaction;
   // Reopening reevaluates flags and keeps the selection inside the results.
-  if CatSongs.CatNumShow = -2 then
+  if (CatSongs.CatNumShow = -2) or fPending then
   begin
     fPending := true;
     FlushChanges;
@@ -770,7 +778,7 @@ var I: integer; X, Y, W, H, Z: real;
       Theme.SongJumpto.FocusColor.G, Theme.SongJumpto.FocusColor.B, Theme.SongJumpto.FocusAlpha);
   end;
 begin
-  if fPending and (SDL_GetTicks - fChangedTick >= SEARCH_DEBOUNCE_MS) then FlushChanges;
+  UpdateFilter;
   UpdateSuggestions;
   if fLockShortcutPending and (SDL_GetModState and KMOD_ALT = 0) then
   begin
