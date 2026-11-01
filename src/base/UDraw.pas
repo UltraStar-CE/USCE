@@ -1225,7 +1225,6 @@ var
   Space: real;
   Texture: TTexture;
   ColorR, ColorG, ColorB, A: single;
-  UseRapTexture: boolean;
 begin
   Space := H / (NumLines - 1);
 
@@ -1246,7 +1245,10 @@ begin
             ColorR := 1;
             ColorG := 1;
             ColorB := 1;
-            A := 0.35;
+            if Color = P1_INVERTED then
+              A := 0.65
+            else
+              A := 0.35;
           end;
           ntNormal:
           begin
@@ -1269,7 +1271,7 @@ begin
               ColorR := 1;
               ColorG := 1;
               ColorB := 1;
-              A := 0.75;
+              A := 1;
             end
             else
             begin
@@ -1286,7 +1288,7 @@ begin
               ColorR := 1;
               ColorG := 1;
               ColorB := 0.3;
-              A := 0.75;
+              A := 1;
             end
             else
             begin
@@ -1298,19 +1300,12 @@ begin
           end;
         end; // case
 
-        UseRapTexture := IsUnpitchedNote(NoteType);
-        if UseRapTexture and (Color = P1_INVERTED) then
-        begin
-          A := Theme.EditSub.SelectedUnpitchedNoteAlpha;
-          UseRapTexture := not Theme.EditSub.SelectedUnpitchedNoteFilled;
-        end;
-
         // left part
         Rec.Left  := (StartBeat - CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine].Notes[0].StartBeat) * TempR + X + 0.5;
         Rec.Right := Rec.Left + NotesW[0];
         Rec.Top := YBaseNote - (Tone-BaseNote)*Space/2 - NotesH[0];
         Rec.Bottom := Rec.Top + 2 * NotesH[0];
-        if UseRapTexture then
+        if NoteType in [ntRap, ntRapGolden] then
         begin
           If Color = P1_INVERTED then
             Texture := Tex_Left_Rap_Inv
@@ -1346,7 +1341,7 @@ begin
         Rec.Left  := Rec.Right;
         Rec.Right := (StartBeat + Duration - CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine].Notes[0].StartBeat) * TempR + X - NotesW[0] - 0.5;
 
-        if UseRapTexture then
+        if NoteType in [ntRap, ntRapGolden] then
         begin
           If Color = P1_INVERTED then
             Texture := Tex_Mid_Rap_Inv
@@ -1381,7 +1376,7 @@ begin
         Rec.Left  := Rec.Right;
         Rec.Right := Rec.Right + NotesW[0];
 
-        if UseRapTexture then
+        if NoteType in [ntRap, ntRapGolden] then
         begin
           If Color = P1_INVERTED then
             Texture := Tex_Right_Rap_Inv
