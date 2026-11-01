@@ -149,7 +149,6 @@ type
     function GetMD5: string;
     procedure SetMD5(const Value: string);
   public
-    SourceDigest: string; // exact loaded TXT snapshot, including notes
     Tracks: array of TLines; // Per-song track storage
   public
     Path:         IPath; // kust path component of file (only set if file was found)
@@ -2233,30 +2232,6 @@ begin
   Relative := false;
 end;
 
-function DigestSongSource(Stream: TStream): string;
-var
-  Context: TMD5Context;
-  Digest: TMD5Digest;
-  Buffer: array[0..8191] of byte;
-  SavedPosition: int64;
-  Count: integer;
-begin
-  // The parser already owns an in-memory snapshot; do not reopen the file.
-  SavedPosition := Stream.Position;
-  MD5Init(Context);
-  try
-    Stream.Position := 0;
-    repeat
-      Count := Stream.Read(Buffer, SizeOf(Buffer));
-      if Count > 0 then MD5Update(Context, Buffer, Count);
-    until Count = 0;
-    MD5Final(Context, Digest);
-    Result := MD5Print(Digest);
-  finally
-    Stream.Position := SavedPosition;
-  end;
-end;
-
 function TSong.ReadRefreshHeader(Stream: TTextFileStream; DefaultEncoding: UTextEncoding.TEncoding;
   const AgeCountry: UTF8String): boolean;
 begin
@@ -2264,7 +2239,6 @@ begin
   FileLineNo := 0;
   ClearWithEncoding(DefaultEncoding);
   Result := ReadTXTHeader(Stream, false, DefaultEncoding, AgeCountry);
-  if Result then SourceDigest := DigestSongSource(Stream);
 end;
 
 function TSong.Analyse(const ReadCustomTags: Boolean; DuetChange: boolean; OutOfBoundsToFreestyle: boolean; AudioLength: real; ForceLoadNotes: boolean): boolean;
@@ -2295,7 +2269,6 @@ begin
 
     //Read Header
     Result := Self.ReadTxTHeader(SongFile, ReadCustomTags, Ini.DefaultEncoding, Ini.AgeCountry);
-    if Result then SourceDigest := DigestSongSource(SongFile);
 
     if Result and ForceLoadNotes then
     begin

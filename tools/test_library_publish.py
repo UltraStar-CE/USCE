@@ -13,13 +13,11 @@ class LibraryPublishTests(unittest.TestCase):
             self.skipTest('Free Pascal is not installed')
         source = (Path(__file__).resolve().parents[1] / 'src/base/USongs.pas').read_text(encoding='utf-8')
         method = 'function TSongs.PublishRefresh' + source.split('function TSongs.PublishRefresh', 1)[1].split('procedure TSongs.ReplayDeferredReload;', 1)[0]
-        song_source = (Path(__file__).resolve().parents[1] / 'src/base/USong.pas').read_text(encoding='utf-8')
-        digest_method = 'function DigestSongSource' + song_source.split('function DigestSongSource', 1)[1].split('function TSong.ReadRefreshHeader', 1)[0]
         refresh = (Path(__file__).resolve().parents[1] / 'src/base/ULibraryRefresh.pas').read_text(encoding='utf-8')
         covers_method = 'function TLibraryRefresh.Covers' + refresh.split('function TLibraryRefresh.Covers', 1)[1].split('procedure TLibraryRefresh.ReadSong', 1)[0]
         catalog_methods = 'function TCatSongs.VisibleSongs' + source.split('function TCatSongs.VisibleSongs', 1)[1].split('function TCatSongs.FilterMask', 1)[0]
         harness = r'''program Probe; {$mode Delphi}
-uses SysUtils, Classes, MD5;
+uses SysUtils, Classes;
 type
   IPath = interface function Append(const N: IPath): IPath; function Name: string; function IsChildOf(const Parent: IPath; Direct: boolean): boolean; end;
   TPath = class(TInterfacedObject, IPath)
@@ -28,7 +26,6 @@ type
     function IsChildOf(const Parent: IPath; Direct: boolean): boolean;
   end;
   TSong = class
-    SourceDigest: string;
     Path, FileName: IPath;
     Visible: boolean; VisibleIndex: integer;
     constructor Create(const N: string); destructor Destroy; override;
@@ -47,7 +44,7 @@ type
     function VisibleIndex(Index: integer): integer;
   end;
   TSongs = class
-    LastRefreshChanged: boolean;
+    LastRefreshMembershipChanged: boolean;
     fFailedSongFiles: TStringList;
     SongList: TList; fRefresh: TLibraryRefresh; fProcessing: boolean;
     function RefreshReady: boolean;
@@ -69,15 +66,17 @@ class function TLibraryRefresh.Key(const N: IPath): string; begin Result := N.Na
 function Path(const N: UTF8String): IPath; begin Result := TPath.Create(N); end;
 procedure TLibraryRefresh.WaitFor; begin end;
 function TSongs.RefreshReady: boolean; begin Result := fRefresh <> nil; end;
-''' + digest_method + method + covers_method + catalog_methods + r'''
+''' + method + covers_method + catalog_methods + r'''
 procedure Check(B: boolean; const M: string); begin if not B then raise Exception.Create(M); end;
 procedure Release(L: TList); var I: integer; begin for I := 0 to L.Count - 1 do TObject(L[I]).Free; L.Free; end;
-var S: TSongs; Old, Incomplete, Outside, Deleted, Replacement, Added, Linked: TSong; Retired: TList; Cat: TCatSongs; Stream: TStringStream; Digest: string; I: integer;
+var S: TSongs; Old, Incomplete, Outside, Deleted, Replacement, Added, Linked: TSong; Retired: TList; Cat: TCatSongs;
 begin
   Cat := TCatSongs.Create;
   Check((Cat.VisibleSongs = 0) and (Cat.VisibleIndex(-1) = -1), 'empty catalog indexed a missing song');
   Cat.Free;
   S := TSongs.Create; S.SongList := TList.Create; S.fFailedSongFiles := TStringList.Create;
+  S.fFailedSongFiles.Add('outside/rejected'); S.fFailedSongFiles.Add('scope/fixed');
+  S.fFailedSongFiles.Add('scope/gone'); S.fFailedSongFiles.Add('scope/writing');
   Old := TSong.Create('scope/old'); Incomplete := TSong.Create('scope/incomplete');
   Outside := TSong.Create('outside/keep'); Deleted := TSong.Create('scope/deleted');
   Linked := TSong.Create('scope/link/song'); S.SongList.Add(Linked);
@@ -88,6 +87,8 @@ begin
   Replacement := TSong.Create('scope/old'); Added := TSong.Create('scope/new');
   S.fRefresh.Entries.AddObject('scope/old', Replacement); S.fRefresh.Entries.AddObject('scope/new', Added);
   S.fRefresh.Seen.Add('scope/incomplete');
+  S.fRefresh.Seen.Add('scope/writing'); S.fRefresh.Seen.Add('scope/bad');
+  S.fRefresh.Failed.Add('scope/bad');
   Check(S.PublishRefresh(Retired), 'publish failed');
   Check((S.SongList.Count = 5) and (Retired.Count = 2), 'wrong counts');
   Check((S.SongList.IndexOf(Replacement) >= 0) and (S.SongList.IndexOf(Added) >= 0), 'new objects not transferred');
@@ -95,34 +96,31 @@ begin
   Check(S.SongList.IndexOf(Linked) >= 0, 'skipped linked subtree was deleted');
   Check((Retired.IndexOf(Old) >= 0) and (Retired.IndexOf(Deleted) >= 0), 'old snapshot not retained');
   Check((Live = 7) and (S.fRefresh = nil) and not S.fProcessing, 'ownership or completion state wrong');
-  Check(S.LastRefreshChanged, 'addition/deletion not reported as changed');
+  Check(S.LastRefreshMembershipChanged, 'addition/removal not reported');
+  Check((S.fFailedSongFiles.Count = 3) and (S.fFailedSongFiles.IndexOf('outside/rejected') >= 0) and
+    (S.fFailedSongFiles.IndexOf('scope/writing') >= 0) and (S.fFailedSongFiles.IndexOf('scope/bad') >= 0), 'failed-file scope was not preserved');
   Release(Retired);
-  // Re-reading identical content or a timestamp-only touch is not a change.
+  // Updating an existing song must stay quiet, while still publishing its header.
   Old := TSong(S.SongList[0]);
   S.fRefresh := TLibraryRefresh.Create;
   Replacement := TSong.Create(Old.FileName.Name);
   S.fRefresh.Entries.AddObject(Old.Path.Append(Old.FileName).Name, Replacement);
-  Check(S.PublishRefresh(Retired) and not S.LastRefreshChanged, 'unchanged scan notified');
+  Check(S.PublishRefresh(Retired), 'existing-song update failed');
+  Check(not S.LastRefreshMembershipChanged, 'existing-song update triggered notification');
+  Check(S.SongList.IndexOf(Replacement) >= 0, 'updated song was not published');
   Release(Retired);
-  Old := TSong(S.SongList[0]);
+  // Equal counts can still mean a removal and an addition.
   S.fRefresh := TLibraryRefresh.Create;
-  Replacement := TSong.Create(Old.FileName.Name); Replacement.SourceDigest := 'changed notes';
-  S.fRefresh.Entries.AddObject(Old.Path.Append(Old.FileName).Name, Replacement);
-  Check(S.PublishRefresh(Retired) and S.LastRefreshChanged, 'changed TXT not reported');
+  SetLength(S.fRefresh.Roots, 1); S.fRefresh.Roots[0] := TPath.Create('outside');
+  S.fRefresh.Entries.AddObject('outside/new', TSong.Create('outside/new'));
+  Check(S.PublishRefresh(Retired), 'same-count replacement failed');
+  Check(S.LastRefreshMembershipChanged and (S.SongList.Count = 5), 'same-count membership change missed');
   Release(Retired);
   S.fRefresh := TLibraryRefresh.Create; S.fRefresh.Failure := 'unplugged root';
   S.fRefresh.Entries.AddObject('scope/bad', TSong.Create('scope/bad'));
   Check(not S.PublishRefresh(Retired), 'failed scan published');
   Check((Retired = nil) and (Live = 5) and (S.SongList.Count = 5), 'failed scan changed catalog or leaked');
-  Check(not S.LastRefreshChanged, 'failed refresh retained a stale change result');
-  Stream := TStringStream.Create(StringOfChar('x', 20000));
-  try
-    Stream.Position := 13; Digest := DigestSongSource(Stream);
-    Check(Stream.Position = 13, 'digest changed parser position');
-    Check(Digest = MD5Print(MD5String(StringOfChar('x', 20000))), 'snapshot digest mismatch');
-    Stream.Position := Stream.Size; Stream.WriteString('changed lyric');
-    Check(DigestSongSource(Stream) <> Digest, 'lyric-only edit missed');
-  finally Stream.Free; end;
+  Check(not S.LastRefreshMembershipChanged, 'failed scan retained stale notification state');
   S.fFailedSongFiles.Free; Release(S.SongList); S.Free; Check(Live = 0, 'leaked song'); WriteLn('PASS');
 end.
 '''
