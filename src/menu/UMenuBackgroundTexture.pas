@@ -108,7 +108,7 @@ begin
     H := RenderH;
     if Motion > 0 then
     begin
-      // Extend the canvas beyond the viewport while the image drifts.
+      // Keep every edge outside the viewport while the image drifts.
       Phase := SDL_GetTicks / 1000 * Motion;
       W := RenderW * 1.3;
       H := RenderH * 1.3;
@@ -120,7 +120,6 @@ begin
     ColB := Color.B;
     ScaleMode := lsUniform;
     EdgeExtend := true;
-    EdgeExtendAllowUpscale := false;
     EdgeExtendSolidFill := false;
     EdgeExtendPixels := 16;
   end;

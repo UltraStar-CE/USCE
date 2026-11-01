@@ -202,7 +202,6 @@ uses
   UIni              in 'base\UIni.pas',
   URecentNames      in 'base\URecentNames.pas',
   UImage            in 'base\UImage.pas',
-  UImageFit         in 'base\UImageFit.pas',
   ULyrics           in 'base\ULyrics.pas',
   UEditorLyrics     in 'base\UEditorLyrics.pas',
   USkins            in 'base\USkins.pas',
