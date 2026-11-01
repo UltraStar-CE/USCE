@@ -110,7 +110,7 @@ type
   public
     SongList: TList;            // array of songs
 
-    LastRefreshChanged: boolean;
+    LastRefreshMembershipChanged: boolean;
     Selected: integer;        // selected song index
     constructor Create();
     destructor  Destroy(); override;
@@ -464,7 +464,7 @@ var NewList: TList; Old: TSong; Name: IPath; I, Index: integer;
 begin
   Result := false;
   Retired := nil;
-  LastRefreshChanged := false;
+  LastRefreshMembershipChanged := false;
   if not RefreshReady then Exit;
   fRefresh.WaitFor;
   try
@@ -480,8 +480,6 @@ begin
       begin
         if fRefresh.Entries.Objects[Index] <> nil then
         begin
-          LastRefreshChanged := LastRefreshChanged or
-            (Old.SourceDigest <> TSong(fRefresh.Entries.Objects[Index]).SourceDigest);
           NewList.Add(fRefresh.Entries.Objects[Index]);
         end;
         fRefresh.Entries.Objects[Index] := nil;
@@ -489,7 +487,7 @@ begin
       end
       else if fRefresh.Covers(Name) and (fRefresh.Seen.IndexOf(TLibraryRefresh.Key(Name)) < 0) then
       begin
-        LastRefreshChanged := true;
+        LastRefreshMembershipChanged := true;
         Retired.Add(Old);
       end
       else
@@ -498,7 +496,7 @@ begin
     for I := 0 to fRefresh.Entries.Count - 1 do
       if fRefresh.Entries.Objects[I] <> nil then
       begin
-        LastRefreshChanged := true;
+        LastRefreshMembershipChanged := true;
         NewList.Add(fRefresh.Entries.Objects[I]);
         fRefresh.Entries.Objects[I] := nil;
       end;
