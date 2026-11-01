@@ -377,6 +377,7 @@ type
 
     TextDescription:      TThemeText;
     TextDescriptionLong:  TThemeText;
+    TextSongLoadWarning:  TThemeText;
     Description:          array[0..5] of UTF8String;
     DescriptionLong:      array[0..5] of UTF8String;
   end;
@@ -2123,6 +2124,15 @@ begin
 
       ThemeLoadText(Main.TextDescription, 'MainTextDescription');
       ThemeLoadText(Main.TextDescriptionLong, 'MainTextDescriptionLong');
+      Main.TextSongLoadWarning := Main.TextDescriptionLong;
+      Main.TextSongLoadWarning.X := 40; Main.TextSongLoadWarning.Y := 510;
+      Main.TextSongLoadWarning.W := 400; Main.TextSongLoadWarning.H := 28;
+      Main.TextSongLoadWarning.Size := 18; Main.TextSongLoadWarning.Align := 0;
+      Main.TextSongLoadWarning.ColR := 1; Main.TextSongLoadWarning.ColG := 0.85;
+      Main.TextSongLoadWarning.ColB := 0.45;
+      Main.TextSongLoadWarning.Reflection := false;
+      if Length(GetSectionList('MainTextSongLoadWarning')) > 0 then
+        ThemeLoadText(Main.TextSongLoadWarning, 'MainTextSongLoadWarning');
       ThemeLoadMainButtons;
       ThemeLoadMainPreviews;
       SetLength(Main.ButtonCollection, 0);

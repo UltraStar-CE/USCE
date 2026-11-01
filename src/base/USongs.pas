@@ -91,12 +91,14 @@ type
     fDiscoveryDirsScanned: integer;
     fTotalSongsToLoad:   integer;
     fSongsLoaded:        integer;
+    fFailedSongFiles: TStringList;
     fReloadAfterLockdown: boolean;
     fRefresh: TLibraryRefresh;
     fRefreshAgain: boolean;
     fWatcher: TLibraryWatch;
     fWatchRoots: string;
     fOwnerThread: cardinal; // SDL_ThreadID returns a Uint32, not a native thread handle.
+    function GetFailedSongCount: integer;
     procedure PollLibraryChanges;
     function RequestRefreshPaths(const Roots: TPathDynArray): boolean;
     function CollectSongFiles: TPathDynArray;
@@ -123,6 +125,7 @@ type
   procedure FindFilesByExtension(const Dir: IPath; const Ext: IPath; Recursive: Boolean; var Files: TPathDynArray);
     procedure Sort(Order: TSortingType);
     property  Processing: boolean read fProcessing;
+    property FailedSongCount: integer read GetFailedSongCount;
   end;
 
   TCatSongs = class
@@ -256,6 +259,10 @@ begin
   fOwnerThread := SDL_ThreadID;
 
   SongList           := TList.Create();
+  fFailedSongFiles := TStringList.Create;
+  fFailedSongFiles.Sorted := true;
+  fFailedSongFiles.CaseSensitive := true;
+  fFailedSongFiles.Duplicates := dupIgnore;
 
   // Initial loading runs before the song screen is available.
   int_LoadSongList();
@@ -265,8 +272,14 @@ destructor TSongs.Destroy();
 begin
   StopRefresh;
   FreeAndNil(SongList);
+  FreeAndNil(fFailedSongFiles);
 
   inherited;
+end;
+
+function TSongs.GetFailedSongCount: integer;
+begin
+  Result := fFailedSongFiles.Count;
 end;
 
 procedure TSongs.DoDirChanged(Sender: TObject);
@@ -294,6 +307,7 @@ begin
     fDiscoveryDirCount := 0;
     fDiscoveryDirsScanned := 0;
     fSongsLoaded := 0;
+    fFailedSongFiles.Clear;
     fTotalSongsToLoad := 0;
     if Assigned(ScreenLoading) then
     begin
@@ -445,6 +459,7 @@ end;
 
 function TSongs.PublishRefresh(out Retired: TList): boolean;
 var NewList: TList; Old: TSong; Name: IPath; I, Index: integer;
+  Loaded: TStringList;
 begin
   Result := false;
   Retired := nil;
@@ -477,6 +492,29 @@ begin
         NewList.Add(fRefresh.Entries.Objects[I]);
         fRefresh.Entries.Objects[I] := nil;
       end;
+    // Refreshes cover only part of the library. Retain failures outside that
+    // scope and incomplete files still being written; clear fixed/deleted files.
+    for I := fFailedSongFiles.Count - 1 downto 0 do
+      if fRefresh.Covers(Path(UTF8String(fFailedSongFiles[I]))) and
+         ((fRefresh.Seen.IndexOf(fFailedSongFiles[I]) < 0) or
+          (fRefresh.Entries.IndexOf(fFailedSongFiles[I]) >= 0)) then
+        fFailedSongFiles.Delete(I);
+    if fRefresh.Failed.Count > 0 then
+    begin
+      Loaded := TStringList.Create;
+      try
+        Loaded.Sorted := true;
+        Loaded.CaseSensitive := true;
+        for I := 0 to NewList.Count - 1 do
+        begin
+          Old := TSong(NewList[I]);
+          Loaded.Add(TLibraryRefresh.Key(Old.Path.Append(Old.FileName)));
+        end;
+        for I := 0 to fRefresh.Failed.Count - 1 do
+          if Loaded.IndexOf(fRefresh.Failed[I]) < 0 then
+            fFailedSongFiles.Add(fRefresh.Failed[I]);
+      finally Loaded.Free; end;
+    end;
     SongList.Free;
     SongList := NewList;
     Result := true;
@@ -614,6 +652,7 @@ begin
     SongList.Add(Song)
   else
   begin
+    fFailedSongFiles.Add(TLibraryRefresh.Key(FilePath));
     Log.LogError('AnalyseFile failed for "' + FilePath.ToNative + '".');
     FreeAndNil(Song);
   end;

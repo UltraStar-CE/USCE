@@ -56,6 +56,8 @@ type
       Alpha: real;
     end;
     PreviewTick: cardinal;
+    TextSongLoadWarning: integer;
+    LastFailedSongCount: integer;
     procedure UpdatePreviews;
   public
     TextDescription:     integer;
@@ -252,6 +254,9 @@ begin
  *}
   TextDescription     := AddText(Theme.Main.TextDescription);
   TextDescriptionLong := AddText(Theme.Main.TextDescriptionLong);
+  TextSongLoadWarning := AddText(Theme.Main.TextSongLoadWarning);
+  Text[TextSongLoadWarning].Visible := false;
+  LastFailedSongCount := -1;
 
   LoadFromTheme(Theme.Main);
 
@@ -341,6 +346,13 @@ function TScreenMain.Draw: boolean;
 begin
   UpdatePreviews;
   ScreenSong.ApplyLibraryRefresh;
+  if Assigned(Songs) and (Songs.FailedSongCount <> LastFailedSongCount) then
+  begin
+    LastFailedSongCount := Songs.FailedSongCount;
+    Text[TextSongLoadWarning].Visible := LastFailedSongCount > 0;
+    Text[TextSongLoadWarning].Text := Format(Language.Translate('SONG_LOAD_WARNING'),
+      [LastFailedSongCount]);
+  end;
   Result := inherited Draw;
 
   if not ScreenPopupError.Visible then
