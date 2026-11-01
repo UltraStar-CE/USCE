@@ -32,7 +32,7 @@ type
   end;
   TLibraryRefresh = class
     Roots, Skipped: array of IPath;
-    Entries, Seen: TStringList; Failure: string;
+    Entries, Seen, Failed: TStringList; Failure: string;
     constructor Create; destructor Destroy; override;
     class function Key(const N: IPath): string;
     function Covers(const Name: IPath): boolean;
@@ -44,6 +44,7 @@ type
     function VisibleIndex(Index: integer): integer;
   end;
   TSongs = class
+    fFailedSongFiles: TStringList;
     SongList: TList; fRefresh: TLibraryRefresh; fProcessing: boolean;
     function RefreshReady: boolean;
     function PublishRefresh(out Retired: TList): boolean;
@@ -56,11 +57,12 @@ function TPath.IsChildOf(const Parent: IPath; Direct: boolean): boolean;
 begin Result := Pos(Parent.Name + '/', S) = 1; end;
 constructor TSong.Create(const N: string); begin Inc(Live); Path := TPath.Create(''); FileName := TPath.Create(N); end;
 destructor TSong.Destroy; begin Dec(Live); inherited; end;
-constructor TLibraryRefresh.Create; begin Entries := TStringList.Create; Entries.Sorted := true; Seen := TStringList.Create; end;
+constructor TLibraryRefresh.Create; begin Entries := TStringList.Create; Entries.Sorted := true; Seen := TStringList.Create; Failed := TStringList.Create; end;
 destructor TLibraryRefresh.Destroy;
-var I: integer; begin for I := 0 to Entries.Count - 1 do Entries.Objects[I].Free; Entries.Free; Seen.Free; inherited; end;
+var I: integer; begin for I := 0 to Entries.Count - 1 do Entries.Objects[I].Free; Entries.Free; Seen.Free; Failed.Free; inherited; end;
 class function TLibraryRefresh.Key(const N: IPath): string; begin Result := N.Name; end;
 
+function Path(const N: UTF8String): IPath; begin Result := TPath.Create(N); end;
 procedure TLibraryRefresh.WaitFor; begin end;
 function TSongs.RefreshReady: boolean; begin Result := fRefresh <> nil; end;
 ''' + method + covers_method + catalog_methods + r'''
@@ -71,7 +73,9 @@ begin
   Cat := TCatSongs.Create;
   Check((Cat.VisibleSongs = 0) and (Cat.VisibleIndex(-1) = -1), 'empty catalog indexed a missing song');
   Cat.Free;
-  S := TSongs.Create; S.SongList := TList.Create;
+  S := TSongs.Create; S.SongList := TList.Create; S.fFailedSongFiles := TStringList.Create;
+  S.fFailedSongFiles.Add('outside/rejected'); S.fFailedSongFiles.Add('scope/fixed');
+  S.fFailedSongFiles.Add('scope/gone'); S.fFailedSongFiles.Add('scope/writing');
   Old := TSong.Create('scope/old'); Incomplete := TSong.Create('scope/incomplete');
   Outside := TSong.Create('outside/keep'); Deleted := TSong.Create('scope/deleted');
   Linked := TSong.Create('scope/link/song'); S.SongList.Add(Linked);
@@ -82,6 +86,8 @@ begin
   Replacement := TSong.Create('scope/old'); Added := TSong.Create('scope/new');
   S.fRefresh.Entries.AddObject('scope/old', Replacement); S.fRefresh.Entries.AddObject('scope/new', Added);
   S.fRefresh.Seen.Add('scope/incomplete');
+  S.fRefresh.Seen.Add('scope/writing'); S.fRefresh.Seen.Add('scope/bad');
+  S.fRefresh.Failed.Add('scope/bad');
   Check(S.PublishRefresh(Retired), 'publish failed');
   Check((S.SongList.Count = 5) and (Retired.Count = 2), 'wrong counts');
   Check((S.SongList.IndexOf(Replacement) >= 0) and (S.SongList.IndexOf(Added) >= 0), 'new objects not transferred');
@@ -89,12 +95,15 @@ begin
   Check(S.SongList.IndexOf(Linked) >= 0, 'skipped linked subtree was deleted');
   Check((Retired.IndexOf(Old) >= 0) and (Retired.IndexOf(Deleted) >= 0), 'old snapshot not retained');
   Check((Live = 7) and (S.fRefresh = nil) and not S.fProcessing, 'ownership or completion state wrong');
+  Check((S.fFailedSongFiles.Count = 3) and (S.fFailedSongFiles.IndexOf('outside/rejected') >= 0) and
+    (S.fFailedSongFiles.IndexOf('scope/writing') >= 0) and (S.fFailedSongFiles.IndexOf('scope/bad') >= 0), 'failed-file scope was not preserved');
   Release(Retired);
   S.fRefresh := TLibraryRefresh.Create; S.fRefresh.Failure := 'unplugged root';
   S.fRefresh.Entries.AddObject('scope/bad', TSong.Create('scope/bad'));
   Check(not S.PublishRefresh(Retired), 'failed scan published');
   Check((Retired = nil) and (Live = 5) and (S.SongList.Count = 5), 'failed scan changed catalog or leaked');
-  Release(S.SongList); S.Free; Check(Live = 0, 'leaked song'); WriteLn('PASS');
+  Check(S.fFailedSongFiles.Count = 3, 'failed scan changed rejected-file count');
+  S.fFailedSongFiles.Free; Release(S.SongList); S.Free; Check(Live = 0, 'leaked song'); WriteLn('PASS');
 end.
 '''
         with tempfile.TemporaryDirectory() as temp:
