@@ -457,7 +457,7 @@ type
       procedure ScheduleCuePlayback(StartTime, StopTime: real; StartLine, StopLine: Integer; IncludeMidi, IncludeClicks, SyncToAudio: boolean);
       procedure ScheduleCueNotePlayback(StartTime, StopTime: real; IncludeMidi, IncludeClick, SyncToAudio: boolean);
       procedure PlayScheduledCue;
-      procedure RescheduleCuePlayback(GapDelta: real);
+      procedure RescheduleCuePlayback(TimingChanged: boolean = false);
       procedure LoadCurrentLyricForTextEdit(CursorPosition: Integer);
       function  GetInteractiveNoteIndex(InteractionIndex: Integer): Integer;
       procedure CancelPendingNoteClick;
@@ -1065,9 +1065,6 @@ end;
 
 procedure TScreenEditSub.ScheduleCuePlayback(StartTime, StopTime: real; StartLine, StopLine: Integer; IncludeMidi, IncludeClicks, SyncToAudio: boolean);
 begin
-  if not Assigned(MidiOut) then
-    Exit;
-
   MidiTime := USTime.GetTime;
   MidiStart := StartTime;
   MidiStop := StopTime;
@@ -1078,9 +1075,12 @@ begin
   CueIncludeMidi := IncludeMidi;
   CueIncludeClicks := IncludeClicks;
 
-  MidiOut.Stop;
-  MidiOut.SetPosition(StartTime);
-  MidiOut.SetVolume(1.0);
+  if Assigned(MidiOut) then
+  begin
+    MidiOut.Stop;
+    MidiOut.SetPosition(StartTime);
+    MidiOut.SetVolume(1.0);
+  end;
   ScheduleCueRange(StartLine, StopLine, StartTime, StopTime, IncludeMidi, IncludeClicks);
 end;
 
@@ -1099,34 +1099,76 @@ end;
 
 procedure TScreenEditSub.PlayScheduledCue;
 begin
-  if Assigned(MidiOut) then
-  begin
+  if (CueIncludeMidi or CueIncludeClicks) and Assigned(MidiOut) then
     MidiOut.Play;
-    CuePlaybackActive := true;
-  end;
+  CuePlaybackActive := true;
 end;
 
-procedure TScreenEditSub.RescheduleCuePlayback(GapDelta: real);
+procedure TScreenEditSub.RescheduleCuePlayback(TimingChanged: boolean);
 var
   Position: real;
+  OldLine, LineIndex, NoteIndex: integer;
 begin
-  if not CuePlaybackActive or not Assigned(MidiOut) then
+  if not CuePlaybackActive then
     Exit;
 
-  // Keep the music clock running. Replace old events with the remaining part
-  // of the same preview, whose note times now include the edited GAP.
-  Position := GetPreviewPosition;
-  MidiStop := MidiStop + GapDelta;
-  if MidiSyncToAudio then
-    PlayStopTime := PlayStopTime + GapDelta;
-  if Position >= MidiStop then
+  if (CueStartLine < 0) or (CueStopLine < CueStartLine) or
+     (CueStopLine > CurrentSong.Tracks[CurrentTrack].High) or
+     ((CueNoteIndex >= 0) and
+      (CueNoteIndex > CurrentSong.Tracks[CurrentTrack].Lines[CueStartLine].HighNote)) then
   begin
-    StopMidiPlayback;
+    StopPreviewPlayback;
     Exit;
   end;
 
-  MidiOut.Stop;
-  MidiOut.SetPosition(Position); // clears queued events and sounding notes
+  // Keep the music clock running and retime the remaining part of the same
+  // preview from its saved song scope after GAP, BPM or volume changes.
+  Position := GetPreviewPosition;
+  if CueNoteIndex >= 0 then
+    MidiStop := GetTimeFromBeat(
+      CurrentSong.Tracks[CurrentTrack].Lines[CueStartLine].Notes[CueNoteIndex].EndBeat)
+  else
+    MidiStop := GetTimeFromBeat(CurrentSong.Tracks[CurrentTrack].Lines[CueStopLine].EndBeat);
+  if MidiSyncToAudio then
+    PlayStopTime := MidiStop;
+
+  if TimingChanged then
+  begin
+    CurrentBeat := Floor(GetMidBeat(Position - CurrentSong.GAP / 1000));
+    LineIndex := CueStartLine;
+    while (LineIndex < CueStopLine) and
+          (CurrentSong.Tracks[CurrentTrack].Lines[LineIndex].EndBeat < CurrentBeat) do
+      Inc(LineIndex);
+    NoteIndex := Max(0, CueNoteIndex);
+    if CueNoteIndex < 0 then
+      while (NoteIndex < CurrentSong.Tracks[CurrentTrack].Lines[LineIndex].HighNote) and
+            (CurrentSong.Tracks[CurrentTrack].Lines[LineIndex].Notes[NoteIndex + 1].StartBeat < CurrentBeat) do
+        Inc(NoteIndex);
+    OldLine := CurrentSong.Tracks[CurrentTrack].CurrentLine;
+    CurrentSong.Tracks[CurrentTrack].Lines[OldLine].Notes[CurrentNote[CurrentTrack]].Color := 1;
+    CurrentSong.Tracks[CurrentTrack].CurrentLine := LineIndex;
+    CurrentNote[CurrentTrack] := NoteIndex;
+    CurrentSong.Tracks[CurrentTrack].Lines[LineIndex].Notes[NoteIndex].Color := P1_INVERTED;
+    if OldLine <> LineIndex then
+    begin
+      EditorLyrics[CurrentTrack].AddLine(CurrentTrack, LineIndex);
+      ShowInteractiveBackground;
+      GoldenRec.KillAll;
+    end;
+    EditorLyrics[CurrentTrack].Selected := NoteIndex;
+  end;
+
+  if Position >= MidiStop then
+  begin
+    StopPreviewPlayback;
+    Exit;
+  end;
+
+  if Assigned(MidiOut) then
+  begin
+    MidiOut.Stop;
+    MidiOut.SetPosition(Position); // clears queued events and sounding notes
+  end;
   MidiStart := Position;
   MidiTime := USTime.GetTime;
   if CueNoteIndex >= 0 then
@@ -1225,7 +1267,7 @@ begin
   // Divide lengths by 2
   if (SDL_ModState = KMOD_LSHIFT) then
   begin
-    CopyToUndo;
+    CopyToUndo(true);
     DivideBPM;
     ShowInteractiveBackground;
     Text[TextInfo].Text := Language.Translate('EDIT_INFO_DIVIDED_BPM');
@@ -1259,7 +1301,7 @@ begin
   // Multiply lengths by 2
   if (SDL_ModState = KMOD_LSHIFT) then
   begin
-    CopyToUndo;
+    CopyToUndo(true);
     MultiplyBPM;
     ShowInteractiveBackground;
     Text[TextInfo].Text := Language.Translate('EDIT_INFO_MULTIPLIED_BPM');
@@ -1600,7 +1642,7 @@ end;
 procedure TScreenEditSub.HandleBPMIncrease(SDL_ModState: word);
 begin
   // Increase BPM
-  CopyToUndo;
+  CopyToUndo(true);
   if SDL_ModState = 0 then
   begin
     CurrentSong.BPM := Round((CurrentSong.BPM * 5) + 1) / 5; // (1/20)
@@ -1616,13 +1658,14 @@ begin
     CurrentSong.BPM := Round((CurrentSong.BPM * 25) + 1) / 25; // (1/100)
     Text[TextInfo].Text := Language.Translate('EDIT_INFO_BPM_INCREASED_BY') + ' 0.01';
   end;
+  RescheduleCuePlayback(true);
 end;
 
       // SDLK_MINUS: HandleBPMDecrease;
 procedure TScreenEditSub.HandleBPMDecrease(SDL_ModState: word);
 begin
   // Decrease BPM
-  CopyToUndo;
+  CopyToUndo(true);
   if SDL_ModState = 0 then
   begin
     CurrentSong.BPM := Round((CurrentSong.BPM * 5) - 1) / 5;
@@ -1641,6 +1684,7 @@ begin
 
   if CurrentSong.BPM < MIN_BPM then
     CurrentSong.BPM := MIN_BPM;
+  RescheduleCuePlayback(true);
 end;
 
       // SDLK_2, SDLK_3, SDLK_4, SDLK_5, SDLK_6: HandleExtendedCopyPaste;
@@ -1755,13 +1799,13 @@ begin
   if SDL_ModState = 0 then
   begin
     CurrentSong.GAP := CurrentSong.GAP - 10;
-    RescheduleCuePlayback(-0.01);
+    RescheduleCuePlayback(true);
     Text[TextInfo].Text := Language.Translate('EDIT_INFO_GAP_DECREASED_BY') + ' 10 ms';
   end;
   if SDL_ModState = KMOD_LSHIFT then
   begin
     CurrentSong.GAP := CurrentSong.GAP - 1000;
-    RescheduleCuePlayback(-1.0);
+    RescheduleCuePlayback(true);
     Text[TextInfo].Text := Language.Translate('EDIT_INFO_GAP_DECREASED_BY') + ' 1000 ms';
   end;
 end;
@@ -1774,13 +1818,13 @@ begin
   if SDL_ModState = 0 then
   begin
     CurrentSong.GAP := CurrentSong.GAP + 10;
-    RescheduleCuePlayback(0.01);
+    RescheduleCuePlayback(true);
     Text[TextInfo].Text := Language.Translate('EDIT_INFO_GAP_INCREASED_BY') + ' 10 ms';
   end;
   if SDL_ModState = KMOD_LSHIFT then
   begin
     CurrentSong.GAP := CurrentSong.GAP + 1000;
-    RescheduleCuePlayback(1.0);
+    RescheduleCuePlayback(true);
     Text[TextInfo].Text := Language.Translate('EDIT_INFO_GAP_INCREASED_BY') + ' 1000 ms';
   end;
 end;
@@ -1924,12 +1968,10 @@ begin
     Text[TextInfo].Text := Language.Translate('EDIT_INFO_PLAY_NOTE_AUDIO');
   end;
 
+  ScheduleCueNotePlayback(NoteStart, NoteStop, IncludeMidi, false, IncludeAudio);
+  PlayScheduledCue;
   if PlayOneMidi then
-  begin
-    ScheduleCueNotePlayback(NoteStart, NoteStop, true, false, IncludeAudio);
-    PlayScheduledCue;
     Text[TextInfo].Text := Language.Translate('EDIT_INFO_PLAY_NOTE_MIDI');
-  end;
 end;
 
 procedure TScreenEditSub.LoadCurrentLyricForTextEdit(CursorPosition: Integer);
@@ -2985,7 +3027,7 @@ begin
             if NewBPM < MIN_BPM then
               NewBPM := MIN_BPM;
 
-            CopyToUndo;
+            CopyToUndo(true);
             BPMVal[0] := FloatToStr(NewBPM / 4);
             ChangeBPM(NewBPM);
             SelectsS[CurrentSlideId].TextOpt[0].Text := BPMVal[0];
@@ -3696,7 +3738,7 @@ begin
     SetSfxVolumePercent(EnsureRange(VolumeClickIndex, 0, 100));
 
   if (VolumeMidiIndex <> PrevMidiIndex) or (VolumeClickIndex <> PrevClickIndex) then
-    RescheduleCuePlayback(0);
+    RescheduleCuePlayback;
   end
   else if BtnDown and (MouseButton = SDL_BUTTON_RIGHT) then
   begin
@@ -3773,6 +3815,7 @@ begin
         CurrentSong.Tracks[TrackIndex].Lines[LineIndex].EndBeat := round(CurrentSong.Tracks[TrackIndex].Lines[LineIndex].EndBeat * factor)
     end; // LineIndex
   end; // TrackIndex
+  RescheduleCuePlayback(true);
 end;
 
 procedure TScreenEditSub.DivideBPM;
@@ -6582,7 +6625,7 @@ begin
   begin
     VolumeClickIndex := NewClick;
     SelectsS[VolumeClickSlideId].SelectedOption := VolumeClickIndex;
-    RescheduleCuePlayback(0);
+    RescheduleCuePlayback;
   end;
 end;
 
