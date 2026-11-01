@@ -933,6 +933,10 @@ begin
         SDL_ModState := SDL_ModState and not KMOD_CTRL;
     end;
 
+    // Commands and navigation act on the complete typed query, without waiting.
+    ScreenSongJumpto.FlushChanges;
+    VS := CatSongs.VisibleSongs;
+
     // Left/right variants belong to the same prefix sequence.
     JumpModifiers := SDL_ModState;
     if JumpModifiers and KMOD_ALT <> 0 then
@@ -1742,6 +1746,8 @@ var
   PointerScreen, FirstPlayer, PlayerCount, I, Voice: integer;
   FieldX, FieldY, FieldW, FieldH: real;
 begin
+  if BtnDown and not ScreenSongJumpto.Visible and not ScreenSongMenu.Visible then
+    ScreenSongJumpto.FlushChanges;
   PointerScreen := EnsureRange(Trunc(X / (ScreenW / Screens)) + 1, 1, Screens);
   // Convert mouse coordinates to the virtual render coordinate space.
   X := Round((X / (ScreenW / Screens)) * RenderW);
@@ -3739,6 +3745,7 @@ var
 
 begin
   ApplyLibraryRefresh;
+  ScreenSongJumpto.UpdateFilter;
   UpdateTransitionPreview;
 
   FadeMessage();
