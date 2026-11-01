@@ -255,8 +255,17 @@ SRC_FILES = $(shell find $(srcdir) -name "*.inc" -o -name "*.pas" -o -name "*.pp
 create-pathinfo:
 	echo "INSTALL_DATADIR = '$(INSTALL_DATADIR)';" > paths.inc
 
+# Keep the embedded Windows icon and manifest in sync with their sources.
+WINDOW_RESOURCES :=
+ifneq ($(filter win32 win64,$(PPLATFORM)),)
+WINDRES ?= windres
+WINDOW_RESOURCES := $(top_srcdir)/res/link.res
+$(WINDOW_RESOURCES): $(top_srcdir)/res/link.rc $(top_srcdir)/res/usce.exe.manifest $(top_srcdir)/icons/usce.ico
+	$(WINDRES) -i $(top_srcdir)/res/link.rc -o $@ -O res
+endif
+
 # check if any src-file changed and rebuild
-$(USCE_BIN): $(USCE_PROJ) $(CWRAPPER_LIBS) $(SRC_FILES)
+$(USCE_BIN): $(USCE_PROJ) $(CWRAPPER_LIBS) $(SRC_FILES) $(WINDOW_RESOURCES)
 	@echo "==================================="
 	@echo "Changed files:"
 	@echo "$?"
