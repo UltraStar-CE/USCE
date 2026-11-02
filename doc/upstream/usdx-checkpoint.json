@@ -1,8 +1,8 @@
 {
   "repository": "UltraStar-Deluxe/USDX",
   "branch": "master",
-  "sha": "54f6e010800458543223dc2d7a3fb65140a78649",
-  "meaning": "Assessed upstream tip; changes incorporated through linked USCE PRs and original upstream ancestry recorded.",
+  "sha": "3079c4b8663b199bcbceafe28d2a0ee2d7630035",
+  "meaning": "Assessed upstream tip. Linked implementation PRs retain their own review, CI and merge status.",
   "resolutions": [
     {
       "commits": [
@@ -47,7 +47,62 @@
         "54f6e010800458543223dc2d7a3fb65140a78649"
       ],
       "disposition": "Adopt issue forms with USCE names and retain the optional reporter testing question; remove the duplicate Markdown bug template."
+    },
+    {
+      "commits": [
+        "33c4f323356beb220a8cbfcfaef6cbef6e22cdfb",
+        "3079c4b8663b199bcbceafe28d2a0ee2d7630035"
+      ],
+      "disposition": "The failure is already fixed in USCE by the SizeInt substitutions in 0cbc71c2. Alternative Delphi implementation #341 was closed at the maintainer request. Retain the current implementation and existing regression tests; record the original upstream commits as ancestry without replacing the USCE source.",
+      "usce_pr": 345,
+      "status": "already-covered; upstream ancestry recorded",
+      "existing_usce_commit": "0cbc71c2c157753ef1387ce33dab0dc15a40dfd1",
+      "alternative_usce_pr": 341,
+      "upstream_pr": 1463
     }
   ],
-  "from": "5541017022b8276cc6d101264e913eb5ac6dd9ac"
+  "from": "54f6e010800458543223dc2d7a3fb65140a78649",
+  "comparison": "https://github.com/UltraStar-Deluxe/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...3079c4b8663b199bcbceafe28d2a0ee2d7630035",
+  "assessment": {
+    "checkedAt": "2026-11-02T17:45:56.790Z",
+    "originalAuthorCutoff": "2026-05-02T17:45:00Z",
+    "issueWatchStart": "2026-10-27T00:30:14Z",
+    "outcomes": [
+      {
+        "area": "AnyASCII",
+        "output": "https://github.com/UltraStar-CE/USCE/pull/341",
+        "status": "Covered by existing SizeInt fix; alternative PR 341 closed"
+      },
+      {
+        "area": "Whole-line editor note types",
+        "output": "https://github.com/UltraStar-CE/USCE/pull/346"
+      },
+      {
+        "area": "Mixed-difficulty highscore visibility",
+        "output": "https://github.com/UltraStar-CE/USCE/pull/347"
+      },
+      {
+        "area": "Spanish volume labels",
+        "output": "https://github.com/UltraStar-CE/USCE/pull/348"
+      },
+      {
+        "area": "Unused installer form behind #342/#343/#344",
+        "output": "https://github.com/UltraStar-CE/USCE/pull/349"
+      },
+      {
+        "area": "Busy macOS packaging image",
+        "output": "https://github.com/UltraStar-CE/USCE/pull/350"
+      }
+    ],
+    "notAdopted": [
+      "Six generator/alignment commits remain outside the agreed chart/media generation scope.",
+      "Three fork jukebox/request-server commits use the removed jukebox and an embedded HTTP service; USCE uses continuous playback and usrelay.",
+      "The aveiver Python HTTP timeout/restart changes do not apply to the native relay transport; no Python server is imported."
+    ],
+    "alreadyCovered": [
+      "Tycorc frame pacing is already integrated. Matched measurements support the automatic Intel Windows buffer-upload workaround proposed in #327; no universal performance improvement is claimed.",
+      "Old/rebased dgruss integration branches retain the established focused-port decisions; no second player-layout, synth, scaling, playlist or statistics implementation."
+    ],
+    "remainingFeatureProposals": "Existing feature issues retain their own scope and acceptance; they are not unassessed commits or blockers to merging this checkpoint."
+  }
 }
