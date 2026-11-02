@@ -53,9 +53,10 @@
         "33c4f323356beb220a8cbfcfaef6cbef6e22cdfb",
         "3079c4b8663b199bcbceafe28d2a0ee2d7630035"
       ],
-      "disposition": "Exact upstream Delphi-mode AnyASCII implementation proposed in USCE #341, reverting the four SizeInt substitutions and retaining the existing tests. Original upstream ancestry is on #341; use a merge commit for that PR. Assessment completion does not claim it is merged.",
+      "disposition": "The failure is already fixed in USCE by the SizeInt substitutions in 0cbc71c2. PR #341 offered the alternative upstream Delphi-mode implementation and was closed at the maintainer request. Retain the current implementation and existing regression tests. This assessment does not record the upstream commits as main ancestry.",
       "usce_pr": 341,
-      "status": "implementation-proposed"
+      "status": "already-covered; alternative closed",
+      "existing_usce_commit": "0cbc71c2c157753ef1387ce33dab0dc15a40dfd1"
     }
   ],
   "from": "54f6e010800458543223dc2d7a3fb65140a78649",
@@ -67,7 +68,8 @@
     "outcomes": [
       {
         "area": "AnyASCII",
-        "output": "https://github.com/UltraStar-CE/USCE/pull/341"
+        "output": "https://github.com/UltraStar-CE/USCE/pull/341",
+        "status": "Covered by existing SizeInt fix; alternative PR 341 closed"
       },
       {
         "area": "Whole-line editor note types",
