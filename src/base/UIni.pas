@@ -223,6 +223,7 @@ type
       SkinNo:         integer;
       Color:          integer;
       HighScoreScreenEntries: integer;
+      HighScoreScreenAllDifficulties: boolean;
       BackgroundMusicOption: integer;
 
       // Record
@@ -284,7 +285,7 @@ type
       procedure SavePlayerLevels;
       procedure SaveTeamColors;
       procedure SaveShowWebScore;
-      procedure SaveHighScoreScreenEntries;
+      procedure SaveHighScoreScreenSettings;
       procedure SaveWebcamSettings();
       procedure SaveNumberOfPlayers;
       procedure SaveStatDetailCount;
@@ -1925,6 +1926,8 @@ begin
   TopScores := ReadArrayIndex(ITopScores, IniFile, 'Advanced', 'TopScores', IGNORE_INDEX, 'Player');
 
   // Last list length selected on the high-score screen
+  HighScoreScreenAllDifficulties := IniFile.ReadBool(
+    'Advanced', 'HighScoreScreenAllDifficulties', false);
   HighScoreScreenEntries := IniFile.ReadInteger(
     'Advanced', 'HighScoreScreenEntries', DEFAULT_HIGH_SCORE_SCREEN_ENTRIES);
   if (HighScoreScreenEntries < MIN_HIGH_SCORE_SCREEN_ENTRIES) then
@@ -2183,6 +2186,7 @@ begin
 
     // Last list length selected on the high-score screen
     IniFile.WriteInteger('Advanced', 'HighScoreScreenEntries', HighScoreScreenEntries);
+    IniFile.WriteBool('Advanced', 'HighScoreScreenAllDifficulties', HighScoreScreenAllDifficulties);
 
     for NoteType := Low(TNoteType) to High(TNoteType) do
       IniFile.WriteInteger('Scoring', ScoreFactorName[NoteType],
@@ -2343,13 +2347,14 @@ begin
   end;
 end;
 
-procedure TIni.SaveHighScoreScreenEntries;
+procedure TIni.SaveHighScoreScreenSettings;
 var
   IniFile: TIniFile;
 begin
-  IniFile := TSafeIniFile.Create(Filename.ToNative, 'TIni.SaveHighScoreScreenEntries');
+  IniFile := TSafeIniFile.Create(Filename.ToNative, 'TIni.SaveHighScoreScreenSettings');
   try
     IniFile.WriteInteger('Advanced', 'HighScoreScreenEntries', HighScoreScreenEntries);
+    IniFile.WriteBool('Advanced', 'HighScoreScreenAllDifficulties', HighScoreScreenAllDifficulties);
   finally
     IniFile.Free;
   end;

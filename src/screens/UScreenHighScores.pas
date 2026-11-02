@@ -39,17 +39,27 @@ uses
   UMenuList,
   UMusic,
   USongs,
+  USong,
   UThemes,
   sdl2,
   Math,
   SysUtils;
 
 type
+  THighScoreRow = record
+    Entry: TScore;
+    Difficulty: integer;
+  end;
+
   TScreenHighScores = class(TMenu)
     private
-      EntryColumns: array[0..2] of TListColumn;
+      DisplayScores: array of THighScoreRow;
+      TextDifficultyColumn: integer;
+      EntryColumns: array[0..3] of TListColumn;
       EntryRowsPerColumn: integer;
       EntryColumnOffset, EntryColumnWidth: real;
+      procedure BuildDisplayScores;
+      procedure SelectDifficulty(Delta: integer);
       function ColumnForEntry(Column, Entry: integer): TListColumn;
       function TryTwoColumns(var Layout: TTextListLayout): boolean;
       procedure AddThemedFrame;
@@ -86,6 +96,7 @@ type
       EntryNameText:     array of integer;
       EntryScoreText:    array of integer;
       EntryDateText:     array of integer;
+      EntryDifficultyText: array of integer;
 
       IsFadingOut:    boolean;
 
@@ -104,8 +115,8 @@ const
 implementation
 
 uses
-  USong,
   UDataBase,
+  ULanguage,
   UInputSource,
   UGraphic,
   UHelp,
@@ -208,7 +219,7 @@ begin
 
   EntryCount := NewEntryCount;
   Ini.HighScoreScreenEntries := EntryCount;
-  Ini.SaveHighScoreScreenEntries;
+  Ini.SaveHighScoreScreenSettings;
 
   UpdateHeaderText;
   ShowScoresForDifficulty(VisibleDifficulty);
@@ -227,6 +238,51 @@ begin
   except
     Result := TextTemplate;
   end;
+end;
+
+procedure TScreenHighScores.BuildDisplayScores;
+var
+  Level, I, J, Count: integer;
+  Row: THighScoreRow;
+begin
+  SetLength(DisplayScores, 0);
+  if CurrentSong = nil then Exit;
+  for Level := 0 to 2 do
+    if (VisibleDifficulty = 3) or (VisibleDifficulty = Level) then
+      for I := 0 to High(CurrentSong.Score[Level]) do
+      begin
+        Count := Length(DisplayScores);
+        SetLength(DisplayScores, Count + 1);
+        DisplayScores[Count].Entry := CurrentSong.Score[Level, I];
+        DisplayScores[Count].Difficulty := Level;
+      end;
+  // Scores stay unmodified. Equal totals retain their source-list order.
+  for I := 1 to High(DisplayScores) do
+  begin
+    Row := DisplayScores[I];
+    J := I - 1;
+    while J >= 0 do
+    begin
+      if DisplayScores[J].Entry.Score >= Row.Entry.Score then Break;
+      DisplayScores[J + 1] := DisplayScores[J];
+      Dec(J);
+    end;
+    DisplayScores[J + 1] := Row;
+  end;
+end;
+
+procedure TScreenHighScores.SelectDifficulty(Delta: integer);
+var
+  AllDifficulties: boolean;
+begin
+  VisibleDifficulty := (VisibleDifficulty + Delta + 4) mod 4;
+  AllDifficulties := VisibleDifficulty = 3;
+  if Ini.HighScoreScreenAllDifficulties <> AllDifficulties then
+  begin
+    Ini.HighScoreScreenAllDifficulties := AllDifficulties;
+    Ini.SaveHighScoreScreenSettings;
+  end;
+  ShowScoresForDifficulty(VisibleDifficulty);
 end;
 
 procedure TScreenHighScores.LoadCurrentSongScores;
@@ -269,6 +325,7 @@ begin
   Text[EntryNameText[EntryIndex]].Visible := Visible;
   Text[EntryScoreText[EntryIndex]].Visible := Visible;
   Text[EntryDateText[EntryIndex]].Visible := Visible;
+  Text[EntryDifficultyText[EntryIndex]].Visible := Visible and (VisibleDifficulty = 3);
 end;
 
 function TScreenHighScores.ColumnForEntry(Column, Entry: integer): TListColumn;
@@ -285,6 +342,7 @@ var
   FullWidth, Width, FontSize, MinimumSize, ScoreWidth, DateWidth, NameWidth, RankWidth: real;
 begin
   Result := false;
+  if VisibleDifficulty = 3 then Exit; // four columns need the full table width
   if (LayoutEntryCount < Theme.HighScores.List.TwoColumnMinEntries) or
      (CurrentSong = nil) or (Theme.HighScores.RowNameText.Align <> 0) or
      (Theme.HighScores.RowScoreText.Align <> 2) or (Theme.HighScores.RowDateText.Align <> 2) then Exit;
@@ -301,14 +359,14 @@ begin
   while FontSize >= MinimumSize do
   begin
     ScoreWidth := 0; DateWidth := 0; NameWidth := 0;
-    for I := 0 to Min(LayoutEntryCount, Length(CurrentSong.Score[VisibleDifficulty])) - 1 do
+    for I := 0 to Min(LayoutEntryCount, Length(DisplayScores)) - 1 do
     begin
       ScoreWidth := Max(ScoreWidth, MeasureTextMaxLineWidth(
-          IntToStr(CurrentSong.Score[VisibleDifficulty, I].Score),
+          IntToStr(DisplayScores[I].Entry.Score),
           Theme.HighScores.RowScoreText.Font, Theme.HighScores.RowScoreText.Style, FontSize));
-      DateWidth := Max(DateWidth, MeasureTextMaxLineWidth(CurrentSong.Score[VisibleDifficulty, I].Date,
+      DateWidth := Max(DateWidth, MeasureTextMaxLineWidth(DisplayScores[I].Entry.Date,
           Theme.HighScores.RowDateText.Font, Theme.HighScores.RowDateText.Style, FontSize));
-      NameWidth := Max(NameWidth, MeasureTextMaxLineWidth(CurrentSong.Score[VisibleDifficulty, I].Name,
+      NameWidth := Max(NameWidth, MeasureTextMaxLineWidth(DisplayScores[I].Entry.Name,
           Theme.HighScores.RowNameText.Font, Theme.HighScores.RowNameText.Style, FontSize));
     end;
     RankWidth := (Theme.HighScores.RowNameText.X - Theme.HighScores.RowNumberStatic.X) *
@@ -364,6 +422,8 @@ begin
       Theme.HighScores.RowScoreText);
     ApplyEntryTextLayout(EntryDateText[I], LayoutIndex,
       Theme.HighScores.RowDateText);
+    ApplyEntryTextLayout(EntryDifficultyText[I], LayoutIndex,
+      Theme.HighScores.RowDifficultyText);
     if EntryColumnOffset > 0 then
     begin
       Statics[EntryNumberStatic[I]].Texture.X := Theme.HighScores.RowNumberStatic.X;
@@ -377,9 +437,10 @@ end;
 
 procedure TScreenHighScores.UpdateColumnLayout;
 var
-  Specs: array[0..2] of TListColumnSpec;
-  I, Pass, RowCount: integer;
-  Left, Width, Gap, ScoreDateGap, ScoreWidth, DateWidth, FixedWidth, Scale: real;
+  Specs: array of TListColumnSpec;
+  Columns: array[0..3] of TListColumn;
+  I, Pass, RowCount, ScoreColumn: integer;
+  Left, Width, Gap, ScoreDateGap, ScoreWidth, DateWidth, DifficultyWidth, FixedWidth, Scale: real;
 begin
   EntryColumns[0] := ListColumnFromAnchor(Theme.HighScores.RowNameText.X,
       Theme.HighScores.RowNameText.W, Theme.HighScores.RowNameText.Align);
@@ -389,11 +450,19 @@ begin
       Theme.HighScores.RowDateText.W, Theme.HighScores.RowDateText.Align);
 
   // Keep custom theme anchors; infer widths only for the standard column order.
-  if (EntryColumns[0].Align <> 0) or (EntryColumns[1].Align <> 2) or
-      (EntryColumns[2].Align <> 2) then
+  if (VisibleDifficulty <> 3) and
+     ((EntryColumns[0].Align <> 0) or (EntryColumns[1].Align <> 2) or
+      (EntryColumns[2].Align <> 2)) then
     Exit;
   Left := Theme.HighScores.RowNameText.X;
   Width := Theme.HighScores.RowDateText.X - Left;
+  if VisibleDifficulty = 3 then
+  begin
+    Left := Min(EntryColumns[0].Left, Min(EntryColumns[1].Left, EntryColumns[2].Left));
+    Width := Max(EntryColumns[0].Left + EntryColumns[0].Width,
+        Max(EntryColumns[1].Left + EntryColumns[1].Width,
+            EntryColumns[2].Left + EntryColumns[2].Width)) - Left;
+  end;
   if EntryColumnOffset > 0 then
   begin
     Left := Theme.HighScores.RowNumberStatic.X +
@@ -402,31 +471,43 @@ begin
     Width := EntryColumnWidth - (Left - Theme.HighScores.RowNumberStatic.X);
   end;
   Gap := 12 * Min(1.0, EntryTextSize / Theme.HighScores.RowNameText.Size);
-  if (Width <= 0) or (Theme.HighScores.RowScoreText.X <= Left) or
-      (Theme.HighScores.RowDateText.X <= Theme.HighScores.RowScoreText.X + Gap) then
+  if (Width <= 0) or ((VisibleDifficulty <> 3) and
+     ((Theme.HighScores.RowScoreText.X <= Left) or
+      (Theme.HighScores.RowDateText.X <= Theme.HighScores.RowScoreText.X + Gap))) then
     Exit;
 
   ScoreDateGap := 48;
   if EntryColumnOffset > 0 then ScoreDateGap := 12;
-  RowCount := Min(EntryCount, Length(CurrentSong.Score[VisibleDifficulty]));
+  RowCount := Min(EntryCount, Length(DisplayScores));
   // Reserve measured score and date widths, leaving at least a quarter for names.
   // On narrow layouts reduce the numeric font sizes together instead of truncating.
   for Pass := 0 to 10 do
   begin
     ScoreWidth := 2;
     DateWidth := 2;
+    DifficultyWidth := 0;
+    if VisibleDifficulty = 3 then
+      DifficultyWidth := 2 + MeasureTextMaxLineWidth(Text[TextDifficultyColumn].Text,
+          Text[EntryDifficultyText[0]].Font, Text[EntryDifficultyText[0]].Style,
+          Text[EntryDifficultyText[0]].Size);
     for I := 0 to RowCount - 1 do
     begin
       ScoreWidth := Max(ScoreWidth, 2 + MeasureTextMaxLineWidth(
-          IntToStr(CurrentSong.Score[VisibleDifficulty, I].Score),
+          IntToStr(DisplayScores[I].Entry.Score),
           Text[EntryScoreText[I]].Font, Text[EntryScoreText[I]].Style,
           Text[EntryScoreText[I]].Size));
       DateWidth := Max(DateWidth, 2 + MeasureTextMaxLineWidth(
-          CurrentSong.Score[VisibleDifficulty, I].Date,
+          DisplayScores[I].Entry.Date,
           Text[EntryDateText[I]].Font, Text[EntryDateText[I]].Style,
           Text[EntryDateText[I]].Size));
+      if VisibleDifficulty = 3 then
+        DifficultyWidth := Max(DifficultyWidth, 2 + MeasureTextMaxLineWidth(
+            IDifficultyTranslated[DisplayScores[I].Difficulty],
+            Text[EntryDifficultyText[I]].Font, Text[EntryDifficultyText[I]].Style,
+            Text[EntryDifficultyText[I]].Size));
     end;
     FixedWidth := ScoreWidth + DateWidth;
+    if VisibleDifficulty = 3 then FixedWidth := FixedWidth + DifficultyWidth + Gap;
     if (FixedWidth <= Width * 0.75 - Gap - ScoreDateGap) or (Pass = 10) then
       Break;
     Scale := Max(0.1, (Width * 0.75 - Gap - ScoreDateGap - 4) / FixedWidth);
@@ -434,18 +515,31 @@ begin
     begin
       Text[EntryScoreText[I]].Size := Text[EntryScoreText[I]].Size * Scale;
       Text[EntryDateText[I]].Size := Text[EntryDateText[I]].Size * Scale;
+      if VisibleDifficulty = 3 then
+        Text[EntryDifficultyText[I]].Size := Text[EntryDifficultyText[I]].Size * Scale;
     end;
   end;
 
-  FillChar(Specs, SizeOf(Specs), 0);
+  SetLength(Specs, 3 + Ord(VisibleDifficulty = 3));
   Specs[0].Flexible := true;
-  Specs[1].GapBefore := Gap / Width;
-  Specs[1].Width := ScoreWidth / Width;
-  Specs[1].Align := 2;
-  Specs[2].GapBefore := ScoreDateGap / Width;
-  Specs[2].Width := DateWidth / Width;
-  Specs[2].Align := 2;
-  CalculateListColumns(Specs, Left, Width, 1.0, 1.0, 1.0, EntryColumns);
+  ScoreColumn := 1;
+  if VisibleDifficulty = 3 then
+  begin
+    Specs[1].GapBefore := Gap / Width;
+    Specs[1].Width := DifficultyWidth / Width;
+    ScoreColumn := 2;
+  end;
+  Specs[ScoreColumn].GapBefore := Gap / Width;
+  Specs[ScoreColumn].Width := ScoreWidth / Width;
+  Specs[ScoreColumn].Align := 2;
+  Specs[ScoreColumn + 1].GapBefore := ScoreDateGap / Width;
+  Specs[ScoreColumn + 1].Width := DateWidth / Width;
+  Specs[ScoreColumn + 1].Align := 2;
+  CalculateListColumns(Specs, Left, Width, 1.0, 1.0, 1.0, Columns);
+  EntryColumns[0] := Columns[0];
+  EntryColumns[1] := Columns[ScoreColumn];
+  EntryColumns[2] := Columns[ScoreColumn + 1];
+  if VisibleDifficulty = 3 then EntryColumns[3] := Columns[1];
   if Theme.HighScores.RowNameText.W > 0 then
     EntryColumns[0].Width := Min(Theme.HighScores.RowNameText.W, EntryColumns[0].Width);
   for I := 0 to High(EntryNameText) do
@@ -456,6 +550,18 @@ begin
     Text[EntryNameText[I]].W := EntryColumns[0].Width;
     Text[EntryScoreText[I]].W := EntryColumns[1].Width;
     Text[EntryDateText[I]].W := EntryColumns[2].Width;
+    if VisibleDifficulty = 3 then
+    begin
+      PositionListColumnText(Text[EntryDifficultyText[I]], ColumnForEntry(3, I));
+      Text[EntryDifficultyText[I]].W := EntryColumns[3].Width;
+    end;
+  end;
+  if VisibleDifficulty = 3 then
+  begin
+    PositionListColumnText(Text[TextDifficultyColumn], EntryColumns[3]);
+    Text[TextDifficultyColumn].W := EntryColumns[3].Width;
+    Text[TextDifficultyColumn].Y := Text[EntryDifficultyText[0]].Y - EntryRowPitch;
+    Text[TextDifficultyColumn].Size := Text[EntryDifficultyText[0]].Size;
   end;
 end;
 
@@ -509,17 +615,11 @@ begin
         end;
       SDLK_RIGHT:
         begin
-          inc(VisibleDifficulty);
-          if (VisibleDifficulty > 2) then
-            VisibleDifficulty := 0;
-          ShowScoresForDifficulty(VisibleDifficulty);
+          SelectDifficulty(1);
         end;
       SDLK_LEFT:
         begin
-          dec(VisibleDifficulty);
-          if (VisibleDifficulty < 0) then
-            VisibleDifficulty := 2;
-          ShowScoresForDifficulty(VisibleDifficulty);
+          SelectDifficulty(-1);
         end;
       SDLK_UP:
         begin
@@ -556,6 +656,7 @@ begin
   SetLength(EntryNameText, Theme.HighScores.List.MaxEntries);
   SetLength(EntryScoreText, Theme.HighScores.List.MaxEntries);
   SetLength(EntryDateText, Theme.HighScores.List.MaxEntries);
+  SetLength(EntryDifficultyText, Theme.HighScores.List.MaxEntries);
 
   AddThemedFrame;
 
@@ -578,8 +679,12 @@ begin
     EntryNameText[I] := AddText(Theme.HighScores.RowNameText);
     EntryScoreText[I] := AddText(Theme.HighScores.RowScoreText);
     EntryDateText[I] := AddText(Theme.HighScores.RowDateText);
+    EntryDifficultyText[I] := AddText(Theme.HighScores.RowDifficultyText);
+    Text[EntryDifficultyText[I]].Visible := false;
   end;
 
+  TextDifficultyColumn := AddText(Theme.HighScores.RowDifficultyText);
+  Text[TextDifficultyColumn].Visible := false;
   UpdateEntryLayout;
   UpdateHeaderText;
 end;
@@ -618,22 +723,15 @@ begin
 
   Text[TextArtistTitle].Text := CurrentSong.Artist + ' - ' + CurrentSong.Title;
 
-  // The first singer may have no saved score while another difficulty does.
-  // Keep the shared Party difficulty and explicitly timed screens unchanged.
-  if not (ScreenSong.Mode in [smPartyClassic, smPartyFree]) and
-     not ScreenContinuousPlayback.Session.Active and
+  if Ini.HighScoreScreenAllDifficulties then VisibleDifficulty := 3;
+  if (VisibleDifficulty < 3) and
      (Length(CurrentSong.Score[VisibleDifficulty]) = 0) then
-    for I := 0 to Min(PlayersPlay, Length(Player)) - 1 do
-      if (Player[I].InputSource <> Ord(pisNone)) and
-         (Length(CurrentSong.Score[EnsureRange(Player[I].Level, 0, 2)]) > 0) then
-      begin
-        VisibleDifficulty := EnsureRange(Player[I].Level, 0, 2);
-        Break;
-      end;
+    VisibleDifficulty := 3;
+  BuildDisplayScores;
 
   // An explicitly timed continuous-mode screen also stays visible when this
   // difficulty has no saved scores yet.
-  if (Length(CurrentSong.Score[VisibleDifficulty]) = 0) and
+  if (Length(DisplayScores) = 0) and
      not ScreenContinuousPlayback.Session.Active then
   begin
     // Redirecting from OnShow replaces the pending screen before OnHide runs.
@@ -651,45 +749,54 @@ var
   Name: UTF8String;
   EntriesJson: string;
 begin
-  VisibleDifficulty := difficulty;
-  LayoutEntryCount := EnsureRange(Length(CurrentSong.Score[difficulty]), 5, EntryCount);
+  VisibleDifficulty := EnsureRange(difficulty, 0, 3);
+  BuildDisplayScores;
+  Text[TextDifficultyColumn].Visible := VisibleDifficulty = 3;
+  LayoutEntryCount := EnsureRange(Length(DisplayScores), 5, EntryCount);
   UpdateEntryLayout;
   UpdateColumnLayout;
 
   for I := 0 to High(EntryNumberStatic) do
   begin
-    if (I < EntryCount) and (I < Length(CurrentSong.Score[difficulty])) then
+    if (I < EntryCount) and (I < Length(DisplayScores)) then
     begin
       SetEntryVisible(I, true);
-      Name := CurrentSong.Score[difficulty, I].Name;
-      Track := TrackNumber(CurrentSong.Score[difficulty, I].TrackMask);
+      Name := DisplayScores[I].Entry.Name;
+      Track := TrackNumber(DisplayScores[I].Entry.TrackMask);
       if CurrentSong.IsDuet and (Track > 0) then
         Name := Name + ' (P' + IntToStr(Track) + ')';
       SetListCellText(Text[EntryNameText[I]], ColumnForEntry(0, I), Name);
       SetListCellText(Text[EntryScoreText[I]], ColumnForEntry(1, I),
-          IntToStr(CurrentSong.Score[difficulty, I].Score));
-      SetListCellText(Text[EntryDateText[I]], ColumnForEntry(2, I), CurrentSong.Score[difficulty, I].Date);
+          IntToStr(DisplayScores[I].Entry.Score));
+      SetListCellText(Text[EntryDateText[I]], ColumnForEntry(2, I), DisplayScores[I].Entry.Date);
+      if VisibleDifficulty = 3 then
+        SetListCellText(Text[EntryDifficultyText[I]], ColumnForEntry(3, I),
+            IDifficultyTranslated[DisplayScores[I].Difficulty]);
     end
     else
       SetEntryVisible(I, false);
   end;
 
-  Text[TextDifficulty].Text := IDifficultyTranslated[difficulty];
+  if VisibleDifficulty = 3 then
+    Text[TextDifficulty].Text := Language.Translate('OPTION_VALUE_ALL')
+  else
+    Text[TextDifficulty].Text := IDifficultyTranslated[VisibleDifficulty];
   EntriesJson := '[';
-  for I := 0 to Min(EntryCount, Length(CurrentSong.Score[difficulty])) - 1 do
+  for I := 0 to Min(EntryCount, Length(DisplayScores)) - 1 do
   begin
     if I > 0 then EntriesJson := EntriesJson + ',';
     EntriesJson := EntriesJson + '{"name":"' +
-      RemoteJsonEscape(CurrentSong.Score[difficulty, I].Name) + '","score":' +
-      IntToStr(CurrentSong.Score[difficulty, I].Score) + ',"date":"' +
-      RemoteJsonEscape(CurrentSong.Score[difficulty, I].Date) + '"}';
+      RemoteJsonEscape(DisplayScores[I].Entry.Name) + '","score":' +
+      IntToStr(DisplayScores[I].Entry.Score) + ',"date":"' +
+      RemoteJsonEscape(DisplayScores[I].Entry.Date) + '","difficulty":' +
+      IntToStr(DisplayScores[I].Difficulty) + '}';
   end;
   EntriesJson := EntriesJson + ']';
   RemoteBridgeIPC.SendGameState('high_scores', 0, 0);
   RemoteBridgeIPC.SendJsonMessage('{"type":"screen.info","protocol":1,"screen":"high_scores"' +
     ',"title":"' + RemoteJsonEscape(CurrentSong.Title) + '","artist":"' +
     RemoteJsonEscape(CurrentSong.Artist) + '","difficulty":"' +
-    RemoteJsonEscape(IDifficultyTranslated[difficulty]) + '","entries":' + EntriesJson + '}');
+    RemoteJsonEscape(Text[TextDifficulty].Text) + '","entries":' + EntriesJson + '}');
 end;
 
 function TScreenHighScores.Draw: boolean;
