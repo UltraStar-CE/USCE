@@ -59,11 +59,11 @@ begin
     Sleep(20);
   until GetTickCount64 - Start > 650;
 end;
-procedure SettleStartup;
+procedure SettleChanges;
 var Start, QuietSince: QWord;
 begin
-  // FSEvents can deliver root-creation events after the initial recovery scan,
-  // even after a synchronous flush. Require bounded settling, then test idle.
+  // FSEvents can deliver startup and write notifications in separate batches.
+  // Drain preceding mutations before asserting that a read stays quiet.
   Start := GetTickCount64;
   QuietSince := Start;
   repeat
@@ -88,7 +88,7 @@ begin
   {$ENDIF}
   Watch := TLibraryWatch.Create(Roots);
   try
-    WaitChange(Root, true); SettleStartup; Quiet('after startup');
+    WaitChange(Root, true); SettleChanges; Quiet('after startup');
     {$IFDEF LINUX}
     WriteFile(Root + '/Artist/song.txt', 'upper directory'); WaitChange(Root + '/Artist/song.txt');
     WriteFile(Root + '/artist/song.txt', 'lower directory'); WaitChange(Root + '/artist/song.txt');
@@ -99,6 +99,7 @@ begin
     {$ENDIF}
     WriteFile(Root + PathDelim + 'song.txt', 'first'); WaitChange(Root);
     WriteFile(Root + PathDelim + 'song.txt', 'updated'); WaitChange(Root);
+    SettleChanges;
     Changes.LoadFromFile(Root + PathDelim + 'song.txt'); Quiet('after reading'); // reading is not a mutation
     ForceDirectories(Sub);
     WriteFile(Sub + PathDelim + 'duet.txt', 'copied with nested directory'); WaitChange(Sub);
@@ -127,7 +128,7 @@ begin
   Roots := TStringList.Create; Changes := TStringList.Create; Roots.Add(Missing);
   Watch := TLibraryWatch.Create(Roots);
   try
-    WaitChange(Missing, true); SettleStartup; Quiet('before absent hierarchy creation');
+    WaitChange(Missing, true); SettleChanges; Quiet('before absent hierarchy creation');
     ForceDirectories(Missing);
     WriteFile(Missing + PathDelim + 'new.txt', 'root and parent were absent');
     WaitChange(Missing, true);
