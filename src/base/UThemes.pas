@@ -667,6 +667,7 @@ type
     RowNameText:          TThemeText;
     RowScoreText:         TThemeText;
     RowDateText:          TThemeText;
+    RowDifficultyText:    TThemeText;
   end;
 
   TThemeOptions = class(TThemeBasic)
@@ -3517,6 +3518,10 @@ begin
   ThemeLoadText(HighScores.RowNameText,          SectionName('HighScoresRowNameText', 'Top5TextName1'));
   ThemeLoadText(HighScores.RowScoreText,         SectionName('HighScoresRowScoreText', 'Top5TextScore1'));
   ThemeLoadText(HighScores.RowDateText,          SectionName('HighScoresRowDateText', 'Top5TextDate1'));
+  HighScores.RowDifficultyText := HighScores.RowNameText;
+  HighScores.RowDifficultyText.Text := Language.Translate('STAT_DETAIL_HEADER_DIFFICULTY');
+  if ResolveThemeFile('HighScoresRowDifficultyText') <> nil then
+    ThemeLoadText(HighScores.RowDifficultyText, 'HighScoresRowDifficultyText');
   // Legacy themes supplied five fixed rows instead of a reusable row template.
   if (ResolveThemeFile('HighScoresListArea') = nil) and
      (ResolveThemeFile('Top5TextName5') <> nil) then
