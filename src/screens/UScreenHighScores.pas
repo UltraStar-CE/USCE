@@ -618,6 +618,19 @@ begin
 
   Text[TextArtistTitle].Text := CurrentSong.Artist + ' - ' + CurrentSong.Title;
 
+  // The first singer may have no saved score while another difficulty does.
+  // Keep the shared Party difficulty and explicitly timed screens unchanged.
+  if not (ScreenSong.Mode in [smPartyClassic, smPartyFree]) and
+     not ScreenContinuousPlayback.Session.Active and
+     (Length(CurrentSong.Score[VisibleDifficulty]) = 0) then
+    for I := 0 to Min(PlayersPlay, Length(Player)) - 1 do
+      if (Player[I].InputSource <> Ord(pisNone)) and
+         (Length(CurrentSong.Score[EnsureRange(Player[I].Level, 0, 2)]) > 0) then
+      begin
+        VisibleDifficulty := EnsureRange(Player[I].Level, 0, 2);
+        Break;
+      end;
+
   // An explicitly timed continuous-mode screen also stays visible when this
   // difficulty has no saved scores yet.
   if (Length(CurrentSong.Score[VisibleDifficulty]) = 0) and
