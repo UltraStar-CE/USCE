@@ -9776,6 +9776,511 @@
         "reason": "Stale language template removal: The source removal is already in 412fa2a2. Current English coverage is handled by tools/check_english.py rather than restoring removed templates.",
         "reviewedCommitCount": 1
       }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "test/pacer-309-mapoff",
+      "head": "1097286c4bbf568b199b8fee2e055ac99ce54886",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "already-covered",
+        "assessedAt": "2026-11-02",
+        "reason": "Frame pacer is already integrated; mapped-buffer-off remains the existing experiment #327.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/327"
+        ]
+      }
+    },
+    {
+      "repository": "Tycorc/USDX",
+      "branch": "test/pacer-309",
+      "head": "8b43a1283f4f027d721ed63f4f80cc5475716b26",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "already-covered",
+        "assessedAt": "2026-11-02",
+        "reason": "Frame pacer is already integrated; mapped-buffer-off remains the existing experiment #327.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/327"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "libmpv-video",
+      "head": "caa5df47abff552c42f031d45bc5737f8b64bfb0",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "existing-proposal",
+        "assessedAt": "2026-11-02",
+        "reason": "Existing optional MPV port #173 covers the selected backend; no second port.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/173"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "macos-portaudio-playback-test",
+      "head": "2ffbb5073827db8fcecc622d934d99bddab72933",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "patch-equivalent",
+        "assessedAt": "2026-11-02",
+        "reason": "Stable patch IDs match existing USCE commits; no second port.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/commit/ca0ede883c578e3ecf7164aa8c1e1e7b942c74e2"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "macosaudioswitchdebug",
+      "head": "3183baa2d304cf6cb2d7a5072cec57cb2872dfbf",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "superseded",
+        "assessedAt": "2026-11-02",
+        "reason": "Current CI already uses sdl2-compat and packages EXTRA_DYLIBS; no old workflow replacement.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/34"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "manualmidiin",
+      "head": "c8e418498e1a604f20fbc2474467200abb35ce18",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "superseded",
+        "assessedAt": "2026-11-02",
+        "reason": "Current unified MIDI/synth scheduling is retained; no reintroduction of the old backend/build switches.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/155"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "midiemuvolume",
+      "head": "0163af1e20db7ab7fa539077158a3206d74f1b70",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "not-adopted",
+        "assessedAt": "2026-11-02",
+        "reason": "Old global MIDI-volume persistence is not reapplied over the newer per-note velocity and click/synth mixer controls.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/155"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "morestats",
+      "head": "6b19e7d7fecf5cfc42be81f73437c3c3e6612bad",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "already-covered",
+        "assessedAt": "2026-11-02",
+        "reason": "Current statistics/list helpers and later compatibility fixes supersede this integration branch.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/123"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "newjukebox",
+      "head": "44d2886547ec25505ed003ac1aa6997a7bf712ce",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "superseded",
+        "assessedAt": "2026-11-02",
+        "reason": "Native continuous singing and zero-player mode replace the removed jukebox implementation.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/135"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "notesplitting2",
+      "head": "bf56a82256a6a4976354dcdfd9367ee50580bb71",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "already-covered",
+        "assessedAt": "2026-11-02",
+        "reason": "Current editor has the ported note-splitting behavior; no second editor implementation.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/46"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "nukesongfeatureicons",
+      "head": "4f9dc763440ae3d822cbaeef9c8ab215d354810f",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "not-adopted",
+        "assessedAt": "2026-11-02",
+        "reason": "USCE retains useful song feature indicators; wholesale removal conflicts with current themes.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/11"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "pitch-display-diagnostics",
+      "head": "7b5927e249e3ed0e30fe9c39f05bb30b202ffd7e",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "already-covered",
+        "assessedAt": "2026-11-02",
+        "reason": "Existing pitch diagnostics port.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/59"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "playliststuff",
+      "head": "93821e731f6e6fa1fca91c3daf8ef4f452b0c717",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "patch-equivalent",
+        "assessedAt": "2026-11-02",
+        "reason": "Stable patch IDs match existing USCE commits; no second port.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/commit/25aca45718db66b868a974af37f4900bc12702d3"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "portaudioappimage",
+      "head": "7b09c65775852f08437373e9d3d0d1e69c5659ef",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "not-adopted",
+        "assessedAt": "2026-11-02",
+        "reason": "Retain the established macOS-scoped PortAudio decision and Linux playback path.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/34"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "profiles",
+      "head": "89a907455149c6371332bea3302d5bad714954d4",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "already-covered",
+        "assessedAt": "2026-11-02",
+        "reason": "Player/team history and generic setup supersede this old profile integration branch.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/129"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "reduce-rap-score-weight",
+      "head": "02d7c194286fb3148f5c96e201c320c6fe0301b3",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "superseded",
+        "assessedAt": "2026-11-02",
+        "reason": "Current configurable rap/freestyle weights replace a fixed lower score weight.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/57"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "refactorplayers-12-02-modern-player-templates",
+      "head": "67ee5ecee8a07b92f5aee9f51c6e55e7f19b7b5f",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "patch-equivalent",
+        "assessedAt": "2026-11-02",
+        "reason": "Stable patch IDs match existing USCE commits; no second port.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/commit/0f367921747b6ad52b2ed7b35905d7cd69f5ac34",
+          "https://github.com/UltraStar-CE/USCE/commit/924330ce3dfd2c4d2ca6270cf390daa47e039019"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "refactorplayers-12-03-player-layout-helper",
+      "head": "ec518a1cc1fd12eb53265b43cfe2ec7bb02424fd",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "already-covered",
+        "assessedAt": "2026-11-02",
+        "reason": "Generic player layout/templates and N-player rendering have already been ported and subsequently adapted.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/65"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "refactorplayers-12-04-theme-layout-support",
+      "head": "c234abf0917d74194301844d756e0194958571ff",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "already-covered",
+        "assessedAt": "2026-11-02",
+        "reason": "Generic player layout/templates and N-player rendering have already been ported and subsequently adapted.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/65"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "refactorplayers-12-05-player-selection-layout",
+      "head": "56e7328f7c4dd59450219f61e3025c32ef78c128",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "already-covered",
+        "assessedAt": "2026-11-02",
+        "reason": "Generic player layout/templates and N-player rendering have already been ported and subsequently adapted.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/65"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "refactorplayers-12-06-song-duet-layout",
+      "head": "78817c8dfc1169d682571a5085d5a5ace48d4d6d",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "already-covered",
+        "assessedAt": "2026-11-02",
+        "reason": "Generic player layout/templates and N-player rendering have already been ported and subsequently adapted.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/65"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "refactorplayers-12-07-score-layout",
+      "head": "3d5ee3bf04186af9544ef0f14f90f5ff232f310f",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "already-covered",
+        "assessedAt": "2026-11-02",
+        "reason": "Generic player layout/templates and N-player rendering have already been ported and subsequently adapted.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/65"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "refactorplayers-12-08-sing-lane-layout",
+      "head": "39c95253e01e46b8f0658a24a2bbe251d70577f3",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "already-covered",
+        "assessedAt": "2026-11-02",
+        "reason": "Generic player layout/templates and N-player rendering have already been ported and subsequently adapted.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/65"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "refactorplayers-12-09-sing-controller-slots",
+      "head": "7512e78bfd37aa391da1f3d5f60a752b09f0806a",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "already-covered",
+        "assessedAt": "2026-11-02",
+        "reason": "Generic player layout/templates and N-player rendering have already been ported and subsequently adapted.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/65"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "refactorplayers-12-10-sing-view-slots",
+      "head": "1f7cf93f4161ed47755c51a8d8082a54f04f587b",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "already-covered",
+        "assessedAt": "2026-11-02",
+        "reason": "Generic player layout/templates and N-player rendering have already been ported and subsequently adapted.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/65"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "refactorplayers-12-11-player-counts",
+      "head": "0947c420d2b26dace1c3030a09d29a4c85de8a1a",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "already-covered",
+        "assessedAt": "2026-11-02",
+        "reason": "Generic player layout/templates and N-player rendering have already been ported and subsequently adapted.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/65"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "refactorplayers-12-12-remove-fixed-theme-layouts",
+      "head": "b2021f868c139b6e82bf8f43252c5c00f500485f",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "already-covered",
+        "assessedAt": "2026-11-02",
+        "reason": "Generic player layout/templates and N-player rendering have already been ported and subsequently adapted.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/65"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "reloadplaylists",
+      "head": "5dceb5cbd920a503097f899c9eef364840936303",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "already-covered",
+        "assessedAt": "2026-11-02",
+        "reason": "ReloadCurrentPlaylist and preview checks already exist in current UScreenSong.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/315"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "scaling",
+      "head": "11234ee924afc7ecfab4e2d8c2d108401583cab2",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "already-covered",
+        "assessedAt": "2026-11-02",
+        "reason": "Current shared aspect-scale state, theme ScaleMode and cover handling supersede this integration branch.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/83"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "scorebar",
+      "head": "3078c0811c114fe61ad3b3b744921f9f9f47658b",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "patch-equivalent",
+        "assessedAt": "2026-11-02",
+        "reason": "Stable patch IDs match existing USCE commits; no second port.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/commit/77c034592bdcee1628a9f7144ee90d92e1f3e15b"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "sdl3",
+      "head": "42ebd973cd0270b8c5ef98236051e9937a4d15e3",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "not-adopted",
+        "assessedAt": "2026-11-02",
+        "reason": "No new concrete failure requires replacing the current SDL2 stack; broad mechanical migration not imported.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/11"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "statefullowvocaltoggle",
+      "head": "f6d6bfdfd30bb3f64580d8fb61625b003ce7fe2b",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "already-covered",
+        "assessedAt": "2026-11-02",
+        "reason": "Current VocalsVolume/LastPartialVocalsVolume and karaoke toggling retain this behavior.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/28"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "unifymedleypaths",
+      "head": "3d0758679de3c186d9891d4977c8b00d32507c79",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "already-covered",
+        "assessedAt": "2026-11-02",
+        "reason": "Existing medley path consolidation is ported.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/36"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "usdxbeta",
+      "head": "04a63d30d5f33e0289d0dc8abc569b42c59ef783",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "superseded",
+        "assessedAt": "2026-11-02",
+        "reason": "Old integration/CI/theme history is covered by focused ports, current Themes and packaging; no second integration branch.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/11"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "utf8filesystem",
+      "head": "a5002578ed270a82df0e508ada0bd5ad99fc6512",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "already-covered",
+        "assessedAt": "2026-11-02",
+        "reason": "Current Unicode filesystem startup and paths remain; no copyrighted test song imported.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/50"
+        ]
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "vaapi",
+      "head": "ce949f18cf32d0b2f78d8db4de503897b67c56cf",
+      "assessment": {
+        "decision": "assessed",
+        "disposition": "existing-proposal",
+        "assessedAt": "2026-11-02",
+        "reason": "Use the existing optional MPV path #173 to evaluate hardware playback instead of importing a parallel VAAPI backend.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/173"
+        ]
+      }
     }
   ],
   "unavailableForks": [
