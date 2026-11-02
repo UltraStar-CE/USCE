@@ -234,7 +234,7 @@
     {
       "repository": "shininchi/USDX",
       "branch": "master",
-      "head": "825e2256b425db2cdbdd006ec4ea3212a3ccee44",
+      "head": "e7f55369bd366d3e117843971f0e1df657dcae4d",
       "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
       "comparisonBase": "c3efe4c57914f54cc481acf555afde2e858d98e0",
       "comparisonKind": "since-checkpoint",
@@ -272,6 +272,72 @@
           "title": "Place again the lines the aligner squeezes into an instant after a held word",
           "author": "shininchi",
           "authoredAt": "2026-10-30T22:10:13Z"
+        },
+        {
+          "sha": "cee4be774eb7d5a969620538b8f1159b8292a25d",
+          "title": "End a line's last word where the voice stops, and sing backing vocals as freestyle",
+          "authoredAt": "2026-10-31T13:50:47Z",
+          "author": "shininchi"
+        },
+        {
+          "sha": "fa6ab323b301fb3052b13acb49dfca082bbde092",
+          "title": "End a line's last word at a leap to another sound, and join one-syllable words sung with the word before",
+          "authoredAt": "2026-10-31T14:21:14Z",
+          "author": "shininchi"
+        },
+        {
+          "sha": "9dcdbdcc585b1cdd1a845f2ef8a3f904fce47bc3",
+          "title": "Keep a note in the singer's usual range when its neighbours slip an octave, and trust letters up to 0.3 s off",
+          "authoredAt": "2026-10-31T14:51:46Z",
+          "author": "shininchi"
+        },
+        {
+          "sha": "941887648b2a5b3ae98e6fd274043b63f93909b5",
+          "title": "Keep a backing vocal's held notes freestyle, and give a line's closing backing vocals a line of their own",
+          "authoredAt": "2026-10-31T16:22:21Z",
+          "author": "shininchi"
+        },
+        {
+          "sha": "77494cd062308943420782c5fc0133330a1ce2cc",
+          "title": "Mark golden notes as SingStar places them: about three a minute, spread evenly, one held note a line on its longest or highest note",
+          "authoredAt": "2026-10-31T17:24:17Z",
+          "author": "shininchi"
+        },
+        {
+          "sha": "5d65969bc37d48e43991857d9671d004d6fe0721",
+          "title": "Give generated songs their instrumental track for karaoke, their chorus as preview and medley, and a start after a silent intro",
+          "authoredAt": "2026-10-31T18:51:18Z",
+          "author": "shininchi"
+        },
+        {
+          "sha": "740644682f16dbd33b26a7ea98880393e85f96fe",
+          "title": "Translate the sound volume options to Spanish",
+          "authoredAt": "2026-10-31T19:22:50Z",
+          "author": "shininchi"
+        },
+        {
+          "sha": "e5986ac0ffaf956f4edf4a906927625e5397358c",
+          "title": "Show the song request QR code in the jukebox, and add a jukebox list that plays the request queue",
+          "authoredAt": "2026-10-31T19:32:02Z",
+          "author": "shininchi"
+        },
+        {
+          "sha": "4ebd3cbaba73e17b27cf1f3fb784253f6f811ea7",
+          "title": "Leave the jukebox's requests list when asked to, instead of going on with another song",
+          "authoredAt": "2026-10-31T20:03:58Z",
+          "author": "shininchi"
+        },
+        {
+          "sha": "245df1135c8ac8450726368b439d66ee294d56fa",
+          "title": "Say on the jukebox list screen what each list does with the song requests",
+          "authoredAt": "2026-10-31T20:15:12Z",
+          "author": "shininchi"
+        },
+        {
+          "sha": "e7f55369bd366d3e117843971f0e1df657dcae4d",
+          "title": "Let Shift+F and Shift+G in the editor change the note type of the whole line",
+          "authoredAt": "2026-10-31T23:41:42Z",
+          "author": "shininchi"
         }
       ],
       "newCommits": [
@@ -308,8 +374,8 @@
       ],
       "assessment": {
         "decision": "assessed",
-        "assessedAgainst": "e42382b48c2ca6fc947376f4c936b1a89c509199",
-        "assessedAt": "2026-10-31",
+        "assessedAgainst": "521df17758d58f2674d244a0a4d145db373e74fe",
+        "assessedAt": "2026-11-02T17:45:56.790Z",
         "scope": "Source-diff and current-USCE comparison, with linked concrete outputs. Assessment is not runtime acceptance or adoption of the fork.",
         "items": [
           {
@@ -321,17 +387,31 @@
               "https://github.com/UltraStar-CE/USCE/issues/203",
               "https://github.com/UltraStar-CE/USCE/issues/183"
             ]
+          },
+          {
+            "area": "2026-11-02 source delta",
+            "decision": "assessed",
+            "reason": "Editor shortcut and Spanish labels proposed in #346/#348. Six generator commits remain not adopted; three jukebox/server commits are superseded by continuous playback and usrelay.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/pull/346",
+              "https://github.com/UltraStar-CE/USCE/pull/348",
+              "https://github.com/UltraStar-CE/USCE/pull/168"
+            ]
           }
         ],
         "usceReferences": [
           "https://github.com/UltraStar-CE/USCE/issues/202",
           "https://github.com/UltraStar-CE/USCE/issues/203",
-          "https://github.com/UltraStar-CE/USCE/issues/183"
+          "https://github.com/UltraStar-CE/USCE/issues/183",
+          "https://github.com/UltraStar-CE/USCE/pull/346",
+          "https://github.com/UltraStar-CE/USCE/pull/348",
+          "https://github.com/UltraStar-CE/USCE/pull/168"
         ],
         "reason": "Generator alignment, video acquisition and still extraction: All five new commits were inspected. Three change the declined chart-generation/Whisper alignment pipeline. Two add media download/search and destructive video-to-still replacement through the same generator process runner. These do not reverse the existing decision to exclude chart/stem generation and music/media acquisition from this project.",
-        "reviewedCommitCount": 5
+        "reviewedCommitCount": 16,
+        "followThrough": "Editor shortcut and Spanish labels proposed in #346/#348. Six generator commits remain not adopted; three jukebox/server commits are superseded by continuous playback and usrelay."
       },
-      "previousHead": "c3efe4c57914f54cc481acf555afde2e858d98e0",
+      "previousHead": "825e2256b425db2cdbdd006ec4ea3212a3ccee44",
       "previousAssessment": {
         "decision": "assessed",
         "usceReferences": [
@@ -1143,6 +1223,18 @@
                   "https://github.com/UltraStar-CE/USCE/issues/239"
                 ]
               }
+            ]
+          }
+        },
+        {
+          "head": "825e2256b425db2cdbdd006ec4ea3212a3ccee44",
+          "assessment": {
+            "decision": "assessed",
+            "reason": "Generator alignment, video acquisition and still extraction: All five new commits were inspected. Three change the declined chart-generation/Whisper alignment pipeline. Two add media download/search and destructive video-to-still replacement through the same generator process runner. These do not reverse the existing decision to exclude chart/stem generation and music/media acquisition from this project.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/202",
+              "https://github.com/UltraStar-CE/USCE/issues/203",
+              "https://github.com/UltraStar-CE/USCE/issues/183"
             ]
           }
         }
@@ -3897,7 +3989,7 @@
     {
       "repository": "MDDD87/USDX",
       "branch": "feature-playlist-karussell",
-      "head": "cda33435b1144b151bc3bd05be61e15e0bcefafc",
+      "head": "972fa7a2a0fc3bad41857872bb8f7a996c98fb8c",
       "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
       "ahead": 54,
       "behind": 10,
@@ -4226,12 +4318,18 @@
           "title": "Normaler Modus startet immer mit allen Songs (Playlist der Party wird geschlossen)",
           "author": "claude",
           "authoredAt": "2026-10-30T06:53:59Z"
+        },
+        {
+          "sha": "972fa7a2a0fc3bad41857872bb8f7a996c98fb8c",
+          "title": "Highscores: jeder Spieler wird in der Liste seiner eigenen Schwierigkeit markiert",
+          "authoredAt": "2026-11-01T18:27:48Z",
+          "author": "claude"
         }
       ],
       "assessment": {
         "decision": "assessed",
-        "assessedAgainst": "c3fc8e4993394373cc00f7b1ed2f01f85a2a72e3",
-        "reviewedCommitCount": 1,
+        "assessedAgainst": "521df17758d58f2674d244a0a4d145db373e74fe",
+        "reviewedCommitCount": 2,
         "scope": "Full 54-commit inventory retained; static review of the single commit since previousHead. Earlier decisions preserved, not re-reviewed or runtime-accepted.",
         "items": [
           {
@@ -4254,6 +4352,15 @@
               "https://github.com/UltraStar-CE/USCE/pull/295",
               "https://github.com/UltraStar-CE/USCE/pull/296"
             ]
+          },
+          {
+            "area": "2026-11-02 source delta",
+            "decision": "assessed",
+            "reason": "Adapt empty-difficulty highscore visibility in #347. Optional row/award presentation remains the existing #199 proposal; no fixed-player layout imported.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/pull/347",
+              "https://github.com/UltraStar-CE/USCE/issues/199"
+            ]
           }
         ],
         "usceReferences": [
@@ -4262,10 +4369,14 @@
           "https://github.com/UltraStar-CE/USCE/pull/107",
           "https://github.com/UltraStar-CE/USCE/pull/293",
           "https://github.com/UltraStar-CE/USCE/pull/295",
-          "https://github.com/UltraStar-CE/USCE/pull/296"
+          "https://github.com/UltraStar-CE/USCE/pull/296",
+          "https://github.com/UltraStar-CE/USCE/pull/347",
+          "https://github.com/UltraStar-CE/USCE/issues/199"
         ],
         "reason": "Return from Party to normal library (one new commit): cda33435 adds ResetToAllSongs in Main.OnShow: UnsetPlaylist, RestoreSongOrder and SetFilter clear the active playlist/category/filter on every main-menu return. USCE #294 already restores multipart visibility using the active selection rules. Keep filters/playlists/lockdown intact rather than importing the global reset. Earlier decisions retained: Previous 53-commit assessment remains in previousAssessment. Current follow-ups include #293 joker debounce, #294 multipart visibility, #295 Party highscores and #296 redirected fades. Remaining Party features stay in their existing issues; none is reopened as new work.",
-        "authorDateCutoff": "2026-04-30T00:00:00Z"
+        "authorDateCutoff": "2026-04-30T00:00:00Z",
+        "assessedAt": "2026-11-02T17:45:56.790Z",
+        "followThrough": "Adapt empty-difficulty highscore visibility in #347. Optional row/award presentation remains the existing #199 proposal; no fixed-player layout imported."
       },
       "previousAssessment": {
         "decision": "assessed",
@@ -4378,7 +4489,7 @@
         ]
       },
       "lastSourceCommitAt": "2026-10-30T06:53:59Z",
-      "previousHead": "c179de14998d0d1f85f7b1c57badaa7199cfd2e5",
+      "previousHead": "cda33435b1144b151bc3bd05be61e15e0bcefafc",
       "assessmentHistory": [
         {
           "head": "c179de14998d0d1f85f7b1c57badaa7199cfd2e5",
@@ -4490,6 +4601,21 @@
                   "https://github.com/UltraStar-CE/USCE/issues/264"
                 ]
               }
+            ]
+          }
+        },
+        {
+          "head": "cda33435b1144b151bc3bd05be61e15e0bcefafc",
+          "assessment": {
+            "decision": "assessed",
+            "reason": "Return from Party to normal library (one new commit): cda33435 adds ResetToAllSongs in Main.OnShow: UnsetPlaylist, RestoreSongOrder and SetFilter clear the active playlist/category/filter on every main-menu return. USCE #294 already restores multipart visibility using the active selection rules. Keep filters/playlists/lockdown intact rather than importing the global reset. Earlier decisions retained: Previous 53-commit assessment remains in previousAssessment. Current follow-ups include #293 joker debounce, #294 multipart visibility, #295 Party highscores and #296 redirected fades. Remaining Party features stay in their existing issues; none is reopened as new work.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/pull/294",
+              "https://github.com/UltraStar-CE/USCE/pull/147",
+              "https://github.com/UltraStar-CE/USCE/pull/107",
+              "https://github.com/UltraStar-CE/USCE/pull/293",
+              "https://github.com/UltraStar-CE/USCE/pull/295",
+              "https://github.com/UltraStar-CE/USCE/pull/296"
             ]
           }
         }
@@ -7891,7 +8017,7 @@
     {
       "repository": "aveiver/USDX",
       "branch": "ui-v2",
-      "head": "e59ac01ab048c81992af5d3d648a73350ed19703",
+      "head": "cb244bd85f526987bcfc6169bebf2888507416f1",
       "upstreamHead": "54f6e010800458543223dc2d7a3fb65140a78649",
       "comparisonBase": "1b76398373eda492eb454174ed7605dc96430cc3",
       "comparisonKind": "outside-usce",
@@ -8493,6 +8619,12 @@
           "title": "Phone queue: ask for a name; TV shows who requested the next song",
           "author": "aveiver",
           "authoredAt": "2026-10-30T16:41:36Z"
+        },
+        {
+          "sha": "cb244bd85f526987bcfc6169bebf2888507416f1",
+          "title": "Queue server: survive long parties",
+          "authoredAt": "2026-11-01T20:30:50Z",
+          "author": "aveiver"
         }
       ],
       "newCommits": [
@@ -8811,8 +8943,8 @@
       ],
       "assessment": {
         "decision": "assessed",
-        "assessedAgainst": "e42382b48c2ca6fc947376f4c936b1a89c509199",
-        "assessedAt": "2026-10-31",
+        "assessedAgainst": "521df17758d58f2674d244a0a4d145db373e74fe",
+        "assessedAt": "2026-11-02T17:45:56.790Z",
         "scope": "Source-diff and current-USCE comparison, with linked concrete outputs. Assessment is not runtime acceptance or adoption of the fork.",
         "items": [
           {
@@ -8844,6 +8976,15 @@
               "https://github.com/UltraStar-CE/usrelay/pull/23",
               "https://github.com/UltraStar-CE/usrelay/issues/16"
             ]
+          },
+          {
+            "area": "2026-11-02 source delta",
+            "decision": "assessed",
+            "reason": "The delta changes only the fork Python HTTP server and shell restart script. Neither runs in USCE: native transport and hosted usrelay remain the selected architecture. No server/runtime import.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/pull/168",
+              "https://github.com/UltraStar-CE/usrelay/issues/16"
+            ]
           }
         ],
         "usceReferences": [
@@ -8855,13 +8996,36 @@
           "https://github.com/UltraStar-CE/USCE/issues/326",
           "https://github.com/UltraStar-CE/USCE/pull/319",
           "https://github.com/UltraStar-CE/usrelay/pull/23",
-          "https://github.com/UltraStar-CE/usrelay/issues/16"
+          "https://github.com/UltraStar-CE/usrelay/issues/16",
+          "https://github.com/UltraStar-CE/USCE/pull/168"
         ],
         "reason": "Previously assessed Midnight/Karaoke ancestry: master is an ancestor of 6f756edb, the immutable aveiver snapshot already assessed in #211. ui-v2 has only two commits after that snapshot, not 99 new changes. Existing theme ports, shared controls and native companion work cover the agreed direction. Global Helvetica/default-theme changes and local kiosk deployment scripts are not a second game port. Drawable size on scaled/external displays: The source report and adaptation risks were recorded in #326. Daniel closed it as unlikely to apply to USCE. Respect that decision: do not reopen, port the source patch, or present this as pending work without new evidence. Requester names in Up Next: The other new commit adds requester attribution to the fork-specific phone queue, queue.txt and replacement UI. Use existing usrelay Up Next/native-capability work, not another embedded server or queue parser.",
-        "reviewedCommitCount": 52,
-        "newCommitsBeyondPreviouslyAssessedSource": 2
+        "reviewedCommitCount": 53,
+        "newCommitsBeyondPreviouslyAssessedSource": 2,
+        "followThrough": "The delta changes only the fork Python HTTP server and shell restart script. Neither runs in USCE: native transport and hosted usrelay remain the selected architecture. No server/runtime import."
       },
-      "previouslyAssessedSourceHead": "6f756edb2d91aaa552c46516c22300d6116fc2eb"
+      "previouslyAssessedSourceHead": "6f756edb2d91aaa552c46516c22300d6116fc2eb",
+      "previousHead": "e59ac01ab048c81992af5d3d648a73350ed19703",
+      "assessmentHistory": [
+        {
+          "head": "e59ac01ab048c81992af5d3d648a73350ed19703",
+          "assessment": {
+            "decision": "assessed",
+            "reason": "Previously assessed Midnight/Karaoke ancestry: master is an ancestor of 6f756edb, the immutable aveiver snapshot already assessed in #211. ui-v2 has only two commits after that snapshot, not 99 new changes. Existing theme ports, shared controls and native companion work cover the agreed direction. Global Helvetica/default-theme changes and local kiosk deployment scripts are not a second game port. Drawable size on scaled/external displays: The source report and adaptation risks were recorded in #326. Daniel closed it as unlikely to apply to USCE. Respect that decision: do not reopen, port the source patch, or present this as pending work without new evidence. Requester names in Up Next: The other new commit adds requester attribution to the fork-specific phone queue, queue.txt and replacement UI. Use existing usrelay Up Next/native-capability work, not another embedded server or queue parser.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/issues/211",
+              "https://github.com/UltraStar-CE/Themes/pull/27",
+              "https://github.com/UltraStar-CE/Themes/pull/28",
+              "https://github.com/UltraStar-CE/USCE/pull/314",
+              "https://github.com/UltraStar-CE/USCE/pull/225",
+              "https://github.com/UltraStar-CE/USCE/issues/326",
+              "https://github.com/UltraStar-CE/USCE/pull/319",
+              "https://github.com/UltraStar-CE/usrelay/pull/23",
+              "https://github.com/UltraStar-CE/usrelay/issues/16"
+            ]
+          }
+        }
+      ]
     },
     {
       "repository": "dgruss/USDX",
