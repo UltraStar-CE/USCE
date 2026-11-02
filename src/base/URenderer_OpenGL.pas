@@ -2084,7 +2084,17 @@ begin
   Log.LogInfo('Using Modern OpenGL renderer', 'TRenderer_OpenGL3.CheckVersion');
   SupportsVAO := true;
   SupportsFBO := true;
-  SupportsMappedBuffer := false; // TEST BUILD: force the glBufferSubData path (Intel ig9icd64 spins in glMapBufferRange/glUnmapBuffer)
+  SupportsMappedBuffer := true;
+  {$IFDEF MSWINDOWS}
+  // Intel's Windows driver can spend most of a frame synchronizing each
+  // map/unmap. Use the existing upload path on the active Intel context.
+  if Pos('INTEL', UpperCase(string(glGetString(GL_VENDOR)))) > 0 then
+  begin
+    SupportsMappedBuffer := false;
+    Log.LogInfo('Using glBufferSubData for Intel Windows driver',
+      'TRenderer_OpenGL3.CheckVersion');
+  end;
+  {$ENDIF}
   SupportsMipMap := true;
   GlyphTextureFormat := GL_RED;
   if ((MajorVersion > 3) or ((MajorVersion = 3) and (MinorVersion >= 3))) then
