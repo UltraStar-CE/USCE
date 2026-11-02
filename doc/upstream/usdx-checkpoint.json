@@ -53,7 +53,7 @@
         "33c4f323356beb220a8cbfcfaef6cbef6e22cdfb",
         "3079c4b8663b199bcbceafe28d2a0ee2d7630035"
       ],
-      "disposition": "The failure is already fixed in USCE by the SizeInt substitutions in 0cbc71c2. PR #341 offered the alternative upstream Delphi-mode implementation and was closed at the maintainer request. Retain the current implementation and existing regression tests. This assessment does not record the upstream commits as main ancestry.",
+      "disposition": "The failure is already fixed in USCE by the SizeInt substitutions in 0cbc71c2. Alternative Delphi implementation #341 was closed at the maintainer request. Retain the current implementation and existing regression tests; record the original upstream commits as ancestry without replacing the USCE source.",
       "usce_pr": 341,
       "status": "already-covered; alternative closed",
       "existing_usce_commit": "0cbc71c2c157753ef1387ce33dab0dc15a40dfd1"
@@ -98,7 +98,7 @@
       "The aveiver Python HTTP timeout/restart changes do not apply to the native relay transport; no Python server is imported."
     ],
     "alreadyCovered": [
-      "Tycorc pacer aliases match the existing UFramePacer integration; mapped-buffer-off remains experiment #327, not a default or proven improvement.",
+      "Tycorc frame pacing is already integrated. Matched measurements support the automatic Intel Windows buffer-upload workaround proposed in #327; no universal performance improvement is claimed.",
       "Old/rebased dgruss integration branches retain the established focused-port decisions; no second player-layout, synth, scaling, playlist or statistics implementation."
     ],
     "remainingFeatureProposals": "Existing feature issues retain their own scope and acceptance; they are not unassessed commits or blockers to merging this checkpoint."
