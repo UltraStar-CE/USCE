@@ -64,6 +64,25 @@ class DetachTests(unittest.TestCase):
         with self.assertRaises(subprocess.CalledProcessError):
             detach_volume('hdiutil', '/volume', run, lambda _: None)
 
+    def test_busy_packaging_device_gets_one_force_attempt(self):
+        attached = plistlib.dumps({'images': [{'image-path': '/packaging/image.sparseimage',
+            'system-entities': [{'dev-entry': '/dev/disk2'}]}]})
+        empty = plistlib.dumps({'images': []})
+        calls, run = self.simulate([(1, b''), (0, attached)] * 5 + [(0, b''), (0, empty)])
+        detach_volume('hdiutil', '/volume', run, lambda _: None,
+                      image_path='/packaging/image.sparseimage')
+        self.assertEqual(calls[-2], ['detach', '/dev/disk2', '-force'])
+        self.assertFalse(any('-force' in call for call in calls[:-2]))
+
+    def test_failed_force_still_requires_image_to_disappear(self):
+        attached = plistlib.dumps({'images': [{'image-path': '/packaging/image.sparseimage',
+            'system-entities': [{'dev-entry': '/dev/disk2'}]}]})
+        calls, run = self.simulate([(1, b''), (0, attached)] * 6)
+        with self.assertRaises(RuntimeError):
+            detach_volume('hdiutil', '/volume', run, lambda _: None,
+                          image_path='/packaging/image.sparseimage')
+        self.assertEqual(calls[-2], ['detach', '/dev/disk2', '-force'])
+
 
 if __name__ == '__main__':
     unittest.main()
