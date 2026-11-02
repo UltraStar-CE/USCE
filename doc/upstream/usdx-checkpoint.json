@@ -53,9 +53,9 @@
         "33c4f323356beb220a8cbfcfaef6cbef6e22cdfb",
         "3079c4b8663b199bcbceafe28d2a0ee2d7630035"
       ],
-      "disposition": "AnyASCII integer-range fix already covered by USCE explicit SizeInt table offsets, string lengths and output indices. Retain the native-size implementation and its tests; record original upstream ancestry without changing runtime code.",
+      "disposition": "Adopt the upstream Delphi-mode AnyASCII fix exactly, reverting the four earlier SizeInt substitutions from the USCE implementation. Retain the existing Unicode, long-string and full-table tests. Original upstream commits and authorship are preserved.",
       "upstream_pr": 1463,
-      "usce_commit": "0cbc71c2c157753ef1387ce33dab0dc15a40dfd1"
+      "supersedes_usce_commit": "0cbc71c2c157753ef1387ce33dab0dc15a40dfd1"
     }
   ],
   "from": "54f6e010800458543223dc2d7a3fb65140a78649"

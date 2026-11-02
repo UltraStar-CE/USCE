@@ -22,7 +22,7 @@ header is:
 
 unit anyascii;
 
-{$MODESWITCH OUT}
+{$MODE Delphi}
 
 interface
 
@@ -38,8 +38,8 @@ uses sysutils;
 function anyascii(utf32: cardinal; out ascii: PAnsiChar): integer;
 var
 	b: PAnsiChar;
-	loffset: SizeInt;
-	boffset: SizeInt;
+	loffset: integer;
+	boffset: integer;
 begin
 	anyascii := 0;
 	b := block(utf32 shr 8);
@@ -52,7 +52,7 @@ begin
 			anyascii := 3;
 			if (byte(b[loffset + 2]) and $80) <> 0 then
 				anyascii := byte(b[loffset + 2]) and $7f;
-			if anyascii <= 3 then
+			if Result <= 3 then
 				ascii := @b[loffset]
 			else
 			begin
@@ -65,8 +65,8 @@ end;
 
 function transliterate(s: UCS4String): UCS4String;
 var
-	i: SizeInt;
-	n: SizeInt;
+	i: Integer;
+	n: Integer;
 	l: Integer;
 	a: PAnsiChar;
 	ret: UCS4String; // Free Pascal doesn't like us working directly on the result variable
