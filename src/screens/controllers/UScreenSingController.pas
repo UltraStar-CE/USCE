@@ -81,7 +81,7 @@ type
     PlaybackSeeked: boolean;
     fStartTime, fFirstNote: real;
 
-    procedure SeekTo(Position: real; ResetScoring: boolean = true);
+    procedure SeekTo(Position: real; DisqualifyScore: boolean = true);
     procedure LoadNextSong();
     procedure SongError();
     procedure ResetLinesAndLyrics();
@@ -212,7 +212,7 @@ type
     procedure Finish; virtual;
     procedure Pause; // toggle pause
     procedure UpdateMedleyStats(medley_end: boolean);
-    procedure OnSentenceEnd(Track: integer; SentenceIndex: cardinal; OnlyPlayer: integer = -1);     // for linebonus + singbar
+    procedure OnSentenceEnd(Track: integer; SentenceIndex: cardinal; OnlyPlayer: integer = -1; ShowEffects: boolean = true);     // for linebonus + singbar
     procedure ClearVoiceLyrics;
     procedure ConfigureVoiceLyrics;
     procedure LayoutVoiceLyrics;
@@ -304,6 +304,8 @@ begin
       SDLK_R:
       begin
         if ScreenSong.Mode = smMedley then Exit;
+        // R explicitly starts a fresh attempt; timeline seeking preserves scores.
+        for VoiceIndex := 0 to High(Player) do Player[VoiceIndex].ResetScores;
         SeekTo(fStartTime);
         PlaybackSeeked := false;
         AnnounceRemoteSongStarted;
@@ -586,8 +588,7 @@ begin
       begin
         if ((SDL_ModState and KMOD_LCTRL) <> 0) then
         begin
-          SeekTo(Min(AudioPlayback.Position + 5.0, LyricsState.TotalTime), false);
-          PlaybackSeeked := true;
+          SeekTo(Min(AudioPlayback.Position + 5.0, LyricsState.TotalTime));
         end;
 
       end;
@@ -650,30 +651,35 @@ begin
   Result := inherited ParseMouse(MouseButton, BtnDown, MouseX, MouseY);
 end;
 
-procedure TScreenSingController.SeekTo(Position: real; ResetScoring: boolean);
+procedure TScreenSingController.SeekTo(Position: real; DisqualifyScore: boolean);
 var I: integer; Color: TRGB;
 begin
   ResetSungPitchReference;
-  if ResetScoring then
+  if DisqualifyScore then
   begin
     PlaybackSeeked := true;
     RemoteInputProcessor.ClearFrames;
     for I := 0 to High(Player) do
     begin
-      Player[I].ResetScores;
-      Player[I].ScoreLast := 0;
+      Player[I].ScoreLast := Player[I].Score + Player[I].ScoreGolden;
       Player[I].LastSentencePerfect := false;
     end;
     Scores.KillAllPopUps;
     Scores.ClearPlayers;
     Color.R := 0; Color.G := 0; Color.B := 0;
-    for I := 0 to PlayersPlay - 1 do Scores.AddPlayer(Tex_ScoreBG[I], Color);
+    for I := 0 to PlayersPlay - 1 do Scores.AddPlayer(Tex_ScoreBG[I], Color, Player[I].ScoreTotalInt);
     Scores.Init;
     GoldenRec.KillAll;
   end;
   // Resume detection at the destination without scoring the skipped beats.
   for I := 0 to High(Player) do
+  begin
     Player[I].DetectionReady := false;
+    // Draw the new pass from its destination, independently of stored points.
+    Player[I].HighNote := -1;
+    Player[I].LengthNote := 0;
+    SetLength(Player[I].Note, 0);
+  end;
   StopSingClicks;
   AudioPlayback.SetPosition(Position);
   LyricsState.SetCurrentTime(Position);
@@ -2131,7 +2137,7 @@ begin
 
 end;
 
-procedure TScreenSingController.OnSentenceEnd(Track: integer; SentenceIndex: cardinal; OnlyPlayer: integer); //ToDo: split and redo
+procedure TScreenSingController.OnSentenceEnd(Track: integer; SentenceIndex: cardinal; OnlyPlayer: integer; ShowEffects: boolean); //ToDo: split and redo
 var
   PlayerIndex: integer;
   CurrentPlayer: PPLayer;
@@ -2192,7 +2198,7 @@ begin
       LineBonus := MAX_SONG_LINE_BONUS / (Length(CurrentSong.Tracks[Track].Lines) -
         NumEmptySentences[Track]);
       LineBonus := LineBonus * LinePerfection;
-      if CurrentPlayer.SentenceFinalized[Track][SentenceIndex] and
+      if ShowEffects and CurrentPlayer.SentenceFinalized[Track][SentenceIndex] and
          (CurrentPlayer.SentenceBonus[Track][SentenceIndex] = LineBonus) then Continue;
       // apply line-bonus
       CurrentPlayer.ScoreLine :=
@@ -2202,7 +2208,9 @@ begin
 
       // spawn rating pop-up
       Rating := Round(LinePerfection * MAX_LINE_RATING);
-      Scores.SpawnPopUp(PlayerIndex, Rating, CurrentPlayer.ScoreTotalInt);
+      if Scores <> nil then
+        if ShowEffects then Scores.SpawnPopUp(PlayerIndex, Rating, CurrentPlayer.ScoreTotalInt)
+        else Scores.SetScore(PlayerIndex, CurrentPlayer.ScoreTotalInt);
 
       if (Scores <> nil) then
         Scores.SetRemainingScore(PlayerIndex,
@@ -2210,7 +2218,7 @@ begin
           CurrentPlayer.Score + CurrentPlayer.ScoreGolden + CurrentPlayer.ScoreLine);
 
       // PerfectLineTwinkle (effect), part 1
-      if Ini.EffectSing = 1 then
+      if ShowEffects and (Ini.EffectSing = 1) then
         CurrentPlayer.LastSentencePerfect := (LinePerfection >= 1);
 
       // refresh last score
@@ -2219,7 +2227,7 @@ begin
   end;
 
   // PerfectLineTwinkle (effect), part 2
-  if Ini.EffectSing = 1 then
+  if ShowEffects and (Ini.EffectSing = 1) then
   begin
     GoldenRec.SpawnPerfectLineTwinkle;
 

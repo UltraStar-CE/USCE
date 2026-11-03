@@ -518,16 +518,22 @@ end;
  * sets the score of a specified player to the specified score
  *}
 procedure TSingScores.SetScore(Player: byte; Score: integer);
-  var
-    Diff: Integer;
+var Cur, Previous, Next: PScorePopUp;
 begin
-  if (Player <= PlayerCount - 1) then
+  if Player >= PlayerCount then Exit;
+  // A revised line score replaces any still-animating points for this singer.
+  Previous := nil;
+  Cur := FirstPopUp;
+  while Cur <> nil do
   begin
-    Diff := Score - Players[Player].Score;
-    aPlayers[Player].Score := Score;
-    aPlayers[Player].ScoreActual := Score;
-    Inc(aPlayers[Player].ScoreDisplayed, Diff);
+    Next := Cur.Next;
+    if Cur.Player = Player then KillPopUp(Previous, Cur)
+    else Previous := Cur;
+    Cur := Next;
   end;
+  aPlayers[Player].Score := Score;
+  aPlayers[Player].ScoreActual := Score;
+  aPlayers[Player].ScoreDisplayed := Score;
 end;
 
 {**
