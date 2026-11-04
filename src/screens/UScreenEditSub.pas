@@ -409,8 +409,8 @@ type
       procedure FixTimings;
       procedure DivideSentence;
       procedure JoinSentence;
-      procedure NextSentence(KeepPlayback: boolean = false);
-      procedure PreviousSentence(KeepPlayback: boolean = false);
+      procedure NextSentence;
+      procedure PreviousSentence;
       procedure DivideNote(doubleclick: boolean);
       procedure DeleteNote;
       procedure SelectVoice(Voice: integer);
@@ -2579,7 +2579,7 @@ begin
   begin
     // clear debug text
     Text[TextInfo].Text := '';
-    NextSentence(true);
+    NextSentence;
   end;
 
   // decrease tone
@@ -2627,7 +2627,7 @@ begin
   begin
     // clear debug text
     Text[TextInfo].Text := '';
-    PreviousSentence(true);
+    PreviousSentence;
   end;
 
   // increase tone
@@ -4176,9 +4176,10 @@ begin
   EditorLyrics[CurrentTrack].Selected := CurrentNote[CurrentTrack];
 end;
 
-procedure TScreenEditSub.NextSentence(KeepPlayback: boolean);
+procedure TScreenEditSub.NextSentence;
 begin
   if CurrentSong.Tracks[CurrentTrack].High <= 0 then Exit;
+  PlayOne := false;
   CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Color := 1;
   Inc(CurrentSong.Tracks[CurrentTrack].CurrentLine);
   CurrentNote[CurrentTrack] := 0;
@@ -4189,20 +4190,14 @@ begin
 
   EditorLyrics[CurrentTrack].AddLine(CurrentTrack, CurrentSong.Tracks[CurrentTrack].CurrentLine);
   EditorLyrics[CurrentTrack].Selected := 0;
-  if KeepPlayback then
-    ManualPreviewNavigation := true
-  else
-    StopPreviewPlayback;
+  StopPreviewPlayback;
   GoldenRec.KillAll;
 end;
 
-procedure TScreenEditSub.PreviousSentence(KeepPlayback: boolean);
+procedure TScreenEditSub.PreviousSentence;
 begin
   if CurrentSong.Tracks[CurrentTrack].High <= 0 then Exit;
-  if KeepPlayback then
-    ManualPreviewNavigation := true
-  else
-    StopPreviewPlayback;
+  StopPreviewPlayback;
 
   CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Color := 1;
   Dec(CurrentSong.Tracks[CurrentTrack].CurrentLine);
