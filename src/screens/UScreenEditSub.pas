@@ -6677,15 +6677,17 @@ begin
     Text[TextInfo].Text := Language.Translate('EDIT_INFO_CURRENT_BEAT') + ' ' + IntToStr(CurrentBeat);
   end; // if PlaySentenceMidi
 
-  // move "cursor"
-  if not ManualPreviewNavigation and
-     (PlaySentence or PlaySentenceMidi or PlayVideo) and not (PlayOne) then //and Not (PlayNote) then
+  // Keep the playback clock moving even while browsing elsewhere.
+  if (PlaySentence or PlayVideo) then
   begin
-    if (PlaySentence or PlayVideo) then
-    begin
-      CurrentBeat := Floor(GetMidBeat(AudioPlayback.Position - (CurrentSong.GAP) / 1000));
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_CURRENT_BEAT') + ' ' + IntToStr(CurrentBeat);
-    end;
+    CurrentBeat := Floor(GetMidBeat(AudioPlayback.Position - (CurrentSong.GAP) / 1000));
+    Text[TextInfo].Text := Language.Translate('EDIT_INFO_CURRENT_BEAT') + ' ' + IntToStr(CurrentBeat);
+  end;
+
+  // Follow playback until the user navigates to another note or line.
+  if not ManualPreviewNavigation and
+     (PlaySentence or PlaySentenceMidi or PlayVideo) and not PlayOne then
+  begin
 
     // store current line, find next line to given beat
     LastLine := CurrentSong.Tracks[CurrentTrack].CurrentLine;
