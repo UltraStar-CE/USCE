@@ -112,6 +112,7 @@ type
       PlaySentence:            boolean;
       PlayOne:                 boolean;
       PlayOneMidi:             boolean;
+      ManualPreviewNavigation: boolean;
       PlaySentenceMidi:        boolean;
       PlayVideo:               boolean;
       PlayStopTime:            real;
@@ -408,8 +409,8 @@ type
       procedure FixTimings;
       procedure DivideSentence;
       procedure JoinSentence;
-      procedure NextSentence;
-      procedure PreviousSentence;
+      procedure NextSentence(KeepPlayback: boolean = false);
+      procedure PreviousSentence(KeepPlayback: boolean = false);
       procedure DivideNote(doubleclick: boolean);
       procedure DeleteNote;
       procedure SelectVoice(Voice: integer);
@@ -1232,6 +1233,7 @@ procedure TScreenEditSub.StopMidiPlayback;
 begin
   PlaySentenceMidi := false;
   PlayOneMidi := false;
+  ManualPreviewNavigation := false;
   MidiSyncToAudio := false;
   CuePlaybackActive := false;
 
@@ -1244,6 +1246,7 @@ end;
 
 procedure TScreenEditSub.StopPreviewPlayback;
 begin
+  ManualPreviewNavigation := false;
   AudioPlayback.Stop;
   StopMidiPlayback;
   PlaySentence := false;
@@ -1942,10 +1945,11 @@ var
   IncludeAudio, IncludeMidi: boolean;
   NoteStart, NoteStop: real;
 begin
+  // Either Shift key previews the tone; Ctrl adds the song audio.
+  if (SDL_ModState and KMOD_ALT) <> 0 then Exit;
+  IncludeMidi := (SDL_ModState and KMOD_SHIFT) <> 0;
   IncludeAudio := (SDL_ModState = 0) or
-      (SDL_ModState = (KMOD_LSHIFT or KMOD_LCTRL));
-  IncludeMidi := (SDL_ModState = KMOD_LSHIFT) or
-      (SDL_ModState = (KMOD_LSHIFT or KMOD_LCTRL));
+      (IncludeMidi and ((SDL_ModState and KMOD_CTRL) <> 0));
   if not (IncludeAudio or IncludeMidi) then
     Exit;
 
@@ -2425,6 +2429,7 @@ begin
   // right
   if SDL_ModState = 0 then
   begin
+    ManualPreviewNavigation := true;
     // clear debug text
     Text[TextInfo].Text := '';
     CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Color := 1;
@@ -2497,6 +2502,7 @@ begin
   // left
   if SDL_ModState = 0 then
   begin
+    ManualPreviewNavigation := true;
     // clear debug text
     Text[TextInfo].Text := '';
 
@@ -2573,7 +2579,7 @@ begin
   begin
     // clear debug text
     Text[TextInfo].Text := '';
-    NextSentence;
+    NextSentence(true);
   end;
 
   // decrease tone
@@ -2621,7 +2627,7 @@ begin
   begin
     // clear debug text
     Text[TextInfo].Text := '';
-    PreviousSentence;
+    PreviousSentence(true);
   end;
 
   // increase tone
@@ -4170,10 +4176,9 @@ begin
   EditorLyrics[CurrentTrack].Selected := CurrentNote[CurrentTrack];
 end;
 
-procedure TScreenEditSub.NextSentence;
+procedure TScreenEditSub.NextSentence(KeepPlayback: boolean);
 begin
   if CurrentSong.Tracks[CurrentTrack].High <= 0 then Exit;
-  PlayOne := false;
   CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Color := 1;
   Inc(CurrentSong.Tracks[CurrentTrack].CurrentLine);
   CurrentNote[CurrentTrack] := 0;
@@ -4184,14 +4189,20 @@ begin
 
   EditorLyrics[CurrentTrack].AddLine(CurrentTrack, CurrentSong.Tracks[CurrentTrack].CurrentLine);
   EditorLyrics[CurrentTrack].Selected := 0;
-  StopPreviewPlayback;
+  if KeepPlayback then
+    ManualPreviewNavigation := true
+  else
+    StopPreviewPlayback;
   GoldenRec.KillAll;
 end;
 
-procedure TScreenEditSub.PreviousSentence;
+procedure TScreenEditSub.PreviousSentence(KeepPlayback: boolean);
 begin
   if CurrentSong.Tracks[CurrentTrack].High <= 0 then Exit;
-  StopPreviewPlayback;
+  if KeepPlayback then
+    ManualPreviewNavigation := true
+  else
+    StopPreviewPlayback;
 
   CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Color := 1;
   Dec(CurrentSong.Tracks[CurrentTrack].CurrentLine);
@@ -6164,6 +6175,7 @@ begin
   PlayOne := false;
   PlaySentenceMidi := false;
   PlayOneMidi := false;
+  ManualPreviewNavigation := false;
   MidiSyncToAudio := false;
   CuePlaybackActive := false;
   Text[TextInfo].Text := '';
@@ -6666,7 +6678,8 @@ begin
   end; // if PlaySentenceMidi
 
   // move "cursor"
-  if (PlaySentence or PlaySentenceMidi or PlayVideo) and not (PlayOne) then //and Not (PlayNote) then
+  if not ManualPreviewNavigation and
+     (PlaySentence or PlaySentenceMidi or PlayVideo) and not (PlayOne) then //and Not (PlayNote) then
   begin
     if (PlaySentence or PlayVideo) then
     begin
