@@ -370,8 +370,8 @@ const
   IVideoPreview:     array[0..1] of UTF8String  = ('Off', 'On');
   IVideoEnabled:     array[0..1] of UTF8String  = ('Off', 'On');
 
-  IClickSound: array[0..4] of UTF8String = ('Original', 'Blip', 'Drumstick', 'Woodblock', 'HiHat');
-  ISynthTone: array[0..4] of UTF8String = ('Organ', 'Sine', 'Triangle', 'Piano', 'Bell');
+  IClickSound: array[0..1] of UTF8String = ('Original', 'HiHat');
+  ISynthTone: array[0..2] of UTF8String = ('Organ', 'Triangle', 'Piano');
   IClickAssist:      array[0..3] of UTF8String  = ('Off', 'On', 'Synth', 'SynthAndClicks');
   ISavePlayback:     array[0..1] of UTF8String  = ('Off', 'On');
   IReplayGain:       array[0..1] of UTF8String  = ('Off', 'On');
@@ -504,8 +504,8 @@ var
   IVideoPreviewTranslated:     array[0..1] of UTF8String  = ('Off', 'On');
   IVideoEnabledTranslated:     array[0..1] of UTF8String  = ('Off', 'On');
 
-  IClickSoundTranslated: array[0..4] of UTF8String = ('Original', 'Blip', 'Drumstick', 'Woodblock', 'Hi-hat');
-  ISynthToneTranslated: array[0..4] of UTF8String = ('Organ', 'Sine', 'Triangle', 'Piano', 'Bell');
+  IClickSoundTranslated: array[0..1] of UTF8String = ('Original', 'Hi-hat');
+  ISynthToneTranslated: array[0..2] of UTF8String = ('Organ', 'Triangle', 'Piano');
   IClickAssistTranslated:      array[0..3] of UTF8String  = ('Off', 'On', 'Synth', 'SynthAndClicks');
   IReplayGainTranslated:       array[0..1] of UTF8String  = ('Off', 'On');
 
@@ -917,15 +917,10 @@ begin
   IVideoEnabledTranslated[1]          := ULanguage.Language.Translate('OPTION_VALUE_ON');
 
   ISynthToneTranslated[0] := ULanguage.Language.Translate('OPTION_VALUE_SYNTH_ORGAN');
-  ISynthToneTranslated[1] := ULanguage.Language.Translate('OPTION_VALUE_SYNTH_SINE');
-  ISynthToneTranslated[2] := ULanguage.Language.Translate('OPTION_VALUE_SYNTH_TRIANGLE');
-  ISynthToneTranslated[3] := ULanguage.Language.Translate('OPTION_VALUE_SYNTH_PIANO');
-  ISynthToneTranslated[4] := ULanguage.Language.Translate('OPTION_VALUE_SYNTH_BELL');
+  ISynthToneTranslated[1] := ULanguage.Language.Translate('OPTION_VALUE_SYNTH_TRIANGLE');
+  ISynthToneTranslated[2] := ULanguage.Language.Translate('OPTION_VALUE_SYNTH_PIANO');
   IClickSoundTranslated[0] := ULanguage.Language.Translate('OPTION_VALUE_CLICK_ORIGINAL');
-  IClickSoundTranslated[1] := ULanguage.Language.Translate('OPTION_VALUE_CLICK_BLIP');
-  IClickSoundTranslated[2] := ULanguage.Language.Translate('OPTION_VALUE_CLICK_DRUMSTICK');
-  IClickSoundTranslated[3] := ULanguage.Language.Translate('OPTION_VALUE_CLICK_WOODBLOCK');
-  IClickSoundTranslated[4] := ULanguage.Language.Translate('OPTION_VALUE_CLICK_HIHAT');
+  IClickSoundTranslated[1] := ULanguage.Language.Translate('OPTION_VALUE_CLICK_HIHAT');
   IClickAssistTranslated[0]           := ULanguage.Language.Translate('OPTION_VALUE_OFF');
   IClickAssistTranslated[1]           := ULanguage.Language.Translate('OPTION_VALUE_NOTE_CLICKS');
   IClickAssistTranslated[2]           := ULanguage.Language.Translate('OPTION_VALUE_NOTE_SYNTH');
