@@ -22,7 +22,7 @@ uses
 
 type
   TPianoMode = record
-    Previous, Current, Coefficient, Amplitude, Decay, HammerAmplitude, HammerDecay: Double;
+    Previous, Current, Coefficient, Amplitude, Decay: Double;
   end;
   TPianoModes = array[0..47] of TPianoMode;
   TSynthEventKind = (sekNoteOn, sekNoteOff, sekClick, sekStopAll);
@@ -43,6 +43,8 @@ type
     FActive: Boolean;
     FTone, FClickSound: Integer;
     FPianoModes, FPianoTailModes: TPianoModes;
+    FPianoBody: array[0..3] of TPianoMode;
+    FPianoContactTime: Double;
     FPianoTailLevel, FPianoTailAge: Double;
     FNote: Integer;
     FFreq: Double;
@@ -123,54 +125,74 @@ begin
     );
 end;
 
+// Modal struck-string model: a finite hammer-force pulse drives damped
+// oscillators instead of starting a pre-shaped, plucked waveform.
 procedure StartPianoModes(var Modes: TPianoModes; Frequency, Rate: Double);
 var
   I, Partial, StringIndex: Integer;
-  Stiffness, Detune, ModeFrequency, Step, DecayRate, Strike, Phase: Double;
+  Stiffness, ModeFrequency, Step, Radius, Strike: Double;
 begin
-  // Three coupled string voices with a broad hammer attack and slower sustain.
-  // All modes are generated mathematically; no recorded audio is used.
   Stiffness := EnsureRange(0.000025 * Power(Frequency / 440, 0.8), 0.00001, 0.0003);
   for I := 0 to High(Modes) do
   begin
+    FillChar(Modes[I], SizeOf(Modes[I]), 0);
     Partial := I div 3 + 1;
     StringIndex := I mod 3;
-    Detune := (StringIndex - 1) * 0.0008;
-    ModeFrequency := Frequency * Partial * Sqrt(1 + Stiffness * Partial * Partial) * (1 + Detune);
-    FillChar(Modes[I], SizeOf(Modes[I]), 0);
+    ModeFrequency := Frequency * Partial * Sqrt(1 + Stiffness * Partial * Partial) *
+      (1 + (StringIndex - 1) * 0.0007);
     if ModeFrequency >= Rate / 2 then Continue;
     Step := 2 * Pi * ModeFrequency / Rate;
-    Phase := StringIndex * 0.17;
-    Modes[I].Current := Sin(Phase);
-    Modes[I].Previous := Sin(Phase - Step);
-    Modes[I].Coefficient := 2 * Cos(Step);
-    // Hammer position suppresses selected partials rather than a generic sine stack.
-    Strike := 0.7 + 0.3 * Cos(2 * Pi * Partial / 8.5);
-    DecayRate := 0.22 + 0.22 * Sqrt(Frequency / 440) + 0.025 * Power(Partial, 1.6);
-    Modes[I].Decay := Exp(-DecayRate / Rate);
-    Modes[I].Amplitude := 0.85 * Strike * Exp(-Sqr(Partial / 10)) / Power(Partial, 0.85) / 3;
-    Modes[I].HammerAmplitude := 0.24 * Strike / Sqrt(Partial) / 3;
-    Modes[I].HammerDecay := Exp(-(9 + Partial * 1.5) / Rate);
+    Radius := Exp(-(0.30 + 0.22 * Sqrt(Frequency / 440) +
+      0.018 * Power(Partial, 1.7) + StringIndex * 0.12) / Rate);
+    // Force applied near one eighth of the string. The finite contact pulse
+    // supplies the high-frequency rolloff, which changes with strike strength.
+    Strike := Sin(Pi * Partial / 8.2);
+    Modes[I].Coefficient := 2 * Radius * Cos(Step);
+    Modes[I].Decay := Sqr(Radius);
+    Modes[I].Amplitude := 1.8 * Sin(Step) * Strike / Sqrt(Partial) / 3;
   end;
 end;
 
-function PianoFrame(var Modes: TPianoModes): Double;
+procedure StartPianoBody(var Modes: array of TPianoMode; Rate: Double);
+const Frequencies: array[0..3] of Double = (180, 520, 1150, 2700);
+var I: Integer; Step, Radius: Double;
+begin
+  for I := 0 to High(Modes) do
+  begin
+    FillChar(Modes[I], SizeOf(Modes[I]), 0);
+    Step := 2 * Pi * Frequencies[I] / Rate;
+    Radius := Exp(-(35 + I * 18) / Rate);
+    Modes[I].Coefficient := 2 * Radius * Cos(Step);
+    Modes[I].Decay := Sqr(Radius);
+    Modes[I].Amplitude := 0.16 * Sin(Step);
+  end;
+end;
+
+function PianoFrame(var Modes: array of TPianoMode; Force: Double): Double;
 var I: Integer; Next: Double;
 begin
   Result := 0;
   for I := 0 to High(Modes) do
     with Modes[I] do
     begin
-      Result := Result + Current * (Amplitude + HammerAmplitude);
-      Next := Coefficient * Current - Previous;
+      Next := Coefficient * Current - Decay * Previous + Amplitude * Force;
       Previous := Current;
       Current := Next;
-      Amplitude := Amplitude * Decay;
-      HammerAmplitude := HammerAmplitude * HammerDecay;
+      Result := Result + Current;
     end;
 end;
 
+function HammerForce(Age, ContactTime, Rate: Double): Double;
+begin
+  Result := 0;
+  if (Age > 0) and (Age < ContactTime) then
+    // Unit-area, smooth contact pulse; stronger strikes shorten contact time.
+    Result := Power(Sin(Pi * Age / ContactTime), 3) *
+      (3 * Pi / (4 * ContactTime * Rate));
+end;
+
 function ToneWave(Tone: Integer; Phase, Age, Frequency, SampleRate: Double): Double;
+var N, Limit: Integer; Fundamental, Cosine, Previous, Current, Next: Double;
 begin
   case Tone of
     1: begin
@@ -180,6 +202,25 @@ begin
       Result := Result * (8 / (Pi * Pi));
     end;
     2: Result := 0; // The piano uses its own oscillator state.
+    3: Result := Sin(Phase);
+    4, 5: begin
+      // Band-limited Fourier series. Recurrence avoids a sine call per partial.
+      Limit := Min(32, Trunc((SampleRate / 2 - 1) / Frequency));
+      Fundamental := Sin(Phase);
+      Cosine := 2 * Cos(Phase);
+      Previous := 0;
+      Current := Fundamental;
+      Result := 0;
+      for N := 1 to Limit do
+      begin
+        if (Tone = 5) or Odd(N) then Result := Result + Current / N;
+        Next := Cosine * Current - Previous;
+        Previous := Current;
+        Current := Next;
+      end;
+      if Tone = 4 then Result := Result * (4 / Pi)
+      else Result := Result * (2 / Pi);
+    end;
     else Result := OrganWave(Phase, Age);
   end;
 end;
@@ -188,7 +229,7 @@ procedure TMidiAudioSourceStream.SetTone(Tone: Integer);
 begin
   FLock.Enter;
   try
-    FTone := EnsureRange(Tone, 0, 2);
+    FTone := EnsureRange(Tone, 0, 5);
   finally
     FLock.Leave;
   end;
@@ -315,7 +356,7 @@ var
   Frames: Integer;
   s: PSmallInt;
   i, j: Integer;
-  phaseInc, sample, sampleTime, frameTime, ReleaseTime: Double;
+  phaseInc, sample, sampleTime, frameTime, ReleaseTime, Force: Double;
   outSample: SmallInt;
   tempSample: Int64;
 begin
@@ -356,7 +397,11 @@ begin
       if FActive then
       begin
         if FTone = 2 then
-          sample := PianoFrame(FPianoModes) * Min(1.0, FNoteAge / 0.003)
+        begin
+          Force := HammerForce(FNoteAge, FPianoContactTime, SampleRate);
+          sample := PianoFrame(FPianoModes, Force) +
+            PianoFrame(FPianoBody, Force * (1 + 0.3 * ClickNoise(FNoteAge)));
+        end
         else
           sample := ToneWave(FTone, FPhase, FNoteAge, FFreq, SampleRate);
         sample := sample * FVel * FEnvLevel * OrganGain;
@@ -370,7 +415,7 @@ begin
       // Release the previous struck string briefly when the next note starts.
       if (FTone = 2) and (FPianoTailLevel > 0) then
       begin
-        sample := sample + PianoFrame(FPianoTailModes) *
+        sample := sample + PianoFrame(FPianoTailModes, 0) *
           FPianoTailLevel * Max(0.0, 1 - FPianoTailAge / 0.080) * OrganGain;
         FPianoTailAge := FPianoTailAge + sampleTime;
         if FPianoTailAge >= 0.080 then FPianoTailLevel := 0;
@@ -482,7 +527,13 @@ begin
   end;
   FNote := Pitch;
   FFreq := 440.0 * Power(2.0, (FNote - 69) / 12.0);
-  if FTone = 2 then StartPianoModes(FPianoModes, FFreq, FFormat.SampleRate);
+  if FTone = 2 then
+  begin
+    StartPianoModes(FPianoModes, FFreq, FFormat.SampleRate);
+    StartPianoBody(FPianoBody, FFormat.SampleRate);
+    FPianoContactTime := (0.0038 - 0.002 * Velocity / 127) *
+      EnsureRange(Power(440 / FFreq, 0.15), 0.65, 1.6);
+  end;
   FVel := Sqr(Velocity / 127.0);
   FActive := True;
   FRelease := False;
