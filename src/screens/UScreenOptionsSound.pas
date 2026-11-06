@@ -39,17 +39,21 @@ uses
   UIni,
   UMenu,
   UMusic,
+  MidiOut,
   UThemes,
   sdl2;
 
 type
   TScreenOptionsSound = class(TOptionsMenu)
   private
+    SoundPreview: TMidiOutput;
+    LastSynthTone, LastClickSound: Integer;
     AudioVolumeSelectId: integer;
     BackgroundVolumeSelectId: integer;
     VocalsVolumeSelectId: integer;
     SfxVolumeSelectId: integer;
     PreviewVolumeSelectId: integer;
+    procedure PreviewSoundChoice;
     function AddVolumeSlider(const Text: UTF8String; var Data: integer): integer;
     procedure ApplyRealtimeSoundSettings(UpdatePartialVocalsVolume: boolean = false);
     function IsVolumeSlider(SelectId: integer): boolean;
@@ -58,6 +62,8 @@ type
     procedure UpdateVolumeSliderFromIni(SelectId, Value: integer);
   public
     constructor Create; override;
+    destructor Destroy; override;
+    procedure OnHide; override;
     function ParseInput(PressedKey: Cardinal; CharCode: UCS4Char;
       PressedDown: boolean; Repeated: boolean = false): boolean; override;
     function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
@@ -103,6 +109,8 @@ type
     iBackgroundMusicSlide,
     iBackgroundMusicVolumeSlide,
     iClickAssistSlide,
+    iSynthToneSlide,
+    iClickSoundSlide,
     iReplayGainSlide,
     iAudioVolumeSlide,
     iVocalsVolumeSlide,
@@ -220,10 +228,54 @@ begin
   Load;
 end;
 
+destructor TScreenOptionsSound.Destroy;
+begin
+  FreeAndNil(SoundPreview);
+  inherited;
+end;
+
+procedure TScreenOptionsSound.OnHide;
+begin
+  FreeAndNil(SoundPreview);
+  inherited;
+end;
+
+procedure TScreenOptionsSound.PreviewSoundChoice;
+var ToneChanged, ClickChanged: Boolean;
+begin
+  ToneChanged := Ini.SynthTone <> LastSynthTone;
+  ClickChanged := Ini.ClickSound <> LastClickSound;
+  LastSynthTone := Ini.SynthTone;
+  LastClickSound := Ini.ClickSound;
+  if not (ToneChanged or ClickChanged) then Exit;
+  if SoundPreview = nil then
+  begin
+    SoundPreview := TMidiOutput.Create(nil);
+    if not SoundPreview.Open then
+    begin
+      FreeAndNil(SoundPreview);
+      Exit;
+    end;
+  end;
+  SoundPreview.Stop;
+  SoundPreview.SetPosition(0);
+  SoundPreview.SetVolume(Ini.SfxVolume / 100);
+  if ToneChanged then
+  begin
+    SoundPreview.QueueNoteOn(69, 110, 0);
+    SoundPreview.QueueNoteOff(69, 0.5);
+  end
+  else
+    SoundPreview.QueueClick(110, 0);
+  SoundPreview.Play;
+end;
+
 procedure TScreenOptionsSound.OnShow;
 begin
   inherited;
   Interaction := 0;
+  LastSynthTone := Ini.SynthTone;
+  LastClickSound := Ini.ClickSound;
   ApplyRealtimeSoundSettings;
   SyncVolumeSlidersFromIni;
 
@@ -238,6 +290,8 @@ begin
   AddSelectSlide('SING_OPTIONS_SOUND_BACKGROUNDMUSIC', Ini.BackgroundMusicOption, IBackgroundMusicTranslated);
   BackgroundVolumeSelectId := AddVolumeSlider('SING_OPTIONS_SOUND_BACKGROUNDMUSICVOLUME', Ini.BackgroundMusicVolume);
   AddSelectSlide('SING_OPTIONS_SOUND_CLICK_ASSIST', Ini.ClickAssist, IClickAssistTranslated);
+  AddSelectSlide('SING_OPTIONS_SOUND_SYNTH_TONE', Ini.SynthTone, ISynthToneTranslated);
+  AddSelectSlide('SING_OPTIONS_SOUND_CLICK_SOUND', Ini.ClickSound, IClickSoundTranslated);
   AddSelectSlide('SING_OPTIONS_SOUND_MUSICAUTOGAIN', Ini.ReplayGain, IReplayGainTranslated);
   AudioVolumeSelectId := AddVolumeSlider('SING_OPTIONS_SOUND_AUDIOVOLUME', Ini.AudioVolume);
   VocalsVolumeSelectId := AddVolumeSlider('SING_OPTIONS_SOUND_VOCALSVOLUME', Ini.VocalsVolume);
@@ -350,6 +404,7 @@ procedure TScreenOptionsSound.ApplyRealtimeSoundSettings(UpdatePartialVocalsVolu
 var
   MusicOptionValue: integer;
 begin
+  PreviewSoundChoice;
   SetAudioVolumePercent(Ini.AudioVolume);
 
   SetVocalsVolumePercent(Ini.VocalsVolume, UpdatePartialVocalsVolume);

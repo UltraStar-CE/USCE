@@ -54,6 +54,8 @@ procedure Register;
 
 implementation
 
+uses UIni;
+
 constructor TMidiOutput.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
@@ -183,6 +185,11 @@ end;
 
 procedure TMidiOutput.Play;
 begin
+  if Assigned(FSourceStream) and Assigned(Ini) then
+  begin
+    FSourceStream.SetTone(Ini.SynthTone);
+    FSourceStream.SetClickSound(Ini.ClickSound);
+  end;
   // Queued notes and clicks share one running stream on every backend.
   if Assigned(FPlaybackStream) and (FPlaybackStream.Status <> ssPlaying) then
     FPlaybackStream.Play;

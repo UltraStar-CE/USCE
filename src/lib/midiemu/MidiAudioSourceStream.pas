@@ -21,6 +21,10 @@ uses
   SyncObjs;
 
 type
+  TPianoMode = record
+    Previous, Current, Coefficient, Amplitude, Decay: Double;
+  end;
+  TPianoModes = array[0..15] of TPianoMode;
   TSynthEventKind = (sekNoteOn, sekNoteOff, sekClick, sekStopAll);
 
   TScheduledSynthEvent = record
@@ -37,6 +41,9 @@ type
     FPosition: real;
     // Synthesizer state
     FActive: Boolean;
+    FTone, FClickSound: Integer;
+    FPianoModes, FPianoTailModes: TPianoModes;
+    FPianoTailLevel, FPianoTailAge: Double;
     FNote: Integer;
     FFreq: Double;
     FVel: Double;
@@ -72,6 +79,8 @@ type
     function ReadData(Buffer: PByte; BufferSize: integer): integer; override;
     function GetAudioFormatInfo: TAudioFormatInfo; override;
     procedure Close; override;
+    procedure SetTone(Tone: Integer);
+    procedure SetClickSound(Sound: Integer);
     procedure NoteOn(Pitch: Byte; Velocity: Byte = 127; Time: Double = -1.0);
     procedure NoteOff(Pitch: Byte; Time: Double = -1.0);
     procedure Click(Velocity: Byte = 127; Time: Double = -1.0);
@@ -114,6 +123,94 @@ begin
     );
 end;
 
+procedure StartPianoModes(var Modes: TPianoModes; Frequency, Rate: Double);
+const
+  Levels: array[0..7] of Double = (0.60, 0.27, 0.15, 0.10, 0.065, 0.04, 0.025, 0.015);
+var
+  I, Partial, StringIndex: Integer;
+  Stiffness, Detune, ModeFrequency, Step, DecayRate: Double;
+begin
+  // A struck, slightly stiff pair of strings per partial. The two decays
+  // model the initial loss into the soundboard and slower string sustain.
+  Stiffness := EnsureRange(0.00004 * Power(Frequency / 440, 0.8), 0.00002, 0.0003);
+  for I := 0 to High(Modes) do
+  begin
+    Partial := I div 2 + 1;
+    StringIndex := I mod 2;
+    Detune := 0;
+    if Frequency >= 110 then Detune := (2 * StringIndex - 1) * 0.0006;
+    ModeFrequency := Frequency * Partial * Sqrt(1 + Stiffness * Partial * Partial) * (1 + Detune);
+    Modes[I].Previous := 0;
+    Modes[I].Current := 0;
+    Modes[I].Amplitude := 0;
+    Modes[I].Coefficient := 0;
+    Modes[I].Decay := 0;
+    if ModeFrequency >= Rate / 2 then Continue;
+    Step := 2 * Pi * ModeFrequency / Rate;
+    Modes[I].Previous := -Sin(Step);
+    Modes[I].Coefficient := 2 * Cos(Step);
+    DecayRate := 0.35 + 0.8 * Sqrt(Frequency / 440) + 0.12 * Partial;
+    if StringIndex = 0 then DecayRate := DecayRate + 1.5 + 0.25 * Partial;
+    Modes[I].Decay := Exp(-DecayRate / Rate);
+    Modes[I].Amplitude := Levels[Partial - 1] / 2;
+  end;
+end;
+
+function PianoFrame(var Modes: TPianoModes): Double;
+var I: Integer; Next: Double;
+begin
+  Result := 0;
+  for I := 0 to High(Modes) do
+    with Modes[I] do
+    begin
+      Result := Result + Current * Amplitude;
+      Next := Coefficient * Current - Previous;
+      Previous := Current;
+      Current := Next;
+      Amplitude := Amplitude * Decay;
+    end;
+end;
+
+function ToneWave(Tone: Integer; Phase, Age, Frequency, SampleRate: Double): Double;
+begin
+  case Tone of
+    1: Result := Sin(Phase);
+    2: begin
+      // A short harmonic series avoids the sharp edges of a raw triangle.
+      Result := Sin(Phase);
+      if 3 * Frequency < SampleRate / 2 then
+        Result := Result - Sin(3 * Phase) / 9;
+      if 5 * Frequency < SampleRate / 2 then
+        Result := Result + Sin(5 * Phase) / 25;
+      Result := Result * (8 / (Pi * Pi));
+    end;
+    4: Result := Exp(-Age / 0.9) * (0.60 * Sin(Phase) +
+      0.30 * Sin(2 * Phase + 2 * Sin(3 * Phase)) * Exp(-Age / 0.12));
+    3: Result := 0; // The struck-string piano has its own oscillator state.
+    else Result := OrganWave(Phase, Age);
+  end;
+end;
+
+procedure TMidiAudioSourceStream.SetTone(Tone: Integer);
+begin
+  FLock.Enter;
+  try
+    FTone := EnsureRange(Tone, 0, 4);
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TMidiAudioSourceStream.SetClickSound(Sound: Integer);
+begin
+  FLock.Enter;
+  try
+    FClickSound := EnsureRange(Sound, 0, 4);
+  finally
+    FLock.Leave;
+  end;
+end;
+
 function ClickNoise(Age: Double): Double;
 var
   X: Double;
@@ -144,6 +241,25 @@ begin
   Crack := (Noise0 - 0.72 * Noise1 + 0.46 * Noise2) * Exp(-Age / 0.0045);
 
   Result := 1.10 * Stick + 1.35 * Tanh(2.6 * Crack);
+end;
+
+function SelectedClickWave(Sound: Integer; Age: Double): Double;
+var Attack: Double;
+begin
+  // Preserve the original sound exactly, including its transient.
+  if Sound = 0 then Exit(ClickWave(Age));
+  Attack := Min(1.0, Age / 0.0003);
+  case Sound of
+    1: Result := 0.45 * Sin(2 * Pi * 2000 * Age) * Exp(-Age / 0.009);
+    2: Result := (0.35 * Sin(2 * Pi * 1800 * Age) +
+      0.18 * Sin(2 * Pi * 2700 * Age)) * Exp(-Age / 0.013) +
+      0.12 * ClickNoise(Age) * Exp(-Age / 0.001);
+    3: Result := (0.38 * Sin(2 * Pi * 850 * Age) +
+      0.18 * Sin(2 * Pi * 1250 * Age)) * Exp(-Age / 0.023);
+    else Result := 0.32 * (ClickNoise(Age) - ClickNoise(Age + 1 / 44100)) *
+      Exp(-Age / 0.022);
+  end;
+  Result := Result * Attack;
 end;
 
 constructor TMidiAudioSourceStream.Create(Format: TAudioFormatInfo);
@@ -214,7 +330,7 @@ var
   Frames: Integer;
   s: PSmallInt;
   i, j: Integer;
-  phaseInc, sample, sampleTime, frameTime: Double;
+  phaseInc, sample, sampleTime, frameTime, ReleaseTime: Double;
   outSample: SmallInt;
   tempSample: Int64;
 begin
@@ -237,7 +353,9 @@ begin
       if FRelease then
       begin
         FReleaseAge := FReleaseAge + sampleTime;
-        FEnvLevel := FReleaseLevel * Exp(-FReleaseAge / OrganReleaseTime);
+        ReleaseTime := OrganReleaseTime;
+        if FTone = 3 then ReleaseTime := 0.070;
+        FEnvLevel := FReleaseLevel * Exp(-FReleaseAge / ReleaseTime);
         if FEnvLevel <= OrganSilenceLevel then
         begin
           FEnvLevel := 0;
@@ -252,7 +370,11 @@ begin
 
       if FActive then
       begin
-        sample := OrganWave(FPhase, FNoteAge) * FVel * FEnvLevel * OrganGain;
+        if FTone = 3 then
+          sample := PianoFrame(FPianoModes) * Min(1.0, FNoteAge / 0.003)
+        else
+          sample := ToneWave(FTone, FPhase, FNoteAge, FFreq, SampleRate);
+        sample := sample * FVel * FEnvLevel * OrganGain;
         // FPhase handling: keep between -Pi and +Pi
         FPhase := FPhase + phaseInc;
         if FPhase > Pi then FPhase := FPhase - 2 * Pi;
@@ -260,11 +382,22 @@ begin
       else
         sample := 0;
 
+      // Release the previous struck string briefly when the next note starts.
+      if (FTone = 3) and (FPianoTailLevel > 0) then
+      begin
+        sample := sample + PianoFrame(FPianoTailModes) *
+          FPianoTailLevel * Max(0.0, 1 - FPianoTailAge / 0.080) * OrganGain;
+        FPianoTailAge := FPianoTailAge + sampleTime;
+        if FPianoTailAge >= 0.080 then FPianoTailLevel := 0;
+      end;
+
       if FClickActive then
       begin
-        sample := sample + ClickWave(FClickAge) * FClickVel * ClickGain;
+        sample := sample + SelectedClickWave(FClickSound, FClickAge) * FClickVel * ClickGain;
         FClickAge := FClickAge + sampleTime;
-        if Exp(-FClickAge / ClickDecayTime) <= ClickSilenceLevel then
+        if ((FClickSound = 0) and
+            (Exp(-FClickAge / ClickDecayTime) <= ClickSilenceLevel)) or
+           ((FClickSound <> 0) and (FClickAge >= 0.200)) then
           FClickActive := False;
       end;
 
@@ -356,8 +489,15 @@ end;
 
 procedure TMidiAudioSourceStream.ApplyNoteOn(Pitch: Byte; Velocity: Byte);
 begin
+  if (FTone = 3) and FActive then
+  begin
+    FPianoTailModes := FPianoModes;
+    FPianoTailLevel := FVel * FEnvLevel;
+    FPianoTailAge := 0;
+  end;
   FNote := Pitch;
   FFreq := 440.0 * Power(2.0, (FNote - 69) / 12.0);
+  if FTone = 3 then StartPianoModes(FPianoModes, FFreq, FFormat.SampleRate);
   FVel := Sqr(Velocity / 127.0);
   FActive := True;
   FRelease := False;
@@ -387,6 +527,7 @@ end;
 
 procedure TMidiAudioSourceStream.ApplyStopAll;
 begin
+  FPianoTailLevel := 0;
   FActive := False;
   FRelease := False;
   FEnvLevel := 0;
