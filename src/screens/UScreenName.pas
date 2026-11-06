@@ -74,7 +74,6 @@ type
 
       CountIndex:   integer;
       PlayerCountOffset: integer;
-      FInputCount: integer;
       PlayerIndex:  integer;
       ColorIndex:   integer;
       LevelIndex:   integer;
@@ -131,6 +130,8 @@ type
 
       procedure PlayerColorButton(K: integer);
       function NoRepeatColors(ColorP: integer; Interaction: integer; Pos: integer):integer;
+      function ActivePlayerCount: integer;
+      procedure SetPlayerCount(Count: integer);
       procedure RefreshPlayers();
       procedure RefreshProfile();
       procedure RefreshColor();
@@ -824,9 +825,27 @@ end;
 
 function TScreenName.SelectedPlayerCount: integer;
 begin
-  if not Party.bPartyGame then Exit(AudioInputProcessor.ConfiguredPlayerCount);
   if CountIndex < PlayerCountOffset then Result := 0
   else Result := UIni.IPlayersVals[CountIndex - PlayerCountOffset];
+end;
+
+function TScreenName.ActivePlayerCount: integer;
+begin
+  if not Party.bPartyGame and LyricsOnly then Result := 0
+  else Result := UIni.IPlayersVals[Ini.Players];
+end;
+
+procedure TScreenName.SetPlayerCount(Count: integer);
+begin
+  Count := EnsureRange(Count, 0, UIni.IMaxPlayerCount);
+  LyricsOnly := Count = 0;
+  if Count > 0 then Ini.Players := Count - 1;
+  if Display.CurrentScreen = @ScreenName then
+  begin
+    CountIndex := Max(0, Count - 1 + PlayerCountOffset);
+    SelectsS[PlayersCount].SetSelectOpt(CountIndex);
+    RefreshPlayers;
+  end;
 end;
 
 procedure TScreenName.RefreshPlayers();
@@ -836,6 +855,11 @@ var
 begin
 
   Count := SelectedPlayerCount;
+  if not Party.bPartyGame then
+  begin
+    LyricsOnly := Count = 0;
+    if Count > 0 then Ini.Players := Count - 1;
+  end;
 
   while (PlayerIndex > Max(0, Count-1)) do
     PlayerIndex := PlayerIndex - 1;
@@ -1221,8 +1245,7 @@ var
   AvatarIndex: integer;
   Col:         TRGB;
 begin
-  if Party.bPartyGame then PlayersPlay := UIni.IPlayersVals[Ini.Players]
-  else PlayersPlay := AudioInputProcessor.ConfiguredPlayerCount;
+  PlayersPlay := ActivePlayerCount;
   SetLength(Player, PlayersPlay);
 
   for I := 0 to PlayersPlay - 1 do
@@ -1299,14 +1322,6 @@ begin
   if PlayerCountOffset = 1 then Counts[0] := Language.Translate('CONTINUOUS_ZERO_PLAYERS');
   for I := 0 to High(IPlayers) do Counts[I + PlayerCountOffset] := IPlayers[I];
   CountIndex := Ini.Players + PlayerCountOffset;
-  if not Party.bPartyGame then
-  begin
-    FInputCount := AudioInputProcessor.ConfiguredPlayerCount;
-    SetLength(Counts,1);
-    Counts[0] := IntToStr(FInputCount);
-    CountIndex := 0;
-    LyricsOnly := FInputCount = 0;
-  end;
   if LyricsOnly and (PlayerCountOffset = 1) then CountIndex := 0;
   UpdateSelectSlideOptions(PlayersCount, Counts, CountIndex);
 
@@ -1762,17 +1777,8 @@ var
   dx: real;
   dt: real;
   I: integer;
-  Counts: array of UTF8String;
 begin
   ScreenSong.UpdateTransitionPreview;
-  if not Party.bPartyGame and (FInputCount <> AudioInputProcessor.ConfiguredPlayerCount) then
-  begin
-    FInputCount := AudioInputProcessor.ConfiguredPlayerCount;
-    SetLength(Counts,1); Counts[0] := IntToStr(FInputCount); CountIndex := 0;
-    LyricsOnly := FInputCount = 0;
-    UpdateSelectSlideOptions(PlayersCount,Counts,CountIndex);
-    RefreshPlayers;
-  end;
   //inherited Draw;
   //heres a little Hack, that causes the Statics
   //are Drawn after the Buttons because of some Blending Problems.

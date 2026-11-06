@@ -326,6 +326,7 @@ constructor TRemoteBridgeIPC.Create;
 begin
   inherited;
   InitCriticalSection(FStatusLock);
+  FRequestedPlayerCount := -1;
 end;
 
 destructor TRemoteBridgeIPC.Destroy;
@@ -977,7 +978,7 @@ begin
   EnterCriticalSection(FStatusLock);
   try
     Count := FRequestedPlayerCount;
-    FRequestedPlayerCount := 0;
+    FRequestedPlayerCount := -1;
     if FProfilesDirty or RefreshProfiles then
       Profiles := Copy(FPlayers);
     FProfilesDirty := false;
@@ -1009,8 +1010,12 @@ begin
     end;
     if Assigned(ScreenSing) then ScreenSing.PlayerNames[Slot + 1] := Ini.Name[Slot];
   end;
-  // The adapter's suggested count cannot account for local microphones.
-  Count := AudioInputProcessor.ConfiguredPlayerCount;
+  // Only a newly received count update overrides the local selection.
+  // Input assignments and routine polling must not choose the player count.
+  if (Count >= 0) and (Count <= IMaxPlayerCount) and Assigned(ScreenName) then
+    ScreenName.SetPlayerCount(Count);
+  if Assigned(ScreenName) then Count := ScreenName.ActivePlayerCount
+  else Count := UIni.IPlayersVals[Ini.Players];
   if Assigned(ScreenSing) and (Display.CurrentScreen = @ScreenSing) and
     (Display.NextScreen = nil) then ScreenSing.RefreshInputRoster(Count);
   if (FLastInputTick = 0) or (GetTickCount64 - FLastInputTick >= 100) then
@@ -1048,7 +1053,6 @@ begin
       FLastInputState := InputState;
     end;
   end;
-  if Count > 0 then Ini.Players := Count - 1;
   if Assigned(ScreenName) and
     ((Display.CurrentScreen = @ScreenName) or (Display.CurrentScreen = @ScreenSong)) and
     ((Length(Profiles) > 0) or (PlayersPlay <> Count)) then
@@ -1074,7 +1078,7 @@ begin
     end;
   EnterCriticalSection(FOwner.FStatusLock);
   try
-    FOwner.FRequestedPlayerCount := JsonGetInt(Obj, 'gamePlayerCount', 0);
+    FOwner.FRequestedPlayerCount := JsonGetInt(Obj, 'gamePlayerCount', -1);
   finally
     LeaveCriticalSection(FOwner.FStatusLock);
   end;
