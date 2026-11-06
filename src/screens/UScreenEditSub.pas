@@ -1233,7 +1233,6 @@ procedure TScreenEditSub.StopMidiPlayback;
 begin
   PlaySentenceMidi := false;
   PlayOneMidi := false;
-  ManualPreviewNavigation := false;
   MidiSyncToAudio := false;
   CuePlaybackActive := false;
 
