@@ -192,6 +192,8 @@ type
       // Sound
       MicBoost:       integer;
       ClickAssist:    integer;
+      SynthTone:      integer;
+      ClickSound:     integer;
       SavePlayback:   integer;
       ThresholdIndex: integer;
       AudioOutputBufferSizeIndex: integer;
@@ -368,6 +370,8 @@ const
   IVideoPreview:     array[0..1] of UTF8String  = ('Off', 'On');
   IVideoEnabled:     array[0..1] of UTF8String  = ('Off', 'On');
 
+  IClickSound: array[0..4] of UTF8String = ('Original', 'Blip', 'Drumstick', 'Woodblock', 'HiHat');
+  ISynthTone: array[0..4] of UTF8String = ('Organ', 'Sine', 'Triangle', 'Piano', 'Bell');
   IClickAssist:      array[0..3] of UTF8String  = ('Off', 'On', 'Synth', 'SynthAndClicks');
   ISavePlayback:     array[0..1] of UTF8String  = ('Off', 'On');
   IReplayGain:       array[0..1] of UTF8String  = ('Off', 'On');
@@ -500,6 +504,8 @@ var
   IVideoPreviewTranslated:     array[0..1] of UTF8String  = ('Off', 'On');
   IVideoEnabledTranslated:     array[0..1] of UTF8String  = ('Off', 'On');
 
+  IClickSoundTranslated: array[0..4] of UTF8String = ('Original', 'Blip', 'Drumstick', 'Woodblock', 'Hi-hat');
+  ISynthToneTranslated: array[0..4] of UTF8String = ('Organ', 'Sine', 'Triangle', 'Piano', 'Bell');
   IClickAssistTranslated:      array[0..3] of UTF8String  = ('Off', 'On', 'Synth', 'SynthAndClicks');
   IReplayGainTranslated:       array[0..1] of UTF8String  = ('Off', 'On');
 
@@ -910,6 +916,16 @@ begin
   IVideoEnabledTranslated[0]          := ULanguage.Language.Translate('OPTION_VALUE_OFF');
   IVideoEnabledTranslated[1]          := ULanguage.Language.Translate('OPTION_VALUE_ON');
 
+  ISynthToneTranslated[0] := ULanguage.Language.Translate('OPTION_VALUE_SYNTH_ORGAN');
+  ISynthToneTranslated[1] := ULanguage.Language.Translate('OPTION_VALUE_SYNTH_SINE');
+  ISynthToneTranslated[2] := ULanguage.Language.Translate('OPTION_VALUE_SYNTH_TRIANGLE');
+  ISynthToneTranslated[3] := ULanguage.Language.Translate('OPTION_VALUE_SYNTH_PIANO');
+  ISynthToneTranslated[4] := ULanguage.Language.Translate('OPTION_VALUE_SYNTH_BELL');
+  IClickSoundTranslated[0] := ULanguage.Language.Translate('OPTION_VALUE_CLICK_ORIGINAL');
+  IClickSoundTranslated[1] := ULanguage.Language.Translate('OPTION_VALUE_CLICK_BLIP');
+  IClickSoundTranslated[2] := ULanguage.Language.Translate('OPTION_VALUE_CLICK_DRUMSTICK');
+  IClickSoundTranslated[3] := ULanguage.Language.Translate('OPTION_VALUE_CLICK_WOODBLOCK');
+  IClickSoundTranslated[4] := ULanguage.Language.Translate('OPTION_VALUE_CLICK_HIHAT');
   IClickAssistTranslated[0]           := ULanguage.Language.Translate('OPTION_VALUE_OFF');
   IClickAssistTranslated[1]           := ULanguage.Language.Translate('OPTION_VALUE_NOTE_CLICKS');
   IClickAssistTranslated[2]           := ULanguage.Language.Translate('OPTION_VALUE_NOTE_SYNTH');
@@ -1831,6 +1847,9 @@ begin
 
   PreferredCodecNames := IniFile.ReadString('Graphics', 'PreferredCodecs', '');
 
+  ClickSound := ReadArrayIndex(IClickSound, IniFile, 'Sound', 'ClickSound', IGNORE_INDEX, 'Original');
+  SynthTone := ReadArrayIndex(ISynthTone, IniFile, 'Sound', 'SynthTone', IGNORE_INDEX, 'Organ');
+
   // ClickAssist
   ClickAssist := ReadArrayIndex(IClickAssist, IniFile, 'Sound', 'ClickAssist', IGNORE_INDEX, 'Off');
 
@@ -2094,6 +2113,9 @@ begin
 
     // VideoEnabled
     IniFile.WriteString('Graphics', 'VideoEnabled', IVideoEnabled[VideoEnabled]);
+
+    IniFile.WriteString('Sound', 'ClickSound', IClickSound[ClickSound]);
+    IniFile.WriteString('Sound', 'SynthTone', ISynthTone[SynthTone]);
 
     // ClickAssist
     IniFile.WriteString('Sound', 'ClickAssist', IClickAssist[ClickAssist]);
