@@ -504,7 +504,7 @@ var
   IVideoPreviewTranslated:     array[0..1] of UTF8String  = ('Off', 'On');
   IVideoEnabledTranslated:     array[0..1] of UTF8String  = ('Off', 'On');
 
-  IClickSoundTranslated: array[0..1] of UTF8String = ('Original', 'Hi-hat');
+  IClickSoundTranslated: array[0..1] of UTF8String = ('Drumstick', 'Hi-hat');
   ISynthToneTranslated: array[0..2] of UTF8String = ('Organ', 'Triangle', 'Piano');
   IClickAssistTranslated:      array[0..3] of UTF8String  = ('Off', 'On', 'Synth', 'SynthAndClicks');
   IReplayGainTranslated:       array[0..1] of UTF8String  = ('Off', 'On');
