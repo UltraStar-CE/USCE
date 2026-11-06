@@ -154,7 +154,11 @@ end;
 procedure TMidiOutput.QueueNoteOn(Pitch: Byte; Velocity: Byte; Time: Double);
 begin
   if Assigned(FSourceStream) then
+  begin
+    // Time-zero events are processed immediately, before Play is called.
+    if Assigned(Ini) then FSourceStream.SetTone(Ini.SynthTone);
     FSourceStream.NoteOn(Pitch, Velocity, Time);
+  end;
 end;
 
 procedure TMidiOutput.QueueNoteOff(Pitch: Byte; Time: Double);
