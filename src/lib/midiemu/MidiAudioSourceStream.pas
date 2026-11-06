@@ -126,7 +126,7 @@ end;
 procedure StartPianoModes(var Modes: TPianoModes; Frequency, Rate: Double);
 var
   I, Partial, StringIndex: Integer;
-  Stiffness, Detune, ModeFrequency, Step, DecayRate, Strike: Double;
+  Stiffness, Detune, ModeFrequency, Step, DecayRate, Strike, Phase: Double;
 begin
   // Three coupled string voices with a broad hammer attack and slower sustain.
   // All modes are generated mathematically; no recorded audio is used.
@@ -140,15 +140,17 @@ begin
     FillChar(Modes[I], SizeOf(Modes[I]), 0);
     if ModeFrequency >= Rate / 2 then Continue;
     Step := 2 * Pi * ModeFrequency / Rate;
-    Modes[I].Previous := -Sin(Step);
+    Phase := StringIndex * 0.17;
+    Modes[I].Current := Sin(Phase);
+    Modes[I].Previous := Sin(Phase - Step);
     Modes[I].Coefficient := 2 * Cos(Step);
     // Hammer position suppresses selected partials rather than a generic sine stack.
-    Strike := Sqr(Sin(Pi * Partial / 7.3));
-    DecayRate := 0.32 + 0.36 * Sqrt(Frequency / 440) + 0.045 * Partial * Partial;
+    Strike := 0.7 + 0.3 * Cos(2 * Pi * Partial / 8.5);
+    DecayRate := 0.22 + 0.22 * Sqrt(Frequency / 440) + 0.025 * Power(Partial, 1.6);
     Modes[I].Decay := Exp(-DecayRate / Rate);
-    Modes[I].Amplitude := 0.55 * Strike / Power(Partial, 0.85) / 3;
-    Modes[I].HammerAmplitude := 0.8 * Strike / Sqrt(Partial) / 3;
-    Modes[I].HammerDecay := Exp(-(18 + Partial * 3) / Rate);
+    Modes[I].Amplitude := 0.85 * Strike * Exp(-Sqr(Partial / 10)) / Power(Partial, 0.85) / 3;
+    Modes[I].HammerAmplitude := 0.24 * Strike / Sqrt(Partial) / 3;
+    Modes[I].HammerDecay := Exp(-(9 + Partial * 1.5) / Rate);
   end;
 end;
 

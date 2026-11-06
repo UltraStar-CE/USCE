@@ -180,7 +180,9 @@ begin
             AudioPlayback.PlaySound(SoundLib.Option)
           else
           begin
-            AudioPlayback.PlaySound(SoundLib.Option);
+            if (SelInteraction <> Ord(iSynthToneSlide)) and
+               (SelInteraction <> Ord(iClickSoundSlide)) then
+              AudioPlayback.PlaySound(SoundLib.Option);
             InteractInc;
           end;
         end;
@@ -193,7 +195,9 @@ begin
             AudioPlayback.PlaySound(SoundLib.Option)
           else
           begin
-            AudioPlayback.PlaySound(SoundLib.Option);
+            if (SelInteraction <> Ord(iSynthToneSlide)) and
+               (SelInteraction <> Ord(iClickSoundSlide)) then
+              AudioPlayback.PlaySound(SoundLib.Option);
             InteractDec;
           end;
         end;
