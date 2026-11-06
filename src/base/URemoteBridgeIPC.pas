@@ -1055,7 +1055,8 @@ begin
   end;
   if Assigned(ScreenName) and
     ((Display.CurrentScreen = @ScreenName) or (Display.CurrentScreen = @ScreenSong)) and
-    ((Length(Profiles) > 0) or (PlayersPlay <> Count)) then
+    ((Length(Profiles) > 0) or
+     ((Display.CurrentScreen = @ScreenSong) and (PlayersPlay <> Count))) then
     ScreenName.LoadPlayersFromIni(true);
 end;
 

@@ -842,6 +842,7 @@ begin
   if Count > 0 then Ini.Players := Count - 1;
   if Display.CurrentScreen = @ScreenName then
   begin
+    PlayerCountOffset := Ord(not Party.bPartyGame);
     CountIndex := Max(0, Count - 1 + PlayerCountOffset);
     SelectsS[PlayersCount].SetSelectOpt(CountIndex);
     RefreshPlayers;
