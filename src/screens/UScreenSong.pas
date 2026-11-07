@@ -4940,7 +4940,6 @@ begin
     Ini.ReloadNames;
     RemoteBridgeIPC.ApplyPendingPlayerCount(true);
     PlayersPlay := ScreenName.ActivePlayerCount;
-    ScreenName.LyricsOnly := PlayersPlay = 0;
     SetLength(Player, PlayersPlay);
 
     for I := 0 to PlayersPlay - 1 do

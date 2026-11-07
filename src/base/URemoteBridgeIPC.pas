@@ -47,7 +47,6 @@ type
     FStatusSeq: integer;
     FGameStateSeq: integer;
     FCompanionViews: LongInt;
-    FRequestedPlayerCount: integer;
     FProfilesDirty: boolean;
     FPlayerDelayDirty: array[0..REMOTE_INPUT_MAX_PLAYERS-1] of boolean;
     FPlayerDelays: array[0..REMOTE_INPUT_MAX_PLAYERS-1] of integer;
@@ -328,7 +327,6 @@ constructor TRemoteBridgeIPC.Create;
 begin
   inherited;
   InitCriticalSection(FStatusLock);
-  FRequestedPlayerCount := -1;
 end;
 
 destructor TRemoteBridgeIPC.Destroy;
@@ -986,8 +984,6 @@ begin
   if Assigned(Party) and Party.bPartyGame then Exit;
   EnterCriticalSection(FStatusLock);
   try
-    Count := FRequestedPlayerCount;
-    FRequestedPlayerCount := -1;
     if FProfilesDirty or RefreshProfiles then
       Profiles := Copy(FPlayers);
     FProfilesDirty := false;
@@ -1019,10 +1015,6 @@ begin
     end;
     if Assigned(ScreenSing) then ScreenSing.PlayerNames[Slot + 1] := Ini.Name[Slot];
   end;
-  // Only a newly received count update overrides the local selection.
-  // Input assignments and routine polling must not choose the player count.
-  if (Count >= 0) and (Count <= IMaxPlayerCount) and Assigned(ScreenName) then
-    ScreenName.SetPlayerCount(Count);
   if Assigned(ScreenName) then Count := ScreenName.ActivePlayerCount
   else Count := UIni.IPlayersVals[Ini.Players];
   if Assigned(ScreenSing) and (Display.CurrentScreen = @ScreenSing) and
@@ -1086,12 +1078,6 @@ begin
       FOwner.SetPlayerConnected(UTF8String(JsonGetString(Entry, 'playerId', '')),
           JsonGetBool(Entry, 'connected', true));
     end;
-  EnterCriticalSection(FOwner.FStatusLock);
-  try
-    FOwner.FRequestedPlayerCount := JsonGetInt(Obj, 'gamePlayerCount', -1);
-  finally
-    LeaveCriticalSection(FOwner.FStatusLock);
-  end;
 end;
 
 procedure TRemoteBridgeIPCThread.HandlePlayerAssigned(Obj: TJSONObject);
