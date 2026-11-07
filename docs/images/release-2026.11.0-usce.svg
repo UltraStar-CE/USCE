@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="350" viewBox="0 0 1200 350" role="img" aria-labelledby="title desc">
+  <title id="title">USCE 2026.10.0 to USCE 2026.11.0</title>
+  <desc id="desc">Phone microphones. Up to 12 phone inputs with optional remote controls. Continuous playback. Sing the next song or play lyrics with zero singers. Live song library. Song files can change while the game is open. Editor playback. Navigate notes live and choose waveform tones</desc>
+  <rect width="1200" height="350" rx="20" fill="#101d2b"/>
+  <g font-family="DejaVu Sans, sans-serif">
+    <text x="42" y="61" fill="#bfcedb" font-size="24">USCE 2026.10.0</text>
+    <path d="M345 53h74m-12-9 12 9-12 9" fill="none" stroke="#67d7e6" stroke-width="3"/>
+    <text x="452" y="64" fill="#f1f7fc" font-size="35" font-weight="bold">USCE 2026.11.0</text>
+    <text x="42" y="110" fill="#bfcedb" font-size="21">New in the November update</text>
+    <rect x="42" y="140" width="550" height="77" rx="12" fill="#1b2d40"/>
+    <text x="63" y="170" fill="#83e3ed" font-size="22" font-weight="bold">Phone microphones</text>
+    <text x="63" y="198" fill="#e7f0f8" font-size="17">Up to 12 phone inputs with optional remote controls</text>
+    <rect x="608" y="140" width="550" height="77" rx="12" fill="#1b2d40"/>
+    <text x="629" y="170" fill="#83e3ed" font-size="22" font-weight="bold">Continuous playback</text>
+    <text x="629" y="198" fill="#e7f0f8" font-size="17">Sing the next song or play lyrics with zero singers</text>
+    <rect x="42" y="233" width="550" height="77" rx="12" fill="#1b2d40"/>
+    <text x="63" y="263" fill="#83e3ed" font-size="22" font-weight="bold">Live song library</text>
+    <text x="63" y="291" fill="#e7f0f8" font-size="17">Song files can change while the game is open</text>
+    <rect x="608" y="233" width="550" height="77" rx="12" fill="#1b2d40"/>
+    <text x="629" y="263" fill="#83e3ed" font-size="22" font-weight="bold">Editor playback</text>
+    <text x="629" y="291" fill="#e7f0f8" font-size="17">Navigate notes live and choose waveform tones</text>
+  </g>
+</svg>
