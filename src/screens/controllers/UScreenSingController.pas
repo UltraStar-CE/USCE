@@ -1453,14 +1453,29 @@ end;
 
 procedure TScreenSingController.LayoutVoiceLyrics;
 var
-  I, J, FirstPlayer, LocalPlayers, Count, Bank, CenterBank: integer;
+  I, J, FirstPlayer, LocalPlayers, Count, Bank, CenterBank, TrackIndex: integer;
   PlayerBanks: array of integer;
   Used: array[0..1] of boolean;
-  AssignedElsewhere: boolean;
+  AssignedElsewhere, LargeChart: boolean;
+  ScreenMasks: TVoiceScreenMasks;
+  ScreenBit: byte;
   CenterY: real;
 begin
   FirstPlayer := GetFirstPlayerIndexForScreen(PlayersPlay, Screens, ScreenAct);
   LocalPlayers := GetScreenPlayerCount(PlayersPlay, Screens, ScreenAct);
+  LargeChart := Length(VoiceLyrics) > SongVoicesPerScreen;
+  ScreenBit := 1 shl (ScreenAct - 1);
+  if LargeChart then
+  begin
+    SetLength(ScreenMasks, Length(VoiceLyrics));
+    for J := 0 to PlayersPlay - 1 do
+    begin
+      TrackIndex := Player[J].Track;
+      ScreenMasks[TrackIndex] := ScreenMasks[TrackIndex] or
+        (1 shl (GetPlayerScreen(J, PlayersPlay, Screens) - 1));
+    end;
+    ScreenMasks := FitVoiceScreens(ScreenMasks, Screens);
+  end;
   SetLength(PlayerBanks, LocalPlayers);
   CenterBank := 0;
   for J := 0 to LocalPlayers - 1 do
@@ -1481,6 +1496,7 @@ begin
   VoiceBankCounts[1] := 0;
   for I := 0 to High(VoiceLyrics) do
   begin
+    if LargeChart and ((ScreenMasks[I] and ScreenBit) = 0) then Continue;
     Used[0] := false;
     Used[1] := false;
     AssignedElsewhere := false;
@@ -1496,6 +1512,25 @@ begin
     begin
       if VoiceBankCounts[0] <= VoiceBankCounts[1] then Used[0] := true
       else Used[1] := true;
+    end;
+    // A large chart shows each part once per screen and fits six in each bank.
+    if LargeChart then
+    begin
+      if Used[0] and Used[1] then
+      begin
+        Used[0] := VoiceBankCounts[0] <= VoiceBankCounts[1];
+        Used[1] := not Used[0];
+      end;
+      if VoiceBankCounts[0] = SongVoicesPerScreen div 2 then
+      begin
+        Used[0] := false;
+        Used[1] := true;
+      end
+      else if VoiceBankCounts[1] = SongVoicesPerScreen div 2 then
+      begin
+        Used[0] := true;
+        Used[1] := false;
+      end;
     end;
     for Bank := 0 to 1 do
       if Used[Bank] then
