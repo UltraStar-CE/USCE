@@ -1,14 +1,20 @@
 {
-  "version": "2026.10.0",
+  "version": "2026.11.0",
   "ready": true,
   "trigger": "upstream-release",
-  "date": "2026-10-19",
+  "date": "2026-11-07",
   "upstream": {
-    "tag": "v2026.10.0",
-    "sha": "5fde5ec984154aca259117f99c49a220e0bab40c"
+    "tag": "v2026.11.0",
+    "sha": "6e15a472d2a6b1192044b9757d11b6d3933deb6e"
+  },
+  "comparisons": {
+    "upstream": {
+      "tag": "v2026.11.0",
+      "sha": "6e15a472d2a6b1192044b9757d11b6d3933deb6e"
+    }
   },
   "themes": {
     "repository": "UltraStar-CE/Themes",
-    "sha": "4f06930551631288d0702ba978bdd9a7647a6f0f"
+    "sha": "d892d99465480a08f395d5e7b932f18f8f3ee68d"
   }
 }
