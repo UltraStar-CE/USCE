@@ -18,14 +18,18 @@ type
     FHelloSent, FRunning, FRegistered: boolean;
     FRetryAt, FHeartbeatAt, FOpenedAt: QWord;
     FOnMessage: TRelayMessageEvent;
+    FViewsPolicy: LongInt;
+    FViewsDirty: boolean;
     procedure Hello;
     procedure Handle(Message: TJSONObject);
     procedure Heartbeat;
+    procedure SendCompanionViews;
   public
     constructor Create;
     destructor Destroy; override;
     procedure Start(const Url, LibraryPath, GameVersion: string);
     procedure Stop;
+    procedure SetCompanionViews(Policy: LongInt);
     procedure Reconnect;
     procedure Tick;
     // Caller retains ownership. Protocol is set here, never by individual users.
@@ -39,7 +43,7 @@ function NormalizeRelayHostUrl(const Url: string): string;
 
 implementation
 
-uses jsonparser;
+uses jsonparser, UCompanionViews;
 
 function NormalizeRelayHostUrl(const Url: string): string;
 var Address, Scheme, Query: string;
@@ -65,6 +69,7 @@ constructor TRemoteRelaySession.Create;
 begin
   inherited;
   FSocket := TRemoteRelaySocket.Create;
+  FViewsPolicy := AllCompanionViews;
 end;
 
 destructor TRemoteRelaySession.Destroy;
@@ -119,6 +124,24 @@ begin
   Result := FRunning and FSocket.Send(UTF8String(Message.AsJSON));
 end;
 
+procedure TRemoteRelaySession.SetCompanionViews(Policy: LongInt);
+begin
+  if FViewsPolicy = Policy then Exit;
+  FViewsPolicy := Policy;
+  FViewsDirty := true;
+end;
+
+procedure TRemoteRelaySession.SendCompanionViews;
+var Message: TJSONObject;
+begin
+  if not FRegistered or not FViewsDirty then Exit;
+  Message := TJSONObject.Create(['type', 'host.views']);
+  try
+    Message.Add('companionViews', CompanionViewsJson(FViewsPolicy));
+    if Send(Message) then FViewsDirty := false;
+  finally Message.Free; end;
+end;
+
 procedure TRemoteRelaySession.Hello;
 var Message: TJSONObject;
 begin
@@ -129,12 +152,15 @@ begin
   try
     Message.Add('capabilities', TJSONArray.Create(['remoteControl', 'clockSync',
       'p2pDataChannel', 'rawPcmV1', 'audioCalibrationV1']));
+    Message.Add('companionViews', CompanionViewsJson(FViewsPolicy));
+    if (FViewsPolicy shr 3) = Ord(cvCatalog) then Message.Add('webApp', 'catalog');
     if FRoomId <> '' then
     begin
       Message.Add('roomId', string(FRoomId));
       Message.Add('hostToken', string(FHostToken));
     end;
     FHelloSent := Send(Message);
+    if FHelloSent then FViewsDirty := false;
   finally Message.Free; end;
 end;
 
@@ -189,6 +215,7 @@ begin
   if FSocket.State <> 1 then Exit;
   if not FHelloSent then Hello;
   Heartbeat;
+  SendCompanionViews;
   ReceiveStarted := GetTickCount64;
   for I := 1 to 128 do
   begin

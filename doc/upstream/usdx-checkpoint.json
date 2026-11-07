@@ -1,15 +1,122 @@
 {
   "repository": "UltraStar-Deluxe/USDX",
   "branch": "master",
-  "from": "6e15a472d2a6b1192044b9757d11b6d3933deb6e",
   "sha": "8b9d9e08eca997d2e3fe789084fbac136988f276",
-  "meaning": "Assessed upstream tip, not a claim that changes have been incorporated",
-  "comparison": "https://github.com/UltraStar-Deluxe/USDX/compare/6e15a472d2a6b1192044b9757d11b6d3933deb6e...8b9d9e08eca997d2e3fe789084fbac136988f276",
-  "commits": [
+  "meaning": "Assessed upstream tip. Linked implementation PRs retain their own review, CI and merge status.",
+  "resolutions": [
     {
-      "sha": "8b9d9e08eca997d2e3fe789084fbac136988f276",
-      "url": "https://github.com/UltraStar-Deluxe/USDX/commit/8b9d9e08eca997d2e3fe789084fbac136988f276",
-      "subject": "set dev version again"
+      "commits": [
+        "5fde5ec984154aca259117f99c49a220e0bab40c",
+        "519b1c523e61e49db18dd0baf610ba83fb619d30"
+      ],
+      "disposition": "Upstream release bookkeeping superseded by USCE generated version metadata.",
+      "usce_pr": 22
+    },
+    {
+      "commits": [
+        "65c9a1ec24086bbeb456c0123fbcbf2d13792193",
+        "44bd04c7681ea57501c890a4618123234fce1f06"
+      ],
+      "disposition": "macOS linking change integrated; upstream merge ancestry recorded.",
+      "usce_prs": [
+        19,
+        22
+      ]
+    },
+    {
+      "commits": [
+        "e755ec1eaa02fe87d837463c74c3a69128ef2825",
+        "f4fbb218c0bd3c822d77f27a6682734b80cb6bef"
+      ],
+      "disposition": "Windows dependency updates and installer cleanup integrated, retaining USCE adaptations and original upstream ancestry.",
+      "usce_pr": 151
+    },
+    {
+      "commits": [
+        "ea2ebca34565f61f9b61d094cb5d7a2c5318c5e3",
+        "642bac47c6c1e48d02079a9add89e26e9f0c9389"
+      ],
+      "disposition": "Equivalent sound-effect restart behavior is already provided by USCE PlaySound explicitly stopping and restarting effects. Preserve idempotent generic Play for active synth streams. Original upstream ancestry recorded without reverting USCE behavior.",
+      "usce_prs": [
+        155
+      ]
+    },
+    {
+      "commits": [
+        "a7ee0f4f8903c84536b4a715f2391f7520e1a17c",
+        "54f6e010800458543223dc2d7a3fb65140a78649"
+      ],
+      "disposition": "Adopt issue forms with USCE names and retain the optional reporter testing question; remove the duplicate Markdown bug template."
+    },
+    {
+      "commits": [
+        "33c4f323356beb220a8cbfcfaef6cbef6e22cdfb",
+        "3079c4b8663b199bcbceafe28d2a0ee2d7630035"
+      ],
+      "disposition": "The failure is already fixed in USCE by the SizeInt substitutions in 0cbc71c2. Alternative Delphi implementation #341 was closed at the maintainer request. Retain the current implementation and existing regression tests; record the original upstream commits as ancestry without replacing the USCE source.",
+      "usce_pr": 345,
+      "status": "already-covered; upstream ancestry recorded",
+      "existing_usce_commit": "0cbc71c2c157753ef1387ce33dab0dc15a40dfd1",
+      "alternative_usce_pr": 341,
+      "upstream_pr": 1463
+    },
+    {
+      "commits": [
+        "6e15a472d2a6b1192044b9757d11b6d3933deb6e"
+      ],
+      "disposition": "USDX 2026.11.0 release ancestry and fix coverage are recorded by USCE's November release preparation.",
+      "usce_pr": 144
+    },
+    {
+      "commits": [
+        "8b9d9e08eca997d2e3fe789084fbac136988f276"
+      ],
+      "disposition": "USDX returned to development version metadata after its 2026.11.0 release. USCE generates its own build and release versions. Assessed without importing the metadata changes.",
+      "status": "assessed; no port"
     }
-  ]
+  ],
+  "from": "6e15a472d2a6b1192044b9757d11b6d3933deb6e",
+  "comparison": "https://github.com/UltraStar-Deluxe/USDX/compare/6e15a472d2a6b1192044b9757d11b6d3933deb6e...8b9d9e08eca997d2e3fe789084fbac136988f276",
+  "assessment": {
+    "checkedAt": "2026-11-02T17:45:56.790Z",
+    "originalAuthorCutoff": "2026-05-02T17:45:00Z",
+    "issueWatchStart": "2026-10-27T00:30:14Z",
+    "outcomes": [
+      {
+        "area": "AnyASCII",
+        "output": "https://github.com/UltraStar-CE/USCE/pull/341",
+        "status": "Covered by existing SizeInt fix; alternative PR 341 closed"
+      },
+      {
+        "area": "Whole-line editor note types",
+        "output": "https://github.com/UltraStar-CE/USCE/pull/346"
+      },
+      {
+        "area": "Mixed-difficulty highscore visibility",
+        "output": "https://github.com/UltraStar-CE/USCE/pull/347"
+      },
+      {
+        "area": "Spanish volume labels",
+        "output": "https://github.com/UltraStar-CE/USCE/pull/348"
+      },
+      {
+        "area": "Unused installer form behind #342/#343/#344",
+        "output": "https://github.com/UltraStar-CE/USCE/pull/349"
+      },
+      {
+        "area": "Busy macOS packaging image",
+        "output": "https://github.com/UltraStar-CE/USCE/pull/350"
+      }
+    ],
+    "notAdopted": [
+      "Six generator/alignment commits remain outside the agreed chart/media generation scope.",
+      "Three fork jukebox/request-server commits use the removed jukebox and an embedded HTTP service; USCE uses continuous playback and usrelay.",
+      "The aveiver Python HTTP timeout/restart changes do not apply to the native relay transport; no Python server is imported."
+    ],
+    "alreadyCovered": [
+      "Tycorc frame pacing is already integrated. Matched measurements support the automatic Intel Windows buffer-upload workaround proposed in #327; no universal performance improvement is claimed.",
+      "Old/rebased dgruss integration branches retain the established focused-port decisions; no second player-layout, synth, scaling, playlist or statistics implementation."
+    ],
+    "remainingFeatureProposals": "Existing feature issues retain their own scope and acceptance; they are not unassessed commits or blockers to merging this checkpoint."
+  }
 }

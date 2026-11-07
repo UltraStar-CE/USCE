@@ -46,6 +46,7 @@ type
     FDisplayCode: UTF8String;
     FStatusSeq: integer;
     FGameStateSeq: integer;
+    FCompanionViews: LongInt;
     FRequestedPlayerCount: integer;
     FProfilesDirty: boolean;
     FPlayerDelayDirty: array[0..REMOTE_INPUT_MAX_PLAYERS-1] of boolean;
@@ -68,6 +69,7 @@ type
 
     procedure Start;
     procedure Stop;
+    procedure UpdateCompanionViews;
     procedure ApplyPendingPlayerCount(RefreshProfiles: boolean = false);
     procedure SendAck(const PlayerId: UTF8String; CommandId: integer;
       Accepted: boolean; const Reason: UTF8String; GameStateSeq: integer);
@@ -548,8 +550,14 @@ begin
   if (FThread <> nil) then
     Exit;
 
+  UpdateCompanionViews;
   FThread := TRemoteBridgeIPCThread.Create(Self);
   FThread.Start;
+end;
+
+procedure TRemoteBridgeIPC.UpdateCompanionViews;
+begin
+  InterlockedExchange(FCompanionViews, Ini.RemoteBridgeViewPolicy);
 end;
 
 procedure TRemoteBridgeIPC.Stop;
@@ -846,6 +854,7 @@ begin
     begin
       LoopStart := GetTickCount64;
       GapMs := LoopStart - PreviousEnd;
+      FNativeRelay.SetCompanionViews(InterlockedExchangeAdd(FOwner.FCompanionViews, 0));
       FNativeRelay.Tick;
       TickEnd := GetTickCount64;
       FlushNativeWrites;

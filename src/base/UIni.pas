@@ -38,6 +38,7 @@ interface
 uses
   Math,
   URecentNames,
+  UCompanionViews,
   UContinuousPlayback,
   Classes,
   IniFiles,
@@ -271,7 +272,10 @@ type
       // Remote bridge
       RemoteBridgeEnabled: integer;
       RemoteBridgeServerUrl: string;
-      RemoteBridgeWebApp: UTF8String;
+      RemoteBridgeViews: array[TCompanionView] of integer;
+      RemoteBridgeDefaultView: TCompanionView;
+      procedure NormalizeRemoteBridgeViews;
+      function RemoteBridgeViewPolicy: LongInt;
 
       procedure Load();
       procedure Save();
@@ -1647,6 +1651,28 @@ begin
     Result[i] := Values[i];
 end;
 
+procedure TIni.NormalizeRemoteBridgeViews;
+var View: TCompanionView;
+begin
+  if RemoteBridgeViews[RemoteBridgeDefaultView] <> 0 then Exit;
+  for View := Low(TCompanionView) to High(TCompanionView) do
+    if RemoteBridgeViews[View] <> 0 then
+    begin
+      RemoteBridgeDefaultView := View;
+      Exit;
+    end;
+  RemoteBridgeViews[cvFull] := 1;
+  RemoteBridgeDefaultView := cvFull;
+end;
+
+function TIni.RemoteBridgeViewPolicy: LongInt;
+var View: TCompanionView;
+begin
+  Result := Ord(RemoteBridgeDefaultView) shl 3;
+  for View := Low(TCompanionView) to High(TCompanionView) do
+    if RemoteBridgeViews[View] <> 0 then Result := Result or (1 shl Ord(View));
+end;
+
 procedure TIni.Load();
 var
   IniFile: TMemIniFile;
@@ -1657,6 +1683,8 @@ var
   KeysHigh: string;
   ReadPianoKeysLow: TPianoKeyArray;
   ReadPianoKeysHigh: TPianoKeyArray;
+  View: TCompanionView;
+  LegacyWebApp: string;
 
   function ReadVolumePercent(const Section, Key: string; DefaultValue: integer): integer;
   var
@@ -1771,7 +1799,13 @@ begin
   RemoteBridgeServerUrl := Trim(IniFile.ReadString('RemoteBridge', 'ServerUrl', DEFAULT_REMOTE_BRIDGE_SERVER_URL));
   if (RemoteBridgeServerUrl = '') then
     RemoteBridgeServerUrl := DEFAULT_REMOTE_BRIDGE_SERVER_URL;
-  RemoteBridgeWebApp := Trim(IniFile.ReadString('RemoteBridge', 'WebApp', ''));
+  LegacyWebApp := Trim(IniFile.ReadString('RemoteBridge', 'WebApp', ''));
+  if LegacyWebApp = '' then LegacyWebApp := GetEnvironmentVariable('USDX_REMOTE_WEB_APP');
+  RemoteBridgeDefaultView := CompanionViewFromName(Trim(
+    IniFile.ReadString('RemoteBridge', 'DefaultView', LegacyWebApp)));
+  for View := Low(TCompanionView) to High(TCompanionView) do
+    RemoteBridgeViews[View] := Ord(IniFile.ReadBool('RemoteBridge', 'View_' + CompanionViewNames[View], true));
+  NormalizeRemoteBridgeViews;
 
   // Read Users Info (Network)
   DataBase.ReadUsers;
@@ -2011,6 +2045,7 @@ end;
 procedure TIni.Save;
 var
   I: integer;
+  View: TCompanionView;
   IniFile: TIniFile;
   NoteType: TNoteType;
 begin
@@ -2060,7 +2095,9 @@ begin
     IniFile.WriteInteger('Game', 'MicDelay', MicDelay);
     IniFile.WriteString('RemoteBridge', 'Enabled', ITabs[RemoteBridgeEnabled]);
     IniFile.WriteString('RemoteBridge', 'ServerUrl', RemoteBridgeServerUrl);
-    IniFile.WriteString('RemoteBridge', 'WebApp', RemoteBridgeWebApp);
+    for View := Low(TCompanionView) to High(TCompanionView) do
+      IniFile.WriteBool('RemoteBridge', 'View_' + CompanionViewNames[View], RemoteBridgeViews[View] <> 0);
+    IniFile.WriteString('RemoteBridge', 'DefaultView', CompanionViewNames[RemoteBridgeDefaultView]);
 
     // MaxFramerate
     IniFile.WriteString('Graphics', 'MaxFramerate', IMaxFramerate[MaxFramerate]);
