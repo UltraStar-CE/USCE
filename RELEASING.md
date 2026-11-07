@@ -33,8 +33,8 @@ ready for review starts PR checks, including when the workflow token created it.
 
 After the preparation PR merges, release CI builds Windows, Linux, ARM macOS and
 Intel macOS from that exact revision. It creates a draft GitHub release containing
-the Windows installer, portable ZIP, Linux AppImage, two macOS DMGs, the VERSION
-update feed and SHA256SUMS.
+the Windows installer, portable ZIP, Linux AppImage, Ubuntu 22.04 amd64 DEB,
+two macOS DMGs, the VERSION update feed and SHA256SUMS.
 All platforms must succeed. Retries retain matching assets and refuse to replace
 different files or move an existing tag. An already published version is never
 overwritten. No workflow merges PRs or publishes a release automatically.

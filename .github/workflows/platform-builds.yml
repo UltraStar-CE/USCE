@@ -191,7 +191,10 @@ jobs:
           if-no-files-found: error
           retention-days: 7
       - name: Stage portable package with every theme
-        run: python tools/bundle-themes.py portable --source game --destination .release-themes/portable
+        run: |
+          python tools/bundle-themes.py portable --source game --destination .release-themes/portable
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Copy-Item -LiteralPath @('LICENSE', 'COPYRIGHT.txt') -Destination .release-themes/portable
       - name: Upload Portable Artifact
         uses: actions/upload-artifact@v6
         with:

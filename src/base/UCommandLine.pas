@@ -147,7 +147,7 @@ begin
   writeln('  -results / -highscores <manual|skip|5|10|20|30|40|50|60>');
   writeln('  -song-display <lyrics-progress|lyrics|progress|none>');
   writeln('  -singing-display <full|notes-info|notes|info|none>');
-  writeln('    Start locked playback; -playlist can be repeated.');
+  writeln('    Start locked playback with one playlist.');
   writeln;
 
   platform.halt;
