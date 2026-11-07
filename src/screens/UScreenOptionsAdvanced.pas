@@ -48,6 +48,8 @@ type
       constructor Create; override;
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       procedure OnShow; override;
+    private
+      EditorPathButton, SearchPathButton: integer;
     protected
       procedure LoadWidgets; override;
   end;
@@ -77,6 +79,16 @@ type
     iTopScoresSlide,
     iBackButton
   );
+
+procedure ExternalToolPathEntered(Value: boolean; Data: Pointer);
+begin
+  if not Value then Exit;
+  if Data = nil then
+    Ini.ExternalSongEditorPath := Trim(ScreenPopupInsertUser.Username)
+  else
+    Ini.ExternalSongSearchPath := Trim(ScreenPopupInsertUser.Username);
+  Ini.Save;
+end;
 
 function TScreenOptionsAdvanced.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
 begin
@@ -109,6 +121,20 @@ begin
         begin
           if Interactions[SelInteraction].Typ = iButton then
           begin
+            if Interactions[SelInteraction].Num = EditorPathButton then
+            begin
+              ScreenPopupInsertUser.ShowTextPrompt(Language.Translate('EXTERNAL_SONG_EDITOR_PATH'),
+                'EXTERNAL_SONG_PATH_HINT', Language.Translate('FILTER_PRESET_SAVE'),
+                @ExternalToolPathEntered, nil, Ini.ExternalSongEditorPath, 'EXTERNAL_SONG_PATH');
+              Exit;
+            end;
+            if Interactions[SelInteraction].Num = SearchPathButton then
+            begin
+              ScreenPopupInsertUser.ShowTextPrompt(Language.Translate('EXTERNAL_SONG_SEARCH_PATH'),
+                'EXTERNAL_SONG_PATH_HINT', Language.Translate('FILTER_PRESET_SAVE'),
+                @ExternalToolPathEntered, Self, Ini.ExternalSongSearchPath, 'EXTERNAL_SONG_PATH');
+              Exit;
+            end;
             Ini.Save;
             AudioPlayback.PlaySound(SoundLib.Back);
             FadeTo(@ScreenOptions);
@@ -176,6 +202,15 @@ begin
   DefaultSuffix := ' (' + Language.Translate('OPTION_VALUE_DEFAULT') + ')';
   for Weight := Low(WeightOptions) to High(WeightOptions) do
     WeightOptions[Weight] := IntToStr(Weight) + '%';
+
+  AddSection('EXTERNAL_SONG_TOOLS');
+  AddSelectSlide('EXTERNAL_SONG_EDITOR', Ini.ExternalSongEditor,
+    [Language.Translate('OPTION_VALUE_OFF'), IExternalSongEditor[1], IExternalSongEditor[2],
+     Language.Translate('EXTERNAL_SONG_CUSTOM')]);
+  EditorPathButton := AddButton('EXTERNAL_SONG_EDITOR_PATH');
+  AddSelectSlide('EXTERNAL_SONG_SEARCH', Ini.ExternalSongSearch,
+    [Language.Translate('OPTION_VALUE_OFF'), IExternalSongSearch[1]]);
+  SearchPathButton := AddButton('EXTERNAL_SONG_SEARCH_PATH');
 
   AddSection('SING_OPTIONS_ADVANCED_SCORING');
   for NoteType := Low(TNoteType) to High(TNoteType) do

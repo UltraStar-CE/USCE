@@ -356,6 +356,7 @@ implementation
 
 uses
   URemoteSongLibrary,
+  UExternalSongTools,
   URecord,
   UInputSource,
   UJoystick,
@@ -890,6 +891,15 @@ begin
 
     SDL_ModState := SDL_GetModState and (KMOD_LSHIFT + KMOD_RSHIFT
     + KMOD_LCTRL + KMOD_RCTRL + KMOD_LALT  + KMOD_RALT);
+
+    if (PressedKey = SDLK_e) and (SDL_ModState and KMOD_ALT <> 0) and
+       (SDL_ModState and (KMOD_CTRL or KMOD_SHIFT) = 0) and (Ini.ExternalSongEditor <> 0) then
+    begin
+      if not Repeated and (Mode = smNormal) and HasSelection and
+         not CatSongs.Song[Interaction].Main then
+        OpenExternalSongEditor(CatSongs.Song[Interaction]);
+      Exit;
+    end;
 
     // Ctrl+F is shared by both modes; Ctrl+Shift+F retains custom medley.
     if (SDL_ModState and KMOD_CTRL <> 0) and (SDL_ModState and KMOD_ALT = 0) and
