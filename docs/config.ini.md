@@ -331,7 +331,8 @@ relay. No local adapter, Node runtime or HTTP server is needed.
 | --- | --- | --- |
 | `Enabled` | `Off`, `On`; `Off` | Enables the native relay and room code. |
 | `ServerUrl` | `wss://usdx.at/ws/host` | Hosted relay endpoint. An empty value restores this default. |
-| `WebApp` | Empty | Optional hosted client flavor; not an API permission grant. |
+| `View_full`, `View_catalog`, `View_radio` | On | Companion views enabled for the room. At least one view is required. |
+| `DefaultView` | `full` | Enabled view opened by the room link. Existing `WebApp=catalog` settings initialize this to `catalog`. |
 
 Enable the connection in Network settings, then enter the displayed room code
 at https://usdx.at/. Downloaded builds already include the native library and
