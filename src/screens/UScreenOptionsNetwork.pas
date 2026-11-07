@@ -34,6 +34,7 @@ interface
 {$I switches.inc}
 
 uses
+  UCompanionViews,
   UDataBase,
   UDisplay,
   UDLLManager,
@@ -48,12 +49,15 @@ uses
 type
   TScreenOptionsNetwork = class(TOptionsMenu)
   private
-    RemoteBridgeWebAppIndex: integer;
+    RemoteDefaultViewIndex: integer;
+    RemoteDefaultViews: array of TCompanionView;
     RemoteBridgeServerUrlIndex: integer;
     RemoteEditingSlide: integer;
     RemoteEditingOriginal: UTF8String;
     RemoteEditingText: UTF8String;
 
+    procedure RefreshCompanionViews;
+    procedure SelectCompanionView(Slide: integer; ForwardDirection: boolean);
     function HasWebsiteConfig: boolean;
     function HasCurrentUser: boolean;
     function IsRemoteTextSlide(Slide: integer): boolean;
@@ -112,13 +116,17 @@ uses
   ULanguage,
   ULog,
   UMain,
+  URemoteBridgeIPC,
   UUnicodeUtils,
   SysUtils;
 
 type
   InteractionID = (
     iRemoteEnabledSlide,
-    iRemoteWebAppSlide,
+    iRemoteFullSlide,
+    iRemoteCatalogSlide,
+    iRemoteRadioSlide,
+    iRemoteDefaultViewSlide,
     iRemoteServerUrlSlide,
     iWebsiteSlide,
     iUsernameSlide,
@@ -292,7 +300,6 @@ end;
 function TScreenOptionsNetwork.IsRemoteTextSlide(Slide: integer): boolean;
 begin
   Result := Slide in [
-    Ord(iRemoteWebAppSlide),
     Ord(iRemoteServerUrlSlide)
   ];
 end;
@@ -300,8 +307,6 @@ end;
 function TScreenOptionsNetwork.GetRemoteText(Slide: integer): UTF8String;
 begin
   case InteractionID(Slide) of
-    iRemoteWebAppSlide:
-      Result := Ini.RemoteBridgeWebApp;
     iRemoteServerUrlSlide:
       Result := Ini.RemoteBridgeServerUrl;
   else
@@ -312,12 +317,6 @@ end;
 function TScreenOptionsNetwork.GetRemoteDefaultText(Slide: integer): UTF8String;
 begin
   case InteractionID(Slide) of
-    iRemoteWebAppSlide:
-      begin
-        Result := Trim(GetEnvironmentVariable('USDX_REMOTE_WEB_APP'));
-        if (Result = '') then
-          Result := 'default';
-      end;
     iRemoteServerUrlSlide:
       Result := DEFAULT_REMOTE_BRIDGE_SERVER_URL;
   else
@@ -335,8 +334,6 @@ end;
 procedure TScreenOptionsNetwork.SetRemoteText(Slide: integer; const Value: UTF8String);
 begin
   case InteractionID(Slide) of
-    iRemoteWebAppSlide:
-      Ini.RemoteBridgeWebApp := Trim(Value);
     iRemoteServerUrlSlide:
       begin
         Ini.RemoteBridgeServerUrl := Trim(Value);
@@ -383,8 +380,49 @@ end;
 procedure TScreenOptionsNetwork.RefreshRemoteSlides;
 begin
   SelectsS[Ord(iRemoteEnabledSlide)].SetSelectOpt(Ini.RemoteBridgeEnabled);
-  RefreshRemoteSlide(Ord(iRemoteWebAppSlide), GetRemoteDisplayText(Ord(iRemoteWebAppSlide)));
+  RefreshCompanionViews;
   RefreshRemoteSlide(Ord(iRemoteServerUrlSlide), GetRemoteDisplayText(Ord(iRemoteServerUrlSlide)));
+end;
+
+const
+  CompanionViewLabels: array[TCompanionView] of string = (
+    'SING_OPTIONS_NETWORK_REMOTE_FULL', 'SING_OPTIONS_NETWORK_REMOTE_CATALOG', 'SING_OPTIONS_NETWORK_REMOTE_RADIO');
+
+procedure TScreenOptionsNetwork.RefreshCompanionViews;
+var View: TCompanionView;
+    Labels: TUTF8StringArray;
+begin
+  Labels := nil;
+  SetLength(RemoteDefaultViews, 0);
+  for View := Low(TCompanionView) to High(TCompanionView) do
+  begin
+    SelectsS[Ord(iRemoteFullSlide) + Ord(View)].SetSelectOpt(Ini.RemoteBridgeViews[View]);
+    if Ini.RemoteBridgeViews[View] = 0 then Continue;
+    if View = Ini.RemoteBridgeDefaultView then RemoteDefaultViewIndex := Length(Labels);
+    SetLength(Labels, Length(Labels) + 1);
+    SetLength(RemoteDefaultViews, Length(Labels));
+    Labels[High(Labels)] := Language.Translate(CompanionViewLabels[View]);
+    RemoteDefaultViews[High(Labels)] := View;
+  end;
+  UpdateSelectSlideOptions(Ord(iRemoteDefaultViewSlide), Labels, RemoteDefaultViewIndex);
+  SelectsS[Ord(iRemoteDefaultViewSlide)].ShowArrows := Length(Labels) > 1;
+end;
+
+procedure TScreenOptionsNetwork.SelectCompanionView(Slide: integer; ForwardDirection: boolean);
+var View: TCompanionView;
+begin
+  AudioPlayback.PlaySound(SoundLib.Option);
+  if ForwardDirection then InteractInc else InteractDec;
+  if Slide = Ord(iRemoteDefaultViewSlide) then
+    Ini.RemoteBridgeDefaultView := RemoteDefaultViews[RemoteDefaultViewIndex]
+  else
+  begin
+    View := TCompanionView(Slide - Ord(iRemoteFullSlide));
+    if (Ini.RemoteBridgeViewPolicy and AllCompanionViews) = 0 then Ini.RemoteBridgeViews[View] := 1;
+    Ini.NormalizeRemoteBridgeViews;
+    RefreshCompanionViews;
+  end;
+  RemoteBridgeIPC.UpdateCompanionViews;
 end;
 
 procedure TScreenOptionsNetwork.StartRemoteTextEdit(Slide: integer);
@@ -526,6 +564,11 @@ begin
         end;
       SDLK_RIGHT:
         begin
+          if InteractionID(SelInteraction) in [iRemoteFullSlide..iRemoteDefaultViewSlide] then
+          begin
+            SelectCompanionView(SelInteraction, true);
+            Exit;
+          end;
           if (SelInteraction = ord(iBackButton)) and HasWebsiteConfig then
             Interaction := ord(iInsertUserButton);
 
@@ -587,6 +630,11 @@ begin
         end;
       SDLK_LEFT:
         begin
+          if InteractionID(SelInteraction) in [iRemoteFullSlide..iRemoteDefaultViewSlide] then
+          begin
+            SelectCompanionView(SelInteraction, false);
+            Exit;
+          end;
           if (SelInteraction = ord(iInsertUserButton)) then
             Interaction := ord(iBackButton);
 
@@ -877,9 +925,14 @@ end;
 procedure TScreenOptionsNetwork.LoadWidgets;
 var
   I:  integer;
+  View: TCompanionView;
 begin
   AddSelectSlide('SING_OPTIONS_NETWORK_REMOTE_ENABLED', Ini.RemoteBridgeEnabled, ITabsTranslated);
-  AddRemoteTextSlide('SING_OPTIONS_NETWORK_REMOTE_WEB_APP', GetRemoteDisplayText(Ord(iRemoteWebAppSlide)), RemoteBridgeWebAppIndex);
+  for View := Low(TCompanionView) to High(TCompanionView) do
+    AddSelectSlide(CompanionViewLabels[View], Ini.RemoteBridgeViews[View], ITabsTranslated);
+  AddSelectSlide('SING_OPTIONS_NETWORK_REMOTE_DEFAULT_VIEW', RemoteDefaultViewIndex,
+    SingleOption(Language.Translate(CompanionViewLabels[Ini.RemoteBridgeDefaultView])));
+  RefreshCompanionViews;
   AddRemoteTextSlide('SING_OPTIONS_NETWORK_REMOTE_SERVER_URL', GetRemoteDisplayText(Ord(iRemoteServerUrlSlide)), RemoteBridgeServerUrlIndex);
 
   if (High(DataBase.NetworkUser) = -1) then
