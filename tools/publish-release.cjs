@@ -119,7 +119,8 @@ async function publishDraft({github, context, core}, version) {
       }
       notes = generated.notes;
     }
-    const sections = notes.split(/^## /m).slice(1);
+    const sections = notes.split(/^#{2,3} /m).slice(1)
+      .filter(section => /^Changes (?:since |compared with USDX )/.test(section));
     if (sections.length !== 2 || !/^Changes since /.test(sections[0]) ||
         !/^Changes compared with USDX /.test(sections[1]) || sections.some(section => !/!\[[^\]]*\]\([^)]+\)/.test(section))) {
       throw Error('Release notes require USCE and USDX comparison sections, each with a graphic');

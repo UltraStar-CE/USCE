@@ -92,7 +92,7 @@ test('release planning requires a reviewed ready plan and skips published versio
 
 test('curated release notes retain screenshots and replace commit subjects and internal checklists', async()=>fixture(async x=>{
   fs.mkdirSync('doc/releases', {recursive:true});
-  const notes = '## Changes since USCE 2026.9.0\n\n![Since USCE](https://example.org/usce.png)\n\n## Changes compared with USDX 2026.10.0\n\n* New theme.\n\n![Theme screenshot](https://example.org/theme.png)';
+  const notes = '## Highlights\n\n### Changes since USCE 2026.9.0\n\n![Since USCE](https://example.org/usce.png)\n\n### Changes compared with USDX 2026.10.0\n\n* New theme.\n\n![Theme screenshot](https://example.org/theme.png)\n\n## Technical improvements\n\n* Build an Ubuntu package.\n\n## Bugfixes over USDX\n\n* Keep scores after a freestyle ending.';
   fs.writeFileSync('doc/releases/2026.10.0.md', notes);
   await publishDraft(x, '2026.10.0');
   const body = x.state.releases[0].body;
