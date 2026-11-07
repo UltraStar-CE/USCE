@@ -128,8 +128,7 @@ begin
           CheckFadeTo(@ScreenMain,'MSG_END_PARTY');
         end;
 
-      SDLK_TAB: InteractTab;
-      SDLK_F1:
+      SDLK_TAB:
         begin
           ScreenPopupHelp.ShowPopup();
         end;

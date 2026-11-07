@@ -211,7 +211,6 @@ type
 
       function IsSelectable(Int: cardinal): boolean;
 
-      procedure InteractTab;
       procedure InteractNext; virtual;
       procedure InteractCustom(CustomSwitch: integer); virtual;
       procedure InteractPrev; virtual;
@@ -1393,16 +1392,6 @@ begin
   else
     Interaction := Int;        // select row above
 
-end;
-
-procedure TMenu.InteractTab;
-var Modifiers: word;
-begin
-  Modifiers := SDL_GetModState;
-  if (Length(Interactions) < 2) or
-     (Modifiers and (KMOD_CTRL or KMOD_ALT or KMOD_GUI) <> 0) then Exit;
-  if Modifiers and KMOD_SHIFT <> 0 then InteractPrev
-  else InteractNext;
 end;
 
 procedure TMenu.InteractNext;

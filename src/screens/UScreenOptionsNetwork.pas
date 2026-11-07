@@ -494,14 +494,8 @@ begin
               UTF8Delete(RemoteEditingText, LengthUTF8(RemoteEditingText), 1);
             RefreshRemoteSlide(RemoteEditingSlide, RemoteEditingText, true);
           end;
-        SDLK_F1:
-          ScreenPopupHelp.ShowPopup();
         SDLK_TAB:
-          if SDL_GetModState and (KMOD_CTRL or KMOD_ALT or KMOD_GUI) = 0 then
-          begin
-            StopRemoteTextEdit(true);
-            InteractTab;
-          end;
+          ScreenPopupHelp.ShowPopup();
       end;
       Exit;
     end;
@@ -520,8 +514,7 @@ begin
           AudioPlayback.PlaySound(SoundLib.Back);
           FadeTo(@ScreenOptions);
         end;
-      SDLK_TAB: InteractTab;
-      SDLK_F1:
+      SDLK_TAB:
         begin
           ScreenPopupHelp.ShowPopup();
         end;

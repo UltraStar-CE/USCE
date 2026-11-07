@@ -137,8 +137,7 @@ begin
             FadeTo(@ScreenPartyTournamentRounds);
 
         end;
-      SDLK_TAB: InteractTab;
-      SDLK_F1:
+      SDLK_TAB:
         begin
           ScreenPopupHelp.ShowPopup();
         end;

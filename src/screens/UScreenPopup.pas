@@ -491,7 +491,7 @@ begin
           Result := false;
         end;
 
-      SDLK_TAB:   InteractTab;
+      SDLK_TAB:   InteractNext;
 
       SDLK_DOWN:  InteractNext;
       SDLK_UP:    InteractPrev;
@@ -708,7 +708,7 @@ begin
       SDLK_DOWN: InteractNext;
       SDLK_UP:   InteractPrev;
 
-      SDLK_TAB:  InteractTab;
+      SDLK_TAB:  InteractNext;
 
       SDLK_RIGHT:
         begin
@@ -1888,9 +1888,7 @@ begin
 
     pos := Help.GetScrollPos();
     case PressedKey of
-      SDLK_TAB: InteractTab;
-
-      SDLK_F1,
+      SDLK_TAB,
       SDLK_ESCAPE,
       SDLK_BACKSPACE :
         begin
