@@ -2,12 +2,11 @@
   "version": "2026.11.0",
   "ready": true,
   "trigger": "upstream-release",
-  "date": "2026-11-08",
+  "date": "2026-11-07",
   "upstream": {
     "tag": "v2026.11.0",
     "sha": "6e15a472d2a6b1192044b9757d11b6d3933deb6e"
   },
-  "releaseAfter": "2026-11-08T09:22:25.000Z",
   "comparisons": {
     "upstream": {
       "tag": "v2026.11.0",
