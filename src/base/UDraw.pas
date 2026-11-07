@@ -426,7 +426,7 @@ begin
       begin
         with Notes[Count] do
         begin
-          If IsUnpitchedNote(NoteType) then
+          if NoteType in [ntRap, ntRapGolden] then
               Texture := Tex_plain_Left_Rap[PlayerNumber]
             else
               Texture := Tex_plain_Left[PlayerNumber];
@@ -504,7 +504,7 @@ begin
             if Rec.Right <= Rec.Left then
               Rec.Right := Rec.Left;
 
-            If IsUnpitchedNote(NoteType) then
+            if NoteType in [ntRap, ntRapGolden] then
               Texture := Tex_plain_Mid_Rap[PlayerNumber]
             else
               Texture := Tex_plain_Mid[PlayerNumber];
@@ -531,7 +531,7 @@ begin
             Rec.Right := Rec.Right + NotesW[PlayerIndex];
 
 
-            if IsUnpitchedNote(NoteType) then
+            if NoteType in [ntRap, ntRapGolden] then
               Texture := Tex_plain_Right_Rap[PlayerNumber]
             else
               Texture := Tex_plain_Right[PlayerNumber];
@@ -627,7 +627,7 @@ begin
           Rec.Bottom := Rec.Top + 2 * NotesH2;
 
           // draw the left part
-          If IsUnpitchedNote(NoteType) then
+          if NoteType in [ntRap, ntRapGolden] then
             Texture := Tex_Left_Rap[PlayerIndex+1]
           else
             Texture := Tex_Left[PlayerIndex+1];
@@ -657,7 +657,7 @@ begin
             Rec.Right := Rec.Left;
 
           // draw the middle part
-          If IsUnpitchedNote(NoteType) then
+          if NoteType in [ntRap, ntRapGolden] then
             Texture := Tex_Mid_Rap[PlayerIndex+1]
           else
             Texture := Tex_Mid[PlayerIndex+1];
@@ -684,7 +684,7 @@ begin
           Rec.Left  := Rec.Right;
           Rec.Right := Rec.Right + NotesW[PlayerIndex];
 
-          If IsUnpitchedNote(NoteType) then
+          if NoteType in [ntRap, ntRapGolden] then
             Texture := Tex_Right_Rap[PlayerIndex+1]
           else
             Texture := Tex_Right[PlayerIndex+1];
@@ -767,7 +767,7 @@ begin
             Rec.Top := Top - (DisplayTone-BaseNote)*LineSpacing/2 - H;
             Rec.Bottom := Rec.Top + 2 * H;
 
-            If IsUnpitchedNote(NoteType) then
+            if NoteType in [ntRap, ntRapGolden] then
               Texture := Tex_BG_Left_Rap[PlayerIndex+1]
             else
               Texture := Tex_BG_Left[PlayerIndex+1];
@@ -789,7 +789,7 @@ begin
             if Rec.Right <= Rec.Left then
               Rec.Right := Rec.Left;
 
-            If IsUnpitchedNote(NoteType) then
+            if NoteType in [ntRap, ntRapGolden] then
               Texture := Tex_BG_Mid_Rap[PlayerIndex+1]
             else
               Texture := Tex_BG_Mid[PlayerIndex+1];
@@ -807,7 +807,7 @@ begin
             Rec.Left  := Rec.Right;
             Rec.Right := Rec.Left + W;
 
-            If IsUnpitchedNote(NoteType) then
+            if NoteType in [ntRap, ntRapGolden] then
               Texture := Tex_BG_Right_Rap[PlayerIndex+1]
             else
               Texture := Tex_BG_Right[PlayerIndex+1];

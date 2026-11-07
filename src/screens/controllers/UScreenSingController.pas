@@ -2206,20 +2206,7 @@ begin
       if not GetPlayerSentenceScore(PlayerIndex, Track, SentenceIndex, LineScore) then
         LineScore := CurrentScore - CurrentPlayer.ScoreLast;
 
-      // check for lines with low points
-      if MaxLineScore <= 2 then
-        LinePerfection := 1
-      else
-        // determine LinePerfection
-        // Note: the "+2" extra points are a little bonus so the player does not
-        // have to be that perfect to reach the bonus steps.
-        LinePerfection := LineScore / (MaxLineScore - 2);
-
-      // clamp LinePerfection to range [0..1]
-      if LinePerfection < 0 then
-        LinePerfection := 0
-      else if LinePerfection > 1 then
-        LinePerfection := 1;
+      LinePerfection := CalculateLinePerfection(LineScore, MaxLineScore);
 
       // line-bonus points (same for each line, no matter how long the line is)
       LineBonus := MAX_SONG_LINE_BONUS / (Length(CurrentSong.Tracks[Track].Lines) -
