@@ -195,6 +195,12 @@ begin
   else
     SDL_ModState := 0;
 
+  if (PressedKey = SDLK_F1) and (SDL_ModState = 0) then
+  begin
+    ScreenPopupHelp.ShowPopup();
+    Exit;
+  end;
+
   // Key Down
   // check normal keys
   if (Interactions[Interaction].Typ = iButton) then
@@ -248,8 +254,10 @@ begin
       end;
 
     SDLK_TAB:
+      if SDL_ModState and (KMOD_CTRL or KMOD_ALT) = 0 then
       begin
-        ScreenPopupHelp.ShowPopup();
+        if SDL_ModState and KMOD_SHIFT <> 0 then IntPrev
+        else IntNext;
       end;
 
     SDLK_RETURN:

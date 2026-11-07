@@ -168,6 +168,12 @@ begin
 
       SDLK_TAB:
         begin
+          InteractTab;
+          SetTextInput((CurMenu = SM_Playlist_New) and (Button[1].Selected));
+        end;
+
+      SDLK_F1:
+        begin
           Help.SetHelpID(ID);
           ScreenPopupHelp.ShowPopup();
         end;

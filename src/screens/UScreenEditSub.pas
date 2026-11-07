@@ -400,7 +400,6 @@ type
       procedure SetFreestyleNote(SDL_ModState: word);
       procedure SetGoldenNote(SDL_ModState: word);
       procedure SetNoteType(NoteType: TNoteType; SDL_ModState: word);
-      procedure ShowPopupHelp(SDL_ModState: word);
       procedure ToggleDuet(SDL_ModState: word);
       procedure DivideBPM;
       procedure MultiplyBPM;
@@ -585,8 +584,14 @@ begin
   SDL_ModState := SDL_GetModState and (KMOD_LSHIFT + KMOD_RSHIFT
     + KMOD_LCTRL + KMOD_RCTRL + KMOD_LALT + KMOD_RALT {+ KMOD_CAPS});
 
-  // Alt+Tab belongs to the system task switch, not the editor help popup.
-  if (PressedKey = SDLK_TAB) and ((SDL_ModState and KMOD_ALT) <> 0) then Exit;
+  if PressedDown and (PressedKey = SDLK_F1) then
+  begin
+    ScreenPopupHelp.ShowPopup();
+    Exit;
+  end;
+
+  // Alt+Tab belongs to the system task switch.
+  if (PressedKey = SDLK_TAB) and (SDL_ModState and KMOD_ALT <> 0) then Exit;
 
   if PianoEditMode then
   begin
@@ -648,7 +653,7 @@ begin
       SDLK_F: SetFreestyleNote(SDL_ModState);
       SDLK_Z: Undo(SDL_ModState);
       SDLK_ESCAPE: LeaveScope(SDL_ModState);
-      SDLK_TAB: ShowPopupHelp(SDL_ModState);
+      SDLK_TAB: InteractTab;
       SDLK_BACKQUOTE: IncreaseNoteLength(SDL_ModState);
       SDLK_EQUALS, // for keyboards which produce the EQUALS symbol without SHIFT modifier
         SDLK_PLUS: HandleBPMIncrease(SDL_ModState); // for keyboards which produce the PLUS symbol without SHIFT modifier
@@ -1615,12 +1620,6 @@ begin
     StopPreviewPlayback;
     FadeTo(@ScreenSong);
   end;
-end;
-
-      // SDLK_TAB: ShowPopupHelp;
-procedure TScreenEditSub.ShowPopupHelp(SDL_ModState: word);
-begin
-  ScreenPopupHelp.ShowPopup();
 end;
 
       // SDLK_BACKQUOTE: IncreaseNoteLength;

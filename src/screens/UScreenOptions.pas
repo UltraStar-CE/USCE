@@ -180,7 +180,8 @@ begin
           FadeTo(@ScreenMain);
         end;
 
-      SDLK_TAB:
+      SDLK_TAB: InteractTab;
+      SDLK_F1:
         begin
           ScreenPopupHelp.ShowPopup();
         end;

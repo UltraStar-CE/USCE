@@ -1494,6 +1494,24 @@ begin
         end;
 
       SDLK_TAB:
+        if SDL_ModState and (KMOD_CTRL or KMOD_ALT) = 0 then
+        begin
+          LastSelectTime := SDL_GetTicks;
+          if SDL_ModState and KMOD_SHIFT <> 0 then
+          begin
+            if TSongMenuMode(Ini.SongMenu) = smList then
+              ParseInputPrevVertical(PressedKey, CharCode, PressedDown)
+            else ParseInputPrevHorizontal(PressedKey, CharCode, PressedDown);
+          end
+          else
+          begin
+            if TSongMenuMode(Ini.SongMenu) = smList then
+              ParseInputNextVertical(PressedKey, CharCode, PressedDown)
+            else ParseInputNextHorizontal(PressedKey, CharCode, PressedDown);
+          end;
+        end;
+
+      SDLK_F1:
         begin
           Help.SetHelpID(ID);
           ScreenPopupHelp.ShowPopup();
