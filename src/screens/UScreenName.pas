@@ -484,11 +484,7 @@ begin
     // check special keys
     case PressedKey of
 
-      SDLK_F1:
-        if SDL_ModState = 0 then ScreenPopupHelp.ShowPopup()
-        else HandleTemplateHotkey;
-
-      SDLK_F2, SDLK_F3, SDLK_F4, SDLK_F5, SDLK_F6,
+      SDLK_F1, SDLK_F2, SDLK_F3, SDLK_F4, SDLK_F5, SDLK_F6,
       SDLK_F7, SDLK_F8, SDLK_F9, SDLK_F10, SDLK_F11, SDLK_F12:
         HandleTemplateHotkey;
 
@@ -505,8 +501,7 @@ begin
 
       SDLK_TAB:
         begin
-          InteractTab;
-          SetTextInput(Button[PlayerName].Selected);
+          ScreenPopupHelp.ShowPopup();
         end;
 
       SDLK_ESCAPE :

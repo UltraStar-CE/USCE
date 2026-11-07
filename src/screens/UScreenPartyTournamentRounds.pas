@@ -164,8 +164,7 @@ begin
         begin
           ScreenPopupCheck.ShowPopup('MSG_END_PARTY', OnFinish, nil);
         end;
-      SDLK_TAB: InteractTab;
-      SDLK_F1:
+      SDLK_TAB:
         begin
           ScreenPopupHelp.ShowPopup();
         end;
