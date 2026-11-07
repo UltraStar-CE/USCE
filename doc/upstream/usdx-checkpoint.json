@@ -1,7 +1,7 @@
 {
   "repository": "UltraStar-Deluxe/USDX",
   "branch": "master",
-  "sha": "3079c4b8663b199bcbceafe28d2a0ee2d7630035",
+  "sha": "8b9d9e08eca997d2e3fe789084fbac136988f276",
   "meaning": "Assessed upstream tip. Linked implementation PRs retain their own review, CI and merge status.",
   "resolutions": [
     {
@@ -59,10 +59,24 @@
       "existing_usce_commit": "0cbc71c2c157753ef1387ce33dab0dc15a40dfd1",
       "alternative_usce_pr": 341,
       "upstream_pr": 1463
+    },
+    {
+      "commits": [
+        "6e15a472d2a6b1192044b9757d11b6d3933deb6e"
+      ],
+      "disposition": "USDX 2026.11.0 release ancestry and fix coverage are recorded by USCE's November release preparation.",
+      "usce_pr": 144
+    },
+    {
+      "commits": [
+        "8b9d9e08eca997d2e3fe789084fbac136988f276"
+      ],
+      "disposition": "USDX returned to development version metadata after its 2026.11.0 release. USCE generates its own build and release versions. Assessed without importing the metadata changes.",
+      "status": "assessed; no port"
     }
   ],
-  "from": "54f6e010800458543223dc2d7a3fb65140a78649",
-  "comparison": "https://github.com/UltraStar-Deluxe/USDX/compare/54f6e010800458543223dc2d7a3fb65140a78649...3079c4b8663b199bcbceafe28d2a0ee2d7630035",
+  "from": "6e15a472d2a6b1192044b9757d11b6d3933deb6e",
+  "comparison": "https://github.com/UltraStar-Deluxe/USDX/compare/6e15a472d2a6b1192044b9757d11b6d3933deb6e...8b9d9e08eca997d2e3fe789084fbac136988f276",
   "assessment": {
     "checkedAt": "2026-11-02T17:45:56.790Z",
     "originalAuthorCutoff": "2026-05-02T17:45:00Z",
