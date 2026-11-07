@@ -107,7 +107,7 @@ const
 type
   IVideo_FFmpeg = interface (IVideo)
   ['{E640E130-C8C0-4399-AF02-67A3569313AB}']
-    function Open(const FileName: IPath): boolean;
+    function Open(const FileName: IPath; const Media: TBytes = nil): boolean;
   end;
 
   // A converted frame waiting in the queue
@@ -205,7 +205,7 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    function Open(const FileName: IPath): boolean;
+    function Open(const FileName: IPath; const Media: TBytes = nil): boolean;
     procedure Close;
 
     procedure Play;
@@ -265,7 +265,7 @@ type
     function Init(): boolean;
     function Finalize: boolean;
 
-    function Open(const FileName : IPath): IVideo;
+    function Open(const FileName : IPath; const Media: TBytes = nil): IVideo;
   end;
 
 var
@@ -429,12 +429,12 @@ begin
   Result := true;
 end;
 
-function TVideoPlayback_FFmpeg.Open(const FileName : IPath): IVideo;
+function TVideoPlayback_FFmpeg.Open(const FileName : IPath; const Media: TBytes = nil): IVideo;
 var
   Video: IVideo_FFmpeg;
 begin
   Video := TVideo_FFmpeg.Create;
-  if Video.Open(FileName) then
+  if Video.Open(FileName, Media) then
     Result := Video
   else
     Result := nil;
@@ -453,7 +453,7 @@ begin
   Close();
 end;
 
-function TVideo_FFmpeg.Open(const FileName : IPath): boolean;
+function TVideo_FFmpeg.Open(const FileName : IPath; const Media: TBytes = nil): boolean;
 var
   errnum: Integer;
   AudioStreamIndex: integer;
@@ -494,7 +494,7 @@ begin
   FFmpegCore.UnlockAVCodec();
 
   // use custom 'ufile' protocol for UTF-8 support
-  errnum := FFmpegCore.AVFormatOpenInput(@fFormatContext, PAnsiChar(UTF8ToAnsi(FileName.ToUTF8)));//'ufile:'+FileName.ToUTF8));
+  errnum := FFmpegCore.AVFormatOpenInput(@fFormatContext, PAnsiChar(FileName.ToUTF8), Media);
   if (errnum <> 0) then
   begin
     Log.LogError('Failed to open file "'+ FileName.ToNative +'" ('+FFmpegCore.GetErrorString(errnum)+'::'+IntToStr(errnum)+')');

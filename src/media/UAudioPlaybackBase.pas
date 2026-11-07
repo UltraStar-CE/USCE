@@ -58,16 +58,16 @@ type
       function GetLatency(): double; virtual; abstract;
 
       // open sound or music stream (used by Open() and OpenSound())
-      function OpenStream(const Filename: IPath): TAudioPlaybackStream;
+      function OpenStream(const Filename: IPath; const Media: TBytes = nil): TAudioPlaybackStream;
       function OpenStreamBuffer(Buffer: TStream; Format: TAudioFormatInfo): TAudioPlaybackStream;
-      function OpenDecodeStream(const Filename: IPath): TAudioDecodeStream;
+      function OpenDecodeStream(const Filename: IPath; const Media: TBytes = nil): TAudioDecodeStream;
       procedure UpdateStreamVolumes;
     public
       constructor Create(); virtual;
       function GetName: string; virtual; abstract;
       function GetFileName: string;
 
-      function Open(const Filename: IPath; const FilenameKaraoke: IPath): boolean; // true if succeed
+      function Open(const Filename: IPath; const FilenameKaraoke: IPath; const Media: TBytes = nil): boolean; // true if succeed
       procedure Close;
 
       procedure Play;
@@ -192,19 +192,23 @@ begin
     KaraokeMusicStream.Volume := InstrumentalVolume;
 end;
 
-function TAudioPlaybackBase.Open(const Filename: IPath; const FilenameKaraoke: IPath): boolean;
+function TAudioPlaybackBase.Open(const Filename: IPath; const FilenameKaraoke: IPath; const Media: TBytes = nil): boolean;
+var
+  NewStream: TAudioPlaybackStream;
 begin
-  // free old MusicStream
+  if Media = nil then
+  begin
+    FreeAndNil(MusicStream);
+    FreeAndNil(KaraokeMusicStream);
+    CurrentFileName := Filename.ToNative;
+  end;
+  NewStream := OpenStream(Filename, Media);
+  if NewStream = nil then Exit(false);
+
   FreeAndNil(MusicStream);
   FreeAndNil(KaraokeMusicStream);
+  MusicStream := NewStream;
   CurrentFileName := Filename.ToNative;
-
-  MusicStream := OpenStream(Filename);
-  if not assigned(MusicStream) then
-  begin
-    Result := false;
-    Exit;
-  end;
   if (Ini.ReplayGain = 1) then
     MusicStream.ReplayGainEnabled := true;
 
@@ -239,7 +243,7 @@ begin
   FreeAndNil(KaraokeMusicStream);
 end;
 
-function TAudioPlaybackBase.OpenDecodeStream(const Filename: IPath): TAudioDecodeStream;
+function TAudioPlaybackBase.OpenDecodeStream(const Filename: IPath; const Media: TBytes = nil): TAudioDecodeStream;
 var
   i: integer;
 begin
@@ -257,7 +261,7 @@ begin
   end;
   for i := 0 to AudioDecoders.Count-1 do
   begin
-    Result := IAudioDecoder(AudioDecoders[i]).Open(Filename);
+    Result := IAudioDecoder(AudioDecoders[i]).Open(Filename, Media);
     if (assigned(Result)) then
     begin
       Log.LogInfo('Using decoder ' + IAudioDecoder(AudioDecoders[i]).GetName() +
@@ -278,7 +282,7 @@ begin
   SourceStream.Free;
 end;
 
-function TAudioPlaybackBase.OpenStream(const Filename: IPath): TAudioPlaybackStream;
+function TAudioPlaybackBase.OpenStream(const Filename: IPath; const Media: TBytes = nil): TAudioPlaybackStream;
 var
   PlaybackStream: TAudioPlaybackStream;
   DecodeStream: TAudioDecodeStream;
@@ -287,7 +291,7 @@ begin
 
   //Log.LogStatus('Loading Sound: "' + Filename + '"', 'TAudioPlayback_Base.OpenStream');
 
-  DecodeStream := OpenDecodeStream(Filename);
+  DecodeStream := OpenDecodeStream(Filename, Media);
   if (not assigned(DecodeStream)) then
   begin
     Log.LogStatus('Could not open "' + Filename.ToNative + '"', 'TAudioPlayback_Base.OpenStream');

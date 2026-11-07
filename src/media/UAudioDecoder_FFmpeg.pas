@@ -167,7 +167,7 @@ type
       constructor Create();
       destructor Destroy(); override;
 
-      function Open(const Filename: IPath): boolean;
+      function Open(const Filename: IPath; const Media: TBytes = nil): boolean;
       procedure Close();                     override;
 
       function GetLength(): real;            override;
@@ -191,7 +191,7 @@ type
 
       function InitializeDecoder(): boolean;
       function FinalizeDecoder(): boolean;
-      function Open(const Filename: IPath): TAudioDecodeStream;
+      function Open(const Filename: IPath; const Media: TBytes = nil): TAudioDecodeStream;
   end;
 
 var
@@ -268,7 +268,7 @@ begin
   inherited;
 end;
 
-function TFFmpegDecodeStream.Open(const Filename: IPath): boolean;
+function TFFmpegDecodeStream.Open(const Filename: IPath; const Media: TBytes = nil): boolean;
 var
   SampleFormat: TAudioSampleFormat;
   PackedSampleFormat: TAVSampleFormat;
@@ -284,7 +284,7 @@ begin
   Close();
   Reset();
 
-  if (not Filename.IsFile) then
+  if (Media = nil) and not Filename.IsFile then
   begin
     Log.LogError('Audio-file does not exist: "' + Filename.ToNative + '"', 'UAudio_FFmpeg');
     Exit;
@@ -293,7 +293,7 @@ begin
   Self.fFilename := Filename;
 
   // use custom 'ufile' protocol for UTF-8 support
-  AVResult := FFmpegCore.AVFormatOpenInput(@fFormatCtx, PAnsiChar('ufile:'+FileName.ToUTF8));
+  AVResult := FFmpegCore.AVFormatOpenInput(@fFormatCtx, PAnsiChar('ufile:'+FileName.ToUTF8), Media);
   if (AVResult <> 0) then
   begin
     Log.LogError('Failed to open file "' + Filename.ToNative + '" ('+FFmpegCore.GetErrorString(AVResult)+')', 'UAudio_FFmpeg');
@@ -1435,14 +1435,14 @@ begin
   Result := true;
 end;
 
-function TAudioDecoder_FFmpeg.Open(const Filename: IPath): TAudioDecodeStream;
+function TAudioDecoder_FFmpeg.Open(const Filename: IPath; const Media: TBytes = nil): TAudioDecodeStream;
 var
   Stream: TFFmpegDecodeStream;
 begin
   Result := nil;
 
   Stream := TFFmpegDecodeStream.Create();
-  if (not Stream.Open(Filename)) then
+  if (not Stream.Open(Filename, Media)) then
   begin
     Stream.Free;
     Exit;
