@@ -221,8 +221,7 @@ begin
     SDLK_DOWN: InteractNext;
     SDLK_LEFT: if Interactions[Interaction].Typ = iSelectS then InteractDec;
     SDLK_RIGHT: if Interactions[Interaction].Typ = iSelectS then InteractInc;
-    SDLK_TAB: InteractTab;
-    SDLK_F1: ScreenPopupHelp.ShowPopup;
+    SDLK_TAB: ScreenPopupHelp.ShowPopup;
   end;
   SyncProfile;
 end;

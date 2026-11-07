@@ -600,6 +600,7 @@ begin
       end;
 
       SDLK_TAB:
+      begin
         if (SDL_ModState = KMOD_LCTRL) then // change visualization preset
         begin
           if fShowVisualization then
@@ -612,13 +613,14 @@ begin
             else
               Ini.WebCamEffect := 0;
           end;
+        end
+        else // show help popup
+        begin
+          ResumeAfterHelp := not Paused;
+          if ResumeAfterHelp then
+            Pause;
+          ScreenPopupHelp.ShowPopup(ResumeAfterHelp);
         end;
-
-      SDLK_F1:
-      begin
-        ResumeAfterHelp := not Paused;
-        if ResumeAfterHelp then Pause;
-        ScreenPopupHelp.ShowPopup(ResumeAfterHelp);
       end;
     end;
   end;
