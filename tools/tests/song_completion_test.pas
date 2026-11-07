@@ -1,6 +1,6 @@
 program SongCompletionTest;
 {$mode Delphi}
-uses Classes, SysUtils, UMusic, USong, UNote, UPath, ULog;
+uses Classes, SysUtils, UMusic, USong, UNote, UPath, ULog, UVoiceParts;
 
 var Song: TSong; ChartFile: TextFile; I, Weight: integer; Chart: string;
     Kind: TNoteType; BaseNote, TailMarker: char;
@@ -43,12 +43,12 @@ begin
   CheckLastLine(0);
 
   Chart := '';
-  for I := 1 to 8 do
+  for I := 1 to SupportedSongVoices do
     Chart := Chart + 'P' + IntToStr(I) + LineEnding +
-      ': 0 ' + IntToStr(I * 4) + ' 60 sung' + LineEnding + '- 40' + LineEnding +
-      'F 40 8 60 tail' + LineEnding;
-  LoadChart(Chart, 8);
-  for I := 0 to 7 do
+      ': 0 ' + IntToStr(I * 4) + ' 60 sung' + LineEnding + '- 104' + LineEnding +
+      'F 104 8 60 tail' + LineEnding;
+  LoadChart(Chart, SupportedSongVoices);
+  for I := 0 to High(Song.Tracks) do
   begin
     Check(Song.Tracks[I].HighestScoredBeat = (I + 1) * 4, 'independent N-voice boundary');
     CheckLastLine(I);
@@ -130,5 +130,5 @@ begin
   CurrentSong := nil;
   Log.Free;
   Log := nil;
-  WriteLn('PASS: lyric endings, eight voices, scoring weights, excluded notes, negative beats and medleys');
+  WriteLn('PASS: lyric endings, 24 voices, scoring weights, excluded notes, negative beats and medleys');
 end.
