@@ -114,7 +114,7 @@ type
 
 implementation
 
-uses UFolderFilter, Math, USongProblems, UCommon, UDisplay, UFiles, UMusic, UGraphic, ULibraryLockdown, ULockdownUI,
+uses UExternalSongTools, UFolderFilter, Math, USongProblems, UCommon, UDisplay, UFiles, UMusic, UGraphic, ULibraryLockdown, ULockdownUI,
   UHelp, UIni, ULanguage, ULog, UMain, UParty, URenderer, UPlaylist,
   UScreenSong, UUnicodeUtils, UPath, UMenuInteract, UMenuText, UAge, UFilterTerms, Contnrs, sha1, UPlatform, UPathUtils, UScreenPopup;
 
@@ -496,6 +496,12 @@ begin
   begin
     case PressedKey of
       SDLK_c: begin ActivateAction(1); Exit; end;
+      SDLK_u: if not Repeated and ExternalSongSearchEnabled then
+      begin
+        FlushChanges;
+        if fVisSongs = 0 then OpenExternalSongSearch;
+        Exit;
+      end;
       SDLK_l: begin fLockShortcutPending := true; Exit; end;
     end;
     Exit;
@@ -588,6 +594,17 @@ begin
   // UScreenSong already converts mouse input to theme coordinates.
   LX := X;
   LY := Y;
+  if (fVisSongs = 0) and ExternalSongSearchEnabled then
+  begin
+    Area := Text[0].GetMouseOverArea;
+    if (LX >= Area.X) and (LX <= Area.X + Area.W) and
+       (LY >= Area.Y) and (LY <= Area.Y + Area.H) then
+    begin
+      FlushChanges;
+      if fVisSongs = 0 then OpenExternalSongSearch;
+      Exit;
+    end;
+  end;
   for S := 0 to FILTER_SLOTS - 1 do
   begin
     R := fFirst + S;
@@ -787,6 +804,12 @@ begin
     FlushChanges;
     ToggleLibraryLockdown;
     fSuggestionContext := #1;
+  end;
+  if fVisSongs = 0 then
+  begin
+    Text[0].Text := Theme.SongJumpto.NoSongsFound;
+    if ExternalSongSearchEnabled then
+      Text[0].Text := Language.Translate('EXTERNAL_SONG_SEARCH_HINT');
   end;
   Renderer.ClearFrameBuffer(CLEAR_DEPTH);
   Result := inherited Draw;
