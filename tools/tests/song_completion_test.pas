@@ -4,6 +4,7 @@ uses Classes, SysUtils, UMusic, USong, UNote, UPath, ULog, UVoiceParts;
 
 var Song: TSong; ChartFile: TextFile; I, Weight: integer; Chart: string;
     Kind: TNoteType; BaseNote, TailMarker: char;
+    MaxLineScore, PartialLine: real;
 const Markers: array[TNoteType] of char = ('F', ':', '*', 'R', 'G');
 
 procedure Check(Value: boolean; const MessageText: string);
@@ -62,6 +63,18 @@ begin
   ScoreFactor[ntFreestyle] := 100;
   LoadChart('F 0 8 60 weighted freestyle' + LineEnding);
   Check(Song.Tracks[0].HighestScoredBeat = 8, 'positive freestyle weight can score');
+
+  ScoreFactor[ntFreestyle] := 5;
+  LoadChart(': 0 800 60 sung' + LineEnding + '- 804' + LineEnding +
+    'F 804 2 60 quiet freestyle' + LineEnding);
+  MaxLineScore := (MAX_SONG_SCORE - MAX_SONG_LINE_BONUS) *
+    (Song.Tracks[0].Lines[1].ScoreValue / Song.Tracks[0].ScoreValue);
+  Check((MaxLineScore > 0) and (MaxLineScore <= 2), 'low-weight freestyle regression fixture');
+  Check(CalculateLinePerfection(0, MaxLineScore) = 0, 'silent freestyle earns no line bonus');
+  PartialLine := CalculateLinePerfection(MaxLineScore / 2, MaxLineScore);
+  Check((PartialLine >= 0.5) and (PartialLine < 0.55), 'partial freestyle is not perfect');
+  Check(CalculateLinePerfection(MaxLineScore, MaxLineScore) = 1, 'sung freestyle can earn full bonus');
+  Check(CalculateLinePerfection(98, 100) = 1, 'normal lines keep the two-point grace');
 
   ScoreFactor := StandardScoreFactor;
   LoadChart('F 0 8 60 no score' + LineEnding);

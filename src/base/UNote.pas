@@ -170,6 +170,7 @@ procedure AddGapSungNote(PlayerIndex, Beat, Tone: integer);
 function  GetMidBeat(Time: real): real;
 function  GetTimeFromBeat(Beat: integer; SelfSong: TSong = nil): real;
 function  GetPlayerSentenceScore(PlayerIndex, Track, SentenceIndex: integer; out Points: real): boolean;
+function  CalculateLinePerfection(LineScore, MaxLineScore: real): real;
 
 implementation
 
@@ -325,6 +326,13 @@ begin
   EnsurePlayerSentenceScores(PlayerIndex);
   Points := Player[PlayerIndex].SentenceScore[Track][SentenceIndex];
   Result := true;
+end;
+
+function CalculateLinePerfection(LineScore, MaxLineScore: real): real;
+begin
+  if (LineScore <= 0) or (MaxLineScore <= 0) then Exit(0);
+  // Keep the two-point grace for normal lines without letting it dominate low-weight lines.
+  Result := Min(1, LineScore / (MaxLineScore - Min(2, MaxLineScore * 0.05)));
 end;
 
 function GetTimeForBeats(BPM, Beats: real): real;
