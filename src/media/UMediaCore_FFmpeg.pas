@@ -34,6 +34,7 @@ interface
 {$I switches.inc}
 
 uses
+  SysUtils,
   Classes,
   ctypes,
   sdl2,
@@ -101,7 +102,7 @@ type
       class function ConvertAudioFormatToFFmpeg(Format: TAudioSampleFormat; out FFmpegFormat: TAVSampleFormat): boolean;
       procedure LockAVCodec();
       procedure UnlockAVCodec();
-      function AVFormatOpenInput(ps: PPAVFormatContext; filename: {const} PAnsiChar): Integer;
+      function AVFormatOpenInput(ps: PPAVFormatContext; filename: {const} PAnsiChar; const Media: TBytes = nil): Integer;
       procedure AVFormatCloseInput(ps: PPAVFormatContext);
       function GetCodecContext(stream: PAVStream; codec: PAVCodec): PAVCodecContext;
   end;
@@ -109,7 +110,6 @@ type
 implementation
 
 uses
-  SysUtils,
   UConfig;
 
 { redeclaration of constants with the same names as deprecated
@@ -391,20 +391,6 @@ begin
     Result := AVERROR_EOF;
 end;
 
-function FFmpegStreamWrite(h: Pointer; buf: PByteArray; size: cint): cint; cdecl;
-var
-  Stream: TStream;
-begin
-  Stream := TStream(h);
-  if (Stream = nil) then
-    raise EInvalidContainer.Create('FFmpegStreamWrite on nil');
-  try
-    Result := Stream.Write(buf[0], size);
-  except
-    Result := -1;
-  end;
-end;
-
 function FFmpegStreamSeek(h: Pointer; pos: cint64; whence: cint): cint64; cdecl;
 var
   Stream : TStream;
@@ -440,16 +426,40 @@ begin
   Result := 0;
 end;
 
-function TMediaCore_FFmpeg.AVFormatOpenInput(ps: PPAVFormatContext; filename: {const} PAnsiChar): Integer;
+function TMediaCore_FFmpeg.AVFormatOpenInput(ps: PPAVFormatContext; filename: {const} PAnsiChar; const Media: TBytes = nil): Integer;
 var
   h: Pointer;
   buffer: Pointer;
+  IO: PAVIOContext;
 begin
-  ps^ := avformat_alloc_context();
+  ps^ := nil;
+  if Media <> nil then
+    h := TBytesStream.Create(Media)
+  else if FFmpegStreamOpen(h, filename, URL_RDONLY) <> 0 then
+    Exit(AVERROR_EOF);
+
   buffer := av_malloc(BLOCKSIZE);
-  FFmpegStreamOpen(h, filename, URL_RDONLY);
-  ps^^.pb := avio_alloc_context(buffer, BLOCKSIZE, 0, h, FFmpegStreamRead, FFmpegStreamWrite, FFmpegStreamSeek);
+  IO := nil;
+  if buffer <> nil then
+    IO := avio_alloc_context(buffer, BLOCKSIZE, 0, h,
+      FFmpegStreamRead, nil, FFmpegStreamSeek);
+  if IO <> nil then
+    ps^ := avformat_alloc_context();
+  if ps^ = nil then
+  begin
+    av_free(IO);
+    av_free(buffer);
+    FFmpegStreamClose(h);
+    Exit(-1);
+  end;
+  ps^^.pb := IO;
   Result := avformat_open_input(ps, filename, nil, nil);
+  if Result < 0 then
+  begin
+    av_free(IO^.buffer);
+    av_free(IO);
+    FFmpegStreamClose(h);
+  end;
 end;
 
 procedure TMediaCore_FFmpeg.AVFormatCloseInput(ps: PPAVFormatContext);
