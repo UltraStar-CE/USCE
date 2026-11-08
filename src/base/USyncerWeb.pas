@@ -18,6 +18,7 @@ type
   private
     FAddress, FQuery: UTF8String;
     FSongID: Int64;
+    FPort: integer;
   protected
     procedure Execute; override;
   public
@@ -27,13 +28,12 @@ type
     Succeeded: boolean;
     constructor Create(Kind: TSyncerOperation; const Query: UTF8String; SongID: Int64);
     class function Enabled: boolean; static;
-    class function ValidAddress(const Address: UTF8String): boolean; static;
     class function ChartID(const Folder, Chart: IPath): Int64; static;
   end;
 
 implementation
 
-uses SysUtils, FPHTTPClient, fpjson, jsonparser, UFilesystem, UIni, ULibraryLockdown;
+uses SysUtils, Sockets, FPHTTPClient, fpjson, jsonparser, UFilesystem, UIni, ULibraryLockdown;
 
 type
   TResponseBuffer = class(TMemoryStream)
@@ -46,21 +46,33 @@ begin
   Result := inherited Write(Buffer, Count);
 end;
 
-class function TSyncerClient.ValidAddress(const Address: UTF8String): boolean;
-var Colon, Port, I: integer;
+function LocalIPv4: string;
+var
+  Socket: TSocket;
+  Address: TInetSockAddr;
+  Size: TSockLen;
 begin
-  Result := false;
-  Colon := Pos(':', Address);
-  if (Colon <= 1) or not TryStrToInt(Copy(Address, Colon + 1, MaxInt), Port) or
-     (Port < 1) or (Port > 65535) then Exit;
-  for I := 1 to Colon - 1 do
-    if not (Address[I] in ['a'..'z', 'A'..'Z', '0'..'9', '.', '-']) then Exit;
-  Result := true;
+  Result := '';
+  Socket := fpSocket(AF_INET, SOCK_DGRAM, 0);
+  if Socket = TSocket(-1) then Exit;
+  try
+    FillChar(Address, SizeOf(Address), 0);
+    Address.sin_family := AF_INET;
+    Address.sin_port := htons(1);
+    Address.sin_addr := StrToNetAddr('10.255.255.255');
+    // Use the OS route to find our own address, like Syncer does. UDP sends no data here.
+    if fpConnect(Socket, @Address, SizeOf(Address)) <> 0 then Exit;
+    Size := SizeOf(Address);
+    if fpGetSockName(Socket, @Address, @Size) = 0 then
+      Result := NetAddrToStr(Address.sin_addr);
+  finally
+    CloseSocket(Socket);
+  end;
 end;
 
 class function TSyncerClient.Enabled: boolean;
 begin
-  Result := (Ini.ExternalSongSearch <> 0) and not LibraryLockdown.Active and ValidAddress(Ini.SyncerAddress);
+  Result := (Ini.ExternalSongSearch <> 0) and not LibraryLockdown.Active;
 end;
 
 function EncodeQuery(const Query: UTF8String): UTF8String;
@@ -77,7 +89,7 @@ end;
 constructor TSyncerClient.Create(Kind: TSyncerOperation; const Query: UTF8String; SongID: Int64);
 begin
   inherited Create(true);
-  FAddress := Ini.SyncerAddress;
+  FPort := Ini.SyncerPort;
   FQuery := Query;
   FSongID := SongID;
   Operation := Kind;
@@ -90,9 +102,25 @@ var
   Body: TResponseBuffer;
   Data: TJSONData;
   Item: TJSONObject;
-  URL, Status: string;
+  URL, Status, Host: string;
   I, Count: integer;
   Deadline, NextPoll: QWord;
+
+  function FindSyncer(const Host: string): boolean;
+  var Page: string;
+  begin
+    FAddress := Host + ':' + IntToStr(FPort);
+    Body.Clear;
+    try
+      Client.Get('http://' + FAddress + '/?limit=0', Body);
+      SetString(Page, PChar(Body.Memory), Body.Size);
+      Result := (Pos('id="songs-table"', Page) > 0) and
+        (Pos('name="search"', Page) > 0) and (Pos('"/api/songs/"', Page) > 0);
+    except
+      Result := false;
+    end;
+    Body.Clear;
+  end;
 
   function DownloadStatus(Post: boolean): string;
   begin
@@ -113,6 +141,11 @@ begin
     Client.ConnectTimeout := 700;
     Client.IOTimeout := 1500;
     Client.AllowRedirect := false;
+    if not FindSyncer('127.0.0.1') then
+    begin
+      Host := LocalIPv4;
+      if (Host = '') or (Host = '127.0.0.1') or not FindSyncer(Host) then Exit;
+    end;
     URL := 'http://' + FAddress + '/api/songs';
     try
       if Operation = soDownload then

@@ -239,7 +239,7 @@ type
       AskBeforeDel:   integer;
       OnSongClick:    integer;
       ExternalSongSearch: integer;
-      SyncerAddress: UTF8String;
+      SyncerPort: integer;
       PartyPopup:     integer;
       PartyHighscores: integer;
       SingScores:     integer;
@@ -1687,7 +1687,7 @@ var
   ReadPianoKeysLow: TPianoKeyArray;
   ReadPianoKeysHigh: TPianoKeyArray;
   View: TCompanionView;
-  LegacyWebApp: string;
+  LegacyWebApp, LegacySyncerAddress: string;
 
   function ReadVolumePercent(const Section, Key: string; DefaultValue: integer): integer;
   var
@@ -1962,9 +1962,10 @@ begin
   AskBeforeDel := ReadArrayIndex(IAskbeforeDel, IniFile, 'Advanced', 'AskbeforeDel', IGNORE_INDEX, 'On');
 
   ExternalSongSearch := ReadArrayIndex(IExternalSongSearch, IniFile, 'ExternalSongTools', 'Search', IGNORE_INDEX, 'Off');
-  SyncerAddress := IniFile.ReadString('ExternalSongTools', 'SyncerAddress', '');
-  if SyncerAddress = '' then
-    SyncerAddress := '127.0.0.1:' + IntToStr(IniFile.ReadInteger('ExternalSongTools', 'SyncerPort', 8765));
+  LegacySyncerAddress := IniFile.ReadString('ExternalSongTools', 'SyncerAddress', '');
+  SyncerPort := StrToIntDef(Copy(LegacySyncerAddress, LastDelimiter(':', LegacySyncerAddress) + 1, MaxInt), 0);
+  if SyncerPort = 0 then SyncerPort := IniFile.ReadInteger('ExternalSongTools', 'SyncerPort', 8765);
+  if (SyncerPort < 1) or (SyncerPort > 65535) then SyncerPort := 8765;
 
   // OnSongClick
   OnSongClick := ReadArrayIndex(IOnSongClick, IniFile, 'Advanced', 'OnSongClick', IGNORE_INDEX, 'Sing');
@@ -2234,7 +2235,8 @@ begin
     IniFile.WriteString('Advanced', 'AskbeforeDel', IAskbeforeDel[AskBeforeDel]);
 
     IniFile.WriteString('ExternalSongTools', 'Search', IExternalSongSearch[ExternalSongSearch]);
-    IniFile.WriteString('ExternalSongTools', 'SyncerAddress', SyncerAddress);
+    IniFile.WriteInteger('ExternalSongTools', 'SyncerPort', SyncerPort);
+    IniFile.DeleteKey('ExternalSongTools', 'SyncerAddress');
 
     //OnSongClick
     IniFile.WriteString('Advanced', 'OnSongClick', IOnSongClick[OnSongClick]);
