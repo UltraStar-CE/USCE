@@ -48,6 +48,8 @@ type
       constructor Create; override;
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       procedure OnShow; override;
+    private
+      EditorPathButton: integer;
     protected
       procedure LoadWidgets; override;
   end;
@@ -63,7 +65,7 @@ uses
   ULanguage,
   ULog,
   UUnicodeUtils,
-  SysUtils;
+  SysUtils{$IFDEF WINDOWS}, Windows, CommDlg{$ENDIF};
 
 type
   InteractionID = (
@@ -77,6 +79,45 @@ type
     iTopScoresSlide,
     iBackButton
   );
+
+{$IFDEF WINDOWS}
+type PEditorFilename = ^TOpenFilenameW;
+
+function ChooseEditorFile(Dialog: PEditorFilename): BOOL; stdcall;
+  external 'comdlg32.dll' name 'GetOpenFileNameW';
+
+procedure BrowseSongEditor;
+var
+  Dialog: TOpenFilenameW;
+  Filename: array[0..32767] of WideChar;
+  CurrentPath: UnicodeString;
+begin
+  FillChar(Dialog, SizeOf(Dialog), 0);
+  FillChar(Filename, SizeOf(Filename), 0);
+  CurrentPath := Copy(UTF8Decode(Ini.ExternalSongEditorPath), 1, High(Filename));
+  if CurrentPath <> '' then
+    Move(CurrentPath[1], Filename[0], Length(CurrentPath) * SizeOf(WideChar));
+  Dialog.lStructSize := SizeOf(Dialog);
+  Dialog.hwndOwner := GetActiveWindow;
+  Dialog.lpstrFilter := 'Applications (*.exe)'#0'*.exe'#0#0;
+  Dialog.lpstrFile := @Filename[0];
+  Dialog.nMaxFile := Length(Filename);
+  Dialog.Flags := OFN_FILEMUSTEXIST or OFN_PATHMUSTEXIST or OFN_NOCHANGEDIR;
+  if ChooseEditorFile(@Dialog) then
+  begin
+    Ini.ExternalSongEditorPath := UTF8Encode(UnicodeString(PWideChar(@Filename[0])));
+    Ini.Save;
+  end;
+end;
+{$ELSE}
+procedure ExternalToolPathEntered(Value: boolean; Data: Pointer);
+begin
+  if not Value then Exit;
+  Ini.ExternalSongEditorPath := Trim(ScreenPopupInsertUser.Username);
+  Ini.Save;
+end;
+
+{$ENDIF}
 
 function TScreenOptionsAdvanced.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
 begin
@@ -109,6 +150,17 @@ begin
         begin
           if Interactions[SelInteraction].Typ = iButton then
           begin
+            if Interactions[SelInteraction].Num = EditorPathButton then
+            begin
+              {$IFDEF WINDOWS}
+              BrowseSongEditor;
+              {$ELSE}
+              ScreenPopupInsertUser.ShowTextPrompt(Language.Translate('EXTERNAL_SONG_EDITOR_PATH'),
+                'EXTERNAL_SONG_PATH_HINT', Language.Translate('FILTER_PRESET_SAVE'),
+                @ExternalToolPathEntered, nil, Ini.ExternalSongEditorPath, 'EXTERNAL_SONG_PATH');
+              {$ENDIF}
+              Exit;
+            end;
             Ini.Save;
             AudioPlayback.PlaySound(SoundLib.Back);
             FadeTo(@ScreenOptions);
@@ -176,6 +228,12 @@ begin
   DefaultSuffix := ' (' + Language.Translate('OPTION_VALUE_DEFAULT') + ')';
   for Weight := Low(WeightOptions) to High(WeightOptions) do
     WeightOptions[Weight] := IntToStr(Weight) + '%';
+
+  AddSection('EXTERNAL_SONG_TOOLS');
+  AddSelectSlide('EXTERNAL_SONG_EDITOR', Ini.ExternalSongEditor,
+    [Language.Translate('OPTION_VALUE_OFF'), IExternalSongEditor[1], IExternalSongEditor[2],
+     Language.Translate('EXTERNAL_SONG_CUSTOM')]);
+  EditorPathButton := AddButton('EXTERNAL_SONG_EDITOR_PATH');
 
   AddSection('SING_OPTIONS_ADVANCED_SCORING');
   for NoteType := Low(TNoteType) to High(TNoteType) do
