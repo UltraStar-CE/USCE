@@ -112,10 +112,13 @@ type
       function GetMouseOverArea: TMouseOverRect;
   end;
 
+procedure DrawKeyFrame(X, Y, Z, W, H, R, G, B, A: real);
+
 implementation
 
 uses
   UGraphic,
+  URenderer,
   UIni,
   UThemes,
   URecentNames,
@@ -205,6 +208,71 @@ begin
   end;
 end;
 
+// Bold chord hints already carry localized key names, such as Ctrl+F.
+function InlineChord(const Text: UTF8String; Bold: boolean; out FirstKey, SecondKey: UTF8String): boolean;
+var Separator: integer;
+begin
+  Separator := Pos('+', Text);
+  Result := Bold and (Separator > 1) and (Separator < Length(Text)) and
+    (PosEx('+', Text, Separator + 1) = 0);
+  if not Result then Exit;
+  FirstKey := Trim(Copy(Text, 1, Separator - 1));
+  SecondKey := Trim(Copy(Text, Separator + 1, MaxInt));
+  Result := (FirstKey <> '') and (SecondKey <> '');
+end;
+
+function KeyHintWidth(const Key: UTF8String; FontSize: real): real;
+begin
+  Result := TextWidth(Key) + FontSize * 0.36;
+end;
+
+procedure DrawKeyFrame(X, Y, Z, W, H, R, G, B, A: real);
+var
+  Lines: TLineList;
+  Right, Top, Bottom, Radius: real;
+
+  procedure Edge(Index: integer; AX1, AY1, AX2, AY2: real);
+  begin
+    with Lines[Index] do
+    begin
+      X1 := AX1;
+      Y1 := AY1;
+      X2 := AX2;
+      Y2 := AY2;
+    end;
+    Lines[Index].Z := Z;
+    Lines[Index].Thickness := 1;
+    Lines[Index].ColR := R;
+    Lines[Index].ColG := G;
+    Lines[Index].ColB := B;
+    Lines[Index].Alpha := A;
+  end;
+
+begin
+  Right := X + W;
+  Top := Y;
+  Bottom := Top + H;
+  Radius := Min(W, H) * 0.14;
+  SetLength(Lines, 8);
+  Edge(0, X + Radius, Top, Right - Radius, Top);
+  Edge(1, Right - Radius, Top, Right, Top + Radius);
+  Edge(2, Right, Top + Radius, Right, Bottom - Radius);
+  Edge(3, Right - Radius, Bottom, Right, Bottom - Radius);
+  Edge(4, X + Radius, Bottom, Right - Radius, Bottom);
+  Edge(5, X, Bottom - Radius, X + Radius, Bottom);
+  Edge(6, X, Top + Radius, X, Bottom - Radius);
+  Edge(7, X, Top + Radius, X + Radius, Top);
+  Renderer.DrawLines(Lines);
+end;
+
+procedure DrawKeyHint(const Key: UTF8String; X, Y, Z, FontSize, R, G, B, A: real);
+begin
+  DrawKeyFrame(X, Y + FontSize * 0.02, Z, KeyHintWidth(Key, FontSize),
+    FontSize * 0.83, R, G, B, A);
+  SetFontPos(X + FontSize * 0.18, Y);
+  PrintText(Key);
+end;
+
 function InlineTextWidth(const Value: UTF8String; BaseStyle: integer; FontSize: real;
     InitialBold: boolean = false): real;
 var
@@ -215,6 +283,7 @@ var
   CurrentStyle: integer;
 
   procedure AddSegment(const Text: UTF8String);
+  var FirstKey, SecondKey: UTF8String;
   begin
     if Text = '' then
       Exit;
@@ -224,7 +293,11 @@ var
       CurrentStyle := BaseStyle;
     SetFontStyle(CurrentStyle);
     SetFontSize(FontSize);
-    Result := Result + TextWidth(Text);
+    if InlineChord(Text, Bold, FirstKey, SecondKey) then
+      Result := Result + KeyHintWidth(FirstKey, FontSize) + TextWidth(' + ') +
+        KeyHintWidth(SecondKey, FontSize)
+    else
+      Result := Result + TextWidth(Text);
   end;
 begin
   Result := 0;
@@ -255,6 +328,7 @@ var
   CurrentStyle: integer;
 
   procedure PrintSegment(const Text: UTF8String);
+  var FirstKey, SecondKey: UTF8String;
   begin
     if Text = '' then
       Exit;
@@ -265,10 +339,23 @@ var
     SetFontStyle(CurrentStyle);
     SetFontSize(FontSize);
     SetFontColor(R, G, B, A);
-    SetFontPos(CurrentX, Y);
     SetFontZ(Z);
-    PrintText(Text);
-    CurrentX := CurrentX + TextWidth(Text);
+    if InlineChord(Text, Bold, FirstKey, SecondKey) then
+    begin
+      DrawKeyHint(FirstKey, CurrentX, Y, Z, FontSize, R, G, B, A);
+      CurrentX := CurrentX + KeyHintWidth(FirstKey, FontSize);
+      SetFontPos(CurrentX, Y);
+      PrintText(' + ');
+      CurrentX := CurrentX + TextWidth(' + ');
+      DrawKeyHint(SecondKey, CurrentX, Y, Z, FontSize, R, G, B, A);
+      CurrentX := CurrentX + KeyHintWidth(SecondKey, FontSize);
+    end
+    else
+    begin
+      SetFontPos(CurrentX, Y);
+      PrintText(Text);
+      CurrentX := CurrentX + TextWidth(Text);
+    end;
   end;
 
 begin

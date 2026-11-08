@@ -689,15 +689,25 @@ begin
 end;
 
 function TMenu.AddStatic(ThemeStatic: TThemeStatic): integer;
+var TexturePath: IPath;
 begin
+  if (ThemeStatic.KeyCap <> '') and (ThemeStatic.W > 0) and (ThemeStatic.H > 0) then
+    TexturePath := PATH_NONE
+  else
+  begin
+    ThemeStatic.KeyCap := '';
+    TexturePath := Skin.GetTextureFileName(ThemeStatic.Tex);
+  end;
   Result := AddStatic(ThemeStatic.X, ThemeStatic.Y, ThemeStatic.W, ThemeStatic.H, ThemeStatic.Z,
     ThemeStatic.ColR, ThemeStatic.ColG, ThemeStatic.ColB,
     ThemeStatic.TexX1, ThemeStatic.TexY1, ThemeStatic.TexX2, ThemeStatic.TexY2, ThemeStatic.Alpha,
-    Skin.GetTextureFileName(ThemeStatic.Tex),
-    ThemeStatic.Typ, $FFFFFF, ThemeStatic.Reflection, ThemeStatic.Reflectionspacing);
-    if (Result >= 0) then
-      Statics[Result].Texture.ScaleMode := ThemeStatic.ScaleMode;
-      Statics[Result].Texture.CornerRadius := ThemeStatic.CornerRadius;
+    TexturePath, ThemeStatic.Typ, $FFFFFF, ThemeStatic.Reflection, ThemeStatic.Reflectionspacing);
+  if Result >= 0 then
+  begin
+    Statics[Result].KeyCap := ThemeStatic.KeyCap;
+    Statics[Result].Texture.ScaleMode := ThemeStatic.ScaleMode;
+    Statics[Result].Texture.CornerRadius := ThemeStatic.CornerRadius;
+  end;
 end;
 
 function TMenu.AddStaticPosition(static: TThemePosition): integer;

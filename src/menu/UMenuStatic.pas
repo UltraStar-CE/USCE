@@ -42,6 +42,7 @@ type
     public
       Texture:           TTexture; // Button Screen position and size
       Visible:           boolean;
+      KeyCap:            UTF8String;
 
       // for list item
       TextureSelect:     TTexture;
@@ -59,12 +60,42 @@ type
 
 implementation
 uses
-  UDisplay,
-  UScale;
+  Math, UDisplay, UFont, UMenuText, UScale, UText;
 
 procedure TStatic.Draw;
+var
+  X, Y, W, H, Size: real;
+  Bounds: TBoundsDbl;
 begin
-  if Visible then
+  if not Visible then Exit;
+  if KeyCap <> '' then
+  begin
+    X := Texture.X; Y := Texture.Y; W := Texture.W; H := Texture.H;
+    ResolveLayoutRect(X, Y, W, H, Texture.ScaleMode);
+    // Keep the cap inside the old icon's slot and leave space for its label.
+    X := X + 2; Y := Y + 4; W := W - 4; H := H - 8;
+    if (W <= 0) or (H <= 0) then Exit;
+    SetFont(0, ftRegular);
+    SetFontItalic(false);
+    SetFontReflection(false, 0);
+    Size := H * 0.67;
+    SetFontSize(Size);
+    while (Size > 1) and (TextWidth(KeyCap) > W - 4) do
+    begin
+      Size := Size - 1;
+      SetFontSize(Size);
+    end;
+    DrawKeyFrame(X, Y, Texture.Z, W, H, 0.08, 0.12, 0.18, Texture.Alpha);
+    Bounds := Fonts[CurrentFont.FontFamily][CurrentFont.FontStyle].Font.BBox(KeyCap, false);
+    SetFontColor(0.08, 0.12, 0.18, Texture.Alpha);
+    SetFontZ(Texture.Z);
+    SetFontPos(X + (W - TextWidth(KeyCap)) / 2,
+      Y + H / 2 - Fonts[CurrentFont.FontFamily][CurrentFont.FontStyle].Font.Ascender +
+      (Bounds.Top + Bounds.Bottom) / 2);
+    PrintText(KeyCap);
+    ResetFont;
+  end
+  else
   begin
     Texture.Reflection := Reflection;
     Texture.ReflectionSpacing := ReflectionSpacing;
