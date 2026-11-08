@@ -48,6 +48,8 @@ type
       constructor Create; override;
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       procedure OnShow; override;
+    private
+      SyncerAddressButton: integer;
     protected
       procedure LoadWidgets; override;
   end;
@@ -63,7 +65,7 @@ uses
   ULanguage,
   ULog,
   UUnicodeUtils,
-  SysUtils;
+  SysUtils, USyncerWeb;
 
 type
   InteractionID = (
@@ -77,6 +79,20 @@ type
     iTopScoresSlide,
     iBackButton
   );
+
+procedure SyncerAddressEntered(Value: boolean; Data: Pointer);
+var Address: UTF8String;
+begin
+  if not Value then Exit;
+  Address := Trim(ScreenPopupInsertUser.Username);
+  if not TSyncerClient.ValidAddress(Address) then
+  begin
+    ScreenPopupError.ShowPopup(Language.Translate('SYNCER_INVALID_ADDRESS'));
+    Exit;
+  end;
+  Ini.SyncerAddress := Address;
+  Ini.Save;
+end;
 
 function TScreenOptionsAdvanced.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
 begin
@@ -109,6 +125,13 @@ begin
         begin
           if Interactions[SelInteraction].Typ = iButton then
           begin
+            if Interactions[SelInteraction].Num = SyncerAddressButton then
+            begin
+              ScreenPopupInsertUser.ShowTextPrompt(Language.Translate('SYNCER_ADDRESS'),
+                'SYNCER_ADDRESS_HINT', Language.Translate('FILTER_PRESET_SAVE'),
+                @SyncerAddressEntered, nil, Ini.SyncerAddress, 'SYNCER_ADDRESS');
+              Exit;
+            end;
             Ini.Save;
             AudioPlayback.PlaySound(SoundLib.Back);
             FadeTo(@ScreenOptions);
@@ -176,6 +199,10 @@ begin
   DefaultSuffix := ' (' + Language.Translate('OPTION_VALUE_DEFAULT') + ')';
   for Weight := Low(WeightOptions) to High(WeightOptions) do
     WeightOptions[Weight] := IntToStr(Weight) + '%';
+
+  AddSelectSlide('EXTERNAL_SONG_SEARCH', Ini.ExternalSongSearch,
+    [Language.Translate('OPTION_VALUE_OFF'), Language.Translate('OPTION_VALUE_ON')]);
+  SyncerAddressButton := AddButton('SYNCER_ADDRESS');
 
   AddSection('SING_OPTIONS_ADVANCED_SCORING');
   for NoteType := Low(TNoteType) to High(TNoteType) do

@@ -5286,6 +5286,7 @@ var
   OldCategory, P, Item, I, Index, NewIndex: integer;
   OldPosition, OldListTop, GridOffset, Candidate: integer;
   PlaylistPaths, NewIds, VisiblePaths: TStringList;
+  Reloaded: TList;
   Song: TSong;
   EmptyMainMenu, ReloadPreview, ResumeVideoPreview: boolean;
   SavedVideo: IVideo;
@@ -5333,7 +5334,8 @@ begin
      MakeMedley or ScreenSongMenu.Visible or
      ScreenPopupError.Visible or ScreenPopupCheck.Visible or
      ScreenPopupHelp.Visible or ScreenPopupInfo.Visible or
-     ScreenSongJumpto.Visible or ScreenContinuousPlayback.Session.Active or
+     (ScreenSongJumpto.Visible and not ScreenSongJumpto.WaitingForSyncerSong) or
+     ScreenContinuousPlayback.Session.Active or
      not Songs.RefreshReady then Exit;
   SelectedPath := '';
   SavedPreviewEnd := PreviewEnd;
@@ -5358,6 +5360,8 @@ begin
   PlaylistPaths := TStringList.Create;
   NewIds := TStringList.Create;
   VisiblePaths := TStringList.Create;
+  Reloaded := nil;
+  if ScreenSongJumpto.WaitingForSyncerSong then Reloaded := TList.Create;
   try
     for I := 0 to High(CatSongs.Song) do
       if CatSongs.Song[I].Visible then VisiblePaths.Add(SelectionKey(CatSongs.Song[I]));
@@ -5369,7 +5373,7 @@ begin
           PlaylistPaths.Add(TLibraryRefresh.Key(CatSongs.Song[I].Path.Append(CatSongs.Song[I].FileName)))
         else PlaylistPaths.Add('');
       end;
-    if not Songs.PublishRefresh(Retired) then
+    if not Songs.PublishRefresh(Retired, Reloaded) then
     begin
       WriteMessage(Language.Translate('LIBRARY_REFRESH_FAILED'));
       Exit;
@@ -5526,6 +5530,7 @@ begin
         Text[TextYear].Text := '';
         SongScore;
       end;
+      if Assigned(Reloaded) then ScreenSongJumpto.SyncerLibraryUpdated(Reloaded);
       if Songs.LastRefreshMembershipChanged then
         WriteMessage(Language.Translate('LIBRARY_REFRESH_FINISHED'));
     finally
@@ -5534,6 +5539,7 @@ begin
       Retired.Free;
     end;
   finally
+    Reloaded.Free;
     NewIds.Free;
     PlaylistPaths.Free;
     VisiblePaths.Free;
