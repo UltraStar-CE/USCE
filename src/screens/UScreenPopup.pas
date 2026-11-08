@@ -98,7 +98,8 @@ type
         Handler: TPopupInsertUserHandler; HandlerData: Pointer);
 
       procedure ShowTextPrompt(const Title, Msg, Caption: UTF8String;
-        Handler: TPopupInsertUserHandler; Data: Pointer);
+        Handler: TPopupInsertUserHandler; Data: Pointer;
+        const InitialText: UTF8String = ''; const FieldLabel: UTF8String = 'FILTER_PRESET_NAME');
       constructor Create; override;
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       procedure OnShow; override;
@@ -607,13 +608,15 @@ begin
 end;
 
 procedure TScreenPopupInsertUser.ShowTextPrompt(const Title, Msg, Caption: UTF8String;
-  Handler: TPopupInsertUserHandler; Data: Pointer);
+  Handler: TPopupInsertUserHandler; Data: Pointer; const InitialText, FieldLabel: UTF8String);
 begin
   ShowPopup(Title, Msg, Handler, Data);
+  Username := InitialText;
+  Button[0].Text[0].Text := InitialText;
   fTextOnly := true;
   Button[1].Visible := false;
   if Length(Button[0].Text) > 1 then
-    Button[0].Text[1].Text := Language.Translate('FILTER_PRESET_NAME');
+    Button[0].Text[1].Text := Language.Translate(FieldLabel);
   Button[2].Text[0].Text := Caption;
   Interaction := 0;
 end;

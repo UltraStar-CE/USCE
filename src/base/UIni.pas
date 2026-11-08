@@ -238,6 +238,8 @@ type
       ScreenFade:     integer;
       AskBeforeDel:   integer;
       OnSongClick:    integer;
+      ExternalSongEditor: integer;
+      ExternalSongEditorPath: UTF8String;
       PartyPopup:     integer;
       PartyHighscores: integer;
       SingScores:     integer;
@@ -446,6 +448,7 @@ const
   ISingScores:    array[0..3] of UTF8String = ('Off', 'On', 'Bar Rating', 'Remaining Score');
   IDuetScores:    array[0..3] of UTF8String = ('Off', 'Separate', 'Combined', 'Both');
   ITopScores:     array[0..1] of UTF8String = ('All', 'Player');
+  IExternalSongEditor: array[0..3] of UTF8String = ('Off', 'UltraStar Manager', 'USDB Syncer Preview', 'Custom');
   IOnSongClick:   array[0..2] of UTF8String = ('Sing', 'Select Players', 'Open Menu');
   sStartSing = 0;
   sSelectPlayer = 1;
@@ -1958,6 +1961,9 @@ begin
   // AskbeforeDel
   AskBeforeDel := ReadArrayIndex(IAskbeforeDel, IniFile, 'Advanced', 'AskbeforeDel', IGNORE_INDEX, 'On');
 
+  ExternalSongEditor := ReadArrayIndex(IExternalSongEditor, IniFile, 'ExternalSongTools', 'Editor', IGNORE_INDEX, 'Off');
+  ExternalSongEditorPath := IniFile.ReadString('ExternalSongTools', 'EditorPath', '');
+
   // OnSongClick
   OnSongClick := ReadArrayIndex(IOnSongClick, IniFile, 'Advanced', 'OnSongClick', IGNORE_INDEX, 'Sing');
 
@@ -2224,6 +2230,9 @@ begin
 
     //AskbeforeDel
     IniFile.WriteString('Advanced', 'AskbeforeDel', IAskbeforeDel[AskBeforeDel]);
+
+    IniFile.WriteString('ExternalSongTools', 'Editor', IExternalSongEditor[ExternalSongEditor]);
+    IniFile.WriteString('ExternalSongTools', 'EditorPath', ExternalSongEditorPath);
 
     //OnSongClick
     IniFile.WriteString('Advanced', 'OnSongClick', IOnSongClick[OnSongClick]);
