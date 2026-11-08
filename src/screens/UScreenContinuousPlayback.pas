@@ -5,7 +5,7 @@ unit UScreenContinuousPlayback;
 
 interface
 
-uses UCommon, UMenu, UContinuousPlayback, sdl2;
+uses UCommon, UMenu, UContinuousPlayback, USyncerWeb, sdl2;
 
 type
   TScreenContinuousPlayback = class(TOptionsMenu)
@@ -18,6 +18,11 @@ type
     PreparingPlayers: boolean;
     PreviousRequested: boolean;
     StageChanged, SkipResults: boolean;
+    LikesRequest: TSyncerClient;
+    LikesAdvanceDeadline: QWord;
+    LikesDiscarded, StartedFirstSong: boolean;
+    function UpdateNextSongRanking: boolean;
+    procedure CancelNextSongRanking;
     procedure StartSelectedSong;
     procedure SaveProfile;
     procedure LoadProfile;
@@ -91,6 +96,7 @@ end;
 
 destructor TScreenContinuousPlayback.Destroy;
 begin
+  LikesRequest.Free;
   Session.Free;
   inherited;
 end;
@@ -115,6 +121,8 @@ begin
      Language.Translate('CONTINUOUS_NOTES_ONLY'), Language.Translate('CONTINUOUS_PLAYER_INFO_ONLY'),
      Language.Translate('CONTINUOUS_NOTHING')]);
   AddSelectSlide('CONTINUOUS_PLAYER_SETUP', PlayerTime, Times);
+  AddSelectSlide('SYNCER_CONTINUOUS_ORDER', Ini.SyncerContinuousLikes,
+    [Language.Translate('OPTION_VALUE_OFF'), Language.Translate('OPTION_VALUE_ON')]);
 end;
 
 procedure TScreenContinuousPlayback.SaveProfile;
@@ -231,6 +239,8 @@ var Selection: TPlaybackSongs; I, SongIndex: integer; Ordered: boolean;
 begin
   RemoteOwned := false;
   ResultsOnly := false;
+  StartedFirstSong := false;
+  CancelNextSongRanking;
   SyncProfile;
   Ordered := (CatSongs.CatNumShow = -3) and (PlaylistMan.CurPlaylist >= 0) and
     (PlaylistMan.CurPlaylist < Length(PlaylistMan.Playlists)) and
@@ -373,15 +383,57 @@ begin
   ChangeStage;
 end;
 
+procedure TScreenContinuousPlayback.CancelNextSongRanking;
+begin
+  if not Assigned(LikesRequest) then Exit;
+  LikesDiscarded := true;
+  LikesRequest.Terminate;
+end;
+
+function TScreenContinuousPlayback.UpdateNextSongRanking: boolean;
+var I: integer; Votes: array of integer;
+begin
+  Result := true;
+  if not StartedFirstSong or RemoteOwned or (Ini.SyncerContinuousLikes = 0) or
+    not TSyncerClient.Enabled then Exit;
+  if not Assigned(LikesRequest) then
+  begin
+    LikesDiscarded := false;
+    LikesRequest := TSyncerClient.BeginLikes;
+    LikesAdvanceDeadline := GetTickCount64 + 3000;
+  end;
+  if not Assigned(LikesRequest) or LikesDiscarded then Exit;
+  if not LikesRequest.Finished then
+  begin
+    if GetTickCount64 >= LikesAdvanceDeadline then
+    begin
+      CancelNextSongRanking;
+      Exit;
+    end;
+    StageChanged := true;
+    Exit(false);
+  end;
+  LikesRequest.WaitFor;
+  if not LikesDiscarded and LikesRequest.Succeeded then
+  begin
+    SetLength(Votes, Length(CatSongs.Song));
+    for I := 0 to High(Votes) do Votes[I] := TSyncerClient.LikesForSong(LikesRequest.Likes, CatSongs.Song[I]);
+    Session.PrioritizeUpcoming(Votes);
+  end;
+  FreeAndNil(LikesRequest);
+end;
+
 procedure TScreenContinuousPlayback.Advance;
 var SongIndex, Skipped, I: integer; Message: UTF8String;
     Handoff: TJSONObject; Singers: TJSONArray; Local: TBooleanDynArray;
 begin
   if PreviousRequested then
   begin
+    CancelNextSongRanking;
     PreviousRequested := false;
     Session.PreviousSong(SongIndex);
   end
+  else if not UpdateNextSongRanking then Exit
   else if not Session.NextSong(SongIndex) then
   begin
     Skipped := Session.Skipped;
@@ -395,6 +447,7 @@ begin
     ScreenPopupInfo.ShowPopup(Message);
     Exit;
   end;
+  StartedFirstSong := true;
   CatSongs.Selected := SongIndex;
   ScreenSong.Interaction := SongIndex;
   SkipResults := false;
@@ -454,6 +507,7 @@ procedure TScreenContinuousPlayback.Stop(const Reason: UTF8String);
 begin
   if not Session.Active then Exit;
   Session.Stop;
+  CancelNextSongRanking;
   PreparingPlayers := false;
   ScreenName.Goto_SingScreen := false;
   if RemoteOwned then
@@ -559,6 +613,7 @@ var Suspended: boolean;
 begin
   if not Session.Active then Exit;
   if ScreenAct <> Screens then Exit;
+  if LikesDiscarded and Assigned(LikesRequest) and LikesRequest.Finished then FreeAndNil(LikesRequest);
   Suspended := (Display.NextScreen <> nil) or ScreenPopupHelp.Visible or
     ScreenPopupError.Visible or ScreenPopupInfo.Visible or ScreenPopupCheck.Visible or
     ScreenPopupSendScore.Visible or not Display.CurrentScreen^.ShowFinish;

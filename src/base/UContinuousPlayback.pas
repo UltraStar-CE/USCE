@@ -19,7 +19,7 @@ type
   TContinuousPlayback = class
   private
     Songs: TPlaybackSongs;
-    Rejected: array of boolean;
+    Rejected, Played: array of boolean;
     Position: integer;
     Ordered, RepeatSongs: boolean;
     LastTick, Remaining: cardinal;
@@ -33,6 +33,7 @@ type
     procedure Start(const Selection: TPlaybackSongs; FirstSong: integer;
       InOrder, RepeatSelection, WithPlayers: boolean);
     procedure ReplaceUpcoming(const Selection: TPlaybackSongs);
+    procedure PrioritizeUpcoming(const Votes: array of integer);
     function NextSong(out Song: integer): boolean;
     function PreviousSong(out Song: integer): boolean;
     procedure RejectCurrentSong;
@@ -67,6 +68,7 @@ begin
     J := Random(I + 1);
     Temp := Songs[I]; Songs[I] := Songs[J]; Songs[J] := Temp;
     Bad := Rejected[I]; Rejected[I] := Rejected[J]; Rejected[J] := Bad;
+    Bad := Played[I]; Played[I] := Played[J]; Played[J] := Bad;
   end;
 end;
 
@@ -80,6 +82,7 @@ begin
   RepeatSongs := RepeatSelection;
   Scored := WithPlayers;
   SetLength(Rejected, Length(Songs));
+  SetLength(Played, Length(Songs));
   if not Ordered then Shuffle;
   Position := -1;
   for I := 0 to High(Songs) do
@@ -112,6 +115,37 @@ begin
   Position := 0;
   SetLength(Rejected, 0);
   SetLength(Rejected, Length(Songs));
+  SetLength(Played, 0);
+  SetLength(Played, Length(Songs));
+  Played[0] := true;
+end;
+
+procedure TContinuousPlayback.PrioritizeUpcoming(const Votes: array of integer);
+var I, Best, BestVotes, Song: integer;
+begin
+  Best := -1;
+  BestVotes := 0;
+  for I := Position + 1 to High(Songs) do
+  begin
+    Song := Songs[I];
+    if not Played[I] and not Rejected[I] and (Song >= 0) and
+       (Song <= High(Votes)) and (Votes[Song] > BestVotes) then
+    begin
+      Best := I;
+      BestVotes := Votes[Song];
+    end;
+  end;
+  if Best <= Position + 1 then Exit;
+  Song := Songs[Best];
+  for I := Best downto Position + 2 do
+  begin
+    Songs[I] := Songs[I - 1];
+    Rejected[I] := Rejected[I - 1];
+    Played[I] := Played[I - 1];
+  end;
+  Songs[Position + 1] := Song;
+  Rejected[Position + 1] := false;
+  Played[Position + 1] := false;
 end;
 
 function TContinuousPlayback.NextSong(out Song: integer): boolean;
@@ -131,6 +165,7 @@ begin
     if not Rejected[Position] then
     begin
       Song := Songs[Position];
+      Played[Position] := true;
       Stage := psSong;
       Paused := false;
       Result := true;
@@ -239,6 +274,7 @@ begin
   Skipped := 0;
   Songs := nil;
   Rejected := nil;
+  Played := nil;
   ClockStarted := false;
 end;
 

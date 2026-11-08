@@ -3469,6 +3469,7 @@ end;
 
 procedure TScreenSong.OnHide;
 begin
+  ScreenSongJumpto.SuspendLikesFilter;
   StopTextInput;
   inherited;
   if not KeepPreviewMusicOnHide then
@@ -3768,6 +3769,7 @@ var
 
 begin
   ApplyLibraryRefresh;
+  ScreenSongJumpto.UpdateLikesFilter;
   ScreenSongJumpto.UpdateFilter;
   UpdateTransitionPreview;
 

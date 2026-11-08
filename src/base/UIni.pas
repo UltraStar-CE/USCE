@@ -238,7 +238,7 @@ type
       ScreenFade:     integer;
       AskBeforeDel:   integer;
       OnSongClick:    integer;
-      ExternalSongSearch: integer;
+      ExternalSongSearch, SyncerContinuousLikes: integer;
       SyncerPort, SyncerLastPort: integer;
       PartyPopup:     integer;
       PartyHighscores: integer;
@@ -1968,6 +1968,7 @@ begin
   SyncerPort := IniFile.ReadInteger('ExternalSongTools', 'SyncerPort', SyncerPort);
   if (SyncerPort < 0) or (SyncerPort > 65535) then SyncerPort := 0;
   InterlockedExchange(SyncerLastPort, IniFile.ReadInteger('ExternalSongTools', 'SyncerLastPort', 0));
+  SyncerContinuousLikes := EnsureRange(IniFile.ReadInteger('ExternalSongTools', 'SyncerContinuousLikes', 0), 0, 1);
 
   // OnSongClick
   OnSongClick := ReadArrayIndex(IOnSongClick, IniFile, 'Advanced', 'OnSongClick', IGNORE_INDEX, 'Sing');
@@ -2240,6 +2241,7 @@ begin
     IniFile.WriteInteger('ExternalSongTools', 'SyncerPort', SyncerPort);
     IniFile.WriteInteger('ExternalSongTools', 'SyncerLastPort', InterlockedExchangeAdd(SyncerLastPort, 0));
     IniFile.DeleteKey('ExternalSongTools', 'SyncerAddress');
+    IniFile.WriteInteger('ExternalSongTools', 'SyncerContinuousLikes', SyncerContinuousLikes);
 
     //OnSongClick
     IniFile.WriteString('Advanced', 'OnSongClick', IOnSongClick[OnSongClick]);
