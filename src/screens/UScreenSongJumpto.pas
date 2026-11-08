@@ -30,7 +30,7 @@ unit UScreenSongJumpto;
 
 interface
 
-uses UFilterPresets, UMenu, USongs, USong, UThemes, sdl2, SysUtils, Classes, UMenuButton;
+uses UFilterPresets, UMenu, USongs, USong, UThemes, sdl2, SysUtils, Classes, UMenuButton, USyncerWeb;
 
 const
   FILTER_SLOTS = 3;
@@ -56,6 +56,12 @@ type
     fValues, fValueKeys: TStringList;
     fValueCache: array[TSongFilter] of TSuggestionCache;
     fMatches: array of integer;
+    fSyncerResults: TSyncerSongs;
+    fSyncerRequest: TSyncerClient;
+    fSyncerMode: boolean;
+    fSyncerDownloadID: Int64;
+    fSyncerMessage: UTF8String;
+    fSyncerLibraryDeadline: QWord;
     fSuggestionContext, fSuggestionQuery: UTF8String;
     fSuggestionFocus, fPending: boolean;
     fChangedTick: cardinal;
@@ -71,6 +77,12 @@ type
     fSlotKinds: array[0..FILTER_SLOTS-1] of integer;
     fInputs, fCategories: array[0..FILTER_SLOTS-1] of integer;
     fActions: array[0..3] of integer;
+    function ResultCount: integer;
+    function CanSearchSyncer: boolean;
+    procedure StartSyncerSearch;
+    procedure UpdateSyncerSearch;
+    procedure CloseSyncerSearch;
+    procedure StartSyncerDownload;
     function GetTypingQuery: UTF8String;
     procedure OpenPresets;
     procedure SavePreset;
@@ -82,6 +94,7 @@ type
     function SuggestionPrefix: UTF8String;
     procedure SetVisible(Value: boolean);
     procedure SetTextFound(Count: cardinal; SelectedSong: TSong);
+    function SyncerQuery: UTF8String;
     function FilterSummary: UTF8String;
     procedure RefreshRows;
     procedure Changed;
@@ -108,6 +121,8 @@ type
     function SearchSummary: UTF8String;
     property TypingQuery: UTF8String read GetTypingQuery;
     function Draw: boolean; override;
+    function WaitingForSyncerSong: boolean;
+    procedure SyncerLibraryUpdated(Reloaded: TList);
     property Visible: boolean read fVisible write SetVisible;
 
   end;
@@ -169,6 +184,7 @@ var Kind: TSongFilter;
 begin
   for Kind := Low(TSongFilter) to High(TSongFilter) do
   begin fValueCache[Kind].Values.Free; fValueCache[Kind].Keys.Free; end;
+  fSyncerRequest.Free;
   fSuggestions.Free;
   fLockIcons.Free;
   fFooter.Free;
@@ -223,6 +239,136 @@ begin
   fLastPlayed := ScreenSong.Interaction;
   fPending := true;
   fChangedTick := SDL_GetTicks;
+end;
+
+function TScreenSongJumpto.CanSearchSyncer: boolean;
+begin
+  Result := (fVisSongs = 0) and (ScreenSong.Mode = smNormal) and
+    not fPlaylistSearch and TSyncerClient.Enabled and
+    (SyncerQuery <> '');
+end;
+
+function TScreenSongJumpto.ResultCount: integer;
+begin
+  if fSyncerMode then Result := Length(fSyncerResults)
+  else Result := Length(fMatches);
+end;
+
+procedure TScreenSongJumpto.StartSyncerSearch;
+begin
+  FlushChanges;
+  if not CanSearchSyncer or Assigned(fSyncerRequest) then Exit;
+  fSyncerRequest := TSyncerClient.Create(soSearch, SyncerQuery, 0);
+  fSyncerMode := true;
+  fSyncerMessage := Language.Translate('SYNCER_SEARCHING');
+  fSuggestionIndex := 0;
+  fSuggestionFirst := 0;
+  SetTextInput(false);
+end;
+
+procedure TScreenSongJumpto.CloseSyncerSearch;
+begin
+  if not fSyncerMode then Exit;
+  fSyncerMode := false;
+  fSyncerDownloadID := 0;
+  fSyncerLibraryDeadline := 0;
+  fSyncerResults := nil;
+  if Assigned(fSyncerRequest) then fSyncerRequest.Terminate;
+  fSuggestionFocus := false;
+  fSuggestionContext := #1;
+  SetTextInput(fVisible);
+end;
+
+procedure SyncerDownloadConfirmed(Value: boolean; Data: Pointer);
+begin
+  if Value then ScreenSongJumpto.StartSyncerDownload;
+end;
+
+procedure TScreenSongJumpto.StartSyncerDownload;
+begin
+  if not fSyncerMode or (fSyncerDownloadID <> 0) or Assigned(fSyncerRequest) or
+    not TSyncerClient.Enabled or (fSuggestionIndex >= Length(fSyncerResults)) then Exit;
+  fSyncerDownloadID := fSyncerResults[fSuggestionIndex].ID;
+  fSyncerRequest := TSyncerClient.Create(soDownload, '', fSyncerDownloadID);
+  fSyncerMessage := Language.Translate('SYNCER_DOWNLOADING');
+end;
+
+function TScreenSongJumpto.WaitingForSyncerSong: boolean;
+begin
+  Result := fSyncerDownloadID > 0;
+end;
+
+procedure TScreenSongJumpto.SyncerLibraryUpdated(Reloaded: TList);
+var I, J: integer; Song: TSong;
+begin
+  if not WaitingForSyncerSong then Exit;
+  for J := 0 to Reloaded.Count - 1 do
+  begin
+    Song := TSong(Reloaded[J]);
+    if TSyncerClient.ChartID(Song.Path, Song.FileName) <> fSyncerDownloadID then Continue;
+    if not Song.Visible then
+    begin
+      SetSearchText('');
+      FlushChanges;
+    end;
+    for I := 0 to High(CatSongs.Song) do
+      if CatSongs.Song[I] = Song then
+      begin
+        ScreenSong.SkipTo(CatSongs.VisibleIndex(I), I, CatSongs.VisibleSongs);
+        CatSongs.Selected := I;
+        ScreenSong.SetScrollRefresh;
+        Visible := false;
+        Exit;
+      end;
+  end;
+end;
+
+procedure TScreenSongJumpto.UpdateSyncerSearch;
+begin
+  if Assigned(fSyncerRequest) and fSyncerRequest.Finished then
+  begin
+    fSyncerRequest.WaitFor;
+    if fSyncerMode then
+    begin
+      if not fSyncerRequest.Succeeded then
+      begin
+        fSyncerDownloadID := 0;
+        if fSyncerRequest.ResponseCode = 403 then fSyncerMessage := Language.Translate('SYNCER_DOWNLOAD_DISABLED')
+        else fSyncerMessage := Language.Translate('SYNCER_REQUEST_FAILED');
+      end
+      else if fSyncerRequest.Operation = soSearch then
+      begin
+        fSyncerResults := fSyncerRequest.Songs;
+        if Length(fSyncerResults) = 0 then fSyncerMessage := Language.Translate('SYNCER_NO_MATCHES')
+        else fSyncerMessage := Language.Translate('SYNCER_SELECT_DOWNLOAD');
+      end
+      else
+      begin
+        fSyncerLibraryDeadline := GetTickCount64 + 15000;
+        fSyncerMessage := Language.Translate('SYNCER_WAITING_FOR_LIBRARY');
+      end;
+    end;
+    FreeAndNil(fSyncerRequest);
+  end;
+  if WaitingForSyncerSong and (fSyncerLibraryDeadline <> 0) and
+     (GetTickCount64 >= fSyncerLibraryDeadline) then
+  begin
+    fSyncerLibraryDeadline := 0;
+    fSyncerMessage := Language.Translate('SYNCER_CHECK_FOLDER');
+  end;
+end;
+
+function TScreenSongJumpto.SyncerQuery: UTF8String;
+var Row: integer; Query: UTF8String;
+begin
+  Result := '';
+  for Row := 0 to High(fRows) do
+  begin
+    Query := Trim(fRows[Row].Query);
+    if Query = '' then Continue;
+    if Result <> '' then Result := Result + ' ';
+    Result := Result + Query;
+  end;
 end;
 
 function TScreenSongJumpto.FilterSummary: UTF8String;
@@ -454,7 +600,7 @@ begin
     0: begin fPresetPage := 0; OpenPresets; end;
     1: begin SetLength(fRows, 1); fRows[0].Query := ''; fRows[0].Kind := fltAll;
          fFocus := 0; fFirst := 0; Changed; end;
-    2: Visible := false;
+    2: if CanSearchSyncer then StartSyncerSearch;
     3: begin FlushChanges; ToggleLibraryLockdown; fSuggestionContext := #1; end;
   end;
 end;
@@ -462,8 +608,7 @@ end;
 procedure TScreenSongJumpto.MoveFocus(Direction: integer);
 begin
   fFocus := (fFocus + Direction + Length(fRows) + 4) mod (Length(fRows) + 4);
-  if fFocus = Length(fRows) + 2 then Inc(fFocus, Direction);
-  if fFocus = Length(fRows) + 2 then Inc(fFocus, Direction);
+  if (fFocus = Length(fRows) + 2) and not CanSearchSyncer then Inc(fFocus, Direction);
   RefreshRows;
 end;
 
@@ -473,6 +618,16 @@ var S: integer;
 begin
   Result := true;
   if not PressedDown then Exit;
+  if fSyncerMode then
+  begin
+    case PressedKey of
+      SDLK_ESCAPE: CloseSyncerSearch;
+      SDLK_UP: fSuggestionIndex := Max(0, fSuggestionIndex - 1);
+      SDLK_DOWN: fSuggestionIndex := Min(Max(0, High(fSyncerResults)), fSuggestionIndex + 1);
+      SDLK_RETURN: if not Repeated then AcceptSuggestion;
+    end;
+    Exit;
+  end;
   if (PressedKey = SDLK_SPACE) and (SDL_GetModState and KMOD_CTRL <> 0) then
   begin
     FlushChanges;
@@ -561,19 +716,24 @@ var S, R, I: integer; LX, LY: real; Area: TMouseOverRect;
 begin
   Result := true;
   if not BtnDown then Exit;
-  if (Length(fMatches) > 0) and (X >= fSuggestionX) and
+  if (ResultCount > 0) and (X >= fSuggestionX) and
     (X <= fSuggestionX + fSuggestionW) and (Y >= fSuggestionY) and
     (Y < fSuggestionY + fSuggestionRows * Theme.SongJumpto.SuggestionRowHeight) then
   begin
     if (MouseButton = SDL_BUTTON_WHEELUP) or (MouseButton = SDL_BUTTON_WHEELDOWN) then fSuggestionFocus := false;
     if MouseButton = SDL_BUTTON_WHEELUP then fSuggestionFirst := Max(0, fSuggestionFirst - 1)
     else if MouseButton = SDL_BUTTON_WHEELDOWN then
-      fSuggestionFirst := Min(Max(0, Length(fMatches) - fSuggestionRows), fSuggestionFirst + 1)
+      fSuggestionFirst := Min(Max(0, ResultCount - fSuggestionRows), fSuggestionFirst + 1)
     else if MouseButton = SDL_BUTTON_LEFT then
     begin
       fSuggestionIndex := fSuggestionFirst + Trunc((Y - fSuggestionY) / Theme.SongJumpto.SuggestionRowHeight);
       AcceptSuggestion;
     end;
+    Exit;
+  end;
+  if fSyncerMode then
+  begin
+    if RightMbESC and (MouseButton = SDL_BUTTON_RIGHT) then CloseSyncerSearch;
     Exit;
   end;
   if RightMbESC and (MouseButton = SDL_BUTTON_RIGHT) then begin Visible := false; Exit; end;
@@ -588,6 +748,16 @@ begin
   // UScreenSong already converts mouse input to theme coordinates.
   LX := X;
   LY := Y;
+  if CanSearchSyncer then
+  begin
+    Area := Text[0].GetMouseOverArea;
+    if (LX >= Area.X) and (LX <= Area.X + Area.W) and
+       (LY >= Area.Y) and (LY <= Area.Y + Area.H) then
+    begin
+      StartSyncerSearch;
+      Exit;
+    end;
+  end;
   for S := 0 to FILTER_SLOTS - 1 do
   begin
     R := fFirst + S;
@@ -649,7 +819,11 @@ end;
 
 procedure TScreenSongJumpto.SetVisible(Value: boolean);
 begin
-  if not Value then FlushChanges;
+  if not Value then
+  begin
+    CloseSyncerSearch;
+    FlushChanges;
+  end;
   if not fVisible and Value then OnShow;
   SetTextInput(Value or ((Ini.SongKeyboard = 0) and ScreenSong.FreeListMode));
   fVisible := Value;
@@ -780,13 +954,26 @@ var I: integer; X, Y, W, H, Z: real;
   end;
 begin
   UpdateFilter;
-  UpdateSuggestions;
+  if not fSyncerMode then UpdateSuggestions;
+  if not TSyncerClient.Enabled then CloseSyncerSearch;
+  UpdateSyncerSearch;
+  if not fVisible then Exit(true);
   if fLockShortcutPending and (SDL_GetModState and KMOD_ALT = 0) then
   begin
     fLockShortcutPending := false;
     FlushChanges;
     ToggleLibraryLockdown;
     fSuggestionContext := #1;
+  end;
+  if fSyncerMode then Text[0].Text := fSyncerMessage
+  else if fVisSongs = 0 then
+  begin
+    Text[0].Text := Theme.SongJumpto.NoSongsFound;
+    if CanSearchSyncer then
+    begin
+      Text[0].Text := Language.Translate('EXTERNAL_SONG_SEARCH_HINT');
+      if fFocus = Length(fRows) + 2 then Text[0].Text := '> ' + Text[0].Text;
+    end;
   end;
   Renderer.ClearFrameBuffer(CLEAR_DEPTH);
   Result := inherited Draw;
@@ -995,6 +1182,15 @@ end;
 
 procedure TScreenSongJumpto.AcceptSuggestion;
 begin
+  if fSyncerMode then
+  begin
+    if (fSyncerDownloadID = 0) and not Assigned(fSyncerRequest) and
+       (fSuggestionIndex >= 0) and (fSuggestionIndex < Length(fSyncerResults)) then
+      with fSyncerResults[fSuggestionIndex] do
+        ScreenPopupCheck.ShowPopup(Format(Language.Translate('SYNCER_CONFIRM_DOWNLOAD'), [Artist, Title]),
+          @SyncerDownloadConfirmed, nil);
+    Exit;
+  end;
   if (fFocus >= Length(fRows)) or (fSuggestionIndex < 0) or
     (fSuggestionIndex >= Length(fMatches)) then Exit;
   fRows[fFocus].Query := CompleteFilterTerm(fRows[fFocus].Query,
@@ -1007,29 +1203,34 @@ procedure TScreenSongJumpto.DrawSuggestions;
 var I, N, S, MaxRows: integer; B: TThemeButton; H, Margin, Bottom: single;
 begin
   fSuggestionRows := 0;
-  if (Length(fMatches) = 0) or (Length(Statics) = 0) or
+  if (ResultCount = 0) or (Length(Statics) = 0) or
     (Length(fSuggestions.Statics) = 0) then Exit;
   Margin := Theme.SongJumpto.SuggestionMargin;
   fSuggestionX := Statics[0].Texture.X + Statics[0].Texture.W + Theme.SongJumpto.SuggestionGap;
   fSuggestionW := Min(Theme.SongJumpto.SuggestionWidth, RenderW - Margin - fSuggestionX);
-  if fSuggestionW < 80 then begin fSuggestionRows := 0; Exit; end;
+  if fSuggestionW < 80 then
+  begin
+    if not fSyncerMode then Exit;
+    fSuggestionW := Min(Theme.SongJumpto.SuggestionWidth, RenderW - 2 * Margin);
+    fSuggestionX := RenderW - Margin - fSuggestionW;
+  end;
   Bottom := RenderH;
   for I := 0 to High(fFooter.Statics) do Bottom := Min(Bottom, fFooter.Statics[I].Texture.Y);
   for I := 0 to High(fFooter.Text) do Bottom := Min(Bottom, fFooter.Text[I].Y - 4);
   Bottom := Bottom - Margin;
   MaxRows := Floor((Bottom - Margin) / Theme.SongJumpto.SuggestionRowHeight);
   if MaxRows < 1 then begin fSuggestionRows := 0; Exit; end;
-  fSuggestionRows := Min(Length(fMatches), MaxRows);
+  fSuggestionRows := Min(ResultCount, MaxRows);
   H := fSuggestionRows * Theme.SongJumpto.SuggestionRowHeight;
   S := EnsureRange(fFocus - fFirst, 0, FILTER_SLOTS - 1);
   fSuggestionY := EnsureRange(Button[fInputs[S]].Y, Margin, Max(Margin, Bottom - H));
-  if fSuggestionFocus then
+  if fSuggestionFocus or fSyncerMode then
   begin
     if fSuggestionIndex < fSuggestionFirst then fSuggestionFirst := fSuggestionIndex;
     if fSuggestionIndex >= fSuggestionFirst + fSuggestionRows then
       fSuggestionFirst := fSuggestionIndex - fSuggestionRows + 1;
   end;
-  fSuggestionFirst := EnsureRange(fSuggestionFirst, 0, Max(0, Length(fMatches) - fSuggestionRows));
+  fSuggestionFirst := EnsureRange(fSuggestionFirst, 0, Max(0, ResultCount - fSuggestionRows));
   fSuggestions.Statics[0].Texture.X := fSuggestionX;
   fSuggestions.Statics[0].Texture.Y := fSuggestionY;
   fSuggestions.Statics[0].Texture.W := fSuggestionW;
@@ -1047,24 +1248,30 @@ begin
   begin
     fSuggestions.Row(I).Visible := I < fSuggestionRows;
     if I >= fSuggestionRows then Continue;
-    N := fMatches[fSuggestionFirst + I];
+    N := fSuggestionFirst + I;
     with fSuggestions.Row(I) do
     begin
       X := fSuggestionX; Y := fSuggestionY + I * Theme.SongJumpto.SuggestionRowHeight;
       W := fSuggestionW; SelectW := W;
-      Selected := fSuggestionFocus and (fSuggestionFirst + I = fSuggestionIndex);
+      Selected := (fSuggestionFocus or fSyncerMode) and (fSuggestionFirst + I = fSuggestionIndex);
       Text[0].W := W - 8;
       Text[0].H := Theme.SongJumpto.SuggestionRowHeight;
       Text[0].Writable := false;
-      Text[0].Text := fValues[N] + ' (' + IntToStr(PtrInt(fValues.Objects[N])) + ')';
+      if fSyncerMode then
+        Text[0].Text := fSyncerResults[N].Artist + ' - ' + fSyncerResults[N].Title
+      else
+      begin
+        N := fMatches[N];
+        Text[0].Text := fValues[N] + ' (' + IntToStr(PtrInt(fValues.Objects[N])) + ')';
+      end;
     end;
   end;
   fSuggestions.DrawFG;
-  if Length(fMatches) > fSuggestionRows then
+  if ResultCount > fSuggestionRows then
     Renderer.DrawLine(fSuggestionX + fSuggestionW - 3,
-      fSuggestionY + H * fSuggestionFirst / Length(fMatches),
+      fSuggestionY + H * fSuggestionFirst / ResultCount,
       fSuggestionX + fSuggestionW - 3,
-      fSuggestionY + H * (fSuggestionFirst + fSuggestionRows) / Length(fMatches),
+      fSuggestionY + H * (fSuggestionFirst + fSuggestionRows) / ResultCount,
       Theme.SongJumpto.SuggestionPanel.Z + 0.004, 2,
       Theme.SongJumpto.FocusColor.R, Theme.SongJumpto.FocusColor.G,
       Theme.SongJumpto.FocusColor.B, Theme.SongJumpto.FocusAlpha);

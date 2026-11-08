@@ -238,6 +238,8 @@ type
       ScreenFade:     integer;
       AskBeforeDel:   integer;
       OnSongClick:    integer;
+      ExternalSongSearch: integer;
+      SyncerAddress: UTF8String;
       PartyPopup:     integer;
       PartyHighscores: integer;
       SingScores:     integer;
@@ -446,6 +448,7 @@ const
   ISingScores:    array[0..3] of UTF8String = ('Off', 'On', 'Bar Rating', 'Remaining Score');
   IDuetScores:    array[0..3] of UTF8String = ('Off', 'Separate', 'Combined', 'Both');
   ITopScores:     array[0..1] of UTF8String = ('All', 'Player');
+  IExternalSongSearch: array[0..1] of UTF8String = ('Off', 'On');
   IOnSongClick:   array[0..2] of UTF8String = ('Sing', 'Select Players', 'Open Menu');
   sStartSing = 0;
   sSelectPlayer = 1;
@@ -1958,6 +1961,11 @@ begin
   // AskbeforeDel
   AskBeforeDel := ReadArrayIndex(IAskbeforeDel, IniFile, 'Advanced', 'AskbeforeDel', IGNORE_INDEX, 'On');
 
+  ExternalSongSearch := ReadArrayIndex(IExternalSongSearch, IniFile, 'ExternalSongTools', 'Search', IGNORE_INDEX, 'Off');
+  SyncerAddress := IniFile.ReadString('ExternalSongTools', 'SyncerAddress', '');
+  if SyncerAddress = '' then
+    SyncerAddress := '127.0.0.1:' + IntToStr(IniFile.ReadInteger('ExternalSongTools', 'SyncerPort', 8765));
+
   // OnSongClick
   OnSongClick := ReadArrayIndex(IOnSongClick, IniFile, 'Advanced', 'OnSongClick', IGNORE_INDEX, 'Sing');
 
@@ -2224,6 +2232,9 @@ begin
 
     //AskbeforeDel
     IniFile.WriteString('Advanced', 'AskbeforeDel', IAskbeforeDel[AskBeforeDel]);
+
+    IniFile.WriteString('ExternalSongTools', 'Search', IExternalSongSearch[ExternalSongSearch]);
+    IniFile.WriteString('ExternalSongTools', 'SyncerAddress', SyncerAddress);
 
     //OnSongClick
     IniFile.WriteString('Advanced', 'OnSongClick', IOnSongClick[OnSongClick]);
