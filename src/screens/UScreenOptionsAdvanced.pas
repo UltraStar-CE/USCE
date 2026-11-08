@@ -49,7 +49,7 @@ type
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       procedure OnShow; override;
     private
-      SyncerAddressButton: integer;
+      SyncerPortButton: integer;
     protected
       procedure LoadWidgets; override;
   end;
@@ -65,7 +65,7 @@ uses
   ULanguage,
   ULog,
   UUnicodeUtils,
-  SysUtils, USyncerWeb;
+  SysUtils;
 
 type
   InteractionID = (
@@ -80,17 +80,17 @@ type
     iBackButton
   );
 
-procedure SyncerAddressEntered(Value: boolean; Data: Pointer);
-var Address: UTF8String;
+procedure SyncerPortEntered(Value: boolean; Data: Pointer);
+var Port: integer;
 begin
   if not Value then Exit;
-  Address := Trim(ScreenPopupInsertUser.Username);
-  if not TSyncerClient.ValidAddress(Address) then
+  Port := StrToIntDef(Trim(ScreenPopupInsertUser.Username), 0);
+  if (Port < 1) or (Port > 65535) then
   begin
-    ScreenPopupError.ShowPopup(Language.Translate('SYNCER_INVALID_ADDRESS'));
+    ScreenPopupError.ShowPopup(Language.Translate('SYNCER_INVALID_PORT'));
     Exit;
   end;
-  Ini.SyncerAddress := Address;
+  Ini.SyncerPort := Port;
   Ini.Save;
 end;
 
@@ -125,11 +125,11 @@ begin
         begin
           if Interactions[SelInteraction].Typ = iButton then
           begin
-            if Interactions[SelInteraction].Num = SyncerAddressButton then
+            if Interactions[SelInteraction].Num = SyncerPortButton then
             begin
-              ScreenPopupInsertUser.ShowTextPrompt(Language.Translate('SYNCER_ADDRESS'),
-                'SYNCER_ADDRESS_HINT', Language.Translate('FILTER_PRESET_SAVE'),
-                @SyncerAddressEntered, nil, Ini.SyncerAddress, 'SYNCER_ADDRESS');
+              ScreenPopupInsertUser.ShowTextPrompt(Language.Translate('SYNCER_PORT'),
+                'SYNCER_PORT_HINT', Language.Translate('FILTER_PRESET_SAVE'),
+                @SyncerPortEntered, nil, IntToStr(Ini.SyncerPort), 'SYNCER_PORT');
               Exit;
             end;
             Ini.Save;
@@ -202,7 +202,7 @@ begin
 
   AddSelectSlide('EXTERNAL_SONG_SEARCH', Ini.ExternalSongSearch,
     [Language.Translate('OPTION_VALUE_OFF'), Language.Translate('OPTION_VALUE_ON')]);
-  SyncerAddressButton := AddButton('SYNCER_ADDRESS');
+  SyncerPortButton := AddButton('SYNCER_PORT');
 
   AddSection('SING_OPTIONS_ADVANCED_SCORING');
   for NoteType := Low(TNoteType) to High(TNoteType) do
