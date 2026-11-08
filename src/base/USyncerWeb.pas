@@ -4,7 +4,7 @@ unit USyncerWeb;
 
 interface
 
-uses Classes, UPath;
+uses Classes, UPath, USong, FPHTTPClient;
 
 type
   TSyncerSong = record
@@ -12,13 +12,20 @@ type
     Artist, Title: UTF8String;
   end;
   TSyncerSongs = array of TSyncerSong;
-  TSyncerOperation = (soSearch, soDownload);
+  TSyncerOperation = (soSearch, soDownload, soLikes);
+  TSyncerChart = record
+    Folder, Filename: IPath;
+    NameKey: UTF8String;
+  end;
+  TSyncerCharts = array of TSyncerChart;
 
   TSyncerClient = class(TThread)
   private
     FAddress, FQuery: UTF8String;
     FSongID: Int64;
     FPort, FLastPort: integer;
+    FCharts: TSyncerCharts;
+    procedure ReadLikes(Client: TFPHTTPClient; Body: TMemoryStream);
   protected
     procedure Execute; override;
   public
@@ -26,7 +33,12 @@ type
     Songs: TSyncerSongs;
     ResponseCode: integer;
     Succeeded: boolean;
-    constructor Create(Kind: TSyncerOperation; const Query: UTF8String; SongID: Int64);
+    Likes: TStringList;
+    constructor Create(Kind: TSyncerOperation; const Query: UTF8String; SongID: Int64;
+      const Charts: TSyncerCharts = nil);
+    destructor Destroy; override;
+    class function BeginLikes: TSyncerClient; static;
+    class function LikesForSong(Likes: TStringList; Song: TSong): integer; static;
     class function Enabled: boolean; static;
     class function SongFolder: IPath; static;
     class function ChartID(const Folder, Chart: IPath): Int64; static;
@@ -34,7 +46,7 @@ type
 
 implementation
 
-uses SysUtils, Sockets, FPHTTPClient, fpjson, jsonparser, UFilesystem, UIni, ULibraryLockdown
+uses SysUtils, Sockets, StrUtils, fpjson, jsonparser, UFilesystem, UIni, ULibraryLockdown, USongs, UUnicodeUtils
   {$IFDEF WINDOWS}, Registry, Windows{$ENDIF}
   {$IFDEF DARWIN}, Process{$ENDIF};
 
@@ -202,7 +214,8 @@ begin
       Result := Result + '%' + IntToHex(Ord(C), 2);
 end;
 
-constructor TSyncerClient.Create(Kind: TSyncerOperation; const Query: UTF8String; SongID: Int64);
+constructor TSyncerClient.Create(Kind: TSyncerOperation; const Query: UTF8String; SongID: Int64;
+  const Charts: TSyncerCharts);
 begin
   inherited Create(true);
   FPort := Ini.SyncerPort;
@@ -210,7 +223,22 @@ begin
   FQuery := Query;
   FSongID := SongID;
   Operation := Kind;
+  if Kind = soLikes then
+  begin
+    FCharts := Charts;
+    Likes := TStringList.Create;
+    Likes.Sorted := true;
+    Likes.CaseSensitive := true;
+  end;
   Start;
+end;
+
+destructor TSyncerClient.Destroy;
+begin
+  Terminate;
+  WaitFor;
+  Likes.Free;
+  inherited;
 end;
 
 procedure TSyncerClient.Execute;
@@ -303,6 +331,11 @@ begin
     if not Connect then Exit;
     URL := 'http://' + FAddress + '/api/songs';
     try
+      if Operation = soLikes then
+      begin
+        ReadLikes(Client, Body);
+        Exit;
+      end;
       if Operation = soDownload then
       begin
         URL := URL + '/' + IntToStr(FSongID) + '/download';
@@ -397,6 +430,163 @@ begin
     except
       // Syncer may be rewriting the metadata.
     end;
+  end;
+end;
+
+function ChartNameKey(const Artist, Title: UTF8String): UTF8String;
+begin
+  Result := UTF8LowerCase(Trim(Artist)) + #1 + UTF8LowerCase(Trim(Title));
+end;
+
+class function TSyncerClient.BeginLikes: TSyncerClient;
+var Charts: TSyncerCharts; I: integer; Song: TSong;
+begin
+  Result := nil;
+  if not Enabled then Exit;
+  SetLength(Charts, USongs.Songs.SongList.Count);
+  for I := 0 to High(Charts) do
+  begin
+    Song := TSong(USongs.Songs.SongList[I]);
+    Charts[I].Folder := Song.Path;
+    Charts[I].Filename := Song.FileName;
+    Charts[I].NameKey := ChartNameKey(Song.Artist, Song.Title);
+  end;
+  Result := TSyncerClient.Create(soLikes, '', 0, Charts);
+end;
+
+class function TSyncerClient.LikesForSong(Likes: TStringList; Song: TSong): integer;
+var I: integer;
+begin
+  Result := 0;
+  if Assigned(Likes) and not Song.Main and (Likes.Count > 0) and
+    Likes.Find(Song.Path.Append(Song.FileName).ToUTF8, I) then
+    Result := PtrInt(Likes.Objects[I]);
+end;
+
+function ReadLikeButtons(const HTML: string; Counts: TStringList; out HasZero: boolean): integer;
+const
+  Prefix = '="/fragments/songs/';
+var
+  Offset, StartID, EndID, StartLabel, EndLabel, Votes: integer;
+  ID: Int64;
+  LabelText: string;
+begin
+  Result := 0;
+  HasZero := false;
+  Offset := 1;
+  repeat
+    StartID := PosEx(Prefix, HTML, Offset);
+    if StartID = 0 then Exit;
+    Inc(StartID, Length(Prefix));
+    EndID := PosEx('/', HTML, StartID);
+    if EndID = 0 then raise EConvertError.Create('Invalid Syncer song button');
+    Offset := EndID + 1;
+    if Copy(HTML, Offset, 5) <> 'like"' then Continue;
+    if not TryStrToInt64(Copy(HTML, StartID, EndID - StartID), ID) or (ID <= 0) then
+      raise EConvertError.Create('Invalid Syncer song ID');
+    StartLabel := PosEx('>', HTML, EndID);
+    EndLabel := PosEx('</button>', HTML, StartLabel + 1);
+    if (StartLabel = 0) or (EndLabel = 0) then raise EConvertError.Create('Invalid Syncer like button');
+    LabelText := Trim(Copy(HTML, StartLabel + 1, EndLabel - StartLabel - 1));
+    Votes := StrToIntDef(Copy(LabelText, LastDelimiter(' ', LabelText) + 1, MaxInt), -1);
+    if Votes < 0 then raise EConvertError.Create('Invalid Syncer like count');
+    Inc(Result);
+    if Votes > 0 then Counts.AddObject(IntToStr(ID), TObject(PtrInt(Votes)))
+    else HasZero := true;
+    Offset := EndLabel + Length('</button>');
+  until false;
+end;
+
+procedure TSyncerClient.ReadLikes(Client: TFPHTTPClient; Body: TMemoryStream);
+const
+  PageSize = 100;
+  MaxPages = 20;
+var
+  Counts, Charts: TStringList;
+  Data: TJSONData;
+  Item: TJSONObject;
+  URL, Query, HTML: string;
+  Key: UTF8String;
+  Deadline: QWord;
+  ID: Int64;
+  Page, Rows, I, ChartIndex, ChartPos, CountIndex, MatchedIDs: integer;
+  HasZero: boolean;
+begin
+  Counts := TStringList.Create;
+  Charts := TStringList.Create;
+  try
+    Client.ConnectTimeout := 500;
+    Client.IOTimeout := 900;
+    Charts.Duplicates := dupAccept;
+    Counts.Sorted := true;
+    Counts.Duplicates := dupIgnore;
+    for I := 0 to High(FCharts) do
+    begin
+      if Terminated then Exit;
+      Charts.AddObject(FCharts[I].NameKey, TObject(PtrInt(I)));
+    end;
+    Charts.Sorted := true;
+    URL := 'http://' + FAddress;
+    Deadline := GetTickCount64 + 3000;
+    try
+      for Page := 0 to MaxPages - 1 do
+      begin
+        if Terminated or (GetTickCount64 >= Deadline) then Exit;
+        Counts.Clear;
+        Query := '?sort_by=likes&sort_order=desc&limit=' + IntToStr(PageSize) +
+          '&offset=' + IntToStr(Page * PageSize);
+        Body.Clear;
+        Client.Get(URL + '/fragments/songs' + Query, Body);
+        SetString(HTML, PChar(Body.Memory), Body.Size);
+        Rows := ReadLikeButtons(HTML, Counts, HasZero);
+        if (Rows = 0) and (Pos('<tr', HTML) > 0) then Exit;
+        if Counts.Count > 0 then
+        begin
+          Body.Clear;
+          Client.Get(URL + '/api/songs' + Query, Body);
+          Body.Position := 0;
+          Data := GetJSON(Body);
+          try
+            if not (Data is TJSONArray) then Exit;
+            MatchedIDs := 0;
+            for I := 0 to Data.Count - 1 do
+            begin
+              if Terminated or (GetTickCount64 >= Deadline) then Exit;
+              if not (Data.Items[I] is TJSONObject) then Exit;
+              Item := TJSONObject(Data.Items[I]);
+              ID := Item.Get('song_id', Int64(0));
+              if not Counts.Find(IntToStr(ID), CountIndex) then Continue;
+              Inc(MatchedIDs);
+              Key := ChartNameKey(Item.Get('artist', ''), Item.Get('title', ''));
+              if not Charts.Find(Key, ChartPos) then Continue;
+              while (ChartPos > 0) and (Charts[ChartPos - 1] = Key) do Dec(ChartPos);
+              while (ChartPos < Charts.Count) and (Charts[ChartPos] = Key) do
+              begin
+                ChartIndex := PtrInt(Charts.Objects[ChartPos]);
+                with FCharts[ChartIndex] do
+                  if ChartID(Folder, Filename) = ID then
+                    Likes.AddObject(Folder.Append(Filename).ToUTF8, Counts.Objects[CountIndex]);
+                Inc(ChartPos);
+              end;
+            end;
+            // The ranking may have changed between the HTML and JSON requests.
+            if MatchedIDs <> Counts.Count then Exit;
+          finally
+            Data.Free;
+          end;
+        end;
+        if HasZero or (Rows < PageSize) then
+        begin
+          Succeeded := true;
+          Exit;
+        end;
+      end;
+    except
+      // Keep the last successful ranking when Syncer cannot be read.
+    end;
+  finally
+    Charts.Free;
+    Counts.Free;
   end;
 end;
 

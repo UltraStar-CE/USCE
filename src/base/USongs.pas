@@ -67,7 +67,8 @@ type
     fltTags,
     fltAge,
     fltProblem,
-    fltFolder
+    fltFolder,
+    fltSyncerLikes
   );
 
   TSongFilterRow = record
