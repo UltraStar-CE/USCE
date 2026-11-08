@@ -3502,7 +3502,9 @@ begin
 end;
 
 procedure TScreenSong.LayoutSearchHeader;
-var Header: TThemeText;
+var
+  Header: TThemeText;
+  FontBounds: TBoundsDbl;
 begin
   if Length(TextNonParty) = 0 then Exit;
   Header := Theme.Song.TextNonParty[0];
@@ -3510,6 +3512,7 @@ begin
      (Header.Y >= Theme.Song.SearchPanel.Y + Theme.Song.SearchPanel.H) then Exit;
   with Text[TextNonParty[0]] do
   begin
+    Y := Header.Y;
     W := Header.W; H := Header.H; Size := Header.Size;
     if ModernKeyboard then
     begin
@@ -3517,6 +3520,17 @@ begin
       H := Theme.Song.SearchPanel.H;
     end;
     Text := Header.Text;
+    if ModernKeyboard then
+    begin
+      SetFontFamily(ResolveThemeFont(FontFile, Font));
+      SetFontStyle(Style);
+      SetFontSize(Size);
+      FontBounds := Fonts[CurrentFont.FontFamily][CurrentFont.FontStyle].Font.BBox(UTF8String('M'), false);
+      Y := Theme.Song.SearchPanel.Y + H / 2 -
+        Fonts[CurrentFont.FontFamily][CurrentFont.FontStyle].Font.Ascender +
+        (FontBounds.Top + FontBounds.Bottom) / 2;
+      ResetFont;
+    end;
   end;
 end;
 
