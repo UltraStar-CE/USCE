@@ -4579,6 +4579,7 @@ procedure TScreenSong.StartPreview;
 begin
   StopMusicPreview;
   StopVideoPreview;
+  PreviewOpened := -1;
   StartMusicPreview;
   PreviewSettledTime := SDL_GetTicks;
 end;
