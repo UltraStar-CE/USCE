@@ -4,12 +4,13 @@
 
 ## Get the game
 
-USCE runs on Windows, macOS and Linux. Our first release is in preparation;
-tested downloads will appear on the [releases page](https://github.com/UltraStar-CE/USCE/releases).
-For now, [COMPILING.md](../COMPILING.md) explains how to build it.
+Download the [latest USCE release](https://github.com/UltraStar-CE/USCE/releases/latest).
+On Windows, choose the installer or the portable ZIP. On macOS, choose the ARM
+DMG for Apple Silicon or the x86 DMG for Intel. On Linux, choose the AppImage or
+the `.deb` package.
 
 The program is called `usce.exe` on Windows, `usce` on Linux, and
-`UltraStar Community Edition.app` on macOS. USCE has no published Flathub package yet.
+`UltraStar Community Edition.app` on macOS.
 
 ## Connect your microphone
 

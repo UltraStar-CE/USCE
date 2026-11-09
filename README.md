@@ -2,8 +2,6 @@
 
 # UltraStar Community Edition
 
-**Your music. Your stage. Your karaoke night.**
-
 USCE is a free, open-source karaoke game for **Windows, macOS and Linux**.
 Follow the lyrics, match the notes and see how your singing scores.
 Sing solo, challenge friends or get everyone involved in a party game.
@@ -31,9 +29,8 @@ Choose a small group or a larger party. Layouts adapt to the number of players.
 
 ## Start singing
 
-Our first USCE release is in preparation. Downloads will appear on the
-[releases page](https://github.com/UltraStar-CE/USCE/releases) after testing.
-You can already [build the game from source](COMPILING.md).
+Download the [latest release](https://github.com/UltraStar-CE/USCE/releases/latest)
+for Windows, macOS or Linux.
 
 1. Connect a microphone and select it in the game's **Record** settings.
 2. Add your UltraStar-format songs. Song collections are separate from the game.
