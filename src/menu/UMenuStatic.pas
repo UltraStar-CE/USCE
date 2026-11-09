@@ -75,7 +75,7 @@ begin
     // Keep the cap inside the old icon's slot and leave space for its label.
     X := X + 2; Y := Y + 4; W := W - 4; H := H - 8;
     if (W <= 0) or (H <= 0) then Exit;
-    SetFont(0, ftRegular);
+    SetFont(0, ftBold);
     SetFontItalic(false);
     SetFontReflection(false, 0);
     Size := H * 0.67;

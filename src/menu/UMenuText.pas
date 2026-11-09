@@ -227,42 +227,8 @@ begin
 end;
 
 procedure DrawKeyFrame(X, Y, Z, W, H, R, G, B, A: real);
-var
-  Lines: TLineList;
-  Right, Top, Bottom, Radius: real;
-
-  procedure Edge(Index: integer; AX1, AY1, AX2, AY2: real);
-  begin
-    with Lines[Index] do
-    begin
-      X1 := AX1;
-      Y1 := AY1;
-      X2 := AX2;
-      Y2 := AY2;
-    end;
-    Lines[Index].Z := Z;
-    Lines[Index].Thickness := 1;
-    Lines[Index].ColR := R;
-    Lines[Index].ColG := G;
-    Lines[Index].ColB := B;
-    Lines[Index].Alpha := A;
-  end;
-
 begin
-  Right := X + W;
-  Top := Y;
-  Bottom := Top + H;
-  Radius := Min(W, H) * 0.14;
-  SetLength(Lines, 8);
-  Edge(0, X + Radius, Top, Right - Radius, Top);
-  Edge(1, Right - Radius, Top, Right, Top + Radius);
-  Edge(2, Right, Top + Radius, Right, Bottom - Radius);
-  Edge(3, Right - Radius, Bottom, Right, Bottom - Radius);
-  Edge(4, X + Radius, Bottom, Right - Radius, Bottom);
-  Edge(5, X, Bottom - Radius, X + Radius, Bottom);
-  Edge(6, X, Top + Radius, X, Bottom - Radius);
-  Edge(7, X, Top + Radius, X + Radius, Top);
-  Renderer.DrawLines(Lines);
+  Renderer.DrawRoundedOutline(X, Y, Z, W, H, R, G, B, A, 0.20, 0.13);
 end;
 
 procedure DrawKeyHint(const Key: UTF8String; X, Y, Z, FontSize, R, G, B, A: real);

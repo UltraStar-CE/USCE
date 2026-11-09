@@ -250,6 +250,8 @@ type
       procedure DrawGlyph(Texture: TTexture); virtual; abstract;
       procedure DrawQuads(QuadList: TQuadList); virtual; abstract;
       procedure DrawQuad(X, Y, Z, W, H, ColR, ColG, ColB, Alpha: single);
+      procedure DrawRoundedOutline(X, Y, Z, W, H, ColR, ColG, ColB, Alpha,
+        Radius, Thickness: single); virtual; abstract;
       procedure DrawTriangles(TriangleList: TTriangleList); virtual; abstract;
       procedure DrawTriangle(X1, Y1, X2, Y2, X3, Y3, Z, ColR, ColG, ColB, Alpha: single);
       procedure DrawLines(LineList: TLineList); virtual; abstract;

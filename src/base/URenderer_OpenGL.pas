@@ -75,6 +75,7 @@ type
       UpdateTransformText: boolean;
 
       WhiteTexture: GLuint;
+      ShapeTexture: TTexture;
       ErrorCode: GLenum;
       SupportsVAO: boolean;
       SupportsFBO: boolean;
@@ -114,6 +115,8 @@ type
       function LoadGlyph(Data: PByte; W, H: integer): TTexture; overload; override;
       procedure DrawTexture(Texture: TTexture); override;
       procedure DrawGlyph(Texture: TTexture); override;
+      procedure DrawRoundedOutline(X, Y, Z, W, H, ColR, ColG, ColB, Alpha,
+        Radius, Thickness: single); override;
       procedure DrawQuads(QuadList: TQuadList); override;
       procedure DrawTriangles(TriangleList: TTriangleList); override;
       procedure DrawLines(LineList: TLineList); override;
@@ -499,6 +502,9 @@ begin
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, PGLvoid(@WhitePixel[0]));
+  ShapeTexture := TTexture_OpenGL.Create(PATH_NONE);
+  TTexture_OpenGL(ShapeTexture).TexID := WhiteTexture;
+  TTexture_OpenGL(ShapeTexture).OwnsTex := false;
 
   glGetIntegerv(GL_MAX_TEXTURE_SIZE, @fMaxTextureSize);
   Limit := Min(Limit, fMaxTextureSize);
@@ -522,6 +528,7 @@ begin
   end;
   glDeleteBuffers(1, @VBO);
   glDeleteBuffers(1, @EBO);
+  ShapeTexture.Free;
   if (WhiteTexture <> 0) then
     glDeleteTextures(1, @WhiteTexture);
   FreeMem(MappedBuffer);
@@ -1139,6 +1146,23 @@ begin
   finally
     MainTexture.Free;
   end;
+end;
+
+procedure TRenderer_OpenGLBase.DrawRoundedOutline(X, Y, Z, W, H, ColR, ColG,
+  ColB, Alpha, Radius, Thickness: single);
+begin
+  ShapeTexture.X := X;
+  ShapeTexture.Y := Y;
+  ShapeTexture.Z := Z;
+  ShapeTexture.W := W;
+  ShapeTexture.H := H;
+  ShapeTexture.ColR := ColR;
+  ShapeTexture.ColG := ColG;
+  ShapeTexture.ColB := ColB;
+  ShapeTexture.Alpha := Alpha;
+  ShapeTexture.CornerRadius := Radius;
+  ShapeTexture.OutlineWidth := Thickness;
+  DrawTexture(ShapeTexture, MainProgram, UpdateTransformMain, TransformLocationMain);
 end;
 
 procedure TRenderer_OpenGLBase.DrawGlyph(Texture: TTexture);
