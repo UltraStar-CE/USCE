@@ -177,7 +177,7 @@ begin
         begin
           if (Songs.SongList.Count >= 1) then
           begin
-            PlayersPlay := UIni.IPlayersVals[Ini.Players];
+            PlayersPlay := ScreenName.ActivePlayerCount;
 
             if Ini.OnSongClick = sSelectPlayer then
               FadeTo(@ScreenSong)

@@ -73,7 +73,8 @@ type
       VoiceIndex: integer;
 
       CountIndex:   integer;
-      PlayerCountOffset: integer;
+      AssignedPlayerCount: integer;
+      AssignedPlayerSlots: cardinal;
       PlayerIndex:  integer;
       ColorIndex:   integer;
       LevelIndex:   integer;
@@ -103,6 +104,8 @@ type
       MicPreviewCount: integer;
       OwnsMicPreview: boolean;
       MicActivity: array[0..UIni.IMaxPlayerCount-1] of single;
+      procedure UpdateAssignedPlayers(Force: boolean = false);
+      function DisplayPlayerName(Index: integer): UTF8String;
       procedure UpdateMicActivity;
       function MicColor(PlayerID: integer): TRGB;
       function SelectedPlayerCount: integer;
@@ -131,7 +134,6 @@ type
       procedure PlayerColorButton(K: integer);
       function NoRepeatColors(ColorP: integer; Interaction: integer; Pos: integer):integer;
       function ActivePlayerCount: integer;
-      procedure SetPlayerCount(Count: integer);
       procedure RefreshPlayers();
       procedure RefreshProfile();
       procedure RefreshColor();
@@ -262,7 +264,8 @@ begin
     X := X - RenderW;
   Y := Round((Y / ScreenH) * RenderH);
 
-  if Theme.Name.Cards.Enabled and BtnDown and (MouseButton = SDL_BUTTON_LEFT) then
+  if Theme.Name.Cards.Enabled and (SelectedPlayerCount > 0) and
+     BtnDown and (MouseButton = SDL_BUTTON_LEFT) then
   begin
     if Theme.Name.Cards.LevelSegments then
       for I := 0 to 2 do
@@ -302,7 +305,8 @@ begin
             AvatarTarget := PlayerAvatars[PlayerIndex];
             AvatarCurrent := AvatarTarget;
             RefreshProfile;
-            Interaction := PlayerNameIID;
+            if Button[PlayerName].Selectable then Interaction := PlayerNameIID
+            else Interaction := PlayerSelectIID;
           end
           else if (Btn = PlayerColorIID) or (Btn = PlayerSelectLevelIID) or
             (Btn = PlayerSelectVoiceIID) then
@@ -524,8 +528,8 @@ begin
       SDLK_RETURN:
         begin
           StopTextInput;
-          LyricsOnly := (PlayerCountOffset = 1) and (SelectedPlayerCount = 0);
-          if not LyricsOnly then Ini.Players := SelectedPlayerCount - 1;
+          UpdateAssignedPlayers;
+          if SelectedPlayerCount > 0 then Ini.Players := SelectedPlayerCount - 1;
 
           for I := 1 to SelectedPlayerCount do
           begin
@@ -825,28 +829,40 @@ end;
 
 function TScreenName.SelectedPlayerCount: integer;
 begin
-  if CountIndex < PlayerCountOffset then Result := 0
-  else Result := UIni.IPlayersVals[CountIndex - PlayerCountOffset];
+  if Party.bPartyGame then Exit(UIni.IPlayersVals[CountIndex]);
+  if CountIndex = 0 then Exit(0);
+  Result := AssignedPlayerCount;
 end;
 
 function TScreenName.ActivePlayerCount: integer;
 begin
-  if not Party.bPartyGame and LyricsOnly then Result := 0
-  else Result := UIni.IPlayersVals[Ini.Players];
+  if Party.bPartyGame then Exit(UIni.IPlayersVals[Ini.Players]);
+  if LyricsOnly then Exit(0);
+  Result := AudioInputProcessor.ConfiguredPlayerCount;
 end;
 
-procedure TScreenName.SetPlayerCount(Count: integer);
+procedure TScreenName.UpdateAssignedPlayers(Force: boolean);
+var
+  Count: integer;
+  Slots: cardinal;
 begin
-  Count := EnsureRange(Count, 0, UIni.IMaxPlayerCount);
-  LyricsOnly := Count = 0;
-  if Count > 0 then Ini.Players := Count - 1;
-  if Display.CurrentScreen = @ScreenName then
-  begin
-    PlayerCountOffset := Ord(not Party.bPartyGame);
-    CountIndex := Max(0, Count - 1 + PlayerCountOffset);
-    SelectsS[PlayersCount].SetSelectOpt(CountIndex);
-    RefreshPlayers;
-  end;
+  if Party.bPartyGame then Exit;
+  Count := AudioInputProcessor.ConfiguredPlayerCount(Slots);
+  if not Force and (Slots = AssignedPlayerSlots) then Exit;
+  AssignedPlayerSlots := Slots;
+  AssignedPlayerCount := Count;
+  UpdateSelectSlideOptions(PlayersCount,
+    [Language.Translate('CONTINUOUS_ZERO_PLAYERS'),
+     Format(Language.Translate('SING_PLAYER_COUNT_ASSIGNED'), [Count])], CountIndex);
+  if not Force then RefreshPlayers;
+end;
+
+function TScreenName.DisplayPlayerName(Index: integer): UTF8String;
+begin
+  if not Party.bPartyGame and (AssignedPlayerSlots and (cardinal(1) shl Index) = 0) then
+    Result := Language.Translate('SING_OPTIONS_RECORD_NOONE')
+  else
+    Result := PlayerNames[Index];
 end;
 
 procedure TScreenName.RefreshPlayers();
@@ -856,11 +872,7 @@ var
 begin
 
   Count := SelectedPlayerCount;
-  if not Party.bPartyGame then
-  begin
-    LyricsOnly := Count = 0;
-    if Count > 0 then Ini.Players := Count - 1;
-  end;
+  if not Party.bPartyGame then LyricsOnly := CountIndex = 0;
 
   while (PlayerIndex > Max(0, Count-1)) do
     PlayerIndex := PlayerIndex - 1;
@@ -892,16 +904,12 @@ begin
   // list players
   for I := 0 to Count -1 do
   begin
-    if not Party.bPartyGame and (PlayerInputSource(I) = pisNone) then
-      Text[PlayerCurrentText[I]].Text := Language.Translate('SING_OPTIONS_RECORD_NOONE')
-    else
-      Text[PlayerCurrentText[I]].Text := PlayerNames[I];
+    Text[PlayerCurrentText[I]].Text := DisplayPlayerName(I);
     SetPlayerAvatar(I);
   end;
 
-  Button[PlayerName].Visible := (Count > 0) and
-    (Party.bPartyGame or (PlayerInputSource(PlayerIndex) <> pisNone));
-  Button[PlayerName].Selectable := Button[PlayerName].Visible;
+  Button[PlayerName].Visible := false;
+  Button[PlayerName].Selectable := false;
   Button[PlayerSelect].Visible := Count > 0;
   Button[PlayerSelect].Selectable := false;
   Button[PlayerAvatar].Visible := Count > 0;
@@ -910,9 +918,15 @@ begin
   Button[Interactions[PlayerSelectIID].Num].Selectable := Count > 0;
   SelectsS[PlayerColor].Visible := Count > 0;
   SelectsS[PlayerSelectLevel].Visible := Count > 0;
+  RefreshVoice;
   for I := 0 to High(PlayerAvatarButton) do Button[PlayerAvatarButton[I]].Visible := false;
-  if Count = 0 then Exit;
   RefreshProfile();
+  if not IsSelectable(Interaction) then
+  begin
+    Interaction := PlayersCountIID;
+    StopTextInput;
+  end;
+  if Count = 0 then Exit;
 
   AvatarTarget := PlayerAvatars[PlayerIndex];
   AvatarCurrent := AvatarTarget;
@@ -924,7 +938,7 @@ var
   Options: array of UTF8String;
   I: integer;
 begin
-  SelectsS[PlayerSelectVoice].Visible := Goto_SingScreen and
+  SelectsS[PlayerSelectVoice].Visible := (SelectedPlayerCount > 0) and Goto_SingScreen and
     (CatSongs.Selected >= 0) and (CatSongs.Selected < Length(CatSongs.Song)) and
     CatSongs.Song[CatSongs.Selected].isDuet;
   if not SelectsS[PlayerSelectVoice].Visible then Exit;
@@ -945,6 +959,9 @@ var
   Used: boolean;
 begin
   if SelectedPlayerCount = 0 then Exit;
+  Button[PlayerName].Visible := Party.bPartyGame or
+    (AssignedPlayerSlots and (cardinal(1) shl PlayerIndex) <> 0);
+  Button[PlayerName].Selectable := Button[PlayerName].Visible;
   // no-avatar for current player
   Button[PlayerAvatarButton[0]].Texture.Free;
   Button[PlayerAvatarButton[0]].Texture := NoAvatarTexture[PlayerIndex + 1].Clone();
@@ -1305,7 +1322,6 @@ end;
 procedure TScreenName.OnShow;
 var
   I: integer;
-  Counts: array of UTF8String;
   PreviewEnd: real;
 begin
   inherited;
@@ -1318,13 +1334,16 @@ begin
 
   Ini.ReloadNames;
   RemoteBridgeIPC.ApplyPendingPlayerCount(true);
-  PlayerCountOffset := Ord(not Party.bPartyGame);
-  SetLength(Counts, Length(IPlayers) + PlayerCountOffset);
-  if PlayerCountOffset = 1 then Counts[0] := Language.Translate('CONTINUOUS_ZERO_PLAYERS');
-  for I := 0 to High(IPlayers) do Counts[I + PlayerCountOffset] := IPlayers[I];
-  CountIndex := Ini.Players + PlayerCountOffset;
-  if LyricsOnly and (PlayerCountOffset = 1) then CountIndex := 0;
-  UpdateSelectSlideOptions(PlayersCount, Counts, CountIndex);
+  if Party.bPartyGame then
+  begin
+    CountIndex := Ini.Players;
+    UpdateSelectSlideOptions(PlayersCount, IPlayers, CountIndex);
+  end
+  else
+  begin
+    CountIndex := Ord(not LyricsOnly);
+    UpdateAssignedPlayers(true);
+  end;
 
   for I := 0 to UIni.IMaxPlayerCount-1 do
   begin
@@ -1704,8 +1723,8 @@ begin
         R.Y + (Theme.Name.Cards.Avatar.Y + Theme.Name.Cards.Avatar.H / 2 - 10) * SY);
       PrintText(LabelText);
     end;
-    if (I = PlayerIndex) and Theme.Name.Cards.EditOutside then
-      Caption(Button[PlayerName].Text[0].Text, Theme.Name.Cards.NameText.X,
+    if (I = PlayerIndex) and (Theme.Name.Cards.EditOutside or not Button[PlayerName].Visible) then
+      Caption(DisplayPlayerName(I), Theme.Name.Cards.NameText.X,
         Theme.Name.Cards.NameText.Y, Theme.Name.Cards.NameText.Size, TextColor);
     if I = PlayerIndex then
     begin
@@ -1740,7 +1759,7 @@ begin
     end
     else
     begin
-      Caption(PlayerNames[I], Theme.Name.Cards.NameText.X, Theme.Name.Cards.NameText.Y,
+      Caption(DisplayPlayerName(I), Theme.Name.Cards.NameText.X, Theme.Name.Cards.NameText.Y,
         Theme.Name.Cards.NameText.Size, TextColor);
       if not Theme.Name.Cards.EditOutside then
       begin
@@ -1780,6 +1799,7 @@ var
   I: integer;
 begin
   ScreenSong.UpdateTransitionPreview;
+  UpdateAssignedPlayers;
   //inherited Draw;
   //heres a little Hack, that causes the Statics
   //are Drawn after the Buttons because of some Blending Problems.
