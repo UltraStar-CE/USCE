@@ -96,13 +96,26 @@ var
   Lines, Fields: TStringList;
   Line, Address: string;
   Port: integer;
+  {$IFDEF LINUX}
+  Table: TextFile;
+  {$ENDIF}
 begin
   Lines := TStringList.Create;
   Fields := TStringList.Create;
   try
     {$IFDEF LINUX}
     if not FileExists('/proc/net/tcp') then Exit;
-    Lines.LoadFromFile('/proc/net/tcp');
+    AssignFile(Table, '/proc/net/tcp');
+    Reset(Table);
+    try
+      while not EOF(Table) do
+      begin
+        ReadLn(Table, Line);
+        Lines.Add(Line);
+      end;
+    finally
+      CloseFile(Table);
+    end;
     {$ENDIF}
     {$IFDEF DARWIN}
     if not RunCommand('/usr/sbin/netstat', ['-an', '-p', 'tcp'], Line) then Exit;
