@@ -107,7 +107,7 @@ const
 type
   IVideo_FFmpeg = interface (IVideo)
   ['{E640E130-C8C0-4399-AF02-67A3569313AB}']
-    function Open(const FileName: IPath): boolean;
+    function Open(const FileName: IPath; const Media: TBytes = nil): boolean;
   end;
 
   // A converted frame waiting in the queue
@@ -141,6 +141,7 @@ type
     fRequestedTime: extended;  //**< stream time the main thread is currently displaying
     fDecoderFailed: boolean; // published terminal failure, protected by fLock
     fDecoderEOF:   boolean;    //**< decode thread reached the end of the stream
+    fFinished:     boolean;    //**< presentation has reached the end (main thread)
     fSlots:        array of TVideoFrameSlot; //**< ring buffer of converted frames
     fSlotHead:     integer;    //**< index of the oldest queued frame
     fSlotCount:    integer;    //**< number of queued frames
@@ -204,7 +205,7 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    function Open(const FileName: IPath): boolean;
+    function Open(const FileName: IPath; const Media: TBytes = nil): boolean;
     procedure Close;
 
     procedure Play;
@@ -250,6 +251,7 @@ type
      function GetReflectionSpacing(): double;
 
      procedure GetFrame(Time: Extended);
+     function Finished: boolean;
      procedure Draw();
   end;
 
@@ -263,7 +265,7 @@ type
     function Init(): boolean;
     function Finalize: boolean;
 
-    function Open(const FileName : IPath): IVideo;
+    function Open(const FileName : IPath; const Media: TBytes = nil): IVideo;
   end;
 
 var
@@ -427,12 +429,12 @@ begin
   Result := true;
 end;
 
-function TVideoPlayback_FFmpeg.Open(const FileName : IPath): IVideo;
+function TVideoPlayback_FFmpeg.Open(const FileName : IPath; const Media: TBytes = nil): IVideo;
 var
   Video: IVideo_FFmpeg;
 begin
   Video := TVideo_FFmpeg.Create;
-  if Video.Open(FileName) then
+  if Video.Open(FileName, Media) then
     Result := Video
   else
     Result := nil;
@@ -451,7 +453,7 @@ begin
   Close();
 end;
 
-function TVideo_FFmpeg.Open(const FileName : IPath): boolean;
+function TVideo_FFmpeg.Open(const FileName : IPath; const Media: TBytes = nil): boolean;
 var
   errnum: Integer;
   AudioStreamIndex: integer;
@@ -492,7 +494,7 @@ begin
   FFmpegCore.UnlockAVCodec();
 
   // use custom 'ufile' protocol for UTF-8 support
-  errnum := FFmpegCore.AVFormatOpenInput(@fFormatContext, PAnsiChar(UTF8ToAnsi(FileName.ToUTF8)));//'ufile:'+FileName.ToUTF8));
+  errnum := FFmpegCore.AVFormatOpenInput(@fFormatContext, PAnsiChar(FileName.ToUTF8), Media);
   if (errnum <> 0) then
   begin
     Log.LogError('Failed to open file "'+ FileName.ToNative +'" ('+FFmpegCore.GetErrorString(errnum)+'::'+IntToStr(errnum)+')');
@@ -976,6 +978,7 @@ begin
   fSeekGen := 0;
 
   fLoop := false;
+  fFinished := false;
   fLoopTime := 0;
 
   fScreen := 1;
@@ -1257,20 +1260,27 @@ begin
     end;
     SDL_UnlockMutex(fLock);
   end
-  else if ReachedEnd and fLoop and not DecodeFailed and
-          (CurrentTime >= fFrameTime + fFrameDuration) then
+  else if ReachedEnd and (DecodeFailed or not fFrameTexValid or
+          (CurrentTime >= fFrameTime + fFrameDuration)) then
   begin
-    // we have to loop, so rewind
-    SetPosition(0);
-    // record the start-time of the current loop, so we can
-    // determine the position in the stream (fFrameTime-fLoopTime) later.
-    fLoopTime := Time;
+    if fLoop and not DecodeFailed and fFrameTexValid then
+    begin
+      SetPosition(0);
+      fLoopTime := Time;
+    end
+    else
+      fFinished := true;
   end;
 
   {$IFDEF VideoBenchmark}
   Log.BenchmarkEnd(15);
   Log.LogBenchmark('Texture', 15);
   {$ENDIF}
+end;
+
+function TVideo_FFmpeg.Finished: boolean;
+begin
+  Result := fFinished;
 end;
 
 procedure TVideo_FFmpeg.GetVideoRect(var ScreenRect, TexRect: TRectCoords);
@@ -1516,6 +1526,7 @@ begin
 
   fFrameTime := Time;
   fFrameTexValid := false;
+  fFinished := false;
 
   if (fLock = nil) then
     Exit;

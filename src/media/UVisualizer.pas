@@ -92,7 +92,7 @@ type
 
       function Finalize(): boolean;
 
-      function Open(const aFileName: IPath): IVideo;
+      function Open(const aFileName: IPath; const Media: TBytes = nil): IVideo;
   end;
 
   TVideo_ProjectM = class( TInterfacedObject, IVideo )
@@ -152,6 +152,7 @@ type
       function GetReflectionSpacing(): double;
 
       procedure GetFrame(Time: Extended);
+      function Finished: boolean;
       procedure Draw();
   end;
 
@@ -347,7 +348,7 @@ begin
   Result := true;
 end;
 
-function TVideoPlayback_ProjectM.Open(const aFileName: IPath): IVideo;
+function TVideoPlayback_ProjectM.Open(const aFileName: IPath; const Media: TBytes = nil): IVideo;
 begin
   Result := TVideo_ProjectM.Create(self);
 end;
@@ -530,6 +531,11 @@ end;
 function TVideo_ProjectM.GetReflectionSpacing(): double;
 begin
   Result := 0;
+end;
+
+function TVideo_ProjectM.Finished: boolean;
+begin
+  Result := false;
 end;
 
 procedure TVideo_ProjectM.GetFrame(Time: Extended);

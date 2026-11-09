@@ -142,6 +142,7 @@ type
     ColG:   real;
     ColB:   real;
     Tex:    string;
+    KeyCap: UTF8String;
     Typ:    TTextureType;
     TexX1:  real;
     TexY1:  real;
@@ -3629,6 +3630,12 @@ begin
   end;
 
   ThemeStatic.Tex := ReadString(SectionList, 'Tex', '');
+  // A theme can opt its own keyboard legend textures into drawn keycaps.
+  ThemeStatic.KeyCap := ThemeIni.ReadString('Keycaps', ThemeStatic.Tex, '');
+  {$IFDEF DARWIN}
+  if SameText(ThemeStatic.Tex, 'ButtonAlt') and (ThemeStatic.KeyCap <> '') then
+    ThemeStatic.KeyCap := ThemeIni.ReadString('Keycaps', 'ButtonAltMac', ThemeStatic.KeyCap);
+  {$ENDIF}
   ThemeStatic.X := ReadInteger(SectionList, 'X', 0);
   ThemeStatic.Y := ReadInteger(SectionList, 'Y', 0);
   ThemeStatic.Z := ReadFloat  (SectionList, 'Z', 0);

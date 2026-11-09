@@ -107,6 +107,7 @@ var
 begin
   // first position for no-avatar
   SetLength(AvatarsList, 1);
+  SetLength(AvatarsMD5, 1);
 
   // Find avatars
   for I := 0 to AvatarsPaths.Count - 1 do
