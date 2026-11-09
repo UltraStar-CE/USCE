@@ -37,6 +37,13 @@ const
 const
   SWS_FAST_BILINEAR = 1;
   SWS_LANCZOS = $200;
+  SWS_CS_ITU709 = 1;
+  SWS_CS_FCC = 4;
+  SWS_CS_ITU601 = 5;
+  SWS_CS_SMPTE170M = 5;
+  SWS_CS_SMPTE240M = 7;
+  SWS_CS_DEFAULT = 5;
+  SWS_CS_BT2020 = 9;
 type
   PSwsContext = ^TSwsContext;
   TSwsContext = record
@@ -51,5 +58,7 @@ function sws_isSupportedInput(pix_fmt: TAVPixelFormat): cint; cdecl; external sw
 function sws_scale(c: PSwsContext; srcSlice: ppcuint8; srcStride: pcint; srcSliceY: cint; srcSliceH: cint; dst: ppcuint8; dstStride: pcint): cint; cdecl; external sw__scale;
 function sws_getContext(srcW: cint; srcH: cint; srcFormat: TAVPixelFormat; dstW: cint; dstH: cint; dstFormat: TAVPixelFormat; flags: cint; srcFilter: PSwsFilter; dstFilter: PSwsFilter; param: pcdouble): PSwsContext; cdecl; external sw__scale;
 procedure sws_freeContext(swsContext: PSwsContext); cdecl; external sw__scale;
+function sws_getCoefficients(colorspace: cint): pcint; cdecl; external sw__scale;
+function sws_setColorspaceDetails(c: PSwsContext; inv_table: pcint; srcRange: cint; table: pcint; dstRange: cint; brightness: cint; contrast: cint; saturation: cint): cint; cdecl; external sw__scale;
 implementation
 end.

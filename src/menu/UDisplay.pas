@@ -89,6 +89,9 @@ type
 
       Cursor_Update:       boolean;
 
+      ScreenshotNotice: UTF8String;
+      ScreenshotNoticeStarted: cardinal;
+      procedure DrawScreenshotNotice;
       procedure DrawDebugInformation;
 
       { called by MoveCursor and OnMouseButton to update last move and start fade in }
@@ -580,6 +583,7 @@ begin
     if not BlackScreen then
     begin
       DrawSongProblem;
+      if S = 1 then DrawScreenshotNotice;
       DrawCursor;
     end;
   end; // for
@@ -888,6 +892,37 @@ begin
 
 end;
 
+procedure TDisplay.DrawScreenshotNotice;
+const
+  Duration = 4000;
+  Margin = 12;
+  Padding = 8;
+  NoticeHeight = 26;
+var
+  Width, X, Y: real;
+begin
+  if ScreenshotNotice = '' then Exit;
+  if SDL_GetTicks - ScreenshotNoticeStarted >= Duration then
+  begin
+    ScreenshotNotice := '';
+    Exit;
+  end;
+
+  Renderer.DepthTest := false;
+  SetFont(0, ftRegular);
+  SetFontSize(12);
+  SetFontItalic(false);
+  SetFontReflection(false, 0);
+  SetFontZ(0);
+  SetFontColor(1, 1, 1, 1);
+  Width := TextWidth(ScreenshotNotice);
+  X := RenderW - Margin - Width - 2 * Padding;
+  Y := RenderH - 48 - NoticeHeight;
+  Renderer.DrawQuad(X, Y, 0, Width + 2 * Padding, NoticeHeight, 0, 0, 0, 0.8);
+  SetFontPos(X + Padding, Y + 5);
+  PrintText(ScreenshotNotice);
+end;
+
 procedure TDisplay.SaveScreenShot;
 var
   Num:        integer;
@@ -925,9 +960,10 @@ begin
   //  Success := WriteBMPImage(FileName, Surface);
   //Success := WritePNGImage(FileName, Surface);
   if Success then
-    ScreenPopupInfo.ShowPopup(Format(Language.Translate('SCREENSHOT_SAVED'), [FileName.GetName.ToUTF8()]))
+    ScreenshotNotice := Format(Language.Translate('SCREENSHOT_SAVED'), [FileName.GetName.ToUTF8()])
   else
-    ScreenPopupError.ShowPopup(Language.Translate('SCREENSHOT_FAILED'));
+    ScreenshotNotice := Language.Translate('SCREENSHOT_FAILED');
+  ScreenshotNoticeStarted := SDL_GetTicks;
 
   SDL_FreeSurface(Surface);
   FreeMem(ScreenData);
