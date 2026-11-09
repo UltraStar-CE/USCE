@@ -112,7 +112,8 @@ type
       function GetMouseOverArea: TMouseOverRect;
   end;
 
-procedure DrawKeyFrame(X, Y, Z, W, H, R, G, B, A: real);
+procedure DrawKeyFrame(X, Y, Z, W, H, R, G, B, A: real;
+  Reflection: boolean; ReflectionSpacing: real);
 
 implementation
 
@@ -226,15 +227,22 @@ begin
   Result := TextWidth(Key) + FontSize * 0.36;
 end;
 
-procedure DrawKeyFrame(X, Y, Z, W, H, R, G, B, A: real);
+procedure DrawKeyFrame(X, Y, Z, W, H, R, G, B, A: real;
+  Reflection: boolean; ReflectionSpacing: real);
 begin
-  Renderer.DrawRoundedOutline(X, Y, Z, W, H, R, G, B, A, 0.20, 0.13);
+  Renderer.DrawRoundedOutline(X, Y, Z, W, H, R, G, B, A, 0.20, 0.09,
+    Reflection, ReflectionSpacing);
 end;
 
-procedure DrawKeyHint(const Key: UTF8String; X, Y, Z, FontSize, R, G, B, A: real);
+procedure DrawKeyHint(const Key: UTF8String; X, Y, Z, FontSize, R, G, B, A: real;
+  Reflection: boolean; ReflectionSpacing: real);
+var
+  Ascender: real;
 begin
+  Ascender := Fonts[CurrentFont.FontFamily][CurrentFont.FontStyle].Font.Ascender;
   DrawKeyFrame(X, Y + FontSize * 0.02, Z, KeyHintWidth(Key, FontSize),
-    FontSize * 0.83, R, G, B, A);
+    FontSize * 0.83, R, G, B, A, Reflection,
+    ReflectionSpacing + 2 * (Ascender - FontSize * 0.85));
   SetFontPos(X + FontSize * 0.18, Y);
   PrintText(Key);
 end;
@@ -284,7 +292,7 @@ begin
 end;
 
 procedure PrintInlineText(const Value: UTF8String; X, Y, Z: real; BaseStyle: integer;
-    FontSize, R, G, B, A: single; InitialBold: boolean = false);
+    FontSize, R, G, B, A: single; InitialBold, Reflection: boolean; ReflectionSpacing: real);
 var
   Bold: boolean;
   CurrentX: real;
@@ -304,16 +312,17 @@ var
       CurrentStyle := BaseStyle;
     SetFontStyle(CurrentStyle);
     SetFontSize(FontSize);
+    SetFontReflection(Reflection, ReflectionSpacing);
     SetFontColor(R, G, B, A);
     SetFontZ(Z);
     if InlineChord(Text, Bold, FirstKey, SecondKey) then
     begin
-      DrawKeyHint(FirstKey, CurrentX, Y, Z, FontSize, R, G, B, A);
+      DrawKeyHint(FirstKey, CurrentX, Y, Z, FontSize, R, G, B, A, Reflection, ReflectionSpacing);
       CurrentX := CurrentX + KeyHintWidth(FirstKey, FontSize);
       SetFontPos(CurrentX, Y);
       PrintText(' + ');
       CurrentX := CurrentX + TextWidth(' + ');
-      DrawKeyHint(SecondKey, CurrentX, Y, Z, FontSize, R, G, B, A);
+      DrawKeyHint(SecondKey, CurrentX, Y, Z, FontSize, R, G, B, A, Reflection, ReflectionSpacing);
       CurrentX := CurrentX + KeyHintWidth(SecondKey, FontSize);
     end
     else
@@ -710,7 +719,7 @@ begin
           end;
 
           PrintInlineText(Text2, X2, Y2, Z, Style, Size, ColR*Int, ColG*Int, ColB*Int, Alpha,
-            TextTileBoldStart[I]);
+            TextTileBoldStart[I], Reflection, ReflectionSpacing);
         end
         else
         begin

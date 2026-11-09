@@ -116,7 +116,7 @@ type
       procedure DrawTexture(Texture: TTexture); override;
       procedure DrawGlyph(Texture: TTexture); override;
       procedure DrawRoundedOutline(X, Y, Z, W, H, ColR, ColG, ColB, Alpha,
-        Radius, Thickness: single); override;
+        Radius, Thickness: single; Reflection: boolean; ReflectionSpacing: single); override;
       procedure DrawQuads(QuadList: TQuadList); override;
       procedure DrawTriangles(TriangleList: TTriangleList); override;
       procedure DrawLines(LineList: TLineList); override;
@@ -1149,7 +1149,7 @@ begin
 end;
 
 procedure TRenderer_OpenGLBase.DrawRoundedOutline(X, Y, Z, W, H, ColR, ColG,
-  ColB, Alpha, Radius, Thickness: single);
+  ColB, Alpha, Radius, Thickness: single; Reflection: boolean; ReflectionSpacing: single);
 begin
   ShapeTexture.X := X;
   ShapeTexture.Y := Y;
@@ -1162,6 +1162,8 @@ begin
   ShapeTexture.Alpha := Alpha;
   ShapeTexture.CornerRadius := Radius;
   ShapeTexture.OutlineWidth := Thickness;
+  ShapeTexture.Reflection := Reflection;
+  ShapeTexture.ReflectionSpacing := ReflectionSpacing;
   DrawTexture(ShapeTexture, MainProgram, UpdateTransformMain, TransformLocationMain);
 end;
 
