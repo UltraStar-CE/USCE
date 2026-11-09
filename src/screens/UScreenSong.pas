@@ -3731,7 +3731,6 @@ var
   dx:         real;
   dt:         real;
   VideoAlpha: real;
-  Position:   real;
   I, J:       integer;
 
   procedure SetMarkedCardTexture(StaticIndex: integer; const ThemeStatic: TThemeStatic);
@@ -3863,6 +3862,12 @@ begin
     CoverTime := 0;
   end;
 
+  if HasSelection and Assigned(fCurrentVideo) and (ScreenAct = 1) then
+  begin
+    fCurrentVideo.GetFrame(CatSongs.Song[Interaction].VideoGAP + AudioPlayback.Position);
+    if fCurrentVideo.Finished then StopVideoPreview;
+  end;
+
   //Fading Functions, Only if Covertime is under 5 Seconds
   if (TSongMenuMode(Ini.SongMenu) in [smChessboard, smList]) then
   begin
@@ -3975,15 +3980,8 @@ begin
 
   //  StopVideoPreview;
 
-  Position := AudioPlayback.Position;
-
   if HasSelection and Assigned(fCurrentVideo) then
   begin
-    // Just call this once
-    // when Screens = 2
-    if (ScreenAct = 1) then
-      fCurrentVideo.GetFrame(CatSongs.Song[Interaction].VideoGAP + Position);
-
     fCurrentVideo.SetScreen(ScreenAct);
     fCurrentVideo.Alpha := VideoAlpha;
 

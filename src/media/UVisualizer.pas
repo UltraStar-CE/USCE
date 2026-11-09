@@ -152,6 +152,7 @@ type
       function GetReflectionSpacing(): double;
 
       procedure GetFrame(Time: Extended);
+      function Finished: boolean;
       procedure Draw();
   end;
 
@@ -530,6 +531,11 @@ end;
 function TVideo_ProjectM.GetReflectionSpacing(): double;
 begin
   Result := 0;
+end;
+
+function TVideo_ProjectM.Finished: boolean;
+begin
+  Result := false;
 end;
 
 procedure TVideo_ProjectM.GetFrame(Time: Extended);

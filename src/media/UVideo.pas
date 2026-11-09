@@ -141,6 +141,7 @@ type
     fRequestedTime: extended;  //**< stream time the main thread is currently displaying
     fDecoderFailed: boolean; // published terminal failure, protected by fLock
     fDecoderEOF:   boolean;    //**< decode thread reached the end of the stream
+    fFinished:     boolean;    //**< presentation has reached the end (main thread)
     fSlots:        array of TVideoFrameSlot; //**< ring buffer of converted frames
     fSlotHead:     integer;    //**< index of the oldest queued frame
     fSlotCount:    integer;    //**< number of queued frames
@@ -250,6 +251,7 @@ type
      function GetReflectionSpacing(): double;
 
      procedure GetFrame(Time: Extended);
+     function Finished: boolean;
      procedure Draw();
   end;
 
@@ -976,6 +978,7 @@ begin
   fSeekGen := 0;
 
   fLoop := false;
+  fFinished := false;
   fLoopTime := 0;
 
   fScreen := 1;
@@ -1257,20 +1260,27 @@ begin
     end;
     SDL_UnlockMutex(fLock);
   end
-  else if ReachedEnd and fLoop and not DecodeFailed and
-          (CurrentTime >= fFrameTime + fFrameDuration) then
+  else if ReachedEnd and (DecodeFailed or not fFrameTexValid or
+          (CurrentTime >= fFrameTime + fFrameDuration)) then
   begin
-    // we have to loop, so rewind
-    SetPosition(0);
-    // record the start-time of the current loop, so we can
-    // determine the position in the stream (fFrameTime-fLoopTime) later.
-    fLoopTime := Time;
+    if fLoop and not DecodeFailed and fFrameTexValid then
+    begin
+      SetPosition(0);
+      fLoopTime := Time;
+    end
+    else
+      fFinished := true;
   end;
 
   {$IFDEF VideoBenchmark}
   Log.BenchmarkEnd(15);
   Log.LogBenchmark('Texture', 15);
   {$ENDIF}
+end;
+
+function TVideo_FFmpeg.Finished: boolean;
+begin
+  Result := fFinished;
 end;
 
 procedure TVideo_FFmpeg.GetVideoRect(var ScreenRect, TexRect: TRectCoords);
@@ -1516,6 +1526,7 @@ begin
 
   fFrameTime := Time;
   fFrameTexValid := false;
+  fFinished := false;
 
   if (fLock = nil) then
     Exit;

@@ -448,6 +448,7 @@ type
       function GetReflectionSpacing(): double;
 
       procedure GetFrame(Time: Extended);
+      function Finished: boolean;
       procedure Draw();
 
 

@@ -156,6 +156,7 @@ type
       function GetReflectionSpacing(): double;
 
       procedure GetFrame(Time: Extended);
+      function Finished: boolean;
       procedure Draw();
 
       property Screen: integer read GetScreen;
@@ -531,6 +532,11 @@ end;
 function TVideo_Dummy.GetReflectionSpacing(): double;
 begin
   Result := 0;
+end;
+
+function TVideo_Dummy.Finished: boolean;
+begin
+  Result := false;
 end;
 
 procedure TVideo_Dummy.GetFrame(Time: Extended);
