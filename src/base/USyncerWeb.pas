@@ -28,12 +28,14 @@ type
     Succeeded: boolean;
     constructor Create(Kind: TSyncerOperation; const Query: UTF8String; SongID: Int64);
     class function Enabled: boolean; static;
+    class function SongFolder: IPath; static;
     class function ChartID(const Folder, Chart: IPath): Int64; static;
   end;
 
 implementation
 
-uses SysUtils, Sockets, FPHTTPClient, fpjson, jsonparser, UFilesystem, UIni, ULibraryLockdown;
+uses SysUtils, Sockets, FPHTTPClient, fpjson, jsonparser, UFilesystem, UIni, ULibraryLockdown
+  {$IFDEF WINDOWS}, Registry, Windows{$ENDIF};
 
 type
   TResponseBuffer = class(TMemoryStream)
@@ -192,6 +194,24 @@ begin
   end;
 end;
 
+class function TSyncerClient.SongFolder: IPath;
+{$IFDEF WINDOWS}
+var Settings: TRegistry;
+{$ENDIF}
+begin
+  Result := PATH_NONE;
+  {$IFDEF WINDOWS}
+  Settings := TRegistry.Create(KEY_READ);
+  try
+    Settings.RootKey := HKEY_CURRENT_USER;
+    if Settings.OpenKeyReadOnly('Software\bohning\usdb_syncer') and Settings.ValueExists('song_dir') then
+      Result := Path(UnicodeString(Settings.ReadString('song_dir')));
+  finally
+    Settings.Free;
+  end;
+  {$ENDIF}
+end;
+
 class function TSyncerClient.ChartID(const Folder, Chart: IPath): Int64;
 var
   Iter: IFileIterator;
@@ -212,7 +232,8 @@ begin
         try
           if not (Data is TJSONObject) then Continue;
           Txt := TJSONObject(Data).Find('txt');
-          if (Txt is TJSONObject) and (TJSONObject(Txt).Get('fname', '') = Chart.ToUTF8) then
+          if (Txt is TJSONObject) and
+             Chart.Equals(UTF8String(TJSONObject(Txt).Get('fname', '')), not FileSystem.IsCaseSensitive) then
             Exit(TJSONObject(Data).Get('song_id', Int64(0)));
         finally
           Data.Free;

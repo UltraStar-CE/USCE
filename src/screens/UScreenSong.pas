@@ -378,6 +378,7 @@ uses
   BaseUnix,
   {$ENDIF}
   URemoteSongLibrary,
+  USyncerWeb,
   URecord,
   UInputSource,
   UJoystick,
@@ -918,7 +919,7 @@ begin
     if (SDL_ModState and KMOD_CTRL <> 0) and (SDL_ModState and KMOD_ALT = 0) and
        (PressedKey = SDLK_f) and (SDL_ModState and KMOD_SHIFT = 0) then
     begin
-      if (Songs.SongList.Count > 0) and FreeListMode then ScreenSongJumpto.Visible := true;
+      if ((Songs.SongList.Count > 0) or TSyncerClient.Enabled) and FreeListMode then ScreenSongJumpto.Visible := true;
       Exit;
     end;
     if ModernKeyboard and not ControllerKeyInput then
@@ -928,7 +929,7 @@ begin
          ((SDL_ModState and (KMOD_CTRL or KMOD_ALT) = 0) or
           ((SDL_ModState and KMOD_CTRL <> 0) and (SDL_ModState and KMOD_ALT <> 0))) then
       begin
-        if Songs.SongList.Count > 0 then
+        if (Songs.SongList.Count > 0) or TSyncerClient.Enabled then
           ScreenSongJumpto.SetTypingQuery(ScreenSongJumpto.TypingQuery + UCS4ToUTF8String(CharCode));
         Exit;
       end;
@@ -1214,7 +1215,7 @@ begin
 
       SDLK_J: //Show Jumpto Menu
         begin
-          if (Songs.SongList.Count > 0) and (FreeListMode) then
+          if ((Songs.SongList.Count > 0) or TSyncerClient.Enabled) and FreeListMode then
           begin
             ScreenSongJumpto.Visible := true;
           end;
@@ -3431,6 +3432,8 @@ var
   PlaylistReloaded, PlaylistReapplied: Boolean;
 begin
   SetTextInput(ModernKeyboard);
+  if (Songs.SongList.Count = 0) and TSyncerClient.Enabled then
+    ScreenSongJumpto.SetSearchText('');
   SyncDuetSingerTheme;
 
   isScrolling := true;
