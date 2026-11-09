@@ -95,6 +95,14 @@ type
   cenum = cint;
 
 const
+  AVCOL_RANGE_JPEG = 2;
+  AVCOL_SPC_BT709 = 1;
+  AVCOL_SPC_FCC = 4;
+  AVCOL_SPC_BT470BG = 5;
+  AVCOL_SPC_SMPTE170M = 6;
+  AVCOL_SPC_SMPTE240M = 7;
+  AVCOL_SPC_BT2020_NCL = 9;
+  AVCOL_SPC_BT2020_CL = 10;
   AVERROR_EOF = -(ord('E') or (ord('O') shl 8) or (ord('F') shl 16) or (ord(' ') shl 24));
   AV_LOG_FATAL = 8;
   AV_NOPTS_VALUE = -9223372036854775808;
@@ -125,6 +133,8 @@ type
     AVMEDIA_TYPE_VIDEO,
     AVMEDIA_TYPE_AUDIO
   );
+  TAVColorRange = cenum;
+  TAVColorSpace = cenum;
   ppcuint8 = ^pcuint8;
   PAVFrame = ^TAVFrame;
   PPAVFrame = ^PAVFrame;
@@ -145,6 +155,20 @@ type
     we_do_not_use_quality: cint;
     we_do_not_use_opaque: pointer;
     repeat_pict: cint;
+    we_do_not_use_interlaced_frame: cint;
+    we_do_not_use_top_field_first: cint;
+    we_do_not_use_palette_has_changed: cint;
+    we_do_not_use_sample_rate: cint;
+    we_do_not_use_buf: array [0..AV_NUM_DATA_POINTERS-1] of pointer;
+    we_do_not_use_extended_buf: pointer;
+    we_do_not_use_nb_extended_buf: cint;
+    we_do_not_use_side_data: pointer;
+    we_do_not_use_nb_side_data: cint;
+    we_do_not_use_flags: cint;
+    color_range: TAVColorRange;
+    we_do_not_use_color_primaries: cenum;
+    we_do_not_use_color_trc: cenum;
+    colorspace: TAVColorSpace;
     do_not_instantiate_this_record: incomplete_record;
   end;
   PAVChannelLayout = ^TAVChannelLayout;

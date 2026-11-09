@@ -448,6 +448,7 @@ type
       function GetReflectionSpacing(): double;
 
       procedure GetFrame(Time: Extended);
+      function Finished: boolean;
       procedure Draw();
 
 
@@ -468,7 +469,7 @@ type
       function Init(): boolean;
       function Finalize: boolean;
 
-      function Open(const FileName : IPath): IVideo;
+      function Open(const FileName : IPath; const Media: TBytes = nil): IVideo;
   end;
 
   IVideoVisualization = Interface( IVideoPlayback )
@@ -499,7 +500,7 @@ type
       function  Length: real;
       function  GetFileName: string;
 
-      function Open(const Filename: IPath; const FilenameKaraoke: IPath): boolean; // true if succeed
+      function Open(const Filename: IPath; const FilenameKaraoke: IPath; const Media: TBytes = nil): boolean; // true if succeed
       procedure Close;
 
       procedure Play;
@@ -565,7 +566,7 @@ type
 
   IAudioDecoder = Interface( IGenericDecoder )
   ['{AB47B1B6-2AA9-4410-BF8C-EC79561B5478}']
-      function Open(const Filename: IPath): TAudioDecodeStream;
+      function Open(const Filename: IPath; const Media: TBytes = nil): TAudioDecodeStream;
   end;
 
   IAudioInput = Interface

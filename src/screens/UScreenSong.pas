@@ -64,6 +64,20 @@ uses
 
 type
   TVisArr = array of integer;
+  TPreviewMediaLoad = class(TThread)
+  private
+    Limit: integer;
+  protected
+    procedure Execute; override;
+    procedure ReadSnapshot;
+  public
+    FileName: IPath;
+    Data: TBytes;
+    Discard, TooLarge: boolean;
+    constructor Create(const Source: IPath; ByteLimit: integer);
+    procedure Cancel;
+  end;
+
   TScreenSong = class(TMenu)
     private
       Equalizer: Tms_Equalizer;
@@ -71,6 +85,8 @@ type
       PreviewOpened: Integer; // interaction of the Song that is loaded for preview music
                               // -1 if nothing is opened
       PreviewEnd: real;
+      AudioPreviewLoad, VideoPreviewLoad: TPreviewMediaLoad;
+      RefreshingPlayingPreview, PreviewReloadPending: boolean;
 
       isScrolling: boolean;   // true if song flow is about to move
 
@@ -116,8 +132,9 @@ type
 
       function HasSelection: boolean;
       procedure SchedulePreview(SelectionSettled: boolean = false);
-      procedure StartMusicPreview();
-      procedure StartVideoPreview();
+      procedure StartMusicPreview(const Media: TBytes = nil);
+      procedure StartVideoPreview(const Media: TBytes = nil);
+      procedure FinishPreviewLoad(var Load: TPreviewMediaLoad; IsVideo: boolean);
       function GetSongButtonMouseOverArea(ButtonIndex: integer): TMouseOverRect;
       function ReloadCurrentPlaylist(ForceCheck: boolean): boolean;
     public
@@ -3297,7 +3314,7 @@ begin
     StartFinishedSong(TransitionCandidate, PreviewEnd);
   KeepPreview := KeepPreviewPositionOnShow and
     (AudioPlayback.Length > 0) and not AudioPlayback.Finished;
-  if (SongIndex <> Interaction) and not KeepPreview then
+  if (SongIndex <> Interaction) and not KeepPreview and not RefreshingPlayingPreview then
     AudioPlayback.Stop;
   if KeepPreview or SuppressTransitionPreview(TransitionCandidate) then
     PreviewOpened := Interaction
@@ -3467,6 +3484,7 @@ end;
 
 procedure TScreenSong.OnHide;
 begin
+  if Assigned(AudioPreviewLoad) then AudioPreviewLoad.Cancel;
   StopTextInput;
   inherited;
   if not KeepPreviewMusicOnHide then
@@ -3492,6 +3510,10 @@ end;
 
 destructor TScreenSong.Destroy;
 begin
+  if Assigned(AudioPreviewLoad) then AudioPreviewLoad.Cancel;
+  if Assigned(VideoPreviewLoad) then VideoPreviewLoad.Cancel;
+  AudioPreviewLoad.Free;
+  VideoPreviewLoad.Free;
   ModernFooter.Free;
   inherited;
 end;
@@ -3502,7 +3524,9 @@ begin
 end;
 
 procedure TScreenSong.LayoutSearchHeader;
-var Header: TThemeText;
+var
+  Header: TThemeText;
+  FontBounds: TBoundsDbl;
 begin
   if Length(TextNonParty) = 0 then Exit;
   Header := Theme.Song.TextNonParty[0];
@@ -3510,6 +3534,7 @@ begin
      (Header.Y >= Theme.Song.SearchPanel.Y + Theme.Song.SearchPanel.H) then Exit;
   with Text[TextNonParty[0]] do
   begin
+    Y := Header.Y;
     W := Header.W; H := Header.H; Size := Header.Size;
     if ModernKeyboard then
     begin
@@ -3517,6 +3542,17 @@ begin
       H := Theme.Song.SearchPanel.H;
     end;
     Text := Header.Text;
+    if ModernKeyboard then
+    begin
+      SetFontFamily(ResolveThemeFont(FontFile, Font));
+      SetFontStyle(Style);
+      SetFontSize(Size);
+      FontBounds := Fonts[CurrentFont.FontFamily][CurrentFont.FontStyle].Font.BBox(UTF8String('M'), false);
+      Y := Theme.Song.SearchPanel.Y + H / 2 -
+        Fonts[CurrentFont.FontFamily][CurrentFont.FontStyle].Font.Ascender +
+        (FontBounds.Top + FontBounds.Bottom) / 2;
+      ResetFont;
+    end;
   end;
 end;
 
@@ -3717,7 +3753,6 @@ var
   dx:         real;
   dt:         real;
   VideoAlpha: real;
-  Position:   real;
   I, J:       integer;
 
   procedure SetMarkedCardTexture(StaticIndex: integer; const ThemeStatic: TThemeStatic);
@@ -3778,9 +3813,14 @@ begin
 
   // Use the same preview scheduling for every way Interaction can change.
   SchedulePreview;
+  FinishPreviewLoad(AudioPreviewLoad, false);
+  FinishPreviewLoad(VideoPreviewLoad, true);
 
   if (PreviewEnd > 0) and (AudioPlayback.Position >= PreviewEnd) then
-    StopMusicPreview;
+  begin
+    AudioPlayback.Stop;
+    PreviewEnd := 0;
+  end;
   ReloadCurrentPlaylist(false);
   SendRemoteSongSelectState(false);
 
@@ -3804,19 +3844,21 @@ begin
 
   // Audio should react quickly, independently of the cover-scroll animation.
   if (Ini.PreviewVolume <> 0) and
-     (PreviewOpened <> Interaction) and  // No preview loaded for current song
+     (AudioPreviewLoad = nil) and
+     ((PreviewOpened <> Interaction) or PreviewReloadPending) and
      (LastPreviewStartTime > 0) and
      (SDL_GetTicks - LastPreviewStartTime >= PREVIEW_DEBOUNCE_MS) then
   begin
     LastPreviewStartTime := 0;
+    PreviewReloadPending := false;
     StartMusicPreview;
   end;
 
   // Video opening may block the render thread, so wait until the screen
   // transition and selection movement have finished.
   if ShowFinish and (not isScrolling) and (Ini.PreviewVolume <> 0) and
-     (PreviewOpened = Interaction) and
-     (PreviewSettledTime > 0) and
+     (PreviewOpened = Interaction) and (VideoPreviewLoad = nil) and
+     (AudioPreviewLoad = nil) and (PreviewSettledTime > 0) and
      (SDL_GetTicks - PreviewSettledTime >= PREVIEW_DEBOUNCE_MS) then
   begin
     PreviewSettledTime := 0;
@@ -3847,6 +3889,12 @@ begin
       ReloadCurrentPlaylist(true);
     end;
     CoverTime := 0;
+  end;
+
+  if HasSelection and Assigned(fCurrentVideo) and (ScreenAct = 1) then
+  begin
+    fCurrentVideo.GetFrame(CatSongs.Song[Interaction].VideoGAP + AudioPlayback.Position);
+    if fCurrentVideo.Finished then StopVideoPreview;
   end;
 
   //Fading Functions, Only if Covertime is under 5 Seconds
@@ -3961,15 +4009,8 @@ begin
 
   //  StopVideoPreview;
 
-  Position := AudioPlayback.Position;
-
   if HasSelection and Assigned(fCurrentVideo) then
   begin
-    // Just call this once
-    // when Screens = 2
-    if (ScreenAct = 1) then
-      fCurrentVideo.GetFrame(CatSongs.Song[Interaction].VideoGAP + Position);
-
     fCurrentVideo.SetScreen(ScreenAct);
     fCurrentVideo.Alpha := VideoAlpha;
 
@@ -4339,10 +4380,101 @@ begin
   end;
 end;
 
+constructor TPreviewMediaLoad.Create(const Source: IPath; ByteLimit: integer);
+begin
+  inherited Create(true);
+  FileName := Source;
+  Limit := ByteLimit;
+  Start;
+end;
+
+procedure TPreviewMediaLoad.Cancel;
+begin
+  Discard := true;
+  Terminate;
+end;
+
+procedure TPreviewMediaLoad.Execute;
+var
+  Attempt: integer;
+begin
+  for Attempt := 1 to 5 do
+  begin
+    if Terminated then Exit;
+    ReadSnapshot;
+    if (Data <> nil) or TooLarge or Terminated then Exit;
+    if Attempt < 5 then Sleep(100);
+  end;
+end;
+
+procedure TPreviewMediaLoad.ReadSnapshot;
+var
+  Input: TBinaryFileStream;
+  Size: Int64;
+  Offset, Count: integer;
+begin
+  try
+    Input := TBinaryFileStream.Create(FileName, fmOpenRead or fmShareDenyWrite);
+    try
+      Size := Input.Size;
+      TooLarge := Size > Limit;
+      if (Size <= 0) or TooLarge then Exit;
+      SetLength(Data, Size);
+      Offset := 0;
+      while (Offset < Length(Data)) and not Terminated do
+      begin
+        Count := Input.Read(Data[Offset], Min(Length(Data) - Offset, 256 * 1024));
+        if Count <= 0 then Break;
+        Inc(Offset, Count);
+      end;
+      if (Offset <> Length(Data)) or (Input.Size <> Size) or Terminated then Data := nil;
+    finally
+      Input.Free;
+    end;
+  except
+    Data := nil;
+  end;
+end;
+
+procedure TScreenSong.FinishPreviewLoad(var Load: TPreviewMediaLoad; IsVideo: boolean);
+var
+  Completed: TPreviewMediaLoad;
+  Song: TSong;
+  Source: IPath;
+begin
+  if (Load = nil) or not Load.Finished then Exit;
+  Completed := Load;
+  Load := nil;
+  try
+    if Completed.Discard or not HasSelection or
+       (Display.NextScreen <> nil) or (Display.NextScreenWithCheck <> nil) then Exit;
+    Song := CatSongs.Song[Interaction];
+    if IsVideo then Source := Song.Video else Source := Song.Audio;
+    if not Source.IsSet or
+       (TLibraryRefresh.Key(Completed.FileName) <> TLibraryRefresh.Key(Song.Path.Append(Source))) then Exit;
+    if Completed.TooLarge then
+    begin
+      Log.LogInfo('Preview file exceeds the 64 MiB snapshot limit: ' +
+        Completed.FileName.ToNative, 'TScreenSong.FinishPreviewLoad');
+      if IsVideo then StopVideoPreview;
+    end;
+    if Completed.Data = nil then Exit;
+    if IsVideo then
+      StartVideoPreview(Completed.Data)
+    else
+      StartMusicPreview(Completed.Data);
+  finally
+    Completed.Free;
+  end;
+end;
+
 procedure TScreenSong.SchedulePreview(SelectionSettled: boolean);
 begin
   if PreviewInteraction <> Interaction then
   begin
+    PreviewReloadPending := false;
+    if Assigned(AudioPreviewLoad) then AudioPreviewLoad.Cancel;
+    if Assigned(VideoPreviewLoad) then VideoPreviewLoad.Cancel;
     if (Interaction >= 0) and (Interaction < Length(CatSongs.Song)) and
        (TransitionSong <> CatSongs.Song[Interaction]) then
     begin
@@ -4369,24 +4501,19 @@ begin
     PreviewSettledTime := SDL_GetTicks;
 end;
 
-procedure TScreenSong.StartMusicPreview();
+procedure TScreenSong.StartMusicPreview(const Media: TBytes);
 var
   Song: TSong;
-  PreviewPos: real;
+  PreviewPos, PreviousPosition: real;
   PreviewVolume: single;
 begin
-  PreviewEndReloaded := false;
-
   if SongIndex <> -1 then
   begin
     PreviewOpened := SongIndex;
     Exit;
   end;
 
-  AudioPlayback.Close();
-
-  if CatSongs.VisibleSongs = 0 then
-    Exit;
+  if not HasSelection then Exit;
 
   Song := CatSongs.Song[Interaction];
   if not assigned(Song) then
@@ -4396,14 +4523,31 @@ begin
   if Song.main then
     Exit;
 
+  if Media = nil then
+  begin
+    if AudioPreviewLoad = nil then
+      AudioPreviewLoad := TPreviewMediaLoad.Create(Song.Path.Append(Song.Audio), 64 * 1024 * 1024)
+    else
+      LastPreviewStartTime := SDL_GetTicks;
+    Exit;
+  end;
+
+  PreviousPosition := -1;
+  if (PreviewOpened = Interaction) and not AudioPlayback.Finished then
+    PreviousPosition := AudioPlayback.Position;
   PlayMidi := false;
-  if AudioPlayback.Open(Song.Path.Append(Song.Audio),nil) then
+  if AudioPlayback.Open(Song.Path.Append(Song.Audio), nil, Media) then
   begin
     PreviewOpened := Interaction;
+    PreviewEndReloaded := false;
 
     Song.GetPreviewRange(AudioPlayback.Length, PreviewPos, PreviewEnd);
 
+    if (PreviousPosition >= PreviewPos) and (PreviousPosition < PreviewEnd) then
+      PreviewPos := PreviousPosition;
     AudioPlayback.Position := PreviewPos;
+    if Assigned(fCurrentVideo) then
+      fCurrentVideo.Position := Song.VideoGAP + PreviewPos;
   
     // set preview volume
     PreviewVolume := EnsureRange(Ini.PreviewVolume, 0, 100) / 100;
@@ -4425,8 +4569,9 @@ end;
 
 procedure TScreenSong.StopMusicPreview();
 begin
-  // Stop preview of previous song
-  AudioPlayback.Stop;
+  if Assigned(AudioPreviewLoad) then AudioPreviewLoad.Cancel;
+  PreviewReloadPending := false;
+  if not RefreshingPlayingPreview then AudioPlayback.Stop;
   PreviewEnd := 0;
 end;
 
@@ -4434,8 +4579,9 @@ procedure TScreenSong.StartPreview;
 begin
   StopMusicPreview;
   StopVideoPreview;
+  PreviewOpened := -1;
   StartMusicPreview;
-  StartVideoPreview;
+  PreviewSettledTime := SDL_GetTicks;
 end;
 
 procedure TScreenSong.StopPreview;
@@ -4444,20 +4590,15 @@ begin
   StopVideoPreview;
 end;
 
-procedure TScreenSong.StartVideoPreview();
+procedure TScreenSong.StartVideoPreview(const Media: TBytes);
 var
   VideoFile:  IPath;
   Song:       TSong;
+  Video:      IVideo;
 
 begin
   if (Ini.VideoPreview=0)  then
     Exit;
-
-  if Assigned(fCurrentVideo) then
-  begin
-    fCurrentVideo.Stop();
-    fCurrentVideo := nil;
-  end;
 
   //if no audio open => exit
   if (PreviewOpened = -1) then
@@ -4477,20 +4618,33 @@ begin
   if SuppressTransitionPreview(Song) then Exit;
 
   VideoFile := Song.Path.Append(Song.Video);
-  if (Song.Video.IsSet) and VideoFile.IsFile then
+  if not Song.Video.IsSet or ((Media = nil) and not VideoFile.IsFile) then
   begin
-    fCurrentVideo := VideoPlayback.Open(VideoFile);
-    if (fCurrentVideo <> nil) then
-    begin
-      fCurrentVideo.Position := Song.VideoGAP + AudioPlayback.Position;
-      fCurrentVideo.Play;
-      CoverTime := 0;
-    end;
+    StopVideoPreview;
+    Exit;
+  end;
+  if Media = nil then
+  begin
+    if VideoPreviewLoad = nil then
+      VideoPreviewLoad := TPreviewMediaLoad.Create(VideoFile, 64 * 1024 * 1024)
+    else
+      PreviewSettledTime := SDL_GetTicks;
+    Exit;
+  end;
+  Video := VideoPlayback.Open(VideoFile, Media);
+  if Video <> nil then
+  begin
+    StopVideoPreview;
+    fCurrentVideo := Video;
+    fCurrentVideo.Position := Song.VideoGAP + AudioPlayback.Position;
+    fCurrentVideo.Play;
+    CoverTime := 0;
   end;
 end;
 
 procedure TScreenSong.StopVideoPreview();
 begin
+  if Assigned(VideoPreviewLoad) then VideoPreviewLoad.Cancel;
   // Stop video preview of previous song
   if Assigned(fCurrentVideo) then
   begin
@@ -5058,7 +5212,9 @@ var
   OldPosition, OldListTop, GridOffset, Candidate: integer;
   PlaylistPaths, NewIds, VisiblePaths: TStringList;
   Song: TSong;
-  EmptyMainMenu: boolean;
+  EmptyMainMenu, ReloadPreview, ResumeVideoPreview: boolean;
+  SavedVideo: IVideo;
+  SavedPreviewEnd: real;
   function SelectionKey(const Entry: TSong): UTF8String;
   begin
     if Entry.Main then Result := '#category:' + Entry.Artist
@@ -5105,6 +5261,9 @@ begin
      ScreenSongJumpto.Visible or ScreenContinuousPlayback.Session.Active or
      not Songs.RefreshReady then Exit;
   SelectedPath := '';
+  SavedPreviewEnd := PreviewEnd;
+  ReloadPreview := false;
+  ResumeVideoPreview := false;
   Category := '';
   OldCategory := CatSongs.CatNumShow;
   OldPosition := 0;
@@ -5141,10 +5300,19 @@ begin
       Exit;
     end;
     try
-      // No running song/editor is changed. Release only the selection preview now.
+      RefreshingPlayingPreview := not EmptyMainMenu and HasSelection and
+        (PreviewOpened = Interaction) and not AudioPlayback.Finished;
+      if RefreshingPlayingPreview then
+      begin
+        ReloadPreview := Retired.IndexOf(CatSongs.Song[Interaction]) >= 0;
+        ResumeVideoPreview := (PreviewSettledTime > 0) or
+          (Assigned(VideoPreviewLoad) and not VideoPreviewLoad.Discard);
+        SavedVideo := fCurrentVideo;
+        fCurrentVideo := nil;
+      end;
       StopMusicPreview;
       StopVideoPreview;
-      AudioPlayback.Close;
+      if not RefreshingPlayingPreview then AudioPlayback.Close;
       TransitionSong := nil;
       CurrentSong := nil;
       VoiceAssignments.Reset;
@@ -5231,6 +5399,28 @@ begin
         CatSongs.Selected := Interaction;
         SetScrollRefresh;
       end;
+      if RefreshingPlayingPreview then
+      begin
+        RefreshingPlayingPreview := false;
+        if HasSelection and (SelectionKey(CatSongs.Song[Interaction]) = SelectedPath) then
+        begin
+          PreviewOpened := Interaction;
+          PreviewInteraction := Interaction;
+          PreviewEnd := SavedPreviewEnd;
+          LastPreviewStartTime := 0;
+          PreviewSettledTime := 0;
+          fCurrentVideo := SavedVideo;
+          if ReloadPreview then
+          begin
+            PreviewReloadPending := true;
+            LastPreviewStartTime := SDL_GetTicks;
+          end;
+          if ReloadPreview or ResumeVideoPreview then
+            PreviewSettledTime := SDL_GetTicks;
+        end
+        else
+          AudioPlayback.Close;
+      end;
       ResetRandomSongState;
       if Interaction < 0 then
       begin
@@ -5264,6 +5454,7 @@ begin
       if Songs.LastRefreshMembershipChanged then
         WriteMessage(Language.Translate('LIBRARY_REFRESH_FINISHED'));
     finally
+      RefreshingPlayingPreview := false;
       for I := 0 to Retired.Count - 1 do TObject(Retired[I]).Free;
       Retired.Free;
     end;

@@ -1173,7 +1173,7 @@ begin
   IAutoPlayerTranslated[IMaxPlayerCount] := ULanguage.Language.Translate('OPTION_ALL_PLAYERS');
 
   for I := 0 to IMaxPlayerCount - 1 do
-    IPlayerTranslated[I] := ULanguage.Language.Translate('OPTION_PLAYER_' + IntToStr(I + 1));
+    IPlayerTranslated[I] := ULanguage.Language.Translate('OPTION_VALUE_PLAYER') + ' ' + IntToStr(I + 1);
 
   for I := 0 to High(ITeamTranslated) do
     ITeamTranslated[I] := ULanguage.Language.Translate('OPTION_VALUE_TEAM') + ' ' + IntToStr(I + 1);

@@ -107,7 +107,7 @@ const
 type
   IVideo_FFmpeg = interface (IVideo)
   ['{E640E130-C8C0-4399-AF02-67A3569313AB}']
-    function Open(const FileName: IPath): boolean;
+    function Open(const FileName: IPath; const Media: TBytes = nil): boolean;
   end;
 
   // A converted frame waiting in the queue
@@ -141,6 +141,7 @@ type
     fRequestedTime: extended;  //**< stream time the main thread is currently displaying
     fDecoderFailed: boolean; // published terminal failure, protected by fLock
     fDecoderEOF:   boolean;    //**< decode thread reached the end of the stream
+    fFinished:     boolean;    //**< presentation has reached the end (main thread)
     fSlots:        array of TVideoFrameSlot; //**< ring buffer of converted frames
     fSlotHead:     integer;    //**< index of the oldest queued frame
     fSlotCount:    integer;    //**< number of queued frames
@@ -164,6 +165,8 @@ type
     fTexWidth, fTexHeight: cardinal;
     fScaledWidth, fScaledHeight: cardinal;
     fSwScaleContext: PSwsContext;
+    fSwsColorSpace: integer; //**< frame colorspace last passed to swscale, -1: none yet (decode thread only)
+    fSwsColorRange: integer; //**< frame color range last passed to swscale, -1: none yet (decode thread only)
     fScreen:          integer; //actual screen to draw on
 
     fPosX:    double;
@@ -187,6 +190,7 @@ type
     procedure Reset();
     function DecodeFrame(): boolean;
     procedure SynchronizeTime(Frame: PAVFrame; pts: double);
+    procedure UpdateColorspace(Frame: PAVFrame);
 
     function AllocSlots(): boolean;
     procedure FreeSlots();
@@ -204,7 +208,7 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    function Open(const FileName: IPath): boolean;
+    function Open(const FileName: IPath; const Media: TBytes = nil): boolean;
     procedure Close;
 
     procedure Play;
@@ -250,6 +254,7 @@ type
      function GetReflectionSpacing(): double;
 
      procedure GetFrame(Time: Extended);
+     function Finished: boolean;
      procedure Draw();
   end;
 
@@ -263,7 +268,7 @@ type
     function Init(): boolean;
     function Finalize: boolean;
 
-    function Open(const FileName : IPath): IVideo;
+    function Open(const FileName : IPath; const Media: TBytes = nil): IVideo;
   end;
 
 var
@@ -427,12 +432,12 @@ begin
   Result := true;
 end;
 
-function TVideoPlayback_FFmpeg.Open(const FileName : IPath): IVideo;
+function TVideoPlayback_FFmpeg.Open(const FileName : IPath; const Media: TBytes = nil): IVideo;
 var
   Video: IVideo_FFmpeg;
 begin
   Video := TVideo_FFmpeg.Create;
-  if Video.Open(FileName) then
+  if Video.Open(FileName, Media) then
     Result := Video
   else
     Result := nil;
@@ -451,7 +456,7 @@ begin
   Close();
 end;
 
-function TVideo_FFmpeg.Open(const FileName : IPath): boolean;
+function TVideo_FFmpeg.Open(const FileName : IPath; const Media: TBytes = nil): boolean;
 var
   errnum: Integer;
   AudioStreamIndex: integer;
@@ -492,7 +497,7 @@ begin
   FFmpegCore.UnlockAVCodec();
 
   // use custom 'ufile' protocol for UTF-8 support
-  errnum := FFmpegCore.AVFormatOpenInput(@fFormatContext, PAnsiChar(UTF8ToAnsi(FileName.ToUTF8)));//'ufile:'+FileName.ToUTF8));
+  errnum := FFmpegCore.AVFormatOpenInput(@fFormatContext, PAnsiChar(FileName.ToUTF8), Media);
   if (errnum <> 0) then
   begin
     Log.LogError('Failed to open file "'+ FileName.ToNative +'" ('+FFmpegCore.GetErrorString(errnum)+'::'+IntToStr(errnum)+')');
@@ -672,6 +677,9 @@ begin
     Close();
     Exit;
   end;
+  // the colorspace details are set from the first decoded frame
+  fSwsColorSpace := -1;
+  fSwsColorRange := -1;
 
   fOpened := true;
   if not StartDecodeThread() then
@@ -879,6 +887,7 @@ begin
       LockHeld := false;
       SDL_UnlockMutex(fLock);
 
+      UpdateColorspace(fAVFrame);
       errnum := -1;
       try
         errnum := sws_scale(fSwScaleContext, @fAVFrame.data, @fAVFrame.linesize,
@@ -976,6 +985,7 @@ begin
   fSeekGen := 0;
 
   fLoop := false;
+  fFinished := false;
   fLoopTime := 0;
 
   fScreen := 1;
@@ -1050,6 +1060,66 @@ begin
   // if we are repeating a frame, adjust clock accordingly
   FrameDelay := FrameDelay + Frame^.repeat_pict * (FrameDelay * 0.5);
   fDecNextFrameTime := fDecFrameTime + FrameDelay;
+end;
+
+{**
+ * Sets the YUV->RGB matrix and the input range swscale uses for Frame
+ * (decode thread only).
+ * Without this swscale converts every frame as limited range BT.601, which
+ * shifts the colours of BT.709 (HD) and full range videos.
+ * swscale is only reconfigured if the frame's tags differ from the last frame.
+ *}
+procedure TVideo_FFmpeg.UpdateColorspace(Frame: PAVFrame);
+var
+  SwsColorSpace: cint;
+  SrcRange: cint;
+begin
+  if (Frame^.colorspace = fSwsColorSpace) and
+     (Frame^.color_range = fSwsColorRange) then
+    Exit;
+  fSwsColorSpace := Frame^.colorspace;
+  fSwsColorRange := Frame^.color_range;
+
+  case Frame^.colorspace of
+    AVCOL_SPC_BT709:     SwsColorSpace := SWS_CS_ITU709;
+    AVCOL_SPC_BT470BG:   SwsColorSpace := SWS_CS_ITU601;
+    AVCOL_SPC_SMPTE170M: SwsColorSpace := SWS_CS_SMPTE170M;
+    AVCOL_SPC_SMPTE240M: SwsColorSpace := SWS_CS_SMPTE240M;
+    AVCOL_SPC_FCC:       SwsColorSpace := SWS_CS_FCC;
+    AVCOL_SPC_BT2020_NCL,
+    AVCOL_SPC_BT2020_CL: SwsColorSpace := SWS_CS_BT2020;
+    else
+    begin
+      // Untagged or not supported by swscale: guess from the frame size the
+      // way mpv does, BT.709 from 1280 pixels width or above 576 lines,
+      // BT.601 below.
+      if (fCodecContext^.width >= 1280) or (fCodecContext^.height > 576) then
+        SwsColorSpace := SWS_CS_ITU709
+      else
+        SwsColorSpace := SWS_CS_ITU601;
+    end;
+  end;
+
+  // An untagged range is treated as limited, as swscale did so far. The
+  // decoders that output the deprecated full range YUVJ formats (MJPEG, full
+  // range H.264) tag their frames with AVCOL_RANGE_JPEG.
+  if (Frame^.color_range = AVCOL_RANGE_JPEG) then
+    SrcRange := 1
+  else
+    SrcRange := 0;
+
+  // RGB output is full range; brightness, contrast and saturation keep
+  // swscale's defaults (16.16 fixed point). A failure is only logged,
+  // playback continues.
+  if (sws_setColorspaceDetails(fSwScaleContext,
+        sws_getCoefficients(SwsColorSpace), SrcRange,
+        sws_getCoefficients(SWS_CS_DEFAULT), 1,
+        0, 1 shl 16, 1 shl 16) < 0) then
+    Log.LogError('Failed to set colorspace details', 'TVideoPlayback_ffmpeg.UpdateColorspace')
+  else
+    Log.LogInfo(Format('Colorspace %d, color range %d: swscale colorspace %d, source range %d',
+                       [Frame^.colorspace, Frame^.color_range, SwsColorSpace, SrcRange]),
+                'TVideoPlayback_ffmpeg.UpdateColorspace');
 end;
 
 {**
@@ -1257,20 +1327,27 @@ begin
     end;
     SDL_UnlockMutex(fLock);
   end
-  else if ReachedEnd and fLoop and not DecodeFailed and
-          (CurrentTime >= fFrameTime + fFrameDuration) then
+  else if ReachedEnd and (DecodeFailed or not fFrameTexValid or
+          (CurrentTime >= fFrameTime + fFrameDuration)) then
   begin
-    // we have to loop, so rewind
-    SetPosition(0);
-    // record the start-time of the current loop, so we can
-    // determine the position in the stream (fFrameTime-fLoopTime) later.
-    fLoopTime := Time;
+    if fLoop and not DecodeFailed and fFrameTexValid then
+    begin
+      SetPosition(0);
+      fLoopTime := Time;
+    end
+    else
+      fFinished := true;
   end;
 
   {$IFDEF VideoBenchmark}
   Log.BenchmarkEnd(15);
   Log.LogBenchmark('Texture', 15);
   {$ENDIF}
+end;
+
+function TVideo_FFmpeg.Finished: boolean;
+begin
+  Result := fFinished;
 end;
 
 procedure TVideo_FFmpeg.GetVideoRect(var ScreenRect, TexRect: TRectCoords);
@@ -1516,6 +1593,7 @@ begin
 
   fFrameTime := Time;
   fFrameTexValid := false;
+  fFinished := false;
 
   if (fLock = nil) then
     Exit;
