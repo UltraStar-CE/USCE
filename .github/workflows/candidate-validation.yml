@@ -32,6 +32,9 @@ jobs:
   platforms:
     name: Candidate platforms
     needs: resolve
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/platform-builds.yml
     with:
       ref: ${{ needs.resolve.outputs.sha }}
