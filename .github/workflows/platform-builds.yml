@@ -212,9 +212,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-26
+          # Keep release builds on macOS 15 so Homebrew libraries support it.
+          - os: ${{ inputs.release-version != '' && 'macos-15' || 'macos-26' }}
             arch: ARM
-          - os: macos-26-intel
+          - os: ${{ inputs.release-version != '' && 'macos-15-intel' || 'macos-26-intel' }}
             arch: x86
     env:
       USCE_RELEASE_VERSION: ${{ inputs.release-version }}

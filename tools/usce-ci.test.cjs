@@ -124,12 +124,12 @@ test('unavailable failure details cannot make a failed build pass', async () => 
   await assert.rejects(waitForBuilds(f.args), /Required main.yml finished with failure/);
 });
 
-test('both macOS architectures use explicit images and remain required for candidates', () => {
+test('macOS uses newer images for CI and keeps compatible images for releases', () => {
   const fs = require('node:fs');
   const path = require('node:path');
   const workflow = fs.readFileSync(path.join(__dirname, '../.github/workflows/platform-builds.yml'), 'utf8');
-  assert.match(workflow, /os: macos-26\s+arch: ARM/);
-  assert.match(workflow, /os: macos-26-intel\s+arch: x86/);
+  assert.match(workflow, /os: \$\{\{ inputs\.release-version != '' && 'macos-15' \|\| 'macos-26' \}\}\s+arch: ARM/);
+  assert.match(workflow, /os: \$\{\{ inputs\.release-version != '' && 'macos-15-intel' \|\| 'macos-26-intel' \}\}\s+arch: x86/);
   assert.match(workflow, /fail-fast: false/);
   const candidate = fs.readFileSync(path.join(__dirname, '../.github/workflows/candidate-validation.yml'), 'utf8');
   assert(candidate.includes("'Build for MacOS (ARM)'") && candidate.includes("'Build for MacOS (x86)'"));
