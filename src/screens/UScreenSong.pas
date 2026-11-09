@@ -5213,7 +5213,7 @@ var
   OldPosition, OldListTop, GridOffset, Candidate: integer;
   PlaylistPaths, NewIds, VisiblePaths: TStringList;
   Song: TSong;
-  EmptyMainMenu, ReloadPreview: boolean;
+  EmptyMainMenu, ReloadPreview, ResumeVideoPreview: boolean;
   SavedVideo: IVideo;
   SavedPreviewEnd: real;
   function SelectionKey(const Entry: TSong): UTF8String;
@@ -5264,6 +5264,7 @@ begin
   SelectedPath := '';
   SavedPreviewEnd := PreviewEnd;
   ReloadPreview := false;
+  ResumeVideoPreview := false;
   Category := '';
   OldCategory := CatSongs.CatNumShow;
   OldPosition := 0;
@@ -5305,6 +5306,8 @@ begin
       if RefreshingPlayingPreview then
       begin
         ReloadPreview := Retired.IndexOf(CatSongs.Song[Interaction]) >= 0;
+        ResumeVideoPreview := (PreviewSettledTime > 0) or
+          (Assigned(VideoPreviewLoad) and not VideoPreviewLoad.Discard);
         SavedVideo := fCurrentVideo;
         fCurrentVideo := nil;
       end;
@@ -5412,8 +5415,9 @@ begin
           begin
             PreviewReloadPending := true;
             LastPreviewStartTime := SDL_GetTicks;
-            PreviewSettledTime := LastPreviewStartTime;
           end;
+          if ReloadPreview or ResumeVideoPreview then
+            PreviewSettledTime := SDL_GetTicks;
         end
         else
           AudioPlayback.Close;
