@@ -78,7 +78,7 @@ test('candidate publisher requires every platform and whitespace on the resolved
   const text = fs.readFileSync(path.join(__dirname, '../.github/workflows/candidate-validation.yml'), 'utf8');
   const body = text.slice(text.lastIndexOf('          script: |') + '          script: |'.length)
     .split('\n').map(line => line.replace(/^            /, '')).join('\n');
-  const names = ['Build for Windows', 'Build for Linux', 'Build for MacOS (macos-15)', 'Build for MacOS (macos-15-intel)'];
+  const names = ['Build for Windows', 'Build for Linux', 'Build for MacOS (ARM)', 'Build for MacOS (x86)'];
   async function publish(results, lint = 'success', platform = 'success') {
     const statuses = [];
     const github = {paginate: async () => results, rest: {actions: {listJobsForWorkflowRun() {}},
@@ -106,7 +106,7 @@ test('failure diagnostics identify runner cancellations and actual failed steps'
   f.args.github.paginate = async (_, args) => {
     assert.equal(args.run_id, 42);
     assert.equal(args.filter, 'latest');
-    return [{name: 'Build for MacOS (macos-15)', conclusion: 'cancelled', steps: []},
+    return [{name: 'Build for MacOS (ARM)', conclusion: 'cancelled', steps: []},
       {name: 'Build for Linux', conclusion: 'failure', steps: [{name: 'Compile', conclusion: 'failure'}]},
       {name: 'Build for Windows', conclusion: 'success', steps: []}];
   };
@@ -124,12 +124,13 @@ test('unavailable failure details cannot make a failed build pass', async () => 
   await assert.rejects(waitForBuilds(f.args), /Required main.yml finished with failure/);
 });
 
-test('ARM macOS uses an explicit supported image and remains required for candidates', () => {
+test('both macOS architectures use explicit images and remain required for candidates', () => {
   const fs = require('node:fs');
   const path = require('node:path');
   const workflow = fs.readFileSync(path.join(__dirname, '../.github/workflows/platform-builds.yml'), 'utf8');
-  assert.match(workflow, /os: \[macos-15, macos-15-intel\]/);
+  assert.match(workflow, /os: macos-26\s+arch: ARM/);
+  assert.match(workflow, /os: macos-26-intel\s+arch: x86/);
   assert.match(workflow, /fail-fast: false/);
   const candidate = fs.readFileSync(path.join(__dirname, '../.github/workflows/candidate-validation.yml'), 'utf8');
-  assert(candidate.includes("'Build for MacOS (macos-15)'"));
+  assert(candidate.includes("'Build for MacOS (ARM)'") && candidate.includes("'Build for MacOS (x86)'"));
 });

@@ -206,12 +206,16 @@ jobs:
 
   build_mac:
     needs: resolve
-    name: Build for MacOS (${{ matrix.os }})
+    name: Build for MacOS (${{ matrix.arch }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-15, macos-15-intel]
+        include:
+          - os: macos-26
+            arch: ARM
+          - os: macos-26-intel
+            arch: x86
     env:
       USCE_RELEASE_VERSION: ${{ inputs.release-version }}
       USCE_BUILD_CHANNEL: development
@@ -234,13 +238,6 @@ jobs:
           echo "versionName=$VNAME" >> $GITHUB_ENV
       - name: Bundle reviewed themes
         uses: ./.github/actions/bundle-themes
-      - name: Determine Arch
-        run: |
-          if [ "${{ matrix.os }}" = "macos-15-intel" ]; then
-            echo "arch=x86" >> $GITHUB_ENV
-          else
-            echo "arch=ARM" >> $GITHUB_ENV
-          fi
       - name: Locate Homebrew downloads
         if: inputs.use-caches
         id: homebrew-downloads
@@ -303,12 +300,12 @@ jobs:
       - name: Build
         run: make USCE_THEMES_DIR=".release-themes/bundle" macos-dmg
       - name: Rename DMG
-        run: mv "UltraStar Community Edition.dmg" "USCE-mac-${{ env.arch }}-${{ env.versionName }}.dmg"
+        run: mv "UltraStar Community Edition.dmg" "USCE-mac-${{ matrix.arch }}-${{ env.versionName }}.dmg"
       - name: Upload Image Artifact
         uses: actions/upload-artifact@v6
         with:
-          name: USCE-mac-${{ env.arch }}-${{ env.versionName }}
-          path: USCE-mac-${{ env.arch }}-${{ env.versionName }}.dmg
+          name: USCE-mac-${{ matrix.arch }}-${{ env.versionName }}
+          path: USCE-mac-${{ matrix.arch }}-${{ env.versionName }}.dmg
           if-no-files-found: error
           retention-days: 7
 
