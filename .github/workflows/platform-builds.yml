@@ -206,20 +206,166 @@ jobs:
 
   build_mac:
     needs: resolve
-    name: macOS (${{ matrix.arch }})
+    name: Build for MacOS (${{ matrix.arch }})
+    runs-on: ${{ matrix.arch == 'ARM' && 'macos-15' || 'macos-15-intel' }}
+    continue-on-error: ${{ inputs.release-version == '' }}
     strategy:
       fail-fast: false
       matrix:
         arch: [ARM, x86]
+    env:
+      USCE_RELEASE_VERSION: ${{ inputs.release-version }}
+      USCE_BUILD_CHANNEL: development
+      PROJECTM_VERSION: 4.1.7
+      PROJECTM_SHA: 16e4610b4d58981f7a2351faa58d507d3f40163a7b26ba81e19aec928c66641f
+      USCE_MACOS_RUNNER: ${{ matrix.arch == 'ARM' && 'macos-15' || 'macos-15-intel' }}
+    steps: &build_steps
+      - name: Checkout Repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Determine version
+        run: |
+          VNAME=$(python3 tools/generate-version.py)
+          echo "versionName=$VNAME" >> $GITHUB_ENV
+      - name: Bundle reviewed themes
+        uses: ./.github/actions/bundle-themes
+      - name: Locate Homebrew downloads
+        if: inputs.use-caches
+        id: homebrew-downloads
+        run: |
+          echo "path=$(brew --cache)/downloads" >> "$GITHUB_OUTPUT"
+          echo "week=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
+          image="$USCE_MACOS_RUNNER"
+          if [[ "$image" == macos-latest ]]; then
+            image="$image-$(sw_vers -productVersion | cut -d. -f1)"
+          fi
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+      - name: Cache Homebrew downloads
+        if: inputs.use-caches
+        uses: actions/cache@v6
+        with:
+          path: ${{ steps.homebrew-downloads.outputs.path }}
+          key: homebrew-downloads-v1-${{ steps.homebrew-downloads.outputs.image }}-${{ runner.arch }}-${{ steps.homebrew-downloads.outputs.week }}
+          restore-keys: |
+            homebrew-downloads-v1-${{ steps.homebrew-downloads.outputs.image }}-${{ runner.arch }}-
+      - name: Install Homebrew Dependencies
+        run: |
+          brew install fpc sdl2-compat sdl2_image automake portaudio lua ffmpeg opencv cmake ninja openssl@3
+      - name: Test native library notifications
+        run: python3 -m unittest discover -s tools -p "test_library*.py" -v
+      - name: Cache ProjectM
+        if: inputs.use-caches
+        id: cache-projectm
+        uses: actions/cache@v6
+        with:
+          path: ${{github.workspace}}/projectm
+          key: projectm-${{ steps.homebrew-downloads.outputs.image }}-${{ env.PROJECTM_VERSION }}
+      - name: Build ProjectM
+        if: steps.cache-projectm.outputs.cache-hit != 'true'
+        run: |
+          curl -L -O https://github.com/projectM-visualizer/projectm/releases/download/v$PROJECTM_VERSION/libprojectM-$PROJECTM_VERSION.tar.gz
+          echo "$PROJECTM_SHA libprojectM-$PROJECTM_VERSION.tar.gz" | sha256sum -c -
+          tar -xf libprojectM-$PROJECTM_VERSION.tar.gz
+          cmake -S libprojectM-$PROJECTM_VERSION \
+            -B libprojectM-$PROJECTM_VERSION/build \
+            -DENABLE_PLAYLIST=OFF \
+            -DBUILD_SHARED_LIBS=ON \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/projectm \
+            -DCMAKE_INSTALL_NAME_DIR=$GITHUB_WORKSPACE/projectm/lib \
+            -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON
+          cmake --build libprojectM-$PROJECTM_VERSION/build --target install --parallel
+      - name: Stage native phone receiver
+        run: |
+          export OPENSSL_ROOT_DIR="$(brew --prefix openssl@3)"
+          cmake -S native/phone-audio -B build/phone-audio -G Ninja -DCMAKE_BUILD_TYPE=Release -DOPENSSL_USE_STATIC_LIBS=TRUE
+          cmake --build build/phone-audio --parallel 3
+          ctest --test-dir build/phone-audio --output-on-failure
+          license="$(find -L "$OPENSSL_ROOT_DIR" -type f -name LICENSE.txt -print -quit)"
+          test -f "$license"
+          python3 tools/stage-phone-audio.py --platform darwin --openssl-license "$license"
+      - name: Check bundle signing order
+        run: python3 tools/test_macos_bundle_signing.py
+      - name: Generate Build Scripts
+        run: ./autogen.sh
+      - name: Configure Project
+        run: |
+          libprojectM_VERSION=$PROJECTM_VERSION \
+          LIBS=-L$GITHUB_WORKSPACE/projectm/lib \
+          ./configure --with-opencv-cxx-api --with-libprojectM=nocheck
+      - name: Build
+        run: make USCE_THEMES_DIR=".release-themes/bundle" macos-dmg
+      - name: Rename DMG
+        run: mv "UltraStar Community Edition.dmg" "USCE-mac-${{ matrix.arch }}-${{ env.versionName }}.dmg"
+      - name: Upload Image Artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: USCE-mac-${{ matrix.arch }}-${{ env.versionName }}
+          path: USCE-mac-${{ matrix.arch }}-${{ env.versionName }}.dmg
+          if-no-files-found: error
+          retention-days: 7
+      - name: Record successful build
+        id: built
+        run: echo 'ok=true' >> "$GITHUB_OUTPUT"
+
+  mac_retry_plan:
+    name: Check macOS build results
+    needs: build_mac
+    if: ${{ !cancelled() && inputs.release-version == '' }}
+    runs-on: ubuntu-latest
     permissions:
-      contents: read
       actions: read
-    uses: ./.github/workflows/macos-build.yml
-    with:
-      ref: ${{ needs.resolve.outputs.sha }}
-      arch: ${{ matrix.arch }}
-      release-version: ${{ inputs.release-version }}
-      use-caches: ${{ inputs.use-caches }}
+    outputs:
+      retry: ${{ steps.plan.outputs.result }}
+    steps:
+      - id: plan
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          script: |
+            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun,
+              {...context.repo, run_id: context.runId, filter: 'latest', per_page: 100});
+            const retry = [];
+            for (const arch of ['ARM', 'x86']) {
+              const name = `Build for MacOS (${arch})`;
+              const matches = jobs.filter(job => job.name === name || job.name.endsWith(' / ' + name));
+              if (matches.length !== 1 || matches[0].status !== 'completed' || !Array.isArray(matches[0].steps)) {
+                throw Error(`Incomplete or ambiguous results for ${name}`);
+              }
+              const job = matches[0];
+              if (job.conclusion === 'success' && job.steps.some(step =>
+                step.name === 'Record successful build' && step.conclusion === 'success') &&
+                job.steps.every(step => ['success', 'skipped'].includes(step.conclusion))) continue;
+              const failed = ['failure', 'cancelled', 'startup_failure', 'timed_out'];
+              const setup = job.steps.find(step => step.name === 'Set up job');
+              const started = job.steps.some(step => step.name !== 'Set up job' &&
+                step.name !== 'Complete job' && step.conclusion !== 'skipped');
+              if (started || !(setup ? failed.includes(setup.conclusion) :
+                job.steps.length === 0 && failed.includes(job.conclusion))) {
+                throw Error(`${name} failed after startup or has no confirmed startup failure`);
+              }
+              retry.push(arch);
+            }
+            return retry;
+
+  build_mac_retry:
+    needs: [resolve, mac_retry_plan]
+    if: ${{ !cancelled() && needs.mac_retry_plan.result == 'success' && needs.mac_retry_plan.outputs.retry != '[]' }}
+    name: Retry MacOS (${{ matrix.arch }})
+    runs-on: ${{ matrix.arch == 'ARM' && 'macos-latest' || 'macos-26-intel' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ${{ fromJSON(needs.mac_retry_plan.outputs.retry) }}
+    env:
+      USCE_RELEASE_VERSION: ${{ inputs.release-version }}
+      USCE_BUILD_CHANNEL: development
+      PROJECTM_VERSION: 4.1.7
+      PROJECTM_SHA: 16e4610b4d58981f7a2351faa58d507d3f40163a7b26ba81e19aec928c66641f
+      USCE_MACOS_RUNNER: ${{ matrix.arch == 'ARM' && 'macos-latest' || 'macos-26-intel' }}
+    steps: *build_steps
 
   build_linux:
     env:
