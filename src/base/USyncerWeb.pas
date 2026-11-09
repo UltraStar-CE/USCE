@@ -54,7 +54,7 @@ function GetTcpTable(Table: Pointer; var Size: DWORD; Sort: BOOL): DWORD; stdcal
   external 'iphlpapi.dll' name 'GetTcpTable';
 {$ENDIF}
 
-procedure ListListeningPorts(Ports: TStrings);
+procedure ListListeningPorts(Ports: TStrings; const Host: string);
 {$IFDEF WINDOWS}
 const
   TcpListen = 2;
@@ -62,7 +62,10 @@ var
   Table: PDWORD;
   Row: PTcpRow;
   Size, Required, I: DWORD;
+  HostAddress, LoopbackAddress: in_addr;
 begin
+  HostAddress := StrToNetAddr(Host);
+  LoopbackAddress := StrToNetAddr('127.0.0.1');
   Size := 0;
   if GetTcpTable(nil, Size, false) <> ERROR_INSUFFICIENT_BUFFER then Exit;
   repeat
@@ -72,12 +75,16 @@ begin
       case GetTcpTable(Table, Size, false) of
         NO_ERROR:
           begin
-            Row := PTcpRow(Table + 1);
+            Row := PTcpRow(PByte(Table) + SizeOf(DWORD));
             I := 0;
             while I < Table^ do
             begin
-              if Row^.State = TcpListen then
-                Ports.Add(IntToStr(ntohs(Word(Row^.LocalPort))));
+              if ((Row^.LocalAddress = 0) or
+                  (Row^.LocalAddress = HostAddress.s_addr) or
+                  (Row^.LocalAddress = LoopbackAddress.s_addr)) and
+                 ((Row^.State = TcpListen) or
+                  ((Row^.RemoteAddress = 0) and (Row^.RemotePort = 0))) then
+                Ports.Add(Format('%.5d', [ntohs(Word(Row^.LocalPort))]));
               Inc(Row);
               Inc(I);
             end;
@@ -129,7 +136,7 @@ begin
       begin
         Address := Fields[1];
         Port := StrToIntDef('$' + Copy(Address, Pos(':', Address) + 1, MaxInt), 0);
-        if Port > 0 then Ports.Add(IntToStr(Port));
+        if Port > 0 then Ports.Add(Format('%.5d', [Port]));
       end;
       {$ENDIF}
       {$IFDEF DARWIN}
@@ -137,7 +144,7 @@ begin
       begin
         Address := Fields[3];
         Port := StrToIntDef(Copy(Address, LastDelimiter('.', Address) + 1, MaxInt), 0);
-        if Port > 0 then Ports.Add(IntToStr(Port));
+        if Port > 0 then Ports.Add(Format('%.5d', [Port]));
       end;
       {$ENDIF}
       Fields.Clear;
@@ -234,9 +241,9 @@ var
 
   function Connect: boolean;
   var
-    Host, Entry: string;
+    Host: string;
     Ports: TStringList;
-    Port: integer;
+    Port, Index: integer;
 
     function Probe(Port: integer): boolean;
     begin
@@ -256,14 +263,19 @@ var
     try
       Ports.Sorted := true;
       Ports.Duplicates := dupIgnore;
-      ListListeningPorts(Ports);
-      for Entry in Ports do
+      ListListeningPorts(Ports, Host);
+      Client.ConnectTimeout := 250;
+      Client.IOTimeout := 750;
+      // Auto ports are usually high. Leave services on conventional ports until last.
+      for Index := Ports.Count - 1 downto 0 do
       begin
         if Terminated then Break;
-        Port := StrToInt(Entry);
+        Port := StrToInt(Ports[Index]);
         if (Port <> FLastPort) and Probe(Port) then Exit(true);
       end;
     finally
+      Client.ConnectTimeout := 700;
+      Client.IOTimeout := 1500;
       Ports.Free;
     end;
     Result := false;
