@@ -335,7 +335,7 @@ begin
         fSyncerDownloadID := 0;
         if fSyncerRequest.ResponseCode = 403 then fSyncerMessage := Language.Translate('SYNCER_DOWNLOAD_DISABLED')
         else if fSyncerRequest.Operation = soSearch then
-          fSyncerMessage := Format(Language.Translate('SYNCER_CONNECTION_FAILED'), [Ini.SyncerPort])
+          fSyncerMessage := Language.Translate('SYNCER_CONNECTION_FAILED')
         else fSyncerMessage := Language.Translate('SYNCER_REQUEST_FAILED');
       end
       else if fSyncerRequest.Operation = soSearch then

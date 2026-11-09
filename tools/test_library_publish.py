@@ -48,7 +48,7 @@ type
     fFailedSongFiles: TStringList;
     SongList: TList; fRefresh: TLibraryRefresh; fProcessing: boolean;
     function RefreshReady: boolean;
-    function PublishRefresh(out Retired: TList): boolean;
+    function PublishRefresh(out Retired: TList; Reloaded: TList = nil): boolean;
   end;
 var Live: integer = 0;
 constructor TPath.Create(const N: string); begin S := N; end;
