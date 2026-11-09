@@ -239,7 +239,7 @@ type
       AskBeforeDel:   integer;
       OnSongClick:    integer;
       ExternalSongSearch: integer;
-      SyncerPort: integer;
+      SyncerPort, SyncerLastPort: integer;
       PartyPopup:     integer;
       PartyHighscores: integer;
       SingScores:     integer;
@@ -1965,8 +1965,9 @@ begin
   ExternalSongSearch := ReadArrayIndex(IExternalSongSearch, IniFile, 'ExternalSongTools', 'Search', IGNORE_INDEX, 'Off');
   LegacySyncerAddress := IniFile.ReadString('ExternalSongTools', 'SyncerAddress', '');
   SyncerPort := StrToIntDef(Copy(LegacySyncerAddress, LastDelimiter(':', LegacySyncerAddress) + 1, MaxInt), 0);
-  if SyncerPort = 0 then SyncerPort := IniFile.ReadInteger('ExternalSongTools', 'SyncerPort', 8765);
-  if (SyncerPort < 1) or (SyncerPort > 65535) then SyncerPort := 8765;
+  SyncerPort := IniFile.ReadInteger('ExternalSongTools', 'SyncerPort', SyncerPort);
+  if (SyncerPort < 0) or (SyncerPort > 65535) then SyncerPort := 0;
+  InterlockedExchange(SyncerLastPort, IniFile.ReadInteger('ExternalSongTools', 'SyncerLastPort', 0));
 
   // OnSongClick
   OnSongClick := ReadArrayIndex(IOnSongClick, IniFile, 'Advanced', 'OnSongClick', IGNORE_INDEX, 'Sing');
@@ -2237,6 +2238,7 @@ begin
 
     IniFile.WriteString('ExternalSongTools', 'Search', IExternalSongSearch[ExternalSongSearch]);
     IniFile.WriteInteger('ExternalSongTools', 'SyncerPort', SyncerPort);
+    IniFile.WriteInteger('ExternalSongTools', 'SyncerLastPort', InterlockedExchangeAdd(SyncerLastPort, 0));
     IniFile.DeleteKey('ExternalSongTools', 'SyncerAddress');
 
     //OnSongClick

@@ -93,8 +93,8 @@ procedure SyncerPortEntered(Value: boolean; Data: Pointer);
 var Port: integer;
 begin
   if not Value or (Trim(ScreenPopupInsertUser.Username) = '') then Exit;
-  Port := StrToIntDef(Trim(ScreenPopupInsertUser.Username), 0);
-  if (Port < 1) or (Port > 65535) then
+  Port := StrToIntDef(Trim(ScreenPopupInsertUser.Username), -1);
+  if (Port < 0) or (Port > 65535) then
   begin
     ScreenPopupError.ShowPopup(Language.Translate('SYNCER_INVALID_PORT'));
     Exit;

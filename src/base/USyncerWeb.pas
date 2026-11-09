@@ -18,7 +18,7 @@ type
   private
     FAddress, FQuery: UTF8String;
     FSongID: Int64;
-    FPort: integer;
+    FPort, FLastPort: integer;
   protected
     procedure Execute; override;
   public
@@ -35,12 +35,106 @@ type
 implementation
 
 uses SysUtils, Sockets, FPHTTPClient, fpjson, jsonparser, UFilesystem, UIni, ULibraryLockdown
-  {$IFDEF WINDOWS}, Registry, Windows{$ENDIF};
+  {$IFDEF WINDOWS}, Registry, Windows{$ENDIF}
+  {$IFDEF DARWIN}, Process{$ENDIF};
 
 type
   TResponseBuffer = class(TMemoryStream)
     function Write(const Buffer; Count: Longint): Longint; override;
   end;
+
+{$IFDEF WINDOWS}
+type
+  PTcpRow = ^TTcpRow;
+  TTcpRow = record
+    State, LocalAddress, LocalPort, RemoteAddress, RemotePort: DWORD;
+  end;
+
+function GetTcpTable(Table: Pointer; var Size: DWORD; Sort: BOOL): DWORD; stdcall;
+  external 'iphlpapi.dll' name 'GetTcpTable';
+{$ENDIF}
+
+procedure ListListeningPorts(Ports: TStrings);
+{$IFDEF WINDOWS}
+const
+  TcpListen = 2;
+var
+  Table: PDWORD;
+  Row: PTcpRow;
+  Size, Required, I: DWORD;
+begin
+  Size := 0;
+  if GetTcpTable(nil, Size, false) <> ERROR_INSUFFICIENT_BUFFER then Exit;
+  repeat
+    Required := Size;
+    GetMem(Table, Required);
+    try
+      case GetTcpTable(Table, Size, false) of
+        NO_ERROR:
+          begin
+            Row := PTcpRow(Table + 1);
+            I := 0;
+            while I < Table^ do
+            begin
+              if Row^.State = TcpListen then
+                Ports.Add(IntToStr(ntohs(Word(Row^.LocalPort))));
+              Inc(Row);
+              Inc(I);
+            end;
+            Exit;
+          end;
+        ERROR_INSUFFICIENT_BUFFER: ;
+        else Exit;
+      end;
+    finally
+      FreeMem(Table);
+    end;
+  until Size <= Required;
+end;
+{$ELSE}
+var
+  Lines, Fields: TStringList;
+  Line, Address: string;
+  Port: integer;
+begin
+  Lines := TStringList.Create;
+  Fields := TStringList.Create;
+  try
+    {$IFDEF LINUX}
+    if not FileExists('/proc/net/tcp') then Exit;
+    Lines.LoadFromFile('/proc/net/tcp');
+    {$ENDIF}
+    {$IFDEF DARWIN}
+    if not RunCommand('/usr/sbin/netstat', ['-an', '-p', 'tcp'], Line) then Exit;
+    Lines.Text := Line;
+    {$ENDIF}
+    for Line in Lines do
+    begin
+      ExtractStrings([' ', #9], [], PChar(Line), Fields);
+      {$IFDEF LINUX}
+      if (Fields.Count > 3) and (Fields[3] = '0A') then
+      begin
+        Address := Fields[1];
+        Port := StrToIntDef('$' + Copy(Address, Pos(':', Address) + 1, MaxInt), 0);
+        if Port > 0 then Ports.Add(IntToStr(Port));
+      end;
+      {$ENDIF}
+      {$IFDEF DARWIN}
+      if (Fields.Count > 5) and (Fields[0] = 'tcp4') and (Fields[5] = 'LISTEN') then
+      begin
+        Address := Fields[3];
+        Port := StrToIntDef(Copy(Address, LastDelimiter('.', Address) + 1, MaxInt), 0);
+        if Port > 0 then Ports.Add(IntToStr(Port));
+      end;
+      {$ENDIF}
+      Fields.Clear;
+    end;
+  finally
+    Fields.Free;
+    Lines.Free;
+  end;
+end;
+{$ENDIF}
 
 function TResponseBuffer.Write(const Buffer; Count: Longint): Longint;
 begin
@@ -92,6 +186,7 @@ constructor TSyncerClient.Create(Kind: TSyncerOperation; const Query: UTF8String
 begin
   inherited Create(true);
   FPort := Ini.SyncerPort;
+  FLastPort := InterlockedExchangeAdd(Ini.SyncerLastPort, 0);
   FQuery := Query;
   FSongID := SongID;
   Operation := Kind;
@@ -104,14 +199,14 @@ var
   Body: TResponseBuffer;
   Data: TJSONData;
   Item: TJSONObject;
-  URL, Status, Host: string;
+  URL, Status: string;
   I, Count: integer;
   Deadline, NextPoll: QWord;
 
-  function FindSyncer(const Host: string): boolean;
+  function FindSyncer(const Host: string; Port: integer): boolean;
   var Page: string;
   begin
-    FAddress := Host + ':' + IntToStr(FPort);
+    FAddress := Host + ':' + IntToStr(Port);
     Body.Clear;
     try
       Client.Get('http://' + FAddress + '/?limit=0', Body);
@@ -122,6 +217,43 @@ var
       Result := false;
     end;
     Body.Clear;
+  end;
+
+  function Connect: boolean;
+  var
+    Host, Entry: string;
+    Ports: TStringList;
+    Port: integer;
+
+    function Probe(Port: integer): boolean;
+    begin
+      Result := not Terminated and (Port > 0) and (Port <= 65535) and
+        (FindSyncer('127.0.0.1', Port) or
+         ((Host <> '') and (Host <> '127.0.0.1') and FindSyncer(Host, Port)));
+      if Result and (FPort = 0) then InterlockedExchange(Ini.SyncerLastPort, Port);
+    end;
+
+  begin
+    Host := LocalIPv4;
+    if FPort > 0 then Exit(Probe(FPort));
+    if Probe(FLastPort) then Exit(true);
+
+    // Auto asks the OS for a port. Probe actual listeners instead of guessing its range.
+    Ports := TStringList.Create;
+    try
+      Ports.Sorted := true;
+      Ports.Duplicates := dupIgnore;
+      ListListeningPorts(Ports);
+      for Entry in Ports do
+      begin
+        if Terminated then Break;
+        Port := StrToInt(Entry);
+        if (Port <> FLastPort) and Probe(Port) then Exit(true);
+      end;
+    finally
+      Ports.Free;
+    end;
+    Result := false;
   end;
 
   function DownloadStatus(Post: boolean): string;
@@ -143,11 +275,7 @@ begin
     Client.ConnectTimeout := 700;
     Client.IOTimeout := 1500;
     Client.AllowRedirect := false;
-    if not FindSyncer('127.0.0.1') then
-    begin
-      Host := LocalIPv4;
-      if (Host = '') or (Host = '127.0.0.1') or not FindSyncer(Host) then Exit;
-    end;
+    if not Connect then Exit;
     URL := 'http://' + FAddress + '/api/songs';
     try
       if Operation = soDownload then
