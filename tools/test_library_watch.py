@@ -62,8 +62,8 @@ end;
 procedure SettleChanges;
 var Start, QuietSince: QWord;
 begin
-  // FSEvents can deliver startup and write notifications in separate batches.
-  // Drain preceding mutations before asserting that a read stays quiet.
+  // FSEvents can deliver notifications for one mutation in separate batches.
+  // Drain preceding mutations before asserting that the next action stays quiet.
   Start := GetTickCount64;
   QuietSince := Start;
   repeat
@@ -120,6 +120,7 @@ begin
     Check(RenameFile(Root, Root + '-moved'), 'root rename failed'); WaitChange(Root, true);
     ForceDirectories(Root); WaitChange(Root, true);
     WriteFile(Root + PathDelim + 'fresh.txt', 'new inode at configured root'); WaitChange(Root);
+    SettleChanges;
     WriteFile(Root + '-moved' + PathDelim + 'old-root.txt', 'no longer in library'); Quiet('after moved-root file');
     Quiet('at shutdown');
     Writeln('PASS native add/change/rename/delete, new nested watches, root recreation, idle and outside-library isolation');
