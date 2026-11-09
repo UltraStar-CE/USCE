@@ -93,7 +93,7 @@ uses
   URenderer,
   USkins,
   USongs,
-  UUnicodeUtils;
+  UUnicodeUtils, USyncerWeb;
 
 function TScreenMain.ParseInput(PressedKey: Cardinal; CharCode: UCS4Char;
   PressedDown: boolean; Repeated: boolean = false): boolean;
@@ -187,8 +187,8 @@ begin
               FadeTo(@ScreenName, SoundLib.Start);
             end;
           end
-          else //show error message
-            ScreenPopupError.ShowPopup(Language.Translate('ERROR_NO_SONGS'));
+          else if TSyncerClient.Enabled then FadeTo(@ScreenSong)
+          else ScreenPopupError.ShowPopup(Language.Translate('ERROR_NO_SONGS'));
         end;
 
         //Party

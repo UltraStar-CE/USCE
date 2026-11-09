@@ -296,6 +296,7 @@ type
       procedure SaveHighScoreScreenSettings;
       procedure SaveWebcamSettings();
       procedure SaveNumberOfPlayers;
+      function AddSongDirectory(const Folder: IPath): boolean;
       procedure SaveStatDetailCount;
       procedure SaveStatPeriod;
       procedure SaveSingTimebarMode;
@@ -2523,6 +2524,37 @@ begin
   finally
     IniFile.Free;
   end;
+end;
+
+function TIni.AddSongDirectory(const Folder: IPath): boolean;
+var
+  IniFile: TIniFile;
+  Key: string;
+  I: integer;
+  Root, Existing: IPath;
+begin
+  Result := false;
+  if not Folder.IsDirectory then Exit;
+  Root := Folder.GetAbsolutePath.RemovePathDelim;
+  if Assigned(SongPaths) then
+    for I := 0 to SongPaths.Count - 1 do
+    begin
+      Existing := (SongPaths[I] as IPath).GetAbsolutePath.RemovePathDelim;
+      if Root.Equals(Existing, not FileSystem.IsCaseSensitive) or Root.IsChildOf(Existing, false) then Exit;
+    end;
+  AddSongPath(Root, false);
+  IniFile := TSafeIniFile.Create(Filename.ToNative, 'TIni.AddSongDirectory');
+  try
+    I := 1;
+    repeat
+      Key := 'SongDir' + IntToStr(I);
+      Inc(I);
+    until Trim(IniFile.ReadString('Directories', Key, '')) = '';
+    IniFile.WriteString('Directories', Key, Folder.ToUTF8);
+  finally
+    IniFile.Free;
+  end;
+  Result := true;
 end;
 
 procedure TIni.SaveStatDetailCount;
