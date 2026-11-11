@@ -725,7 +725,7 @@ begin
   if (OldCount=0) and (NewCount>0) then
   begin
     UpdatePlayerVisibility;
-    AudioInput.CaptureStart;
+    AudioInput.CaptureStart(Min(NewCount, ScreenName.LocalPlayerCount));
   end;
   if NewCount=0 then AudioInput.CaptureStop;
   if ScreenContinuousPlayback.Session.Active then ScreenContinuousPlayback.Session.Scored:=NewCount>0;
@@ -1361,7 +1361,13 @@ begin
     Player[PlayerIndex].DetectionReady := false;
 
   // prepare and start voice-capture
-  if PlayersPlay > 0 then AudioInput.CaptureStart;
+  if PlayersPlay > 0 then
+  begin
+    if (ScreenSong.Mode = smNormal) and not Party.bPartyGame then
+      AudioInput.CaptureStart(Min(PlayersPlay, ScreenName.LocalPlayerCount))
+    else
+      AudioInput.CaptureStart;
+  end;
 
   // main text
   ClearLyricEngines;
