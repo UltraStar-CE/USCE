@@ -727,8 +727,7 @@ begin
     UpdatePlayerVisibility;
     AudioInput.CaptureStart(Min(NewCount, ScreenName.LocalPlayerCount));
   end;
-  if NewCount=0 then AudioInput.CaptureStop;
-  if ScreenContinuousPlayback.Session.Active then ScreenContinuousPlayback.Session.Scored:=NewCount>0;
+  if ScreenContinuousPlayback.Session.Active then ScreenContinuousPlayback.Session.Scored:=true;
   SendRemoteScoreSnapshot(true);
   RemoteBridgeIPC.SendGameState('singing',RemoteSongSeq,0);
   Log.LogStatus(Format('players %d -> %d',[OldCount,NewCount]),'Input roster');
@@ -807,7 +806,7 @@ begin
   inherited;
 
   ScoringTailActive := false;
-  RemoteBridgeIPC.ApplyPendingPlayerCount(true);
+  RemoteBridgeIPC.RefreshRemoteInputs(true);
   if (ScreenSong.Mode = smNormal) and not Party.bPartyGame then
   begin
     // Input loss preserves this song's scores, but must not retain next-song lanes.

@@ -73,6 +73,7 @@ type
       VoiceIndex: integer;
 
       CountIndex:   integer;
+      NoLocalPlayers: boolean;
       AssignedPlayerCount: integer;
       AssignedPlayerSlots: cardinal;
       PlayerIndex:  integer;
@@ -114,7 +115,6 @@ type
       procedure DrawCards;
       procedure RefreshVoice;
     public
-      LyricsOnly: boolean;
       Goto_SingScreen: boolean; //If true then next Screen in SingScreen
 
       constructor Create; override;
@@ -529,13 +529,13 @@ begin
       SDLK_RETURN:
         begin
           StopTextInput;
-          UpdateAssignedPlayers;
+          UpdateAssignedPlayers(true);
           if Party.bPartyGame then
             Ini.Players := CountIndex
           else
           begin
-            LyricsOnly := CountIndex = 0;
-            if not LyricsOnly then Ini.Players := CountIndex - 1;
+            NoLocalPlayers := CountIndex = 0;
+            if not NoLocalPlayers then Ini.Players := CountIndex - 1;
           end;
 
           for I := 1 to SelectedPlayerCount do
@@ -842,7 +842,7 @@ end;
 
 function TScreenName.LocalPlayerCount: integer;
 begin
-  if LyricsOnly then Exit(0);
+  if NoLocalPlayers then Exit(0);
   Result := UIni.IPlayersVals[Ini.Players];
 end;
 
@@ -1344,7 +1344,7 @@ begin
   AudioPlayback.SetVolume(EnsureRange(Ini.PreviewVolume, 0, 100) / 100);
 
   Ini.ReloadNames;
-  RemoteBridgeIPC.ApplyPendingPlayerCount(true);
+  RemoteBridgeIPC.RefreshRemoteInputs(true);
   if Party.bPartyGame then
   begin
     CountIndex := Ini.Players;
