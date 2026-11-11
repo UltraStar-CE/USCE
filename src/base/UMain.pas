@@ -988,7 +988,7 @@ begin
       CheckEvents;
       UpdatePhoneAudio((Display.CurrentScreen <> @ScreenSing) and
         (Display.NextScreen <> @ScreenSing));
-      RemoteBridgeIPC.ApplyPendingPlayerCount;
+      RemoteBridgeIPC.RefreshRemoteInputs;
       ProcessRemoteCommandQueue;
 
       // display
