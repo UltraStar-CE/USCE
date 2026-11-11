@@ -3347,7 +3347,7 @@ begin
     Mode := smNormal;
 
   Ini.ReloadNames;
-  RemoteBridgeIPC.ApplyPendingPlayerCount(true);
+  RemoteBridgeIPC.RefreshRemoteInputs(true);
   PlayersPlay := ScreenName.ActivePlayerCount;
   SetLength(Player, PlayersPlay);
   for I := 0 to PlayersPlay - 1 do
@@ -5158,11 +5158,6 @@ begin
     Exit;
   end;
   CatSongs.Selected := Interaction;
-  if (Mode = smNormal) and ScreenName.LyricsOnly then
-  begin
-    PlayersPlay := 0;
-    SetLength(Player, 0);
-  end;
 
   if (Mode = smPartyFree) then
     Party.SaveSungPartySong(Interaction);
@@ -5172,7 +5167,7 @@ begin
   if (not Party.bPartyGame) and (Mode <> smPartyTournament) then
   begin
     Ini.ReloadNames;
-    RemoteBridgeIPC.ApplyPendingPlayerCount(true);
+    RemoteBridgeIPC.RefreshRemoteInputs(true);
     PlayersPlay := ScreenName.ActivePlayerCount;
     SetLength(Player, PlayersPlay);
 

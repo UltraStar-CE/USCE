@@ -69,7 +69,7 @@ type
     procedure Start;
     procedure Stop;
     procedure UpdateCompanionViews;
-    procedure ApplyPendingPlayerCount(RefreshProfiles: boolean = false);
+    procedure RefreshRemoteInputs(RefreshProfiles: boolean = false);
     procedure SendAck(const PlayerId: UTF8String; CommandId: integer;
       Accepted: boolean; const Reason: UTF8String; GameStateSeq: integer);
     procedure SendSongStarted(SongSeq: integer; SongId: integer; MediaStartUs: int64;
@@ -960,7 +960,7 @@ begin
   end;
 end;
 
-procedure TRemoteBridgeIPC.ApplyPendingPlayerCount(RefreshProfiles: boolean = false);
+procedure TRemoteBridgeIPC.RefreshRemoteInputs(RefreshProfiles: boolean = false);
 var
   Count, I, Slot, A: integer;
   Local: TBooleanDynArray;

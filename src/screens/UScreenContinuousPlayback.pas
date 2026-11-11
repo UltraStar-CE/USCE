@@ -57,8 +57,8 @@ type
 
 implementation
 
-uses SysUtils, Classes, fpjson, jsonparser, Math, UNote, UGraphic, URemoteInput, ULanguage, UHelp, ULog, UMusic, UPlaylist,
-  USongs, USong, UIni, UThemes, ULyrics, UDisplay, URecord, URemoteBridgeIPC,
+uses SysUtils, Classes, fpjson, jsonparser, Math, UNote, UGraphic, UInputSource, ULanguage, UHelp, ULog, UMusic, UPlaylist,
+  USongs, USong, UIni, UThemes, ULyrics, UDisplay, URemoteBridgeIPC,
   UScreenScore, UScreenSingController, UCommandLine, ULibraryLockdown;
 
 
@@ -197,7 +197,7 @@ begin
   inherited;
   SyncProfile;
   SelectsS[0].SelectedOption := Enabled;
-  SelectsS[SingingSlide].Visible := not ScreenName.LyricsOnly;
+  SelectsS[SingingSlide].Visible := ScreenName.ActivePlayerCount > 0;
   Interaction := 0;
   Help.SetHelpID('ID_082');
 end;
@@ -375,7 +375,7 @@ end;
 
 procedure TScreenContinuousPlayback.Advance;
 var SongIndex, Skipped, I: integer; Message: UTF8String;
-    Handoff: TJSONObject; Singers: TJSONArray; Local: TBooleanDynArray;
+    Handoff: TJSONObject; Singers: TJSONArray;
 begin
   if PreviousRequested then
   begin
@@ -409,9 +409,8 @@ begin
       try
         Singers := TJSONArray.Create;
         Handoff.Add('singers', Singers);
-        AudioInputProcessor.CheckPlayersConfig(IMaxPlayerCount, Local);
         for I := 0 to ScreenName.ActivePlayerCount - 1 do
-          if Local[I] or RemoteInputProcessor.HasAssignedPlayer(I) then
+          if PlayerInputSource(I) <> pisNone then
             Singers.Add(TJSONObject.Create(['slot', I + 1, 'name', string(Ini.Name[I])]));
         RemoteBridgeIPC.SendJsonMessage(UTF8String(Handoff.AsJSON));
       finally Handoff.Free; end;
