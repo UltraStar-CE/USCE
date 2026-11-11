@@ -4,18 +4,18 @@ interface
 uses UScale;
 type TPlayerInputSource = (pisNone, pisLocal, pisDirect, pisServer);
   TInputBadgeScreen = (ibsSetup, ibsSing, ibsScore);
-function PlayerInputSource(PlayerIndex: integer): TPlayerInputSource;
+function PlayerInputSource(PlayerIndex: integer; LocalCount: integer = -1): TPlayerInputSource;
 procedure DrawInputSourceBadge(Source: TPlayerInputSource; X, Y, W, H: single;
   Screen: TInputBadgeScreen = ibsSetup; Opacity: single = 1;
   LayoutMode: TLayoutScaleMode = lsStretch);
 procedure ReleaseInputSourceBadges;
 implementation
 uses Math, SysUtils, Types, UIni, URecord, URemoteInput, UPhoneAudio, URenderer,
-  UThemes, USkins, fpjson, jsonparser;
+  UThemes, USkins, USong, UGraphic, UParty, fpjson, jsonparser;
 var CachedAt: array[0..IMaxPlayerCount-1] of QWord;
     CachedSource: array[0..IMaxPlayerCount-1] of TPlayerInputSource;
     Glyphs: array[pisLocal..pisServer] of TTexture;
-function PlayerInputSource(PlayerIndex: integer): TPlayerInputSource;
+function PlayerInputSource(PlayerIndex: integer; LocalCount: integer): TPlayerInputSource;
 var Local: TBooleanDynArray; Data: TJSONData;
 begin
   Result := pisNone;
@@ -41,6 +41,14 @@ begin
     Exit(CachedSource[PlayerIndex]);
   end;
   CachedAt[PlayerIndex] := 0;
+  if LocalCount < 0 then
+  begin
+    LocalCount := IMaxPlayerCount;
+    if Assigned(ScreenName) and Assigned(ScreenSong) and Assigned(Party) and
+       not Party.bPartyGame and (ScreenSong.Mode = smNormal) then
+      LocalCount := ScreenName.LocalPlayerCount;
+  end;
+  if PlayerIndex >= LocalCount then Exit;
   AudioInputProcessor.CheckPlayersConfig(IMaxPlayerCount, Local);
   if Local[PlayerIndex] then Result := pisLocal;
 end;

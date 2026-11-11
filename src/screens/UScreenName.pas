@@ -134,6 +134,7 @@ type
 
       procedure PlayerColorButton(K: integer);
       function NoRepeatColors(ColorP: integer; Interaction: integer; Pos: integer):integer;
+      function LocalPlayerCount: integer;
       function ActivePlayerCount: integer;
       procedure RefreshPlayers();
       procedure RefreshProfile();
@@ -534,7 +535,13 @@ begin
         begin
           StopTextInput;
           UpdateAssignedPlayers;
-          if SelectedPlayerCount > 0 then Ini.Players := SelectedPlayerCount - 1;
+          if Party.bPartyGame then
+            Ini.Players := CountIndex
+          else
+          begin
+            LyricsOnly := CountIndex = 0;
+            if not LyricsOnly then Ini.Players := CountIndex - 1;
+          end;
 
           for I := 1 to SelectedPlayerCount do
           begin
@@ -835,15 +842,21 @@ end;
 function TScreenName.SelectedPlayerCount: integer;
 begin
   if Party.bPartyGame then Exit(UIni.IPlayersVals[CountIndex]);
-  if CountIndex = 0 then Exit(0);
   Result := AssignedPlayerCount;
 end;
 
+function TScreenName.LocalPlayerCount: integer;
+begin
+  if LyricsOnly then Exit(0);
+  Result := UIni.IPlayersVals[Ini.Players];
+end;
+
 function TScreenName.ActivePlayerCount: integer;
+var
+  Slots: cardinal;
 begin
   if Party.bPartyGame then Exit(UIni.IPlayersVals[Ini.Players]);
-  if LyricsOnly then Exit(0);
-  Result := AudioInputProcessor.ConfiguredPlayerCount;
+  Result := AudioInputProcessor.ConfiguredPlayerCount(LocalPlayerCount, Slots);
 end;
 
 procedure TScreenName.UpdateAssignedPlayers(Force: boolean);
@@ -852,13 +865,10 @@ var
   Slots: cardinal;
 begin
   if Party.bPartyGame then Exit;
-  Count := AudioInputProcessor.ConfiguredPlayerCount(Slots);
+  Count := AudioInputProcessor.ConfiguredPlayerCount(CountIndex, Slots);
   if not Force and (Slots = AssignedPlayerSlots) then Exit;
   AssignedPlayerSlots := Slots;
   AssignedPlayerCount := Count;
-  UpdateSelectSlideOptions(PlayersCount,
-    [Language.Translate('CONTINUOUS_ZERO_PLAYERS'),
-     Format(Language.Translate('SING_PLAYER_COUNT_ASSIGNED'), [Count])], CountIndex);
   if not Force then RefreshPlayers;
 end;
 
@@ -876,8 +886,8 @@ var
   DesCol: TRGB;
 begin
 
+  UpdateAssignedPlayers(true);
   Count := SelectedPlayerCount;
-  if not Party.bPartyGame then LyricsOnly := CountIndex = 0;
 
   while (PlayerIndex > Max(0, Count-1)) do
     PlayerIndex := PlayerIndex - 1;
@@ -1327,6 +1337,7 @@ end;
 
 procedure TScreenName.OnShow;
 var
+  LocalCounts: array of UTF8String;
   I: integer;
   PreviewEnd: real;
 begin
@@ -1347,8 +1358,11 @@ begin
   end
   else
   begin
-    CountIndex := Ord(not LyricsOnly);
-    UpdateAssignedPlayers(true);
+    CountIndex := LocalPlayerCount;
+    SetLength(LocalCounts, Length(IPlayers) + 1);
+    for I := 0 to High(LocalCounts) do
+      LocalCounts[I] := Format(Language.Translate('SING_LOCAL_PLAYER_COUNT'), [I]);
+    UpdateSelectSlideOptions(PlayersCount, LocalCounts, CountIndex);
   end;
 
   for I := 0 to UIni.IMaxPlayerCount-1 do
@@ -1548,25 +1562,27 @@ end;
 
 procedure TScreenName.UpdateMicActivity;
 var
-  I, Count: integer;
+  I, Count, CaptureCount: integer;
   Target, Threshold, Blend: single;
   NowTicks, LastInput: QWord;
   Clipped: boolean;
   C: TRGB;
 begin
   Count := SelectedPlayerCount;
-  if Count <> MicPreviewCount then
+  CaptureCount := Count;
+  if not Party.bPartyGame then CaptureCount := Min(Count, CountIndex);
+  if CaptureCount <> MicPreviewCount then
   begin
     if OwnsMicPreview then AudioInput.CaptureStop(true);
     OwnsMicPreview := false;
-    MicPreviewCount := Count;
+    MicPreviewCount := CaptureCount;
     FillChar(MicActivity, SizeOf(MicActivity), 0);
     FillChar(MicClippedUntil, SizeOf(MicClippedUntil), 0);
   end;
   // Retry after an outgoing singing screen releases its capture at fade end.
   if (Count > 0) and not AudioInput.IsCapturing then
   begin
-    AudioInput.CaptureStart(Count, true);
+    AudioInput.CaptureStart(CaptureCount, true);
     OwnsMicPreview := true;
   end;
   Threshold := IThresholdVals[EnsureRange(Ini.ThresholdIndex, 0, High(IThresholdVals))];
@@ -1574,7 +1590,8 @@ begin
   for I := 0 to Count - 1 do
   begin
     Target := 0;
-    if OwnsMicPreview then
+    if OwnsMicPreview and (Party.bPartyGame or
+       (AssignedPlayerSlots and (cardinal(1) shl I) <> 0)) then
     begin
       LastInput := AudioInputProcessor.Sound[I].LastInputTicks;
       if (LastInput <> 0) and (LastInput <= NowTicks) and
@@ -1860,8 +1877,8 @@ begin
   if SelectedPlayerCount > 0 then SetAvatarScroll;
 
   // set current name = name in list
-  if not Party.bPartyGame and (PlayerInputSource(PlayerIndex) = pisNone) then
-    Text[PlayerCurrentText[PlayerIndex]].Text := Language.Translate('SING_OPTIONS_RECORD_NOONE')
+  if not Party.bPartyGame and (AssignedPlayerSlots and (cardinal(1) shl PlayerIndex) = 0) then
+    Text[PlayerCurrentText[PlayerIndex]].Text := DisplayPlayerName(PlayerIndex)
   else
     Text[PlayerCurrentText[PlayerIndex]].Text := Button[PlayerName].Text[0].Text;
 
@@ -1880,9 +1897,11 @@ begin
 
   // and texts
   for I := 0 to SelectedPlayerCount - 1 do
-    if Statics[PlayerCurrentAvatar[I]].Visible then
+    if Statics[PlayerCurrentAvatar[I]].Visible and (Party.bPartyGame or
+       (AssignedPlayerSlots and (cardinal(1) shl I) <> 0)) then
       with Statics[PlayerCurrentAvatar[I]].Texture do
-        DrawInputSourceBadge(PlayerInputSource(I), X, Y, W, H, ibsSetup, Alpha, ScaleMode);
+        DrawInputSourceBadge(PlayerInputSource(I, IfThen(Party.bPartyGame, IMaxPlayerCount, CountIndex)),
+          X, Y, W, H, ibsSetup, Alpha, ScaleMode);
   for I := 0 to High(Text) do
     Text[I].Draw;
 

@@ -922,6 +922,9 @@ begin
     if (not CurrentSong.isDuet) or (Player[PlayerIndex].Track = CP) then
     begin
 
+      if (ScreenSong.Mode = smNormal) and not Party.bPartyGame and
+         (PlayerIndex >= ScreenName.LocalPlayerCount) and
+         not RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) then Continue;
       IsRemotePlayer := RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) and
         not PhoneAudio.Enabled;
       PlayerDelayMs := ConfiguredPlayerDelayMs(PlayerIndex);
