@@ -153,6 +153,39 @@ The DEB packages themselves remain part of USCE releases.
 
 ## Optional MPV video playback
 
-On Ubuntu install `libmpv-dev`, then build with `./configure --enable-debug --with-mpv` and `make`. The default `./configure` build keeps FFmpeg only. MPV is loaded dynamically; its runtime must be installed separately.
+Install libmpv development files (`libmpv-dev` on Ubuntu), then configure with
+`./configure --with-mpv` and run `make`. The default build keeps FFmpeg only.
+MPV loads dynamically; the normal release packages do not bundle it.
 
-Choose the video backend and hardware decoding in Tools > Options > Graphics and restart after changing the backend. FFmpeg remains the default and fallback. See [hardware video](doc/hardware-video.md) for configuration, platform runtime names and validation.
+Choose MPV in Tools > Options > Graphics and restart. Hardware decoding `Auto`
+tries the available decoders; `Off` uses software decoding. Check the log for
+the decoder actually selected. Song audio and lyrics keep the existing audio
+clock. FFmpeg remains the default and fallback when MPV cannot open a video.
+Song previews supplied as in-memory snapshots use FFmpeg to keep files replaceable.
+
+The runtime must match the game's architecture and provide the OpenGL render API:
+
+- Linux: `libmpv.so.2` or compatible `libmpv.so.1`, plus video drivers.
+- Windows: `libmpv-2.dll` or `mpv-2.dll` and its dependencies beside the executable.
+- macOS: `libmpv.2.dylib` or compatible `libmpv.1.dylib` with suitable loader paths.
+
+`--with-mpv=nocheck` builds the loader without development metadata; it does not
+install or package the runtime. Keep the game's existing FFmpeg libraries intact.
+Original source commits are listed in [MPV port provenance](doc/mpv-port-provenance.md).
+
+### Regression checks
+
+After building, run the video clock and real-renderer tests:
+
+```sh
+mkdir -p build/video-tests
+fpc -Fusrc/media -FUbuild/video-tests -FEbuild/video-tests test/VideoSyncTest.pas
+build/video-tests/VideoSyncTest
+python3 test/run-video-smoke.py --renderers gl gl2 gles2 gles3
+```
+
+The playback test generates its fixtures and builds a separate executable; tests
+are not installed with the game. It needs Python 3, FFmpeg with libx264 and a display
+(use `xvfb-run -a` on headless Linux). CI checks builds with and without MPV.
+On a physical GPU, add `--hwdec auto --require-hardware` to verify hardware decoding.
+Longer playback and microphone responsiveness still require native testing.

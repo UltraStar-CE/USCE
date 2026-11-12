@@ -199,12 +199,12 @@ begin
   Video:=Provider.Open(Path(ParamStr(2)+'.corrupt'));
   Require(Video=nil,'corrupt file returned a video');
   ConsoleWriteLn('Testing expected libmpv initialization failure and FFmpeg fallback');
-  SupportsTargets:=TRendererTestAccess(Renderer).SupportsFBO;
-  TRendererTestAccess(Renderer).SupportsFBO:=false;
+  SupportsTargets:=TRendererTestAccess(Renderer).SupportsRenderTargets;
+  TRendererTestAccess(Renderer).SupportsRenderTargets:=false;
   try
     Video:=Provider.Open(Path(ParamStr(2)));
   finally
-    TRendererTestAccess(Renderer).SupportsFBO:=SupportsTargets;
+    TRendererTestAccess(Renderer).SupportsRenderTargets:=SupportsTargets;
   end;
   Require(Video<>nil,'fallback did not open valid video');
   PumpVideo(Video,0,100,false);
@@ -236,7 +236,7 @@ end;
 {$ENDIF}
 
 procedure Run;
-var I: integer; Saved: array[0..3] of GLint;
+var I: integer; Saved: array[0..3] of GLint; CaptureStarted: boolean;
 begin
   SetDefaultNumericLocale;
   Log.SetLogLevel(LOG_LEVEL_INFO);
@@ -275,6 +275,12 @@ begin
   A := Renderer.CreateRenderTarget(64,32);
   Require(A <> nil,'render target unsupported');
   CheckError('target created');
+  if Renderer is TRenderer_OpenGL2 then
+  begin
+    CaptureStarted := Renderer.BeginTextureCapture(A.Texture,64,32);
+    if CaptureStarted then Renderer.EndTextureCapture;
+    Require(not CaptureStarted,'legacy OpenGL unexpectedly enables menu-fade captures');
+  end;
   if ModeName <> 'gles2' then
   begin
     glBindFramebuffer(GL_READ_FRAMEBUFFER,A.NativeHandle);

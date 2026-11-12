@@ -79,6 +79,7 @@ type
       ErrorCode: GLenum;
       SupportsVAO: boolean;
       SupportsFBO: boolean;
+      SupportsRenderTargets: boolean;
       CaptureFBO, CaptureDepth: GLuint;
       CaptureWidth, CaptureHeight: integer;
       CapturePreviousFBO: GLint;
@@ -2119,7 +2120,7 @@ end;
 function TRenderer_OpenGLBase.CreateRenderTarget(Width, Height: integer): TRenderTarget;
 begin
   Result := nil;
-  if not SupportsFBO or (Width < 1) or (Height < 1) or
+  if not SupportsRenderTargets or (Width < 1) or (Height < 1) or
     (Width > MaxTextureSize) or (Height > MaxTextureSize) or
     not Assigned(glGenFramebuffers) or not Assigned(glBindFramebuffer) or
     not Assigned(glBindRenderbuffer) or
@@ -2364,6 +2365,7 @@ begin
   Log.LogInfo('Using Modern OpenGL renderer', 'TRenderer_OpenGL3.CheckVersion');
   SupportsVAO := true;
   SupportsFBO := true;
+  SupportsRenderTargets := true;
   SupportsMappedBuffer := true;
   {$IFDEF MSWINDOWS}
   // Intel's Windows driver can spend most of a frame synchronizing each
@@ -2463,6 +2465,7 @@ begin
       Log.LogInfo('OpenGL ES driver does not support mipmapping for NPOT textures. Mipmapping will be disabled', 'TRenderer_OpenGLES.CheckVersion');
   end;
   SupportsFBO := true;
+  SupportsRenderTargets := true;
 end;
 
 procedure TRenderer_OpenGLES.GetShaderSource(out MainVertex, MainFragment, TextFragment, LineStripVertex, LineStripFragment: string);
@@ -2513,7 +2516,9 @@ begin
     SupportsMappedBuffer := true;
   SupportsMipMap := true;
   fSupportsProjectM := false;
-  SupportsFBO := Int_CheckExtension(Extensions, 'GL_ARB_framebuffer_object');
+  SupportsFBO := false;
+  // MPV targets must not enable the legacy renderer's menu-fade captures.
+  SupportsRenderTargets := Int_CheckExtension(Extensions, 'GL_ARB_framebuffer_object');
   GlyphTextureFormat := GL_LUMINANCE;
 end;
 
