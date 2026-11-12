@@ -43,6 +43,39 @@ deferral. An assessment checkpoint records what was reviewed; it does not imply
 that every change was adopted. Changes that depend on earlier work are reviewed
 in order, with compatibility adjustments recorded in the PR.
 
+Automated proposals retain upstream links and contributor mentions, including
+maintainers. Upstream issues and PRs use fully qualified references such as
+`UltraStar-Deluxe/USDX#1460` so they point to the correct repository. The tracker
+links both the source proposal and its USCE counterpart. Release notes retain
+relevant source references and attribution alongside links to the USCE changes.
+
+The same daily assessment also monitors the upstream USDX and Themes issue
+trackers, even when there are no new commits. Only reports created on or after
+the fixed cutoff in `doc/upstream/issues-watch.json` are included. Older issues
+stay excluded even when updated or reopened. Later activity on the new reports,
+including comments and changes of state, prompts reassessment. Titles, source
+links, description excerpts, labels and comment counts provide context for
+assessing bugs, regressions, feature requests and workarounds against current
+USCE. An upstream report is not automatically a confirmed USCE bug.
+
+Issue assessments contain up to 20 reports, with one outstanding assessment per
+source repository. Decisions and related USCE issue or PR links are recorded in
+`doc/upstream/usdx-issues.json` or `doc/upstream/themes-issues.json` before merge.
+Unchanged reports are not proposed again; new activity prompts reassessment and
+retains the prior decision. Closing an assessment without merging does not mark
+its reports as assessed. The workflow neither posts upstream nor generates or
+merges game changes from issue text, and requires no additional paid AI service.
+
+The daily assessment also discovers USDX forks pushed within the last two years,
+including forks listed in GitHub's active-forks view. Archived and disabled
+repositories and USCE itself are excluded. All branch tips are checked, including feature branches. New tips are filtered against USDX and all previously recorded source heads before producing a draft intake with immutable comparisons and commit excerpts. An intake is not a completed assessment.
+These commits may already have equivalent ports in USCE; they are discovery
+candidates, not automatic imports. Assessments contain up to 20 branch tips, with one
+outstanding fork assessment at a time. Decisions and existing USCE references
+are recorded in `doc/upstream/usdx-forks.json`. Unchanged assessed heads do not
+produce duplicate proposals. Closing an unmerged assessment leaves it eligible
+for reassessment. The scan reads metadata only and does not execute fork code.
+
 ## Validation and merge decisions
 
 Automated proposals follow our [contribution policy](CONTRIBUTING.md), including
@@ -60,7 +93,16 @@ check out or execute proposed code, merge PRs, or purchase additional usage.
 Queue requests and their source commits are recorded in PR comments.
 `tools/codex-review-queue.cjs` selects one eligible request from complete metadata
 and the owner-authored request ledger; missing in-flight state stops dispatch. This local
-schedule runs while its Codex host is available.
+  schedule runs while its Codex host is available.
+
+Only an unverified request on the current head of an open PR blocks dispatch.
+`classifyRequests` requires fresh PR metadata for every request, including closed
+and merged PRs. Superseded heads and closed PRs remain outstanding, count toward
+historical usage, and are monitored for completion and late findings. They do
+not block current-head reviews. Never infer completion from age, rebase or merge,
+cancel an existing review, or retry a stale request. Surface new actionable late
+findings on merged PRs for follow-up without repeating unchanged stale blockers.
+Only verified native completion evidence enters `completedCommentIds`.
 
 Build results identify the exact source revision tested. See
 [USCE-CI.md](USCE-CI.md) for platform coverage.
@@ -68,3 +110,33 @@ Build results identify the exact source revision tested. See
 Automation does not approve its own proposals, change review requirements or
 merge PRs. A human evaluates the change, testing and review feedback before
 deciding to merge.
+
+### Incremental fork assessment
+
+Known branches are compared with their last recorded head. Newly discovered
+branches are compared with USCE main, excluding commits already in its history.
+The complete commit inventory is paginated before applying the six-month author-date cutoff; eligible commits and the number excluded are recorded. Excerpts are only a summary.
+Prior heads and decisions remain in assessment history. Commits reachable from current USDX are excluded even if USCE adapted their changes. Shared commits are presented once across the batch and previous inventories. Full recorded source-head ancestry, including cross-fork aliases, is excluded even when an old inventory stored only excerpts. A branch containing only previously seen history produces no proposal. A new push elsewhere
+in a fork does not make its old branch history new development.
+
+Assessors check rebased/adapted equivalents against USCE source and existing
+PRs, record covered/superseded/rejected work with evidence, and link unresolved
+work to existing follow-ups. These semantic decisions are not inferred from
+commit titles or ancestry. Commits older than six calendar months are excluded using their original author date, including recently rebased commits. Old-only branches produce no proposal. Reports should
+provide recommendations and concrete follow-ups rather than another reading list.
+
+### Concrete follow-through
+
+The local daily upstream follow-through task consumes discovery records and
+processes open intake PRs first and prepares the actual outputs: worthwhile source changes become focused regular
+PRs with preserved authorship and appropriate checks; relevant reports become
+attributed issues; product decisions become specific questions for @dgruss.
+Draft is for incomplete work, not a default for automated proposals. Existing
+outputs are reused, and the assessment links those outputs rather than handing
+the maintainer a reading list. Covered or excluded work creates no new action.
+Before presenting results, replace the intake body with actual output links and evidence-backed dispositions. Previously assessed source heads in linked theme/engine proposals also count as prior work. Rebased or adapted equivalents require source/patch inspection, not title matching. The six-month commit-age cutoff and the fixed new-issue watch cutoff apply.
+
+The local registry at outputs/upstream-assessment/registry.json remembers source
+heads, decisions and output links while repository checkpoints await merge.
+This task is separate from the metadata-only review queue and does not merge,
+approve, publish releases or close reporter issues.

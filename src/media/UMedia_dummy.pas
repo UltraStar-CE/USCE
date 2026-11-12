@@ -54,7 +54,7 @@ type
       function Init(): boolean;
       function Finalize(): boolean;
 
-      function Open(const aFileName: IPath; const aFileNameKaraoke: IPath): boolean; // true if succeed
+      function Open(const aFileName: IPath; const aFileNameKaraoke: IPath; const Media: TBytes = nil): boolean; // true if succeed
       procedure Close;
       function  GetFileName: string;
 
@@ -73,8 +73,9 @@ type
       // IAudioInput
       function InitializeRecord(ScanMode: TAudioInputScanMode): boolean;
       function FinalizeRecord: boolean;
-      procedure CaptureStart;
-      procedure CaptureStop;
+      function IsCapturing: boolean;
+      procedure CaptureStart(PlayerCount: integer = -1; MonitorOnly: boolean = false);
+      procedure CaptureStop(MonitorOnly: boolean = false);
       procedure GetFFTData(var data: TFFTData);
       function GetPCMData(var data: TPCMData): Cardinal;
       function GetFormatInfo(): TAudioFormatInfo;
@@ -155,6 +156,7 @@ type
       function GetReflectionSpacing(): double;
 
       procedure GetFrame(Time: Extended);
+      function Finished: boolean;
       procedure Draw();
 
       property Screen: integer read GetScreen;
@@ -176,7 +178,7 @@ type
       function Init(): boolean;
       function Finalize(): boolean;
 
-      function Open(const FileName: IPath): IVideo;
+      function Open(const FileName: IPath; const Media: TBytes = nil): IVideo;
     end;
 
 function  TAudio_Dummy.GetName: string;
@@ -199,7 +201,7 @@ begin
   Result := true;
 end;
 
-function TAudio_Dummy.Open(const aFileName : IPath; const aFileNameKaraoke : IPath): boolean; // true if succeed
+function TAudio_Dummy.Open(const aFileName : IPath; const aFileNameKaraoke : IPath; const Media: TBytes = nil): boolean; // true if succeed
 begin
   Result := false;
 end;
@@ -263,11 +265,16 @@ begin
   Result := true;
 end;
 
-procedure TAudio_Dummy.CaptureStart;
+function TAudio_Dummy.IsCapturing: boolean;
+begin
+  Result := false;
+end;
+
+procedure TAudio_Dummy.CaptureStart(PlayerCount: integer; MonitorOnly: boolean);
 begin
 end;
 
-procedure TAudio_Dummy.CaptureStop;
+procedure TAudio_Dummy.CaptureStop(MonitorOnly: boolean);
 begin
 end;
 
@@ -527,6 +534,11 @@ begin
   Result := 0;
 end;
 
+function TVideo_Dummy.Finished: boolean;
+begin
+  Result := false;
+end;
+
 procedure TVideo_Dummy.GetFrame(Time: Extended);
 begin
 end;
@@ -557,7 +569,7 @@ begin
   Result := true;
 end;
 
-function TVideoPlayback_Dummy.Open(const FileName: IPath): IVideo;
+function TVideoPlayback_Dummy.Open(const FileName: IPath; const Media: TBytes = nil): IVideo;
 begin
   Result := TVideo_Dummy.Create;
 end;

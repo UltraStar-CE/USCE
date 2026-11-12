@@ -4,14 +4,15 @@ unit ULockdownUI;
 
 interface
 
-uses UMenu;
+uses UMenu, Classes;
 
+function ActivateLibraryLockdown(Selected: TList; const Password: UTF8String): boolean;
 procedure ToggleLibraryLockdown;
 function RequestLockdownAccess(Target: PMenu): boolean;
 
 implementation
 
-uses Classes, SysUtils, ULibraryLockdown, UGraphic, UDisplay, UIni, ULanguage,
+uses SysUtils, ULibraryLockdown, UGraphic, UDisplay, UIni, ULanguage,
   UScreenPopup, UScreenSongJumpto, USongs, UPlaylist, USong, UMain, UNote;
 
 var
@@ -32,6 +33,15 @@ begin
   ScreenSong.ResetRandomSongState;
   ScreenSong.OnShow;
   ScreenSongJumpto.ResetFilters;
+end;
+
+function ActivateLibraryLockdown(Selected: TList; const Password: UTF8String): boolean;
+begin
+  Result := LibraryLockdown.Activate(Songs.SongList, Selected, Password);
+  if not Result then Exit;
+  ScreenSongJumpto.Visible := false;
+  ScreenSong.StopMusicPreview;
+  RebuildLibrary;
 end;
 
 procedure PasswordAccessResult(Value: boolean; Data: Pointer);
@@ -127,14 +137,11 @@ begin
       if not CatSongs.Song[I].Main and
         (CatSongs.Song[I].Visible or (CatSongs.CatNumShow = -1)) then
         Selected.Add(CatSongs.Song[I]);
-    if not LibraryLockdown.Activate(Songs.SongList, Selected, Password) then
+    if not ActivateLibraryLockdown(Selected, Password) then
     begin
       ScreenPopupError.ShowPopup(Language.Translate('LOCKDOWN_NO_SONGS'));
       Exit;
     end;
-    ScreenSongJumpto.Visible := false;
-    ScreenSong.StopMusicPreview;
-    RebuildLibrary;
   finally
     Selected.Free;
   end;

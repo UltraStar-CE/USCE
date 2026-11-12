@@ -42,7 +42,8 @@ uses
   UPath,
   UMusic,
   URenderer,
-  UHookableEvent;
+  UHookableEvent,
+  UMenuText, USong, USongProblems;
 
 type
   TDisplay = class
@@ -56,15 +57,25 @@ type
       FadeEnabled:   boolean;  // true if fading is enabled
       FadeFailed:    boolean;  // true if fading is possible (enough memory, etc.)
       FadeStartTime: cardinal; // time when fading starts, 0 means that the fade texture must be initialized
-      DoneOnShow:    boolean;  // true if passed onShow after fading
+      ShownScreen: PMenu; // target that has received OnShow for this transition
 
+      OpaqueFadeTex: array[0..1] of TTexture;
       FadeTex:       array[0..1] of TTexture;
+      FadeForeground: array[0..1] of boolean;
       TexW, TexH:    Cardinal;
  
       FPSCounter:    cardinal;
       NextFPSSwap:   cardinal;
 
       OSD_LastError: string;
+      ProblemFlags: TSongProblems;
+      ProblemFlagsUnavailable: boolean;
+      SongProblemTexture: TTexture;
+      function InitializeNextScreen: boolean;
+      function ProblemSong: TSong;
+      function EnsureProblemFlags: boolean;
+      procedure DrawSongProblem;
+    private
 
       { software cursor data }
       Cursor_X:              double;
@@ -78,6 +89,9 @@ type
 
       Cursor_Update:       boolean;
 
+      ScreenshotNotice: UTF8String;
+      ScreenshotNoticeStarted: cardinal;
+      procedure DrawScreenshotNotice;
       procedure DrawDebugInformation;
 
       { called by MoveCursor and OnMouseButton to update last move and start fade in }
@@ -161,7 +175,8 @@ const
 
 implementation
 
-uses
+uses UDuplicateSongUI, UMenuBackground,
+  UPlatform, USongs, UThemes, UNote, USkins,
   UText,
   StrUtils,
   UCommandLine,
@@ -170,6 +185,7 @@ uses
   UImage,
   ULog,
   UMain,
+  URemoteOverlay,
   UTime,
   ULanguage,
   UPathUtils,
@@ -262,7 +278,7 @@ begin
   FadeStartTime := 0;
   FadeEnabled := (Ini.ScreenFade = 1);
   FadeFailed  := false;
-  DoneOnShow  := false;
+  ShownScreen := nil;
 
   InitFadeTextures();
 
@@ -286,8 +302,11 @@ end;
 
 destructor TDisplay.Destroy;
 begin
+  SongProblemTexture.Free;
   FadeTex[0].Free;
   FadeTex[1].Free;
+  OpaqueFadeTex[0].Free;
+  OpaqueFadeTex[1].Free;
   {$IFDEF MSWINDOWS}
   UnregisterPrintScreenHotKey;
   {$ENDIF}
@@ -301,15 +320,40 @@ begin
   TexW := ScreenWPerScreen;
   TexH := ScreenH;
   for i := 0 to 1 do
-    FadeTex[i] := Renderer.CreateTexture(nil, PATH_NONE, TexW, TexH, TEXTURE_TYPE_PLAIN);
+  begin
+    FreeAndNil(OpaqueFadeTex[i]);
+    FadeTex[i] := Renderer.CreateTexture(nil, PATH_NONE, TexW, TexH, TEXTURE_TYPE_TRANSPARENT, false);
+  end;
+end;
+
+function TDisplay.InitializeNextScreen: boolean;
+var Target: PMenu;
+begin
+  Target := NextScreen;
+  Result := Target <> nil;
+  if not Result then Exit;
+  if ShownScreen <> Target then
+  begin
+    // Set before the callback: OnShow may request another destination.
+    ShownScreen := Target;
+    Target.OnShow;
+  end;
+  Result := NextScreen = Target;
+  if not Result then
+  begin
+    ShownScreen := nil;
+    FadeStartTime := 0;
+  end;
 end;
 
 function TDisplay.Draw: boolean;
 var
   S:               integer;
-  FadeStateSquare: real;
+  Snapshot: TTexture;
+  FadeStateSquare, FadeZoom: real;
   FadeW, FadeH:    real;
   FadeCopyW, FadeCopyH: integer;
+  DrawnScreen: PMenu;
 
 begin
   Result := true;
@@ -347,6 +391,8 @@ begin
         ScreenPopupInfo.Draw
       else if (ScreenPopupCheck <> nil) and ScreenPopupCheck.Visible then
         ScreenPopupCheck.Draw
+      else if (DuplicateSongPopup <> nil) and DuplicateSongPopup.Visible then
+        DuplicateSongPopup.Draw
       else if (ScreenPopupInsertUser <> nil) and ScreenPopupInsertUser.Visible then
         ScreenPopupInsertUser.Draw
       else if (ScreenPopupSendScore <> nil) and ScreenPopupSendScore.Visible then
@@ -358,6 +404,7 @@ begin
 
       // fade
       FadeStartTime := 0;
+      ShownScreen := nil;
       if ((Ini.ScreenFade = 1) and (not FadeFailed)) then
         FadeEnabled := true
       else
@@ -373,25 +420,15 @@ begin
         FadeEnabled := false;
       end;
       
+      if not BlackScreen and (S = 1) and (ShownScreen <> NextScreen) then FadeStartTime := 0;
+
       if (FadeEnabled and not FadeFailed) then
       begin
         // create fading texture if we're just starting
         if FadeStartTime = 0 then
         begin
-          // draw screen that will be faded
-          ePreDraw.CallHookChain(false);
-          CurrentScreen.Draw;
-          eDraw.CallHookChain(false);
-
-          // clear OpenGL errors, otherwise fading might be disabled due to some
-          // older errors in previous OpenGL calls.
-          Renderer.GetError();
-
           FadeCopyW := ScreenWPerScreen;
           FadeCopyH := ScreenH;
-
-          // it is possible that our fade textures are too small after a window
-          // resize. In that case resize the fade texture to fit the requirements.
           if (TexW < FadeCopyW) or (TexH < FadeCopyH) then
           begin
             FreeAndNil(FadeTex[0]);
@@ -399,8 +436,33 @@ begin
             InitFadeTextures();
           end;
 
-          // copy screen to texture
-          FadeTex[S-1].CopyFrameBuffer((S-1) * ScreenWPerScreen, 0, FadeCopyW, FadeCopyH);
+          Renderer.GetError();
+          FadeForeground[S-1] := not BlackScreen and
+            Renderer.BeginTextureCapture(FadeTex[S-1], TexW, TexH);
+          if FadeForeground[S-1] then
+          begin
+            Renderer.SetViewPort(0, 0, FadeCopyW, FadeCopyH);
+            Renderer.SetClearColor(0, 0, 0, 0);
+            Renderer.ClearFrameBuffer(CLEAR_COLOR or CLEAR_DEPTH);
+            TMenuBackground.SuppressDrawing := true;
+          end;
+          try
+            ePreDraw.CallHookChain(false);
+            // An aborted destination may not have finished initialization.
+            if CurrentScreen.ShowFinish then CurrentScreen.Draw;
+            eDraw.CallHookChain(false);
+          finally
+            TMenuBackground.SuppressDrawing := false;
+            if FadeForeground[S-1] then Renderer.EndTextureCapture;
+          end;
+          if not FadeForeground[S-1] then
+          begin
+            // Composited framebuffer snapshots must have opaque alpha.
+            if OpaqueFadeTex[S-1] = nil then
+              OpaqueFadeTex[S-1] := Renderer.CreateTexture(nil, PATH_NONE,
+                  TexW, TexH, TEXTURE_TYPE_PLAIN, false);
+            OpaqueFadeTex[S-1].CopyFrameBuffer((S-1) * ScreenWPerScreen, 0, FadeCopyW, FadeCopyH);
+          end;
 
           if (Renderer.Error) then
           begin
@@ -408,11 +470,8 @@ begin
             Log.LogError('Fading disabled: $' + IntToHex(Renderer.GetErrorCode(), 4), 'TDisplay.Draw');
           end;
 
-          if not BlackScreen and (S = 1) and not DoneOnShow then
-          begin
-            NextScreen.OnShow;
-            DoneOnShow := true;
-          end;
+          if not BlackScreen and (S = 1) then
+            if not InitializeNextScreen then Exit;
 
 
           // set fade time once on second screen (or first if screens = 1)
@@ -423,7 +482,14 @@ begin
         if not BlackScreen then
         begin
           ePreDraw.CallHookChain(false);
-          NextScreen.Draw; // draw next screen
+          DrawnScreen := NextScreen;
+          DrawnScreen.Draw; // draw next screen
+          if NextScreen <> DrawnScreen then
+          begin
+            ShownScreen := nil;
+            FadeStartTime := 0;
+            Exit;
+          end;
           eDraw.CallHookChain(false);
         end
         else if ScreenAct = 1 then
@@ -443,20 +509,34 @@ begin
         begin
           FadeW := (ScreenWPerScreen)/TexW;
           FadeH := ScreenH/TexH;
-          with FadeTex[S-1] do
+          if FadeForeground[S-1] then FadeZoom := FadeStateSquare
+          else FadeZoom := 0; // Older renderers still crossfade, without zooming the background.
+          if FadeForeground[S-1] then Snapshot := FadeTex[S-1]
+          else Snapshot := OpaqueFadeTex[S-1];
+          with Snapshot do
           begin
             X := 0;
             Y := 0;
             W := RenderW;
             H := RenderH;
             Alpha := 1 - FadeStateSquare;
-            TexX1 := (0+FadeStateSquare/2)*FadeW;
-            TexY1 := (1-FadeStateSquare/2)*FadeH;
-            TexX2 := (1-FadeStateSquare/2)*FadeW;
-            TexY2 := (0+FadeStateSquare/2)*FadeH;
+            if FadeForeground[S-1] then
+            begin
+              ColR := Alpha; ColG := Alpha; ColB := Alpha;
+            end
+            else begin ColR := 1; ColG := 1; ColB := 1; end;
+            TexX1 := (0+FadeZoom/2)*FadeW;
+            TexY1 := (1-FadeZoom/2)*FadeH;
+            TexX2 := (1-FadeZoom/2)*FadeW;
+            TexY2 := (0+FadeZoom/2)*FadeH;
           end;
           Renderer.DepthTest := false;
-          Renderer.DrawTexture(FadeTex[S-1]);
+          Renderer.SetPremultipliedAlpha(FadeForeground[S-1]);
+          try
+            Renderer.DrawTexture(Snapshot);
+          finally
+            Renderer.SetPremultipliedAlpha(false);
+          end;
           Renderer.DepthTest := true;
         end;
       end
@@ -464,7 +544,7 @@ begin
       // there is no need to init next screen if it is a black screen
       else if not BlackScreen then
       begin
-        NextScreen.OnShow;
+        if not InitializeNextScreen then Exit;
       end;
 
       if ((FadeStartTime + FADE_DURATION < SDL_GetTicks) or
@@ -473,7 +553,7 @@ begin
       begin
         // fade out complete...
         FadeStartTime := 0;
-        DoneOnShow := false;
+        ShownScreen := nil;
         CurrentScreen.onHide;
         CurrentScreen.ShowFinish := false;
         CurrentScreen := NextScreen;
@@ -492,6 +572,8 @@ begin
       end;
     end; // if
 
+    DrawRemoteRoomOverlay;
+
     // Draw OSD only on first Screen if Debug Mode is enabled
     if ((Ini.Debug = 1) or (Params.Debug)) and (S = 1) then
     begin
@@ -499,7 +581,11 @@ begin
     end;
 
     if not BlackScreen then
+    begin
+      DrawSongProblem;
+      if S = 1 then DrawScreenshotNotice;
       DrawCursor;
+    end;
   end; // for
 end;
 
@@ -639,8 +725,93 @@ begin
     Result := True;
 end;
 
-function TDisplay.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown : boolean; Repeated : boolean = false): boolean;
+function TDisplay.ProblemSong: TSong;
+var SongIndex: integer;
 begin
+  Result := nil;
+  if NextScreen <> nil then Exit;
+  if (CurrentScreen = @ScreenSong) or
+     ((CurrentScreen = @ScreenName) and ScreenName.Goto_SingScreen) then
+  begin
+    if ScreenSongMenu.Visible or ScreenSongJumpto.Visible then Exit;
+    if CurrentScreen = @ScreenSong then SongIndex := ScreenSong.Interaction
+    else SongIndex := CatSongs.Selected;
+    if (SongIndex >= 0) and (SongIndex < Length(CatSongs.Song)) and
+       not CatSongs.Song[SongIndex].Main then Result := CatSongs.Song[SongIndex];
+  end
+  else if (CurrentScreen = @ScreenSing) or (CurrentScreen = @ScreenScore) or
+          (CurrentScreen = @ScreenHighScores) then Result := CurrentSong;
+end;
+
+function TDisplay.EnsureProblemFlags: boolean;
+begin
+  if (ProblemFlags = nil) and not ProblemFlagsUnavailable then
+    try
+      ProblemFlags := GetSongProblems;
+    except
+      on E: Exception do
+      begin
+        ProblemFlagsUnavailable := true;
+        Log.LogError(E.Message, 'SongProblems');
+        ScreenPopupError.ShowPopup(Language.Translate('SONG_PROBLEM_SAVE_FAILED'));
+      end;
+    end;
+  Result := (ProblemFlags <> nil) and ProblemFlags.Available;
+end;
+
+procedure TDisplay.DrawSongProblem;
+var
+  Song: TSong;
+  Style: TThemeStatic;
+  IconPath: IPath;
+begin
+  Song := ProblemSong;
+  if (Song = nil) or not EnsureProblemFlags then Exit;
+  if not ProblemFlags.IsFlagged(Song.Path.Append(Song.FileName)) then Exit;
+  Style := Theme.SongProblemIndicator;
+  if (Style.W = 0) or (Style.H = 0) or (Style.Alpha = 0) then Exit;
+  IconPath := Skin.GetTextureFileName(Style.Tex);
+  if IconPath.IsUnset or not IconPath.IsFile then Exit;
+  if (SongProblemTexture = nil) or not SongProblemTexture.Name.Equals(IconPath) then
+  begin
+    FreeAndNil(SongProblemTexture);
+    SongProblemTexture := Renderer.GetTexture(IconPath, TEXTURE_TYPE_TRANSPARENT);
+  end;
+  if SongProblemTexture.IsEmpty then Exit;
+  with SongProblemTexture do
+  begin
+    X := Style.X;
+    Y := Style.Y;
+    W := Style.W;
+    H := Style.H;
+    Z := Style.Z;
+    ColR := Style.ColR;
+    ColG := Style.ColG;
+    ColB := Style.ColB;
+    Alpha := Style.Alpha;
+  end;
+  Renderer.DrawTexture(SongProblemTexture);
+end;
+
+function TDisplay.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown : boolean; Repeated : boolean = false): boolean;
+var Song: TSong;
+begin
+  if (PressedKey = SDLK_INSERT) and (SDL_GetModState and (KMOD_CTRL or KMOD_ALT or KMOD_SHIFT) = 0) then
+  begin
+    Song := ProblemSong;
+    if Song <> nil then
+    begin
+      if PressedDown and not Repeated and EnsureProblemFlags then
+        try ProblemFlags.Toggle(Song.Path.Append(Song.FileName));
+        except on E: Exception do
+          begin
+            Log.LogError(E.Message, 'SongProblems');
+            ScreenPopupError.ShowPopup(Language.Translate('SONG_PROBLEM_SAVE_FAILED'));
+          end;
+        end;
+      Exit(true);
+    end;
+  end;
   if (assigned(NextScreen)) then
     Result := NextScreen^.ParseInput(PressedKey, CharCode, PressedDown, Repeated)
   else if (assigned(CurrentScreen)) then
@@ -721,6 +892,37 @@ begin
 
 end;
 
+procedure TDisplay.DrawScreenshotNotice;
+const
+  Duration = 4000;
+  Margin = 12;
+  Padding = 8;
+  NoticeHeight = 26;
+var
+  Width, X, Y: real;
+begin
+  if ScreenshotNotice = '' then Exit;
+  if SDL_GetTicks - ScreenshotNoticeStarted >= Duration then
+  begin
+    ScreenshotNotice := '';
+    Exit;
+  end;
+
+  Renderer.DepthTest := false;
+  SetFont(0, ftRegular);
+  SetFontSize(12);
+  SetFontItalic(false);
+  SetFontReflection(false, 0);
+  SetFontZ(0);
+  SetFontColor(1, 1, 1, 1);
+  Width := TextWidth(ScreenshotNotice);
+  X := RenderW - Margin - Width - 2 * Padding;
+  Y := RenderH - 48 - NoticeHeight;
+  Renderer.DrawQuad(X, Y, 0, Width + 2 * Padding, NoticeHeight, 0, 0, 0, 0.8);
+  SetFontPos(X + Padding, Y + 5);
+  PrintText(ScreenshotNotice);
+end;
+
 procedure TDisplay.SaveScreenShot;
 var
   Num:        integer;
@@ -758,9 +960,10 @@ begin
   //  Success := WriteBMPImage(FileName, Surface);
   //Success := WritePNGImage(FileName, Surface);
   if Success then
-    ScreenPopupInfo.ShowPopup(Format(Language.Translate('SCREENSHOT_SAVED'), [FileName.GetName.ToUTF8()]))
+    ScreenshotNotice := Format(Language.Translate('SCREENSHOT_SAVED'), [FileName.GetName.ToUTF8()])
   else
-    ScreenPopupError.ShowPopup(Language.Translate('SCREENSHOT_FAILED'));
+    ScreenshotNotice := Language.Translate('SCREENSHOT_FAILED');
+  ScreenshotNoticeStarted := SDL_GetTicks;
 
   SDL_FreeSurface(Surface);
   FreeMem(ScreenData);

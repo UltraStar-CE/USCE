@@ -38,6 +38,7 @@ interface
 uses
   Math,
   URecentNames,
+  UCompanionViews,
   UContinuousPlayback,
   Classes,
   IniFiles,
@@ -50,6 +51,7 @@ uses
   UPath;
 
 type
+  TUTF8StringArray = array of UTF8String;
   {**
    * TInputDeviceConfig stores the configuration for an input device.
    * Configurations will be stored in the InputDeviceConfig array.
@@ -82,17 +84,22 @@ const
   DEFAULT_THEME = 'Modern';
   DEFAULT_HIGH_SCORE_SCREEN_ENTRIES = 5;
   MIN_HIGH_SCORE_SCREEN_ENTRIES = 5;
-  MAX_HIGH_SCORE_SCREEN_ENTRIES = 20;
+  MAX_HIGH_SCORE_SCREEN_ENTRIES = 30;
   IMaxPlayerCount = 24;
 
 type
-  TUTF8StringArray = array of UTF8String;
   TIntegerArray = array of integer;
 
 function GetNameTemplateIndexFromKey(const Key: cardinal): integer;
 function CreateNumericOptionArray(const FirstValue, LastValue: integer): TUTF8StringArray;
 function GetPlayerColorOptionCount: integer;
 function TryGetMixedPlayerColorPair(ColorIndex: integer; out LeftColor, RightColor: integer): boolean;
+
+const
+  DEFAULT_REMOTE_BRIDGE_ENABLED = 0;
+  DEFAULT_REMOTE_BRIDGE_IPC_HOST = '127.0.0.1';
+  DEFAULT_REMOTE_BRIDGE_IPC_PORT = 8765;
+  DEFAULT_REMOTE_BRIDGE_SERVER_URL = 'wss://usdx.at/ws/host';
 
 type
 
@@ -150,6 +157,7 @@ type
       PlaybackProfiles: TPlaybackProfiles;
       Language:       integer;
       SongMenu:       integer;
+      FolderFiltering, FolderDisplay: integer;
       Tabs:           integer;
       TabsAtStartup:  integer; // Tabs at Startup fix
       Sorting:        integer;
@@ -173,6 +181,7 @@ type
       FullScreen:     integer;
       TextureSize:    integer;
       Oscilloscope:   integer;
+      PitchTrace:     integer;
       // not used
       //Spectrum:       integer;
       //Spectrograph:   integer;
@@ -186,6 +195,8 @@ type
       // Sound
       MicBoost:       integer;
       ClickAssist:    integer;
+      SynthTone:      integer;
+      ClickSound:     integer;
       SavePlayback:   integer;
       ThresholdIndex: integer;
       AudioOutputBufferSizeIndex: integer;
@@ -203,18 +214,21 @@ type
       // Song Preview
       PreviewVolume:  integer;
       PreviewFading:  integer;
+      EndedSongAction: integer;
 
       // Lyrics
       LyricsFont:     integer;
       LyricsStyle:    integer;
       LyricsEffect:   integer;
       NoteLines:      integer;
+      GapCountdown:   integer;
 
       // Themes
       Theme:          integer;
       SkinNo:         integer;
       Color:          integer;
       HighScoreScreenEntries: integer;
+      HighScoreScreenAllDifficulties: boolean;
       BackgroundMusicOption: integer;
 
       // Record
@@ -227,6 +241,7 @@ type
       AskBeforeDel:   integer;
       OnSongClick:    integer;
       PartyPopup:     integer;
+      PartyHighscores: integer;
       SingScores:     integer;
       DuetScores:     integer;
       TopScores:      integer;
@@ -236,6 +251,7 @@ type
 
       // Controller
       Joypad:         integer;
+      SongKeyboard:   integer;
 
       // WebCam
       WebCamID:         integer;
@@ -255,6 +271,14 @@ type
       LastReadNames: LongInt;
       LastReadDelays: LongInt;
 
+      // Remote bridge
+      RemoteBridgeEnabled: integer;
+      RemoteBridgeServerUrl: string;
+      RemoteBridgeViews: array[TCompanionView] of integer;
+      RemoteBridgeDefaultView: TCompanionView;
+      procedure NormalizeRemoteBridgeViews;
+      function RemoteBridgeViewPolicy: LongInt;
+
       procedure Load();
       procedure Save();
       procedure SaveNames;
@@ -269,7 +293,7 @@ type
       procedure SavePlayerLevels;
       procedure SaveTeamColors;
       procedure SaveShowWebScore;
-      procedure SaveHighScoreScreenEntries;
+      procedure SaveHighScoreScreenSettings;
       procedure SaveWebcamSettings();
       procedure SaveNumberOfPlayers;
       procedure SaveStatDetailCount;
@@ -314,6 +338,8 @@ var
 
 const
   IDifficulty:  array[0..2] of UTF8String = ('Easy', 'Medium', 'Hard');
+  IFolderModes: array[0..2] of UTF8String = ('Off', 'Root folders', 'All folders');
+  IFolderModesTranslated: array[0..2] of UTF8String = ('Off', 'Root folders', 'All folders');
   ITabs:        array[0..1] of UTF8String = ('Off', 'On');
 
 const
@@ -342,6 +368,7 @@ const
 
   // SingBar Mod
   IOscilloscope:     array[0..1] of UTF8String  = ('Off', 'On');
+  IPitchTrace:       array[0..1] of UTF8String  = ('Off', 'On');
 
   ISpectrum:         array[0..1] of UTF8String  = ('Off', 'On');
   ISpectrograph:     array[0..1] of UTF8String  = ('Off', 'On');
@@ -349,6 +376,8 @@ const
   IVideoPreview:     array[0..1] of UTF8String  = ('Off', 'On');
   IVideoEnabled:     array[0..1] of UTF8String  = ('Off', 'On');
 
+  IClickSound: array[0..1] of UTF8String = ('Original', 'HiHat');
+  ISynthTone: array[0..5] of UTF8String = ('Organ', 'Triangle', 'Piano', 'Sine', 'Square', 'Sawtooth');
   IClickAssist:      array[0..3] of UTF8String  = ('Off', 'On', 'Synth', 'SynthAndClicks');
   ISavePlayback:     array[0..1] of UTF8String  = ('Off', 'On');
   IReplayGain:       array[0..1] of UTF8String  = ('Off', 'On');
@@ -374,6 +403,9 @@ const
   IPreviewVolume:             array[0..12] of UTF8String = ('Off', '3%', '5%', '10%', '20%', '30%', '40%', '50%', '60%', '70%', '80%', '90%', '100%');
   IPreviewVolumeVals:         array[0..12] of single     = ( 0,  0.03,  0.05,  0.10,  0.20,  0.30,  0.40,  0.50,  0.60,  0.70,  0.80,  0.90,   1.00  );
 
+  IEndedSongAction: array[0..3] of UTF8String = ('Preview', 'Beginning', 'Silence', 'Menu music');
+  IEndedSongActionTranslated: array[0..3] of UTF8String = ('', '', '', '');
+
   IPreviewFading:             array[0..5] of UTF8String  = ('Off', '1 Sec', '2 Secs', '3 Secs', '4 Secs', '5 Secs');
   IPreviewFadingVals:         array[0..5] of integer     = ( 0,     1,       2,        3,        4,        5      );
 
@@ -384,6 +416,9 @@ const
                                                 '0.55', '0.60', '0.65', '0.70', '0.75', '0.80', '0.85', '0.90', '0.95', '1.00');
   ILyricsAlphaVals: array[0..20] of single = (0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50,
                                               0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95, 1.00);
+
+  IGapCountdown: array[0..12] of UTF8String = ('Off', '5', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55', '60');
+  IGapCountdownTranslated: array[0..12] of UTF8String = ('Off', '5 s', '10 s', '15 s', '20 s', '25 s', '30 s', '35 s', '40 s', '45 s', '50 s', '55 s', '60 s');
 
   INoteLines:     array[0..1] of UTF8String = ('Off', 'On');
 
@@ -419,6 +454,10 @@ const
   sOpenMenu = 2;
 
   IPartyPopup:    array[0..1] of UTF8String = ('Off', 'On');
+  IPartyHighscores: array[0..2] of UTF8String = ('Nothing', 'Duels', 'FullSongs');
+
+  ISongKeyboard: array[0..1] of UTF8String = ('Modern', 'Classic');
+  ISongKeyboardTranslated: array[0..1] of UTF8String = ('Modern', 'Classic');
 
   IJoypad:        array[0..1] of UTF8String = ('Off', 'On');
 
@@ -471,6 +510,8 @@ var
   IVideoPreviewTranslated:     array[0..1] of UTF8String  = ('Off', 'On');
   IVideoEnabledTranslated:     array[0..1] of UTF8String  = ('Off', 'On');
 
+  IClickSoundTranslated: array[0..1] of UTF8String = ('Drumstick', 'Hi-hat');
+  ISynthToneTranslated: array[0..5] of UTF8String = ('Organ', 'Triangle', 'Piano', 'Sine', 'Square', 'Sawtooth');
   IClickAssistTranslated:      array[0..3] of UTF8String  = ('Off', 'On', 'Synth', 'SynthAndClicks');
   IReplayGainTranslated:       array[0..1] of UTF8String  = ('Off', 'On');
 
@@ -513,6 +554,7 @@ var
   IAskbeforeDelTranslated:     array[0..1] of UTF8String = ('Off', 'On');
   IOnSongClickTranslated:      array[0..2] of UTF8String = ('Sing', 'Select Players', 'Open Menu');
   IPartyPopupTranslated:       array[0..1] of UTF8String = ('Off', 'On');
+  IPartyHighscoresTranslated: array[0..2] of UTF8String;
   ISingScoresTranslated:       array[0..3] of UTF8String = ('Off', 'On', 'Bar Rating', 'Remaining Score');
   IDuetScoresTranslated:       array[0..3] of UTF8String = ('Off', 'Separate', 'Combined', 'Both');
   ITopScoresTranslated:        array[0..1] of UTF8String = ('All', 'Player');
@@ -819,6 +861,10 @@ begin
   IDifficultyTranslated[1]            := ULanguage.Language.Translate('OPTION_VALUE_MEDIUM');
   IDifficultyTranslated[2]            := ULanguage.Language.Translate('OPTION_VALUE_HARD');
 
+  IFolderModesTranslated[0] := ULanguage.Language.Translate('OPTION_VALUE_OFF');
+  IFolderModesTranslated[1] := ULanguage.Language.Translate('OPTION_VALUE_ROOT_FOLDERS');
+  IFolderModesTranslated[2] := ULanguage.Language.Translate('OPTION_VALUE_ALL_FOLDERS');
+
   ITabsTranslated[0]                  := ULanguage.Language.Translate('OPTION_VALUE_OFF');
   ITabsTranslated[1]                  := ULanguage.Language.Translate('OPTION_VALUE_ON');
 
@@ -876,6 +922,14 @@ begin
   IVideoEnabledTranslated[0]          := ULanguage.Language.Translate('OPTION_VALUE_OFF');
   IVideoEnabledTranslated[1]          := ULanguage.Language.Translate('OPTION_VALUE_ON');
 
+  ISynthToneTranslated[0] := ULanguage.Language.Translate('OPTION_VALUE_SYNTH_ORGAN');
+  ISynthToneTranslated[1] := ULanguage.Language.Translate('OPTION_VALUE_SYNTH_TRIANGLE');
+  ISynthToneTranslated[2] := ULanguage.Language.Translate('OPTION_VALUE_SYNTH_PIANO');
+  ISynthToneTranslated[3] := ULanguage.Language.Translate('OPTION_VALUE_SYNTH_SINE');
+  ISynthToneTranslated[4] := ULanguage.Language.Translate('OPTION_VALUE_SYNTH_SQUARE');
+  ISynthToneTranslated[5] := ULanguage.Language.Translate('OPTION_VALUE_SYNTH_SAWTOOTH');
+  IClickSoundTranslated[0] := ULanguage.Language.Translate('OPTION_VALUE_CLICK_ORIGINAL');
+  IClickSoundTranslated[1] := ULanguage.Language.Translate('OPTION_VALUE_CLICK_HIHAT');
   IClickAssistTranslated[0]           := ULanguage.Language.Translate('OPTION_VALUE_OFF');
   IClickAssistTranslated[1]           := ULanguage.Language.Translate('OPTION_VALUE_NOTE_CLICKS');
   IClickAssistTranslated[2]           := ULanguage.Language.Translate('OPTION_VALUE_NOTE_SYNTH');
@@ -904,6 +958,8 @@ begin
   ILyricsEffectTranslated[2]          := ULanguage.Language.Translate('OPTION_VALUE_SLIDE');
   ILyricsEffectTranslated[3]          := ULanguage.Language.Translate('OPTION_VALUE_BALL');
   ILyricsEffectTranslated[4]          := ULanguage.Language.Translate('OPTION_VALUE_SHIFT');
+
+  IGapCountdownTranslated[0] := ULanguage.Language.Translate('OPTION_VALUE_OFF');
 
   INoteLinesTranslated[0]             := ULanguage.Language.Translate('OPTION_VALUE_OFF');
   INoteLinesTranslated[1]             := ULanguage.Language.Translate('OPTION_VALUE_ON');
@@ -1020,6 +1076,9 @@ begin
 
   IPartyPopupTranslated[0]            := ULanguage.Language.Translate('OPTION_VALUE_OFF');
   IPartyPopupTranslated[1]            := ULanguage.Language.Translate('OPTION_VALUE_ON');
+  IPartyHighscoresTranslated[0] := ULanguage.Language.Translate('PARTY_HIGHSCORES_NOTHING');
+  IPartyHighscoresTranslated[1] := ULanguage.Language.Translate('PARTY_HIGHSCORES_DUELS');
+  IPartyHighscoresTranslated[2] := ULanguage.Language.Translate('PARTY_HIGHSCORES_FULL');
 
   ISingScoresTranslated[0]          := ULanguage.Language.Translate('OPTION_VALUE_OFF');
   ISingScoresTranslated[1]          := ULanguage.Language.Translate('OPTION_VALUE_ON');
@@ -1031,6 +1090,9 @@ begin
   IDuetScoresTranslated[3]          := ULanguage.Language.Translate('OPTION_VALUE_BOTH');
   ITopScoresTranslated[0]          := ULanguage.Language.Translate('OPTION_VALUE_ALL');
   ITopScoresTranslated[1]          := ULanguage.Language.Translate('OPTION_VALUE_PLAYER');
+
+  ISongKeyboardTranslated[0] := ULanguage.Language.Translate('OPTION_VALUE_MODERN');
+  ISongKeyboardTranslated[1] := ULanguage.Language.Translate('OPTION_VALUE_CLASSIC');
 
   IJoypadTranslated[0]                := ULanguage.Language.Translate('OPTION_VALUE_OFF');
   IJoypadTranslated[1]                := ULanguage.Language.Translate('OPTION_VALUE_ON');
@@ -1077,6 +1139,11 @@ begin
   IPreviewVolumeTranslated[11]        := '90%';
   IPreviewVolumeTranslated[12]        := '100%';
 
+  IEndedSongActionTranslated[0] := ULanguage.Language.Translate('OPTION_VALUE_ENDED_PREVIEW');
+  IEndedSongActionTranslated[1] := ULanguage.Language.Translate('OPTION_VALUE_ENDED_BEGINNING');
+  IEndedSongActionTranslated[2] := ULanguage.Language.Translate('OPTION_VALUE_ENDED_SILENCE');
+  IEndedSongActionTranslated[3] := ULanguage.Language.Translate('OPTION_VALUE_ENDED_MENU');
+
   IPreviewFadingTranslated[0]         :=        ULanguage.Language.Translate('OPTION_VALUE_OFF');
   IPreviewFadingTranslated[1]         := '1 ' + ULanguage.Language.Translate('OPTION_VALUE_SEC');
   IPreviewFadingTranslated[2]         := '2 ' + ULanguage.Language.Translate('OPTION_VALUE_SECS');
@@ -1108,7 +1175,7 @@ begin
   IAutoPlayerTranslated[IMaxPlayerCount] := ULanguage.Language.Translate('OPTION_ALL_PLAYERS');
 
   for I := 0 to IMaxPlayerCount - 1 do
-    IPlayerTranslated[I] := ULanguage.Language.Translate('OPTION_PLAYER_' + IntToStr(I + 1));
+    IPlayerTranslated[I] := ULanguage.Language.Translate('OPTION_VALUE_PLAYER') + ' ' + IntToStr(I + 1);
 
   for I := 0 to High(ITeamTranslated) do
     ITeamTranslated[I] := ULanguage.Language.Translate('OPTION_VALUE_TEAM') + ' ' + IntToStr(I + 1);
@@ -1586,6 +1653,28 @@ begin
     Result[i] := Values[i];
 end;
 
+procedure TIni.NormalizeRemoteBridgeViews;
+var View: TCompanionView;
+begin
+  if RemoteBridgeViews[RemoteBridgeDefaultView] <> 0 then Exit;
+  for View := Low(TCompanionView) to High(TCompanionView) do
+    if RemoteBridgeViews[View] <> 0 then
+    begin
+      RemoteBridgeDefaultView := View;
+      Exit;
+    end;
+  RemoteBridgeViews[cvFull] := 1;
+  RemoteBridgeDefaultView := cvFull;
+end;
+
+function TIni.RemoteBridgeViewPolicy: LongInt;
+var View: TCompanionView;
+begin
+  Result := Ord(RemoteBridgeDefaultView) shl 3;
+  for View := Low(TCompanionView) to High(TCompanionView) do
+    if RemoteBridgeViews[View] <> 0 then Result := Result or (1 shl Ord(View));
+end;
+
 procedure TIni.Load();
 var
   IniFile: TMemIniFile;
@@ -1596,6 +1685,8 @@ var
   KeysHigh: string;
   ReadPianoKeysLow: TPianoKeyArray;
   ReadPianoKeysHigh: TPianoKeyArray;
+  View: TCompanionView;
+  LegacyWebApp: string;
 
   function ReadVolumePercent(const Section, Key: string; DefaultValue: integer): integer;
   var
@@ -1633,6 +1724,8 @@ var
     else if Result > 100 then
       Result := 100;
   end;
+
+
 begin
   InitializePlayerOptionArrays;
   LoadFontFamilyNames;
@@ -1688,6 +1781,9 @@ begin
 
   // Tabs
   Tabs := ReadArrayIndex(ITabs, IniFile, 'Game', 'Tabs', 0);
+  FolderFiltering := ReadArrayIndex(IFolderModes, IniFile, 'Game', 'FolderFiltering', 2);
+  FolderDisplay := ReadArrayIndex(IFolderModes, IniFile, 'Game', 'FolderDisplay', Tabs);
+  Tabs := Ord(FolderDisplay > 0);
   TabsAtStartup := Tabs;	//Tabs at Startup fix
 
   // Song Sorting
@@ -1699,6 +1795,19 @@ begin
   AVDelay := IniFile.ReadInteger('Game', 'AVDelay', 0);
 
   MicDelay := IniFile.ReadInteger('Game', 'MicDelay', 140);
+  RemoteBridgeEnabled := ReadArrayIndex(ITabs, IniFile, 'RemoteBridge', 'Enabled', DEFAULT_REMOTE_BRIDGE_ENABLED);
+  if (RemoteBridgeEnabled < 0) then
+    RemoteBridgeEnabled := DEFAULT_REMOTE_BRIDGE_ENABLED;
+  RemoteBridgeServerUrl := Trim(IniFile.ReadString('RemoteBridge', 'ServerUrl', DEFAULT_REMOTE_BRIDGE_SERVER_URL));
+  if (RemoteBridgeServerUrl = '') then
+    RemoteBridgeServerUrl := DEFAULT_REMOTE_BRIDGE_SERVER_URL;
+  LegacyWebApp := Trim(IniFile.ReadString('RemoteBridge', 'WebApp', ''));
+  if LegacyWebApp = '' then LegacyWebApp := GetEnvironmentVariable('USDX_REMOTE_WEB_APP');
+  RemoteBridgeDefaultView := CompanionViewFromName(Trim(
+    IniFile.ReadString('RemoteBridge', 'DefaultView', LegacyWebApp)));
+  for View := Low(TCompanionView) to High(TCompanionView) do
+    RemoteBridgeViews[View] := Ord(IniFile.ReadBool('RemoteBridge', 'View_' + CompanionViewNames[View], true));
+  NormalizeRemoteBridgeViews;
 
   // Read Users Info (Network)
   DataBase.ReadUsers;
@@ -1731,6 +1840,7 @@ begin
     with PlaybackProfiles[I] do
     begin
       RepeatSelection := EnsureRange(IniFile.ReadInteger('Playback' + IntToStr(I), 'Repeat', 0), 0, 1);
+      PlayerTime := EnsureRange(IniFile.ReadInteger('Playback' + IntToStr(I), 'PlayerSetup', 1), 0, 8);
       ResultTime := EnsureRange(IniFile.ReadInteger('Playback' + IntToStr(I), 'Results', I), 0, 8);
       HighScoreTime := EnsureRange(IniFile.ReadInteger('Playback' + IntToStr(I), 'HighScores', I), 0, 8);
       SongDisplay := EnsureRange(IniFile.ReadInteger('Playback' + IntToStr(I), 'SongDisplay', 0), 0, 3);
@@ -1749,6 +1859,10 @@ begin
 
   // Oscilloscope
   Oscilloscope := ReadArrayIndex(IOscilloscope, IniFile, 'Graphics', 'Oscilloscope', 1);
+
+  // PitchTrace - extend the normal sung bars through gaps, including
+  // the gaps between notes where the game normally draws nothing
+  PitchTrace := ReadArrayIndex(IPitchTrace, IniFile, 'Graphics', 'PitchTrace', 0);
 
   // Spectrum
   //Spectrum := ReadArrayIndex(ISpectrum, IniFile, 'Graphics', 'Spectrum', IGNORE_INDEX, 'Off');
@@ -1779,6 +1893,9 @@ begin
     VideoHardwareDecoding := 'auto';
   end;
 
+  ClickSound := ReadArrayIndex(IClickSound, IniFile, 'Sound', 'ClickSound', IGNORE_INDEX, 'Original');
+  SynthTone := ReadArrayIndex(ISynthTone, IniFile, 'Sound', 'SynthTone', IGNORE_INDEX, 'Organ');
+
   // ClickAssist
   ClickAssist := ReadArrayIndex(IClickAssist, IniFile, 'Sound', 'ClickAssist', IGNORE_INDEX, 'Off');
 
@@ -1799,6 +1916,8 @@ begin
   // ReplayGain
   ReplayGain := ReadArrayIndex(IReplayGain, IniFile, 'Sound', 'ReplayGain', 0);
 
+  EndedSongAction := ReadArrayIndex(IEndedSongAction, IniFile, 'Sound', 'EndedSongAction', 0);
+
   //Preview Fading
   PreviewFading := ReadArrayIndex(IPreviewFading, IniFile, 'Sound', 'PreviewFading', 3);
 
@@ -1815,6 +1934,8 @@ begin
 
   // Lyrics Effect
   LyricsEffect := ReadArrayIndex(ILyricsEffect, IniFile, 'Lyrics', 'LyricsEffect', 2);
+
+  GapCountdown := ReadArrayIndex(IGapCountdown, IniFile, 'Lyrics', 'GapCountdown', 0);
 
   // NoteLines
   NoteLines := ReadArrayIndex(INoteLines, IniFile, 'Lyrics', 'NoteLines', 1);
@@ -1856,6 +1977,7 @@ begin
 
   // PartyPopup
   PartyPopup := ReadArrayIndex(IPartyPopup, IniFile, 'Advanced', 'PartyPopup', IGNORE_INDEX, 'On');
+  PartyHighscores := ReadArrayIndex(IPartyHighscores, IniFile, 'Party', 'Highscores', IGNORE_INDEX, 'Nothing');
 
   // SingScores
   SingScores := ReadArrayIndex(ISingScores, IniFile, 'Advanced', 'SingScores', IGNORE_INDEX, 'On');
@@ -1869,6 +1991,8 @@ begin
   TopScores := ReadArrayIndex(ITopScores, IniFile, 'Advanced', 'TopScores', IGNORE_INDEX, 'Player');
 
   // Last list length selected on the high-score screen
+  HighScoreScreenAllDifficulties := IniFile.ReadBool(
+    'Advanced', 'HighScoreScreenAllDifficulties', false);
   HighScoreScreenEntries := IniFile.ReadInteger(
     'Advanced', 'HighScoreScreenEntries', DEFAULT_HIGH_SCORE_SCREEN_ENTRIES);
   if (HighScoreScreenEntries < MIN_HIGH_SCORE_SCREEN_ENTRIES) then
@@ -1890,6 +2014,8 @@ begin
 
   // SyncTo
   SyncTo := ReadArrayIndex(ISyncTo, IniFile, 'Advanced', 'SyncTo', Ord(stMusic));
+
+  SongKeyboard := ReadArrayIndex(ISongKeyboard, IniFile, 'Controller', 'SongKeyboard', 0);
 
   // Joypad
   Joypad := ReadArrayIndex(IJoypad, IniFile, 'Controller', 'Joypad', 0);
@@ -1933,6 +2059,7 @@ end;
 procedure TIni.Save;
 var
   I: integer;
+  View: TCompanionView;
   IniFile: TIniFile;
   NoteType: TNoteType;
 begin
@@ -1950,7 +2077,8 @@ begin
     IniFile.WriteString('Game', 'Language', ILanguage[Language]);
 
     // Tabs
-    IniFile.WriteString('Game', 'Tabs', ITabs[Tabs]);
+    IniFile.WriteString('Game', 'FolderFiltering', IFolderModes[FolderFiltering]);
+    IniFile.WriteString('Game', 'FolderDisplay', IFolderModes[FolderDisplay]);
 
     // SongMenu
     IniFile.WriteString('Game', 'SongMenu', ISongMenuMode[Ord(SongMenu)]);
@@ -1968,6 +2096,7 @@ begin
       with PlaybackProfiles[I] do
       begin
         IniFile.WriteInteger('Playback' + IntToStr(I), 'Repeat', RepeatSelection);
+        IniFile.WriteInteger('Playback' + IntToStr(I), 'PlayerSetup', PlayerTime);
         IniFile.WriteInteger('Playback' + IntToStr(I), 'Results', ResultTime);
         IniFile.WriteInteger('Playback' + IntToStr(I), 'HighScores', HighScoreTime);
         IniFile.WriteInteger('Playback' + IntToStr(I), 'SongDisplay', SongDisplay);
@@ -1978,6 +2107,11 @@ begin
 
     IniFile.WriteInteger('Game', 'AVDelay', AVDelay);
     IniFile.WriteInteger('Game', 'MicDelay', MicDelay);
+    IniFile.WriteString('RemoteBridge', 'Enabled', ITabs[RemoteBridgeEnabled]);
+    IniFile.WriteString('RemoteBridge', 'ServerUrl', RemoteBridgeServerUrl);
+    for View := Low(TCompanionView) to High(TCompanionView) do
+      IniFile.WriteBool('RemoteBridge', 'View_' + CompanionViewNames[View], RemoteBridgeViews[View] <> 0);
+    IniFile.WriteString('RemoteBridge', 'DefaultView', CompanionViewNames[RemoteBridgeDefaultView]);
 
     // MaxFramerate
     IniFile.WriteString('Graphics', 'MaxFramerate', IMaxFramerate[MaxFramerate]);
@@ -2011,6 +2145,9 @@ begin
     // Oscilloscope
     IniFile.WriteString('Graphics', 'Oscilloscope', IOscilloscope[Oscilloscope]);
 
+    // PitchTrace
+    IniFile.WriteString('Graphics', 'PitchTrace', IPitchTrace[PitchTrace]);
+
     // Spectrum
     //IniFile.WriteString('Graphics', 'Spectrum', ISpectrum[Spectrum]);
 
@@ -2027,6 +2164,9 @@ begin
     IniFile.WriteString('Graphics', 'VideoEnabled', IVideoEnabled[VideoEnabled]);
     IniFile.WriteString('Graphics', 'VideoBackend', VideoBackend);
     IniFile.WriteString('Graphics', 'VideoHardwareDecoding', VideoHardwareDecoding);
+
+    IniFile.WriteString('Sound', 'ClickSound', IClickSound[ClickSound]);
+    IniFile.WriteString('Sound', 'SynthTone', ISynthTone[SynthTone]);
 
     // ClickAssist
     IniFile.WriteString('Sound', 'ClickAssist', IClickAssist[ClickAssist]);
@@ -2050,6 +2190,8 @@ begin
     IniFile.WriteInteger('Sound', 'BackgroundMusicVolume', BackgroundMusicVolume);
     IniFile.WriteInteger('Sound', 'PreviewVolume', PreviewVolume);
 
+    IniFile.WriteString('Sound', 'EndedSongAction', IEndedSongAction[EndedSongAction]);
+
     // PreviewFading
     IniFile.WriteString('Sound', 'PreviewFading', IPreviewFading[PreviewFading]);
 
@@ -2067,6 +2209,8 @@ begin
 
     // Lyrics Effect
     IniFile.WriteString('Lyrics', 'LyricsEffect', ILyricsEffect[LyricsEffect]);
+
+    IniFile.WriteString('Lyrics', 'GapCountdown', IGapCountdown[GapCountdown]);
 
     // NoteLines
     IniFile.WriteString('Lyrics', 'NoteLines', INoteLines[NoteLines]);
@@ -2102,6 +2246,7 @@ begin
 
     //Party Popup
     IniFile.WriteString('Advanced', 'PartyPopup', IPartyPopup[PartyPopup]);
+    IniFile.WriteString('Party', 'Highscores', IPartyHighscores[PartyHighscores]);
 
     //SingScores
     IniFile.WriteString('Advanced', 'SingScores', ISingScores[SingScores]);
@@ -2114,6 +2259,7 @@ begin
 
     // Last list length selected on the high-score screen
     IniFile.WriteInteger('Advanced', 'HighScoreScreenEntries', HighScoreScreenEntries);
+    IniFile.WriteBool('Advanced', 'HighScoreScreenAllDifficulties', HighScoreScreenAllDifficulties);
 
     for NoteType := Low(TNoteType) to High(TNoteType) do
       IniFile.WriteInteger('Scoring', ScoreFactorName[NoteType],
@@ -2126,6 +2272,8 @@ begin
 
     //SyncTo
     IniFile.WriteString('Advanced', 'SyncTo', ISyncTo[SyncTo]);
+
+    IniFile.WriteString('Controller', 'SongKeyboard', ISongKeyboard[SongKeyboard]);
 
     // Joypad
     IniFile.WriteString('Controller', 'Joypad', IJoypad[Joypad]);
@@ -2272,13 +2420,14 @@ begin
   end;
 end;
 
-procedure TIni.SaveHighScoreScreenEntries;
+procedure TIni.SaveHighScoreScreenSettings;
 var
   IniFile: TIniFile;
 begin
-  IniFile := TSafeIniFile.Create(Filename.ToNative, 'TIni.SaveHighScoreScreenEntries');
+  IniFile := TSafeIniFile.Create(Filename.ToNative, 'TIni.SaveHighScoreScreenSettings');
   try
     IniFile.WriteInteger('Advanced', 'HighScoreScreenEntries', HighScoreScreenEntries);
+    IniFile.WriteBool('Advanced', 'HighScoreScreenAllDifficulties', HighScoreScreenAllDifficulties);
   finally
     IniFile.Free;
   end;

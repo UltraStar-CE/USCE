@@ -151,6 +151,7 @@ type
 
       // text
       function AddText(ThemeText: TThemeText): integer; overload;
+      function AddKeyHint(ThemeText: TThemeText): integer;
       function AddText(X, Y: real; const Text_: UTF8String): integer; overload;
       function AddText(X, Y: real; Font, Style: integer; Size, ColR, ColG, ColB: real; const Text: UTF8String): integer; overload;
       function AddText(X, Y, W, H: real; Font, Style: integer; Size, ColR, ColG, ColB: real; Align: integer; const Text_: UTF8String; Reflection_: boolean; ReflectionSpacing_: real; Z : real; Writable: boolean): integer; overload;
@@ -638,6 +639,9 @@ begin
   ButtonCollection[Num].Texture.TexY1 := 0;
   ButtonCollection[Num].Texture.TexX2 := 1;
   ButtonCollection[Num].Texture.TexY2 := 1;
+  ButtonCollection[Num].BackgroundAlpha := ThemeCollection.Style.Alpha;
+  ButtonCollection[Num].Texture.Alpha := ThemeCollection.Style.Alpha;
+  ButtonCollection[Num].DeSelectTexture.Alpha := ThemeCollection.Style.Alpha;
   ButtonCollection[Num].Texture.ScaleMode := ThemeCollection.Style.ScaleMode;
   ButtonCollection[Num].DeSelectTexture.ScaleMode := ThemeCollection.Style.ScaleMode;
   ButtonCollection[Num].SetSelect(false);
@@ -647,6 +651,12 @@ begin
   ButtonCollection[Num].DeSelectReflectionspacing := ThemeCollection.Style.DeSelectReflectionSpacing;
 
   ButtonCollection[Num].Z := ThemeCollection.Style.Z;
+  ButtonCollection[Num].ConfigureFocus(ThemeCollection.Style.FocusWidth,
+    ThemeCollection.Style.FocusInset, ThemeCollection.Style.FocusRadius,
+    ThemeCollection.Style.FocusColR, ThemeCollection.Style.FocusColG,
+    ThemeCollection.Style.FocusColB, ThemeCollection.Style.FocusAlpha,
+    ThemeCollection.Style.FocusDuration);
+
 
   //Some Things from ButtonFading
   ButtonCollection[Num].SelectH := ThemeCollection.Style.SelectH;
@@ -679,14 +689,25 @@ begin
 end;
 
 function TMenu.AddStatic(ThemeStatic: TThemeStatic): integer;
+var TexturePath: IPath;
 begin
+  if (ThemeStatic.KeyCap <> '') and (ThemeStatic.W > 0) and (ThemeStatic.H > 0) then
+    TexturePath := PATH_NONE
+  else
+  begin
+    ThemeStatic.KeyCap := '';
+    TexturePath := Skin.GetTextureFileName(ThemeStatic.Tex);
+  end;
   Result := AddStatic(ThemeStatic.X, ThemeStatic.Y, ThemeStatic.W, ThemeStatic.H, ThemeStatic.Z,
     ThemeStatic.ColR, ThemeStatic.ColG, ThemeStatic.ColB,
     ThemeStatic.TexX1, ThemeStatic.TexY1, ThemeStatic.TexX2, ThemeStatic.TexY2, ThemeStatic.Alpha,
-    Skin.GetTextureFileName(ThemeStatic.Tex),
-    ThemeStatic.Typ, $FFFFFF, ThemeStatic.Reflection, ThemeStatic.Reflectionspacing);
-    if (Result >= 0) then
-      Statics[Result].Texture.ScaleMode := ThemeStatic.ScaleMode;
+    TexturePath, ThemeStatic.Typ, $FFFFFF, ThemeStatic.Reflection, ThemeStatic.Reflectionspacing);
+  if Result >= 0 then
+  begin
+    Statics[Result].KeyCap := ThemeStatic.KeyCap;
+    Statics[Result].Texture.ScaleMode := ThemeStatic.ScaleMode;
+    Statics[Result].Texture.CornerRadius := ThemeStatic.CornerRadius;
+  end;
 end;
 
 function TMenu.AddStaticPosition(static: TThemePosition): integer;
@@ -716,6 +737,7 @@ begin
   if Result >= 0 then
   begin
     Statics[Result].Texture.Z := static.Z;
+    Statics[Result].Texture.CornerRadius := static.CornerRadius;
     Statics[Result].Texture.ScaleMode := static.ScaleMode;
   end;
 end;
@@ -741,7 +763,10 @@ begin
     false, 0
   );
   if Result >= 0 then
+  begin
+    Statics[Result].Texture.CornerRadius := static.CornerRadius;
     Statics[Result].Texture.ScaleMode := static.ScaleMode;
+  end;
 end;
 
 function TMenu.AddStaticColorRectangle(static: TThemeStaticColorRectangle): integer;
@@ -963,10 +988,20 @@ begin
   Result := StatNum;
 end;
 
+function TMenu.AddKeyHint(ThemeText: TThemeText): integer;
+begin
+  Result := AddText(ThemeText);
+  // Rich text is opt-in for trusted theme/language hints, not song metadata.
+  Text[Result].InlineMarkup := true;
+  Text[Result].Text := ThemeText.Text;
+end;
+
 function TMenu.AddText(ThemeText: TThemeText): integer;
 begin
   Result := AddText(ThemeText.X, ThemeText.Y, ThemeText.W, ThemeText.H, ThemeText.Font, ThemeText.Style, ThemeText.Size,
     ThemeText.ColR, ThemeText.ColG, ThemeText.ColB, ThemeText.Align, ThemeText.Text, ThemeText.Reflection, ThemeText.ReflectionSpacing, ThemeText.Z, ThemeText.Writable);
+  Text[Result].FontFile := ThemeText.FontFile;
+  if (ThemeText.FontFile <> nil) and ThemeText.FontFile.IsSet then Text[Result].Text := ThemeText.Text;
 end;
 
 function TMenu.AddText(X, Y: real; const Text_: UTF8String): integer;
@@ -1032,10 +1067,19 @@ begin
     Skin.GetTextureFileName(ThemeButton.Tex), ThemeButton.Typ,
     ThemeButton.Reflection, ThemeButton.Reflectionspacing, ThemeButton.DeSelectReflectionspacing);
 
+  Button[Result].HasDeselectAlpha := ThemeButton.HasDAlpha;
+  Button[Result].DeselectAlpha := ThemeButton.DAlpha;
+  Button[Result].BackgroundAlpha := ThemeButton.Alpha;
+  Button[Result].Texture.Alpha := ThemeButton.Alpha;
+  Button[Result].DeSelectTexture.Alpha := ThemeButton.Alpha;
   Button[Result].Texture.ScaleMode := ThemeButton.ScaleMode;
   Button[Result].DeSelectTexture.ScaleMode := ThemeButton.ScaleMode;
 
   Button[Result].Z := ThemeButton.Z;
+  Button[Result].ConfigureFocus(ThemeButton.FocusWidth, ThemeButton.FocusInset,
+    ThemeButton.FocusRadius, ThemeButton.FocusColR, ThemeButton.FocusColG,
+    ThemeButton.FocusColB, ThemeButton.FocusAlpha, ThemeButton.FocusDuration);
+
 
   //Button Visibility
   Button[Result].Visible := ThemeButton.Visible;
@@ -1067,12 +1111,28 @@ begin
   Button[Result].FadeTexPos := ThemeButton.FadeTexPos;
 
   BTLen := Length(ThemeButton.Text);
+  SetLength(Button[Result].TextColors, BTLen);
   for BT := 0 to BTLen-1 do
   begin
     AddButtonText(ThemeButton.Text[BT].X, ThemeButton.Text[BT].Y,
       ThemeButton.Text[BT].ColR, ThemeButton.Text[BT].ColG, ThemeButton.Text[BT].ColB,
       ThemeButton.Text[BT].Font, ThemeButton.Text[BT].Style, ThemeButton.Text[BT].Size,
       ThemeButton.Text[BT].Align, ThemeButton.Text[BT].Text);
+    with Button[Result].TextColors[BT] do
+    begin
+      Enabled := ThemeButton.Text[BT].FocusColors;
+      R := ThemeButton.Text[BT].ColR; G := ThemeButton.Text[BT].ColG; B := ThemeButton.Text[BT].ColB;
+      DR := ThemeButton.Text[BT].DColR; DG := ThemeButton.Text[BT].DColG; DB := ThemeButton.Text[BT].DColB;
+    end;
+    if ThemeButton.Text[BT].FocusColors and not Button[Result].Selected then
+    begin
+      Button[Result].Text[BT].ColR := ThemeButton.Text[BT].DColR;
+      Button[Result].Text[BT].ColG := ThemeButton.Text[BT].DColG;
+      Button[Result].Text[BT].ColB := ThemeButton.Text[BT].DColB;
+    end;
+    Button[Result].Text[BT].FontFile := ThemeButton.Text[BT].FontFile;
+    if (ThemeButton.Text[BT].FontFile <> nil) and ThemeButton.Text[BT].FontFile.IsSet then
+      Button[Result].Text[BT].Text := ThemeButton.Text[BT].Text;
   end;
 
   // button collection mod
@@ -2319,7 +2379,7 @@ begin
   end;
 
   Renderer.SetScissorRect(
-    Round(ScrollArea.X * ((ScreenW/RenderW) / Screens) + ((ScreenAct - 1) * (ScreenW / 2))),
+    Round(ScrollArea.X * ((ScreenW/RenderW) / Screens) + Renderer.ViewportX),
     Round((RenderH - (ScrollArea.Y + ScrollArea.H))*(ScreenH/RenderH)),
     Round(ScrollArea.W*ScreenW/RenderW),
     Round(ScrollArea.H*ScreenH/RenderH)

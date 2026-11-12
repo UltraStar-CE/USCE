@@ -46,12 +46,12 @@ if older 1.8 wayland-scanner --version ; then
 	deps+=('wayland,https://gitlab.freedesktop.org/wayland/wayland/-/releases/1.21.91/downloads/wayland-1.21.91.tar.xz,d4f5b5e2453d45902016138dae0605cae096e00b')
 fi
 
-deps+=('pulseaudio,https://freedesktop.org/software/pulseaudio/releases/pulseaudio-16.1.tar.xz,7bf3845b522a1da263b6b84a0bc5aa761e49bc87')
+deps+=('pulseaudio,https://sources.buildroot.net/pulseaudio/pulseaudio-16.1.tar.xz,7bf3845b522a1da263b6b84a0bc5aa761e49bc87')
 deps+=('pipewire,https://gitlab.freedesktop.org/pipewire/pipewire/-/archive/0.3.66/pipewire-0.3.66.tar.bz2,20c58dd867c33a7d111df69d7ec8d31c45b92a0b')
 deps+=('wayland-protocols,https://gitlab.freedesktop.org/wayland/wayland-protocols/-/releases/1.31/downloads/wayland-protocols-1.31.tar.xz,5a84628630598027fab1708f822fc399d9e70b02')
 deps+=('xkbcommon,https://github.com/xkbcommon/libxkbcommon/archive/refs/tags/xkbcommon-1.13.1.tar.gz,f487d1e7f5e362b8971e23e354d9eb4bdc51e453')
-deps+=('SDL2,https://www.libsdl.org/release/SDL2-2.32.10.tar.gz,ce98fa93e31836a751feca374ab28a0770b63c16')
-deps+=('SDL2_image,https://www.libsdl.org/projects/SDL_image/release/SDL2_image-2.8.12.tar.gz,d7075e3fe8c1780c5d239c69371ab19089209ea0')
+deps+=('SDL2,https://github.com/libsdl-org/SDL/releases/download/release-2.32.10/SDL2-2.32.10.tar.gz,ce98fa93e31836a751feca374ab28a0770b63c16')
+deps+=('SDL2_image,https://github.com/libsdl-org/SDL_image/releases/download/release-2.8.12/SDL2_image-2.8.12.tar.gz,d7075e3fe8c1780c5d239c69371ab19089209ea0')
 deps+=('sqlite,https://sqlite.org/2026/sqlite-autoconf-3530100.tar.gz,f5828a709d18bb4857cec8ddb4298c47a9143892')
 
 if older 2.15 nasm --version ; then
@@ -59,8 +59,9 @@ if older 2.15 nasm --version ; then
 fi
 
 deps+=('dav1d,https://downloads.videolan.org/pub/videolan/dav1d/1.5.3/dav1d-1.5.3.tar.xz,a547b3830b3469ef9e6a33a2fa62b714eb1f611c')
-deps+=('ffmpeg,https://ffmpeg.org/releases/ffmpeg-8.1.1.tar.xz,0b8318579556aaa736096ceb1e8333d2260b63bf')
-deps+=('lua,https://www.lua.org/ftp/lua-5.4.8.tar.gz,ced7c0ec99ad9d984ad3e7af5fcd2deef2b33f9f')
+deps+=('ffmpeg,https://distfiles.macports.org/ffmpeg/ffmpeg-8.1.1.tar.xz,0b8318579556aaa736096ceb1e8333d2260b63bf')
+# The MacPorts mirror serves the same pinned Lua source archive.
+deps+=('lua,https://distfiles.macports.org/lua/lua-5.4.8.tar.gz,ced7c0ec99ad9d984ad3e7af5fcd2deef2b33f9f')
 deps+=('libjpeg-turbo,https://download.sourceforge.net/libjpeg-turbo/libjpeg-turbo-2.1.5.1.tar.gz,3ec9f6a19781a583285d93c2c4653f3dbe845fcc')
 deps+=('libpng,https://download.sourceforge.net/libpng/libpng-1.6.58.tar.xz,6263409a6907d180e7b990827ca84ee944c6cc17')
 deps+=('libwebp,https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-1.6.0.tar.gz,c65babfd749817e6d0f8233d653f8a85e4220b48')

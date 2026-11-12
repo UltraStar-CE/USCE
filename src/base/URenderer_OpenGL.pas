@@ -49,6 +49,7 @@ type
 
       // Shader programs
       MainProgram: GLuint;
+      ShapeRectLocation, ShapeSizeLocation: GLint;
       TextProgram: GLuint;
       LineStripProgram: GLuint;
 
@@ -74,9 +75,16 @@ type
       UpdateTransformText: boolean;
 
       WhiteTexture: GLuint;
+      ShapeTexture: TTexture;
       ErrorCode: GLenum;
       SupportsVAO: boolean;
       SupportsFBO: boolean;
+      CaptureFBO, CaptureDepth: GLuint;
+      CaptureWidth, CaptureHeight: integer;
+      CapturePreviousFBO: GLint;
+      CaptureViewport: TViewPortArray;
+      CaptureActive, CaptureBlend, CapturePreviousBlend: boolean;
+      CaptureBlendFactors: array[0..3] of GLint;
       SupportsMappedBuffer: boolean;
       SupportsMipMap: boolean;
       GlyphTextureFormat: GLint;
@@ -107,11 +115,16 @@ type
       function LoadGlyph(Data: PByte; W, H: integer): TTexture; overload; override;
       procedure DrawTexture(Texture: TTexture); override;
       procedure DrawGlyph(Texture: TTexture); override;
+      procedure DrawRoundedOutline(X, Y, Z, W, H, ColR, ColG, ColB, Alpha,
+        Radius, Thickness: single; Reflection: boolean; ReflectionSpacing: single); override;
       procedure DrawQuads(QuadList: TQuadList); override;
       procedure DrawTriangles(TriangleList: TTriangleList); override;
       procedure DrawLines(LineList: TLineList); override;
       procedure DrawParticles(Texture: TTexture; ParticleList: TParticleList); override;
       procedure DrawLineStrip(PointList: TPointList; ScaleX, ScaleY, TranslateX, TranslateY, ColR, ColG, ColB, Alpha: single); override;
+      function BeginTextureCapture(Texture: TTexture; Width, Height: integer): boolean; override;
+      procedure EndTextureCapture; override;
+      procedure SetPremultipliedAlpha(Enabled: boolean); override;
       procedure SetBlend(Enabled: boolean); override;
       function GetBlend(): boolean; override;
       procedure SetDepthTest(Enabled: boolean); override;
@@ -234,23 +247,41 @@ const
     '[VTX_IN] vec2 tex_coords;                   ' + #10 +
     '[VTX_OUT] vec4 col;                         ' + #10 +
     '[VTX_OUT] vec2 tc;                          ' + #10 +
+    '[VTX_OUT] vec2 canvas_pos;                  ' + #10 +
     'uniform mat4 transform;                     ' + #10 +
     'void main()                                 ' + #10 +
     '{                                           ' + #10 +
 	  '  gl_Position = transform * vec4(pos, 1.0); ' + #10 +
 	  '  col = color;                              ' + #10 +
 	  '  tc = tex_coords;                          ' + #10 +
+    '  canvas_pos = pos.xy;                      ' + #10 +
     '}';
 
   // Main fragment shader source, use for drawing textures, quads, lines, triangles
   MAIN_FRAGMENT_SHADER_SOURCE =
     '[FRAG_IN] vec4 col;                            ' + #10 +
     '[FRAG_IN] vec2 tc;                             ' + #10 +
+    '[FRAG_IN] vec2 canvas_pos;                     ' + #10 +
     '[FRAG_OUT_DECL]                                ' + #10 +
     'uniform sampler2D tex;                         ' + #10 +
+    'uniform vec4 shape_rect;                          ' + #10 +
+    'uniform vec4 shape_size;                        ' + #10 +
     'void main()                                    ' + #10 +
     '{                                              ' + #10 +
-    '  [FRAG_OUT] = [TEXTURE_FUNC](tex, tc) * col;  ' + #10 +
+    '  vec4 result_color = [TEXTURE_FUNC](tex, tc) * col;' + #10 +
+    '  if (shape_size.z > 0.0 || shape_size.w > 0.0) {                     ' + #10 +
+    '    vec2 p = (canvas_pos - shape_rect.xy) / shape_rect.zw;' + #10 +
+    '    vec2 q = abs(p - 0.5) * shape_size.xy       ' + #10 +
+    '      - shape_size.xy * 0.5 + shape_size.z;     ' + #10 +
+    '    float d = length(max(q, vec2(0.0)))        ' + #10 +
+    '      + min(max(q.x, q.y), 0.0) - shape_size.z;' + #10 +
+    '    result_color.a *= 1.0 - smoothstep(         ' + #10 +
+    '      -0.75, 0.75, d);                         ' + #10 +
+    '    if (shape_size.w > 0.0)                     ' + #10 +
+    '      result_color.a *= smoothstep(-shape_size.w - 0.75, -shape_size.w + 0.75, d);' + #10 +
+    '  }                                            ' + #10 +
+    '  if ((shape_size.z > 0.0 || shape_size.w > 0.0) && result_color.a <= 0.0) discard;' + #10 +
+    '  [FRAG_OUT] = result_color;                    ' + #10 +
     '}';
 
   // The text rendering requires a special fragment shader because the texture provided by FreeType
@@ -693,6 +724,8 @@ begin
 
   // Get uniform locations in shader programs
   TransformLocationMain := glGetUniformLocation(MainProgram, 'transform');
+  ShapeRectLocation := glGetUniformLocation(MainProgram, 'shape_rect');
+  ShapeSizeLocation := glGetUniformLocation(MainProgram, 'shape_size');
   TransformLocationText := glGetUniformLocation(TextProgram, 'transform');
   TransformLocationLineStrip := glGetUniformLocation(LineStripProgram, 'transform');
   ColorLocationLineStrip := glGetUniformLocation(LineStripProgram, 'color');
@@ -705,6 +738,9 @@ begin
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, PGLvoid(@WhitePixel[0]));
+  ShapeTexture := TTexture_OpenGL.Create(PATH_NONE);
+  TTexture_OpenGL(ShapeTexture).TexID := WhiteTexture;
+  TTexture_OpenGL(ShapeTexture).OwnsTex := false;
 
   glGetIntegerv(GL_MAX_TEXTURE_SIZE, @fMaxTextureSize);
   Limit := Min(Limit, fMaxTextureSize);
@@ -716,6 +752,8 @@ end;
 
 destructor TRenderer_OpenGLBase.Destroy();
 begin
+  if CaptureDepth <> 0 then glDeleteRenderbuffers(1, @CaptureDepth);
+  if CaptureFBO <> 0 then glDeleteFramebuffers(1, @CaptureFBO);
   glDeleteProgram(MainProgram);
   glDeleteProgram(TextProgram);
   glDeleteProgram(LineStripProgram);
@@ -726,6 +764,7 @@ begin
   end;
   glDeleteBuffers(1, @VBO);
   glDeleteBuffers(1, @EBO);
+  ShapeTexture.Free;
   if (WhiteTexture <> 0) then
     glDeleteTextures(1, @WhiteTexture);
   FreeMem(MappedBuffer);
@@ -970,6 +1009,8 @@ var
   Bytes: GLuint;
   ColorR, ColorG, ColorB: single;
   X2, Y2: single;
+  ShapeW, ShapeH: single;
+  HasShape: boolean;
 begin
   Tex := TTexture_OpenGL(Texture);
   if (Tex.TexID = 0) then
@@ -1132,8 +1173,30 @@ begin
   // Upload our vertex data to the GPU
   UploadArray(Bytes);
 
-  // Draw elements and update VBO and EBO positions
-  glDrawElements(GL_TRIANGLES, NumQuads * 6, GL_UNSIGNED_INT, PGLvoid(EBOCursor * SizeOf(GLuint)));
+  // Geometry, not source UVs, defines the mask (including cropped images).
+  HasShape := (Prog = MainProgram) and ((Texture.CornerRadius > 0) or (Texture.OutlineWidth > 0)) and
+    (Texture.W > 0) and (Texture.H > 0);
+  if HasShape then
+  begin
+    ShapeW := Abs(Texture.W * GetLayoutScaleX);
+    ShapeH := Abs(Texture.H * GetLayoutScaleY);
+    glUniform4f(ShapeRectLocation, Texture.X, Texture.Y, Texture.W, Texture.H);
+    glUniform4f(ShapeSizeLocation, ShapeW, ShapeH,
+      EnsureRange(Texture.CornerRadius, 0.0, 0.5) * Min(ShapeW, ShapeH),
+      EnsureRange(Texture.OutlineWidth, 0.0, 0.5) * Min(ShapeW, ShapeH));
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, PGLvoid(EBOCursor * SizeOf(GLuint)));
+    if Texture.Reflection then
+    begin
+      // Mirror the original shape; a shortened reflection fades before its
+      // far edge rather than introducing a second pair of rounded corners.
+      glUniform4f(ShapeRectLocation, Texture.X,
+        Texture.Y + 2 * Texture.H + Texture.ReflectionSpacing, Texture.W, -Texture.H);
+      glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, PGLvoid((EBOCursor + 6) * SizeOf(GLuint)));
+    end;
+    glUniform4f(ShapeSizeLocation, 0, 0, 0, 0);
+  end
+  else
+    glDrawElements(GL_TRIANGLES, NumQuads * 6, GL_UNSIGNED_INT, PGLvoid(EBOCursor * SizeOf(GLuint)));
   VBOCursor := VBOCursor + (NumQuads * 4 * VERTEX_STRIDE);
   EBOCursor := EBOCursor + (NumQuads * 6);
   {$IFDEF DEBUG_MODE}
@@ -1150,11 +1213,11 @@ var
   Scale: single;
   CropAmount: single;
   U1, U2, V1, V2: single;
-  EdgeU: single;
-  BlurU: single;
+  EdgeU, EdgeV: single;
+  BlurU, BlurV: single;
   LayoutScaleCorrection: single;
-  DrawX, DrawW: single;
-  LeftPad, RightPad: single;
+  DrawX, DrawY, DrawW, DrawH: single;
+  LeftPad, RightPad, TopPad, BottomPad: single;
 
   procedure DrawEdge(X, Y, W, H, TexX1, TexY1, TexX2, TexY2: single);
   begin
@@ -1214,11 +1277,16 @@ begin
         begin
           // Logical coordinates are stretched independently on each axis.
           // Preserve the source aspect in physical pixels, then fill only
-          // the horizontal remainder with the requested edge treatment.
+          // the remaining area with the requested edge treatment.
           DrawW := SourceAspect * MainTexture.H * LayoutScaleCorrection;
+          DrawH := MainTexture.H;
           if DrawW > MainTexture.W then
+          begin
+            DrawH := DrawH * MainTexture.W / DrawW;
             DrawW := MainTexture.W;
+          end;
           DrawX := MainTexture.X + (MainTexture.W - DrawW) / 2;
+          DrawY := MainTexture.Y + (MainTexture.H - DrawH) / 2;
 
           // Keep the edge next to the image sharp, but gradually sample
           // farther into the image toward the outside of each pad.  This is
@@ -1252,8 +1320,29 @@ begin
               Max(U2 - EdgeU * 0.5, U1), V1, Max(U2 - BlurU, U1), V2);
           end;
 
+          TopPad := DrawY - MainTexture.Y;
+          BottomPad := MainTexture.Y + MainTexture.H - (DrawY + DrawH);
+          if MainTexture.EdgeExtendSolidFill then
+          begin
+            DrawSolidEdge(MainTexture.X, MainTexture.Y, MainTexture.W, TopPad);
+            DrawSolidEdge(MainTexture.X, DrawY + DrawH, MainTexture.W, BottomPad);
+          end
+          else
+          begin
+            EdgeV := (1 / MainTexture.SourceH) * Abs(V2 - V1);
+            BlurV := Max(MainTexture.EdgeExtendPixels, 2) * EdgeV;
+            if TopPad > 0 then
+              DrawEdge(MainTexture.X, MainTexture.Y, MainTexture.W, TopPad + 1,
+                U1, Min(V1 + BlurV, V2), U2, Min(V1 + EdgeV * 0.5, V2));
+            if BottomPad > 0 then
+              DrawEdge(MainTexture.X, DrawY + DrawH - 1, MainTexture.W, BottomPad + 1,
+                U1, Max(V2 - EdgeV * 0.5, V1), U2, Max(V2 - BlurV, V1));
+          end;
+
           MainTexture.X := DrawX;
+          MainTexture.Y := DrawY;
           MainTexture.W := DrawW;
+          MainTexture.H := DrawH;
           MainTexture.ScaleMode := lsStretch;
           MainTexture.EdgeExtend := false;
         end
@@ -1293,6 +1382,25 @@ begin
   finally
     MainTexture.Free;
   end;
+end;
+
+procedure TRenderer_OpenGLBase.DrawRoundedOutline(X, Y, Z, W, H, ColR, ColG,
+  ColB, Alpha, Radius, Thickness: single; Reflection: boolean; ReflectionSpacing: single);
+begin
+  ShapeTexture.X := X;
+  ShapeTexture.Y := Y;
+  ShapeTexture.Z := Z;
+  ShapeTexture.W := W;
+  ShapeTexture.H := H;
+  ShapeTexture.ColR := ColR;
+  ShapeTexture.ColG := ColG;
+  ShapeTexture.ColB := ColB;
+  ShapeTexture.Alpha := Alpha;
+  ShapeTexture.CornerRadius := Radius;
+  ShapeTexture.OutlineWidth := Thickness;
+  ShapeTexture.Reflection := Reflection;
+  ShapeTexture.ReflectionSpacing := ReflectionSpacing;
+  DrawTexture(ShapeTexture, MainProgram, UpdateTransformMain, TransformLocationMain);
 end;
 
 procedure TRenderer_OpenGLBase.DrawGlyph(Texture: TTexture);
@@ -1895,8 +2003,73 @@ begin
   {$ENDIF};
 end;
 
+function TRenderer_OpenGLBase.BeginTextureCapture(Texture: TTexture; Width, Height: integer): boolean;
+var PreviousRenderbuffer: GLint;
+begin
+  Result := false;
+  if not SupportsFBO then Exit;
+  glGetIntegerv(GL_FRAMEBUFFER_BINDING, @CapturePreviousFBO);
+  CaptureViewport := ViewPortArray;
+  CapturePreviousBlend := GetBlend;
+  CaptureBlend := CapturePreviousBlend;
+  glGetIntegerv(GL_BLEND_SRC_RGB, @CaptureBlendFactors[0]);
+  glGetIntegerv(GL_BLEND_DST_RGB, @CaptureBlendFactors[1]);
+  glGetIntegerv(GL_BLEND_SRC_ALPHA, @CaptureBlendFactors[2]);
+  glGetIntegerv(GL_BLEND_DST_ALPHA, @CaptureBlendFactors[3]);
+  if CaptureFBO = 0 then glGenFramebuffers(1, @CaptureFBO);
+  if CaptureDepth = 0 then glGenRenderbuffers(1, @CaptureDepth);
+  glBindFramebuffer(GL_FRAMEBUFFER, CaptureFBO);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+    TTexture_OpenGL(Texture).TexID, 0);
+  glGetIntegerv(GL_RENDERBUFFER_BINDING, @PreviousRenderbuffer);
+  glBindRenderbuffer(GL_RENDERBUFFER, CaptureDepth);
+  if (Width <> CaptureWidth) or (Height <> CaptureHeight) then
+  begin
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, Width, Height);
+    CaptureWidth := Width;
+    CaptureHeight := Height;
+  end;
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, CaptureDepth);
+  glBindRenderbuffer(GL_RENDERBUFFER, PreviousRenderbuffer);
+  if glCheckFramebufferStatus(GL_FRAMEBUFFER) <> GL_FRAMEBUFFER_COMPLETE then
+  begin
+    glBindFramebuffer(GL_FRAMEBUFFER, CapturePreviousFBO);
+    Exit;
+  end;
+  CaptureActive := true;
+  SetBlend(CaptureBlend);
+  Result := true;
+end;
+
+procedure TRenderer_OpenGLBase.EndTextureCapture;
+begin
+  CaptureActive := false;
+  glBindFramebuffer(GL_FRAMEBUFFER, CapturePreviousFBO);
+  SetViewPort(CaptureViewport[0], CaptureViewport[1], CaptureViewport[2], CaptureViewport[3]);
+  SetBlend(CapturePreviousBlend);
+  glBlendFuncSeparate(CaptureBlendFactors[0], CaptureBlendFactors[1],
+      CaptureBlendFactors[2], CaptureBlendFactors[3]);
+end;
+
+procedure TRenderer_OpenGLBase.SetPremultipliedAlpha(Enabled: boolean);
+begin
+  if Enabled then glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA)
+  else glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+end;
+
 procedure TRenderer_OpenGLBase.SetBlend(Enabled: boolean);
 begin
+  if CaptureActive then
+  begin
+    CaptureBlend := Enabled;
+    glEnable(GL_BLEND);
+    if Enabled then
+      glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA)
+    else
+      // Unblended draws replace the pixel, but still store premultiplied RGB.
+      glBlendFuncSeparate(GL_SRC_ALPHA, GL_ZERO, GL_ONE, GL_ZERO);
+    Exit;
+  end;
   if (Enabled) then
     glEnable(GL_BLEND)
   else
@@ -1908,7 +2081,8 @@ end;
 
 function TRenderer_OpenGLBase.GetBlend(): boolean;
 begin
-  Result := glIsEnabled(GL_BLEND) = GL_TRUE;
+  if CaptureActive then Result := CaptureBlend
+  else Result := glIsEnabled(GL_BLEND) = GL_TRUE;
 end;
 
 function TRenderer_OpenGLBase.LoadTexture(Data: PByte; W, H: integer; const Identifier: IPath; Typ: TTextureType; UseMipmaps: boolean): TTexture;
@@ -2017,6 +2191,7 @@ end;
 
 procedure TRenderer_OpenGLBase.SetViewPort(x, y: integer; width, height: cardinal);
 begin
+  fViewportX := x;
   glViewPort(x, y, width, height);
   ViewPortArray[0] := x;
   ViewPortArray[1] := y;
@@ -2098,8 +2273,7 @@ var
 begin
   WindowBoundary := Round(X * VertexW);
   NewX := (WindowBoundary * PixelW);
-  if (ScreenAct = 2) then
-    WindowBoundary := WindowBoundary + ScreenWPerScreen;
+  WindowBoundary := WindowBoundary + ViewPortArray[0];
 
   // Partial update of the projection matrix based on the values that are actually changing
   // see SetOrthographicProjection() function for equations
@@ -2107,13 +2281,13 @@ begin
   begin
     ProjectionMatrix.data[0,0] := 2 / (RenderW - NewX);
     ProjectionMatrix.data[0,3] := -1 * ((RenderW + NewX) / (RenderW - NewX));
-    glViewport(WindowBoundary, ViewPortArray[1], (ScreenAct * ScreenWPerScreen) - WindowBoundary, ViewPortArray[3]);
+    glViewport(WindowBoundary, ViewPortArray[1], ViewPortArray[0] + ViewPortArray[2] - WindowBoundary, ViewPortArray[3]);
   end
   else
   begin
     ProjectionMatrix.data[0,0] := 2 / NewX;
     ProjectionMatrix.data[0,3] := -1;
-    glViewPort((ScreenAct - 1) * ScreenWPerScreen, ViewPortArray[1], WindowBoundary - (ScreenAct - 1) * ScreenWPerScreen, ViewPortArray[3]);
+    glViewPort(ViewPortArray[0], ViewPortArray[1], WindowBoundary - ViewPortArray[0], ViewPortArray[3]);
   end;
   UpdateTransformText := true;
   {$IFDEF DEBUG_MODE}
@@ -2191,6 +2365,16 @@ begin
   SupportsVAO := true;
   SupportsFBO := true;
   SupportsMappedBuffer := true;
+  {$IFDEF MSWINDOWS}
+  // Intel's Windows driver can spend most of a frame synchronizing each
+  // map/unmap. Use the existing upload path on the active Intel context.
+  if Pos('INTEL', UpperCase(string(glGetString(GL_VENDOR)))) > 0 then
+  begin
+    SupportsMappedBuffer := false;
+    Log.LogInfo('Using glBufferSubData for Intel Windows driver',
+      'TRenderer_OpenGL3.CheckVersion');
+  end;
+  {$ENDIF}
   SupportsMipMap := true;
   GlyphTextureFormat := GL_RED;
   if ((MajorVersion > 3) or ((MajorVersion = 3) and (MinorVersion >= 3))) then

@@ -10,8 +10,14 @@ import time
 def detach_volume(hdiutil, mountpoint, run=subprocess.run, sleep=time.sleep, image_path=None):
     target = mountpoint
     expected_image = os.path.realpath(image_path) if image_path else None
-    for attempt in range(5):
-        result = run([hdiutil, 'detach', target], check=False)
+    attempts = 6 if expected_image else 5
+    for attempt in range(attempts):
+        command = [hdiutil, 'detach', target]
+        # Finder/Spotlight can keep our finished packaging image busy. Only
+        # force a device identified through this exact image after five tries.
+        if attempt == 5 and target.startswith('/dev/disk'):
+            command.append('-force')
+        result = run(command, check=False)
         if result.returncode == 0 and expected_image is None:
             return
         # A failed detach can still unmount the volume asynchronously. Query
@@ -37,7 +43,7 @@ def detach_volume(hdiutil, mountpoint, run=subprocess.run, sleep=time.sleep, ima
                           for entity in image.get('system-entities', []))
             if not mounted:
                 return
-        if attempt < 4:
+        if attempt < attempts - 1:
             sleep(2)
     raise RuntimeError('Packaging image is still attached: ' + (image_path or mountpoint))
 

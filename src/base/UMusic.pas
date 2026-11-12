@@ -164,6 +164,7 @@ type
     Number:      integer;
     NotesGAP:    integer;
     ScoreValue:  integer;
+    HighestScoredBeat: integer; // End of scored notes; Low(Integer) when none can score.
     Lines:       array of TLine;
   end;
 
@@ -447,6 +448,7 @@ type
       function GetReflectionSpacing(): double;
 
       procedure GetFrame(Time: Extended);
+      function Finished: boolean;
       procedure Draw();
 
 
@@ -467,7 +469,7 @@ type
       function Init(): boolean;
       function Finalize: boolean;
 
-      function Open(const FileName : IPath): IVideo;
+      function Open(const FileName : IPath; const Media: TBytes = nil): IVideo;
   end;
 
   IVideoVisualization = Interface( IVideoPlayback )
@@ -498,7 +500,7 @@ type
       function  Length: real;
       function  GetFileName: string;
 
-      function Open(const Filename: IPath; const FilenameKaraoke: IPath): boolean; // true if succeed
+      function Open(const Filename: IPath; const FilenameKaraoke: IPath; const Media: TBytes = nil): boolean; // true if succeed
       procedure Close;
 
       procedure Play;
@@ -564,7 +566,7 @@ type
 
   IAudioDecoder = Interface( IGenericDecoder )
   ['{AB47B1B6-2AA9-4410-BF8C-EC79561B5478}']
-      function Open(const Filename: IPath): TAudioDecodeStream;
+      function Open(const Filename: IPath; const Media: TBytes = nil): TAudioDecodeStream;
   end;
 
   IAudioInput = Interface
@@ -573,8 +575,9 @@ type
       function InitializeRecord(ScanMode: TAudioInputScanMode): boolean;
       function FinalizeRecord(): boolean;
 
-      procedure CaptureStart;
-      procedure CaptureStop;
+      function IsCapturing: boolean;
+      procedure CaptureStart(PlayerCount: integer = -1; MonitorOnly: boolean = false);
+      procedure CaptureStop(MonitorOnly: boolean = false);
   end;
 
 type
@@ -671,7 +674,7 @@ function RefreshAudioInputDevices(ScanMode: TAudioInputScanMode): boolean;
 
 function  Visualization(): IVideoPlayback;
 function  VideoPlayback(): IVideoPlayback;
-function OpenVideoFallback(const FileName: IPath; const FailedBackend: IVideoPlayback): IVideo;
+function OpenVideoFallback(const FileName: IPath; const FailedBackend: IVideoPlayback; const Media: TBytes = nil): IVideo;
 function  AudioPlayback(): IAudioPlayback;
 function  AudioInput(): IAudioInput;
 function  AudioDecoders(): TInterfaceList;
@@ -802,7 +805,7 @@ begin
   Result := DefaultVideoPlayback;
 end;
 
-function OpenVideoFallback(const FileName: IPath; const FailedBackend: IVideoPlayback): IVideo;
+function OpenVideoFallback(const FileName: IPath; const FailedBackend: IVideoPlayback; const Media: TBytes = nil): IVideo;
 var
   Providers: TInterfaceList;
   Provider: IVideoPlayback;
@@ -827,7 +830,7 @@ begin
         Continue;
       if Provider.Init() then
       begin
-        Result := Provider.Open(FileName);
+        Result := Provider.Open(FileName, Media);
         if Result <> nil then
         begin
           Log.LogInfo('Using fallback ' + Provider.GetName, 'VideoPlayback');

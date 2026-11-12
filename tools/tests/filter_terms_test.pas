@@ -23,5 +23,13 @@ begin
   Check(not MatchesFilterTerms('portuguese', 'brazilian portuguese', false), 'multiword conjunction');
   Check(MatchesFilterTerms('rock & roll', 'rock & roll', false), 'punctuation');
   Check(MatchesFilterTerms('german', '', false), 'empty row');
-  Writeln('Filter alternative tests passed');
+  Check(FilterTermStart('German, Eng', false) = 9, 'last comma term');
+  Check(FilterTermStart('Classic Rock', false) = 1, 'spaces inside names');
+  Check(FilterTermStart('1999 200', true) = 6, 'space-separated years');
+  Check(CompleteFilterTerm('German, Eng', 'English', false) = 'German, English, ', 'complete last term');
+  Check(CompleteFilterTerm('Rock; Cla', 'Classic Rock', false) = 'Rock; Classic Rock, ', 'semicolon and multiword value');
+  Check(CompleteFilterTerm('1999 200', '2000', true) = '1999 2000, ', 'year completion');
+  Check(CompleteFilterTerm('', 'German', false) = 'German, ', 'first choice');
+  Check(MatchesFilterTerms('english', 'German, english, ', false), 'trailing separator');
+  Writeln('Filter alternatives and suggestion completion tests passed');
 end.

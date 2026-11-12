@@ -81,6 +81,7 @@ jobs:
             mingw-w64-ucrt-x86_64-toolchain
             mingw-w64-ucrt-x86_64-autotools
             mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-openssl
             mingw-w64-ucrt-x86_64-meson
             mingw-w64-ucrt-x86_64-ninja
             mingw-w64-ucrt-x86_64-git
@@ -127,17 +128,24 @@ jobs:
           set -eo pipefail
           package_key=$(pacman -Q | LC_ALL=C sort | sha256sum)
           echo "key=${package_key%% *}" >> "$GITHUB_OUTPUT"
-      - name: Cache Windows DLL dependencies
+      - name: Restore Windows DLL dependencies
         if: inputs.use-caches
         id: cache-windows-dlls
-        uses: actions/cache@v6
+        uses: actions/cache/restore@v6
         with:
           path: dists/windows/prefix
           key: windows-2022-ucrt64-native-v2-${{ runner.arch }}-${{ steps.windows-toolchain.outputs.key }}-${{ hashFiles('dists/windows/tasks.sh', 'dists/windows/Makefile', 'dists/windows/*.patch') }}
       - name: Build Windows DLL dependencies
+        id: build-windows-dlls
         if: steps.cache-windows-dlls.outputs.cache-hit != 'true'
         shell: msys2 {0}
         run: make -C dists/windows
+      - name: Save completed Windows DLL dependencies
+        if: inputs.use-caches && steps.cache-windows-dlls.outputs.cache-hit != 'true' && steps.build-windows-dlls.outcome == 'success'
+        uses: actions/cache/save@v6
+        with:
+          path: dists/windows/prefix
+          key: ${{ steps.cache-windows-dlls.outputs.cache-primary-key }}
       - name: Install Windows DLL dependencies
         shell: msys2 {0}
         run: |
@@ -156,6 +164,19 @@ jobs:
           ./autogen.sh
           ./configure --with-opencv --with-libprojectM
           make
+      - name: Stage native phone receiver
+        shell: msys2 {0}
+        run: |
+          cmake -S native/phone-audio -B build/phone-audio -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/phone-audio --parallel 3
+          ctest --test-dir build/phone-audio --output-on-failure
+          python tools/stage-phone-audio.py --platform windows --openssl-license /ucrt64/share/licenses/openssl/LICENSE
+      - name: Test native library notifications
+        env:
+          USCE_FPC: C:/FPC/3.2.2/bin/i386-win32/fpc.exe
+        run: python -m unittest discover -s tools -p "test_library*.py" -v
+      - name: Verify packaged Windows DLL loading without development paths
+        run: python tools/check_windows_runtime.py game
       - name: Create installer
         run: |
           del game\*.debug
@@ -170,7 +191,10 @@ jobs:
           if-no-files-found: error
           retention-days: 7
       - name: Stage portable package with every theme
-        run: python tools/bundle-themes.py portable --source game --destination .release-themes/portable
+        run: |
+          python tools/bundle-themes.py portable --source game --destination .release-themes/portable
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Copy-Item -LiteralPath @('LICENSE', 'COPYRIGHT.txt') -Destination .release-themes/portable
       - name: Upload Portable Artifact
         uses: actions/upload-artifact@v6
         with:
@@ -217,9 +241,25 @@ jobs:
           else
             echo "arch=ARM" >> $GITHUB_ENV
           fi
+      - name: Locate Homebrew downloads
+        if: inputs.use-caches
+        id: homebrew-downloads
+        run: |
+          echo "path=$(brew --cache)/downloads" >> "$GITHUB_OUTPUT"
+          echo "week=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
+      - name: Cache Homebrew downloads
+        if: inputs.use-caches
+        uses: actions/cache@v6
+        with:
+          path: ${{ steps.homebrew-downloads.outputs.path }}
+          key: homebrew-downloads-v1-${{ matrix.os }}-${{ runner.arch }}-${{ steps.homebrew-downloads.outputs.week }}
+          restore-keys: |
+            homebrew-downloads-v1-${{ matrix.os }}-${{ runner.arch }}-
       - name: Install Homebrew Dependencies
         run: |
-          brew install fpc sdl2-compat sdl2_image automake portaudio lua ffmpeg opencv
+          brew install fpc sdl2-compat sdl2_image automake portaudio lua ffmpeg opencv cmake ninja openssl@3
+      - name: Test native library notifications
+        run: python3 -m unittest discover -s tools -p "test_library*.py" -v
       - name: Cache ProjectM
         if: inputs.use-caches
         id: cache-projectm
@@ -242,6 +282,17 @@ jobs:
             -DCMAKE_INSTALL_NAME_DIR=$GITHUB_WORKSPACE/projectm/lib \
             -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON
           cmake --build libprojectM-$PROJECTM_VERSION/build --target install --parallel
+      - name: Stage native phone receiver
+        run: |
+          export OPENSSL_ROOT_DIR="$(brew --prefix openssl@3)"
+          cmake -S native/phone-audio -B build/phone-audio -G Ninja -DCMAKE_BUILD_TYPE=Release -DOPENSSL_USE_STATIC_LIBS=TRUE
+          cmake --build build/phone-audio --parallel 3
+          ctest --test-dir build/phone-audio --output-on-failure
+          license="$(find -L "$OPENSSL_ROOT_DIR" -type f -name LICENSE.txt -print -quit)"
+          test -f "$license"
+          python3 tools/stage-phone-audio.py --platform darwin --openssl-license "$license"
+      - name: Check bundle signing order
+        run: python3 tools/test_macos_bundle_signing.py
       - name: Generate Build Scripts
         run: ./autogen.sh
       - name: Configure Project
@@ -289,6 +340,12 @@ jobs:
           key: linux-docker-${{ hashFiles('dists/linux/dl.sh', 'dists/linux/tasks.sh', 'dists/linux/dockerenv.sh', 'dists/linux/Dockerfile.in') }}
           path: |
             dists/linux/prefix
+      - name: Install native test compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y fp-compiler
+      - name: Test native library notifications
+        run: python3 -m unittest discover -s tools -p "test_library*.py" -v
       - name: Start container builder
         uses: docker/setup-buildx-action@v4
       - name: Generate Dockerfile
@@ -313,5 +370,51 @@ jobs:
         with:
           name: USCE-linux-${{ env.versionName }}
           path: USCE-linux-${{ env.versionName }}.AppImage
+          if-no-files-found: error
+          retention-days: 7
+
+  build_deb:
+    needs: resolve
+    name: Build Ubuntu 22.04 package (amd64)
+    runs-on: ubuntu-22.04
+    env:
+      USCE_RELEASE_VERSION: ${{ inputs.release-version }}
+      USCE_BUILD_CHANNEL: development
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Bundle reviewed themes
+        uses: ./.github/actions/bundle-themes
+      - name: Install native build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fpc automake build-essential cmake ninja-build libssl-dev pkg-config libsdl2-image-dev libavformat-dev libavcodec-dev libavutil-dev libswresample-dev libswscale-dev libsqlite3-dev libfreetype6-dev portaudio19-dev liblua5.3-dev fonts-dejavu-core dpkg-dev desktop-file-utils
+      - name: Stage native phone receiver
+        run: |
+          cmake -S native/phone-audio -B build/phone-audio -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/phone-audio --parallel 2
+          ctest --test-dir build/phone-audio --output-on-failure
+          python3 tools/stage-phone-audio.py --platform linux --openssl-license /usr/share/doc/libssl-dev/copyright
+      - name: Build native game
+        run: |
+          ./autogen.sh
+          ./configure --prefix=/usr --with-opencv=no --with-libprojectM=no
+          make -j2
+          v=$(python3 tools/generate-version.py)
+          echo "versionName=${v/-dev./~dev.}" >> "$GITHUB_ENV"
+      - name: Build and inspect Debian package
+        run: |
+          python3 tools/build-deb.py --version "$versionName" --output deb-output --themes .release-themes/bundle
+          python3 tools/check_deb_install.py deb-output/*.deb
+          sudo apt-get install -y ./deb-output/*.deb
+          usce -help
+      - name: Upload Debian package
+        uses: actions/upload-artifact@v6
+        with:
+          name: USCE-linux-deb-${{ env.versionName }}
+          path: deb-output/*.deb
           if-no-files-found: error
           retention-days: 7

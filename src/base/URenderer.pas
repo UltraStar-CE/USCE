@@ -174,6 +174,8 @@ type
       ReflectionTexY1: single;
       ReflectionTexY2: single;
       ScaleMode: TLayoutScaleMode;
+      OutlineWidth: single; // fraction of the shorter side; 0 keeps a filled texture
+      CornerRadius: single; // fraction of the shorter displayed side, 0..0.5
       EdgeExtend: boolean;
       EdgeExtendSolidFill: boolean;
       EdgeExtendPixels: single;
@@ -257,6 +259,7 @@ type
   TRenderer = class
     protected
       TextureDatabase: TTextureDatabase;
+      fViewportX: integer;
       SWRendering: boolean;
       fSupportsProjectM: boolean;
       Limit: integer;
@@ -270,6 +273,8 @@ type
       procedure DrawGlyph(Texture: TTexture); virtual; abstract;
       procedure DrawQuads(QuadList: TQuadList); virtual; abstract;
       procedure DrawQuad(X, Y, Z, W, H, ColR, ColG, ColB, Alpha: single);
+      procedure DrawRoundedOutline(X, Y, Z, W, H, ColR, ColG, ColB, Alpha,
+        Radius, Thickness: single; Reflection: boolean; ReflectionSpacing: single); virtual; abstract;
       procedure DrawTriangles(TriangleList: TTriangleList); virtual; abstract;
       procedure DrawTriangle(X1, Y1, X2, Y2, X3, Y3, Z, ColR, ColG, ColB, Alpha: single);
       procedure DrawLines(LineList: TLineList); virtual; abstract;
@@ -277,6 +282,11 @@ type
       procedure DrawParticles(Texture: TTexture; ParticleList: TParticleList); virtual; abstract;
       procedure DrawBoundedBox(X1, Y1, X2, Y2, Z, LineThickness, ColR, ColG, ColB, Alpha: single); virtual;
       procedure DrawLineStrip(PointList: TPointList; ScaleX, ScaleY, TranslateX, TranslateY, ColR, ColG, ColB, Alpha: single); virtual; abstract;
+
+      // Transparent foreground capture for menu transitions.
+      function BeginTextureCapture(Texture: TTexture; Width, Height: integer): boolean; virtual; abstract;
+      procedure EndTextureCapture; virtual; abstract;
+      procedure SetPremultipliedAlpha(Enabled: boolean); virtual; abstract;
 
       // State changes
       procedure SetOrthographicProjection(Left, Right, Bottom, Top, NearVal, FarVal: single); virtual; abstract;
@@ -324,6 +334,7 @@ type
       constructor Create;
       destructor Destroy; override;
 
+      property ViewportX: integer read fViewportX;
       property Blend: boolean read GetBlend write SetBlend;
       property DepthTest: boolean read GetDepthTest write SetDepthTest;
       property ScissorTest: boolean read GetScissorTest write SetScissorTest;
@@ -395,6 +406,8 @@ begin
   ReflectionTexY1 := TexY2;
   ReflectionTexY2 := TexY1 + ReflectionHeight;
   ScaleMode := lsStretch;
+  CornerRadius := 0;
+  OutlineWidth := 0;
   EdgeExtend := false;
   EdgeExtendSolidFill := false;
   EdgeExtendPixels := 1;
@@ -433,6 +446,8 @@ begin
   T.ReflectionTexY1 := ReflectionTexY1;
   T.ReflectionTexY2 := ReflectionTexY2;
   T.ScaleMode := ScaleMode;
+  T.CornerRadius := CornerRadius;
+  T.OutlineWidth := OutlineWidth;
   T.EdgeExtend := EdgeExtend;
   T.EdgeExtendSolidFill := EdgeExtendSolidFill;
   T.EdgeExtendPixels := EdgeExtendPixels;

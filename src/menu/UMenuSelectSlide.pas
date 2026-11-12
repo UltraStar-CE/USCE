@@ -46,6 +46,7 @@ type
   TSelectSlide = class(IMenuWidget)
     private
       SelectBool:       boolean;
+      FocusOption: integer;
 
       function AdjustOptionTextToFit(OptText: UTF8String): UTF8String;
     public
@@ -183,7 +184,7 @@ uses
   SysUtils,
   UGraphic,
   ULog,
-  UMenu;
+  UMenu, UThemes;
 
 // ------------ Select
 constructor TSelectSlide.Create(PosX, PosY, W, H, SkipX, SBGW, ColR, ColG, ColB, Int, DColR, DColG, DColB, DInt,
@@ -417,6 +418,7 @@ var
   var
     I: integer;
   begin
+    FocusOption := Sel;
     for I := Low(TextOpt) to High(TextOpt) do
     begin
       TextOpt[I].ColR := STDColR;
@@ -656,10 +658,10 @@ begin
       Renderer.DrawTexture(self.Tex_SelectS_ArrowR);
     end;
 
-    Text.Draw;
+    Text.DrawEmphasized(SelectBool and Theme.BoldSelection);
 
     for SO := Low(TextOpt) to High(TextOpt) do
-      TextOpt[SO].Draw;
+      TextOpt[SO].DrawEmphasized(SelectBool and Theme.BoldSelection and (SO = FocusOption));
   end;
 end;
 

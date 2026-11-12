@@ -54,8 +54,9 @@ deps+=('SDL2_image,https://www.libsdl.org/projects/SDL_image/release/SDL2_image-
 deps+=('sqlite,https://sqlite.org/2026/sqlite-autoconf-3530100.tar.gz,83e6b2020a034e9a7ad4a72feea59e1ad52f162e09cbd26735a3ffb98359fc4f')
 deps+=('freetype,https://download-mirror.savannah.gnu.org/releases/freetype/freetype-2.14.3.tar.xz,36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f')
 deps+=('dav1d,https://downloads.videolan.org/pub/videolan/dav1d/1.5.4/dav1d-1.5.4.tar.xz,686616b7c69eb88d44459391ab25cac13b6647a3b288835c5784e71c1514a5c5')
-deps+=('ffmpeg,https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz,8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e')
-deps+=('lua,https://www.lua.org/ftp/lua-5.5.1.tar.gz,1c4b4068d67061f2a2231ad2b5422e77acea1487ea9890f6320af614f4373dce')
+deps+=('ffmpeg,https://distfiles.macports.org/ffmpeg/ffmpeg-9.0.2.tar.xz,8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e')
+# Debian's original source archive matches the published Lua tarball checksum.
+deps+=('lua,https://deb.debian.org/debian/pool/main/l/lua5.5/lua5.5_5.5.1.orig.tar.gz,1c4b4068d67061f2a2231ad2b5422e77acea1487ea9890f6320af614f4373dce')
 deps+=('libjpeg-turbo,https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/3.2.0/libjpeg-turbo-3.2.0.tar.gz,6f30092cef9fb839779646608f4ee14ae3cbac989c47fa05e841b0841f09878e')
 deps+=('libpng,https://download.sourceforge.net/libpng/libpng-1.6.58.tar.xz,28eb403f51f0f7405249132cecfe82ea5c0ef97f1b32c5a65828814ae0d34775')
 deps+=('libwebp,https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-1.6.0.tar.gz,e4ab7009bf0629fd11982d4c2aa83964cf244cffba7347ecd39019a9e38c4564')

@@ -68,6 +68,9 @@ ppaslink.sh
 # Windows build outputs
 /game/*.dll
 /game/*.debug
+/game/*.so
+/game/*.dylib
+/game/runtime/
 
 # Generated build version metadata
 /VERSION.build
@@ -79,3 +82,11 @@ __pycache__/
 
 # Separate theme checkout and package staging
 /.release-themes/
+
+# Local song annotations
+/game/song-problems.json
+/game/song-problems.json.tmp
+/game/song-problems.json.bak
+/game/themes/*
+!/game/themes/Modern.ini
+!/game/themes/Modern/

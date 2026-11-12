@@ -63,6 +63,7 @@ end;
 
 procedure   TMenuBackgroundColor.Draw;
 begin
+  if SuppressDrawing then Exit;
   if (ScreenAct = 1) then
   begin //just clear once, even when using two screens
     Renderer.SetClearColor(Color.R, Color.G, Color.B, 0);

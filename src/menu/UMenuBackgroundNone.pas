@@ -61,6 +61,7 @@ end;
 
 procedure   TMenuBackgroundNone.Draw;
 begin
+  if SuppressDrawing then Exit;
   //Do just nothing in here!
   If (ScreenAct = 1) then //Clear just once when in dual screen mode
     Renderer.ClearFrameBuffer(CLEAR_DEPTH);

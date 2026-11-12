@@ -308,11 +308,13 @@ implementation
 
 
 uses
+  UInputSource,
   Classes,
   Math,
   UDisplay,
   UCommandLine,
   UPathUtils,
+  UMenuBackgroundVideo,
   UThemes;
 
 var
@@ -459,6 +461,8 @@ var
   I: integer;
   Col: TRGB;
   Color: cardinal;
+  PlainType: TTextureType;
+  PlainColor: cardinal;
 begin
   if ForceReload then
     UnloadSingScreenTextures
@@ -476,9 +480,16 @@ begin
     Tex_Mid[I]          := Renderer.LoadTexture(Skin.GetTextureFileName('GrayMid'),   TEXTURE_TYPE_COLORIZED, Color);
     Tex_Right[I]        := Renderer.LoadTexture(Skin.GetTextureFileName('GrayRight'), TEXTURE_TYPE_COLORIZED, Color);
 
-    Tex_plain_Left[I]   := Renderer.LoadTexture(Skin.GetTextureFileName('NotePlainLeft'),  TEXTURE_TYPE_COLORIZED, Color);
-    Tex_plain_Mid[I]    := Renderer.LoadTexture(Skin.GetTextureFileName('NotePlainMid'),   TEXTURE_TYPE_COLORIZED, Color);
-    Tex_plain_Right[I]  := Renderer.LoadTexture(Skin.GetTextureFileName('NotePlainRight'), TEXTURE_TYPE_COLORIZED, Color);
+    PlainType := TEXTURE_TYPE_COLORIZED;
+    PlainColor := Color;
+    if not Theme.Sing.PlainNotesUsePlayerColor then
+    begin
+      PlainType := TEXTURE_TYPE_TRANSPARENT;
+      PlainColor := 0;
+    end;
+    Tex_plain_Left[I]   := Renderer.LoadTexture(Skin.GetTextureFileName('NotePlainLeft'),  PlainType, PlainColor);
+    Tex_plain_Mid[I]    := Renderer.LoadTexture(Skin.GetTextureFileName('NotePlainMid'),   PlainType, PlainColor);
+    Tex_plain_Right[I]  := Renderer.LoadTexture(Skin.GetTextureFileName('NotePlainRight'), PlainType, PlainColor);
 
     Tex_BG_Left[I]      := Renderer.LoadTexture(Skin.GetTextureFileName('NoteBGLeft'),  TEXTURE_TYPE_COLORIZED, Color);
     Tex_BG_Mid[I]       := Renderer.LoadTexture(Skin.GetTextureFileName('NoteBGMid'),   TEXTURE_TYPE_COLORIZED, Color);
@@ -496,7 +507,10 @@ begin
     Tex_BG_Mid_Rap[I]       := Renderer.LoadTexture(Skin.GetTextureFileName('NoteBGMidRap'),   TEXTURE_TYPE_COLORIZED, Color);
     Tex_BG_Right_Rap[I]     := Renderer.LoadTexture(Skin.GetTextureFileName('NoteBGRightRap'), TEXTURE_TYPE_COLORIZED, Color);
 
-    Tex_ScoreBG[I - 1] := Renderer.LoadTexture(Skin.GetTextureFileName('ScoreBG'), TEXTURE_TYPE_COLORIZED, Color);
+    if Theme.Sing.ScorePlayerColor then
+      Tex_ScoreBG[I - 1] := Renderer.LoadTexture(Skin.GetTextureFileName('ScoreBG'), TEXTURE_TYPE_COLORIZED, Color)
+    else
+      Tex_ScoreBG[I - 1] := Renderer.LoadTexture(Skin.GetTextureFileName('ScoreBG'), TEXTURE_TYPE_TRANSPARENT, 0);
   end;
 
   Col := GetPlayerColor(Ini.SingColor[0]);
@@ -635,6 +649,7 @@ procedure Finalize3D;
 begin
   UnloadScreens;
   UnloadFontTextures;
+  ReleaseInputSourceBadges;
   Renderer.Free;
   SDL_QuitSubSystem(SDL_INIT_VIDEO);
 end;
@@ -1080,6 +1095,8 @@ end;
 
 procedure UnloadScreens;
 begin
+  // Release cached video textures while the renderer and GL context still exist.
+  ClearMenuVideoCache(true);
   FreeAndNil(ScreenMain);
   FreeAndNil(ScreenName);
   FreeAndNil(ScreenContinuousPlayback);

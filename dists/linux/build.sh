@@ -23,7 +23,11 @@ echo "==> Scanning and copying libraries..."
 tput sgr0
 rm -rf "$OUTPUT/$LIBDIR"
 mkdir -p "$OUTPUT/$LIBDIR"
-LD_LIBRARY_PATH="$PREFIX/lib" "$root/scan_libs.py" "$OUTPUT/usce" "$OUTPUT/$LIBDIR" --strip --rpath | tee "$OUTPUT/$LIBDIR/libs.txt"
+{
+  LD_LIBRARY_PATH="$PREFIX/lib" "$root/scan_libs.py" "$OUTPUT/usce" "$OUTPUT/$LIBDIR" --strip --rpath
+  LD_LIBRARY_PATH="$PREFIX/lib" "$root/scan_libs.py" "$OUTPUT/libusce-phone-audio.so" "$OUTPUT/$LIBDIR" --strip --rpath
+} | tee "$OUTPUT/$LIBDIR/libs.txt"
+patchelf --set-rpath "\$ORIGIN/$LIBDIR" "$OUTPUT/libusce-phone-audio.so"
 sed -r -i "s/\x1B(\[[0-9;]*[JKmsu]|\(B)//g" "$OUTPUT/$LIBDIR/libs.txt" # remove color codes
 
 # strip executable

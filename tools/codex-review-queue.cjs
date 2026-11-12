@@ -24,6 +24,29 @@ function parseRequest(comment) {
   } catch { return null; }
 }
 
+// Completion is evidence supplied by the dispatcher, never inferred from age,
+// a rebase or a merge. Keep stale requests for late findings and usage accounting.
+function classifyRequests({prs, requests, completedCommentIds}) {
+  if (!Array.isArray(prs) || !Array.isArray(requests) || !Array.isArray(completedCommentIds))
+    throw Error('Complete request metadata is required');
+  const completed = new Set(completedCommentIds);
+  const seen = new Set();
+  return requests.flatMap(comment => {
+    const request = parseRequest(comment);
+    if (!request) return [];
+    if (!Number.isSafeInteger(comment.id)) throw Error('Missing request comment ID');
+    if (seen.has(comment.id)) return [];
+    seen.add(comment.id);
+    const pr = prs.find(p => p.repo === request.repo && p.number === request.number);
+    if (!pr || !['open', 'closed'].includes(pr.state) || !sha.test(pr.head))
+      throw Error('Missing current PR metadata');
+    const status = completed.has(comment.id) ? 'completed' :
+      request.repo === 'UltraStar-CE/USCE' && request.number === 154 ? 'retired' :
+      pr.state === 'open' && pr.head === request.head ? 'current' : 'stale';
+    return [{...request, commentId: comment.id, status}];
+  });
+}
+
 function planReview({prs, requests, reviewInFlight, now}) {
   if (!Array.isArray(prs) || !Array.isArray(requests) || typeof reviewInFlight !== 'boolean' ||
       !Number.isFinite(now)) throw Error('Complete queue metadata is required');
@@ -48,7 +71,7 @@ function planReview({prs, requests, reviewInFlight, now}) {
   return null;
 }
 
-module.exports = {policy, requestBody, parseRequest, planReview};
+module.exports = {policy, requestBody, parseRequest, classifyRequests, planReview};
 if (require.main === module) {
   const fs = require('node:fs');
   console.log(JSON.stringify(planReview(JSON.parse(fs.readFileSync(0, 'utf8')))));

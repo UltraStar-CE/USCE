@@ -50,6 +50,7 @@ type
       SelectLevel:     cardinal;
       SelectPlayList:  cardinal;
       SelectPlayList2: cardinal;
+      SelectHighscores: cardinal;
 
       ILevel:     array of UTF8String;
       IPlaylist:  array of UTF8String;
@@ -134,6 +135,7 @@ begin
           //Save Difficulty
           Ini.Difficulty := SelectsS[SelectLevel].SelectedOption;
           Ini.SaveLevel;
+          Ini.Save;
 
           case Mode of
             0: InitClassic;
@@ -222,6 +224,11 @@ begin
   Theme.PartyOptions.SelectPlayList2.oneItemOnly := true;
   Theme.PartyOptions.SelectPlayList2.showArrows := true;
   SelectPlayList2 := AddSelectSlide(Theme.PartyOptions.SelectPlayList2, PlayList2, IPlaylist2);
+
+  Theme.PartyOptions.SelectHighscores.oneItemOnly := true;
+  Theme.PartyOptions.SelectHighscores.showArrows := true;
+  SelectHighscores := AddSelectSlide(Theme.PartyOptions.SelectHighscores,
+    Ini.PartyHighscores, IPartyHighscoresTranslated);
 
   FillLevel;
 

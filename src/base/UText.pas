@@ -46,6 +46,7 @@ type
     Font:     TScalableFont;
     Outlined: boolean;
     BaseStretch: single;
+    FallbackFiles: array of IPath;
     X, Y, Z:  real;
   end;
   TFont = record
@@ -72,6 +73,7 @@ var
 
 procedure LoadFontFamilyNames;
 procedure BuildFonts;                         // builds all fonts
+function ResolveThemeFont(const FileName: IPath; Fallback: integer): integer;
 procedure KillFonts;                          // deletes all font
 function  TextWidth(const text: UTF8String): real; // returns text width
 procedure PrintText(const text: UTF8String);    // custom GL "Print" routine
@@ -105,6 +107,74 @@ const
   FONT_STYLES: array [0..3] of string = (
     'Regular', 'Bold', 'Outline', 'BoldHighRes'
   );
+
+type
+  TThemeFontEntry = record
+    FileName: IPath;
+    Fallback, Family: integer;
+  end;
+var
+  ThemeFonts: array of TThemeFontEntry;
+
+function ResolveThemeFont(const FileName: IPath; Fallback: integer): integer;
+var
+  I, J, K, Family: integer;
+  Candidate: array[0..3] of TGLFont;
+  Embolden: single;
+begin
+  Result := Fallback;
+  if (Length(Fonts) = 0) or (Fonts[0][0].Font = nil) then Exit;
+  if (Result < 0) or (Result >= Length(FontFamilyNames)) then Result := 0;
+  Fallback := Result;
+  if (FileName = nil) or FileName.IsUnset then Exit;
+  for I := 0 to High(ThemeFonts) do
+    if FileName.Equals(ThemeFonts[I].FileName) and (Fallback = ThemeFonts[I].Fallback) then
+      Exit(ThemeFonts[I].Family);
+  FillChar(Candidate, SizeOf(Candidate), 0);
+  try
+    for J := 0 to High(Candidate) do
+    begin
+      if J = ftOutline then
+        Candidate[J].Font := TFTScalableOutlineFont.Create(FileName, 64, 0.06, true, false)
+      else
+      begin
+        Embolden := 0;
+        if J in [ftBold, ftBoldHighRes] then Embolden := 0.01;
+        Candidate[J].Font := TFTScalableFont.Create(FileName, 64, Embolden, true, false);
+      end;
+      Candidate[J].Outlined := J = ftOutline;
+      Candidate[J].BaseStretch := 1;
+      if Fonts[Fallback][J].Font <> nil then
+      begin
+        Candidate[J].Font.AddFallback(Fonts[Fallback][J].Font.Filename);
+        SetLength(Candidate[J].FallbackFiles, 1);
+        Candidate[J].FallbackFiles[0] := Fonts[Fallback][J].Font.Filename;
+        for K := 0 to High(Fonts[Fallback][J].FallbackFiles) do
+        begin
+          Candidate[J].Font.AddFallback(Fonts[Fallback][J].FallbackFiles[K]);
+          SetLength(Candidate[J].FallbackFiles, K + 2);
+          Candidate[J].FallbackFiles[K + 1] := Fonts[Fallback][J].FallbackFiles[K];
+        end;
+      end;
+    end;
+    Family := Length(Fonts);
+    SetLength(Fonts, Family + 1);
+    SetLength(Fonts[Family], Length(Candidate));
+    for J := 0 to High(Candidate) do Fonts[Family][J] := Candidate[J];
+    Result := Family;
+  except
+    on E: Exception do
+    begin
+      for J := 0 to High(Candidate) do Candidate[J].Font.Free;
+      Log.LogError('Theme font ' + FileName.ToNative + ': ' + E.Message, 'ResolveThemeFont');
+    end;
+  end;
+  I := Length(ThemeFonts);
+  SetLength(ThemeFonts, I + 1);
+  ThemeFonts[I].FileName := FileName;
+  ThemeFonts[I].Fallback := Fallback;
+  ThemeFonts[I].Family := Result;
+end;
 
 function GetLayoutStretchCompensation: single;
 var
@@ -266,6 +336,7 @@ begin
         Fonts[FontNameIndex][FontStyleIndex].BaseStretch := FontIni.ReadFloat(SectionName, FONT_STYLES[FontStyleIndex] + 'Stretch', 1.0);
         Fonts[FontNameIndex][FontStyleIndex].Font.Stretch := Fonts[FontNameIndex][FontStyleIndex].BaseStretch;
 
+        SetLength(Fonts[FontNameIndex][FontStyleIndex].FallbackFiles, 0);
         for FallbackIndex := 1 to 25 do
         begin
           FontFile := FindFontFile(FontIniPath.GetDir, FontIni.ReadString(SectionName , FONT_STYLES[FontStyleIndex] + 'FallbackFile' + IntToStr(FallbackIndex), ''));
@@ -273,6 +344,9 @@ begin
             Continue;
           try
             Fonts[FontNameIndex][FontStyleIndex].Font.AddFallback(FontFile);
+            I := Length(Fonts[FontNameIndex][FontStyleIndex].FallbackFiles);
+            SetLength(Fonts[FontNameIndex][FontStyleIndex].FallbackFiles, I + 1);
+            Fonts[FontNameIndex][FontStyleIndex].FallbackFiles[I] := FontFile;
           except
             on E: EFontError do
               Log.LogError('Setting font fallback ''' + FontFile.ToNative() + ''' failed: ' + E.Message);
@@ -298,7 +372,12 @@ var
 begin
   for I := 0 to High(Fonts) do
     for J := 0 to High(Fonts[I]) do
-      Fonts[I][J].Font.Free;
+    begin
+      FreeAndNil(Fonts[I][J].Font);
+      SetLength(Fonts[I][J].FallbackFiles, 0);
+    end;
+  SetLength(ThemeFonts, 0);
+  SetLength(Fonts, Length(FontFamilyNames));
 end;
 
 function TextWidth(const text: UTF8String): real;

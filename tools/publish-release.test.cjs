@@ -22,12 +22,12 @@ async function fixture(run) {
     execFileSync('git', ['tag', 'v2026.9.0']);
     const upstreamSha = execFileSync('git', ['rev-parse', 'HEAD'], {encoding:'utf8'}).trim();
     fs.writeFileSync('release-plan.json', JSON.stringify({ready:true,version:'2026.10.0',themes:themePin,upstream:{tag:'v2026.10.0',sha:upstreamSha}}));
-    execFileSync('git', ['-c','user.name=USCE Tests','-c','user.email=tests@example.invalid','commit','--quiet','--allow-empty','-m','Improve playback #123 @contributor']);
+    execFileSync('git', ['-c','user.name=USCE Tests','-c','user.email=tests@example.invalid','commit','--quiet','--allow-empty','-m','Improve playback #123 @contributor UltraStar-Deluxe/USDX#1460 https://github.com/UltraStar-Deluxe/USDX/pull/1460']);
     const sha = execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
     fs.mkdirSync('docs/images', {recursive:true});
     for (const kind of ['usce','upstream']) fs.writeFileSync('docs/images/release-2026.10.0-' + kind + '.svg', '<svg xmlns="http://www.w3.org/2000/svg"/>');
     fs.mkdirSync('release-output');
-    for (const name of ['USCE-windows-installer-2026.10.0.exe','USCE-windows-portable-2026.10.0.zip','USCE-linux-2026.10.0.AppImage','USCE-mac-ARM-2026.10.0.dmg','USCE-mac-x86-2026.10.0.dmg','SHA256SUMS','VERSION']) fs.writeFileSync('release-output/'+name, name);
+    for (const name of ['USCE-windows-installer-2026.10.0.exe','USCE-windows-portable-2026.10.0.zip','USCE-linux-2026.10.0.AppImage','USCE-linux-deb-2026.10.0.deb','USCE-mac-ARM-2026.10.0.dmg','USCE-mac-x86-2026.10.0.dmg','SHA256SUMS','VERSION']) fs.writeFileSync('release-output/'+name, name);
     const state = {releases:[],assets:[],uploads:0,outputs:{}};
     const repos = {
       getCommit: async () => {const e=Error('missing tag');e.status=404;throw e;},
@@ -46,24 +46,26 @@ async function fixture(run) {
     fs.rmSync(temp,{recursive:true,force:true});
   }
 }
-test('draft publisher pins source, avoids cross-references and retries matching assets', async()=>fixture(async x=>{
+test('draft publisher pins source, retains attribution and retries matching assets', async()=>fixture(async x=>{
   await publishDraft(x,'2026.10.0');
   assert.equal(x.state.releases[0].draft,true);
   assert.equal(x.state.releases[0].target_commitish,x.context.sha);
   assert(x.state.releases[0].body.includes('<!-- usce-upstream-release:v2026.10.0 -->'));
-  assert(!x.state.releases[0].body.includes('#123'));
-  assert(!x.state.releases[0].body.includes('@contributor'));
+  assert(x.state.releases[0].body.includes('#123'));
+  assert(x.state.releases[0].body.includes('@contributor'));
+  assert(x.state.releases[0].body.includes('UltraStar-Deluxe/USDX#1460'));
+  assert(x.state.releases[0].body.includes('https://github.com/UltraStar-Deluxe/USDX/pull/1460'));
   assert(x.state.releases[0].body.includes(themePin.sha));
-  assert.equal(x.state.uploads,7);
+  assert.equal(x.state.uploads,8);
   await publishDraft(x,'2026.10.0');
   assert.equal(x.state.releases.length,1);
-  assert.equal(x.state.uploads,7);
+  assert.equal(x.state.uploads,8);
   fs.writeFileSync('release-output/SHA256SUMS','changed');
   await assert.rejects(publishDraft(x,'2026.10.0'), /asset differs/);
 }));
 test('publisher rejects a missing package, a different tag and an already published release', async()=>fixture(async x=>{
   fs.renameSync('release-output/SHA256SUMS','sums');
-  await assert.rejects(publishDraft(x,'2026.10.0'), /five packages/);
+  await assert.rejects(publishDraft(x,'2026.10.0'), /six packages/);
   assert.equal(x.state.releases.length,0);
   fs.renameSync('sums','release-output/SHA256SUMS');
   x.git.getRef=async()=>({data:{object:{type:'tag',sha:'annotated-tag'}}});
@@ -90,7 +92,7 @@ test('release planning requires a reviewed ready plan and skips published versio
 
 test('curated release notes retain screenshots and replace commit subjects and internal checklists', async()=>fixture(async x=>{
   fs.mkdirSync('doc/releases', {recursive:true});
-  const notes = '## Changes since USCE 2026.9.0\n\n![Since USCE](https://example.org/usce.png)\n\n## Changes compared with USDX 2026.10.0\n\n* New theme.\n\n![Theme screenshot](https://example.org/theme.png)';
+  const notes = '## Highlights\n\n### Changes since USCE 2026.9.0\n\n![Since USCE](https://example.org/usce.png)\n\n### Changes compared with USDX 2026.10.0\n\n* New theme.\n\n![Theme screenshot](https://example.org/theme.png)\n\n## Technical improvements\n\n* Build an Ubuntu package.\n\n## Bugfixes over USDX\n\n* Keep scores after a freestyle ending.';
   fs.writeFileSync('doc/releases/2026.10.0.md', notes);
   await publishDraft(x, '2026.10.0');
   const body = x.state.releases[0].body;
@@ -143,7 +145,7 @@ test('generated notes link to local commits and state the previous USCE baseline
   const body = x.state.releases[0].body;
   assert(body.includes('Changes since USCE 2026.9.0'));
   assert(body.includes('https://github.com/UltraStar-CE/USCE/commit/' + x.context.sha));
-  assert(!body.includes('#123'));
+  assert(body.includes('#123'));
 }));
 
 test('the first release leaves USCE changes empty and compares USDX with September', () => {

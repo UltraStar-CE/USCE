@@ -243,7 +243,12 @@ end;
 
 class function TWebcam.CaptureThreadMain(Data: Pointer): integer; cdecl; static;
 begin
+  try
   Result := TWebcam(Data).CaptureLoop;
+  except
+    LogWorkerException('TWebcam.CaptureThreadMain');
+    raise;
+  end;
 end;
 
 procedure TWebcam.GetWebcamFrame();

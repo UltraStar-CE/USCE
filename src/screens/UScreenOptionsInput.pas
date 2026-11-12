@@ -187,6 +187,8 @@ procedure TScreenOptionsInput.LoadWidgets;
 begin
   SelectJoyPad := AddSelectSlide('SING_OPTIONS_INPUT_JOYPAD_SUPPORT', Ini.Joypad, IJoypad);
   Include(SoundInteractions, SelectJoyPad);
+  Include(SoundInteractions, AddSelectSlide('SING_OPTIONS_INPUT_SONG_KEYBOARD',
+    Ini.SongKeyboard, ISongKeyboardTranslated));
 end;
 
 end.

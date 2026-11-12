@@ -139,6 +139,7 @@ type
   end;
 
 procedure DebugWriteln(const aString: String);
+procedure LogWorkerException(const Context: string);
 
 var
   Log:    TLog;
@@ -155,7 +156,7 @@ uses
   UTime,
   UCommon,
   UCommandLine,
-  UPathUtils;
+  UPathUtils, UPlatform;
 
 (*
  * Write to console if in debug mode (Thread-safe).
@@ -173,6 +174,30 @@ begin
   {$ENDIF}
 end;
 
+
+procedure LogWorkerException(const Context: string);
+var Report: string; I: integer; Trace: TBacktraceStrFunc;
+begin
+  // Called inside the worker's except block. Never replace its exception,
+  // invoke a GUI on the worker, or recursively report a logging failure.
+  try
+    if not Assigned(Log) then Exit;
+    Report := 'Worker: ' + Context + LineEnding;
+    if ExceptObject <> nil then
+    begin
+      Report := Report + 'Exception class: ' + ExceptObject.ClassName + LineEnding;
+      if ExceptObject is Exception then
+        Report := Report + 'Message: ' + Exception(ExceptObject).Message + LineEnding;
+    end;
+    Trace := Platform.GetBacktraceFunction();
+    Report := Report + Trace(ExceptAddr);
+    for I := 0 to ExceptFrameCount - 1 do
+      Report := Report + LineEnding + Trace(ExceptFrames[I]);
+    Log.LogExceptionReport(Report);
+  except
+    // The original handler still receives the original exception.
+  end;
+end;
 
 constructor TLog.Create;
 begin

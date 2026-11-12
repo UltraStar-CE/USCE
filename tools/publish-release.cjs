@@ -27,8 +27,7 @@ function gitChanges(ref, sha, repositoryUrl) {
   const commits = execFileSync('git', ['log', '--first-parent', '--format=%H%x09%s', range], {encoding: 'utf8'});
   const notes = commits.trim().split('\n').filter(Boolean).map(line => {
     const [hash, ...subject] = line.split('\t');
-    const title = subject.join('\t').replace(/https?:\/\/github\.com\/[^\s)]+/g, '[source reference omitted]')
-      .replace(/#/g, ' PR ').replace(/@([A-Za-z0-9_-]+)/g, '$1').replace(/[\[\]]/g, '');
+    const title = subject.join('\t').replace(/[\[\]]/g, '\\$&');
     return '- ' + title + ' ([`' + hash.slice(0, 7) + '`](' + repositoryUrl + '/commit/' + hash + '))';
   }).join('\n');
   const count = Number(execFileSync('git', ['rev-list', '--count', range], {encoding: 'utf8'}).trim());
@@ -87,8 +86,8 @@ async function publishDraft({github, context, core}, version) {
   if (!versionPattern.test(version)) throw Error('Invalid release version');
   const paths = fs.readdirSync('release-output').sort();
   const expected = ['USCE-windows-installer-' + version + '.exe', 'USCE-windows-portable-' + version + '.zip',
-    'USCE-linux-' + version + '.AppImage', 'USCE-mac-ARM-' + version + '.dmg', 'USCE-mac-x86-' + version + '.dmg', 'SHA256SUMS', 'VERSION'].sort();
-  if (JSON.stringify(paths) !== JSON.stringify(expected)) throw Error('Expected five packages, VERSION and SHA256SUMS');
+    'USCE-linux-' + version + '.AppImage', 'USCE-linux-deb-' + version + '.deb', 'USCE-mac-ARM-' + version + '.dmg', 'USCE-mac-x86-' + version + '.dmg', 'SHA256SUMS', 'VERSION'].sort();
+  if (JSON.stringify(paths) !== JSON.stringify(expected)) throw Error('Expected six packages, VERSION and SHA256SUMS');
   const marker = '<!-- usce-source:' + context.sha + ' -->';
   const tag = 'v' + version;
   let tagExists = false;
@@ -120,7 +119,8 @@ async function publishDraft({github, context, core}, version) {
       }
       notes = generated.notes;
     }
-    const sections = notes.split(/^## /m).slice(1);
+    const sections = notes.split(/^#{2,3} /m).slice(1)
+      .filter(section => /^Changes (?:since |compared with USDX )/.test(section));
     if (sections.length !== 2 || !/^Changes since /.test(sections[0]) ||
         !/^Changes compared with USDX /.test(sections[1]) || sections.some(section => !/!\[[^\]]*\]\([^)]+\)/.test(section))) {
       throw Error('Release notes require USCE and USDX comparison sections, each with a graphic');

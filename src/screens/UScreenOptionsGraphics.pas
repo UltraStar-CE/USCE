@@ -92,6 +92,7 @@ type
     iDepthSlide,
     iVisualizerSlide,
     iOscilloscopeSlide,
+    iPitchTraceSlide,
     iMoveSizeSlide,
 {$IFDEF UseMpvVideo}
     iVideoBackendSlide,
@@ -265,6 +266,7 @@ begin
   AddSelectSlide('SING_OPTIONS_GRAPHICS_DEPTH', Ini.Depth, IDepth);
   AddSelectSlide('SING_OPTIONS_GRAPHICS_VISUALIZER', Ini.VisualizerOption, IVisualizerTranslated);
   AddSelectSlide('SING_OPTIONS_GRAPHICS_OSCILLOSCOPE', Ini.Oscilloscope, IOscilloscopeTranslated);
+  AddSelectSlide('SING_OPTIONS_GRAPHICS_PITCH_TRACE', Ini.PitchTrace, IOscilloscopeTranslated);
   AddSelectSlide('SING_OPTIONS_GRAPHICS_MOVIE_SIZE', Ini.MovieSize, IMovieSizeTranslated);
 {$IFDEF UseMpvVideo}
   AddSelectSlide('SING_OPTIONS_GRAPHICS_VIDEO_BACKEND', VideoBackendIndex, VideoBackendOptions);

@@ -48,6 +48,8 @@ type
       fSyncSource:   TSyncSource;
       fAvgSyncDiff:  real;
       fLastClock:    real;       // last master clock value
+      fFrameTime: real;
+      fFrameHostUs: int64;
       // Note: do not use Timer.GetState() to check if lyrics are paused as
       // Timer.Pause() is used for synching.
       fPaused:       boolean;
@@ -75,6 +77,9 @@ type
 
       StartTime:    real;       // time till start of lyrics (= Gap)
       TotalTime:    real;       // total song time
+      // Snapshot used by UpdateBeats; diagnostics must not re-run synchronization.
+      property FrameTime: real read fFrameTime;
+      property FrameHostUs: int64 read fFrameHostUs;
 
       constructor Create();
 
@@ -258,6 +263,8 @@ begin
   fSyncSource := nil;
 
   StartTime := 0;
+  fFrameTime := 0;
+  fFrameHostUs := 0;
   TotalTime := 0;
 
   OldBeat      := -1;
@@ -282,6 +289,8 @@ var
   CurLyricsTime: real;
 begin
   CurLyricsTime := GetCurrentTime();
+  fFrameTime := CurLyricsTime;
+  fFrameHostUs := int64(GetTickCount64) * 1000;
 
   OldBeat := CurrentBeat;
   MidBeat := GetMidBeat(CurLyricsTime - StartTime / 1000);

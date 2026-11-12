@@ -54,6 +54,7 @@ type
       old_SongMenu:  integer;
       old_Sorting:   integer;
       old_Tabs:      integer;
+      old_FolderFiltering, old_FolderDisplay: integer;
       AVDelayOptInt: integer;
       MicDelayOptInt:integer;
       AVDelaySelectNum:  integer;
@@ -94,7 +95,8 @@ type
   InteractionID = (
     iLanguageSlide,
     iSongMenuSlide,
-    iTabsSlide,
+    iFolderFilteringSlide,
+    iFolderDisplaySlide,
     iSortingSlide,
     iShowScoresSlide,
     iDebugSlide,
@@ -256,6 +258,8 @@ begin
   old_SongMenu := Ini.SongMenu;
   old_Sorting  := Ini.Sorting;
   old_Tabs     := Ini.Tabs;
+  old_FolderFiltering := Ini.FolderFiltering;
+  old_FolderDisplay := Ini.FolderDisplay;
 
   Interaction := 0;
 
@@ -266,6 +270,7 @@ end;
 procedure TScreenOptionsGame.Leave;
 begin
   Ini.AgeCountry := AgeCountries[AgeCountryIndex];
+  Ini.Tabs := Ord(Ini.FolderDisplay > 0);
   Ini.Save;
   ReloadAllScreens;
   ReloadSongMenu;
@@ -298,12 +303,15 @@ begin
     old_SongMenu := Ini.SongMenu;
     old_Sorting  := Ini.Sorting;
     old_Tabs     := Ini.Tabs;
+    old_FolderFiltering := Ini.FolderFiltering;
+    old_FolderDisplay := Ini.FolderDisplay;
   end;
 end;
 
 procedure TScreenOptionsGame.ReloadSongMenu;
 begin
-  if (Ini.Sorting <> old_Sorting) or (Ini.Tabs <> old_Tabs) or (old_SongMenu <> Ini.SongMenu) then
+  if (Ini.Sorting <> old_Sorting) or (Ini.Tabs <> old_Tabs) or (old_SongMenu <> Ini.SongMenu) or
+     (old_FolderFiltering <> Ini.FolderFiltering) or (old_FolderDisplay <> Ini.FolderDisplay) then
   begin
     Ini.TabsAtStartup := Ini.Tabs;
     Theme.ThemeSongReload;
@@ -341,7 +349,8 @@ begin
   // when editing this, also update the InteractionID enum declaration
   AddSelectSlide('SING_OPTIONS_GAME_LANGUAGE', Ini.Language, ILanguageTranslated);
   AddSelectSlide('SING_OPTIONS_GAME_SONGMENU', Ini.SongMenu, ISongMenuTranslated);
-  AddSelectSlide('SING_OPTIONS_GAME_TABS', Ini.Tabs, ITabsTranslated);
+  AddSelectSlide('SING_OPTIONS_GAME_FOLDER_FILTERING', Ini.FolderFiltering, IFolderModesTranslated);
+  AddSelectSlide('SING_OPTIONS_GAME_FOLDER_DISPLAY', Ini.FolderDisplay, IFolderModesTranslated);
   AddSelectSlide('SING_OPTIONS_GAME_SORTING', Ini.Sorting, ISortingTranslated);
   AddSelectSlide('SING_OPTIONS_GAME_SHOWSCORES', Ini.ShowScores, IShowScoresTranslated);
   AddSelectSlide('SING_OPTIONS_GAME_DEBUG', Ini.Debug, IDebugTranslated);

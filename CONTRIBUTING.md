@@ -65,4 +65,10 @@ USCE derives from [UltraStar Deluxe](https://github.com/UltraStar-Deluxe/USDX),
 which builds on UltraStar by corvus5. Thank you to their contributors. Preserve
 authorship when porting changes, link the source commit, and document adaptations.
 
+Link the original PRs and issues using fully qualified references, for example
+`UltraStar-Deluxe/USDX#1460`, and credit their authors with GitHub mentions.
+This includes upstream maintainers. Keep the original PR description as a quote;
+references inside it should point to the original repository. Record USCE
+adaptations in separate commits and link the corresponding USCE PRs in our tracker.
+
 For conduct concerns, read [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).

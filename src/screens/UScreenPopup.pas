@@ -81,7 +81,9 @@ type
 
   TScreenPopupInsertUser = class(TMenu)
     private
-      fPasswordOnly: boolean;
+      fPasswordOnly, fTextOnly: boolean;
+      fRestoreTextInput: boolean;
+      fNameCaption: UTF8String;
       fHandler: TPopupInsertUserHandler;
       fHandlerData: Pointer;
 
@@ -95,6 +97,8 @@ type
       procedure ShowPasswordPrompt(const Title, Msg: UTF8String;
         Handler: TPopupInsertUserHandler; HandlerData: Pointer);
 
+      procedure ShowTextPrompt(const Title, Msg, Caption: UTF8String;
+        Handler: TPopupInsertUserHandler; Data: Pointer);
       constructor Create; override;
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       procedure OnShow; override;
@@ -454,7 +458,6 @@ begin
         begin
           Value := false;
           Visible := false;
-          StopTextInput;
           Result := false;
         end;
 
@@ -485,7 +488,6 @@ begin
 
           Value := (Interaction = 2);
           Visible := false;
-          StopTextInput;
           Result := false;
         end;
 
@@ -501,6 +503,7 @@ begin
 
   if (not Result) then
   begin
+    SetTextInput(fRestoreTextInput);
     if (@fHandler <> nil) then
       fHandler(Value, fHandlerData);
   end;
@@ -533,6 +536,7 @@ begin
   if (Length(Button[3].Text) = 0) then
     AddButtonText(14, 20, 'Cancel');
 
+  if Length(Button[0].Text) > 1 then fNameCaption := Button[0].Text[1].Text;
   Button[0].Text[0].Writable := true;
   Button[1].Text[0].Writable := true;
 
@@ -554,11 +558,14 @@ procedure TScreenPopupInsertUser.ShowPopup(const Title: UTF8String; Msg: UTF8Str
     HandlerData: Pointer);
 begin
 
+  fRestoreTextInput := SDL_IsTextInputActive = SDL_TRUE;
   Visible := true;  //Set Visible
   StartTextInput;
   fHandler := Handler;
   fHandlerData := HandlerData;
   fPasswordOnly := false;
+  fTextOnly := false;
+  if Length(Button[0].Text) > 1 then Button[0].Text[1].Text := fNameCaption;
 
   Text[0].Text := Language.Translate(Msg);
   Text[1].Text := Title;
@@ -584,6 +591,8 @@ end;
 procedure TScreenPopupInsertUser.SetInteraction(Num: integer);
 begin
   if fPasswordOnly and (Num = 0) then Num := 1;
+  if fTextOnly and (Num = 1) then
+    if Interaction = 0 then Num := 2 else Num := 0;
   inherited SetInteraction(Num);
 end;
 
@@ -595,6 +604,18 @@ begin
   Button[0].Visible := false;
   Button[2].Text[0].Text := Language.Translate('SONG_MENU_YES');
   Interaction := 1;
+end;
+
+procedure TScreenPopupInsertUser.ShowTextPrompt(const Title, Msg, Caption: UTF8String;
+  Handler: TPopupInsertUserHandler; Data: Pointer);
+begin
+  ShowPopup(Title, Msg, Handler, Data);
+  fTextOnly := true;
+  Button[1].Visible := false;
+  if Length(Button[0].Text) > 1 then
+    Button[0].Text[1].Text := Language.Translate('FILTER_PRESET_NAME');
+  Button[2].Text[0].Text := Caption;
+  Interaction := 0;
 end;
 
 { TScreenPopupSendScore }
@@ -1571,6 +1592,7 @@ end;
 
 procedure TScreenPopup.OnHide;
 begin
+  inherited;
 end;
 
 procedure TScreenPopup.ResetLayout;
@@ -1696,7 +1718,7 @@ end;
 
 function TScreenPopup.ButtonWidth(const Caption: UTF8String): real;
 begin
-  SetFontFamily(Button[0].Text[0].Font);
+  SetFontFamily(ResolveThemeFont(Button[0].Text[0].FontFile, Button[0].Text[0].Font));
   SetFontStyle(Button[0].Text[0].Style);
   SetFontSize(Button[0].Text[0].Size);
   Result := Max(Theme.ErrorPopup.Button1.W,

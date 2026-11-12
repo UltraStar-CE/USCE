@@ -33,12 +33,6 @@ interface
 
 {$I switches.inc}
 
-{$IFDEF DARWIN}
-  {$IFDEF DEBUG}
-    {$DEFINE USE_PSEUDO_THREAD}
-  {$ENDIF}
-{$ENDIF}
-
 uses
   SysUtils,
   Classes,
@@ -54,14 +48,11 @@ uses
   UPlatform,
   ULog,
   UCommon,
-  {$IFDEF USE_PSEUDO_THREAD}
-  PseudoThread,
-  {$ENDIF}
   UPath,
   UPlaylist,
   USong,
   UIni,
-  UCatCovers;
+  UCatCovers, ULibraryRefresh, ULibraryWatch;
 
 type
   TSongFilter = (
@@ -74,7 +65,9 @@ type
     fltYear,
     fltCreator,
     fltTags,
-    fltAge
+    fltAge,
+    fltProblem,
+    fltFolder
   );
 
   TSongFilterRow = record
@@ -82,6 +75,7 @@ type
     Query: UTF8String;
   end;
   TSongFilterRows = array of TSongFilterRow;
+  TSongFilterMask = array of boolean;
 
   TScore = record
     Name:   UTF8String;
@@ -89,40 +83,50 @@ type
     Length: string;
   end;
 
-  {$IFDEF USE_PSEUDO_THREAD}
-  TSongs = class(TPseudoThread)
-  {$ELSE}
-  TSongs = class(TThread)
-  {$ENDIF}
+  TSongs = class
   private
-    fParseSongDirectory: boolean;
     fProcessing:         boolean;
     fDiscoveringDirectories: boolean;
     fDiscoveryDirCount:  integer;
     fDiscoveryDirsScanned: integer;
     fTotalSongsToLoad:   integer;
     fSongsLoaded:        integer;
+    fFailedSongFiles: TStringList;
     fReloadAfterLockdown: boolean;
+    fRefresh: TLibraryRefresh;
+    fRefreshAgain: boolean;
+    fWatcher: TLibraryWatch;
+    fWatchRoots: string;
+    fOwnerThread: cardinal; // SDL_ThreadID returns a Uint32, not a native thread handle.
+    function GetFailedSongCount: integer;
+    procedure PollLibraryChanges;
+    function RequestRefreshPaths(const Roots: TPathDynArray): boolean;
     function CollectSongFiles: TPathDynArray;
     procedure int_LoadSongList;
     procedure DoDirChanged(Sender: TObject);
     procedure LoadSongFromFile(const FilePath: IPath);
     procedure UpdateDiscoveryProgress(SongsFound: integer; Force: boolean = false);
     procedure UpdateSongLoadingProgress(Force: boolean = false);
-  protected
-    procedure Execute; override;
   public
     SongList: TList;            // array of songs
 
+    LastRefreshMembershipChanged: boolean;
     Selected: integer;        // selected song index
     constructor Create();
     destructor  Destroy(); override;
 
     procedure LoadSongList;     // load all songs
     procedure ReplayDeferredReload;
+    procedure StopRefresh;
+    // Main-thread request; nil rescans configured roots. Busy requests return false.
+    function RequestRefresh(const Target: IPath = nil): boolean;
+    function RefreshReady: boolean;
+    // Caller releases retired headers after dropping old UI/media references.
+    function PublishRefresh(out Retired: TList): boolean;
   procedure FindFilesByExtension(const Dir: IPath; const Ext: IPath; Recursive: Boolean; var Files: TPathDynArray);
     procedure Sort(Order: TSortingType);
     property  Processing: boolean read fProcessing;
+    property FailedSongCount: integer read GetFailedSongCount;
   end;
 
   TCatSongs = class
@@ -150,6 +154,7 @@ type
 
     function SetFilter(FilterStr: UTF8String; Filter: TSongFilter): cardinal;
     function SetFilters(const Rows: TSongFilterRows): cardinal;
+    function FilterMask(const Rows: TSongFilterRows; ExceptRow: integer): TSongFilterMask;
   end;
 
 var
@@ -173,7 +178,7 @@ const
 implementation
 
 uses
-  UFilterTerms,
+  ULanguage, UFolderFilter, UFilterTerms, USongProblems,
   UAge,
   ULibraryLockdown,
   StrUtils,
@@ -251,47 +256,36 @@ end;
 
 constructor TSongs.Create();
 begin
-  // do not start thread BEFORE initialization (suspended = true)
-  inherited Create(true);
-  Self.FreeOnTerminate := true;
+  inherited Create;
+  fOwnerThread := SDL_ThreadID;
 
   SongList           := TList.Create();
+  fFailedSongFiles := TStringList.Create;
+  fFailedSongFiles.Sorted := true;
+  fFailedSongFiles.CaseSensitive := true;
+  fFailedSongFiles.Duplicates := dupIgnore;
 
-  // until it is fixed, simply load the song-list
+  // Initial loading runs before the song screen is available.
   int_LoadSongList();
 end;
 
 destructor TSongs.Destroy();
 begin
+  StopRefresh;
   FreeAndNil(SongList);
+  FreeAndNil(fFailedSongFiles);
 
   inherited;
+end;
+
+function TSongs.GetFailedSongCount: integer;
+begin
+  Result := fFailedSongFiles.Count;
 end;
 
 procedure TSongs.DoDirChanged(Sender: TObject);
 begin
   LoadSongList();
-end;
-
-procedure TSongs.Execute();
-begin
-{$IFDEF USE_PSEUDO_THREAD}
-  int_LoadSongList();
-{$ELSE}
-  fParseSongDirectory := true;
-
-  while not terminated do
-  begin
-
-    if fParseSongDirectory then
-    begin
-      Log.LogStatus('Calling int_LoadSongList', 'TSongs.Execute');
-      int_LoadSongList();
-    end;
-
-    Suspend();
-  end;
-{$ENDIF}
 end;
 
 procedure TSongs.int_LoadSongList;
@@ -314,6 +308,7 @@ begin
     fDiscoveryDirCount := 0;
     fDiscoveryDirsScanned := 0;
     fSongsLoaded := 0;
+    fFailedSongFiles.Clear;
     fTotalSongsToLoad := 0;
     if Assigned(ScreenLoading) then
     begin
@@ -355,21 +350,186 @@ begin
     SetLength(SongFiles, 0);
     Log.LogStatus('Search Complete', 'SongList');
 
-    fParseSongDirectory := false;
     fProcessing         := false;
   end;
 end;
 
 
+procedure TSongs.StopRefresh;
+begin
+  FreeAndNil(fWatcher);
+  fWatchRoots := '';
+  FreeAndNil(fRefresh); // TLibraryRefresh terminates and joins before freeing its data.
+  fRefreshAgain := false;
+  fProcessing := false;
+end;
+
 procedure TSongs.LoadSongList;
 begin
+  if SDL_ThreadID <> fOwnerThread then Exit;
   if LibraryLockdown.Active then
+    fReloadAfterLockdown := true
+  else if not RequestRefresh then
+    fRefreshAgain := true;
+end;
+
+procedure TSongs.PollLibraryChanges;
+var Paths, Changed: TStringList; Roots: TPathDynArray;
+  I: integer; AllRoots: boolean; Error: string;
+begin
+  if (SDL_ThreadID <> fOwnerThread) or LibraryLockdown.Active then Exit;
+  Paths := TStringList.Create;
+  Changed := TStringList.Create;
+  try
+    if Params.Song.IsSet then Paths.Add(Params.Song.ToUTF8)
+    else for I := 0 to SongPaths.Count - 1 do Paths.Add((SongPaths[I] as IPath).GetAbsolutePath.ToUTF8);
+    if (fWatcher = nil) or (Paths.Text <> fWatchRoots) then
+    begin
+      FreeAndNil(fWatcher);
+      fWatchRoots := Paths.Text;
+      if Paths.Count > 0 then fWatcher := TLibraryWatch.Create(Paths);
+    end;
+    if (fWatcher = nil) or (fRefresh <> nil) then Exit;
+    if not fWatcher.TakeChanges(Changed, AllRoots, Error) then
+    begin
+      if Error <> '' then Log.LogError(Error, 'Library watcher');
+      Exit;
+    end;
+    if Error <> '' then Log.LogError(Error, 'Library watcher');
+    if AllRoots then RequestRefresh
+    else
+    begin
+      SetLength(Roots, Changed.Count);
+      for I := 0 to Changed.Count - 1 do Roots[I] := Path(UTF8String(Changed[I]));
+      RequestRefreshPaths(Roots);
+    end;
+  finally Changed.Free; Paths.Free; end;
+end;
+
+function TSongs.RequestRefreshPaths(const Roots: TPathDynArray): boolean;
+var FolderRoots: TPathDynArray; I: integer;
+begin
+  Result := false;
+  if (SDL_ThreadID <> fOwnerThread) or LibraryLockdown.Active or
+     (fRefresh <> nil) or (Length(Roots) = 0) then Exit;
+  SetLength(FolderRoots, SongPaths.Count);
+  for I := 0 to SongPaths.Count - 1 do FolderRoots[I] := SongPaths[I] as IPath;
+  fRefresh := TLibraryRefresh.Create(Roots, FolderRoots, Ini.DefaultEncoding, Ini.AgeCountry);
+  fProcessing := true;
+  Result := true;
+end;
+
+function TSongs.RequestRefresh(const Target: IPath): boolean;
+var Roots: TPathDynArray; I: integer;
+begin
+  if Target <> nil then
   begin
-    fReloadAfterLockdown := true;
+    SetLength(Roots, 1);
+    Roots[0] := Target.GetAbsolutePath;
+  end
+  else if Params.Song.IsSet then
+  begin
+    SetLength(Roots, 1);
+    Roots[0] := Params.Song;
+  end
+  else
+  begin
+    SetLength(Roots, SongPaths.Count);
+    for I := 0 to SongPaths.Count - 1 do Roots[I] := SongPaths[I] as IPath;
+  end;
+  Result := RequestRefreshPaths(Roots);
+end;
+
+function TSongs.RefreshReady: boolean;
+begin
+  PollLibraryChanges;
+  Result := false;
+  if (SDL_ThreadID <> fOwnerThread) or (fRefresh = nil) or
+     not fRefresh.Finished or LibraryLockdown.Active then Exit;
+  if fRefreshAgain or (fRefresh.DefaultEncoding <> Ini.DefaultEncoding) or
+     (fRefresh.AgeCountry <> Ini.AgeCountry) then
+  begin
+    FreeAndNil(fRefresh);
+    fRefreshAgain := false;
+    fProcessing := false;
+    RequestRefresh;
     Exit;
   end;
-  fParseSongDirectory := true;
-  Resume();
+  Result := true;
+end;
+
+function TSongs.PublishRefresh(out Retired: TList): boolean;
+var NewList: TList; Old: TSong; Name: IPath; I, Index: integer;
+  Loaded: TStringList;
+begin
+  Result := false;
+  Retired := nil;
+  LastRefreshMembershipChanged := false;
+  if not RefreshReady then Exit;
+  fRefresh.WaitFor;
+  try
+    if fRefresh.Failure <> '' then Exit;
+    NewList := TList.Create;
+    Retired := TList.Create;
+    for I := 0 to SongList.Count - 1 do
+    begin
+      Old := TSong(SongList[I]);
+      Name := Old.Path.Append(Old.FileName);
+      Index := fRefresh.Entries.IndexOf(TLibraryRefresh.Key(Name));
+      if Index >= 0 then
+      begin
+        if fRefresh.Entries.Objects[Index] <> nil then
+        begin
+          NewList.Add(fRefresh.Entries.Objects[Index]);
+        end;
+        fRefresh.Entries.Objects[Index] := nil;
+        Retired.Add(Old);
+      end
+      else if fRefresh.Covers(Name) and (fRefresh.Seen.IndexOf(TLibraryRefresh.Key(Name)) < 0) then
+      begin
+        LastRefreshMembershipChanged := true;
+        Retired.Add(Old);
+      end
+      else
+        NewList.Add(Old);
+    end;
+    for I := 0 to fRefresh.Entries.Count - 1 do
+      if fRefresh.Entries.Objects[I] <> nil then
+      begin
+        LastRefreshMembershipChanged := true;
+        NewList.Add(fRefresh.Entries.Objects[I]);
+        fRefresh.Entries.Objects[I] := nil;
+      end;
+    // Refreshes cover only part of the library. Retain failures outside that
+    // scope and incomplete files still being written; clear fixed/deleted files.
+    for I := fFailedSongFiles.Count - 1 downto 0 do
+      if fRefresh.Covers(Path(UTF8String(fFailedSongFiles[I]))) and
+         ((fRefresh.Seen.IndexOf(fFailedSongFiles[I]) < 0) or
+          (fRefresh.Entries.IndexOf(fFailedSongFiles[I]) >= 0)) then
+        fFailedSongFiles.Delete(I);
+    if fRefresh.Failed.Count > 0 then
+    begin
+      Loaded := TStringList.Create;
+      try
+        Loaded.Sorted := true;
+        Loaded.CaseSensitive := true;
+        for I := 0 to NewList.Count - 1 do
+        begin
+          Old := TSong(NewList[I]);
+          Loaded.Add(TLibraryRefresh.Key(Old.Path.Append(Old.FileName)));
+        end;
+        for I := 0 to fRefresh.Failed.Count - 1 do
+          if Loaded.IndexOf(fRefresh.Failed[I]) < 0 then
+            fFailedSongFiles.Add(fRefresh.Failed[I]);
+      finally Loaded.Free; end;
+    end;
+    SongList.Free;
+    SongList := NewList;
+    Result := true;
+  finally
+    FreeAndNil(fRefresh);
+    fProcessing := false;
+  end;
 end;
 
 procedure TSongs.ReplayDeferredReload;
@@ -388,6 +548,7 @@ var
   Iter: IFileIterator;
   FileInfo: TFileInfo;
   FileName: IPath;
+  FileCount: Integer;
 begin
   if Recursive then
     DirList := CollectDirectories(Dir, true, Self)
@@ -397,6 +558,8 @@ begin
     DirList[0] := Dir;
   end;
 
+  FileCount := 0;
+  SetLength(Files, 128);
   for DirIndex := 0 to High(DirList) do
   begin
     Iter := FileSystem.FileFind(DirList[DirIndex].Append('*.txt'), 0);
@@ -407,12 +570,17 @@ begin
       if ((FileInfo.Attr and faDirectory) = 0) and Ext.Equals(FileName.GetExtension(), true) then
       begin
         Log.LogDebug('Found file ' + DirList[DirIndex].Append(FileName).ToWide, 'TSongs.FindFilesByExtension');
-        SetLength(Files, Length(Files) + 1);
-        Files[High(Files)] := DirList[DirIndex].Append(FileName);
+        if (Length(Files) <= FileCount) then
+        begin
+          SetLength(Files, Length(Files)*2);
+        end;
+        Files[FileCount] := DirList[DirIndex].Append(FileName);
+        FileCount := FileCount + 1;
         PumpLoadingEvents;
       end;
     end;
   end;
+  SetLength(Files, FileCount);
 end;
 
 function TSongs.CollectSongFiles: TPathDynArray;
@@ -492,6 +660,7 @@ begin
     SongList.Add(Song)
   else
   begin
+    fFailedSongFiles.Add(TLibraryRefresh.Key(FilePath));
     Log.LogError('AnalyseFile failed for "' + FilePath.ToNative + '".');
     FreeAndNil(Song);
   end;
@@ -676,287 +845,70 @@ begin
 end;
 
 procedure TCatSongs.Refresh;
-var
-  SongIndex:   integer;
-  CurSong:     TSong;
-  CatIndex:    integer;    // index of current song in Song
-  Letter:      UCS4Char;   // current letter for sorting using letter
-  CurCategory: UTF8String; // current edition for sorting using edition, genre etc.
-  Order:       integer;    // number used for ordernum
-  LetterTmp:   UCS4Char;
-  CatNumber:   integer;    // Number of Song in Category
-  tmpCategory: UTF8String; //
-  StringIndex: integer;
-  MainArtist:  UTF8String;
-
-  procedure AddCategoryButton(const CategoryName: UTF8String; const cover: IPath = nil);
-  var
-    PrevCatBtnIndex: integer;
-  begin
-    Inc(Order);
-    CatIndex := Length(Song);
-    SetLength(Song, CatIndex+1);
-    Song[CatIndex]          := TSong.Create();
-    Song[CatIndex].Artist   := '[' + CategoryName + ']';
-    Song[CatIndex].Main     := true;
-    Song[CatIndex].OrderTyp := 0;
-    Song[CatIndex].OrderNum := Order;
-    if (cover <> nil) then
-       Song[CatIndex].Cover := cover
-    else
-       Song[CatIndex].Cover := CatCovers.GetCover(TSortingType(Ini.Sorting), CategoryName);
-    Song[CatIndex].Visible  := true;
-
-    // set number of songs in previous category
-    PrevCatBtnIndex := CatIndex - CatNumber - 1;
-    if ((PrevCatBtnIndex >= 0) and Song[PrevCatBtnIndex].Main) then
-      Song[PrevCatBtnIndex].CatNumber := CatNumber;
-
-    CatNumber := 0;
-  end;
-
+var I, J, K, Offset: integer; Item, Card: TSong;
+  Folders, Prefixes: TStringList; Caption: UTF8String;
 begin
-  CatNumShow  := -1;
-
-  SortSongs();
-
-  CurCategory := '';
-  Order       := 0;
-  CatNumber   := 0;
-
-  // Note: do NOT set Letter to ' ', otherwise no category-button will be
-  // created for songs beginning with ' ' if songs of this category exist.
-  // TODO: trim song-properties so ' ' will not occur as first chararcter.
-  Letter      := 0;
-
-  // clear song-list
-  for SongIndex := 0 to Songs.SongList.Count - 1 do
-  begin
-    // free category buttons
-    // Note: do NOT delete songs, they are just references to Songs.SongList entries
-    CurSong := TSong(Songs.SongList[SongIndex]);
-    if (CurSong.Main) then
-      CurSong.Free;
-  end;
+  CatNumShow := -1;
+  SortSongs;
+  // Category objects belong to this view, real songs belong to Songs.SongList.
+  for I := 0 to High(Song) do if Song[I].Main then Song[I].Free;
   SetLength(Song, 0);
-
-  for SongIndex := 0 to Songs.SongList.Count - 1 do
-  begin
-    CurSong := TSong(Songs.SongList[SongIndex]);
-    // if tabs are on, add section buttons for each new section
-    if (Ini.Tabs = 1) then
+  Folders := TStringList.Create;
+  Prefixes := TStringList.Create;
+  try
+    Folders.Sorted := true; Folders.CaseSensitive := true;
+    for I := 0 to Songs.SongList.Count - 1 do
     begin
-      case (TSortingType(Ini.Sorting)) of
-        sEdition: begin
-          if (CompareText(CurCategory, CurSong.Edition) <> 0) then
-          begin
-            CurCategory := CurSong.Edition;
-
-            // add Category Button
-            AddCategoryButton(CurCategory);
-          end;
-        end;
-
-        sGenre: begin
-          if (CompareText(CurCategory, CurSong.Genre) <> 0) then
-          begin
-            CurCategory := CurSong.Genre;
-            // add Genre Button
-            AddCategoryButton(CurCategory);
-          end;
-        end;
-
-        sLanguage: begin
-          if (CompareText(CurCategory, CurSong.Language) <> 0) then
-          begin
-            CurCategory := CurSong.Language;
-            // add Language Button
-            AddCategoryButton(CurCategory);
-          end
-        end;
-
-        sTitle: begin
-          if (Length(CurSong.Title) >= 1) then
-          begin
-            LetterTmp := UCS4UpperCase(UTF8ToUCS4String(CurSong.Title)[0]);
-            { all numbers and some punctuation chars are put into a
-              category named '#'
-              we can't put the other punctuation chars into this category
-              because they are not in order, so there will be two different
-              categories named '#' }
-            if (LetterTmp in [Ord('!') .. Ord('?')]) then
-              LetterTmp := Ord('#')
-            else
-              LetterTmp := UCS4UpperCase(LetterTmp);
-            if (Letter <> LetterTmp) then
-            begin
-              Letter := LetterTmp;
-              // add a letter Category Button
-              AddCategoryButton(UCS4ToUTF8String(Letter));
-            end;
-          end;
-        end;
-
-        sArtist: begin
-          if (Length(CurSong.Artist) >= 1) then
-          begin
-            LetterTmp := UCS4UpperCase(UTF8ToUCS4String(CurSong.Artist)[0]);
-            { all numbers and some punctuation chars are put into a
-              category named '#'
-              we can't put the other punctuation chars into this category
-              because they are not in order, so there will be two different
-              categories named '#' }
-            if (LetterTmp in [Ord('!') .. Ord('?')]) then
-              LetterTmp := Ord('#')
-            else
-              LetterTmp := UCS4UpperCase(LetterTmp);
-
-            if (Letter <> LetterTmp) then
-            begin
-              Letter := LetterTmp;
-              // add a letter Category Button
-              AddCategoryButton(UCS4ToUTF8String(Letter));
-            end;
-          end;
-        end;
-
-        sFolder: begin
-          if (UTF8CompareText(CurCategory, CurSong.Folder) <> 0) then
-          begin
-            CurCategory := CurSong.Folder;
-            // add folder tab
-            AddCategoryButton(CurCategory);
-          end;
-        end;
-
-        sArtist2: begin
-          { this new sorting puts all songs by the same artist into
-            a single category }
-          //
-          if (UTF8ContainsText(CurSong.Artist, ' feat.')) then
-          begin
-            StringIndex := UTF8Pos(' feat', CurSong.Artist);
-            MainArtist := TrimRight(UTF8Copy(CurSong.Artist, 1, StringIndex-1));
-          end
-          else
-            MainArtist := CurSong.Artist;
-          //
-          if (UTF8CompareText(CurCategory, MainArtist) <> 0) then
-          begin
-            CurCategory := MainArtist;
-            // add folder tab with first song cover
-            AddCategoryButton(CurCategory, CurSong.Path.Append(CurSong.Cover));
-          end;
-        end;
-
-        sYear: begin
-           if (CurSong.Year <> 0) then
-             tmpCategory := IntToStr(CurSong.Year)
-           else
-             tmpCategory := 'Unknown';
-
-           if (tmpCategory <> CurCategory) then
-           begin
-             CurCategory := tmpCategory;
-
-             // add Category Button
-             AddCategoryButton(CurCategory);
-           end;
-         end;
-
-        sYearReversed: begin
-           if (CurSong.Year <> 0) then
-             tmpCategory := IntToStr(CurSong.Year)
-           else
-             tmpCategory := 'Unknown';
-
-           if (tmpCategory <> CurCategory) then
-           begin
-             CurCategory := tmpCategory;
-
-             // add Category Button
-             AddCategoryButton(CurCategory);
-           end;
-         end;
-
-        sDecade: begin
-           if (CurSong.Year <> 0) then
-             tmpCategory := IntToStr(Trunc(CurSong.Year/10)*10) + '-' + IntToStr(Trunc(CurSong.Year/10)*10+9)
-           else
-             tmpCategory := 'Unknown';
-
-           if (tmpCategory <> CurCategory) then
-           begin
-             CurCategory := tmpCategory;
-
-             // add Category Button
-             AddCategoryButton(CurCategory);
-           end;
-        end;
-      end; // case (Ini.Sorting)
-    end; // if (Ini.Tabs = 1)
-
-    CatIndex := Length(Song);
-    SetLength(Song, CatIndex+1);
-
-    Inc(CatNumber); // increase number of songs in category
-
-    // copy reference to current song
-    Song[CatIndex] := CurSong;
-
-    // set song's category info
-    CurSong.OrderNum := Order; // assigns category
-    CurSong.CatNumber := CatNumber;
-
-    if (Ini.Tabs = 0) then
-    begin
-      CurSong.Visible := true;
-    end
-    else if (Ini.Tabs = 1) then
-    begin
-      CurSong.Visible := false;
+      Item := TSong(Songs.SongList[I]);
+      Prefixes.Clear;
+      AddFolderChoices(Item.FolderPath, Ini.FolderDisplay, Prefixes);
+      for J := 0 to Prefixes.Count - 1 do
+      begin
+        K := Folders.IndexOf(Prefixes[J]);
+        if K < 0 then Folders.AddObject(Prefixes[J], TObject(PtrInt(1)))
+        else Folders.Objects[K] := TObject(PtrInt(Folders.Objects[K]) + 1);
+      end;
     end;
-{
-    if (Ini.Tabs = 1) and (Order = 1) then
+    Offset := Folders.Count; CatCount := Offset;
+    SetLength(Song, Offset + Songs.SongList.Count);
+    for I := 0 to Offset - 1 do
     begin
-      //open first tab
-      CurSong.Visible := true;
+      Card := TSong.Create;
+      Card.Main := true; Card.Visible := true;
+      Card.FolderPath := Folders[I];
+      Caption := Copy(Folders[I], 2, Length(Folders[I]) - 2);
+      if Caption = '' then Caption := Language.Translate('SONG_JUMPTO_TYPE1');
+      Card.Artist := '[' + Caption + ']';
+      Card.OrderNum := I + 1;
+      Card.CatNumber := PtrInt(Folders.Objects[I]);
+      if Folders[I] = '/' then Card.CatNumber := Songs.SongList.Count;
+      if CatCovers.CoverExists(sFolder, Folders[I]) then
+        Card.Cover := CatCovers.GetCover(sFolder, Folders[I])
+      else if CatCovers.CoverExists(sFolder, Caption) then
+        Card.Cover := CatCovers.GetCover(sFolder, Caption)
+      else
+        Card.Cover := CatCovers.GetCover(sFolder, Copy(Caption, 1, Pos('/', Caption + '/') - 1));
+      Song[I] := Card;
     end;
-    CurSong.Visible := true;
-}
-  end;
+    for I := 0 to Songs.SongList.Count - 1 do
+    begin
+      Item := TSong(Songs.SongList[I]); Song[Offset + I] := Item;
+      Item.Main := false; Item.Visible := Ini.FolderDisplay = 0;
+      Item.OrderNum := 0; Item.CatNumber := I + 1;
+    end;
+  finally Prefixes.Free; Folders.Free; end;
   ResetVisibleIndexCache;
-
-  // set CatNumber of last category
-  if (Ini.TabsAtStartup = 1) and (High(Song) >= 1) then
-  begin
-    // set number of songs in previous category
-    SongIndex := CatIndex - CatNumber;
-    if ((SongIndex >= 0) and Song[SongIndex].Main) then
-      Song[SongIndex].CatNumber := CatNumber;
-  end;
-
-  // update number of categories
-  CatCount := Order;
 end;
 
 procedure TCatSongs.ShowCategory(Index: integer);
-var
-  S: integer; // song
+var I: integer;
 begin
-  CatNumShow := Index;
-  for S := 0 to high(CatSongs.Song) do
-  begin
-{
-    if (CatSongs.Song[S].OrderNum = Index) and (not CatSongs.Song[S].Main) then
-      CatSongs.Song[S].Visible := true
-    else
-      CatSongs.Song[S].Visible := false;
-}
-//  KMS: This should be the same, but who knows :-)
-    CatSongs.Song[S].Visible := ((CatSongs.Song[S].OrderNum = Index) and (not CatSongs.Song[S].Main));
-  end;
-  ResetVisibleIndexCache;
+  for I := 0 to High(Song) do
+    if Song[I].Main and (Song[I].OrderNum = Index) then
+    begin
+      ScreenSongJumpto.SetFolderFilter(Song[I].FolderPath);
+      Exit;
+    end;
 end;
 
 procedure TCatSongs.HideCategory(Index: integer); // hides all songs in category
@@ -993,7 +945,7 @@ var
 begin
   // Hide All Songs Show All Cats
   for S := 0 to high(CatSongs.Song) do
-    CatSongs.Song[S].Visible := CatSongs.Song[S].Main;
+    CatSongs.Song[S].Visible := CatSongs.Song[S].Main = (Ini.FolderDisplay > 0);
   CatSongs.Selected := CatNumShow; //Show last shown Category
   CatNumShow := -1;
   ResetVisibleIndexCache;
@@ -1059,6 +1011,7 @@ end;
  *)
 function TCatSongs.VisibleSongs: integer;
 begin
+  if Length(Song) = 0 then Exit(0);
   Result := VisibleIndex(High(Song));
   if Song[High(Song)].Visible then
     Inc(Result);
@@ -1070,6 +1023,7 @@ end;
  *)
 function TCatSongs.VisibleIndex(Index: integer): integer;
 begin
+  if (Index < 0) or (Index > High(Song)) then Exit(-1);
   while LastVisChecked < Index do
   begin
     if Song[LastVisChecked].Visible then
@@ -1078,6 +1032,34 @@ begin
     Song[LastVisChecked].VisibleIndex := LastVisIndex;
   end;
   Result := Song[Index].VisibleIndex;
+end;
+
+function TCatSongs.FilterMask(const Rows: TSongFilterRows; ExceptRow: integer): TSongFilterMask;
+var Saved: TSongFilterMask; I, R, Category: integer;
+begin
+  Result := nil;
+  // Nonempty SetFilter calls only change visibility. Never clear a filter here:
+  // that path restores playlist order and rebuilds category objects.
+  SetLength(Result, Length(Song));
+  SetLength(Saved, Length(Song));
+  Category := CatNumShow;
+  for I := 0 to High(Song) do
+  begin
+    Saved[I] := Song[I].Visible;
+    Result[I] := not Song[I].Main;
+  end;
+  try
+    for R := 0 to High(Rows) do
+      if (R <> ExceptRow) and (Trim(Rows[R].Query) <> '') then
+      begin
+        SetFilter(Rows[R].Query, Rows[R].Kind);
+        for I := 0 to High(Song) do Result[I] := Result[I] and Song[I].Visible;
+      end;
+  finally
+    for I := 0 to High(Song) do Song[I].Visible := Saved[I];
+    CatNumShow := Category;
+    ResetVisibleIndexCache;
+  end;
 end;
 
 function TCatSongs.SetFilters(const Rows: TSongFilterRows): cardinal;
@@ -1114,10 +1096,14 @@ var
   TmpString: UTF8String;
   WordArray: array of UTF8String;
   FilterCopy: UTF8String;
-  AgeFilterActive: boolean;
-  AgeFilterCondition: TAgeCondition;
-  AgeRegion: string;
+  AgeParts: TStringList;
+  AgeQuery, AgeRegion: string;
   RegionSeparator: integer;
+  AgeTerms: array of record
+    Region: string;
+    Unrated, Valid: boolean;
+    Condition: TAgeCondition;
+  end;
 
   function MatchesAgeCondition(SongAge: integer; const Condition: TAgeCondition): boolean;
   begin
@@ -1140,24 +1126,44 @@ begin
         PlayListMan.RestoreSongOrder;
     end;
 
-  FilterStr := Trim(LowerCase(TransliterateToASCII(FilterStr)));
-  FilterCopy := FilterStr;
-  AgeRegion := Ini.AgeCountry;
-  if Filter = fltAge then
+  if (Filter = fltFolder) and (Trim(FilterStr) <> '') then
   begin
-    RegionSeparator := Pos(':', FilterCopy);
-    if RegionSeparator > 0 then
+    Result := 0;
+    for I := 0 to High(Song) do
     begin
-      AgeRegion := UpperCase(Trim(Copy(FilterCopy, 1, RegionSeparator - 1)));
-      Delete(FilterCopy, 1, RegionSeparator);
+      Song[I].Visible := not Song[I].Main and MatchesFolderPath(Song[I].FolderPath, FilterStr);
+      if Song[I].Visible then Inc(Result);
     end;
+    CatNumShow := -2; ResetVisibleIndexCache; Exit;
   end;
 
-  AgeFilterActive := false;
-  if (Filter = fltAge) and (FilterStr <> '') then
+  FilterStr := Trim(LowerCase(TransliterateToASCII(FilterStr)));
+  FilterCopy := FilterStr;
+  if (Filter = fltAge) and (FilterCopy <> '') then
   begin
-    AgeFilterActive := ParseAgeCondition(FilterCopy, AgeFilterCondition);
-    // An invalid nonempty age query must match nothing, not clear the filter.
+    AgeParts := TStringList.Create;
+    try
+      AgeParts.StrictDelimiter := true;
+      AgeParts.QuoteChar := #0;
+      AgeParts.Delimiter := ',';
+      AgeParts.DelimitedText := StringReplace(FilterCopy, ';', ',', [rfReplaceAll]);
+      SetLength(AgeTerms, AgeParts.Count);
+      for I := 0 to AgeParts.Count - 1 do
+      begin
+        AgeQuery := Trim(AgeParts[I]);
+        AgeRegion := Ini.AgeCountry;
+        RegionSeparator := Pos(':', AgeQuery);
+        if RegionSeparator > 0 then
+        begin
+          AgeRegion := UpperCase(Trim(Copy(AgeQuery, 1, RegionSeparator - 1)));
+          Delete(AgeQuery, 1, RegionSeparator);
+          AgeQuery := Trim(AgeQuery);
+        end;
+        AgeTerms[I].Region := AgeRegion;
+        AgeTerms[I].Unrated := AgeQuery = '?';
+        AgeTerms[I].Valid := ParseAgeCondition(AgeQuery, AgeTerms[I].Condition);
+      end;
+    finally AgeParts.Free; end;
   end;
 
   if (FilterStr <> '') then
@@ -1191,10 +1197,16 @@ begin
 
       if Filter = fltAge then
       begin
-        if FilterCopy = '?' then
-          Song[i].Visible := AgeForRegion(Song[i].AgeRaw, AgeRegion) < 0
-        else
-          Song[i].Visible := AgeFilterActive and MatchesAgeCondition(AgeForRegion(Song[i].AgeRaw, AgeRegion), AgeFilterCondition);
+        Song[I].Visible := false;
+        for J := 0 to High(AgeTerms) do
+        begin
+          if AgeTerms[J].Unrated then
+            Song[I].Visible := AgeForRegion(Song[I].AgeRaw, AgeTerms[J].Region) < 0
+          else
+            Song[I].Visible := AgeTerms[J].Valid and MatchesAgeCondition(
+              AgeForRegion(Song[I].AgeRaw, AgeTerms[J].Region), AgeTerms[J].Condition);
+          if Song[I].Visible then Break;
+        end;
         if Song[i].Visible then
           Inc(Result);
         Continue;
@@ -1219,9 +1231,14 @@ begin
           TmpString := Song[I].CreatorASCII;
         fltTags:
           TmpString := Song[i].TagsASCII;
+        fltProblem:
+          if GetSongProblems.IsFlagged(Song[I].Path.Append(Song[I].FileName)) then
+            TmpString := 'yes'
+          else
+            TmpString := 'no';
       end;
 
-      if Filter in [fltLanguage, fltEdition, fltGenre, fltYear, fltTags] then
+      if Filter in [fltTitle, fltArtist, fltLanguage, fltEdition, fltGenre, fltYear, fltCreator, fltTags, fltProblem] then
       begin
         Song[I].Visible := MatchesFilterTerms(TmpString, FilterCopy, Filter = fltYear);
         if Song[I].Visible then Inc(Result);

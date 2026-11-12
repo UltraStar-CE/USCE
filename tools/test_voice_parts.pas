@@ -1,7 +1,8 @@
 program TestVoiceParts;
 {$MODE Delphi}
 uses SysUtils, UVoiceParts;
-var N, Columns, Rows, Voice: integer;
+var N, Columns, Rows, Voice, LeftCount, RightCount: integer;
+    Assigned, Fitted: TVoiceScreenMasks;
 procedure Check(Condition: boolean);
 begin
   if not Condition then Halt(1);
@@ -27,5 +28,29 @@ begin
   Check((Columns = 3) and (Rows = 2));
   GetVoiceGrid(18, Columns, Rows);
   Check((Columns = 3) and (Rows = 3));
+  SetLength(Assigned, SupportedSongVoices);
+  Assigned[23] := 1;
+  Fitted := FitVoiceScreens(Assigned, 1);
+  LeftCount := 0;
+  for N := 0 to High(Fitted) do
+    if Fitted[N] = 1 then Inc(LeftCount);
+  Check((LeftCount = 12) and (Fitted[23] = 1));
+
+  Assigned[23] := 2;
+  Assigned[0] := 1;
+  Fitted := FitVoiceScreens(Assigned, 2);
+  LeftCount := 0;
+  RightCount := 0;
+  for N := 0 to High(Fitted) do
+    case Fitted[N] of
+      1: Inc(LeftCount);
+      2: Inc(RightCount);
+    end;
+  Check((LeftCount = 12) and (RightCount = 12) and
+    (Fitted[0] = 1) and (Fitted[23] = 2));
+
+  Assigned[0] := 3;
+  Fitted := FitVoiceScreens(Assigned, 2);
+  Check(Fitted[0] = 3);
   WriteLn('Voice marker and layout tests passed');
 end.

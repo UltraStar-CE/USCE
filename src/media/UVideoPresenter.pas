@@ -31,6 +31,7 @@ interface
 {$I switches.inc}
 
 uses
+  SysUtils,
   UMusic,
   URenderer,
   UPath;
@@ -55,11 +56,14 @@ type
     procedure ResetPresentation;
     procedure GetVideoRect(var ScreenRect, TexRect: TRectCoords);
     procedure DrawBorders(ScreenRect: TRectCoords);
+    procedure EnableVideoScissor;
+    // Fills the video area with black, e.g. before the first frame is ready.
+    procedure DrawBlack;
 
   public
     constructor Create;
 
-    function Open(const FileName: IPath): boolean; virtual; abstract;
+    function Open(const FileName: IPath; const Media: TBytes = nil): boolean; virtual; abstract;
     procedure Close; virtual; abstract;
     procedure Play; virtual; abstract;
     procedure Pause; virtual; abstract;
@@ -69,6 +73,7 @@ type
     procedure SetPosition(Time: real); virtual; abstract;
     function GetPosition: real; virtual; abstract;
     procedure GetFrame(Time: Extended); virtual; abstract;
+    function Finished: boolean; virtual; abstract;
 
     procedure SetScreen(Screen: integer);
     function GetScreen(): integer;
@@ -95,7 +100,6 @@ type
 implementation
 
 uses
-  SysUtils,
   UGraphic;
 
 constructor TVideoPresenter.Create;
@@ -223,6 +227,31 @@ begin
     Renderer.DrawQuads(QuadList);
 end;
 
+procedure TVideoPresenter.EnableVideoScissor;
+begin
+  Renderer.SetScissorRect(
+    round(fPosX*VertexW + Renderer.ViewportX),
+    round((RenderH-fPosY-fHeight)*VertexH),
+    round(fWidth*VertexW),
+    round(fHeight*VertexH)
+    );
+
+  Renderer.ScissorTest := true;
+end;
+
+procedure TVideoPresenter.DrawBlack;
+var
+  ScreenRect: TRectCoords;
+begin
+  EnableVideoScissor;
+  ScreenRect.Left := fPosX;
+  ScreenRect.Right := fPosX;
+  ScreenRect.Upper := fPosY;
+  ScreenRect.Lower := fPosY + fHeight;
+  DrawBorders(ScreenRect);
+  Renderer.ScissorTest := false;
+end;
+
 procedure TVideoPresenter.Draw();
 var
   ScreenRect:   TRectCoords;
@@ -235,14 +264,7 @@ begin
   // get texture and screen positions
   GetVideoRect(ScreenRect, TexRect);
 
-  Renderer.SetScissorRect(
-    round(fPosX*VertexW + (ScreenWPerScreen)*(fScreen-1)),
-    round((RenderH-fPosY-fHeight)*VertexH),
-    round(fWidth*VertexW),
-    round(fHeight*VertexH)
-    );
-
-  Renderer.ScissorTest := true;
+  EnableVideoScissor;
   with fFrameTex do
   begin
     X := ScreenRect.Left;

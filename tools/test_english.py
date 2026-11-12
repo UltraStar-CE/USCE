@@ -20,6 +20,17 @@ class EnglishCoverageTests(unittest.TestCase):
     def errors(self):
         return audit(self.root)[0]
 
+    def test_external_themes_replace_missing_local_setup(self):
+        (self.root / 'game/themes').rmdir()
+        external = self.root / 'pinned-themes'
+        external.mkdir()
+        (external / 'Test.ini').write_text('[Footer]\nText = SING_PRESENT\n', encoding='utf-8')
+        self.assertEqual(audit(self.root, [external])[0], [])
+        self.assertTrue(any('theme directory does not exist' in error
+                            for error in self.errors()))
+        self.assertTrue(any('theme directory does not exist' in error
+                            for error in audit(self.root, [external / 'missing'])[0]))
+
     def test_comments_do_not_invent_keys_or_hide_literal_calls(self):
         self.write('src/base/Test.pas', """// Language.Translate('SING_LINE_COMMENT');
 {Language.Translate('SING_BRACE_COMMENT')}

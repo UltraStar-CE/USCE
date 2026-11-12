@@ -318,6 +318,7 @@ procedure TScreenSongMenu.MenuShow(sMenu: byte);
 var
   I, MSongs: integer;
 begin
+  StopTextInput;
   Interaction := 0; // reset interaction
   Visible := true;  // set visible
   case sMenu of
@@ -905,9 +906,9 @@ begin
 
                 //Do the Action that is specified in Ini
                 case Ini.OnSongClick of
-                  0: FadeTo(@ScreenSing);
+                  0: ScreenSong.StartSong;
                   1: ScreenSong.SelectPlayers;
-                  2: FadeTo(@ScreenSing);
+                  2: ScreenSong.StartSong;
                 end;
               end
               else

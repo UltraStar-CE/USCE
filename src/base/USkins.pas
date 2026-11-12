@@ -51,6 +51,7 @@ type
     FileName: IPath;
 
     DefaultColor: integer;
+    ColorizeDefaultAvatars: boolean;
     Creator:  string; // not used yet
   end;
 
@@ -63,6 +64,7 @@ type
     SkinTexture: array of TSkinTexture;
     SkinPath:    IPath;
     Color:       integer;
+    ColorizeDefaultAvatars: boolean;
     procedure LoadDefaultSkinForTheme(const ThemeName: string; Depth: integer);
     procedure LoadSkinTextures(const SkinEntry: TSkinEntry; UseAsBasePath: boolean);
     procedure SetTextureEntry(const TextureName: string; const FileName: IPath; const TexturePath: IPath);
@@ -160,6 +162,7 @@ begin
     Skin[S].Theme    := Theme;
     Skin[S].Name     := Name;
     Skin[S].Creator  := SkinIni.ReadString('Skin', 'Creator', '');
+    Skin[S].ColorizeDefaultAvatars := SkinIni.ReadBool('Skin', 'ColorizeDefaultAvatars', true);
     Skin[S].DefaultColor := Max(0, GetArrayIndex(IColor, SkinIni.ReadString('Skin', 'Color', ''), true));
   end;
   SkinIni.Free;
@@ -259,6 +262,7 @@ var
   SelectedSkinIndex: integer;
 begin
   SelectedSkinIndex := GetSkinNumber(Name, Theme);
+  ColorizeDefaultAvatars := Skin[SelectedSkinIndex].ColorizeDefaultAvatars;
   SetLength(SkinTexture, 0);
   SetLength(LoadedSkinPaths, 0);
   RequestedSkinName := Name;
@@ -275,6 +279,16 @@ function TSkin.GetTextureFileName(TextureName: string): IPath;
 var
   T: integer;
 begin
+  {$IFDEF DARWIN}
+  // Mac keyboards label the Alt key Option
+  if SameText(Trim(TextureName), 'ButtonAlt') then
+  begin
+    Result := GetTextureFileName('ButtonAltMac');
+    if Result.IsSet and Result.Exists then
+      Exit;
+  end;
+  {$ENDIF}
+
   Result := PATH_NONE;
   
   for T := 0 to High(SkinTexture) do

@@ -62,6 +62,8 @@ type
   TScreenStatDetail = class(TMenu)
     private
       TextHeader: array[0..STAT_DETAIL_MAX_COLUMNS - 1] of integer;
+      TextHeaderRight: array[0..STAT_DETAIL_MAX_COLUMNS - 1] of integer;
+      RowsPerColumn: integer;
       TextList: array of array of integer;
       ListColumns: array[0..STAT_DETAIL_MAX_COLUMNS - 1] of TListColumn;
       TextListValue: array[0..STAT_DETAIL_MAX_COLUMNS - 1] of TStatDetailCellValue;
@@ -92,6 +94,7 @@ type
       constructor Create; override;
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       procedure OnShow; override;
+      procedure OnWindowResized; override;
 
       procedure SetTitle;
       procedure SetPage(NewPage: cardinal);
@@ -244,7 +247,10 @@ begin
       TextList[Row, Column] := AddText(Theme.StatDetail.TextList[0]);
 
   for Column := 0 to STAT_DETAIL_MAX_COLUMNS - 1 do
+  begin
     TextHeader[Column] := AddText(Theme.StatDetail.TextHeader);
+    TextHeaderRight[Column] := AddText(Theme.StatDetail.TextHeader);
+  end;
 
   TextDescription := AddText(Theme.StatDetail.TextDescription);
   TextPage := AddText(Theme.StatDetail.TextPage);
@@ -281,6 +287,12 @@ begin
 
   //Show First Page
   SetPage(0);
+end;
+
+procedure TScreenStatDetail.OnWindowResized;
+begin
+  inherited;
+  SetPage(Page);
 end;
 
 procedure TScreenStatDetail.SetTitle;
@@ -416,6 +428,7 @@ var
   ListW: integer;
   ListBottomY: real;
   ColumnCompactFactor: real;
+  ColumnOffset: real;
   LayoutRows: integer;
   ThemeText: TThemeText;
 
@@ -438,47 +451,29 @@ var
     Text[TextID].Y := HeaderY;
     Text[TextID].Visible := Layout.Width > 0;
     SetListCellText(Text[TextID], Layout, Language.Translate(HeaderID(HeaderText)));
+    TextID := TextHeaderRight[Column];
+    PositionListColumnText(Text[TextID], Layout);
+    Text[TextID].X := Text[TextID].X + ColumnOffset;
+    Text[TextID].Y := HeaderY;
+    Text[TextID].W := 0;
+    Text[TextID].H := 0;
+    Text[TextID].Visible := (ColumnOffset > 0) and (Layout.Width > 0);
+    SetListCellText(Text[TextID], Layout, Language.Translate(HeaderID(HeaderText)));
     for Row := 0 to High(TextList) do
     begin
       TextID := TextList[Row, Column];
       PositionListColumnText(Text[TextID], Layout);
+      if Row >= RowsPerColumn then
+        Text[TextID].X := Text[TextID].X + ColumnOffset;
       Text[TextID].W := 0;
       Text[TextID].H := 0;
       Text[TextID].Visible := (Row < EntriesPerPage) and (Layout.Width > 0);
     end;
   end;
 
-  function TextLeftEdge(TextID: integer): real;
-  var
-    TextWidth: real;
-  begin
-    TextWidth := MeasureTextMaxLineWidth(Text[TextID].Text, Text[TextID].Font,
-        Text[TextID].Style, Text[TextID].Size);
-
-    case Text[TextID].Align of
-      1:
-        Result := Text[TextID].X - TextWidth / 2;
-      2:
-        Result := Text[TextID].X - TextWidth;
-      else
-        Result := Text[TextID].X;
-    end;
-  end;
-
-  function PageTextRightBound: real;
-  begin
-    Result := 1.0;
-    if (ThemeText.W > 0) and (Text[TextPage].Text <> '') then
-      Result := EnsureRange((TextLeftEdge(TextPage) - Theme.StatDetail.PageTextMargin -
-          ThemeText.X) / ThemeText.W, 0.0, 1.0);
-  end;
-
   function TableRightBound(const Table: TThemeStatDetailTable): real;
   begin
-    if Table.UsePageRightBound then
-      Result := PageTextRightBound
-    else
-      Result := 1.0;
+    Result := 1.0;
 
     if (ThemeText.W > 0) then
       Result := EnsureRange(Result - Table.RightInset /
@@ -516,16 +511,63 @@ var
       const Definitions: TStatDetailColumnDefinitions);
   var
     Specs: array of TListColumnSpec;
-    Column, ColumnCount: integer;
+    Column, ColumnCount, TrialRows: integer;
+    FullWidth, RequiredWidth, Gap, RightBound: real;
+    SingleLayout: TTextListLayout;
   begin
     ColumnCount := EnsureRange(Table.ColumnCount, 0, STAT_DETAIL_MAX_COLUMNS);
     while (ColumnCount > 0) and (Definitions[ColumnCount - 1].Value = scvNone) do
       Dec(ColumnCount);
+    // Try two complete tables at the font size appropriate for half the rows.
+    // Measure headers and values too; never force a second table by squeezing
+    // out a score, date or song column.
+    FullWidth := ThemeText.W;
+    RightBound := TableRightBound(Table);
+    SingleLayout := ListLayout;
+    TrialRows := (VisibleEntries + 1) div 2;
+    Gap := Max(Theme.StatDetail.TableColumnGap, MaxTextSize * 2);
+    ThemeText.W := Trunc((FullWidth * RightBound - Gap) / 2);
+    if (VisibleEntries >= Theme.StatDetail.TwoColumnMinEntries) and
+       (SingleLayout.TextSize < MaxTextSize * 0.9) and (ThemeText.W > 0) then
+    begin
+      ListLayout := CalculateTextListLayout(TopY, BottomY,
+          TrialRows + Theme.StatDetail.PaddingRows,
+          Theme.StatDetail.MinTextSize, MaxTextSize,
+          FontSizePerRowPitch(TrialRows, Theme.StatDetail.MinEntries,
+          Theme.StatDetail.MaxEntries, Theme.StatDetail.FontSizeRelaxed,
+          Theme.StatDetail.FontSizeDense, Theme.StatDetail.FontSizeCurve),
+          Theme.StatDetail.LineHeight);
+      while ListLayout.TextSize >= SingleLayout.TextSize * 1.1 do
+      begin
+        RequiredWidth := 0;
+        for Column := 0 to ColumnCount - 1 do
+          RequiredWidth := RequiredWidth + Table.Column[Column].GapBefore +
+              Max(Table.Column[Column].Width,
+              ValueColumnWidth(Definitions[Column].Header, Definitions[Column].Value));
+        if RequiredWidth <= 1 then
+        begin
+          RowsPerColumn := TrialRows;
+          ColumnOffset := ThemeText.W + Gap;
+          RightBound := 1;
+          Break;
+        end;
+        ListLayout.TextSize := ListLayout.TextSize * 0.95;
+      end;
+    end;
+    if ColumnOffset = 0 then
+    begin
+      ThemeText.W := Trunc(FullWidth);
+      ListLayout := SingleLayout;
+    end;
+    ColumnCompactFactor := EnsureRange(ListLayout.TextSize / MaxTextSize, 0.0, 1.0);
     SetLength(Specs, ColumnCount);
     for Column := 0 to ColumnCount - 1 do
     begin
       Specs[Column].Width := Table.Column[Column].Width;
-      if Table.Column[Column].AutoWidth then
+      if ColumnOffset > 0 then
+        Specs[Column].Width := Max(Specs[Column].Width,
+            ValueColumnWidth(Definitions[Column].Header, Definitions[Column].Value))
+      else if Table.Column[Column].AutoWidth then
         Specs[Column].Width := ValueColumnWidth(Definitions[Column].Header,
             Definitions[Column].Value);
       Specs[Column].GapBefore := Table.Column[Column].GapBefore;
@@ -533,7 +575,7 @@ var
       Specs[Column].Flexible := Table.Column[Column].Flexible;
       Specs[Column].CompactGap := Table.Column[Column].CompactGap;
     end;
-    CalculateListColumns(Specs, ThemeText.X, ThemeText.W, TableRightBound(Table),
+    CalculateListColumns(Specs, ThemeText.X, ThemeText.W, RightBound,
         ColumnCompactFactor, Theme.StatDetail.MinColumnGap, ListColumns);
     for Column := 0 to ColumnCount - 1 do
     begin
@@ -543,6 +585,8 @@ var
   end;
 
 begin
+  RowsPerColumn := EntriesPerPage;
+  ColumnOffset := 0;
   ThemeText := Theme.StatDetail.TextList[0];
   ListX := Theme.StatDetail.ListX;
   ListY := Theme.StatDetail.ListY;
@@ -557,7 +601,7 @@ begin
         (EntriesPerPage + Theme.StatDetail.PaddingRows - 1);
   end;
 
-  LayoutRows := EntriesPerPage + Theme.StatDetail.PaddingRows;
+  LayoutRows := Max(Theme.StatDetail.MinEntries, VisibleEntries) + Theme.StatDetail.PaddingRows;
   ThemeText.X := ListX;
   ThemeText.W := ListW;
   TopY := ListY;
@@ -572,6 +616,7 @@ begin
       Theme.StatDetail.FontSizeDense, Theme.StatDetail.FontSizeCurve),
       Theme.StatDetail.LineHeight);
   HeaderSize := Theme.StatDetail.TextHeader.Size;
+  ListLayout.RowPitch := Min(ListLayout.RowPitch, ListLayout.TextSize / 0.78 + 2);
   ColumnCompactFactor := EnsureRange(ListLayout.TextSize / MaxTextSize,
       0.0, 1.0);
 
@@ -580,6 +625,7 @@ begin
     TextListValue[Column] := scvNone;
     Text[TextHeader[Column]].Text := '';
     Text[TextHeader[Column]].Visible := false;
+    Text[TextHeaderRight[Column]].Visible := false;
   end;
 
   for Row := 0 to High(TextList) do
@@ -604,6 +650,14 @@ begin
     stMostPopBand:
       SetColumns(Theme.StatDetail.PopularTable, POPULAR_BAND_COLUMNS);
   end;
+  ListLayout.RowPitch := Min(ListLayout.RowPitch, ListLayout.TextSize / 0.78 + 2);
+  for Row := 0 to High(TextList) do
+    for Column := 0 to STAT_DETAIL_MAX_COLUMNS - 1 do
+    begin
+      Text[TextList[Row, Column]].Y := TopY +
+          (Row mod RowsPerColumn + Theme.StatDetail.FirstContentRow) * ListLayout.RowPitch;
+      Text[TextList[Row, Column]].Size := ListLayout.TextSize;
+    end;
 end;
 
 procedure TScreenStatDetail.ChangeEntriesPerPage(Delta: integer);
@@ -665,8 +719,8 @@ begin
     PerPage := EntriesPerPage;
 
   try
-    Text[TextPage].Text := Format(Theme.StatDetail.PageStr,
-        [Page + 1, TotPages, PerPage, TotEntrys]);
+    Text[TextPage].Text := StringReplace(Format(Theme.StatDetail.PageStr,
+        [Page + 1, TotPages, PerPage, TotEntrys]), '\n', ' ', [rfReplaceAll]);
   except
     on E: EConvertError do
     begin

@@ -202,6 +202,7 @@ type
       function ParseMouse(MouseButton: Integer; BtnDown: Boolean; X, Y: integer): boolean; override;
       procedure OnShow; override;
       procedure OnShowFinish; override;
+      procedure OnHide; override;
       function Draw: boolean; override;
   end;
 
@@ -220,6 +221,8 @@ uses
   UNote,
   UPlayerLayout,
   UPathUtils,
+  URemoteBridgeIPC,
+  UInputSource,
   UScreenPopup,
   UScreenSong,
   USkins,
@@ -310,6 +313,7 @@ begin
       ScreenScore.Statics[StaticIndex].Texture.Z := CurrentTexture.Z;
       ScreenScore.Statics[StaticIndex].Texture.Alpha := CurrentTexture.Alpha;
       ScreenScore.Statics[StaticIndex].Texture.ScaleMode := CurrentTexture.ScaleMode;
+      ScreenScore.Statics[StaticIndex].Texture.CornerRadius := ThemeStatic.CornerRadius;
       CurrentTexture.Free;
     end
     else
@@ -983,6 +987,7 @@ begin
     Statics[AvatarStaticRef[I]].Texture.W := Theme.Score.AvatarStatic[SlotIndex].W;
     Statics[AvatarStaticRef[I]].Texture.Z := Theme.Score.AvatarStatic[SlotIndex].Z;
     Statics[AvatarStaticRef[I]].Texture.Alpha := Theme.Score.AvatarStatic[SlotIndex].Alpha;
+    Statics[AvatarStaticRef[I]].Texture.CornerRadius := Theme.Score.AvatarStatic[SlotIndex].CornerRadius;
     Statics[AvatarStaticRef[I]].Texture.ScaleMode := Theme.Score.AvatarStatic[SlotIndex].ScaleMode;
     Statics[AvatarStaticRef[I]].Visible := true;
     ApplyScoreSlotPlayerVisuals(Self, SlotIndex, I);
@@ -1114,6 +1119,7 @@ var
   P: integer;  // player
   I: integer;
   V: array[1..UIni.IMaxPlayerCount] of boolean; // visibility array
+  EntriesJson: string;
 begin
   AudioPlayback.SetVolume(EnsureRange(Ini.PreviewVolume, 0, 100) / 100);
   if not Help.SetHelpID(ID) then
@@ -1196,6 +1202,18 @@ begin
     StartVoice;
   end;
 
+  EntriesJson := '[';
+  for P := 0 to PlayersPlay - 1 do
+  begin
+    if P > 0 then EntriesJson := EntriesJson + ',';
+    EntriesJson := EntriesJson + '{"slot":' + IntToStr(P + 1) + ',"name":"' +
+      RemoteJsonEscape(Player[P].Name) + '","score":' + IntToStr(Player[P].ScoreTotalInt) + '}';
+  end;
+  EntriesJson := EntriesJson + ']';
+  RemoteBridgeIPC.SendGameState('results', 0, 0);
+  RemoteBridgeIPC.SendJsonMessage('{"type":"screen.info","protocol":1,"screen":"results"' +
+    ',"title":"' + RemoteJsonEscape(CurrentSong.Title) + '","artist":"' +
+    RemoteJsonEscape(CurrentSong.Artist) + '","entries":' + EntriesJson + '}');
 end;
 
 procedure TScreenScore.ResetScores;
@@ -1226,6 +1244,7 @@ begin
   BarGolden_EaseOut_Step := 1;
 
   BarTime := SDL_GetTicks();
+
 end;
 
 procedure TScreenScore.onShowFinish;
@@ -1240,6 +1259,14 @@ begin
   end;
 
   BarTime := SDL_GetTicks();
+end;
+
+procedure TScreenScore.OnHide;
+begin
+  RemoteBridgeIPC.SendJsonMessage(
+    '{"type":"audio.stop","protocol":1,"reason":"score_screen_left"}'
+  );
+  inherited;
 end;
 
 function TScreenScore.Draw: boolean;
@@ -1318,6 +1345,11 @@ begin
   end;
    //Draw Theme Objects
   DrawFG;
+  for PlayerCounter := 1 to PlayersPlay do
+    if (PlayerPositionMap[PlayerCounter-1].Screen = ScreenAct) and
+      Statics[AvatarStaticRef[PlayerCounter]].Visible then
+      with Statics[AvatarStaticRef[PlayerCounter]].Texture do
+        DrawInputSourceBadge(TPlayerInputSource(Player[PlayerCounter-1].InputSource), X, Y, W, H, ibsScore, Alpha, ScaleMode);
   ScreenContinuousPlayback.Update;
   Result := true;
 end;
@@ -1681,13 +1713,11 @@ procedure TScreenSCore.StartPreview;
 var
   select:   integer;
   changed:  boolean;
-  PreviewPos: real;
-  PreviewVolume: single;
 begin
   if (not AudioPlayback.Finished) then
     Exit;
-  //When Music Preview is activated -> then change music
-  if (Ini.PreviewVolume <> 0) then
+  // Main-menu music is independent of the song preview volume.
+  if (Ini.PreviewVolume <> 0) or (Ini.EndedSongAction = 3) then
   begin
     changed := false;
     if (ScreenSong.Mode = smMedley) then
@@ -1712,31 +1742,7 @@ begin
     end;
 
     if changed then
-    begin
-      AudioPlayback.Close;
-      PreviewEnd := 0;
-
-      if AudioPlayback.Open(CatSongs.Song[select].Path.Append(CatSongs.Song[select].Audio),nil) then
-      begin
-        CatSongs.Song[select].GetPreviewRange(AudioPlayback.Length, PreviewPos, PreviewEnd);
-        AudioPlayback.Position := PreviewPos;
-
-        // set preview volume
-        PreviewVolume := EnsureRange(Ini.PreviewVolume, 0, 100) / 100;
-        if (Ini.PreviewFading = 0) then
-        begin
-          // music fade disabled: start with full volume
-          AudioPlayback.SetVolume(PreviewVolume);
-          AudioPlayback.Play()
-        end
-        else
-        begin
-          // music fade enabled: start muted and fade-in
-          AudioPlayback.SetVolume(0);
-          AudioPlayback.FadeIn(Ini.PreviewFading, PreviewVolume);
-        end;
-      end;
-    end;
+      ScreenSong.StartFinishedSong(CatSongs.Song[select], PreviewEnd);
   end;
 end;
 

@@ -34,12 +34,15 @@ interface
 {$I switches.inc}
 
 uses
+  UCommon,
+  UPlayerLayout,
   UVoiceAssignments,
   UAvatars,
   UDisplay,
   UFiles,
   UIni,
   UMenu,
+  UMenuInteract,
   UMusic,
   UNote,
   UScreenScore,
@@ -70,7 +73,8 @@ type
       VoiceIndex: integer;
 
       CountIndex:   integer;
-      PlayerCountOffset: integer;
+      AssignedPlayerCount: integer;
+      AssignedPlayerSlots: cardinal;
       PlayerIndex:  integer;
       ColorIndex:   integer;
       LevelIndex:   integer;
@@ -96,8 +100,18 @@ type
       APlayerColor: array of integer;
 
       PlayerAvatarButton: array of integer;
+      CardPanel, CardFocus, MicFrame: integer;
+      MicPreviewCount: integer;
+      OwnsMicPreview: boolean;
+      MicActivity: array[0..UIni.IMaxPlayerCount-1] of single;
+      procedure UpdateAssignedPlayers(Force: boolean = false);
+      function DisplayPlayerName(Index: integer): UTF8String;
+      procedure UpdateMicActivity;
+      function MicColor(PlayerID: integer): TRGB;
       function SelectedPlayerCount: integer;
-
+      function CardRect(Index: integer): TPlayerSlotRect;
+      function DifficultySegmentRect(PlayerID, Segment: integer): TMouseOverRect;
+      procedure DrawCards;
       procedure RefreshVoice;
     public
       LyricsOnly: boolean;
@@ -119,6 +133,7 @@ type
 
       procedure PlayerColorButton(K: integer);
       function NoRepeatColors(ColorP: integer; Interaction: integer; Pos: integer):integer;
+      function ActivePlayerCount: integer;
       procedure RefreshPlayers();
       procedure RefreshProfile();
       procedure RefreshColor();
@@ -141,8 +156,11 @@ implementation
 
 uses
 
-  UCommon,
+  URecord,
+  UText,
   UParty,
+  URemoteBridgeIPC,
+  UInputSource,
   UGraphic,
   UHelp,
   ULanguage,
@@ -150,9 +168,9 @@ uses
   UMain,
   UMenuButton,
   UPath,
-  UPlayerLayout,
   URenderer,
   UScreenSong,
+  UContinuousPlayback,
   USkins,
   USongs,
   UTime,
@@ -211,22 +229,98 @@ begin
   inherited SetInteraction(Num);
 end;
 
+function TScreenName.DifficultySegmentRect(PlayerID, Segment: integer): TMouseOverRect;
+var R: TPlayerSlotRect; SX, SY, SegmentW: real;
+begin
+  R := CardRect(PlayerID);
+  SX := R.W / Max(1, Theme.Name.Cards.Panel.W);
+  SY := R.H / Max(1, Theme.Name.Cards.Panel.H);
+  if (PlayerID = PlayerIndex) and Theme.Name.Cards.EditOutside then
+  begin
+    R.X := 0; R.Y := 0; SX := 1; SY := 1;
+  end;
+  SegmentW := (Theme.Name.Cards.Panel.W - 30) / 3;
+  Result.X := R.X + (Theme.Name.SelectPlayerLevel.X + Segment * SegmentW) * SX;
+  Result.Y := R.Y + Theme.Name.SelectPlayerLevel.Y * SY;
+  Result.W := (SegmentW - 4) * SX;
+  Result.H := 29 * SY;
+end;
+
 function TScreenName.ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
 var
   I: integer;
   Btn: integer;
+  MouseX, MouseY: integer;
+  Card: TPlayerSlotRect;
+  SegmentBounds: TMouseOverRect;
 begin
   Result := true;
 
-  inherited ParseMouse(MouseButton, BtnDown, X, Y);
-  SetTextInput(Button[PlayerName].Selected);
-
+  MouseX := X;
+  MouseY := Y;
   // transfer mousecords to the 800x600 raster we use to draw
   X := Round((X / (ScreenW / Screens)) * RenderW);
   if (X > RenderW) then
     X := X - RenderW;
   Y := Round((Y / ScreenH) * RenderH);
 
+  if Theme.Name.Cards.Enabled and (SelectedPlayerCount > 0) and
+     BtnDown and (MouseButton = SDL_BUTTON_LEFT) then
+  begin
+    if Theme.Name.Cards.LevelSegments then
+      for I := 0 to 2 do
+      begin
+        SegmentBounds := DifficultySegmentRect(PlayerIndex, I);
+        if (X >= SegmentBounds.X) and (X <= SegmentBounds.X + SegmentBounds.W) and
+          (Y >= SegmentBounds.Y) and (Y <= SegmentBounds.Y + SegmentBounds.H) then
+        begin
+          LevelIndex := I;
+          PlayerLevel[PlayerIndex] := I;
+          SelectsS[PlayerSelectLevel].SetSelectOpt(I);
+          Interaction := PlayerSelectLevelIID;
+          SetTextInput(false);
+          Exit;
+        end;
+      end;
+    Btn := InteractAt(X, Y);
+    // Selecting a card editor must not generate the menu's Return action.
+    // This also covers themes that place the name editor outside the card.
+    if (Btn = PlayerNameIID) or (Btn = PlayerAvatarIID) then
+    begin
+      Interaction := Btn;
+      SetTextInput(Button[PlayerName].Selected);
+      Exit;
+    end;
+    for I := 0 to SelectedPlayerCount - 1 do
+      if I div (Theme.Name.Cards.Columns * Theme.Name.Cards.Rows) = PlayerIndex div (Theme.Name.Cards.Columns * Theme.Name.Cards.Rows) then
+      begin
+        Card := CardRect(I);
+        if (X >= Card.X) and (X <= Card.X + Card.W) and
+          (Y >= Card.Y) and (Y <= Card.Y + Card.H) then
+        begin
+          if I <> PlayerIndex then
+          begin
+            PlayerNames[PlayerIndex] := Button[PlayerName].Text[0].Text;
+            PlayerIndex := I;
+            AvatarTarget := PlayerAvatars[PlayerIndex];
+            AvatarCurrent := AvatarTarget;
+            RefreshProfile;
+            if Button[PlayerName].Selectable then Interaction := PlayerNameIID
+            else Interaction := PlayerSelectIID;
+          end
+          else if (Btn = PlayerColorIID) or (Btn = PlayerSelectLevelIID) or
+            (Btn = PlayerSelectVoiceIID) then
+          begin
+            // Slides retain their normal click/arrow handling.
+            inherited ParseMouse(MouseButton, BtnDown, MouseX, MouseY);
+          end;
+          SetTextInput(Button[PlayerName].Selected);
+          Exit;
+        end;
+      end;
+  end;
+  inherited ParseMouse(MouseButton, BtnDown, MouseX, MouseY);
+  SetTextInput(Button[PlayerName].Selected);
   if (BtnDown) then
   begin
      //if RightMbESC is set, send ESC keypress
@@ -416,6 +510,8 @@ begin
 
       SDLK_ESCAPE :
         begin
+          if ScreenContinuousPlayback.WaitingForPlayers then
+          begin ScreenContinuousPlayback.Stop; Exit; end;
           StopTextInput;
           Ini.SaveNames;
           AudioPlayback.PlaySound(SoundLib.Back);
@@ -432,8 +528,8 @@ begin
       SDLK_RETURN:
         begin
           StopTextInput;
-          LyricsOnly := (PlayerCountOffset = 1) and (SelectedPlayerCount = 0);
-          if not LyricsOnly then Ini.Players := CountIndex - PlayerCountOffset;
+          UpdateAssignedPlayers;
+          if SelectedPlayerCount > 0 then Ini.Players := SelectedPlayerCount - 1;
 
           for I := 1 to SelectedPlayerCount do
           begin
@@ -477,7 +573,9 @@ begin
             AudioPlayback.SetVolume(1.0);
             ScreenSong.StopMusicPreview();
             ScreenSong.StopVideoPreview();
-            ScreenSong.StartSong;
+            if ScreenContinuousPlayback.WaitingForPlayers then
+              ScreenContinuousPlayback.PlayersReady
+            else ScreenSong.StartSong;
             GoTo_SingScreen := false;
           end
           else
@@ -605,24 +703,19 @@ var
   Avatar: TAvatar;
   AvatarFile: IPath;
   Hash: string;
-  GenericNoAvatarFile: IPath;
   NoAvatarFile: IPath;
 begin
 
   SetLength(PlayerAvatarButton, Length(AvatarsList) + 1);
 
   // 1st no-avatar dummy
-  GenericNoAvatarFile := Skin.SkinPath.Append(Path('[name]noavatar.png'));
   for I := 1 to UIni.IMaxPlayerCount do
   begin
-    if GenericNoAvatarFile.IsFile() then
-      NoAvatarFile := GenericNoAvatarFile
-    else
-    begin
-      NoAvatarFile := Skin.GetTextureFileName('NoAvatar_P' + IntToStr(I));
-      if not NoAvatarFile.IsSet then
-        NoAvatarFile := Skin.GetTextureFileName('NoAvatar_P1');
-    end;
+    NoAvatarFile := Skin.GetTextureFileName('NoAvatar_P' + IntToStr(I));
+    if not NoAvatarFile.IsFile then
+      NoAvatarFile := Skin.GetTextureFileName('NoAvatar_P1');
+    if not NoAvatarFile.IsFile then
+      NoAvatarFile := Skin.GetTextureFileName('NoAvatar');
 
     NoAvatarTexture[I] := Renderer.GetTexture(NoAvatarFile, TEXTURE_TYPE_TRANSPARENT, $FFFFFF);
     NoAvatarTexture[I].ScaleMode := lsUniform;
@@ -736,8 +829,40 @@ end;
 
 function TScreenName.SelectedPlayerCount: integer;
 begin
-  if CountIndex < PlayerCountOffset then Result := 0
-  else Result := UIni.IPlayersVals[CountIndex - PlayerCountOffset];
+  if Party.bPartyGame then Exit(UIni.IPlayersVals[CountIndex]);
+  if CountIndex = 0 then Exit(0);
+  Result := AssignedPlayerCount;
+end;
+
+function TScreenName.ActivePlayerCount: integer;
+begin
+  if Party.bPartyGame then Exit(UIni.IPlayersVals[Ini.Players]);
+  if LyricsOnly then Exit(0);
+  Result := AudioInputProcessor.ConfiguredPlayerCount;
+end;
+
+procedure TScreenName.UpdateAssignedPlayers(Force: boolean);
+var
+  Count: integer;
+  Slots: cardinal;
+begin
+  if Party.bPartyGame then Exit;
+  Count := AudioInputProcessor.ConfiguredPlayerCount(Slots);
+  if not Force and (Slots = AssignedPlayerSlots) then Exit;
+  AssignedPlayerSlots := Slots;
+  AssignedPlayerCount := Count;
+  UpdateSelectSlideOptions(PlayersCount,
+    [Language.Translate('CONTINUOUS_ZERO_PLAYERS'),
+     Format(Language.Translate('SING_PLAYER_COUNT_ASSIGNED'), [Count])], CountIndex);
+  if not Force then RefreshPlayers;
+end;
+
+function TScreenName.DisplayPlayerName(Index: integer): UTF8String;
+begin
+  if not Party.bPartyGame and (AssignedPlayerSlots and (cardinal(1) shl Index) = 0) then
+    Result := Language.Translate('SING_OPTIONS_RECORD_NOONE')
+  else
+    Result := PlayerNames[Index];
 end;
 
 procedure TScreenName.RefreshPlayers();
@@ -747,6 +872,7 @@ var
 begin
 
   Count := SelectedPlayerCount;
+  if not Party.bPartyGame then LyricsOnly := CountIndex = 0;
 
   while (PlayerIndex > Max(0, Count-1)) do
     PlayerIndex := PlayerIndex - 1;
@@ -778,12 +904,12 @@ begin
   // list players
   for I := 0 to Count -1 do
   begin
-    Text[PlayerCurrentText[I]].Text := PlayerNames[I];
+    Text[PlayerCurrentText[I]].Text := DisplayPlayerName(I);
     SetPlayerAvatar(I);
   end;
 
-  Button[PlayerName].Visible := Count > 0;
-  Button[PlayerName].Selectable := Count > 0;
+  Button[PlayerName].Visible := false;
+  Button[PlayerName].Selectable := false;
   Button[PlayerSelect].Visible := Count > 0;
   Button[PlayerSelect].Selectable := false;
   Button[PlayerAvatar].Visible := Count > 0;
@@ -792,9 +918,15 @@ begin
   Button[Interactions[PlayerSelectIID].Num].Selectable := Count > 0;
   SelectsS[PlayerColor].Visible := Count > 0;
   SelectsS[PlayerSelectLevel].Visible := Count > 0;
+  RefreshVoice;
   for I := 0 to High(PlayerAvatarButton) do Button[PlayerAvatarButton[I]].Visible := false;
-  if Count = 0 then Exit;
   RefreshProfile();
+  if not IsSelectable(Interaction) then
+  begin
+    Interaction := PlayersCountIID;
+    StopTextInput;
+  end;
+  if Count = 0 then Exit;
 
   AvatarTarget := PlayerAvatars[PlayerIndex];
   AvatarCurrent := AvatarTarget;
@@ -806,7 +938,7 @@ var
   Options: array of UTF8String;
   I: integer;
 begin
-  SelectsS[PlayerSelectVoice].Visible := Goto_SingScreen and
+  SelectsS[PlayerSelectVoice].Visible := (SelectedPlayerCount > 0) and Goto_SingScreen and
     (CatSongs.Selected >= 0) and (CatSongs.Selected < Length(CatSongs.Song)) and
     CatSongs.Song[CatSongs.Selected].isDuet;
   if not SelectsS[PlayerSelectVoice].Visible then Exit;
@@ -827,6 +959,9 @@ var
   Used: boolean;
 begin
   if SelectedPlayerCount = 0 then Exit;
+  Button[PlayerName].Visible := Party.bPartyGame or
+    (AssignedPlayerSlots and (cardinal(1) shl PlayerIndex) <> 0);
+  Button[PlayerName].Selectable := Button[PlayerName].Visible;
   // no-avatar for current player
   Button[PlayerAvatarButton[0]].Texture.Free;
   Button[PlayerAvatarButton[0]].Texture := NoAvatarTexture[PlayerIndex + 1].Clone();
@@ -920,55 +1055,64 @@ begin
 
   Col := GetPlayerLightColor(K);
 
-  Button[PlayerName].SelectColR:= Col.R;
-  Button[PlayerName].SelectColG:= Col.G;
-  Button[PlayerName].SelectColB:= Col.B;
+  if not Theme.Name.Cards.Enabled or Theme.Name.Cards.TintControls then
+  begin
+    Button[PlayerName].SelectColR:= Col.R;
+    Button[PlayerName].SelectColG:= Col.G;
+    Button[PlayerName].SelectColB:= Col.B;
 
-  Button[PlayerAvatar].SelectColR:= Col.R;
-  Button[PlayerAvatar].SelectColG:= Col.G;
-  Button[PlayerAvatar].SelectColB:= Col.B;
+    Button[PlayerAvatar].SelectColR:= Col.R;
+    Button[PlayerAvatar].SelectColG:= Col.G;
+    Button[PlayerAvatar].SelectColB:= Col.B;
 
-  SelectsS[PlayerColor].SBGColR:= Col.R;
-  SelectsS[PlayerColor].SBGColG:= Col.G;
-  SelectsS[PlayerColor].SBGColB:= Col.B;
+    SelectsS[PlayerColor].SBGColR:= Col.R;
+    SelectsS[PlayerColor].SBGColG:= Col.G;
+    SelectsS[PlayerColor].SBGColB:= Col.B;
 
-  SelectsS[PlayerSelectLevel].SBGColR:= Col.R;
-  SelectsS[PlayerSelectLevel].SBGColG:= Col.G;
-  SelectsS[PlayerSelectLevel].SBGColB:= Col.B;
-  SelectsS[PlayerSelectVoice].SBGColR := Col.R;
-  SelectsS[PlayerSelectVoice].SBGColG := Col.G;
-  SelectsS[PlayerSelectVoice].SBGColB := Col.B;
+    SelectsS[PlayerSelectLevel].SBGColR:= Col.R;
+    SelectsS[PlayerSelectLevel].SBGColG:= Col.G;
+    SelectsS[PlayerSelectLevel].SBGColB:= Col.B;
+    SelectsS[PlayerSelectVoice].SBGColR := Col.R;
+    SelectsS[PlayerSelectVoice].SBGColG := Col.G;
+    SelectsS[PlayerSelectVoice].SBGColB := Col.B;
 
+  end;
   DesCol := GetPlayerColor(K);
 
   Statics[PlayerCurrent[PlayerIndex]].Texture.ColR := DesCol.R;
   Statics[PlayerCurrent[PlayerIndex]].Texture.ColG := DesCol.G;
   Statics[PlayerCurrent[PlayerIndex]].Texture.ColB := DesCol.B;
 
-  Button[PlayerName].DeselectColR:= DesCol.R;
-  Button[PlayerName].DeselectColG:= DesCol.G;
-  Button[PlayerName].DeselectColB:= DesCol.B;
+  if not Theme.Name.Cards.Enabled or Theme.Name.Cards.TintControls then
+  begin
+    Button[PlayerName].DeselectColR:= DesCol.R;
+    Button[PlayerName].DeselectColG:= DesCol.G;
+    Button[PlayerName].DeselectColB:= DesCol.B;
 
-  Button[PlayerAvatar].DeselectColR:= DesCol.R;
-  Button[PlayerAvatar].DeselectColG:= DesCol.G;
-  Button[PlayerAvatar].DeselectColB:= DesCol.B;
+    Button[PlayerAvatar].DeselectColR:= DesCol.R;
+    Button[PlayerAvatar].DeselectColG:= DesCol.G;
+    Button[PlayerAvatar].DeselectColB:= DesCol.B;
 
-  SelectsS[PlayerColor].SBGDColR := DesCol.R;
-  SelectsS[PlayerColor].SBGDColG:= DesCol.G;
-  SelectsS[PlayerColor].SBGDColB:= DesCol.B;
+    SelectsS[PlayerColor].SBGDColR := DesCol.R;
+    SelectsS[PlayerColor].SBGDColG:= DesCol.G;
+    SelectsS[PlayerColor].SBGDColB:= DesCol.B;
 
-  SelectsS[PlayerSelectLevel].SBGDColR := DesCol.R;
-  SelectsS[PlayerSelectLevel].SBGDColG:= DesCol.G;
-  SelectsS[PlayerSelectLevel].SBGDColB:= DesCol.B;
-  SelectsS[PlayerSelectVoice].SBGDColR := DesCol.R;
-  SelectsS[PlayerSelectVoice].SBGDColG := DesCol.G;
-  SelectsS[PlayerSelectVoice].SBGDColB := DesCol.B;
+    SelectsS[PlayerSelectLevel].SBGDColR := DesCol.R;
+    SelectsS[PlayerSelectLevel].SBGDColG:= DesCol.G;
+    SelectsS[PlayerSelectLevel].SBGDColB:= DesCol.B;
+    SelectsS[PlayerSelectVoice].SBGDColR := DesCol.R;
+    SelectsS[PlayerSelectVoice].SBGDColG := DesCol.G;
+    SelectsS[PlayerSelectVoice].SBGDColB := DesCol.B;
 
-  Button[PlayerAvatarButton[0]].Texture.ColR := DesCol.R;
-  Button[PlayerAvatarButton[0]].Texture.ColG := DesCol.G;
-  Button[PlayerAvatarButton[0]].Texture.ColB := DesCol.B;
+  end;
+  if Skin.ColorizeDefaultAvatars then
+  begin
+    Button[PlayerAvatarButton[0]].Texture.ColR := DesCol.R;
+    Button[PlayerAvatarButton[0]].Texture.ColG := DesCol.G;
+    Button[PlayerAvatarButton[0]].Texture.ColB := DesCol.B;
+  end;
 
-  if (PlayerAvatars[PlayerIndex] = 0) then
+  if (PlayerAvatars[PlayerIndex] = 0) and Skin.ColorizeDefaultAvatars then
   begin
     Statics[PlayerCurrentAvatar[PlayerIndex]].Texture.ColR := DesCol.R;
     Statics[PlayerCurrentAvatar[PlayerIndex]].Texture.ColG := DesCol.G;
@@ -988,6 +1132,7 @@ end;
 constructor TScreenName.Create;
 var
   I: integer;
+  WhitePixel: cardinal;
 begin
   inherited Create;
 
@@ -995,6 +1140,21 @@ begin
 
   Theme.Name.SelectPlayersCount.oneItemOnly := true;
   Theme.Name.SelectPlayersCount.showArrows := true;
+  CardPanel := -1;
+  CardFocus := -1;
+  if Theme.Name.Cards.Enabled then
+  begin
+    CardPanel := AddStatic(Theme.Name.Cards.Panel);
+    CardFocus := AddStatic(Theme.Name.Cards.Focus);
+    Statics[CardPanel].Visible := false;
+    Statics[CardFocus].Visible := false;
+    MicFrame := AddStatic(Theme.Name.Cards.Focus);
+    Statics[MicFrame].Texture.Free;
+    WhitePixel := $FFFFFFFF;
+    Statics[MicFrame].Texture := Renderer.CreateTexture(PChar(@WhitePixel),
+      PATH_NONE, 1, 1, TEXTURE_TYPE_TRANSPARENT, false);
+    Statics[MicFrame].Visible := false;
+  end;
   PlayersCount := AddSelectSlide(Theme.Name.SelectPlayersCount, CountIndex, IPlayers);
   PlayersCountIID := High(Interactions);
 
@@ -1072,9 +1232,12 @@ begin
 
     Col := GetPlayerColor(Num[Player]);
 
-    Statics[PlayerCurrentAvatar[Player]].Texture.ColR := Col.R;
-    Statics[PlayerCurrentAvatar[Player]].Texture.ColG := Col.G;
-    Statics[PlayerCurrentAvatar[Player]].Texture.ColB := Col.B;
+    if Skin.ColorizeDefaultAvatars then
+    begin
+      Statics[PlayerCurrentAvatar[Player]].Texture.ColR := Col.R;
+      Statics[PlayerCurrentAvatar[Player]].Texture.ColG := Col.G;
+      Statics[PlayerCurrentAvatar[Player]].Texture.ColB := Col.B;
+    end;
   end
   else
   begin
@@ -1088,6 +1251,7 @@ begin
   Statics[PlayerCurrentAvatar[Player]].Texture.H := H;
   Statics[PlayerCurrentAvatar[Player]].Texture.Z := Z;
   Statics[PlayerCurrentAvatar[Player]].Texture.Int := 1;
+  Statics[PlayerCurrentAvatar[Player]].Texture.CornerRadius := Theme.Name.PlayerSelectAvatar[Player].CornerRadius;
   Statics[PlayerCurrentAvatar[Player]].Texture.ScaleMode := lsStretch;
 
 end;
@@ -1099,17 +1263,26 @@ var
   AvatarIndex: integer;
   Col:         TRGB;
 begin
-  PlayersPlay := UIni.IPlayersVals[Ini.Players];
+  PlayersPlay := ActivePlayerCount;
   SetLength(Player, PlayersPlay);
 
   for I := 0 to PlayersPlay - 1 do
   begin
-    Player[I].Name := Ini.Name[I];
+    PlayerNames[I] := Ini.Name[I];
+    PlayerLevel[I] := Ini.PlayerLevel[I];
+    PlayerAvatars[I] := Max(0, GetArrayIndex(AvatarsMD5, Ini.PlayerAvatar[I]));
+    if not Party.bPartyGame and (PlayerInputSource(I) = pisNone) then
+      Player[I].Name := Language.Translate('SING_OPTIONS_RECORD_NOONE')
+    else
+      Player[I].Name := Ini.Name[I];
     Player[I].Level := Ini.PlayerLevel[I];
 
     if not LoadAvatars then
       Continue;
 
+    if Assigned(AvatarPlayerTextures[I+1]) and
+      (AvatarPlayerTextures[I+1] <> NoAvatarTexture[I+1]) then
+      FreeAndNil(AvatarPlayerTextures[I+1]);
     AvatarIndex := GetArrayIndex(AvatarsMD5, Ini.PlayerAvatar[I]);
     if (AvatarIndex > 0) then
     begin
@@ -1122,35 +1295,55 @@ begin
 
       Col := GetPlayerColor(Ini.PlayerColor[I]);
 
-      AvatarPlayerTextures[I+1].ColR := Col.R;
-      AvatarPlayerTextures[I+1].ColG := Col.G;
-      AvatarPlayerTextures[I+1].ColB := Col.B;
+      if Skin.ColorizeDefaultAvatars then
+      begin
+        AvatarPlayerTextures[I+1].ColR := Col.R;
+        AvatarPlayerTextures[I+1].ColG := Col.G;
+        AvatarPlayerTextures[I+1].ColB := Col.B;
+      end;
     end;
+  end;
+  if Display.CurrentScreen = @ScreenName then
+  begin
+    RefreshPlayers;
+    RefreshProfile;
   end;
 end;
 
 procedure TScreenName.OnHide;
 begin
   StopTextInput;
+  if OwnsMicPreview then AudioInput.CaptureStop(true);
+  OwnsMicPreview := false;
+  FillChar(MicActivity, SizeOf(MicActivity), 0);
   inherited;
 end;
 
 procedure TScreenName.OnShow;
 var
   I: integer;
-  Counts: array of UTF8String;
+  PreviewEnd: real;
 begin
   inherited;
+  PreviewEnd := 0;
+  if Goto_SingScreen and (CatSongs.Selected >= 0) and
+     (CatSongs.Selected < Length(CatSongs.Song)) then
+    ScreenSong.StartFinishedSong(CatSongs.Song[CatSongs.Selected], PreviewEnd);
+  RemoteBridgeIPC.SendGameState('player_setup', 0, 0);
   AudioPlayback.SetVolume(EnsureRange(Ini.PreviewVolume, 0, 100) / 100);
 
   Ini.ReloadNames;
-  PlayerCountOffset := Ord(not Party.bPartyGame);
-  SetLength(Counts, Length(IPlayers) + PlayerCountOffset);
-  if PlayerCountOffset = 1 then Counts[0] := Language.Translate('CONTINUOUS_ZERO_PLAYERS');
-  for I := 0 to High(IPlayers) do Counts[I + PlayerCountOffset] := IPlayers[I];
-  CountIndex := Ini.Players + PlayerCountOffset;
-  if LyricsOnly and (PlayerCountOffset = 1) then CountIndex := 0;
-  UpdateSelectSlideOptions(PlayersCount, Counts, CountIndex);
+  RemoteBridgeIPC.ApplyPendingPlayerCount(true);
+  if Party.bPartyGame then
+  begin
+    CountIndex := Ini.Players;
+    UpdateSelectSlideOptions(PlayersCount, IPlayers, CountIndex);
+  end
+  else
+  begin
+    CountIndex := Ord(not LyricsOnly);
+    UpdateAssignedPlayers(true);
+  end;
 
   for I := 0 to UIni.IMaxPlayerCount-1 do
   begin
@@ -1178,6 +1371,8 @@ begin
   Button[PlayerName].Text[0].Text := PlayerNames[PlayerIndex];
 
   isScrolling := false;
+  if not OwnsMicPreview then MicPreviewCount := -1;
+  UpdateMicActivity;
 
   Interaction := 0;
 
@@ -1328,12 +1523,283 @@ begin
 
 end;
 
+// The card is a view of the existing controls. Names, avatars, colors,
+// difficulty and voice assignments keep their normal input and persistence.
+function TScreenName.CardRect(Index: integer): TPlayerSlotRect;
+var Columns, Rows, PageSize, LocalIndex, Count: integer;
+begin
+  Columns := Theme.Name.Cards.Columns;
+  PageSize := Columns * Theme.Name.Cards.Rows;
+  Count := Min(PageSize, SelectedPlayerCount - (PlayerIndex div PageSize) * PageSize);
+  Rows := Max(1, (Count + Columns - 1) div Columns);
+  LocalIndex := Index mod PageSize;
+  Result.W := Max(1, (Theme.Name.Cards.Area.W - (Columns - 1) * Theme.Name.Cards.Gap) div Columns);
+  Result.H := Min(Theme.Name.Cards.MaxH,
+    Max(1, (Theme.Name.Cards.Area.H - (Rows - 1) * Theme.Name.Cards.Gap) div Rows));
+  Result.X := Theme.Name.Cards.Area.X + (LocalIndex mod Columns) * (Result.W + Theme.Name.Cards.Gap);
+  Result.Y := Theme.Name.Cards.Area.Y + (LocalIndex div Columns) * (Result.H + Theme.Name.Cards.Gap);
+end;
+
+procedure TScreenName.UpdateMicActivity;
+var
+  I, Count: integer;
+  Target, Threshold, Blend: single;
+  C: TRGB;
+begin
+  Count := SelectedPlayerCount;
+  if Count <> MicPreviewCount then
+  begin
+    if OwnsMicPreview then AudioInput.CaptureStop(true);
+    OwnsMicPreview := false;
+    MicPreviewCount := Count;
+    FillChar(MicActivity, SizeOf(MicActivity), 0);
+  end;
+  // Retry after an outgoing singing screen releases its capture at fade end.
+  if (Count > 0) and not AudioInput.IsCapturing then
+  begin
+    AudioInput.CaptureStart(Count, true);
+    OwnsMicPreview := true;
+  end;
+  Threshold := IThresholdVals[EnsureRange(Ini.ThresholdIndex, 0, High(IThresholdVals))];
+  for I := 0 to Count - 1 do
+  begin
+    Target := 0;
+    if OwnsMicPreview then
+      Target := AudioInputProcessor.Sound[I].MaxSampleVolume;
+    // Ignore background hiss; reserve white for peaks near full input level.
+    Target := EnsureRange((Target - Threshold) / (1 - Threshold), 0, 1);
+    if Target > MicActivity[I] then Blend := 1 - Exp(-Max(0, TimeSkip) / 0.04)
+    else Blend := 1 - Exp(-Max(0, TimeSkip) / 0.25);
+    MicActivity[I] := MicActivity[I] + (Target - MicActivity[I]) * Blend;
+    C := MicColor(I);
+    with Statics[PlayerCurrent[I]].Texture do
+    begin
+      ColR := C.R;
+      ColG := C.G;
+      ColB := C.B;
+    end;
+  end;
+end;
+
+function TScreenName.MicColor(PlayerID: integer): TRGB;
+begin
+  Result := GetPlayerColor(Num[PlayerID]);
+  Result.R := Result.R + (1 - Result.R) * MicActivity[PlayerID];
+  Result.G := Result.G + (1 - Result.G) * MicActivity[PlayerID];
+  Result.B := Result.B + (1 - Result.B) * MicActivity[PlayerID];
+end;
+
+procedure TScreenName.DrawCards;
+var I, First, Last, J: integer;
+  R: TPlayerSlotRect;
+  SX, SY, AvatarSide: real;
+  Panel: TTexture;
+  C: TRGB;
+  LabelText: UTF8String;
+  procedure Difficulty(PlayerID: integer);
+  var K: integer; T: TTexture; C: TRGB; BaseX, BaseY, SegmentW: real;
+    Bounds: TMouseOverRect;
+  begin
+    BaseX := Theme.Name.SelectPlayerLevel.X;
+    BaseY := Theme.Name.SelectPlayerLevel.Y;
+    SegmentW := (Theme.Name.Cards.Panel.W - 30) / 3;
+    for K := 0 to 2 do
+    begin
+      if PlayerLevel[PlayerID] = K then
+      begin
+        T := SelectsS[PlayerSelectLevel].TextureSBG;
+        Bounds := DifficultySegmentRect(PlayerID, K);
+        T.X := Bounds.X; T.Y := Bounds.Y;
+        T.W := Bounds.W; T.H := Bounds.H;
+        if (PlayerID = PlayerIndex) and (Interaction = PlayerSelectLevelIID) then
+          C := GetPlayerColor(Num[PlayerID])
+        else begin C.R := 0.2; C.G := 0.21; C.B := 0.22; end;
+        T.ColR := C.R; T.ColG := C.G; T.ColB := C.B;
+        Renderer.DrawTexture(T);
+      end;
+      SetFontFamily(ResolveThemeFont(Theme.Name.Cards.NameText.FontFile, Theme.Name.Cards.NameText.Font));
+      SetFontStyle(0); SetFontItalic(false); SetFontReflection(false, 0);
+      SetFontSize(Max(8, Round(Theme.Name.SelectPlayerLevel.TextSize * SY)));
+      if PlayerLevel[PlayerID] = K then SetFontColor(1, 1, 1, 1)
+      else SetFontColor(0.5, 0.5, 0.5, 1);
+      SetFontPos(R.X + (BaseX + (K + 0.5) * SegmentW) * SX - TextWidth(IDifficultyTranslated[K]) / 2,
+        R.Y + (BaseY + 7) * SY);
+      PrintText(IDifficultyTranslated[K]);
+    end;
+  end;
+  function TextColor: TRGB;
+  begin
+    Result.R := Theme.Name.PlayerSelectTemplateText.ColR;
+    Result.G := Theme.Name.PlayerSelectTemplateText.ColG;
+    Result.B := Theme.Name.PlayerSelectTemplateText.ColB;
+  end;
+  procedure Caption(const Value: UTF8String; X, Y, Size: real; const C: TRGB);
+  begin
+    SetFontFamily(ResolveThemeFont(Theme.Name.Cards.NameText.FontFile, Theme.Name.Cards.NameText.Font));
+    SetFontStyle(0); SetFontItalic(false); SetFontReflection(false, 0);
+    SetFontSize(Max(8, Round(Size * SY)));
+    SetFontColor(C.R, C.G, C.B, 1);
+    SetFontPos(R.X + X * SX, R.Y + Y * SY);
+    if (TextWidth(Value) > 0) and (TextWidth(Value) > R.W - X * SX - 8) then
+      SetFontSize(Max(6, Round(Size * SY * Max(1, R.W - X * SX - 8) / TextWidth(Value))));
+    PrintText(Value);
+  end;
+  procedure PlaceSlide(Index: integer; const Source: TThemeSelectSlide);
+  var K: integer;
+  begin
+    with SelectsS[Index] do
+    begin
+      Texture.W := Source.W * SX; Texture.H := Source.H * SY;
+      TextureSBG.H := Source.H * SY; SBGW := Source.SBGW * SX;
+      Text.Size := Max(8, Round(Source.TextSize * SY));
+      for K := 0 to High(TextOpt) do TextOpt[K].Size := Text.Size;
+      SetX(R.X + Source.X * SX); SetY(R.Y + Source.Y * SY);
+      // These setup slides show one option. Moving a slide does not regenerate
+      // its option positions, so keep that option centered in its new card.
+      for K := 0 to High(TextOpt) do
+      begin
+        TextOpt[K].X := TextureSBG.X + TextureSBG.W / 2;
+        TextOpt[K].Align := 1;
+      end;
+      SetSelectOpt(SelectedOption);
+    end;
+  end;
+begin
+  First := (PlayerIndex div (Theme.Name.Cards.Columns * Theme.Name.Cards.Rows)) * Theme.Name.Cards.Columns * Theme.Name.Cards.Rows;
+  Last := Min(SelectedPlayerCount - 1, First + Theme.Name.Cards.Columns * Theme.Name.Cards.Rows - 1);
+  for I := First to Last do
+  begin
+    R := CardRect(I);
+    SX := R.W / Max(1, Theme.Name.Cards.Panel.W);
+    SY := R.H / Max(1, Theme.Name.Cards.Panel.H);
+    Panel := Statics[CardPanel].Texture;
+    Panel.X := R.X; Panel.Y := R.Y; Panel.W := R.W; Panel.H := R.H;
+    Renderer.DrawTexture(Panel);
+    if I = PlayerIndex then
+    begin
+      Panel := Statics[CardFocus].Texture;
+      Panel.X := R.X - 2; Panel.Y := R.Y - 2; Panel.W := R.W + 4; Panel.H := R.H + 4;
+      Renderer.DrawTexture(Panel);
+    end;
+    // Player labels are translated through the shared generated-label keys.
+    LabelText := Language.Translate('OPTION_VALUE_PLAYER') + ' ' + IntToStr(I + 1);
+    if Theme.Name.Cards.ShowLabel then Caption(LabelText, 60, 22, 10, TextColor);
+    with Statics[PlayerCurrentAvatar[I]].Texture do
+    begin
+      // Fit a square avatar in physical pixels, including non-16:9 viewports.
+      AvatarSide := Min(Theme.Name.Cards.Avatar.W * SX * GetLayoutScaleX,
+        Theme.Name.Cards.Avatar.H * SY * GetLayoutScaleY);
+      W := AvatarSide / Max(0.0001, GetLayoutScaleX);
+      H := AvatarSide / Max(0.0001, GetLayoutScaleY);
+      X := R.X + Theme.Name.Cards.Avatar.X * SX +
+        (Theme.Name.Cards.Avatar.W * SX - W) / 2;
+      Y := R.Y + Theme.Name.Cards.Avatar.Y * SY +
+        (Theme.Name.Cards.Avatar.H * SY - H) / 2;
+      ScaleMode := lsStretch;
+      CornerRadius := Theme.Name.PlayerSelectTemplateAvatar.CornerRadius;
+    end;
+    Statics[PlayerCurrentAvatar[I]].Draw;
+    C := MicColor(I);
+    Panel := Statics[MicFrame].Texture;
+    with Statics[PlayerCurrentAvatar[I]].Texture do
+    begin
+      Panel.X := X; Panel.Y := Y; Panel.W := W; Panel.H := H;
+      Panel.Z := Z; Panel.Alpha := Alpha;
+      Panel.ScaleMode := ScaleMode; Panel.CornerRadius := CornerRadius;
+    end;
+    // Initials themes use a circular default avatar; keep its outline circular.
+    if Theme.Name.Cards.Initials and (PlayerAvatars[I] = 0) then
+      Panel.CornerRadius := 0.5;
+    Panel.OutlineWidth := 0.05;
+    Panel.ColR := C.R; Panel.ColG := C.G; Panel.ColB := C.B;
+    Renderer.DrawTexture(Panel);
+    if Theme.Name.Cards.Initials and (PlayerAvatars[I] = 0) then
+    begin
+      LabelText := UTF8UpperCase(UTF8Copy(PlayerNames[I], 1, 1));
+      SetFontFamily(Theme.Name.Cards.NameText.Font);
+      SetFontStyle(1); SetFontSize(Max(8, Round(20 * SY)));
+      SetFontColor(0.03, 0.04, 0.05, 1);
+      SetFontPos(R.X + (Theme.Name.Cards.Avatar.X + Theme.Name.Cards.Avatar.W / 2) * SX - TextWidth(LabelText) / 2,
+        R.Y + (Theme.Name.Cards.Avatar.Y + Theme.Name.Cards.Avatar.H / 2 - 10) * SY);
+      PrintText(LabelText);
+    end;
+    if (I = PlayerIndex) and (Theme.Name.Cards.EditOutside or not Button[PlayerName].Visible) then
+      Caption(DisplayPlayerName(I), Theme.Name.Cards.NameText.X,
+        Theme.Name.Cards.NameText.Y, Theme.Name.Cards.NameText.Size, TextColor);
+    if I = PlayerIndex then
+    begin
+      if Theme.Name.Cards.EditOutside then
+      begin
+        R.X := 0; R.Y := 0; SX := 1; SY := 1;
+      end;
+      Button[PlayerName].W := Theme.Name.PlayerButtonName.W * SX;
+      Button[PlayerName].H := Theme.Name.PlayerButtonName.H * SY;
+      Button[PlayerName].X := R.X + Theme.Name.PlayerButtonName.X * SX;
+      Button[PlayerName].Y := R.Y + Theme.Name.PlayerButtonName.Y * SY;
+      Button[PlayerName].Text[0].Size := Max(8, Round(Theme.Name.PlayerButtonName.Text[0].Size * SY));
+      Button[PlayerName].Draw;
+      PlaceSlide(PlayerColor, Theme.Name.SelectPlayerColor);
+      PlaceSlide(PlayerSelectLevel, Theme.Name.SelectPlayerLevel);
+      PlaceSlide(PlayerSelectVoice, Theme.Name.SelectPlayerVoice);
+      SelectsS[PlayerColor].Draw;
+      if Theme.Name.Cards.LevelSegments then Difficulty(I)
+      else SelectsS[PlayerSelectLevel].Draw;
+      if SelectsS[PlayerSelectVoice].Visible then SelectsS[PlayerSelectVoice].Draw;
+      // Reuse the existing avatar picker, without its large carousel.
+      R := CardRect(I);
+      SX := R.W / Max(1, Theme.Name.Cards.Panel.W);
+      SY := R.H / Max(1, Theme.Name.Cards.Panel.H);
+      with Statics[PlayerCurrentAvatar[I]].Texture do
+      begin
+        Button[PlayerAvatar].X := X; Button[PlayerAvatar].Y := Y;
+        Button[PlayerAvatar].W := W; Button[PlayerAvatar].H := H;
+      end;
+      if Interaction = PlayerAvatarIID then
+        Caption('< >', 20, 73, 12, GetPlayerColor(Num[I]));
+    end
+    else
+    begin
+      Caption(DisplayPlayerName(I), Theme.Name.Cards.NameText.X, Theme.Name.Cards.NameText.Y,
+        Theme.Name.Cards.NameText.Size, TextColor);
+      if not Theme.Name.Cards.EditOutside then
+      begin
+        Caption(IPlayerColorTranslated[Num[I] - 1], 75, 142, 14, GetPlayerColor(Num[I]));
+        if Theme.Name.Cards.LevelSegments then Difficulty(I)
+        else Caption(IDifficultyTranslated[PlayerLevel[I]], 75, 184, 14, TextColor);
+      end;
+    end;
+  end;
+  if SelectedPlayerCount > Theme.Name.Cards.Columns * Theme.Name.Cards.Rows then
+  begin
+    R := CardRect(First);
+    SX := 1; SY := 1;
+    Caption(Format('%d-%d / %d', [First + 1, Last + 1, SelectedPlayerCount]),
+      0, Theme.Name.Cards.Area.H + 10, 13, TextColor);
+  end;
+  SelectsS[PlayersCount].Draw;
+  for I := 0 to High(Statics) do
+  begin
+    J := 0;
+    while (J < UIni.IMaxPlayerCount) and (I <> PlayerCurrent[J]) and
+      (I <> PlayerCurrentAvatar[J]) do Inc(J);
+    if J = UIni.IMaxPlayerCount then Statics[I].Draw;
+  end;
+  for I := 0 to High(Text) do
+  begin
+    J := 0;
+    while (J < UIni.IMaxPlayerCount) and (I <> PlayerCurrentText[J]) do Inc(J);
+    if J = UIni.IMaxPlayerCount then Text[I].Draw;
+  end;
+end;
+
 function TScreenName.Draw: boolean;
 var
   dx: real;
   dt: real;
   I: integer;
 begin
+  ScreenSong.UpdateTransitionPreview;
+  UpdateAssignedPlayers;
   //inherited Draw;
   //heres a little Hack, that causes the Statics
   //are Drawn after the Buttons because of some Blending Problems.
@@ -1364,10 +1830,20 @@ begin
     end;
   end;
 
+  UpdateMicActivity;
+  if Theme.Name.Cards.Enabled then
+  begin
+    DrawCards;
+    Result := true;
+    Exit;
+  end;
   if SelectedPlayerCount > 0 then SetAvatarScroll;
 
   // set current name = name in list
-  Text[PlayerCurrentText[PlayerIndex]].Text := Button[PlayerName].Text[0].Text;
+  if not Party.bPartyGame and (PlayerInputSource(PlayerIndex) = pisNone) then
+    Text[PlayerCurrentText[PlayerIndex]].Text := Language.Translate('SING_OPTIONS_RECORD_NOONE')
+  else
+    Text[PlayerCurrentText[PlayerIndex]].Text := Button[PlayerName].Text[0].Text;
 
   //Instead of Draw FG Procedure:
   //We draw Buttons for our own
@@ -1383,9 +1859,14 @@ begin
     Statics[I].Draw;
 
   // and texts
+  for I := 0 to SelectedPlayerCount - 1 do
+    if Statics[PlayerCurrentAvatar[I]].Visible then
+      with Statics[PlayerCurrentAvatar[I]].Texture do
+        DrawInputSourceBadge(PlayerInputSource(I), X, Y, W, H, ibsSetup, Alpha, ScaleMode);
   for I := 0 to High(Text) do
     Text[I].Draw;
 
+  ScreenContinuousPlayback.Update;
   Result := true;
 end;
 

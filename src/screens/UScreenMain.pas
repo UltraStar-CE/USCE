@@ -49,6 +49,16 @@ uses
 type
 
   TScreenMain = class(TMenu)
+  private
+    Preview: array[0..5] of record
+      Statics: array of integer;
+      BaseX, BaseAlpha: array of real;
+      Alpha: real;
+    end;
+    PreviewTick: cardinal;
+    TextSongLoadWarning: integer;
+    LastFailedSongCount: integer;
+    procedure UpdatePreviews;
   public
     TextDescription:     integer;
     TextDescriptionLong: integer;
@@ -72,6 +82,8 @@ implementation
 
 uses
   UGraphic,
+  Math,
+  URemoteBridgeIPC,
   UHelp,
   UIni,
   ULanguage,
@@ -105,17 +117,6 @@ begin
           FadeTo(@ScreenPartyOptions, SoundLib.Start);
           Exit;
         end;
-      end;
-
-      SDLK_J: begin
-        if (Songs.SongList.Count >= 1) then
-        begin
-          ScreenSong.OpenContinuousFromMainMenu;
-          FadeTo(@ScreenSong, SoundLib.Start);
-        end
-        else
-          ScreenPopupError.ShowPopup(Language.Translate('ERROR_NO_SONGS'));
-        Exit;
       end;
 
       SDLK_R: begin
@@ -176,7 +177,7 @@ begin
         begin
           if (Songs.SongList.Count >= 1) then
           begin
-            PlayersPlay := UIni.IPlayersVals[Ini.Players];
+            PlayersPlay := ScreenName.ActivePlayerCount;
 
             if Ini.OnSongClick = sSelectPlayer then
               FadeTo(@ScreenSong)
@@ -203,41 +204,15 @@ begin
             ScreenPopupError.ShowPopup(Language.Translate('ERROR_NO_SONGS'));
         end;
 
-        // Continuous playback entry
         if Interaction = 2 then
-        begin
-          if (Songs.SongList.Count >= 1) then
-          begin
-            ScreenSong.OpenContinuousFromMainMenu;
-            FadeTo(@ScreenSong, SoundLib.Start);
-          end
-          else //show error message, No Songs Loaded
-            ScreenPopupError.ShowPopup(Language.Translate('ERROR_NO_SONGS'));
-        end;
-
-        //Stats
-        if Interaction = 3 then
-        begin
           FadeTo(@ScreenStatMain, SoundLib.Start);
-        end;
 
-        //Options
-        if Interaction = 4 then
-        begin
+        if Interaction = 3 then
           FadeTo(@ScreenOptions, SoundLib.Start);
-        end;
-
-        //About
-        if Interaction = 5 then
-        begin
+        if Interaction = 4 then
           FadeTo(@ScreenAbout, SoundLib.Start);
-        end;
-
-        //Exit
-        if Interaction = 6 then
-        begin
+        if Interaction = 5 then
           Result := false;
-        end;
       end;
       {**
        * Up and Down could be done at the same time,
@@ -265,6 +240,8 @@ begin
 end;
 
 constructor TScreenMain.Create;
+var
+  I, J, Index: integer;
 begin
   inherited Create;
 {**
@@ -277,17 +254,36 @@ begin
  *}
   TextDescription     := AddText(Theme.Main.TextDescription);
   TextDescriptionLong := AddText(Theme.Main.TextDescriptionLong);
+  TextSongLoadWarning := AddText(Theme.Main.TextSongLoadWarning);
+  Text[TextSongLoadWarning].Visible := false;
+  LastFailedSongCount := -1;
 
   LoadFromTheme(Theme.Main);
 
-  AddButton(Theme.Main.ButtonSolo);
-  AddButton(Theme.Main.ButtonMulti);
-  AddButton(Theme.Main.ButtonJukebox); // Preserve the theme slot for compatibility.
-  Button[High(Button)].Text[0].Text := Language.Translate('CONTINUOUS_TITLE');
-  AddButton(Theme.Main.ButtonStat);
-  AddButton(Theme.Main.ButtonOptions);
+  for I := 0 to High(Theme.Main.Buttons) do
+  begin
+    AddButton(Theme.Main.Buttons[I]);
+    if Length(Button[High(Button)].Text) > 0 then
+      Button[High(Button)].Text[0].Text := Theme.Main.Description[I];
+  end;
+
   AddButton(Theme.Main.ButtonAbout);
   AddButton(Theme.Main.ButtonExit);
+
+  for I := 0 to High(Preview) do
+  begin
+    SetLength(Preview[I].Statics, Length(Theme.Main.Preview[I]));
+    SetLength(Preview[I].BaseX, Length(Theme.Main.Preview[I]));
+    SetLength(Preview[I].BaseAlpha, Length(Theme.Main.Preview[I]));
+    for J := 0 to High(Preview[I].Statics) do
+    begin
+      Index := AddStatic(Theme.Main.Preview[I][J]);
+      Preview[I].Statics[J] := Index;
+      Preview[I].BaseX[J] := Statics[Index].Texture.X;
+      Preview[I].BaseAlpha[J] := Statics[Index].Texture.Alpha;
+      Statics[Index].Visible := false;
+    end;
+  end;
 
   Interaction := 0;
 
@@ -295,8 +291,14 @@ begin
 end;
 
 procedure TScreenMain.OnShow;
+var
+  I: integer;
 begin
   inherited;
+  PreviewTick := SDL_GetTicks;
+  for I := 0 to High(Preview) do
+    Preview[I].Alpha := Ord(I = Interaction);
+  RemoteBridgeIPC.SendGameState('main_menu', 0, 0);
 
   SoundLib.StartBgMusic;
 
@@ -312,8 +314,45 @@ begin
   Party.Clear;
 end;
 
+procedure TScreenMain.UpdatePreviews;
+var
+  Now, Elapsed: cardinal;
+  I, J, Index: integer;
+  Step: real;
+begin
+  Now := SDL_GetTicks;
+  if Now >= PreviewTick then Elapsed := Now - PreviewTick
+  else Elapsed := cardinal(QWord(High(cardinal)) - PreviewTick + Now + 1);
+  PreviewTick := Now;
+  if Theme.Main.PreviewFadeTime > 0 then
+    Step := Elapsed / (1000 * Theme.Main.PreviewFadeTime)
+  else
+    Step := 1;
+  for I := 0 to High(Preview) do
+  begin
+    if I = Interaction then Preview[I].Alpha := Min(1, Preview[I].Alpha + Step)
+    else Preview[I].Alpha := Max(0, Preview[I].Alpha - Step);
+    for J := 0 to High(Preview[I].Statics) do
+    begin
+      Index := Preview[I].Statics[J];
+      Statics[Index].Visible := Preview[I].Alpha > 0;
+      Statics[Index].Texture.Alpha := Preview[I].BaseAlpha[J] * Preview[I].Alpha;
+      Statics[Index].Texture.X := Preview[I].BaseX[J] + Theme.Main.PreviewSlideX * (1 - Preview[I].Alpha);
+    end;
+  end;
+end;
+
 function TScreenMain.Draw: boolean;
 begin
+  UpdatePreviews;
+  ScreenSong.ApplyLibraryRefresh;
+  if Assigned(Songs) and (Songs.FailedSongCount <> LastFailedSongCount) then
+  begin
+    LastFailedSongCount := Songs.FailedSongCount;
+    Text[TextSongLoadWarning].Visible := LastFailedSongCount > 0;
+    Text[TextSongLoadWarning].Text := Format(Language.Translate('SONG_LOAD_WARNING'),
+      [LastFailedSongCount]);
+  end;
   Result := inherited Draw;
 
   if not ScreenPopupError.Visible then
@@ -329,6 +368,7 @@ end;
 procedure TScreenMain.SetInteraction(Num: integer);
 begin
   inherited SetInteraction(Num);
+  if not Theme.Main.DynamicDescription then Exit;
   Text[TextDescription].Text     := Theme.Main.Description[Interaction];
   Text[TextDescriptionLong].Text := Theme.Main.DescriptionLong[Interaction];
 end;

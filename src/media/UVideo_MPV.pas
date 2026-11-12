@@ -116,7 +116,7 @@ type
     public
       constructor Create;
       destructor Destroy; override;
-      function Open(const FileName: IPath): boolean; override;
+      function Open(const FileName: IPath; const Media: TBytes = nil): boolean; override;
       procedure Close; override;
       procedure Play; override;
       procedure Pause; override;
@@ -126,6 +126,7 @@ type
       procedure SetPosition(Time: real); override;
       function GetPosition: real; override;
       procedure GetFrame(Time: Extended); override;
+      function Finished: boolean; override;
       procedure Draw; override;
   end;
 
@@ -136,7 +137,7 @@ type
       function GetName: string;
       function Init(): boolean;
       function Finalize(): boolean;
-      function Open(const FileName: IPath): IVideo;
+      function Open(const FileName: IPath; const Media: TBytes = nil): IVideo;
   end;
 
 var
@@ -216,11 +217,16 @@ begin
   Result := true;
 end;
 
-function TVideoPlayback_MPV.Open(const FileName: IPath): IVideo;
+function TVideoPlayback_MPV.Open(const FileName: IPath; const Media: TBytes = nil): IVideo;
 var
   video: TVideo_MPV;
 begin
   Result := nil;
+  { A song preview arrives as a snapshot in memory, so that its file stays
+    replaceable while it plays. libmpv reads from the file here, so the
+    snapshot goes to the next file decoder. }
+  if Media <> nil then
+    Exit(OpenVideoFallback(FileName, Self as IVideoPlayback, Media));
   video := TVideo_MPV.Create;
   if video.Open(FileName) then
     Result := video
@@ -911,7 +917,7 @@ begin
   end;
 end;
 
-function TVideo_MPV.Open(const FileName: IPath): boolean;
+function TVideo_MPV.Open(const FileName: IPath; const Media: TBytes = nil): boolean;
 var
   deadline: double;
   filenameUTF8: AnsiString;
@@ -919,6 +925,9 @@ begin
   Close;
   ResetPresentation;
   Result := false;
+  { No in-memory input: TVideoPlayback_MPV.Open hands a snapshot to the fallback. }
+  if Media <> nil then
+    Exit;
   if not AdoptParkedPlayer() then
   begin
     fLibraryLoaded := LoadMpv();
@@ -1085,6 +1094,12 @@ end;
 function TVideo_MPV.GetPosition: real;
 begin
   Result := fPosition;
+end;
+
+function TVideo_MPV.Finished: boolean;
+begin
+  { keep-open holds the last frame at the end; a looping file never ends. }
+  Result := fOpened and fEndReached and not fLoop;
 end;
 
 procedure TVideo_MPV.GetFrame(Time: Extended);

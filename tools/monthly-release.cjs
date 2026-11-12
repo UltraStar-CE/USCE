@@ -24,18 +24,15 @@ function chooseRelease({now, upstream, releases, previousPlan = null}) {
     version = month + '.' + (Math.max(...monthReleases.map(r => Number(r.tag_name.split('.').at(-1)))) + 1);
   }
   const currentUpstream = source && (upstream.tag_name.startsWith('v' + month + '.') || followup);
-  let releaseAfter = null;
   if (currentUpstream) {
     const publishedAt = Date.parse(upstream.published_at);
     if (!Number.isFinite(publishedAt)) throw Error('Missing or invalid USDX publication time');
-    releaseAfter = new Date(publishedAt + 24 * 60 * 60 * 1000).toISOString();
-    if (now.getTime() < Date.parse(releaseAfter)) return null;
+    if (now.getTime() < publishedAt) return null;
   }
   if (!currentUpstream && Number(date.day) < 24) return null;
   return {version, ready: true, trigger: followup ? (Number(source[3]) > 0 ? 'upstream-bugfix' : 'upstream-followup') : currentUpstream ? 'upstream-release' : 'calendar-fallback',
     date: `${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`,
-    upstream: upstream ? {tag: upstream.tag_name, sha: upstream.sha} : null,
-    ...(releaseAfter ? {releaseAfter} : {})};
+    upstream: upstream ? {tag: upstream.tag_name, sha: upstream.sha} : null};
 }
 async function chooseComparisonRelease({version, initial, upstream, resolveTag, followup = false}) {
   if (followup) return upstream;
@@ -99,7 +96,7 @@ async function prepareMonthly({github, context, core, now = new Date()}) {
       ...noteFiles],
     'Prepare USCE ' + plan.version,
     `Proposed USCE release: ${plan.version}. Trigger: ${plan.trigger}.\n\n` +
-    `Release notes separately compare the previous USCE release and USDX ${plan.comparisons.upstream.tag}, each with a comparison graphic. Entries link to USCE PRs or commits.\n\n` +
+    `Release notes separately compare the previous USCE release and USDX ${plan.comparisons.upstream.tag}, each with a comparison graphic. Entries link to USCE PRs or commits and retain relevant upstream references and contributor mentions.\n\n` +
     `Upstream reference: ${plan.upstream?.tag || 'no stable upstream release available'}. The release candidate requires the full upstream release history and a comparison against its release notes.\n\n` +
     `Themes revision: ${plan.themes.sha}. Every platform package includes all themes and their assets from this snapshot.\n\n` +
     'Merging prepares draft packages from the exact merged revision. Release review covers upstream changes, USCE additions, compatibility, release notes and required CI. Packages remain drafts until installation, launch, song and microphone testing are complete and a maintainer publishes the release.');

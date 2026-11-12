@@ -33,11 +33,11 @@ class ReleaseTests(unittest.TestCase):
         with self.assertRaises(ValueError): version_info('2026.10.0', sha, 1, True, '2026.10.0')
         with self.assertRaises(ValueError): version_info('2026.10.0', sha, 1, release='2026.11.0')
 
-    def test_matching_five_packages_and_portable_archive(self):
+    def test_matching_six_packages_and_portable_archive(self):
         with tempfile.TemporaryDirectory() as temp:
             source, dest = Path(temp) / 'source', Path(temp) / 'out'
             source.mkdir()
-            for stem, ext in [('windows-installer','.exe'),('linux','.AppImage'),('mac-ARM','.dmg'),('mac-x86','.dmg')]:
+            for stem, ext in [('windows-installer','.exe'),('linux','.AppImage'),('linux-deb','.deb'),('mac-ARM','.dmg'),('mac-x86','.dmg')]:
                 name = 'USCE-' + stem + '-2026.10.0'
                 folder = source / name
                 folder.mkdir()
@@ -46,8 +46,8 @@ class ReleaseTests(unittest.TestCase):
             portable.mkdir()
             (portable / 'usce.exe').write_bytes(b'game')
             manifest = package(source, dest, '2026.10.0')
-            self.assertEqual(len(manifest), 6)
-            self.assertEqual(len((dest / 'SHA256SUMS').read_text().splitlines()), 6)
+            self.assertEqual(len(manifest), 7)
+            self.assertEqual(len((dest / 'SHA256SUMS').read_text().splitlines()), 7)
             with zipfile.ZipFile(str(dest / 'USCE-windows-portable-2026.10.0.zip')) as archive:
                 self.assertEqual(archive.namelist(), ['usce.exe'])
             os.utime(portable / 'usce.exe', (1700000000, 1700000000))

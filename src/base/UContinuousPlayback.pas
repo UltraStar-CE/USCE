@@ -6,11 +6,11 @@ interface
 
 type
   TPlaybackProfile = record
-    RepeatSelection, ResultTime, HighScoreTime, SongDisplay, SingingDisplay: integer;
+    RepeatSelection, ResultTime, HighScoreTime, SongDisplay, SingingDisplay, PlayerTime: integer;
   end;
   TPlaybackProfiles = array[0..1] of TPlaybackProfile;
   TPlaybackSongs = array of integer;
-  TPlaybackStage = (psStopped, psSong, psResults, psHighScores, psAdvance);
+  TPlaybackStage = (psStopped, psSong, psResults, psHighScores, psAdvance, psPlayers);
   TContinuousDisplay = record
     Lyrics, Progress, Notes, PlayerInfo, Feedback: boolean;
   end;
@@ -28,9 +28,11 @@ type
   public
     Stage: TPlaybackStage;
     Scored, Paused: boolean;
-    ResultSeconds, HighScoreSeconds, Skipped: integer;
+    ResultSeconds, HighScoreSeconds, PlayerSeconds, Skipped: integer;
+    procedure PreparePlayers;
     procedure Start(const Selection: TPlaybackSongs; FirstSong: integer;
       InOrder, RepeatSelection, WithPlayers: boolean);
+    procedure ReplaceUpcoming(const Selection: TPlaybackSongs);
     function NextSong(out Song: integer): boolean;
     function PreviousSong(out Song: integer): boolean;
     procedure RejectCurrentSong;
@@ -88,6 +90,28 @@ begin
       Break;
     end;
   if Length(Songs) > 0 then Stage := psAdvance;
+end;
+
+procedure TContinuousPlayback.ReplaceUpcoming(const Selection: TPlaybackSongs);
+var Current, I, J: integer; Duplicate: boolean;
+begin
+  if not Active or (Position < 0) or (Position > High(Songs)) then Exit;
+  Current := Songs[Position];
+  SetLength(Songs, 1);
+  Songs[0] := Current;
+  for I := 0 to High(Selection) do
+  begin
+    Duplicate := false;
+    for J := 0 to High(Songs) do Duplicate := Duplicate or (Songs[J] = Selection[I]);
+    if not Duplicate then
+    begin
+      SetLength(Songs, Length(Songs) + 1);
+      Songs[High(Songs)] := Selection[I];
+    end;
+  end;
+  Position := 0;
+  SetLength(Rejected, 0);
+  SetLength(Rejected, Length(Songs));
 end;
 
 function TContinuousPlayback.NextSong(out Song: integer): boolean;
@@ -166,11 +190,20 @@ begin
   else Stage := psAdvance;
 end;
 
+procedure TContinuousPlayback.PreparePlayers;
+begin
+  if PlayerSeconds = 0 then Exit;
+  Stage := psPlayers;
+  Paused := false;
+  ClockStarted := false;
+end;
+
 procedure TContinuousPlayback.NextStage;
 begin
   Paused := false;
   ClockStarted := false;
-  if (Stage = psResults) and (HighScoreSeconds <> 0) then Stage := psHighScores
+  if Stage = psPlayers then Stage := psSong
+  else if (Stage = psResults) and (HighScoreSeconds <> 0) then Stage := psHighScores
   else Stage := psAdvance;
 end;
 
@@ -178,13 +211,15 @@ function TContinuousPlayback.Tick(Now: cardinal; Suspended: boolean): boolean;
 var Elapsed: cardinal;
 begin
   Result := false;
-  if not (Stage in [psResults, psHighScores]) then Exit;
+  if not (Stage in [psResults, psHighScores, psPlayers]) then Exit;
   // Negative duration means manual advancement, never an unsigned timeout.
   if ((Stage = psResults) and (ResultSeconds < 0)) or
-     ((Stage = psHighScores) and (HighScoreSeconds < 0)) then Exit;
+     ((Stage = psHighScores) and (HighScoreSeconds < 0)) or
+     ((Stage = psPlayers) and (PlayerSeconds < 0)) then Exit;
   if not ClockStarted then
   begin
-    if Stage = psResults then Remaining := cardinal(ResultSeconds) * 1000
+    if Stage = psPlayers then Remaining := cardinal(PlayerSeconds) * 1000
+    else if Stage = psResults then Remaining := cardinal(ResultSeconds) * 1000
     else Remaining := cardinal(HighScoreSeconds) * 1000;
     LastTick := Now;
     ClockStarted := true;

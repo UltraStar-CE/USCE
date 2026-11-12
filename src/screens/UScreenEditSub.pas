@@ -112,6 +112,7 @@ type
       PlaySentence:            boolean;
       PlayOne:                 boolean;
       PlayOneMidi:             boolean;
+      ManualPreviewNavigation: boolean;
       PlaySentenceMidi:        boolean;
       PlayVideo:               boolean;
       PlayStopTime:            real;
@@ -123,6 +124,8 @@ type
       MidiPos:                 real;
       MidiSyncToAudio:         boolean;
       CuePlaybackActive:       boolean;
+      CueStartLine, CueStopLine, CueNoteIndex: Integer;
+      CueIncludeMidi, CueIncludeClicks: boolean;
       EditorMidiPitchOffset:   Integer;
 
       //for mouse move
@@ -302,6 +305,8 @@ type
       VolumeMidi:              array of UTF8String;
       VolumeClick:             array of UTF8String;
       // control buttons
+      MicrophoneButtonId: Integer;
+      MicrophoneEnabled, OwnsMicrophoneCapture: boolean;
       UndoButtonId:            Integer;
       PreviousSeqButtonID:     Integer;
       NextSeqButtonID:         Integer;
@@ -354,6 +359,7 @@ type
       TimingErrorBeat:         Integer;
       TimingErrorValid:        boolean;
 
+      procedure SetMicrophoneEnabled(Enabled: boolean);
       procedure ChangeBPM(newBPM: real);
       procedure HandleSaveSong(SDL_ModState: word);
       procedure SetPreviewStart(SDL_ModState: word);
@@ -393,6 +399,7 @@ type
       procedure IncreaseVideoGap(SDL_ModState: word);
       procedure SetFreestyleNote(SDL_ModState: word);
       procedure SetGoldenNote(SDL_ModState: word);
+      procedure SetNoteType(NoteType: TNoteType; SDL_ModState: word);
       procedure ShowPopupHelp(SDL_ModState: word);
       procedure ToggleDuet(SDL_ModState: word);
       procedure DivideBPM;
@@ -429,7 +436,7 @@ type
       procedure GoToFirstTimingError;
       function  SaveSongToFile(const SaveRelative: boolean): boolean;
       procedure Refresh;
-      procedure CopyToUndo; //copy current lines, mouse position and headers
+      procedure CopyToUndo(PreservePlayback: boolean = false); //copy current lines, mouse position and headers
       procedure CopyFromUndo; //undo last lines, mouse position and headers
       procedure DrawPlayerTrack(CurrentTone: Integer; Count: Integer; CurrentNote: Integer; DetectedToneAbs: Integer);
       procedure DrawInfoBar(X, Y, W, H: Integer; ColR, ColG, ColB, Alpha: real; Track: Integer);
@@ -452,6 +459,7 @@ type
       procedure ScheduleCuePlayback(StartTime, StopTime: real; StartLine, StopLine: Integer; IncludeMidi, IncludeClicks, SyncToAudio: boolean);
       procedure ScheduleCueNotePlayback(StartTime, StopTime: real; IncludeMidi, IncludeClick, SyncToAudio: boolean);
       procedure PlayScheduledCue;
+      procedure RescheduleCuePlayback(TimingChanged: boolean = false);
       procedure LoadCurrentLyricForTextEdit(CursorPosition: Integer);
       function  GetInteractiveNoteIndex(InteractionIndex: Integer): Integer;
       procedure CancelPendingNoteClick;
@@ -459,6 +467,7 @@ type
       procedure PlayPendingNoteClick;
       procedure SelectNote(NoteIndex: Integer);
       procedure StopMidiPlayback;
+      procedure StopPreviewPlayback;
       procedure UpdateMidiPitchOffset;
       function  GetMidiPitch(NoteTone: Integer): Byte;
 
@@ -469,6 +478,7 @@ type
       constructor Create; override;
       destructor Destroy; override;
       procedure OnShow; override;
+      procedure OnShowFinish; override;
       function  ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       function  ParseInputEditText(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
       function  ParseInputEditBPM(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
@@ -554,7 +564,7 @@ begin
   if (Value) then
   begin
     Display.CheckOK := false;
-    AudioPlayback.Stop;
+    ScreenEditSub.StopPreviewPlayback;
     Display.FadeTo(@ScreenSong);
   end;
 end;
@@ -575,10 +585,8 @@ begin
   SDL_ModState := SDL_GetModState and (KMOD_LSHIFT + KMOD_RSHIFT
     + KMOD_LCTRL + KMOD_RCTRL + KMOD_LALT + KMOD_RALT {+ KMOD_CAPS});
 
-  if PressedDown and
-     not ((((PressedKey = SDLK_LEFT) or (PressedKey = SDLK_RIGHT)) and (SDL_ModState = 0)) or
-          (PressedKey = SDLK_SPACE)) then
-    StopMidiPlayback;
+  // Alt+Tab belongs to the system task switch, not the editor help popup.
+  if (PressedKey = SDLK_TAB) and ((SDL_ModState and KMOD_ALT) <> 0) then Exit;
 
   if PianoEditMode then
   begin
@@ -656,6 +664,8 @@ begin
       SDLK_F4: EnterTextEditMode(SDL_ModState);
       SDLK_F5: EnterBPMEditMode(SDL_ModState);
       SDLK_F6: EnterPianoEditMode(SDL_ModState);
+      SDLK_F7: if (SDL_ModState = 0) and not Repeated then
+        SetMicrophoneEnabled(not MicrophoneEnabled);
       SDLK_SPACE: PlayNote(SDL_ModState);
       SDLK_RETURN: ToggleTextEditMode(SDL_ModState);
       SDLK_DELETE: DeleteNotes(SDL_ModState);
@@ -1058,17 +1068,22 @@ end;
 
 procedure TScreenEditSub.ScheduleCuePlayback(StartTime, StopTime: real; StartLine, StopLine: Integer; IncludeMidi, IncludeClicks, SyncToAudio: boolean);
 begin
-  if not Assigned(MidiOut) then
-    Exit;
-
   MidiTime := USTime.GetTime;
   MidiStart := StartTime;
   MidiStop := StopTime;
   MidiSyncToAudio := SyncToAudio;
+  CueStartLine := StartLine;
+  CueStopLine := StopLine;
+  CueNoteIndex := -1;
+  CueIncludeMidi := IncludeMidi;
+  CueIncludeClicks := IncludeClicks;
 
-  MidiOut.Stop;
-  MidiOut.SetPosition(StartTime);
-  MidiOut.SetVolume(1.0);
+  if Assigned(MidiOut) then
+  begin
+    MidiOut.Stop;
+    MidiOut.SetPosition(StartTime);
+    MidiOut.SetVolume(1.0);
+  end;
   ScheduleCueRange(StartLine, StopLine, StartTime, StopTime, IncludeMidi, IncludeClicks);
 end;
 
@@ -1078,17 +1093,94 @@ begin
     CurrentSong.Tracks[CurrentTrack].CurrentLine,
     CurrentSong.Tracks[CurrentTrack].CurrentLine,
     false, false, SyncToAudio);
+  CueNoteIndex := CurrentNote[CurrentTrack];
+  CueIncludeMidi := IncludeMidi;
+  CueIncludeClicks := IncludeClick;
   ScheduleCueNote(CurrentSong.Tracks[CurrentTrack].CurrentLine, CurrentNote[CurrentTrack],
     StartTime, StopTime, IncludeMidi, IncludeClick);
 end;
 
 procedure TScreenEditSub.PlayScheduledCue;
 begin
+  if (CueIncludeMidi or CueIncludeClicks) and Assigned(MidiOut) then
+    MidiOut.Play;
+  CuePlaybackActive := true;
+end;
+
+procedure TScreenEditSub.RescheduleCuePlayback(TimingChanged: boolean);
+var
+  Position: real;
+  OldLine, LineIndex, NoteIndex: integer;
+begin
+  if not CuePlaybackActive then
+    Exit;
+
+  if (CueStartLine < 0) or (CueStopLine < CueStartLine) or
+     (CueStopLine > CurrentSong.Tracks[CurrentTrack].High) or
+     ((CueNoteIndex >= 0) and
+      (CueNoteIndex > CurrentSong.Tracks[CurrentTrack].Lines[CueStartLine].HighNote)) then
+  begin
+    StopPreviewPlayback;
+    Exit;
+  end;
+
+  // Keep the music clock running and retime the remaining part of the same
+  // preview from its saved song scope after GAP, BPM or volume changes.
+  Position := GetPreviewPosition;
+  if CueNoteIndex >= 0 then
+    MidiStop := GetTimeFromBeat(
+      CurrentSong.Tracks[CurrentTrack].Lines[CueStartLine].Notes[CueNoteIndex].EndBeat)
+  else
+    MidiStop := GetTimeFromBeat(CurrentSong.Tracks[CurrentTrack].Lines[CueStopLine].EndBeat);
+  if MidiSyncToAudio then
+    PlayStopTime := MidiStop;
+
+  if TimingChanged then
+  begin
+    CurrentBeat := Floor(GetMidBeat(Position - CurrentSong.GAP / 1000));
+    LineIndex := CueStartLine;
+    while (LineIndex < CueStopLine) and
+          (CurrentSong.Tracks[CurrentTrack].Lines[LineIndex].EndBeat < CurrentBeat) do
+      Inc(LineIndex);
+    NoteIndex := Max(0, CueNoteIndex);
+    if CueNoteIndex < 0 then
+      while (NoteIndex < CurrentSong.Tracks[CurrentTrack].Lines[LineIndex].HighNote) and
+            (CurrentSong.Tracks[CurrentTrack].Lines[LineIndex].Notes[NoteIndex + 1].StartBeat < CurrentBeat) do
+        Inc(NoteIndex);
+    OldLine := CurrentSong.Tracks[CurrentTrack].CurrentLine;
+    CurrentSong.Tracks[CurrentTrack].Lines[OldLine].Notes[CurrentNote[CurrentTrack]].Color := 1;
+    CurrentSong.Tracks[CurrentTrack].CurrentLine := LineIndex;
+    CurrentNote[CurrentTrack] := NoteIndex;
+    CurrentSong.Tracks[CurrentTrack].Lines[LineIndex].Notes[NoteIndex].Color := P1_INVERTED;
+    if OldLine <> LineIndex then
+    begin
+      EditorLyrics[CurrentTrack].AddLine(CurrentTrack, LineIndex);
+      ShowInteractiveBackground;
+      GoldenRec.KillAll;
+    end;
+    EditorLyrics[CurrentTrack].Selected := NoteIndex;
+  end;
+
+  if Position >= MidiStop then
+  begin
+    StopPreviewPlayback;
+    Exit;
+  end;
+
   if Assigned(MidiOut) then
   begin
-    MidiOut.Play;
-    CuePlaybackActive := true;
+    MidiOut.Stop;
+    MidiOut.SetPosition(Position); // clears queued events and sounding notes
   end;
+  MidiStart := Position;
+  MidiTime := USTime.GetTime;
+  if CueNoteIndex >= 0 then
+    ScheduleCueNote(CueStartLine, CueNoteIndex, Position, MidiStop,
+      CueIncludeMidi, CueIncludeClicks)
+  else
+    ScheduleCueRange(CueStartLine, CueStopLine, Position, MidiStop,
+      CueIncludeMidi, CueIncludeClicks);
+  PlayScheduledCue;
 end;
 
 procedure TScreenEditSub.UpdateMidiPitchOffset;
@@ -1151,6 +1243,17 @@ begin
   end;
 end;
 
+procedure TScreenEditSub.StopPreviewPlayback;
+begin
+  ManualPreviewNavigation := false;
+  AudioPlayback.Stop;
+  StopMidiPlayback;
+  PlaySentence := false;
+  PlayOne := false;
+  PlayVideo := false;
+  StopVideoPreview;
+end;
+
 procedure TScreenEditSub.ReloadSong(SDL_ModState: word);
 //reload
 begin
@@ -1168,7 +1271,7 @@ begin
   // Divide lengths by 2
   if (SDL_ModState = KMOD_LSHIFT) then
   begin
-    CopyToUndo;
+    CopyToUndo(true);
     DivideBPM;
     ShowInteractiveBackground;
     Text[TextInfo].Text := Language.Translate('EDIT_INFO_DIVIDED_BPM');
@@ -1181,6 +1284,7 @@ begin
   // create duet or convert duet to normal song
   if (SDL_ModState = KMOD_LCTRL or KMOD_LSHIFT) then
   begin
+    StopPreviewPlayback;
     if (CurrentSong.isDuet) then
     begin
       MakeSolo;
@@ -1201,7 +1305,7 @@ begin
   // Multiply lengths by 2
   if (SDL_ModState = KMOD_LSHIFT) then
   begin
-    CopyToUndo;
+    CopyToUndo(true);
     MultiplyBPM;
     ShowInteractiveBackground;
     Text[TextInfo].Text := Language.Translate('EDIT_INFO_MULTIPLIED_BPM');
@@ -1245,6 +1349,7 @@ procedure TScreenEditSub.HandleVideo(SDL_ModState: word);
 begin
   if (SDL_ModState = 0) or (SDL_ModState = KMOD_LALT) then // play current line/remainder of song with video
   begin
+    StopPreviewPlayback;
     Statics[BackgroundImageId].Visible := false;
     StopVideoPreview;
     AudioPlayback.Stop;
@@ -1331,6 +1436,12 @@ var
   R: real;
   IncludeSynth, IncludeAudio: boolean;
 begin
+  case SDL_ModState of
+    0, KMOD_LSHIFT, KMOD_LSHIFT or KMOD_LCTRL, KMOD_LALT,
+    KMOD_LSHIFT or KMOD_LALT, KMOD_LSHIFT or KMOD_LCTRL or KMOD_LALT: ;
+    else Exit;
+  end;
+  StopPreviewPlayback;
   if SDL_ModState = 0 then
   begin
     // Play Sentence
@@ -1434,54 +1545,51 @@ end;
 
       // SDLK_G: SetGoldenNote;
 procedure TScreenEditSub.SetGoldenNote(SDL_ModState: word);
-// Golden Note
+// Golden Note: normal -> golden -> rap golden -> normal
 begin
-  CopyToUndo;
-  if (CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType = ntGolden) then
-  begin
-    CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType := ntRapGolden;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTE_SET_TO_RAPGOLDEN');
-  end
-  else if (CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType = ntRapGolden) then
-  begin
-    CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType := ntNormal;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTE_SET_TO_NORMAL');
-  end
-  else
-  begin
-    CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType := ntGolden;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTE_SET_TO_GOLDEN');
+  case CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType of
+    ntGolden:    SetNoteType(ntRapGolden, SDL_ModState);
+    ntRapGolden: SetNoteType(ntNormal, SDL_ModState);
+    else         SetNoteType(ntGolden, SDL_ModState);
   end;
-  GoldenRec.KillAll;
-  Exit;
 end;
 
       // SDLK_F: SetFreestyleNote;
 procedure TScreenEditSub.SetFreestyleNote(SDL_ModState: word);
-// Freestyle Note
+// Freestyle Note: normal -> freestyle -> rap -> normal
+begin
+  case CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType of
+    ntFreestyle: SetNoteType(ntRap, SDL_ModState);
+    ntRap:       SetNoteType(ntNormal, SDL_ModState);
+    else         SetNoteType(ntFreestyle, SDL_ModState);
+  end;
+end;
+
+// sets the current note to NoteType, or with Shift every note of the current line
+procedure TScreenEditSub.SetNoteType(NoteType: TNoteType; SDL_ModState: word);
+const
+  Names: array[TNoteType] of string = ('FREESTYLE', 'NORMAL', 'GOLDEN', 'RAP', 'RAPGOLDEN');
+var
+  N: integer;
 begin
   CopyToUndo;
-  if (CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType = ntFreestyle) then
-  begin
-    CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType := ntRap;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTE_SET_TO_RAP');
-  end
-  else if (CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType = ntRap) then
-  begin
-    CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType := ntNormal;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTE_SET_TO_NORMAL');
-  end
-  else
-  begin
-    CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].NoteType := ntFreestyle;
-    Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTE_SET_TO_FREESTYLE');
-  end;
+  with CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine] do
+    if (SDL_ModState and (KMOD_LSHIFT or KMOD_RSHIFT)) <> 0 then
+    begin
+      for N := 0 to HighNote do
+        Notes[N].NoteType := NoteType;
+      Text[TextInfo].Text := Language.Translate('EDIT_INFO_LINE_SET_TO_' + Names[NoteType]);
+    end
+    else
+    begin
+      Notes[CurrentNote[CurrentTrack]].NoteType := NoteType;
+      Text[TextInfo].Text := Language.Translate('EDIT_INFO_NOTE_SET_TO_' + Names[NoteType]);
+    end;
   GoldenRec.KillAll;
 
   // update lyrics
   EditorLyrics[CurrentTrack].AddLine(CurrentTrack, CurrentSong.Tracks[CurrentTrack].CurrentLine);
   EditorLyrics[CurrentTrack].Selected := CurrentNote[CurrentTrack];
-  Exit;
 end;
 
       // SDLK_Z: Undo;
@@ -1503,7 +1611,10 @@ begin
   if length(UndoLines) > 0 then
     ScreenPopupcheck.ShowPopup(Language.Translate('EDIT_INFO_EXIT'), OnExit, nil, false)
   else
+  begin
+    StopPreviewPlayback;
     FadeTo(@ScreenSong);
+  end;
 end;
 
       // SDLK_TAB: ShowPopupHelp;
@@ -1532,7 +1643,7 @@ end;
 procedure TScreenEditSub.HandleBPMIncrease(SDL_ModState: word);
 begin
   // Increase BPM
-  CopyToUndo;
+  CopyToUndo(true);
   if SDL_ModState = 0 then
   begin
     CurrentSong.BPM := Round((CurrentSong.BPM * 5) + 1) / 5; // (1/20)
@@ -1548,13 +1659,14 @@ begin
     CurrentSong.BPM := Round((CurrentSong.BPM * 25) + 1) / 25; // (1/100)
     Text[TextInfo].Text := Language.Translate('EDIT_INFO_BPM_INCREASED_BY') + ' 0.01';
   end;
+  RescheduleCuePlayback(true);
 end;
 
       // SDLK_MINUS: HandleBPMDecrease;
 procedure TScreenEditSub.HandleBPMDecrease(SDL_ModState: word);
 begin
   // Decrease BPM
-  CopyToUndo;
+  CopyToUndo(true);
   if SDL_ModState = 0 then
   begin
     CurrentSong.BPM := Round((CurrentSong.BPM * 5) - 1) / 5;
@@ -1573,6 +1685,7 @@ begin
 
   if CurrentSong.BPM < MIN_BPM then
     CurrentSong.BPM := MIN_BPM;
+  RescheduleCuePlayback(true);
 end;
 
       // SDLK_2, SDLK_3, SDLK_4, SDLK_5, SDLK_6: HandleExtendedCopyPaste;
@@ -1683,15 +1796,17 @@ end;
 procedure TScreenEditSub.DecreaseGAP(SDL_ModState: word);
 begin
   // Decrease GAP
-  CopyToUndo;
+  CopyToUndo(true);
   if SDL_ModState = 0 then
   begin
     CurrentSong.GAP := CurrentSong.GAP - 10;
+    RescheduleCuePlayback(true);
     Text[TextInfo].Text := Language.Translate('EDIT_INFO_GAP_DECREASED_BY') + ' 10 ms';
   end;
   if SDL_ModState = KMOD_LSHIFT then
   begin
     CurrentSong.GAP := CurrentSong.GAP - 1000;
+    RescheduleCuePlayback(true);
     Text[TextInfo].Text := Language.Translate('EDIT_INFO_GAP_DECREASED_BY') + ' 1000 ms';
   end;
 end;
@@ -1700,15 +1815,17 @@ end;
 procedure TScreenEditSub.IncreaseGAP(SDL_ModState: word);
 begin
   // Increase GAP
-  CopyToUndo;
+  CopyToUndo(true);
   if SDL_ModState = 0 then
   begin
     CurrentSong.GAP := CurrentSong.GAP + 10;
+    RescheduleCuePlayback(true);
     Text[TextInfo].Text := Language.Translate('EDIT_INFO_GAP_INCREASED_BY') + ' 10 ms';
   end;
   if SDL_ModState = KMOD_LSHIFT then
   begin
     CurrentSong.GAP := CurrentSong.GAP + 1000;
+    RescheduleCuePlayback(true);
     Text[TextInfo].Text := Language.Translate('EDIT_INFO_GAP_INCREASED_BY') + ' 1000 ms';
   end;
 end;
@@ -1793,6 +1910,7 @@ end;
       // SDLK_F4: EnterTextEditMode
 procedure TScreenEditSub.EnterTextEditMode(SDL_ModState: word);
 begin
+  StopPreviewPlayback;
   // Enter Text Edit Mode
   LoadCurrentLyricForTextEdit(-1);
   TextEditMode := true;
@@ -1816,6 +1934,7 @@ end;
 procedure TScreenEditSub.EnterPianoEditMode(SDL_ModState: word);
 begin
   // Enter Piano Edit Mode
+  StopPreviewPlayback;
   PianoEditMode := true;
 end;
 
@@ -1825,19 +1944,15 @@ var
   IncludeAudio, IncludeMidi: boolean;
   NoteStart, NoteStop: real;
 begin
+  // Either Shift key previews the tone; Ctrl adds the song audio.
+  if (SDL_ModState and KMOD_ALT) <> 0 then Exit;
+  IncludeMidi := (SDL_ModState and KMOD_SHIFT) <> 0;
   IncludeAudio := (SDL_ModState = 0) or
-      (SDL_ModState = (KMOD_LSHIFT or KMOD_LCTRL));
-  IncludeMidi := (SDL_ModState = KMOD_LSHIFT) or
-      (SDL_ModState = (KMOD_LSHIFT or KMOD_LCTRL));
+      (IncludeMidi and ((SDL_ModState and KMOD_CTRL) <> 0));
   if not (IncludeAudio or IncludeMidi) then
     Exit;
 
-  StopMidiPlayback;
-  AudioPlayback.Stop;
-  StopVideoPreview;
-  PlaySentence := false;
-  PlaySentenceMidi := false;
-  PlayVideo := false;
+  StopPreviewPlayback;
   // Only audio-backed previews may be stopped by the audio clock in Draw.
   PlayOne := IncludeAudio;
   PlayOneMidi := IncludeMidi and Assigned(MidiOut);
@@ -1856,12 +1971,10 @@ begin
     Text[TextInfo].Text := Language.Translate('EDIT_INFO_PLAY_NOTE_AUDIO');
   end;
 
+  ScheduleCueNotePlayback(NoteStart, NoteStop, IncludeMidi, false, IncludeAudio);
+  PlayScheduledCue;
   if PlayOneMidi then
-  begin
-    ScheduleCueNotePlayback(NoteStart, NoteStop, true, false, IncludeAudio);
-    PlayScheduledCue;
     Text[TextInfo].Text := Language.Translate('EDIT_INFO_PLAY_NOTE_MIDI');
-  end;
 end;
 
 procedure TScreenEditSub.LoadCurrentLyricForTextEdit(CursorPosition: Integer);
@@ -2079,6 +2192,7 @@ begin
 
     if Interaction = LyricSlideId then
     begin
+      StopPreviewPlayback;
       BackupEditText := CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Text;
       CurrentEditText := BackupEditText;
       editLengthText := LengthUTF8(BackupEditText);
@@ -2150,6 +2264,7 @@ begin
 
     if (Interactions[Interaction].Typ = iButton) and (Interactions[Interaction].Num = PlayOnlyButtonID) then
     begin
+      StopPreviewPlayback;
       // Play Sentence
       AudioPlayback.Stop;
       PlayVideo := false;
@@ -2174,6 +2289,7 @@ begin
 
     if (Interactions[Interaction].Typ = iButton) and (Interactions[Interaction].Num = PlayWithNoteButtonID) then
     begin
+      StopPreviewPlayback;
       CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Color := 1;
       CurrentNote[CurrentTrack] := 0;
       PlaySentenceMidi := true;
@@ -2196,6 +2312,7 @@ begin
 
     if (Interactions[Interaction].Typ = iButton) and (Interactions[Interaction].Num = PlayNoteButtonID) then
     begin
+      StopPreviewPlayback;
       CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Color := 1;
       CurrentNote[CurrentTrack] := 0;
       PlaySentenceMidi := true;
@@ -2216,7 +2333,8 @@ begin
     begin
       if Interaction = InteractiveLineId[LineIndex] then
       begin
-        CopyToUndo;
+        if LineIndex <> CurrentSong.Tracks[CurrentTrack].CurrentLine then
+          StopPreviewPlayback;
         GoldenRec.KillAll;
         CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Color := 1;
         CurrentSong.Tracks[CurrentTrack].CurrentLine := LineIndex;
@@ -2249,6 +2367,7 @@ begin
         CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Color := P1_INVERTED;
         EditorLyrics[CurrentTrack].Selected := CurrentNote[CurrentTrack];
         //play current note
+        StopPreviewPlayback;
         PlaySentenceMidi := false;
         PlayOne := true;
         // TODO: temporary fix: don't force-play Midi when clicking a note
@@ -2309,13 +2428,9 @@ begin
   // right
   if SDL_ModState = 0 then
   begin
+    ManualPreviewNavigation := true;
     // clear debug text
     Text[TextInfo].Text := '';
-    AudioPlayback.Stop;
-    PlaySentence := false;
-    PlayOne := false;
-    PlaySentenceMidi := false;
-    PlayVideo := false;
     CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Color := 1;
     Inc(CurrentNote[CurrentTrack]);
     if CurrentNote[CurrentTrack] > CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].HighNote then
@@ -2386,13 +2501,9 @@ begin
   // left
   if SDL_ModState = 0 then
   begin
+    ManualPreviewNavigation := true;
     // clear debug text
     Text[TextInfo].Text := '';
-    AudioPlayback.Stop();
-    PlaySentence := false;
-    PlayOne := false;
-    PlaySentenceMidi := false;
-    PlayVideo := false;
 
     CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Color := 1;
     Dec(CurrentNote[CurrentTrack]);
@@ -2578,6 +2689,7 @@ begin
 
       if TextEditMode then
         begin
+        StopPreviewPlayback;
         CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Text := CurrentEditText;
         EditorLyrics[CurrentTrack].AddLine(CurrentTrack, CurrentSong.Tracks[CurrentTrack].CurrentLine);
         EditorLyrics[CurrentTrack].Selected := CurrentNote[CurrentTrack];
@@ -2775,6 +2887,7 @@ begin
             dec(editLengthText);
             if TextEditMode then
             begin
+              StopPreviewPlayback;
               CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Text := UTF8Copy(CurrentEditText, 1, TextPosition) + UTF8Copy(CurrentEditText, TextPosition+1, LengthUTF8(CurrentEditText)-TextPosition);
               EditorLyrics[CurrentTrack].AddLine(CurrentTrack, CurrentSong.Tracks[CurrentTrack].CurrentLine);
               EditorLyrics[CurrentTrack].Selected := CurrentNote[CurrentTrack];
@@ -2789,6 +2902,7 @@ begin
             dec(editLengthText);
             if TextEditMode then
             begin
+              StopPreviewPlayback;
               CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Text := UTF8Copy(CurrentEditText, 1, TextPosition) + UTF8Copy(CurrentEditText, TextPosition+1, LengthUTF8(CurrentEditText)-TextPosition);
               EditorLyrics[CurrentTrack].AddLine(CurrentTrack, CurrentSong.Tracks[CurrentTrack].CurrentLine);
               EditorLyrics[CurrentTrack].Selected := CurrentNote[CurrentTrack];
@@ -2913,13 +3027,13 @@ begin
       SDLK_F5, SDLK_RETURN:
         begin
           // Exit BPM Edit Mode
-          //CopyToUndo;
           if (TryStrToFloat(UTF8Copy(CurrentEditText, 1, TextPosition) + UTF8Copy(CurrentEditText, TextPosition+1, LengthUTF8(CurrentEditText)-TextPosition), qBPM)) then
           begin
             NewBPM := qBPM * 4;
             if NewBPM < MIN_BPM then
               NewBPM := MIN_BPM;
 
+            CopyToUndo(true);
             BPMVal[0] := FloatToStr(NewBPM / 4);
             ChangeBPM(NewBPM);
             SelectsS[CurrentSlideId].TextOpt[0].Text := BPMVal[0];
@@ -2996,7 +3110,7 @@ begin
     (CurrentNote[CurrentTrack] >= Length(CurrentSong.Tracks[CurrentTrack].Lines[
       CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes)) then Exit;
 
-  StopMidiPlayback;
+  StopPreviewPlayback;
 
   CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Tone := NewTone;
 
@@ -3039,6 +3153,7 @@ var I, OldCount: integer;
 begin
   Count := EnsureRange(Count, 1, SupportedSongVoices);
   if Count = EditorVoiceCount then Exit;
+  StopPreviewPlayback;
   OldCount := Length(CurrentSong.Tracks);
   if Count > OldCount then
   begin
@@ -3181,6 +3296,7 @@ var
   Action: TMouseClickAction;
   TempR:  real;
   PrevAudioIndex: Integer;
+  PrevMidiIndex: Integer;
   PrevClickIndex: Integer;
   CursorWordIndex: Integer;
   CursorCharIndex: Integer;
@@ -3201,13 +3317,11 @@ begin
   CurrentY := Y;
 
   PrevAudioIndex := VolumeAudioIndex;
+  PrevMidiIndex := VolumeMidiIndex;
   PrevClickIndex := VolumeClickIndex;
 
   Result := true;
   Action := maNone;
-
-  if BtnDown and ((MouseButton = SDL_BUTTON_LEFT) or (MouseButton = SDL_BUTTON_RIGHT)) then
-    StopMidiPlayback;
 
   if BtnDown and (MouseButton = SDL_BUTTON_LEFT) then
   begin
@@ -3217,6 +3331,7 @@ begin
       CursorWordIndex, CursorCharIndex) then
     begin
       CancelPendingNoteClick;
+      StopPreviewPlayback;
       CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Color := 1;
       CurrentNote[CurrentTrack] := CursorWordIndex;
       CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Color := P1_INVERTED;
@@ -3258,6 +3373,11 @@ begin
   if BtnDown and (MouseButton = SDL_BUTTON_LEFT) and
      (nBut >= 0) and (Interactions[nBut].Typ = iButton) and (NoteIndex < 0) then
   begin
+    if Interactions[nBut].Num = MicrophoneButtonId then
+    begin
+      SetMicrophoneEnabled(not MicrophoneEnabled);
+      Exit;
+    end;
     if Interactions[nBut].Num = UndoButtonId then
     begin
       CopyFromUndo;
@@ -3327,6 +3447,7 @@ begin
   begin
     if ((MouseButton = SDL_BUTTON_RIGHT) or (MouseButton = SDL_BUTTON_LEFT)) and (NoteIndex >= 0) then
     begin
+      StopPreviewPlayback;
       LastPressedMouseType := MouseButton;
       LastX := CurrentX;
       LastY := CurrentY;
@@ -3623,6 +3744,9 @@ begin
 
   if (VolumeClickSlideId = Interactions[nBut].Num) and (VolumeClickIndex <> PrevClickIndex) then
     SetSfxVolumePercent(EnsureRange(VolumeClickIndex, 0, 100));
+
+  if (VolumeMidiIndex <> PrevMidiIndex) or (VolumeClickIndex <> PrevClickIndex) then
+    RescheduleCuePlayback;
   end
   else if BtnDown and (MouseButton = SDL_BUTTON_RIGHT) then
   begin
@@ -3632,6 +3756,7 @@ begin
     end
     else
     begin
+      StopPreviewPlayback;
       FadeTo(@ScreenSong);
     end;
   end;
@@ -3698,6 +3823,7 @@ begin
         CurrentSong.Tracks[TrackIndex].Lines[LineIndex].EndBeat := round(CurrentSong.Tracks[TrackIndex].Lines[LineIndex].EndBeat * factor)
     end; // LineIndex
   end; // TrackIndex
+  RescheduleCuePlayback(true);
 end;
 
 procedure TScreenEditSub.DivideBPM;
@@ -4051,6 +4177,7 @@ end;
 
 procedure TScreenEditSub.NextSentence;
 begin
+  if CurrentSong.Tracks[CurrentTrack].High <= 0 then Exit;
   PlayOne := false;
   CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Color := 1;
   Inc(CurrentSong.Tracks[CurrentTrack].CurrentLine);
@@ -4062,20 +4189,14 @@ begin
 
   EditorLyrics[CurrentTrack].AddLine(CurrentTrack, CurrentSong.Tracks[CurrentTrack].CurrentLine);
   EditorLyrics[CurrentTrack].Selected := 0;
-  AudioPlayback.Stop();
-  PlaySentence := false;
-  PlaySentenceMidi := false;
-  PlayVideo := false;
+  StopPreviewPlayback;
   GoldenRec.KillAll;
 end;
 
 procedure TScreenEditSub.PreviousSentence;
 begin
-  AudioPlayback.Stop();
-  PlayVideo := false;
-  PlaySentence := false;
-  PlaySentenceMidi := false;
-  PlayOne := false;
+  if CurrentSong.Tracks[CurrentTrack].High <= 0 then Exit;
+  StopPreviewPlayback;
 
   CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Color := 1;
   Dec(CurrentSong.Tracks[CurrentTrack].CurrentLine);
@@ -4792,12 +4913,14 @@ begin
     DeleteSentence;
 end;
 
-procedure TScreenEditSub.CopyToUndo;
+procedure TScreenEditSub.CopyToUndo(PreservePlayback: boolean);
 var
   TrackIndex: Integer;
   LineIndex:  Integer;
   NoteIndex:  Integer;
 begin
+  if not PreservePlayback then
+    StopPreviewPlayback;
   SetLength(UndoLines, Length(UndoLines)+1, Length(CurrentSong.Tracks));
   CurrentUndoLines := high(UndoLines);
   SetLength(UndoStateNote, CurrentUndoLines+1, Length(CurrentSong.Tracks));
@@ -4955,6 +5078,7 @@ begin
 
 if CurrentUndoLines >= 0 then
 begin
+  StopPreviewPlayback;
   CurrentSong.Title        := Undoheader[CurrentUndoLines].Title;
   CurrentSong.Artist       := Undoheader[CurrentUndoLines].Artist;
   CurrentSong.Language     := Undoheader[CurrentUndoLines].Language;
@@ -5683,15 +5807,7 @@ begin
   if CurrentSong.Tracks[TrackIndex].Lines[LineIndex].HighNote < 0 then
     Exit;
 
-  AudioPlayback.Stop;
-  PlaySentence := false;
-  PlaySentenceMidi := false;
-  PlayOne := false;
-  PlayVideo := false;
-  StopVideoPreview;
-  {$IFDEF UseMIDIPort}
-  StopMidiPlayback;
-  {$ENDIF}
+  StopPreviewPlayback;
 
   CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[CurrentNote[CurrentTrack]].Color := 1;
   CurrentTrack := TrackIndex;
@@ -5972,6 +6088,12 @@ begin
   PlayOnlyButtonID     := AddButton(Theme.EditSub.PlayOnly);
   PlayWithNoteButtonID := AddButton(Theme.EditSub.PlayWithNote);
   PlayNoteButtonID     := AddButton(Theme.EditSub.PlayNote);
+  MicrophoneButtonId := AddButton(Theme.EditSub.Microphone);
+  if Length(Button[MicrophoneButtonId].Text) = 0 then
+    AddButtonText(4, 0, Theme.EditSub.TextInfo.ColR, Theme.EditSub.TextInfo.ColG,
+      Theme.EditSub.TextInfo.ColB, Theme.EditSub.TextInfo.Font,
+      Theme.EditSub.TextInfo.Style, 14, 0, '');
+  SetMicrophoneEnabled(false);
 
   // current line
   TextSentence := AddButton(Theme.EditSub.ButtonCurrentLine);
@@ -6023,7 +6145,7 @@ procedure TScreenEditSub.OnShow;
 const
   SUPPORTED_EXTS_AUDIO: array[0..4]  of string = ('.mp3', '.flac', '.wav', '.ogg', '.m4a');
   SUPPORTED_EXTS_IMAGE: array[0..1]  of string = ('.jpg', '.png');
-  SUPPORTED_EXTS_VIDEO: array[0..11] of string = ('.avi', '.mov', '.divx', '.mkv', '.mpeg', '.mpg', '.mp4', '.mpeg', '.m2v', '.ts', '.webm', '.wmv');
+  SUPPORTED_EXTS_VIDEO: array[0..12] of string = ('.avi', '.mov', '.divx', '.mkv', '.mpeg', '.mpg', '.mp4', '.mpeg', '.m2v', '.ts', '.webm', '.wmv', '.gif');
 var
   Files:       TPathDynArray;
   FileIndex:   Integer;
@@ -6038,6 +6160,7 @@ var
   end;
 begin
   inherited;
+  SoundLib.PauseBgMusic;
   // reset video playback engine
   CurrentTrack := 0;
   fCurrentVideo := nil;
@@ -6046,6 +6169,7 @@ begin
   PlayOne := false;
   PlaySentenceMidi := false;
   PlayOneMidi := false;
+  ManualPreviewNavigation := false;
   MidiSyncToAudio := false;
   CuePlaybackActive := false;
   Text[TextInfo].Text := '';
@@ -6450,8 +6574,8 @@ begin
     CancelPendingNoteClick;
     //show transparent background for notes
     ShowInteractiveBackground;
-    // user input tracking
-    AudioInput.CaptureStart;
+    // Opening an editor must not acquire the microphone implicitly.
+    SetMicrophoneEnabled(false);
   end;
 
   // background picture
@@ -6491,6 +6615,14 @@ begin
   TextPosition := -1;
 end;
 
+procedure TScreenEditSub.OnShowFinish;
+begin
+  inherited;
+  // The outgoing song screen resets the shared playback volume in OnHide,
+  // after this editor's OnShow opened its audio. Reapply the editor's setting.
+  AudioPlayback.SetVolume(EnsureRange(Ini.AudioVolume, 0, 100) / 100);
+end;
+
 procedure TScreenEditSub.SyncVolumeSlidersFromIni;
 var
   NewAudio: Integer;
@@ -6510,6 +6642,7 @@ begin
   begin
     VolumeClickIndex := NewClick;
     SelectsS[VolumeClickSlideId].SelectedOption := VolumeClickIndex;
+    RescheduleCuePlayback;
   end;
 end;
 
@@ -6538,14 +6671,17 @@ begin
     Text[TextInfo].Text := Language.Translate('EDIT_INFO_CURRENT_BEAT') + ' ' + IntToStr(CurrentBeat);
   end; // if PlaySentenceMidi
 
-  // move "cursor"
-  if (PlaySentence or PlaySentenceMidi or PlayVideo) and not (PlayOne) then //and Not (PlayNote) then
+  // Keep the playback clock moving even while browsing elsewhere.
+  if (PlaySentence or PlayVideo) then
   begin
-    if (PlaySentence or PlayVideo) then
-    begin
-      CurrentBeat := Floor(GetMidBeat(AudioPlayback.Position - (CurrentSong.GAP) / 1000));
-      Text[TextInfo].Text := Language.Translate('EDIT_INFO_CURRENT_BEAT') + ' ' + IntToStr(CurrentBeat);
-    end;
+    CurrentBeat := Floor(GetMidBeat(AudioPlayback.Position - (CurrentSong.GAP) / 1000));
+    Text[TextInfo].Text := Language.Translate('EDIT_INFO_CURRENT_BEAT') + ' ' + IntToStr(CurrentBeat);
+  end;
+
+  // Follow playback until the user navigates to another note or line.
+  if not ManualPreviewNavigation and
+     (PlaySentence or PlaySentenceMidi or PlayVideo) and not PlayOne then
+  begin
 
     // store current line, find next line to given beat
     LastLine := CurrentSong.Tracks[CurrentTrack].CurrentLine;
@@ -6768,7 +6904,7 @@ begin
 
   CurrentSound := AudioInputProcessor.Sound[0];
   CurrentSound.AnalyzeBuffer;
-  if (CurrentSound.ToneString <> '-') and
+  if MicrophoneEnabled and (CurrentSound.ToneString <> '-') and
      CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].HasLength() then
   begin
     Count := trunc((720 / (GetTimeFromBeat(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].EndBeat) - GetTimeFromBeat(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[0].StartBeat)))*(AudioPlayback.Position - GetTimeFromBeat(CurrentSong.Tracks[CurrentTrack].Lines[CurrentSong.Tracks[CurrentTrack].CurrentLine].Notes[0].StartBeat)));
@@ -6808,15 +6944,36 @@ begin
   Result := true;
 end;
 
+procedure TScreenEditSub.SetMicrophoneEnabled(Enabled: boolean);
+begin
+  if Enabled and not MicrophoneEnabled then
+  begin
+    OwnsMicrophoneCapture := not AudioInput.IsCapturing;
+    if OwnsMicrophoneCapture then
+      AudioInput.CaptureStart;
+  end
+  else if not Enabled and OwnsMicrophoneCapture then
+  begin
+    AudioInput.CaptureStop;
+    OwnsMicrophoneCapture := false;
+  end;
+  MicrophoneEnabled := Enabled;
+  if Enabled then
+    Button[MicrophoneButtonId].Text[0].Text := Language.Translate('EDIT_MICROPHONE_ON')
+  else
+    Button[MicrophoneButtonId].Text[0].Text := Language.Translate('EDIT_MICROPHONE_OFF');
+end;
+
 procedure TScreenEditSub.OnHide;
 begin
+  inherited;
   CancelPendingNoteClick;
   PressedNoteId := -1;
   StopMidiPlayback;
   FreeAndNil(MidiOut);
 
   //Music.SetVolume(1.0);
-  AudioInput.CaptureStop;
+  SetMicrophoneEnabled(false);
 end;
 
 function TScreenEditSub.GetNoteName(Note: Integer): string;

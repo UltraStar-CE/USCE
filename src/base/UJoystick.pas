@@ -279,6 +279,7 @@ type
 
 var
   Joy:        TJoy;
+  ControllerKeyInput: boolean = false;
 
 procedure InitializeJoystick;
 procedure FinalizeJoyStick;
@@ -393,6 +394,7 @@ function MouseRepeatHandlerFunc(Data: Pointer): integer; cdecl;
 var
   JoyC: TJoyController;
 begin
+  try
   JoyC := TJoyController(Data);
   while (JoyC <> nil) and (JoyC.MouseRepeatThreadFlag) do
   begin
@@ -401,6 +403,10 @@ begin
   end;
 
   Result := 0;
+  except
+    LogWorkerException('MouseRepeatHandlerFunc');
+    raise;
+  end;
 end;
 
 constructor TJoy.Create;

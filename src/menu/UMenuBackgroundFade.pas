@@ -107,6 +107,7 @@ procedure   TMenuBackgroundFade.Draw;
 var
   Progress: real;
 begin
+  if SuppressDrawing then Exit;
   if FadeTime = 0 then
     Progress := Alpha
   else

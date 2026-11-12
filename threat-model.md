@@ -36,3 +36,23 @@ implementations cannot contain bugs.
 Keep repository and build automation in its own scope, as described in
 [`AUTOMATION.md`](AUTOMATION.md). Revisit these operating assumptions if future
 features introduce remote input or services.
+
+## Optional native remote connection
+
+Remote connections are disabled by default. When enabled, the Pascal client
+connects directly to the configured hosted relay; there is no local Node adapter.
+The bundled native transport provides bounded signaling/PCM queues and TLS-verified
+WebSocket I/O. Only assigned remote slots 1 through 12 receive authenticated,
+size-limited PCM; local microphones retain their assignments. Stale frames expire
+and duplicated direct/server packets share sequence de-duplication.
+
+The game owns pitch/scoring and consumes audio on its game thread. Network
+callbacks do not call game objects. Calibration uses separate queues/buffers and
+cannot become singing input. The relay can forward PCM in memory as fallback;
+this is not end-to-end encryption through the server. A room code is a pairing
+boundary, not an identity guarantee. The generic API strips local paths and limits
+media to the current catalog; it does not provide arbitrary file access.
+
+Outgoing messages/media work are bounded and handled on the I/O thread. Slow-stage
+diagnostics do not record audio samples. See the [native runtime reference](docs/native-phone-audio.md)
+and [API contract](docs/usce-game-bridge-ipc.md).

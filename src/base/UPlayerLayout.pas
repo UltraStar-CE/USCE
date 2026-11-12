@@ -303,6 +303,9 @@ begin
   end;
   RowGap := Max(0, Config.RowGap);
   if Grid.Rows > 1 then
+    RowGap := Min(RowGap, Max(0, (AreaHeight - Grid.Rows * Max(2, Config.GuideLineCount) * 6)
+      div (Grid.Rows - 1)));
+  if Grid.Rows > 1 then
     SlotTopY := AreaTop + RowIndex * RowGap +
       Round(RowIndex * Max(1.0, AreaHeight - RowGap * (Grid.Rows - 1)) / Grid.Rows)
   else

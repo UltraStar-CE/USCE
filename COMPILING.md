@@ -56,6 +56,22 @@ builds, run `python3 tools/generate-version.py` before compiling.
 - `make` (on macOS: `make macos-standalone-app`)
 - `./game/usce[.exe]` (on MacOS: `open "UltraStar Community Edition.app"`)
 
+Modern is bundled, so a checkout runs without downloading themes. Themes is the
+source of truth: the bundled `Modern.ini` and `Modern/` assets must match the
+exact revision in `themes.json`. CI checks missing, extra and changed files.
+
+After merging a Modern change in Themes, update the pin, fetch that exact
+commit into `.release-themes/source`, then run
+`python3 tools/bundle-themes.py sync-modern`. Commit the pin and synchronized
+files together. The sync command refuses dirty Modern files and preserves
+untracked custom assets. `check-modern` performs the same comparison without
+writing. On Windows use `python` instead of `python3`.
+
+Optional themes can be installed with `python3 tools/bundle-themes.py setup`.
+Setup adds missing files from the pinned snapshot, preserves local additions,
+and refuses conflicting existing files before copying anything. Release
+packages include the complete pinned snapshot.
+
 On Windows, `make` builds the game and its enabled wrappers; the separate
 dependency step supplies the runtime DLLs. If launching reports a missing DLL,
 check that `make -C dists/windows install` completed successfully, then rerun
@@ -75,6 +91,11 @@ check that `make -C dists/windows install` completed successfully, then rerun
   auto-detects OpenCV 3+ and disables webcam support if OpenCV is not found.
 * `--without-opencv`: Build without webcam support even if OpenCV is installed.
 
+For local macOS builds, use `make macos-standalone-app MACOS_SIGN_IDENTITY="Your certificate name"`
+or the same variable with `macos-dmg`. Both signing steps use that identity.
+The default remains ad-hoc signing (`-`); CI needs no certificate. Selecting an
+identity alone does not guarantee that macOS will retain microphone permission.
+
 ## Flatpak packaging
 
 USCE does not yet have a published Flathub package. The upstream USDX manifest
@@ -91,6 +112,44 @@ The CI does this for you, but if you need to do it manually:
   * Copy the DLLs from `game` to `installer/dependencies/dll`
   * `C:\...\makensis "installer/UltraStar Community Edition.nsi"` (this will take a while)
   * The .exe will be placed in `installer/dist`
+
+## Locked playlist playback
+
+Create a playlist in song selection, using the playlist menu to add the current
+selection if needed. Launch it with:
+
+```
+usce -lockdown -playlist "Karaoke" -password "pw" -results 10 -highscores 10
+```
+
+One playlist is accepted. Lockdown always enables continuous playback and repeat;
+unlocking requires the password. The remaining singing configuration options are:
+
+- `-results` and `-highscores`: `manual`, `skip`, `5`, `10`, `20`, `30`, `40`, `50`, `60` (seconds).
+- `-song-display`: `lyrics-progress`, `lyrics`, `progress`, `none`.
+- `-singing-display`: `full`, `notes-info`, `notes`, `info`, `none`.
+
+Omitted options use the saved continuous-playback profile.
+
+## Ubuntu package
+
+The native Ubuntu 22.04 amd64 CI build also produces a `.deb` with the reviewed
+Themes bundle. Download it from the build artifacts or release and install with
+`sudo apt install ./USCE-linux-deb-VERSION.deb`. This resolves runtime dependencies;
+Webcam and projectM support are omitted from
+this initial package. Songs, configuration and scores remain in your user directory
+and are not removed by uninstalling the package.
+
+For a local package, configure with `--prefix=/usr`, build, then run
+`python3 tools/build-deb.py --version VERSION --output deb-output --themes PATH`
+with the reviewed theme bundle. The package builder derives linked dependencies
+from the native executable and adds the dynamically loaded runtime libraries.
+
+## Signed APT repository
+
+Ubuntu packages are published by the separate [UltraStar-CE/apt repository](https://github.com/UltraStar-CE/apt).
+See its README for supported distributions, installation and signing/publication setup.
+The DEB packages themselves remain part of USCE releases.
 
 ## Optional MPV video playback
 

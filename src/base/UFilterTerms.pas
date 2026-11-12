@@ -7,9 +7,30 @@ interface
 // Inputs have already been case-folded and transliterated by the song library.
 function MatchesFilterTerms(const Value, Query: UTF8String; ExactYears: boolean): boolean;
 
+// Last editable choice; spaces separate years, but remain part of names.
+function FilterTermStart(const Query: UTF8String; SpaceSeparates: boolean; QuotedTerms: boolean = false): integer;
+function CompleteFilterTerm(const Query, Value: UTF8String; SpaceSeparates: boolean; QuotedTerms: boolean = false): UTF8String;
+
 implementation
 
 uses SysUtils;
+
+function FilterTermStart(const Query: UTF8String; SpaceSeparates: boolean; QuotedTerms: boolean = false): integer;
+var I: integer; Quoted: boolean;
+begin
+  Result := 1; Quoted := false;
+  for I := 1 to Length(Query) do
+  begin
+    if QuotedTerms and (Query[I] = '"') then Quoted := not Quoted;
+    if not Quoted and ((Query[I] in [',', ';']) or (SpaceSeparates and (Query[I] = ' '))) then Result := I + 1;
+  end;
+  while (Result <= Length(Query)) and (Query[Result] = ' ') do Inc(Result);
+end;
+
+function CompleteFilterTerm(const Query, Value: UTF8String; SpaceSeparates: boolean; QuotedTerms: boolean = false): UTF8String;
+begin
+  Result := Copy(Query, 1, FilterTermStart(Query, SpaceSeparates, QuotedTerms) - 1) + Value + ', ';
+end;
 
 function MatchesWords(const Value, Query: UTF8String): boolean;
 var I, First: integer; Word: UTF8String;

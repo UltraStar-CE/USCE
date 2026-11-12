@@ -93,14 +93,16 @@ type
       procedure   UnsetPlaylist;
 
       function    AddPlaylist(const Name: UTF8String): Cardinal;
-      procedure   DelPlaylist(const Index: Cardinal);
+      procedure   DelPlaylist(const Index: Cardinal; const RefreshDisplay: boolean = true);
 
-      function    AddItem(const SongID: Cardinal; const iPlaylist: Integer = -1): Boolean;
+      function    AddItem(const SongID: Cardinal; const iPlaylist: Integer = -1; const RefreshDisplay: boolean = true): Boolean;
       function    AddVisibleItems(const iPlaylist: Integer = -1): Cardinal;
-      procedure   DelItem(const iItem: Cardinal; const iPlaylist: Integer = -1);
+      procedure   DelItem(const iItem: Cardinal; const iPlaylist: Integer = -1;
+        const PreserveEmpty: boolean = false; const RefreshDisplay: boolean = true);
       procedure   DelVisibleItems(const iPlaylist: Integer = -1);
       procedure   SortPlaylist(const Order: TPlaylistSortOrder; const iPlaylist: Integer = -1);
-      function    MoveItem(const SongID: Cardinal; const Direction: Integer; const iPlaylist: Integer = -1): Integer;
+      function    MoveItem(const SongID: Cardinal; const Direction: Integer; const iPlaylist: Integer = -1): Integer; overload;
+      procedure   MoveItem(const iItem, iNewItem: Cardinal; const iPlaylist: Integer = -1; const RefreshDisplay: boolean = true); overload;
 
       procedure   GetNames(var PLNames: array of UTF8String);
       function    GetIndexbySongID(const SongID: Cardinal; const iPlaylist: Integer = -1): Integer;
@@ -315,8 +317,9 @@ begin
     Exit;
 
   // open file for rewriting
-  TextStream := TMemTextFileStream.Create(PlaylistFile, fmCreate);
+  TextStream := nil;
   try
+    TextStream := TMemTextFileStream.Create(PlaylistFile, fmCreate);
     // Write version (not nessecary but helpful)
     TextStream.WriteLine('######################################');
     TextStream.WriteLine('#UltraStar Community Edition Playlist Format v1.0');
@@ -526,6 +529,7 @@ begin
     Dec(Result);
     Playlists[Result+1] := Playlists[Result];
   end;
+  if CurPlaylist >= Integer(Result) then Inc(CurPlaylist);
   Playlists[Result].Name := Name;
   Playlists[Result].FixedOrder := False;
 
@@ -548,7 +552,7 @@ end;
 //----------
 //DelPlaylist - Deletes a Playlist
 //----------
-procedure   TPlayListManager.DelPlaylist(const Index: Cardinal);
+procedure   TPlayListManager.DelPlaylist(const Index: Cardinal; const RefreshDisplay: boolean);
 var
   I: Integer;
   Filename: IPath;
@@ -577,7 +581,7 @@ begin
 
   //If Playlist is Displayed atm
   //-> Display Songs
-  if (CatSongs.CatNumShow = -3) and (Index = CurPlaylist) then
+  if RefreshDisplay and (CatSongs.CatNumShow = -3) and (Index = CurPlaylist) then
   begin
     ScreenSong.UnloadCover(ScreenSong.Interaction);
     ScreenSong.HideCatTL;
@@ -586,12 +590,14 @@ begin
     ScreenSong.FixSelected;
     ScreenSong.ChangeMusic;
   end;
+  if CurPlaylist = Integer(Index) then CurPlaylist := -1
+  else if CurPlaylist > Integer(Index) then Dec(CurPlaylist);
 end;
 
 //----------
 //AddItem - Adds an Item to a specific Playlist
 //----------
-Function    TPlayListManager.AddItem(const SongID: Cardinal; const iPlaylist: Integer): Boolean;
+Function    TPlayListManager.AddItem(const SongID: Cardinal; const iPlaylist: Integer; const RefreshDisplay: boolean): Boolean;
 var
   P: Cardinal;
   Len: Cardinal;
@@ -622,7 +628,7 @@ begin
     SavePlayList(P);
 
     //Correct Display when Editing current Playlist
-    if (CatSongs.CatNumShow = -3) and (P = CurPlaylist) then
+    if RefreshDisplay and (CatSongs.CatNumShow = -3) and (P = CurPlaylist) then
       SetPlaylist(P);
   end;
 end;
@@ -671,7 +677,8 @@ end;
 //----------
 //DelItem - Deletes an Item from a specific Playlist
 //----------
-Procedure   TPlayListManager.DelItem(const iItem: Cardinal; const iPlaylist: Integer);
+Procedure   TPlayListManager.DelItem(const iItem: Cardinal; const iPlaylist: Integer;
+  const PreserveEmpty: boolean; const RefreshDisplay: boolean);
 var
   I: Integer;
   P: Cardinal;
@@ -696,13 +703,13 @@ begin
     SavePlayList(P);
   end;
 
-  //Delete Playlist if Last Song is deleted
-  if (Length(PlayLists[P].Items) = 0) then
+  // Remote item removal preserves the playlist; explicit deletion is separate.
+  if (Length(PlayLists[P].Items) = 0) and not PreserveEmpty then
   begin
-    DelPlaylist(P);
+    DelPlaylist(P, RefreshDisplay);
   end
   //Correct Display when Editing current Playlist
-  else if (CatSongs.CatNumShow = -3) and (P = CurPlaylist) then
+  else if RefreshDisplay and (CatSongs.CatNumShow = -3) and (P = CurPlaylist) then
     SetPlaylist(P);
 end;
 
@@ -886,6 +893,49 @@ begin
 end;
 
 //----------
+//MoveItem - Reorders an Item inside a specific Playlist
+//----------
+Procedure   TPlayListManager.MoveItem(const iItem, iNewItem: Cardinal; const iPlaylist: Integer; const RefreshDisplay: boolean);
+var
+  P: Cardinal;
+  I: Integer;
+  Item: TPlaylistItem;
+begin
+  if iPlaylist = -1 then
+    P := CurPlaylist
+  else if (iPlaylist >= 0) AND (iPlaylist <= high(Playlists)) then
+    P := iPlaylist
+  else
+    exit;
+
+  if (Int(iItem) > high(Playlists[P].Items)) or
+     (Int(iNewItem) > high(Playlists[P].Items)) or
+     (iItem = iNewItem) then
+    exit;
+
+  Item := Playlists[P].Items[iItem];
+
+  if iItem > iNewItem then
+  begin
+    for I := Integer(iItem) downto Integer(iNewItem) + 1 do
+      Playlists[P].Items[I] := Playlists[P].Items[I - 1];
+  end
+  else
+  begin
+    for I := Integer(iItem) to Integer(iNewItem) - 1 do
+      Playlists[P].Items[I] := Playlists[P].Items[I + 1];
+  end;
+
+  Playlists[P].Items[Integer(iNewItem)] := Item;
+  Playlists[P].FixedOrder := true;
+
+  SavePlayList(P);
+
+  if RefreshDisplay and (CatSongs.CatNumShow = -3) and (P = CurPlaylist) then
+    SetPlaylist(P, Item.SongID);
+end;
+
+//----------
 //GetNames - Writes Playlist Names in a Array
 //----------
 procedure TPlayListManager.GetNames(var PLNames: array of UTF8String);
@@ -970,7 +1020,7 @@ end;
 procedure TPlayListManager.MoveSongIndex(const OldIndex, NewIndex: Integer);
 var
   SongRef: TSong;
-  I: Integer;
+  I, P, Item, SongID: Integer;
 begin
   if (OldIndex < 0) or (OldIndex > High(CatSongs.Song)) or
      (NewIndex < 0) or (NewIndex > High(CatSongs.Song)) or
@@ -991,12 +1041,23 @@ begin
   end;
 
   CatSongs.Song[NewIndex] := SongRef;
+  for P := 0 to High(Playlists) do
+    for Item := 0 to High(Playlists[P].Items) do
+    begin
+      SongID := Playlists[P].Items[Item].SongID;
+      if SongID = OldIndex then SongID := NewIndex
+      else if (OldIndex > NewIndex) and (SongID >= NewIndex) and (SongID < OldIndex) then Inc(SongID)
+      else if (OldIndex < NewIndex) and (SongID > OldIndex) and (SongID <= NewIndex) then Dec(SongID);
+      Playlists[P].Items[Item].SongID := SongID;
+    end;
 end;
 
 procedure TPlayListManager.ReindexAllPlaylists;
 var
   P, I, NewIndex: Integer;
 begin
+  // The caller has rebuilt the catalog in its normal order.
+  SongOrderDirty := False;
   for P := 0 to High(Playlists) do
   begin
     for I := 0 to High(Playlists[P].Items) do
@@ -1022,13 +1083,11 @@ begin
 
   for I := High(Playlists[Index].Items) downto 0 do
   begin
-    SongIdx := FindSongIndexByNames(Playlists[Index].Items[I].Artist,
-                                    Playlists[Index].Items[I].Title);
+    SongIdx := Playlists[Index].Items[I].SongID;
     if SongIdx <> -1 then
       MoveSongIndex(SongIdx, 0);
   end;
 
-  ReindexAllPlaylists;
   SongOrderDirty := True;
 end;
 

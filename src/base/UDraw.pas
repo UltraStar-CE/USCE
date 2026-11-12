@@ -49,7 +49,7 @@ procedure SingDrawOscilloscope(Position: TThemePosition; NrSound: integer);
 procedure SingDrawNoteLines(Left, Top, Right: real; LineSpacing: integer = 15; LineThickness: single = 1);
 procedure SingDrawLyricHelper(CP: integer; Left, LyricsMid, IndicatorOffset: real);
 procedure SingDrawLine(Left, Top, Right: real; Track, PlayerIndex: integer; LineSpacing: integer = 15);
-procedure SingDrawPlayerLine(Left, Top, W: real; Track, PlayerIndex: integer; LineSpacing: integer = 15);
+procedure SingDrawPlayerLine(Left, Top, W: real; Track, PlayerIndex: integer; LineSpacing: integer = 15; OnlyGaps: boolean = false);
 procedure SingDrawPlayerBGLine(Left, Top, Right: real; Track, PlayerIndex: integer; LineSpacing: integer = 15);
 
 //Draw Editor NoteLines
@@ -94,7 +94,7 @@ var
 
 implementation
 
-uses
+uses UMenuBackground,
   SysUtils,
   Math,
   UText,
@@ -121,6 +121,7 @@ end;
 
 procedure SingDrawWebCamFrame;
 begin
+  if TMenuBackground.SuppressDrawing then Exit;
 
   Webcam.GetWebcamFrame;
 
@@ -158,6 +159,7 @@ var
   ScreenAspect: double;  // aspect of screen resolution and image
   ScaledTexWidth, ScaledTexHeight: double;
 begin
+  if TMenuBackground.SuppressDrawing then Exit;
   // TODO: this is also called if a video is playing
   if (ScreenSing.Tex_Background <> nil) then
   begin
@@ -395,7 +397,7 @@ begin
   for Count := 0 to 9 do
   begin
     Y := Top + Count * LineSpacing;
-    Renderer.DrawLine(Left, Y, Right, Y, 0, LineThickness, Skin_P1_LinesR, Skin_P1_LinesG, Skin_P1_LinesB, 0.4);
+    Renderer.DrawLine(Left, Y, Right, Y, 0, LineThickness, Skin_P1_LinesR, Skin_P1_LinesG, Skin_P1_LinesB, Theme.Sing.GuideAlpha);
   end;
 end;
 
@@ -424,7 +426,7 @@ begin
       begin
         with Notes[Count] do
         begin
-          If IsUnpitchedNote(NoteType) then
+          if NoteType in [ntRap, ntRapGolden] then
               Texture := Tex_plain_Left_Rap[PlayerNumber]
             else
               Texture := Tex_plain_Left[PlayerNumber];
@@ -502,7 +504,7 @@ begin
             if Rec.Right <= Rec.Left then
               Rec.Right := Rec.Left;
 
-            If IsUnpitchedNote(NoteType) then
+            if NoteType in [ntRap, ntRapGolden] then
               Texture := Tex_plain_Mid_Rap[PlayerNumber]
             else
               Texture := Tex_plain_Mid[PlayerNumber];
@@ -529,7 +531,7 @@ begin
             Rec.Right := Rec.Right + NotesW[PlayerIndex];
 
 
-            if IsUnpitchedNote(NoteType) then
+            if NoteType in [ntRap, ntRapGolden] then
               Texture := Tex_plain_Right_Rap[PlayerNumber]
             else
               Texture := Tex_plain_Right[PlayerNumber];
@@ -558,14 +560,26 @@ begin
 end;
 
 // draw sung notes
-procedure SingDrawPlayerLine(Left, Top, W: real; Track, PlayerIndex: integer; LineSpacing: integer);
+procedure SingDrawPlayerLine(Left, Top, W: real; Track, PlayerIndex: integer; LineSpacing: integer; OnlyGaps: boolean);
 var
   TempR:      real;
   Rec:        TRecR;
   N: integer;
+  FirstBeat, WindowStart, BaseTone: real;
+  DrawingGap: boolean;
   Texture: TTexture;
 //  R, G, B, A: real;
   NotesH2:    real;
+  procedure DrawSungTexture;
+  begin
+    if DrawingGap then
+    begin
+      if Texture.X < Left then begin Texture.W := Texture.W-(Left-Texture.X); Texture.X := Left; end;
+      Texture.W := Min(Texture.W,Left+W-Texture.X);
+      if Texture.W <= 0 then Exit;
+    end;
+    Renderer.DrawTexture(Texture);
+  end;
 begin
   if (ScreenSing.Settings.InputVisible) then
   begin
@@ -578,14 +592,29 @@ begin
 
       for N := 0 to Player[PlayerIndex].HighNote do
       begin
+        DrawingGap := Player[PlayerIndex].Note[N].IsGap;
+        if DrawingGap and (Ini.PitchTrace=0) then Continue;
+        if OnlyGaps and not DrawingGap then Continue;
+        with CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine] do
+          if Length(Notes)>0 then begin FirstBeat:=Notes[0].StartBeat;BaseTone:=BaseNote;end
+          else begin FirstBeat:=Player[PlayerIndex].DetectionBeat-15;BaseTone:=Player[PlayerIndex].LastSungTone;TempR:=W/16;end;
+        WindowStart := FirstBeat;
+        if DrawingGap and (TempR > 0) and
+          ((Player[PlayerIndex].DetectionBeat < FirstBeat) or
+           (Player[PlayerIndex].DetectionBeat >= FirstBeat+W/TempR)) then
+          WindowStart := Player[PlayerIndex].DetectionBeat+1-W/TempR;
         with Player[PlayerIndex].Note[N] do
         begin
           // Left part of note
-          Rec.Left  := Left + (Start - CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine].Notes[0].StartBeat) * TempR + 0.5;
+          Rec.Left  := Left + (Start - WindowStart) * TempR + 0.5;
           Rec.Right := Rec.Left + NotesW[PlayerIndex];
 
           // Draw it in half size, if not hit
-          if Hit then
+          if DrawingGap then
+          begin
+            NotesH2 := Max(0.5, NotesH[PlayerIndex] * 0.5);
+          end
+          else if Hit then
           begin
             NotesH2 := NotesH[PlayerIndex]
           end
@@ -594,11 +623,11 @@ begin
             NotesH2 := int(NotesH[PlayerIndex] * 0.65);
           end;
 
-          Rec.Top    := Top - (Tone-CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine].BaseNote)*LineSpacing/2 - NotesH2;
+          Rec.Top    := Top - (Tone-BaseTone)*LineSpacing/2 - NotesH2;
           Rec.Bottom := Rec.Top + 2 * NotesH2;
 
           // draw the left part
-          If IsUnpitchedNote(NoteType) then
+          if NoteType in [ntRap, ntRapGolden] then
             Texture := Tex_Left_Rap[PlayerIndex+1]
           else
             Texture := Tex_Left[PlayerIndex+1];
@@ -613,11 +642,11 @@ begin
             ColB := 1;
             Alpha := NoteAlpha(NoteType, 1);
           end;
-          Renderer.DrawTexture(Texture);
+          DrawSungTexture;
 
           // Middle part of the note
           Rec.Left  := Rec.Right;
-          Rec.Right := Left + (Start + Duration - CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine].Notes[0].StartBeat) * TempR - NotesW[PlayerIndex] - 0.5;
+          Rec.Right := Left + (Start + Duration - WindowStart) * TempR - NotesW[PlayerIndex] - 0.5;
 
           // new
           if (Start + Duration - 1 = LyricsState.CurrentBeatD) then
@@ -628,7 +657,7 @@ begin
             Rec.Right := Rec.Left;
 
           // draw the middle part
-          If IsUnpitchedNote(NoteType) then
+          if NoteType in [ntRap, ntRapGolden] then
             Texture := Tex_Mid_Rap[PlayerIndex+1]
           else
             Texture := Tex_Mid[PlayerIndex+1];
@@ -649,13 +678,13 @@ begin
             TexY2 := 1;
             Alpha := NoteAlpha(NoteType, 1);
           end;
-          Renderer.DrawTexture(Texture);
+          DrawSungTexture;
 
           // the right part of the note
           Rec.Left  := Rec.Right;
           Rec.Right := Rec.Right + NotesW[PlayerIndex];
 
-          If IsUnpitchedNote(NoteType) then
+          if NoteType in [ntRap, ntRapGolden] then
             Texture := Tex_Right_Rap[PlayerIndex+1]
           else
             Texture := Tex_Right[PlayerIndex+1];
@@ -670,7 +699,7 @@ begin
             ColB := 1;
             Alpha := NoteAlpha(NoteType, 1);
           end;
-          Renderer.DrawTexture(Texture);
+          DrawSungTexture;
 
           // Perfect note is stored
           if Perfect and (Ini.EffectSing=1) and ScreenSing.Settings.FeedbackVisible then
@@ -691,7 +720,8 @@ begin
       // actually we need a comparison here, to determine if the singing process
       // is ahead Rec.Right even if there is no singing
 
-      if (Ini.EffectSing = 1) and ScreenSing.Settings.FeedbackVisible then
+      if not OnlyGaps and (Ini.EffectSing = 1) and ScreenSing.Settings.FeedbackVisible and
+         (Player[PlayerIndex].HighNote >= 0) and not Player[PlayerIndex].Note[Player[PlayerIndex].HighNote].IsGap then
         GoldenRec.GoldenNoteTwinkle(Rec.Top,Rec.Bottom,Rec.Right, PlayerIndex);
     end; // if
   end; // if
@@ -737,7 +767,7 @@ begin
             Rec.Top := Top - (DisplayTone-BaseNote)*LineSpacing/2 - H;
             Rec.Bottom := Rec.Top + 2 * H;
 
-            If IsUnpitchedNote(NoteType) then
+            if NoteType in [ntRap, ntRapGolden] then
               Texture := Tex_BG_Left_Rap[PlayerIndex+1]
             else
               Texture := Tex_BG_Left[PlayerIndex+1];
@@ -759,7 +789,7 @@ begin
             if Rec.Right <= Rec.Left then
               Rec.Right := Rec.Left;
 
-            If IsUnpitchedNote(NoteType) then
+            if NoteType in [ntRap, ntRapGolden] then
               Texture := Tex_BG_Mid_Rap[PlayerIndex+1]
             else
               Texture := Tex_BG_Mid[PlayerIndex+1];
@@ -777,7 +807,7 @@ begin
             Rec.Left  := Rec.Right;
             Rec.Right := Rec.Left + W;
 
-            If IsUnpitchedNote(NoteType) then
+            if NoteType in [ntRap, ntRapGolden] then
               Texture := Tex_BG_Right_Rap[PlayerIndex+1]
             else
               Texture := Tex_BG_Right[PlayerIndex+1];
@@ -904,6 +934,16 @@ begin
         ColG := Col.G;
         ColB := Col.B;
         Alpha := BarAlpha;
+      end;
+      if Theme.Sing.HelperAbove then
+      begin
+        Tex_Lyric_Help_Bar.X := Left + LyricsMid - 50 * (1 - BarProgress);
+        Tex_Lyric_Help_Bar.Y := LyricEngine.UpperLineY - 8;
+        Tex_Lyric_Help_Bar.W := 100 * (1 - BarProgress);
+        Tex_Lyric_Help_Bar.H := 4;
+        Tex_Lyric_Help_Bar.ColR := Theme.Sing.LyricActive.R;
+        Tex_Lyric_Help_Bar.ColG := Theme.Sing.LyricActive.G;
+        Tex_Lyric_Help_Bar.ColB := Theme.Sing.LyricActive.B;
       end;
       Renderer.DrawTexture(Tex_Lyric_Help_Bar);
     end;
@@ -1102,7 +1142,7 @@ begin
     Layout := GetSingLaneLayout(PlayerCountOnScreen, LocalIndex, Theme.Sing.PlayerLayout,
       CurrentSong.isDuet);
     ContentScale := Layout.ContentScale;
-    NotesH[I - 1] := Max(2.0, BaseNoteH * ContentScale);
+    NotesH[I - 1] := Max(2.0, BaseNoteH * ContentScale * Theme.Sing.NoteScale);
     NotesW[I - 1] := Max(1.0, BaseNoteW * ContentScale);
   end;
 
@@ -1125,7 +1165,12 @@ begin
     // Clear the final target notes and sung trace when their lyrics fade out.
     // Each duet voice finishes independently; scoring is unaffected.
     if LyricEngine.GetUpperLine.LastLine and
-      not LyricEngine.HasVisibleText(LyricsState.MidBeat) then Continue;
+      not LyricEngine.HasVisibleText(LyricsState.MidBeat) then
+    begin
+      if Ini.PitchTrace <> 0 then
+        SingDrawPlayerLine(LaneLeft, LineTop, LaneWidth, TrackIndex, PlayerIndex, LineSpacing, true);
+      Continue;
+    end;
 
     SingDrawPlayerBGLine(LaneLeft, LineTop, LaneRight, TrackIndex, PlayerIndex, LineSpacing);
     SingDrawLine(LaneLeft, LineTop, LaneRight, TrackIndex, PlayerIndex, LineSpacing);
@@ -1200,7 +1245,10 @@ begin
             ColorR := 1;
             ColorG := 1;
             ColorB := 1;
-            A := 0.35;
+            if Color = P1_INVERTED then
+              A := 0.65
+            else
+              A := 0.35;
           end;
           ntNormal:
           begin
@@ -1223,7 +1271,7 @@ begin
               ColorR := 1;
               ColorG := 1;
               ColorB := 1;
-              A := 0.75;
+              A := 1;
             end
             else
             begin
@@ -1240,7 +1288,7 @@ begin
               ColorR := 1;
               ColorG := 1;
               ColorB := 0.3;
-              A := 0.75;
+              A := 1;
             end
             else
             begin
@@ -1257,7 +1305,7 @@ begin
         Rec.Right := Rec.Left + NotesW[0];
         Rec.Top := YBaseNote - (Tone-BaseNote)*Space/2 - NotesH[0];
         Rec.Bottom := Rec.Top + 2 * NotesH[0];
-        If IsUnpitchedNote(NoteType) then
+        if NoteType in [ntRap, ntRapGolden] then
         begin
           If Color = P1_INVERTED then
             Texture := Tex_Left_Rap_Inv
@@ -1293,7 +1341,7 @@ begin
         Rec.Left  := Rec.Right;
         Rec.Right := (StartBeat + Duration - CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine].Notes[0].StartBeat) * TempR + X - NotesW[0] - 0.5;
 
-        If IsUnpitchedNote(NoteType) then
+        if NoteType in [ntRap, ntRapGolden] then
         begin
           If Color = P1_INVERTED then
             Texture := Tex_Mid_Rap_Inv
@@ -1328,7 +1376,7 @@ begin
         Rec.Left  := Rec.Right;
         Rec.Right := Rec.Right + NotesW[0];
 
-        If IsUnpitchedNote(NoteType) then
+        if NoteType in [ntRap, ntRapGolden] then
         begin
           If Color = P1_INVERTED then
             Texture := Tex_Right_Rap_Inv

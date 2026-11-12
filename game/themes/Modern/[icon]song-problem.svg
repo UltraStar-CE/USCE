@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <mask id="paper">
+      <rect width="64" height="64" fill="white"/>
+      <path d="M39 24Q42 19 45 24L62 54Q65 60 58 60H25Q18 60 21 54Z"
+            fill="black" stroke="black" stroke-width="4" stroke-linejoin="round"/>
+    </mask>
+    <mask id="warning">
+      <rect width="64" height="64" fill="white"/>
+      <rect x="40" y="34" width="4" height="12" rx="2" fill="black"/>
+      <circle cx="42" cy="51" r="2.2" fill="black"/>
+    </mask>
+  </defs>
+  <g fill="white" mask="url(#paper)">
+    <path d="M12 5H31V16Q31 20 35 20H45V49Q45 53 41 53H12Q8 53 8 49V9Q8 5 12 5Z"/>
+    <path d="M35 6L44 16H35Z"/>
+  </g>
+  <path d="M39.4 25Q42 20.5 44.6 25L60.5 53.5Q63.1 58 57.9 58H26.1Q20.9 58 23.5 53.5Z"
+        fill="white" mask="url(#warning)"/>
+</svg>

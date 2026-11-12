@@ -29,3 +29,5 @@ jobs:
         with:
           script: |
             await require('./tools/usce-automation.cjs').trackUpstream({github, context, core});
+            await require('./tools/upstream-issues.cjs').trackIssues({github, context, core});
+            await require('./tools/upstream-forks.cjs').trackForks({github, context, core});

@@ -152,13 +152,8 @@ begin
 
       SDLK_N:
         begin
-          if (High(DataBase.NetworkUser) = -1) then
-            ScreenPopupError.ShowPopup(Language.Translate('SING_OPTIONS_NETWORK_NO_DLL'))
-          else
-          begin
-            AudioPlayback.PlaySound(SoundLib.Back);
-            FadeTo(@ScreenOptionsNetwork);
-          end;
+          AudioPlayback.PlaySound(SoundLib.Back);
+          FadeTo(@ScreenOptionsNetwork);
           Exit;
         end;
 
@@ -241,13 +236,8 @@ begin
 
           if Interaction = ButtonNetworkIID then
           begin
-            if ((High(DataBase.NetworkUser) = -1)) then
-              ScreenPopupError.ShowPopup(Language.Translate('SING_OPTIONS_NETWORK_NO_DLL'))
-            else
-            begin
-              AudioPlayback.PlaySound(SoundLib.Back);
-              FadeTo(@ScreenOptionsNetwork);
-            end;
+            AudioPlayback.PlaySound(SoundLib.Back);
+            FadeTo(@ScreenOptionsNetwork);
           end;
 
           if Interaction = ButtonWebcamIID then

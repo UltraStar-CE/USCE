@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {policy, requestBody, parseRequest, planReview} = require('./codex-review-queue.cjs');
+const {policy, requestBody, parseRequest, classifyRequests, planReview} = require('./codex-review-queue.cjs');
 const now = Date.parse('2026-10-17T12:00:00Z');
 const pr = (number, authorId = 123) => ({repo: 'UltraStar-CE/USCE', number, authorId,
   head: number.toString(16).padStart(40, '0'), state: 'open', draft: false,
@@ -45,4 +45,25 @@ test('an older request prevents a duplicate head even after the budget window ex
 });
 test('clock skew stops dispatch rather than spending outside the ledger', () => {
   assert.throws(() => plan([pr(2)], [request(pr(1), -1)]), /ahead of the clock/);
+});
+
+test('old heads and merged PRs remain outstanding without blocking current heads', () => {
+  const requests = [1, 2, 3].map(n => ({...request(pr(n)), id: n}));
+  const prs = [{...pr(1), head: 'f'.repeat(40)}, {...pr(2), state: 'closed'}, pr(3)];
+  const classified = classifyRequests({prs, requests, completedCommentIds: []});
+  assert.deepEqual(classified.map(r => r.status), ['stale', 'stale', 'current']);
+  assert.equal(plan(prs, requests, {reviewInFlight: classified.some(r => r.status === 'current')}), null);
+  const finished = classifyRequests({prs, requests, completedCommentIds: [3]});
+  assert.deepEqual(finished.map(r => r.status), ['stale', 'stale', 'completed']);
+  // Historical requests still consume the non-owner budget.
+  assert.equal(plan([pr(4)], requests), null);
+});
+
+test('stale requests can complete later, deduplicate by ID and require current metadata', () => {
+  const comment = {...request(pr(1)), id: 1};
+  const prs = [{...pr(1), state: 'closed'}];
+  assert.equal(classifyRequests({prs, requests: [comment, comment], completedCommentIds: [1]}).length, 1);
+  assert.equal(classifyRequests({prs, requests: [comment], completedCommentIds: [1]})[0].status, 'completed');
+  assert.throws(() => classifyRequests({prs: [], requests: [comment], completedCommentIds: []}), /current PR metadata/);
+  assert.equal(classifyRequests({prs: [pr(154)], requests: [{...request(pr(154)), id: 154}], completedCommentIds: []})[0].status, 'retired');
 });

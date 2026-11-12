@@ -34,7 +34,7 @@ interface
 {$I switches.inc}
 
 uses
-  ULua;
+  ULua, UCommon;
 
 type
   { array holds ids of modes or Party_Round_Random
@@ -134,6 +134,11 @@ type
     Modes: array of TParty_ModeInfo;  //< holds info of registered party modes
 
     SungPartySongs: array of integer;
+    ShufflePool, ShuffleOrder: CardinalArray;
+    NextShuffleIndex: cardinal;
+    function NextRandomSong(const Candidates: CardinalArray): integer;
+    function LocalHighscoresEnabled: boolean;
+    function CurrentSingerName(Team: integer): UTF8String;
 
     property CurrentRound: Integer read CurRound;
 
@@ -254,6 +259,8 @@ var
 implementation
 
 uses
+  UDataBase,
+  UIni,
   UGraphic,
   ULanguage,
   ULog,
@@ -297,6 +304,9 @@ begin
     TimesPlayed[I] := 0;
 
   SetLength(SungPartySongs, 0);
+  ShufflePool := nil;
+  ShuffleOrder := nil;
+  NextShuffleIndex := 0;
 end;
 
 { private: some intelligent randomnes for plugins }
@@ -925,9 +935,32 @@ begin
   end;
 end;
 
+function TPartyGame.LocalHighscoresEnabled: boolean;
+var Mode: integer;
+begin
+  Result := false;
+  if (Ini.PartyHighscores = 0) or not bPartyGame or not bPartyStarted or
+    (CurRound < 0) or (CurRound >= Length(Rounds)) then Exit;
+  Mode := Rounds[CurRound].Mode; // random rounds already contain their resolved mode
+  Result := (Mode >= 0) and (Mode < Length(Modes));
+  if not Result then Exit;
+  // Shared-singer modes cannot produce an individual highscore.
+  Result := (Modes[Mode].PlayerCount and 1 <> 0) and
+    ((Ini.PartyHighscores = 2) or SameText(Modes[Mode].Name, 'Duel'));
+end;
+
+function TPartyGame.CurrentSingerName(Team: integer): UTF8String;
+begin
+  Result := '';
+  if (Team < 0) or (Team >= Length(Teams)) then Exit;
+  with Teams[Team] do
+    if (NextPlayer >= 0) and (NextPlayer < Length(Players)) then
+      Result := Players[NextPlayer].Name;
+end;
+
 procedure TPartyGame.CallAfterSing;
   var
-    ExecuteDefault: boolean;
+    ExecuteDefault, ShowHighscores: boolean;
 begin
   if not bPartyStarted then
     ExecuteDefault := true
@@ -942,9 +975,21 @@ begin
   // execute default function:
   if ExecuteDefault then
   begin
-    if (bPartyGame) then
-      // display party score screen
-      Display.FadeTo(@ScreenPartyScore)
+    if bPartyGame then
+    begin
+      ShowHighscores := false;
+      if ScreenSing.LocalHighscoresAllowed then
+      begin
+        DataBase.ReadScore(CurrentSong);
+        ShowHighscores := Length(CurrentSong.Score[Ini.Difficulty]) > 0;
+      end;
+      // Choose before fading: redirecting from an empty highscore OnShow can
+      // bypass initialization of the replacement Party results screen.
+      if ShowHighscores then
+        Display.FadeTo(@ScreenHighScores)
+      else
+        Display.FadeTo(@ScreenPartyScore);
+    end
     else //display standard score screen
     begin
       if (ScreenSong.Mode = smPartyTournament) then
@@ -1040,6 +1085,11 @@ begin
 
   if (Length(Result) = 0) then
     Result := Language.Translate('PARTY_NOBODY');
+end;
+
+function TPartyGame.NextRandomSong(const Candidates: CardinalArray): integer;
+begin
+  Result := NextShuffled(Candidates, ShufflePool, ShuffleOrder, NextShuffleIndex);
 end;
 
 procedure TPartyGame.SaveSungPartySong(ID: integer);
