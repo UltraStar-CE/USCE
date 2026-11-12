@@ -922,9 +922,6 @@ begin
     if (not CurrentSong.isDuet) or (Player[PlayerIndex].Track = CP) then
     begin
 
-      if (ScreenSong.Mode = smNormal) and not Party.bPartyGame and
-         (PlayerIndex >= ScreenName.LocalPlayerCount) and
-         not RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) then Continue;
       IsRemotePlayer := RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) and
         not PhoneAudio.Enabled;
       PlayerDelayMs := ConfiguredPlayerDelayMs(PlayerIndex);
@@ -964,8 +961,15 @@ begin
         PlayerCurBeat := Floor(LyricsState.MidBeatD - DelayBeats);
         if Screen.ScoringTailActive then
           PlayerCurBeat := Min(PlayerCurBeat, Screen.ScoringTailEndBeat);
+        if (ScreenSong.Mode = smNormal) and not Party.bPartyGame and
+           (PlayerIndex >= ScreenName.LocalPlayerCount) and
+           not RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) then
+        begin
+          // Skip absent beats without replaying them when a phone rejoins.
+          Player[PlayerIndex].DetectionBeat := Max(PlayerOldBeat, PlayerCurBeat);
+          Continue;
+        end;
         FirstBeatToAnalyze := PlayerOldBeat + 1;
-
       end;
 
       // Other players can still be before their shifted scoring start when a
