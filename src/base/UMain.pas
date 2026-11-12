@@ -92,6 +92,9 @@ uses
   UPlaylist,
   UMusic,
   URecord,
+{$IFDEF UseSDLInput}
+  UAudioInput_SDL,
+{$ENDIF}
   UPhoneAudio,
   URemoteBridgeIPC,
   URemoteSongLibrary,
@@ -986,6 +989,9 @@ begin
 
       // keyboard/mouse/joystick events
       CheckEvents;
+{$IFDEF UseSDLInput}
+      CheckSDLCaptureDevices;
+{$ENDIF}
       UpdatePhoneAudio((Display.CurrentScreen <> @ScreenSing) and
         (Display.NextScreen <> @ScreenSing));
       RemoteBridgeIPC.ApplyPendingPlayerCount;
@@ -1070,6 +1076,11 @@ begin
   while (SDL_PollEvent(@Event) <> 0) do
   begin
     case Event.type_ of
+{$IFDEF UseSDLInput}
+      SDL_AUDIODEVICEREMOVED:
+        if Event.adevice.iscapture <> 0 then SDLCaptureDeviceRemoved(Event.adevice.which);
+{$ENDIF}
+
       SDL_QUITEV:
       begin
         DoQuit;
