@@ -102,7 +102,7 @@ type
       class function ConvertAudioFormatToFFmpeg(Format: TAudioSampleFormat; out FFmpegFormat: TAVSampleFormat): boolean;
       procedure LockAVCodec();
       procedure UnlockAVCodec();
-      function AVFormatOpenInput(ps: PPAVFormatContext; filename: {const} PAnsiChar; const Media: TBytes = nil): Integer;
+      function AVFormatOpenInput(ps: PPAVFormatContext; filename: {const} PAnsiChar; const Media: TBytes = nil; const Source: IAudioFileSource = nil): Integer;
       procedure AVFormatCloseInput(ps: PPAVFormatContext);
       function GetCodecContext(stream: PAVStream; codec: PAVCodec): PAVCodecContext;
   end;
@@ -120,8 +120,34 @@ const
   URL_RDWR   = 2; (**< read-write *)
   BLOCKSIZE  = 4 * 1024;
 
+type
+  TAudioFileSourceStream = class(TStream)
+  private
+    FSource: IAudioFileSource;
+  public
+    constructor Create(const Source: IAudioFileSource);
+    function Read(var Buffer; Count: Longint): Longint; override;
+    function Seek(const Offset: Int64; Origin: TSeekOrigin): Int64; override;
+  end;
+
 var
   Instance: TMediaCore_FFmpeg;
+
+constructor TAudioFileSourceStream.Create(const Source: IAudioFileSource);
+begin
+  inherited Create;
+  FSource := Source;
+end;
+
+function TAudioFileSourceStream.Read(var Buffer; Count: Longint): Longint;
+begin
+  Result := FSource.GetStream.Read(Buffer, Count);
+end;
+
+function TAudioFileSourceStream.Seek(const Offset: Int64; Origin: TSeekOrigin): Int64;
+begin
+  Result := FSource.GetStream.Seek(Offset, Origin);
+end;
 
 function AV_VERSION_INT(a, b, c: cardinal): cuint;
 begin
@@ -426,14 +452,16 @@ begin
   Result := 0;
 end;
 
-function TMediaCore_FFmpeg.AVFormatOpenInput(ps: PPAVFormatContext; filename: {const} PAnsiChar; const Media: TBytes = nil): Integer;
+function TMediaCore_FFmpeg.AVFormatOpenInput(ps: PPAVFormatContext; filename: {const} PAnsiChar; const Media: TBytes = nil; const Source: IAudioFileSource = nil): Integer;
 var
   h: Pointer;
   buffer: Pointer;
   IO: PAVIOContext;
 begin
   ps^ := nil;
-  if Media <> nil then
+  if Source <> nil then
+    h := TAudioFileSourceStream.Create(Source)
+  else if Media <> nil then
     h := TBytesStream.Create(Media)
   else if FFmpegStreamOpen(h, filename, URL_RDONLY) <> 0 then
     Exit(AVERROR_EOF);

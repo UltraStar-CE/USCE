@@ -54,7 +54,7 @@ type
       function Init(): boolean;
       function Finalize(): boolean;
 
-      function Open(const aFileName: IPath; const aFileNameKaraoke: IPath; const Media: TBytes = nil): boolean; // true if succeed
+      function Open(const aFileName: IPath; const aFileNameKaraoke: IPath; const Media: TBytes = nil; const Source: IAudioFileSource = nil): boolean; // true if succeed
       procedure Close;
       function  GetFileName: string;
 
@@ -201,7 +201,7 @@ begin
   Result := true;
 end;
 
-function TAudio_Dummy.Open(const aFileName : IPath; const aFileNameKaraoke : IPath; const Media: TBytes = nil): boolean; // true if succeed
+function TAudio_Dummy.Open(const aFileName : IPath; const aFileNameKaraoke : IPath; const Media: TBytes = nil; const Source: IAudioFileSource = nil): boolean; // true if succeed
 begin
   Result := false;
 end;
