@@ -279,7 +279,7 @@ begin
   Address.mElement := 0;
   UID := nil;
   Size := SizeOf(UID);
-  if (AudioObjectGetPropertyData(DeviceID, @Address, 0, nil, @Size, @UID) <> 0) or
+  if (AudioObjectGetPropertyData(DeviceID, Address, 0, nil, Size, @UID) <> 0) or
      (UID = nil) then Exit;
   try
     // A USB UID can encode a port instead of a serial. Only resume the
