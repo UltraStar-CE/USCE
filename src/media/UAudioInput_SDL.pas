@@ -43,7 +43,7 @@ type
   TSDLInputDevice = class(TAudioInputDevice)
     private
       DevID:   TSDL_AudioDeviceID;
-      UseName: boolean;
+      UseName, UniqueAtScan, NeedsReassignment: boolean;
       CaptureWanted, Removed, RetriedSilence: boolean;
       LastSignal, NextRetry: QWord;
       function OpenCapture: boolean;
@@ -70,8 +70,43 @@ begin
   AudioInputProcessor.HandleMicrophoneData(input, len, inputDevice);
 end;
 
+// SDL may append a changing numeric suffix to identical capture devices.
+function CaptureNameFamily(const Name: UTF8String): UTF8String;
+var I: integer;
+begin
+  Result := Name;
+  I := Length(Name);
+  if (I < 5) or (Name[I] <> ')') then Exit;
+  Dec(I);
+  if not (Name[I] in ['0'..'9']) then Exit;
+  while (I > 0) and (Name[I] in ['0'..'9']) do Dec(I);
+  if (I > 2) and (Name[I] = '(') and (Name[I-1] = ' ') then
+    SetLength(Result, I-2);
+end;
+
+function CaptureNameMatches(const Name: UTF8String; out Exact: boolean): integer;
+var
+  Count, I: integer;
+  Candidate: PAnsiChar;
+  Family: UTF8String;
+begin
+  Exact := false;
+  Count := SDL_GetNumAudioDevices(1);
+  if Count < 0 then Exit(-1);
+  Result := 0;
+  Family := CaptureNameFamily(Name);
+  for I := 0 to Count - 1 do
+  begin
+    Candidate := SDL_GetAudioDeviceName(I, 1);
+    if Candidate = nil then Exit(-1);
+    if UTF8String(Candidate) = Name then Exact := true;
+    if CaptureNameFamily(UTF8String(Candidate)) = Family then Inc(Result);
+  end;
+end;
+
 function TSDLInputDevice.Start(): boolean;
 begin
+  if NeedsReassignment then Exit(false);
   CaptureWanted := true;
   RetriedSilence := false;
   NextRetry := GetTickCount64 + 1000;
@@ -134,7 +169,8 @@ end;
 
 procedure TSDLInputDevice.CheckCapture(Now: QWord);
 var
-  Reopen: boolean;
+  Reopen, Exact: boolean;
+  Matches: integer;
 begin
   if not CaptureWanted then Exit;
   if DevID <> 0 then
@@ -157,6 +193,16 @@ begin
   end;
   if Now < NextRetry then Exit;
   NextRetry := Now + 1000;
+  Matches := CaptureNameMatches(Name, Exact);
+  if not UniqueAtScan or (Matches > 1) then
+  begin
+    CaptureWanted := false;
+    NeedsReassignment := true;
+    Log.LogStatus('Cannot identify SDL input "' + Name +
+      '" after disconnect. Reassign it in Recording Settings.', 'SDL');
+    Exit;
+  end;
+  if (Matches <> 1) or not Exact then Exit;
   if OpenCapture then
     Log.LogStatus('SDL input device "' + Name + '" reopened', 'SDL');
 end;
@@ -213,6 +259,7 @@ var
   spec:         TSDL_AudioSpec;
   dev:          TSDL_AudioDeviceID;
   deviceName:   UTF8String;
+  Exact:        boolean;
 begin
   Result := false;
 
@@ -256,9 +303,9 @@ begin
 
     device := TSDLInputDevice.Create();
     device.Name := deviceName;
-    device.UseName := false;
-    if name <> nil then
-      device.UseName := true;
+    device.UseName := name <> nil;
+    device.UniqueAtScan := device.UseName and
+      (CaptureNameMatches(deviceName, Exact) = 1) and Exact;
 
     device.MicSource := -1;
     device.SourceRestore := -1;
