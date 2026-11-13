@@ -74,6 +74,7 @@ type
       SingleIn: boolean;
 {$IFDEF MSWINDOWS}
       EndpointID: RawByteString;
+      USBIdentity: UnicodeString;
       CaptureWanted: boolean;
       NextRetry: QWord;
       procedure CheckCapture(Now: QWord);
@@ -197,10 +198,68 @@ begin
 end;
 
 {$IFDEF MSWINDOWS}
-function TBassInputDevice.MatchesEndpoint(const Info: BASS_DEVICEINFO): boolean;
+function CM_Locate_DevNodeW(out Node: DWORD; InstanceID: PWideChar; Flags: DWORD): DWORD;
+  stdcall; external 'cfgmgr32.dll';
+function CM_Get_Parent(out Parent: DWORD; Node, Flags: DWORD): DWORD;
+  stdcall; external 'cfgmgr32.dll';
+function CM_Get_Device_IDW(Node: DWORD; Buffer: PWideChar; Length, Flags: DWORD): DWORD;
+  stdcall; external 'cfgmgr32.dll';
+function CM_Get_DevNode_Registry_PropertyW(Node, Prop: DWORD; Kind, Buffer,
+  Size: PDWORD; Flags: DWORD): DWORD; stdcall; external 'cfgmgr32.dll';
+
+function USBEndpointIdentity(const Endpoint: RawByteString; out Serial: UTF8String): UnicodeString;
+const
+  CR_SUCCESS = 0;
+  CM_DRP_CAPABILITIES = $10;
+  CM_DEVCAP_UNIQUEID = $10;
+var
+  Node, Parent, Caps, Kind, Size: DWORD;
+  Buffer: array[0..199] of WideChar;
+  ID, Model: UnicodeString;
+  Slash, Depth: integer;
 begin
-  Result := (EndpointID <> '') and (Info.driver <> nil) and
-    (RawByteString(Info.driver) = EndpointID) and ((Info.flags and BASS_DEVICE_ENABLED) <> 0);
+  Result := '';
+  Serial := '';
+  if Endpoint = '' then Exit;
+
+  // Start at the exact MMDevice endpoint exposed by BASS, never at a
+  // device found by comparing friendly names or enumeration order.
+  ID := 'SWD\MMDEVAPI\' + UnicodeString(Endpoint);
+  if CM_Locate_DevNodeW(Node, PWideChar(ID), 0) <> CR_SUCCESS then Exit;
+  for Depth := 1 to 16 do
+  begin
+    if CM_Get_Parent(Parent, Node, 0) <> CR_SUCCESS then Exit;
+    Node := Parent;
+    if CM_Get_Device_IDW(Node, @Buffer[0], Length(Buffer), 0) <> CR_SUCCESS then Exit;
+    ID := UpperCase(UnicodeString(PWideChar(@Buffer[0])));
+    if Copy(ID, 1, 8) <> 'USB\VID_' then Continue;
+    Slash := Length(ID);
+    while (Slash > 0) and (ID[Slash] <> '\') do Dec(Slash);
+    Model := Copy(ID, 5, Slash - 5);
+    if Pos('&MI_', Model) <> 0 then Continue; // composite function, not the USB device
+    // Stop at the first physical USB device, even if it has no serial.
+    // Its parent may be a hub shared by both microphones.
+    if (Slash <= 5) or (Slash >= Length(ID)) then Exit;
+    Size := SizeOf(Caps);
+    if (CM_Get_DevNode_Registry_PropertyW(Node, CM_DRP_CAPABILITIES, @Kind,
+        @Caps, @Size, 0) <> CR_SUCCESS) or (Kind <> REG_DWORD) or
+       (Size <> SizeOf(Caps)) or ((Caps and CM_DEVCAP_UNIQUEID) = 0) then Exit;
+    Serial := UTF8Encode(Copy(ID, Slash + 1, MaxInt));
+    Result := ID;
+    Exit;
+  end;
+end;
+
+function TBassInputDevice.MatchesEndpoint(const Info: BASS_DEVICEINFO): boolean;
+var Serial: UTF8String;
+begin
+  Result := false;
+  if (Info.driver = nil) or ((Info.flags and BASS_DEVICE_ENABLED) = 0) or
+     ((Info.flags and BASS_DEVICE_LOOPBACK) <> 0) then Exit;
+  if USBIdentity <> '' then
+    Result := USBEndpointIdentity(RawByteString(Info.driver), Serial) = USBIdentity
+  else
+    Result := (EndpointID <> '') and (RawByteString(Info.driver) = EndpointID);
 end;
 
 function TBassInputDevice.MatchesEndpoint(DeviceID: DWORD): boolean;
@@ -542,7 +601,10 @@ begin
       BassDevice.BassDeviceID := BassDeviceID;
 {$IFDEF MSWINDOWS}
       if DeviceInfo.driver <> nil then
+      begin
         BassDevice.EndpointID := RawByteString(DeviceInfo.driver);
+        BassDevice.USBIdentity := USBEndpointIdentity(BassDevice.EndpointID, BassDevice.CaptureSerial);
+      end;
 {$ENDIF}
 
       BassDevice.Name := DeviceName;
