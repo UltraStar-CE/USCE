@@ -59,7 +59,9 @@ begin
     MediaManager.Clear;
     if MpvProvider<>nil then MediaManager.Add(MpvProvider);
     MediaManager.Add(FFmpegProvider);
+    {$IFDEF UseMpvVideo}
     Ini.VideoBackend:='ffmpeg';
+    {$ENDIF}
     InitializeVideo;
     Require(VideoPlayback=FFmpegProvider,'FFmpeg preference was ignored');
     {$IFDEF UseMpvVideo}
@@ -79,7 +81,9 @@ begin
     MediaManager.Clear;
     for I:=0 to High(SavedProviders) do
       MediaManager.Add(SavedProviders[I]);
+    {$IFDEF UseMpvVideo}
     Ini.VideoBackend:='mpv';
+    {$ENDIF}
   end;
   ConsoleWriteLn('PASS configured video provider selection');
 end;
@@ -241,9 +245,11 @@ begin
   SetDefaultNumericLocale;
   Log.SetLogLevel(LOG_LEVEL_INFO);
   Ini := TIni.Create;
+  {$IFDEF UseMpvVideo}
   Ini.VideoBackend:='mpv';
   Ini.VideoHardwareDecoding:=ParamStr(3);
   if Ini.VideoHardwareDecoding='' then Ini.VideoHardwareDecoding:='no';
+  {$ENDIF}
   SDL_SetHint(SDL_HINT_WINDOWS_DISABLE_THREAD_NAMING, '1');
   if SDL_Init(SDL_INIT_VIDEO or SDL_INIT_TIMER) <> 0 then
     raise Exception.Create('SDL initialization failed: ' + string(SDL_GetError()));

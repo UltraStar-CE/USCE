@@ -52,11 +52,13 @@ type
       ResolutionEmpty:     integer; // not used, only to prevent changing original by-ref passed variable
 
       OldWindowMode:       integer;
+{$IFDEF UseMpvVideo}
       VideoBackendIndex: integer;
       VideoHardwareIndex: integer;
       VideoBackendOptions: array of UTF8String;
       VideoHardwareOptions: array of UTF8String;
       procedure StoreVideoOptions;
+{$ENDIF}
 
       procedure UpdateWindowMode;
       procedure UpdateResolution;
@@ -120,7 +122,9 @@ begin
       SDLK_ESCAPE,
       SDLK_BACKSPACE :
         begin
+{$IFDEF UseMpvVideo}
           StoreVideoOptions;
+{$ENDIF}
           Ini.Save;
           AudioPlayback.PlaySound(SoundLib.Back);
           FadeTo(@ScreenOptions);
@@ -133,7 +137,9 @@ begin
         begin
           if SelInteraction = ord(iBackButton) then
           begin
+{$IFDEF UseMpvVideo}
             StoreVideoOptions;
+{$ENDIF}
             Ini.Save;
             AudioPlayback.PlaySound(SoundLib.Back);
 
@@ -184,6 +190,7 @@ begin
   ResolutionEmpty := 0;
   SetLength(IResolutionEmpty, 1);
   IResolutionEmpty[0] := '---';
+{$IFDEF UseMpvVideo}
   SetLength(VideoBackendOptions, 2);
   VideoBackendOptions[0] := 'FFmpeg';
   VideoBackendOptions[1] := 'MPV';
@@ -192,6 +199,7 @@ begin
   VideoHardwareOptions[1] := Language.Translate('OPTION_VALUE_AUTO');
   VideoBackendIndex := Ord(Ini.VideoBackend = 'mpv');
   VideoHardwareIndex := Ord(Ini.VideoHardwareDecoding = 'auto');
+{$ENDIF}
   Description := Language.Translate('SING_OPTIONS_GRAPHICS_DESC');
   WhereAmI := Language.Translate('SING_OPTIONS_GRAPHICS_WHEREAMI');
   Load;
@@ -248,15 +256,15 @@ begin
 
 end;
 
+{$IFDEF UseMpvVideo}
 procedure TScreenOptionsGraphics.StoreVideoOptions;
 begin
-{$IFDEF UseMpvVideo}
   if VideoBackendIndex = 1 then Ini.VideoBackend := 'mpv'
   else Ini.VideoBackend := 'ffmpeg';
   if VideoHardwareIndex = 1 then Ini.VideoHardwareDecoding := 'auto'
   else Ini.VideoHardwareDecoding := 'no';
-{$ENDIF}
 end;
+{$ENDIF}
 
 procedure TScreenOptionsGraphics.LoadWidgets;
 begin

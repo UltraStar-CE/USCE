@@ -674,7 +674,9 @@ function RefreshAudioInputDevices(ScanMode: TAudioInputScanMode): boolean;
 
 function  Visualization(): IVideoPlayback;
 function  VideoPlayback(): IVideoPlayback;
+{$IFDEF UseMpvVideo}
 function OpenVideoFallback(const FileName: IPath; const FailedBackend: IVideoPlayback; const Media: TBytes = nil): IVideo;
+{$ENDIF}
 function  AudioPlayback(): IAudioPlayback;
 function  AudioInput(): IAudioInput;
 function  AudioDecoders(): TInterfaceList;
@@ -742,7 +744,9 @@ begin
       Exit(false);
   Result := true;
 end;
+{$IFDEF UseMpvVideo}
 procedure FilterInterfaceList(const IID: TGUID; InList, OutList: TInterfaceList); forward;
+{$ENDIF}
 
 
 constructor TAudioFormatInfo.Create(Channels: byte; SampleRate: double; Format: TAudioSampleFormat);
@@ -805,6 +809,7 @@ begin
   Result := DefaultVideoPlayback;
 end;
 
+{$IFDEF UseMpvVideo}
 function OpenVideoFallback(const FileName: IPath; const FailedBackend: IVideoPlayback; const Media: TBytes = nil): IVideo;
 var
   Providers: TInterfaceList;
@@ -842,6 +847,7 @@ begin
     Providers.Free;
   end;
 end;
+{$ENDIF}
 
 function  Visualization(): IVideoPlayback;
 begin
@@ -1093,9 +1099,11 @@ begin
   for i := 0 to InterfaceList.Count-1 do
   begin
     VideoInterface := InterfaceList[i] as IVideoPlayback;
+{$IFDEF UseMpvVideo}
     // An optional backend disabled by configuration is not an init failure.
     if (VideoInterface.GetName = 'MPV_Video') and (Ini.VideoBackend <> 'mpv') then
       Continue;
+{$ENDIF}
     if (VideoInterface.Init()) then
     begin
       DefaultVideoPlayback := VideoInterface;
