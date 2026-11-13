@@ -68,6 +68,10 @@ type
       RecordStream: HSTREAM;
       BassDeviceID: DWORD; // DeviceID used by BASS
       SingleIn: boolean;
+{$IFDEF MSWINDOWS}
+      EndpointID: RawByteString;
+      function MatchesEndpoint(DeviceID: DWORD): boolean;
+{$ENDIF}
 
       function SetInputSource(SourceIndex: integer): boolean;
       function GetInputSource(): integer;
@@ -181,6 +185,16 @@ begin
   Result := true;
 end;
 
+{$IFDEF MSWINDOWS}
+function TBassInputDevice.MatchesEndpoint(DeviceID: DWORD): boolean;
+var Info: BASS_DEVICEINFO;
+begin
+  Result := (EndpointID <> '') and BASS_RecordGetDeviceInfo(DeviceID, Info) and
+    (Info.driver <> nil) and (RawByteString(Info.driver) = EndpointID) and
+    ((Info.flags and BASS_DEVICE_ENABLED) <> 0);
+end;
+{$ENDIF}
+
 function TBassInputDevice.Open(): boolean;
 var
   FormatFlags: DWORD;
@@ -190,6 +204,15 @@ const
 begin
   Result := false;
 
+{$IFDEF MSWINDOWS}
+  // BASS device numbers may change when Windows redetects an endpoint.
+  if (EndpointID <> '') and not MatchesEndpoint(BassDeviceID) then
+  begin
+    Log.LogError('Windows input endpoint changed for "' + Name +
+      '". Check its assignment in Recording Settings.', 'TBassInputDevice.Open');
+    Exit;
+  end;
+{$ENDIF}
   if (not BASS_RecordInit(BassDeviceID)) then
   begin
     Log.LogError('BASS_RecordInit['+Name+']: ' +
@@ -213,6 +236,18 @@ begin
     BASS_RecordFree;
     Exit;
   end;
+
+{$IFDEF MSWINDOWS}
+  // Check the actual paused stream before it can feed the player.
+  if (EndpointID <> '') and not MatchesEndpoint(BASS_ChannelGetDevice(RecordStream)) then
+  begin
+    BASS_RecordFree;
+    RecordStream := 0;
+    Log.LogError('Cannot verify the Windows input endpoint for "' + Name +
+      '". Check its assignment in Recording Settings.', 'TBassInputDevice.Open');
+    Exit;
+  end;
+{$ENDIF}
 
   // save current source selection and select new source
   SourceIndex := Ini.InputDeviceConfig[CfgIndex].Input-1;
@@ -409,6 +444,10 @@ begin
       AudioInputProcessor.DeviceList[DeviceIndex] := BassDevice;
 
       BassDevice.BassDeviceID := BassDeviceID;
+{$IFDEF MSWINDOWS}
+      if DeviceInfo.driver <> nil then
+        BassDevice.EndpointID := RawByteString(DeviceInfo.driver);
+{$ENDIF}
 
       BassDevice.Name := DeviceName;
       Log.LogStatus('Attempting to configure InputDevice "' + BassDevice.Name + '"', 'Bass.EnumDevices');
