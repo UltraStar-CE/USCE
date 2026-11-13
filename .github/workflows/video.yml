@@ -1,6 +1,26 @@
 name: Video backends
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "test/**"
+      - "configure.ac"
+      - "autogen.sh"
+      - "Makefile.in"
+      - "dists/autogen/**"
+      - ".github/workflows/video.yml"
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "src/**"
+      - "test/**"
+      - "configure.ac"
+      - "autogen.sh"
+      - "Makefile.in"
+      - "dists/autogen/**"
+      - ".github/workflows/video.yml"
 
 permissions:
   contents: read
@@ -26,9 +46,12 @@ jobs:
             autoconf automake make gcc fpc pkg-config \
             libsdl2-dev libsdl2-image-dev libfreetype6-dev libsqlite3-dev \
             libavformat-dev libavcodec-dev libavutil-dev libswresample-dev libswscale-dev \
-            portaudio19-dev libportmidi-dev liblua5.3-dev libmpv-dev \
+            portaudio19-dev libportmidi-dev liblua5.3-dev \
             python3 ffmpeg xvfb xauth libgl1 libegl1 libgles2 \
             libgl1-mesa-dri libglx-mesa0 libegl-mesa0
+      - name: Install libmpv
+        if: matrix.mpv == 'with'
+        run: sudo apt-get install --no-install-recommends -y libmpv-dev
       - name: Configure
         run: |
           ./autogen.sh
@@ -47,7 +70,7 @@ jobs:
         run: |
           xvfb-run -a -s '-screen 0 1280x720x24' \
             python3 test/run-video-smoke.py --renderers gl gl2 gles2 gles3
-      - name: Test hardware decoder selection
+      - name: Test hardware decoding option with software fallback
         if: matrix.mpv == 'with'
         env:
           LIBGL_ALWAYS_SOFTWARE: '1'
