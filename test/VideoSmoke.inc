@@ -41,11 +41,28 @@ begin
       Exit(Candidate);
 end;
 
+function VideoClass(const Video: IVideo): string;
+begin
+  Result:='nil';
+  if Video<>nil then Result:=(Video as TObject).ClassName;
+end;
+
 procedure TestVideoSelection;
 var
   SavedProviders: array of IInterface;
   FFmpegProvider, MpvProvider: IVideoPlayback;
   I: integer;
+
+  procedure ExpectBackend(const Backend, VideoType: string);
+  var Video: IVideo;
+  begin
+    {$IFDEF UseMpvVideo}
+    Ini.VideoBackend:=Backend;
+    {$ENDIF}
+    Video:=VideoPlayback.Open(Path(ParamStr(2)));
+    Require(VideoClass(Video)=VideoType,'backend '+Backend+' opened '+VideoClass(Video)+', expected '+VideoType);
+  end;
+
 begin
   ConsoleWriteLn('Testing configured video provider selection');
   FFmpegProvider:=FindVideoProvider('FFmpeg_Video');
@@ -63,18 +80,17 @@ begin
     Ini.VideoBackend:='ffmpeg';
     {$ENDIF}
     InitializeVideo;
-    Require(VideoPlayback=FFmpegProvider,'FFmpeg preference was ignored');
     {$IFDEF UseMpvVideo}
+    // The optional provider is selected whatever the setting and reads the
+    // setting at every open, so a change needs no new initialization.
     Require(MpvProvider<>nil,'missing MPV provider');
-    Require(FindVideoProvider('MPV_Video')=MpvProvider,
-      'disabled MPV provider was treated as an initialization failure');
-    Ini.VideoBackend:='mpv';
-    InitializeVideo;
-    Require(VideoPlayback=MpvProvider,'MPV preference was ignored');
-    // A previously initialized optional provider must still respect opt-out.
-    Ini.VideoBackend:='ffmpeg';
-    InitializeVideo;
-    Require(VideoPlayback=FFmpegProvider,'initialized MPV overrode FFmpeg preference');
+    Require(VideoPlayback=MpvProvider,'the MPV provider was not selected');
+    ExpectBackend('ffmpeg','TVideo_FFmpeg');
+    ExpectBackend('mpv','TVideo_MPV');
+    ExpectBackend('ffmpeg','TVideo_FFmpeg');
+    {$ELSE}
+    Require(VideoPlayback=FFmpegProvider,'FFmpeg was not selected');
+    ExpectBackend('ffmpeg','TVideo_FFmpeg');
     {$ENDIF}
   finally
     if MpvProvider<>nil then MpvProvider.Finalize;

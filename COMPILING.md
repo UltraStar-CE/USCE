@@ -165,9 +165,10 @@ or `libmpv.so.1` on Linux, `libmpv-2.dll` or `mpv-2.dll` with its dependencies
 beside the executable on Windows, `libmpv.2.dylib` or `libmpv.1.dylib` on macOS.
 Without it the game uses FFmpeg.
 
-To use it, choose MPV under Video playback in Tools » Options » Graphics and
-restart. Hardware video decoding `Auto` tries the available decoders; `Off`
-decodes in software.
+To use it, choose MPV under Video playback in Tools » Options » Graphics.
+Newly opened videos use the selected backend. Restart to also apply the choice
+to cached menu video backgrounds. Hardware video decoding `Auto` tries the
+available decoders; `Off` decodes in software.
 
 MPV then plays song videos while singing, menu video backgrounds and the editor's
 video. FFmpeg takes over when MPV cannot open a video. Song previews in song

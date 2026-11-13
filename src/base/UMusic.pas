@@ -674,9 +674,6 @@ function RefreshAudioInputDevices(ScanMode: TAudioInputScanMode): boolean;
 
 function  Visualization(): IVideoPlayback;
 function  VideoPlayback(): IVideoPlayback;
-{$IFDEF UseMpvVideo}
-function OpenVideoFallback(const FileName: IPath; const FailedBackend: IVideoPlayback; const Media: TBytes = nil): IVideo;
-{$ENDIF}
 function  AudioPlayback(): IAudioPlayback;
 function  AudioInput(): IAudioInput;
 function  AudioDecoders(): TInterfaceList;
@@ -744,9 +741,6 @@ begin
       Exit(false);
   Result := true;
 end;
-{$IFDEF UseMpvVideo}
-procedure FilterInterfaceList(const IID: TGUID; InList, OutList: TInterfaceList); forward;
-{$ENDIF}
 
 
 constructor TAudioFormatInfo.Create(Channels: byte; SampleRate: double; Format: TAudioSampleFormat);
@@ -808,48 +802,6 @@ function  VideoPlayback(): IVideoPlayback;
 begin
   Result := DefaultVideoPlayback;
 end;
-
-{$IFDEF UseMpvVideo}
-function OpenVideoFallback(const FileName: IPath; const FailedBackend: IVideoPlayback; const Media: TBytes = nil): IVideo;
-var
-  Providers: TInterfaceList;
-  Provider: IVideoPlayback;
-  i: integer;
-  FoundBackend: boolean;
-begin
-  Result := nil;
-  FoundBackend := false;
-  Providers := TInterfaceList.Create;
-  try
-    FilterInterfaceList(IVideoPlayback, MediaManager, Providers);
-    for i := 0 to Providers.Count - 1 do
-    begin
-      Provider := Providers[i] as IVideoPlayback;
-      if Provider = FailedBackend then
-      begin
-        FoundBackend := true;
-        Continue;
-      end;
-      // Try only the providers after the failed one and skip every provider
-      // that implements IVideoVisualization. TVideoPlayback_Dummy implements
-      // it, so the dummy provider is skipped for that reason.
-      if not FoundBackend or Supports(Provider, IVideoVisualization) then
-        Continue;
-      if Provider.Init() then
-      begin
-        Result := Provider.Open(FileName, Media);
-        if Result <> nil then
-        begin
-          Log.LogInfo('Using fallback ' + Provider.GetName, 'VideoPlayback');
-          Exit;
-        end;
-      end;
-    end;
-  finally
-    Providers.Free;
-  end;
-end;
-{$ENDIF}
 
 function  Visualization(): IVideoPlayback;
 begin
@@ -1101,11 +1053,6 @@ begin
   for i := 0 to InterfaceList.Count-1 do
   begin
     VideoInterface := InterfaceList[i] as IVideoPlayback;
-{$IFDEF UseMpvVideo}
-    // An optional backend disabled by configuration is not an init failure.
-    if (VideoInterface.GetName = 'MPV_Video') and (Ini.VideoBackend <> 'mpv') then
-      Continue;
-{$ENDIF}
     if (VideoInterface.Init()) then
     begin
       DefaultVideoPlayback := VideoInterface;

@@ -135,6 +135,10 @@ type
   TVideoPlayback_MPV = class(TInterfacedObject, IVideoPlayback)
     private
       fInitialized: boolean;
+      fFallback: IVideoPlayback;
+      fLibraryLoaded, fLibraryMissing: boolean;
+      function LibraryLoaded(): boolean;
+      function OpenFallback(const FileName: IPath; const Media: TBytes): IVideo;
     public
       function GetName: string;
       function Init(): boolean;
@@ -207,47 +211,93 @@ begin
   Result := 'MPV_Video';
 end;
 
+{ This provider comes first, so InitializeVideo selects it whenever a video can
+  be played at all, and it decides per video in Open. }
 function TVideoPlayback_MPV.Init(): boolean;
+var
+  i: integer;
+  provider: IVideoPlayback;
+  foundSelf: boolean;
 begin
-  if fInitialized then
-    Exit(true);
-  Result := (Ini.VideoBackend = 'mpv');
-  if not Result then
-    Exit;
-  fInitialized := LoadMpv();
-  Result := fInitialized;
-  if not Result then
-    Log.LogWarn(MpvLoadError() + '; using the next video backend', 'TVideoPlayback_MPV.Init');
+  if not fInitialized then
+  begin
+    { The fallback is the next video provider that is not a visualization,
+      which is FFmpeg: the dummy provider and the visualizers implement
+      IVideoVisualization. }
+    foundSelf := false;
+    for i := 0 to MediaManager.Count - 1 do
+      if Supports(MediaManager[i], IVideoPlayback, provider) then
+      begin
+        if provider = Self as IVideoPlayback then
+          foundSelf := true
+        else if foundSelf and not Supports(provider, IVideoVisualization) then
+        begin
+          if provider.Init() then
+            fFallback := provider;
+          Break;
+        end;
+      end;
+    fInitialized := true;
+  end;
+  Result := (fFallback <> nil) or LibraryLoaded();
 end;
 
 function TVideoPlayback_MPV.Finalize(): boolean;
 begin
-  if fInitialized then
-  begin
-    DestroyParkedPlayer;
-    UnloadMpv();
-  end;
+  DestroyParkedPlayer;
+  fFallback := nil;
   fInitialized := false;
   Result := true;
 end;
 
+{ libmpv is loaded when a video first needs it and stays loaded until the
+  process ends: it registers libavdevice's devices in libavformat's
+  process-wide list, so unloading it would leave FFmpeg's next open reading
+  freed memory. A missing library is reported once and not retried. }
+function TVideoPlayback_MPV.LibraryLoaded(): boolean;
+begin
+  if not fLibraryLoaded and not fLibraryMissing then
+  begin
+    fLibraryLoaded := LoadMpv();
+    fLibraryMissing := not fLibraryLoaded;
+    if fLibraryMissing then
+      Log.LogWarn(MpvLoadError() + '; FFmpeg plays all videos', 'TVideoPlayback_MPV');
+  end;
+  Result := fLibraryLoaded;
+end;
+
+function TVideoPlayback_MPV.OpenFallback(const FileName: IPath; const Media: TBytes): IVideo;
+begin
+  Result := nil;
+  if fFallback <> nil then
+    Result := fFallback.Open(FileName, Media);
+end;
+
+{ The policy for which backend plays a video, read at every open:
+  1. Song-select previews arrive as snapshots in memory so that their files
+     stay replaceable while they play (USCE #366). libmpv reads files only,
+     so FFmpeg decodes every snapshot. This is the rule, not a failure.
+  2. With FFmpeg configured, FFmpeg plays the video.
+  3. Without a loadable libmpv, FFmpeg plays the video.
+  4. Otherwise libmpv opens the file, and FFmpeg takes over when it cannot.
+  Once libmpv has opened a video it keeps it. A later failure ends that video:
+  Finished is true and the last frame stays until the caller drops the video.
+  There is no switch to FFmpeg in mid-stream. }
 function TVideoPlayback_MPV.Open(const FileName: IPath; const Media: TBytes = nil): IVideo;
 var
   video: TVideo_MPV;
 begin
-  Result := nil;
-  { Song-select previews arrive as snapshots in memory so that their files
-    stay replaceable while they play (USCE #366). This backend reads files
-    only, so snapshots are decoded by FFmpeg as a rule, not after a failure. }
-  if Media <> nil then
-    Exit(OpenVideoFallback(FileName, Self as IVideoPlayback, Media));
+  if (Media <> nil) or (Ini.VideoBackend <> 'mpv') or not LibraryLoaded() then
+    Exit(OpenFallback(FileName, Media));
   video := TVideo_MPV.Create;
   if video.Open(FileName) then
     Result := video
   else
   begin
     video.Free;
-    Result := OpenVideoFallback(FileName, Self as IVideoPlayback);
+    Result := OpenFallback(FileName, nil);
+    if Result <> nil then
+      Log.LogInfo('Using fallback ' + fFallback.GetName, 'VideoPlayback');
   end;
 end;
 
