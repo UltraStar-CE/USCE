@@ -179,6 +179,31 @@ begin
   end;
 end;
 
+// Form of a bus path used in the device name, e.g. "09:00.0-usb-0:3:1.0".
+// The controller stays part of it: the same port number exists once per
+// USB controller.
+function PortLabel(const port: UTF8String): UTF8String;
+const
+  PCI_PREFIX = 'pci-0000:';
+begin
+  Result := port;
+  if Copy(Result, 1, Length(PCI_PREFIX)) = PCI_PREFIX then
+    Delete(Result, 1, Length(PCI_PREFIX));
+end;
+
+function FindDeviceConfig(const name: UTF8String): integer;
+var
+  i: integer;
+begin
+  Result := -1;
+  for i := 0 to High(Ini.InputDeviceConfig) do
+    if Ini.InputDeviceConfig[i].Name = name then
+    begin
+      Result := i;
+      Exit;
+    end;
+end;
+
 {*
  * Makes sure SDLName is a name SDL currently knows.
  * Identical devices only differ by a number SDL appends in the order they
@@ -407,11 +432,17 @@ var
   deviceName:   UTF8String;
   names, ports: TUTF8StringArray;
   j:            integer;
+  port:         UTF8String;
+  portName:     UTF8String;
+  hasTwin:      boolean;
+  cfgIndex:     integer;
+  cfgChanged:   boolean;
 begin
   Result := false;
 
   Log.LogInfo('Using ' + SDL_GetCurrentAudioDriver + ' driver', 'SDL');
 
+  cfgChanged := false;
   ListCaptureDevices(names, ports);
   maxDevices := SDL_GetNumAudioDevices(1);
   if maxDevices < 1 then
@@ -428,8 +459,43 @@ begin
       break;
 
     deviceName := DEFAULT_SOURCE_NAME;
+    port := '';
     if (name <> nil) then
+    begin
       deviceName := name;
+      hasTwin := false;
+      for j := 0 to High(names) do
+        if names[j] = deviceName then
+          port := ports[j]
+        else if StripDuplicateSuffix(names[j]) = StripDuplicateSuffix(deviceName) then
+          hasTwin := true;
+
+      if port <> '' then
+      begin
+        // Identical devices are named after the port they are plugged into.
+        // SDL's own numbering depends on the order in which they showed up,
+        // so the player assignment would not be stable between sessions.
+        portName := StripDuplicateSuffix(deviceName) + ' [' + PortLabel(port) + ']';
+
+        // Once a device was configured by port keep that name,
+        // even while its twin is not connected.
+        if hasTwin or (FindDeviceConfig(portName) >= 0) then
+        begin
+          if FindDeviceConfig(portName) < 0 then
+          begin
+            // carry over the assignment made with SDL's name
+            cfgIndex := FindDeviceConfig(deviceName);
+            if cfgIndex >= 0 then
+            begin
+              Ini.InputDeviceConfig[cfgIndex].Name := portName;
+              cfgChanged := true;
+              Log.LogStatus('InputDevice "' + deviceName + '" is now configured as "' + portName + '"', 'SDL');
+            end;
+          end;
+          deviceName := portName;
+        end;
+      end;
+    end;
     deviceName := UnifyDeviceName(deviceName, i);
     if not ShouldProbeDevice(deviceName) then
       continue;
@@ -456,9 +522,7 @@ begin
     begin
       device.UseName := true;
       device.SDLName := name;
-      for j := 0 to High(names) do
-        if names[j] = device.SDLName then
-          device.Port := ports[j];
+      device.Port := port;
     end;
 
     device.MicSource := -1;
@@ -483,6 +547,11 @@ begin
     AudioInputProcessor.DeviceList[deviceIndex] := device;
     Inc(deviceIndex);
   end;
+
+  // keep the port based names, otherwise the assignment would be carried
+  // over again on the next start, with whatever order the devices have then
+  if cfgChanged then
+    Ini.Save;
 
   // adjust size to actual input-device count
   SetLength(AudioInputProcessor.DeviceList, deviceIndex);
