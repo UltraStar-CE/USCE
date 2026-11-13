@@ -908,7 +908,12 @@ begin
     // init device-selection slider
     SetLength(InputDeviceNames, Length(AudioInputProcessor.DeviceList));
     for DeviceIndex := 0 to High(AudioInputProcessor.DeviceList) do
-      InputDeviceNames[DeviceIndex] := AudioInputProcessor.DeviceList[DeviceIndex].Name;
+      with AudioInputProcessor.DeviceList[DeviceIndex] do
+      begin
+        InputDeviceNames[DeviceIndex] := Name;
+        if CaptureSerial <> '' then
+          InputDeviceNames[DeviceIndex] := Name + ' [' + CaptureSerial + ']';
+      end;
 
     // add device-selection slider (InteractionID: 0)
     AddSelectSlide('SING_OPTIONS_RECORD_CARD', CurrentDeviceIndex, InputDeviceNames);

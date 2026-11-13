@@ -27,6 +27,7 @@ uses
   math,
   UIni,
   ULog,
+  UPulseCaptureIdentity,
   URecord;
 
 type
@@ -43,10 +44,11 @@ type
   TSDLInputDevice = class(TAudioInputDevice)
     private
       DevID:   TSDL_AudioDeviceID;
-      UseName, UniqueAtScan, NeedsReassignment: boolean;
+      UseName, NeedsReassignment: boolean;
+      SDLName, Identity: UTF8String;
       CaptureWanted, Removed, RetriedSilence: boolean;
       LastSignal, NextRetry: QWord;
-      function OpenCapture: boolean;
+      function OpenCapture(Reconnect: boolean = false): boolean;
       procedure CheckCapture(Now: QWord);
     public
       function Start(): boolean; override;
@@ -84,24 +86,33 @@ begin
     SetLength(Result, I-2);
 end;
 
-function CaptureNameMatches(const Name: UTF8String; out Exact: boolean): integer;
+var CaptureTagCounter: cardinal;
+
+function OpenIdentifiedCapture(Name: PChar; var Spec: TSDL_AudioSpec;
+  out Key, Serial: UTF8String; AllowedChanges: integer = 0): TSDL_AudioDeviceID;
+const StreamHint = 'SDL_AUDIO_DEVICE_STREAM_NAME';
 var
-  Count, I: integer;
-  Candidate: PAnsiChar;
-  Family: UTF8String;
+  Tag, Previous: UTF8String;
+  Tagged: boolean;
 begin
-  Exact := false;
-  Count := SDL_GetNumAudioDevices(1);
-  if Count < 0 then Exit(-1);
-  Result := 0;
-  Family := CaptureNameFamily(Name);
-  for I := 0 to Count - 1 do
+  Key := '';
+  Serial := '';
+  Tagged := false;
+  if SDL_GetCurrentAudioDriver = 'pulseaudio' then
   begin
-    Candidate := SDL_GetAudioDeviceName(I, 1);
-    if Candidate = nil then Exit(-1);
-    if UTF8String(Candidate) = Name then Exact := true;
-    if CaptureNameFamily(UTF8String(Candidate)) = Family then Inc(Result);
+    Previous := SDL_GetHint(StreamHint);
+    Inc(CaptureTagCounter);
+    Tag := 'USCE-' + IntToHex(PtrUInt(@CaptureTagCounter), SizeOf(Pointer)*2) +
+      '-' + IntToHex(GetTickCount64, 16) + '-' + IntToHex(CaptureTagCounter, 8);
+    Tagged := SDL_SetHint(StreamHint, PChar(Tag));
   end;
+  try
+    // SDL opens paused. The caller verifies identity before unpausing.
+    Result := SDL_OpenAudioDevice(Name, 1, @Spec, @Spec, AllowedChanges);
+  finally
+    if Tagged then SDL_SetHint(StreamHint, PChar(Previous));
+  end;
+  if (Result <> 0) and Tagged then GetPulseCaptureIdentity(Tag, Key, Serial);
 end;
 
 function TSDLInputDevice.Start(): boolean;
@@ -115,10 +126,11 @@ begin
     Log.LogError('Could not open input device "' + Name + '": ' + SDL_GetError, 'SDL');
 end;
 
-function TSDLInputDevice.OpenCapture: boolean;
+function TSDLInputDevice.OpenCapture(Reconnect: boolean): boolean;
 var
-  devName: PChar;
-  spec:    TSDL_AudioSpec;
+  spec: TSDL_AudioSpec;
+  I: integer;
+  Candidate, Key, Serial: UTF8String;
 begin
   Result := false;
 
@@ -138,11 +150,23 @@ begin
         samples := 1 shl Round(Max(Log2(freq / 1000 * Ini.InputDeviceConfig[CfgIndex].Latency), 0));
     end;
 
-    devName := nil;
-    if UseName then
-      devName := PChar(Name);
-
-    DevID := SDL_OpenAudioDevice(devName, 1, @spec, @spec, 0);
+    if Reconnect or (Identity <> '') then
+    begin
+      if Identity = '' then Exit;
+      for I := 0 to SDL_GetNumAudioDevices(1) - 1 do
+      begin
+        Candidate := SDL_GetAudioDeviceName(I, 1);
+        if (Candidate = '') or (CaptureNameFamily(Candidate) <> CaptureNameFamily(SDLName)) then Continue;
+        DevID := OpenIdentifiedCapture(PChar(Candidate), spec, Key, Serial);
+        if (DevID <> 0) and (Key = Identity) then Break;
+        if DevID <> 0 then SDL_CloseAudioDevice(DevID);
+        DevID := 0;
+      end;
+    end
+    else if UseName then
+      DevID := SDL_OpenAudioDevice(PChar(SDLName), 1, @spec, @spec, 0)
+    else
+      DevID := SDL_OpenAudioDevice(nil, 1, @spec, @spec, 0);
     if DevID > 0 then
     begin
       if Ini.InputDeviceConfig[CfgIndex].Latency > 0 then
@@ -169,8 +193,8 @@ end;
 
 procedure TSDLInputDevice.CheckCapture(Now: QWord);
 var
-  Reopen, Exact: boolean;
-  Matches: integer;
+  Reopen: boolean;
+  Channel: TCaptureBuffer;
 begin
   if not CaptureWanted then Exit;
   if DevID <> 0 then
@@ -189,12 +213,13 @@ begin
     SDL_CloseAudioDevice(DevID);
     DevID := 0;
     Removed := false;
+    for Channel in CaptureChannel do
+      if Assigned(Channel) then Channel.Clear;
     Log.LogStatus('Reopening SDL input device "' + Name + '"', 'SDL');
   end;
   if Now < NextRetry then Exit;
   NextRetry := Now + 1000;
-  Matches := CaptureNameMatches(Name, Exact);
-  if not UniqueAtScan or (Matches > 1) then
+  if Identity = '' then
   begin
     CaptureWanted := false;
     NeedsReassignment := true;
@@ -202,8 +227,7 @@ begin
       '" after disconnect. Reassign it in Recording Settings.', 'SDL');
     Exit;
   end;
-  if (Matches <> 1) or not Exact then Exit;
-  if OpenCapture then
+  if OpenCapture(true) then
     Log.LogStatus('SDL input device "' + Name + '" reopened', 'SDL');
 end;
 
@@ -259,7 +283,7 @@ var
   spec:         TSDL_AudioSpec;
   dev:          TSDL_AudioDeviceID;
   deviceName:   UTF8String;
-  Exact:        boolean;
+  SDLName, Identity, Serial: UTF8String;
 begin
   Result := false;
 
@@ -279,9 +303,9 @@ begin
     if (name = nil) and (i > 0) then
       break;
 
+    SDLName := name;
     deviceName := DEFAULT_SOURCE_NAME;
-    if (name <> nil) then
-      deviceName := name;
+    if SDLName <> '' then deviceName := SDLName;
     deviceName := UnifyDeviceName(deviceName, i);
     if not ShouldProbeDevice(deviceName) then
       continue;
@@ -295,7 +319,14 @@ begin
       samples := 0;
     end;
 
-    dev := SDL_OpenAudioDevice(name, 1, @spec, @spec, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE or SDL_AUDIO_ALLOW_CHANNELS_CHANGE);
+    Identity := '';
+    Serial := '';
+    if (SDLName <> '') then
+      dev := OpenIdentifiedCapture(PChar(SDLName), spec, Identity, Serial,
+        SDL_AUDIO_ALLOW_FREQUENCY_CHANGE or SDL_AUDIO_ALLOW_CHANNELS_CHANGE)
+    else
+      dev := SDL_OpenAudioDevice(name, 1, @spec, @spec,
+        SDL_AUDIO_ALLOW_FREQUENCY_CHANGE or SDL_AUDIO_ALLOW_CHANNELS_CHANGE);
     if dev < 1 then
       continue;
 
@@ -303,9 +334,10 @@ begin
 
     device := TSDLInputDevice.Create();
     device.Name := deviceName;
-    device.UseName := name <> nil;
-    device.UniqueAtScan := device.UseName and
-      (CaptureNameMatches(deviceName, Exact) = 1) and Exact;
+    device.UseName := SDLName <> '';
+    device.SDLName := SDLName;
+    device.Identity := Identity;
+    device.CaptureSerial := Serial;
 
     device.MicSource := -1;
     device.SourceRestore := -1;
