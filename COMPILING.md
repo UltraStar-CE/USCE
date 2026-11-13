@@ -153,39 +153,23 @@ The DEB packages themselves remain part of USCE releases.
 
 ## Optional MPV video playback
 
-Install libmpv development files (`libmpv-dev` on Ubuntu), then configure with
-`./configure --with-mpv` and run `make`. The default build keeps FFmpeg only.
-MPV loads dynamically; the normal release packages do not bundle it.
+FFmpeg stays the default video backend. To add the optional libmpv backend,
+install the libmpv development files (`libmpv-dev` on Ubuntu), then configure
+with `./configure --with-mpv` and run `make`. On Windows, `./configure --with-mpv`
+in the MSYS2 shell writes the define into the generated `src/config-win.inc`
+(`--with-mpv=nocheck` skips the pkg-config test); the packaging scripts leave it
+off and ship no libmpv.
 
-Choose MPV in Tools > Options > Graphics and restart. Hardware decoding `Auto`
-tries the available decoders; `Off` uses software decoding. Check the log for
-the decoder actually selected. Song audio and lyrics keep the existing audio
-clock. FFmpeg remains the default and fallback when MPV cannot open a video.
-Song previews supplied as in-memory snapshots use FFmpeg to keep files replaceable.
+libmpv is loaded at run time and must match the game's architecture: `libmpv.so.2`
+or `libmpv.so.1` on Linux, `libmpv-2.dll` or `mpv-2.dll` with its dependencies
+beside the executable on Windows, `libmpv.2.dylib` or `libmpv.1.dylib` on macOS.
+Without it the game uses FFmpeg.
 
-The runtime must match the game's architecture and provide the OpenGL render API:
+To use it, choose MPV under Video playback in Tools » Options » Graphics and
+restart. Hardware video decoding `Auto` tries the available decoders; `Off`
+decodes in software.
 
-- Linux: `libmpv.so.2` or compatible `libmpv.so.1`, plus video drivers.
-- Windows: `libmpv-2.dll` or `mpv-2.dll` and its dependencies beside the executable.
-- macOS: `libmpv.2.dylib` or compatible `libmpv.1.dylib` with suitable loader paths.
-
-`--with-mpv=nocheck` builds the loader without development metadata; it does not
-install or package the runtime. Keep the game's existing FFmpeg libraries intact.
-Original source commits are listed in [MPV port provenance](doc/mpv-port-provenance.md).
-
-### Regression checks
-
-After building, run the video clock and real-renderer tests:
-
-```sh
-mkdir -p build/video-tests
-fpc -Fusrc/media -FUbuild/video-tests -FEbuild/video-tests test/VideoSyncTest.pas
-build/video-tests/VideoSyncTest
-python3 test/run-video-smoke.py --renderers gl gl2 gles2 gles3
-```
-
-The playback test generates its fixtures and builds a separate executable; tests
-are not installed with the game. It needs Python 3, FFmpeg with libx264 and a display
-(use `xvfb-run -a` on headless Linux). CI checks builds with and without MPV.
-On a physical GPU, add `--hwdec auto --require-hardware` to verify hardware decoding.
-Longer playback and microphone responsiveness still require native testing.
+MPV then plays song videos while singing, menu video backgrounds and the editor's
+video. FFmpeg takes over when MPV cannot open a video. Song previews in song
+selection are read into memory so their files stay replaceable, and FFmpeg always
+decodes them.

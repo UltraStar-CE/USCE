@@ -1,4 +1,18 @@
 #!/usr/bin/env python3
+# Regression checks for the video backends. After configuring and building
+# USCE, run the video clock and real-renderer tests from the repository root:
+#
+#   mkdir -p build/video-tests
+#   fpc -Fusrc/media -FUbuild/video-tests -FEbuild/video-tests test/VideoSyncTest.pas
+#   build/video-tests/VideoSyncTest
+#   python3 test/run-video-smoke.py --renderers gl gl2 gles2 gles3
+#
+# The playback test generates its fixtures and builds a separate executable;
+# tests are not installed with the game. It needs Python 3, FFmpeg with libx264
+# and a display (use `xvfb-run -a` on headless Linux). CI checks builds with and
+# without MPV. On a physical GPU, add `--hwdec auto --require-hardware` to
+# verify hardware decoding. Longer playback and microphone responsiveness still
+# require native testing.
 """Build and run the actual USCE renderer/video units in an isolated test program."""
 
 import argparse
