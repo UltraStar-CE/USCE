@@ -200,7 +200,7 @@ begin
   if DevID <> 0 then
   begin
     Reopen := Removed or (SDL_GetAudioDeviceStatus(DevID) = SDL_AUDIO_STOPPED);
-    if not Reopen then
+    if not Reopen and (Identity <> '') then
     begin
       // Some SDL backends keep a disconnected stream open and deliver zeros.
       // Try once per silent period so a muted mic does not repeatedly reopen.

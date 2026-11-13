@@ -84,7 +84,7 @@ type
       PaDeviceIndex:  TPaDeviceIndex;
 {$IF Defined(LINUX) or Defined(DARWIN)}
       CaptureIdentity: UTF8String;
-      CaptureWanted: boolean;
+      CaptureWanted, NeedsReassignment: boolean;
       NextRetry: QWord;
       procedure CheckCapture(Now: QWord);
 {$ENDIF}
@@ -258,7 +258,7 @@ function VerifiedCaptureIdentity(Stream: PPaStream; Device: PPaDeviceInfo;
 {$IFDEF DARWIN}
 var
   Host: PPaHostApiInfo;
-  DeviceID, Size: UInt32;
+  DeviceID, Size, Alive: UInt32;
   Address: AudioObjectPropertyAddress;
   UID: CFStringRef;
   Buffer: array[0..1023] of AnsiChar;
@@ -274,9 +274,13 @@ begin
   if (Host = nil) or (Host^._type <> paCoreAudio) then Exit;
   DeviceID := PaMacCore_GetStreamInputDevice(Stream);
   if DeviceID = 0 then Exit;
-  Address.mSelector := kAudioDevicePropertyDeviceUID;
   Address.mScope := kAudioObjectPropertyScopeGlobal;
   Address.mElement := 0;
+  Address.mSelector := kAudioDevicePropertyDeviceIsAlive;
+  Size := SizeOf(Alive);
+  if (AudioObjectGetPropertyData(DeviceID, Address, 0, nil, Size, @Alive) <> 0) or
+     (Alive = 0) then Exit;
+  Address.mSelector := kAudioDevicePropertyDeviceUID;
   UID := nil;
   Size := SizeOf(UID);
   if (AudioObjectGetPropertyData(DeviceID, Address, 0, nil, Size, @UID) <> 0) or
@@ -391,6 +395,7 @@ begin
     Stop();
 
 {$IF Defined(LINUX) or Defined(DARWIN)}
+  if NeedsReassignment then Exit;
   CaptureWanted := true;
   NextRetry := GetTickCount64 + 1000;
 {$ENDIF}
@@ -476,7 +481,8 @@ begin
   begin
     if Pa_IsStreamActive(RecordStream) = 1 then Exit;
     Stop();
-    CaptureWanted := true;
+    NeedsReassignment := CaptureIdentity = '';
+    CaptureWanted := not NeedsReassignment;
     for Channel in CaptureChannel do
       if Assigned(Channel) then Channel.Clear;
     Log.LogStatus('Input interrupted: "' + Name +
