@@ -39,6 +39,10 @@ uses
   URecord,
   UMusic;
 
+{$IFDEF MSWINDOWS}
+procedure CheckBassCaptureDevices;
+{$ENDIF}
+
 implementation
 
 uses
@@ -70,7 +74,11 @@ type
       SingleIn: boolean;
 {$IFDEF MSWINDOWS}
       EndpointID: RawByteString;
-      function MatchesEndpoint(DeviceID: DWORD): boolean;
+      CaptureWanted: boolean;
+      NextRetry: QWord;
+      procedure CheckCapture(Now: QWord);
+      function MatchesEndpoint(const Info: BASS_DEVICEINFO): boolean; overload;
+      function MatchesEndpoint(DeviceID: DWORD): boolean; overload;
 {$ENDIF}
 
       function SetInputSource(SourceIndex: integer): boolean;
@@ -87,6 +95,9 @@ type
 
 var
   BassCore: TAudioCore_Bass;
+{$IFDEF MSWINDOWS}
+  NextCaptureCheck: QWord;
+{$ENDIF}
 
 
 { Global }
@@ -186,12 +197,16 @@ begin
 end;
 
 {$IFDEF MSWINDOWS}
+function TBassInputDevice.MatchesEndpoint(const Info: BASS_DEVICEINFO): boolean;
+begin
+  Result := (EndpointID <> '') and (Info.driver <> nil) and
+    (RawByteString(Info.driver) = EndpointID) and ((Info.flags and BASS_DEVICE_ENABLED) <> 0);
+end;
+
 function TBassInputDevice.MatchesEndpoint(DeviceID: DWORD): boolean;
 var Info: BASS_DEVICEINFO;
 begin
-  Result := (EndpointID <> '') and BASS_RecordGetDeviceInfo(DeviceID, Info) and
-    (Info.driver <> nil) and (RawByteString(Info.driver) = EndpointID) and
-    ((Info.flags and BASS_DEVICE_ENABLED) <> 0);
+  Result := BASS_RecordGetDeviceInfo(DeviceID, Info) and MatchesEndpoint(Info);
 end;
 {$ENDIF}
 
@@ -223,6 +238,7 @@ begin
   if (not BassCore.ConvertAudioFormatToBASSFlags(AudioFormat.Format, FormatFlags)) then
   begin
     Log.LogError('Unhandled sample-format', 'TBassInputDevice.Open');
+    BASS_RecordFree;
     Exit;
   end;
 
@@ -273,15 +289,23 @@ begin
 
   // recording already started -> stop first
   if (RecordStream <> 0) then
+  begin
     Stop();
+    if RecordStream <> 0 then Exit;
+  end;
 
-  // TODO: Do not open the device here (takes too much time).
+{$IFDEF MSWINDOWS}
+  CaptureWanted := true;
+  NextRetry := GetTickCount64 + 1000;
+{$ENDIF}
+
   if not Open() then
     Exit;
 
   if (not BASS_ChannelPlay(RecordStream, true)) then
   begin
     Log.LogError('BASS_ChannelPlay: ' + BassCore.ErrorGetString(), 'TBassInputDevice.Start');
+    Stop();
     Exit;
   end;
 
@@ -293,10 +317,19 @@ function TBassInputDevice.Stop(): boolean;
 begin
   Result := false;
 
+{$IFDEF MSWINDOWS}
+  CaptureWanted := false;
+{$ENDIF}
   if (RecordStream = 0) then
     Exit;
-  if (not BASS_RecordSetDevice(BassDeviceID)) then
+  if not BASS_RecordSetDevice(BassDeviceID) then
+  begin
+    // Never free the thread's fallback device if this device disappeared.
+    if BASS_ChannelStop(RecordStream) or
+       (BASS_ChannelIsActive(RecordStream) = BASS_ACTIVE_STOPPED) then
+      RecordStream := 0;
     Exit;
+  end;
 
   if (not BASS_ChannelStop(RecordStream)) then
   begin
@@ -328,6 +361,69 @@ begin
 
   RecordStream := 0;
 end;
+
+{$IFDEF MSWINDOWS}
+procedure TBassInputDevice.CheckCapture(Now: QWord);
+var
+  Activity, DeviceID, Candidate: DWORD;
+  Info: BASS_DEVICEINFO;
+  Channel: TCaptureBuffer;
+begin
+  if not CaptureWanted then Exit;
+  if RecordStream <> 0 then
+  begin
+    Activity := BASS_ChannelIsActive(RecordStream);
+    if (Activity <> BASS_ACTIVE_STOPPED) and (Activity <> BASS_ACTIVE_PAUSED_DEVICE) then Exit;
+    Stop();
+    if RecordStream <> 0 then
+    begin
+      CaptureWanted := true;
+      Exit;
+    end;
+    for Channel in CaptureChannel do
+      if Assigned(Channel) then Channel.Clear;
+    CaptureWanted := EndpointID <> '';
+    Log.LogStatus('Windows input disconnected: "' + Name +
+      '". If it does not return, check Recording Settings.', 'BASS');
+    if not CaptureWanted then Exit;
+  end;
+  if (EndpointID = '') or (Now < NextRetry) then Exit;
+  NextRetry := Now + 1000;
+
+  Candidate := High(DWORD);
+  DeviceID := 0;
+  while BASS_RecordGetDeviceInfo(DeviceID, Info) do
+  begin
+    if MatchesEndpoint(Info) then
+    begin
+      if Candidate <> High(DWORD) then Exit;
+      Candidate := DeviceID;
+    end;
+    Inc(DeviceID);
+  end;
+  if Candidate = High(DWORD) then Exit;
+  BassDeviceID := Candidate;
+  if Start() then
+    Log.LogStatus('Verified Windows input endpoint reopened: "' + Name + '"', 'BASS')
+  else
+    CaptureWanted := true;
+end;
+
+procedure CheckBassCaptureDevices;
+var
+  Device: TAudioInputDevice;
+  Now: QWord;
+const
+  CheckInterval = 250;
+begin
+  if not Assigned(AudioInputProcessor) then Exit;
+  Now := GetTickCount64;
+  if Now < NextCaptureCheck then Exit;
+  NextCaptureCheck := Now + CheckInterval;
+  for Device in AudioInputProcessor.DeviceList do
+    if Device is TBassInputDevice then TBassInputDevice(Device).CheckCapture(Now);
+end;
+{$ENDIF}
 
 function TBassInputDevice.GetVolume(): single;
 var
