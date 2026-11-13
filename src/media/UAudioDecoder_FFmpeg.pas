@@ -167,7 +167,7 @@ type
       constructor Create();
       destructor Destroy(); override;
 
-      function Open(const Filename: IPath; const Media: TBytes = nil): boolean;
+      function Open(const Filename: IPath; const Media: TBytes = nil; const Source: IAudioFileSource = nil): boolean;
       procedure Close();                     override;
 
       function GetLength(): real;            override;
@@ -191,7 +191,7 @@ type
 
       function InitializeDecoder(): boolean;
       function FinalizeDecoder(): boolean;
-      function Open(const Filename: IPath; const Media: TBytes = nil): TAudioDecodeStream;
+      function Open(const Filename: IPath; const Media: TBytes = nil; const Source: IAudioFileSource = nil): TAudioDecodeStream;
   end;
 
 var
@@ -268,7 +268,7 @@ begin
   inherited;
 end;
 
-function TFFmpegDecodeStream.Open(const Filename: IPath; const Media: TBytes = nil): boolean;
+function TFFmpegDecodeStream.Open(const Filename: IPath; const Media: TBytes = nil; const Source: IAudioFileSource = nil): boolean;
 var
   SampleFormat: TAudioSampleFormat;
   PackedSampleFormat: TAVSampleFormat;
@@ -284,7 +284,7 @@ begin
   Close();
   Reset();
 
-  if (Media = nil) and not Filename.IsFile then
+  if (Media = nil) and (Source = nil) and not Filename.IsFile then
   begin
     Log.LogError('Audio-file does not exist: "' + Filename.ToNative + '"', 'UAudio_FFmpeg');
     Exit;
@@ -293,7 +293,7 @@ begin
   Self.fFilename := Filename;
 
   // use custom 'ufile' protocol for UTF-8 support
-  AVResult := FFmpegCore.AVFormatOpenInput(@fFormatCtx, PAnsiChar('ufile:'+FileName.ToUTF8), Media);
+  AVResult := FFmpegCore.AVFormatOpenInput(@fFormatCtx, PAnsiChar('ufile:'+FileName.ToUTF8), Media, Source);
   if (AVResult <> 0) then
   begin
     Log.LogError('Failed to open file "' + Filename.ToNative + '" ('+FFmpegCore.GetErrorString(AVResult)+')', 'UAudio_FFmpeg');
@@ -1435,14 +1435,14 @@ begin
   Result := true;
 end;
 
-function TAudioDecoder_FFmpeg.Open(const Filename: IPath; const Media: TBytes = nil): TAudioDecodeStream;
+function TAudioDecoder_FFmpeg.Open(const Filename: IPath; const Media: TBytes = nil; const Source: IAudioFileSource = nil): TAudioDecodeStream;
 var
   Stream: TFFmpegDecodeStream;
 begin
   Result := nil;
 
   Stream := TFFmpegDecodeStream.Create();
-  if (not Stream.Open(Filename, Media)) then
+  if (not Stream.Open(Filename, Media, Source)) then
   begin
     Stream.Free;
     Exit;
