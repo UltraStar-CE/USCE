@@ -66,15 +66,16 @@ type
   TVisArr = array of integer;
   TPreviewMediaLoad = class(TThread)
   private
-    Limit: integer;
+    AllowDiskSnapshot: boolean;
   protected
     procedure Execute; override;
     procedure ReadSnapshot;
   public
     FileName: IPath;
     Data: TBytes;
+    DiskSnapshot: IAudioFileSource;
     Discard, TooLarge: boolean;
-    constructor Create(const Source: IPath; ByteLimit: integer);
+    constructor Create(const Source: IPath; UseDiskSnapshot: boolean);
     procedure Cancel;
   end;
 
@@ -132,7 +133,7 @@ type
 
       function HasSelection: boolean;
       procedure SchedulePreview(SelectionSettled: boolean = false);
-      procedure StartMusicPreview(const Media: TBytes = nil);
+      procedure StartMusicPreview(const Media: TBytes = nil; const DiskSnapshot: IAudioFileSource = nil);
       procedure StartVideoPreview(const Media: TBytes = nil);
       procedure FinishPreviewLoad(var Load: TPreviewMediaLoad; IsVideo: boolean);
       function GetSongButtonMouseOverArea(ButtonIndex: integer): TMouseOverRect;
@@ -367,11 +368,15 @@ type
       procedure UpdateTransitionPreview;
       procedure OpenContinuousFromMainMenu;
   end;
-
 implementation
 
 
 uses
+  {$IFDEF MSWINDOWS}
+  Windows,
+  {$ELSE}
+  BaseUnix,
+  {$ENDIF}
   URemoteSongLibrary,
   URecord,
   UInputSource,
@@ -409,6 +414,7 @@ const
   MAX_TIME_MOUSE_SELECT = 800;
   CHANGE_SOUND_THROTTLE_MS = 200;
   PREVIEW_DEBOUNCE_MS = 150;
+  PREVIEW_SNAPSHOT_LIMIT = 64 * 1024 * 1024;
   PLAYLIST_RELOAD_INTERVAL_MS = 10000;
   REMOTE_STATE_THROTTLE_MS = 100;
 
@@ -4380,11 +4386,57 @@ begin
   end;
 end;
 
-constructor TPreviewMediaLoad.Create(const Source: IPath; ByteLimit: integer);
+type
+  TPreviewDiskSnapshot = class(TInterfacedObject, IAudioFileSource)
+  private
+    FHandle: THandle;
+    FStream: THandleStream;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    function GetStream: TStream;
+  end;
+
+constructor TPreviewDiskSnapshot.Create;
+var
+  ID: TGUID;
+  TempPath: IPath;
+begin
+  inherited Create;
+  FHandle := THandle(-1);
+  if CreateGUID(ID) <> 0 then
+    raise EFCreateError.Create('Could not name temporary preview file');
+  TempPath := Path(IncludeTrailingPathDelimiter(GetTempDir) + 'usce-preview-' + GUIDToString(ID));
+  {$IFDEF MSWINDOWS}
+  FHandle := CreateFileW(PWideChar(TempPath.ToWide), GENERIC_READ or GENERIC_WRITE,
+    0, nil, CREATE_NEW, FILE_ATTRIBUTE_TEMPORARY or FILE_FLAG_DELETE_ON_CLOSE, 0);
+  {$ELSE}
+  FHandle := fpOpen(TempPath.ToNative, O_RDWR or O_CREAT or O_EXCL, &600);
+  if (FHandle <> THandle(-1)) and (fpUnlink(TempPath.ToNative) <> 0) then
+    raise EFCreateError.Create('Could not unlink temporary preview file');
+  {$ENDIF}
+  if FHandle = THandle(-1) then
+    raise EFCreateError.Create('Could not create temporary preview file');
+  FStream := THandleStream.Create(FHandle);
+end;
+
+destructor TPreviewDiskSnapshot.Destroy;
+begin
+  FStream.Free;
+  if FHandle <> THandle(-1) then FileClose(FHandle);
+  inherited;
+end;
+
+function TPreviewDiskSnapshot.GetStream: TStream;
+begin
+  Result := FStream;
+end;
+
+constructor TPreviewMediaLoad.Create(const Source: IPath; UseDiskSnapshot: boolean);
 begin
   inherited Create(true);
   FileName := Source;
-  Limit := ByteLimit;
+  AllowDiskSnapshot := UseDiskSnapshot;
   Start;
 end;
 
@@ -4402,7 +4454,8 @@ begin
   begin
     if Terminated then Exit;
     ReadSnapshot;
-    if (Data <> nil) or TooLarge or Terminated then Exit;
+    if (Data <> nil) or (DiskSnapshot <> nil) or
+       (TooLarge and not AllowDiskSnapshot) or Terminated then Exit;
     if Attempt < 5 then Sleep(100);
   end;
 end;
@@ -4410,15 +4463,37 @@ end;
 procedure TPreviewMediaLoad.ReadSnapshot;
 var
   Input: TBinaryFileStream;
-  Size: Int64;
-  Offset, Count: integer;
+  Size, Offset: Int64;
+  Count: integer;
+  Snapshot: IAudioFileSource;
+  Buffer: TBytes;
 begin
   try
     Input := TBinaryFileStream.Create(FileName, fmOpenRead or fmShareDenyWrite);
     try
       Size := Input.Size;
-      TooLarge := Size > Limit;
-      if (Size <= 0) or TooLarge then Exit;
+      TooLarge := Size > PREVIEW_SNAPSHOT_LIMIT;
+      if (Size <= 0) or (TooLarge and not AllowDiskSnapshot) then Exit;
+      if TooLarge then
+      begin
+        // Keep the decoder's handle off the original so tools can replace it on Windows.
+        Snapshot := TPreviewDiskSnapshot.Create;
+        SetLength(Buffer, 256 * 1024);
+        Offset := 0;
+        while (Offset < Size) and not Terminated do
+        begin
+          Count := Input.Read(Buffer[0], Min(Size - Offset, Length(Buffer)));
+          if Count <= 0 then Break;
+          Snapshot.GetStream.WriteBuffer(Buffer[0], Count);
+          Inc(Offset, Count);
+        end;
+        if (Offset = Size) and (Input.Size = Size) and not Terminated then
+        begin
+          Snapshot.GetStream.Position := 0;
+          DiskSnapshot := Snapshot;
+        end;
+        Exit;
+      end;
       SetLength(Data, Size);
       Offset := 0;
       while (Offset < Length(Data)) and not Terminated do
@@ -4452,17 +4527,22 @@ begin
     if IsVideo then Source := Song.Video else Source := Song.Audio;
     if not Source.IsSet or
        (TLibraryRefresh.Key(Completed.FileName) <> TLibraryRefresh.Key(Song.Path.Append(Source))) then Exit;
-    if Completed.TooLarge then
-    begin
-      Log.LogInfo('Preview file exceeds the 64 MiB snapshot limit: ' +
-        Completed.FileName.ToNative, 'TScreenSong.FinishPreviewLoad');
-      if IsVideo then StopVideoPreview;
-    end;
-    if Completed.Data = nil then Exit;
     if IsVideo then
-      StartVideoPreview(Completed.Data)
-    else
-      StartMusicPreview(Completed.Data);
+    begin
+      if Completed.TooLarge then
+      begin
+        Log.LogInfo('Preview video exceeds the 64 MiB snapshot limit: ' +
+          Completed.FileName.ToNative, 'TScreenSong.FinishPreviewLoad');
+        StopVideoPreview;
+      end
+      else if Completed.Data <> nil then
+        StartVideoPreview(Completed.Data);
+    end
+    else if (Completed.Data <> nil) or (Completed.DiskSnapshot <> nil) then
+      StartMusicPreview(Completed.Data, Completed.DiskSnapshot)
+    else if Completed.TooLarge then
+      Log.LogError('Could not create disk snapshot for audio preview: ' +
+        Completed.FileName.ToNative, 'TScreenSong.FinishPreviewLoad');
   finally
     Completed.Free;
   end;
@@ -4501,7 +4581,7 @@ begin
     PreviewSettledTime := SDL_GetTicks;
 end;
 
-procedure TScreenSong.StartMusicPreview(const Media: TBytes);
+procedure TScreenSong.StartMusicPreview(const Media: TBytes; const DiskSnapshot: IAudioFileSource);
 var
   Song: TSong;
   PreviewPos, PreviousPosition: real;
@@ -4523,10 +4603,10 @@ begin
   if Song.main then
     Exit;
 
-  if Media = nil then
+  if (Media = nil) and (DiskSnapshot = nil) then
   begin
     if AudioPreviewLoad = nil then
-      AudioPreviewLoad := TPreviewMediaLoad.Create(Song.Path.Append(Song.Audio), 64 * 1024 * 1024)
+      AudioPreviewLoad := TPreviewMediaLoad.Create(Song.Path.Append(Song.Audio), true)
     else
       LastPreviewStartTime := SDL_GetTicks;
     Exit;
@@ -4536,7 +4616,7 @@ begin
   if (PreviewOpened = Interaction) and not AudioPlayback.Finished then
     PreviousPosition := AudioPlayback.Position;
   PlayMidi := false;
-  if AudioPlayback.Open(Song.Path.Append(Song.Audio), nil, Media) then
+  if AudioPlayback.Open(Song.Path.Append(Song.Audio), nil, Media, DiskSnapshot) then
   begin
     PreviewOpened := Interaction;
     PreviewEndReloaded := false;
@@ -4626,7 +4706,7 @@ begin
   if Media = nil then
   begin
     if VideoPreviewLoad = nil then
-      VideoPreviewLoad := TPreviewMediaLoad.Create(VideoFile, 64 * 1024 * 1024)
+      VideoPreviewLoad := TPreviewMediaLoad.Create(VideoFile, false)
     else
       PreviewSettledTime := SDL_GetTicks;
     Exit;

@@ -42,6 +42,10 @@ uses
   UWebcam;
 
 type
+  IAudioFileSource = interface
+    function GetStream: TStream;
+  end;
+
   TAudioInputScanMode = (
     aimFast,
     aimFull
@@ -500,7 +504,7 @@ type
       function  Length: real;
       function  GetFileName: string;
 
-      function Open(const Filename: IPath; const FilenameKaraoke: IPath; const Media: TBytes = nil): boolean; // true if succeed
+      function Open(const Filename: IPath; const FilenameKaraoke: IPath; const Media: TBytes = nil; const Source: IAudioFileSource = nil): boolean; // true if succeed
       procedure Close;
 
       procedure Play;
@@ -566,7 +570,7 @@ type
 
   IAudioDecoder = Interface( IGenericDecoder )
   ['{AB47B1B6-2AA9-4410-BF8C-EC79561B5478}']
-      function Open(const Filename: IPath; const Media: TBytes = nil): TAudioDecodeStream;
+      function Open(const Filename: IPath; const Media: TBytes = nil; const Source: IAudioFileSource = nil): TAudioDecodeStream;
   end;
 
   IAudioInput = Interface
