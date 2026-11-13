@@ -62,6 +62,8 @@ type
   {$PACKRECORDS DEFAULT}
 {$ENDIF}
 
+  TMpvArgs = array of PAnsiChar;
+
   TVideo_MPV = class(TVideoPresenter)
     private
       fHandle: Pmpv_handle;
@@ -177,6 +179,18 @@ begin
   Result := string(mpv_error_string(Code));
 end;
 
+{ The nil-terminated argument list of mpv_command and mpv_command_async.
+  The entries point into Args, so Args must outlive every use of the list. }
+function MpvArgs(const Args: array of AnsiString): TMpvArgs;
+var
+  i: integer;
+begin
+  SetLength(Result, Length(Args) + 1);
+  for i := 0 to High(Args) do
+    Result[i] := PAnsiChar(Args[i]);
+  Result[Length(Args)] := nil;
+end;
+
 function MpvProcAddress(Context: Pointer; Name: PAnsiChar): Pointer; cdecl;
 begin
   Result := SDL_GL_GetProcAddress(Name);
@@ -280,14 +294,10 @@ end;
 
 function TVideo_MPV.Command(Id: QWord; const Args: array of AnsiString): boolean;
 var
-  pointers: array of PAnsiChar;
-  i: integer;
+  pointers: TMpvArgs;
   code: cint;
 begin
-  SetLength(pointers, Length(Args) + 1);
-  for i := 0 to High(Args) do
-    pointers[i] := PAnsiChar(Args[i]);
-  pointers[Length(Args)] := nil;
+  pointers := MpvArgs(Args);
   code := mpv_command_async(fHandle, Id, @pointers[0]);
   Result := code >= 0;
   if not Result then
@@ -296,14 +306,10 @@ end;
 
 function TVideo_MPV.CommandSync(const Args: array of AnsiString): boolean;
 var
-  pointers: array of PAnsiChar;
-  i: integer;
+  pointers: TMpvArgs;
   code: cint;
 begin
-  SetLength(pointers, Length(Args) + 1);
-  for i := 0 to High(Args) do
-    pointers[i] := PAnsiChar(Args[i]);
-  pointers[Length(Args)] := nil;
+  pointers := MpvArgs(Args);
   code := mpv_command(fHandle, @pointers[0]);
   Result := code >= 0;
   if not Result then
