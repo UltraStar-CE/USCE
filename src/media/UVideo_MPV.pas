@@ -1104,8 +1104,11 @@ end;
 
 function TVideo_MPV.Finished: boolean;
 begin
-  { keep-open holds the last frame at the end; a looping file never ends. }
-  Result := fOpened and fEndReached and not fLoop;
+  { keep-open holds the last frame at the end; a looping file never ends.
+    After a failure in mid-stream GetFrame stops updating, so the caller must
+    be able to drop the stale image. The FFmpeg backend also reports a decode
+    failure as finished. }
+  Result := fOpened and (fFailed or (fEndReached and not fLoop));
 end;
 
 procedure TVideo_MPV.GetFrame(Time: Extended);
