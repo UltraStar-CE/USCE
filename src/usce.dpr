@@ -289,6 +289,7 @@ uses
 {$ENDIF}
 {$IFDEF UseSDLInput}
   UAudioInput_SDL           in 'media\UAudioInput_SDL.pas',
+  UPulseSources             in 'media\UPulseSources.pas',
 {$ENDIF}
 {$IFDEF UsePortaudioPlayback}
   UAudioPlayback_Portaudio  in 'media\UAudioPlayback_Portaudio.pas',

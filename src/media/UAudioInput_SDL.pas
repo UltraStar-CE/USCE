@@ -27,6 +27,7 @@ uses
   math,
   UIni,
   ULog,
+  UPulseSources,
   URecord;
 
 type
@@ -44,8 +45,11 @@ type
     private
       DevID:   TSDL_AudioDeviceID;
       UseName: boolean;
-      CaptureWanted, Removed, RetriedSilence: boolean;
+      SDLName: UTF8String; // name SDL currently uses for this device
+      Port:    UTF8String; // where the device is plugged in ('' if unknown)
+      CaptureWanted, Removed, RetriedSilence, ReopenFailed: boolean;
       LastSignal, NextRetry: QWord;
+      function ResolveSDLName: boolean;
       function OpenCapture: boolean;
       procedure CheckCapture(Now: QWord);
     public
@@ -70,9 +74,181 @@ begin
   AudioInputProcessor.HandleMicrophoneData(input, len, inputDevice);
 end;
 
+// removes the " (2)" SDL appends to devices with identical names
+function StripDuplicateSuffix(const name: UTF8String): UTF8String;
+var
+  i: integer;
+begin
+  Result := name;
+  i := Length(name);
+  if (i < 4) or (name[i] <> ')') then
+    Exit;
+  Dec(i);
+  while (i > 0) and (name[i] in ['0'..'9']) do
+    Dec(i);
+  if (i > 1) and (i < Length(name) - 1) and (name[i] = '(') and (name[i-1] = ' ') then
+    Result := Copy(name, 1, i - 2);
+end;
+
+type
+  TUTF8StringArray = array of UTF8String;
+
+{*
+ * Lists SDL's recording devices and, where possible, the port each of them
+ * is plugged into ('' if unknown).
+ * SDL does not tell us the port, the sound server does. Both list the devices
+ * in the same order, so the n-th SDL device with a certain description is the
+ * n-th device with that description of the sound server.
+ *}
+procedure ListCaptureDevices(out names, ports: TUTF8StringArray);
+var
+  i, j, k: integer;
+  count:   integer;
+  sdlDev:  PChar;
+  sources: TPulseSourceArray;
+  base:    UTF8String;
+  matches: array of integer;
+  usable:  boolean;
+begin
+  // this also refreshes SDL's device list
+  count := SDL_GetNumAudioDevices(1);
+  SetLength(names, 0);
+  for i := 0 to count - 1 do
+  begin
+    sdlDev := SDL_GetAudioDeviceName(i, 1);
+    if sdlDev = nil then
+      continue;
+    SetLength(names, Length(names) + 1);
+    names[High(names)] := sdlDev;
+  end;
+
+  SetLength(ports, Length(names));
+  for i := 0 to High(ports) do
+    ports[i] := '';
+
+  if StrPas(SDL_GetCurrentAudioDriver) <> 'pulseaudio' then
+    Exit;
+  if not GetPulseSources(sources) then
+    Exit;
+
+  for i := 0 to High(names) do
+  begin
+    base := StripDuplicateSuffix(names[i]);
+
+    // handle every description once, at its first device
+    usable := true;
+    for j := 0 to i - 1 do
+      if StripDuplicateSuffix(names[j]) = base then
+        usable := false;
+    if not usable then
+      continue;
+
+    SetLength(matches, 0);
+    for j := 0 to High(sources) do
+    begin
+      if sources[j].Description <> base then
+        continue;
+      // the port has to be known and must identify the device
+      if sources[j].BusPath = '' then
+        usable := false;
+      for k := 0 to High(matches) do
+        if sources[matches[k]].BusPath = sources[j].BusPath then
+          usable := false;
+      SetLength(matches, Length(matches) + 1);
+      matches[High(matches)] := j;
+    end;
+
+    count := 0;
+    for j := i to High(names) do
+      if StripDuplicateSuffix(names[j]) = base then
+        Inc(count);
+
+    // while a device is (dis)appearing both lists may differ for a moment
+    if (not usable) or (count <> Length(matches)) then
+      continue;
+
+    k := 0;
+    for j := i to High(names) do
+    begin
+      if StripDuplicateSuffix(names[j]) = base then
+      begin
+        ports[j] := sources[matches[k]].BusPath;
+        Inc(k);
+      end;
+    end;
+  end;
+end;
+
+{*
+ * Makes sure SDLName is a name SDL currently knows.
+ * Identical devices only differ by a number SDL appends in the order they
+ * show up, and SDL keeps counting: after a reconnect "Mic (2)" comes back
+ * as "Mic (3)". If we know the port of the device we look for the device at
+ * that port. Otherwise, if our name is gone, we take a device with the same
+ * base name that is not used by another input device.
+ *}
+function TSDLInputDevice.ResolveSDLName: boolean;
+var
+  i:      integer;
+  names:  TUTF8StringArray;
+  ports:  TUTF8StringArray;
+  other:  TAudioInputDevice;
+  taken:  boolean;
+begin
+  Result := false;
+  ListCaptureDevices(names, ports);
+
+  if Port <> '' then
+  begin
+    for i := 0 to High(names) do
+      if ports[i] = Port then
+      begin
+        if names[i] <> SDLName then
+          Log.LogStatus('InputDevice "' + Name + '" is now known to SDL as "' + names[i] + '"', 'SDL');
+        SDLName := names[i];
+        Result := true;
+        Exit;
+      end;
+    // Nothing is listed at our port. Either the device is gone or the ports
+    // could not be read this time, so only an unchanged name is safe to use.
+    for i := 0 to High(names) do
+      if (names[i] = SDLName) and (ports[i] = '') then
+        Result := true;
+    Exit;
+  end;
+
+  for i := 0 to High(names) do
+    if names[i] = SDLName then
+    begin
+      Result := true;
+      Exit;
+    end;
+
+  for i := 0 to High(names) do
+  begin
+    if StripDuplicateSuffix(names[i]) <> StripDuplicateSuffix(SDLName) then
+      continue;
+
+    taken := false;
+    for other in AudioInputProcessor.DeviceList do
+      if (other <> Self) and (other is TSDLInputDevice) and
+         (TSDLInputDevice(other).SDLName = names[i]) then
+        taken := true;
+
+    if not taken then
+    begin
+      Log.LogStatus('InputDevice "' + Name + '" is now known to SDL as "' + names[i] + '"', 'SDL');
+      SDLName := names[i];
+      Result := true;
+      Exit;
+    end;
+  end;
+end;
+
 function TSDLInputDevice.Start(): boolean;
 begin
   CaptureWanted := true;
+  ReopenFailed := false;
   RetriedSilence := false;
   NextRetry := GetTickCount64 + 1000;
   Result := OpenCapture;
@@ -105,7 +281,14 @@ begin
 
     devName := nil;
     if UseName then
-      devName := PChar(Name);
+    begin
+      if not ResolveSDLName then
+      begin
+        SDL_SetError('device not found');
+        Exit;
+      end;
+      devName := PChar(SDLName);
+    end;
 
     DevID := SDL_OpenAudioDevice(devName, 1, @spec, @spec, 0);
     if DevID > 0 then
@@ -158,7 +341,16 @@ begin
   if Now < NextRetry then Exit;
   NextRetry := Now + 1000;
   if OpenCapture then
+  begin
+    ReopenFailed := false;
     Log.LogStatus('SDL input device "' + Name + '" reopened', 'SDL');
+  end
+  else if not ReopenFailed then
+  begin
+    // once per outage, the attempt is repeated every second
+    ReopenFailed := true;
+    Log.LogError('Could not reopen input device "' + Name + '": ' + SDL_GetError + ', retrying', 'SDL');
+  end;
 end;
 
 var
@@ -213,11 +405,14 @@ var
   spec:         TSDL_AudioSpec;
   dev:          TSDL_AudioDeviceID;
   deviceName:   UTF8String;
+  names, ports: TUTF8StringArray;
+  j:            integer;
 begin
   Result := false;
 
   Log.LogInfo('Using ' + SDL_GetCurrentAudioDriver + ' driver', 'SDL');
 
+  ListCaptureDevices(names, ports);
   maxDevices := SDL_GetNumAudioDevices(1);
   if maxDevices < 1 then
     maxDevices := 1;
@@ -258,7 +453,13 @@ begin
     device.Name := deviceName;
     device.UseName := false;
     if name <> nil then
+    begin
       device.UseName := true;
+      device.SDLName := name;
+      for j := 0 to High(names) do
+        if names[j] = device.SDLName then
+          device.Port := ports[j];
+    end;
 
     device.MicSource := -1;
     device.SourceRestore := -1;
