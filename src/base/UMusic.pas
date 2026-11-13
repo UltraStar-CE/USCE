@@ -830,7 +830,9 @@ begin
         FoundBackend := true;
         Continue;
       end;
-      // Only try lower-priority file decoders, never a visualization or dummy.
+      // Try only the providers after the failed one and skip every provider
+      // that implements IVideoVisualization. TVideoPlayback_Dummy implements
+      // it, so the dummy provider is skipped for that reason.
       if not FoundBackend or Supports(Provider, IVideoVisualization) then
         Continue;
       if Provider.Init() then

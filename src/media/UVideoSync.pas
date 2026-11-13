@@ -1,3 +1,14 @@
+{ Clock policy for a video decoder that runs on its own clock (libmpv).
+  The game's audio clock owns the timeline; between calls the decoder plays
+  on its own timer. TExternalVideoSync.Update takes the time the game
+  requests, the position the decoder last reported (used only when
+  HavePlayback is set), the monotonic time of the call, the duration (0 when
+  unknown) and the loop, pause and end-of-file states. It returns the
+  position to show (wrapped when looping, otherwise clamped to the duration),
+  the playback speed (1, or 0.95 to 1.05 to absorb small drift), whether the
+  decoder should be paused and whether it should seek to that position.
+  The decisions are made here; UVideo_MPV only sends the resulting pause,
+  speed and seek commands to libmpv and reads their acknowledgements. }
 unit UVideoSync;
 
 {$IFDEF FPC}

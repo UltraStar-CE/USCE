@@ -42,15 +42,15 @@ type
   TVideoPresenter = class(TInterfacedObject, IVideo)
   protected
     fFrameTex: TTexture;
-    fFrameTexValid: boolean;
+    fFrameTexValid: boolean; //**< if true, fFrameTex contains the current frame
     fTexWidth, fTexHeight: cardinal;
     fScaledWidth, fScaledHeight: cardinal;
-    fScreen: integer;
+    fScreen: integer; //actual screen to draw on
     fPosX, fPosY, fPosZ: double;
     fWidth, fHeight: double;
     fFrameRange: TRectCoords;
     fAlpha: double;
-    fAspect: real;
+    fAspect: real; //**< width/height ratio
     fAspectCorrection: TAspectCorrection;
 
     procedure ResetPresentation;
@@ -83,6 +83,10 @@ type
     function GetWidth(): double;
     procedure SetHeight(Height: double);
     function GetHeight(): double;
+    {**
+     * Sub-image of the video frame to draw.
+     * This can be used for zooming or similar purposes.
+     *}
     procedure SetFrameRange(Range: TRectCoords);
     function GetFrameRange(): TRectCoords;
     function GetFrameAspect(): real;

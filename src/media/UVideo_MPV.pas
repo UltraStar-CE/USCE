@@ -236,9 +236,9 @@ var
   video: TVideo_MPV;
 begin
   Result := nil;
-  { A song preview arrives as a snapshot in memory, so that its file stays
-    replaceable while it plays. libmpv reads from the file here, so the
-    snapshot goes to the next file decoder. }
+  { Song-select previews arrive as snapshots in memory so that their files
+    stay replaceable while they play (USCE #366). This backend reads files
+    only, so snapshots are decoded by FFmpeg as a rule, not after a failure. }
   if Media <> nil then
     Exit(OpenVideoFallback(FileName, Self as IVideoPlayback, Media));
   video := TVideo_MPV.Create;

@@ -405,6 +405,11 @@ begin
   inherited;
 end;
 
+// BeginRender saves the state an external renderer such as libmpv may change
+// and EndRender restores it. Without a VAO only vertex attributes 0 to 2 are
+// saved: InitShaderPrograms binds only the locations pos, color and tex_coords
+// (0, 1, 2). Only the active texture unit and unit 0 keep their 2D binding:
+// the renderer never selects a texture unit other than GL_TEXTURE0.
 procedure TRenderTarget_OpenGL.BeginRender();
 var
   I: integer;
