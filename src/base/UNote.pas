@@ -900,6 +900,7 @@ var
   PlayerCurBeat:       integer;
   FirstBeatToAnalyze:  integer;
   IsRemotePlayer:      boolean;
+  SlotAbsent:          boolean;
   CanUpdatePlayerNote: boolean;
   SongTimeUs:          int64;
   RemoteTone:          TRemoteToneSample;
@@ -924,6 +925,9 @@ begin
 
       IsRemotePlayer := RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) and
         not PhoneAudio.Enabled;
+      SlotAbsent := (not IsRemotePlayer) and (ScreenSong.Mode = smNormal) and
+        not Party.bPartyGame and (PlayerIndex >= ScreenName.LocalPlayerCount) and
+        not RemoteInputProcessor.HasAssignedPlayer(PlayerIndex);
       PlayerDelayMs := ConfiguredPlayerDelayMs(PlayerIndex);
       if IsRemotePlayer then
       begin
@@ -961,14 +965,6 @@ begin
         PlayerCurBeat := Floor(LyricsState.MidBeatD - DelayBeats);
         if Screen.ScoringTailActive then
           PlayerCurBeat := Min(PlayerCurBeat, Screen.ScoringTailEndBeat);
-        if (ScreenSong.Mode = smNormal) and not Party.bPartyGame and
-           (PlayerIndex >= ScreenName.LocalPlayerCount) and
-           not RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) then
-        begin
-          // Skip absent beats without replaying them when a phone rejoins.
-          Player[PlayerIndex].DetectionBeat := Max(PlayerOldBeat, PlayerCurBeat);
-          Continue;
-        end;
         FirstBeatToAnalyze := PlayerOldBeat + 1;
       end;
 
@@ -994,6 +990,9 @@ begin
               if ActualBeat = SentenceEnd then
                 Screen.OnSentenceEnd(CP, EndLineIndex, PlayerIndex);
             end;
+        // Keep already-earned line bonuses while skipping input for absent beats.
+        if SlotAbsent then Continue;
+
         // check for an active note at the current time defined in the lyrics
         NoteAvailable := false;
         SentenceDetected := SentenceMin;
