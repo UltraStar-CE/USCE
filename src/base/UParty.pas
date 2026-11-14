@@ -115,6 +115,7 @@ type
     TimesPlayed: array of Integer; //< times every mode was played in current party game (for random mode calculation)
 
     procedure GenScores;
+    function PointsForRank(Rank: integer): integer;
     function GetRandomMode: integer;
     function GetRandomPlayer(Team: integer): integer;
 
@@ -192,6 +193,7 @@ type
 
     { indicates that current round has already been played }
     procedure RoundPlayed;
+    function CurrentRoundPoints(Team: integer): integer;
 
     { true if in a Party Game (not in standard mode) }
     property PartyGame: Boolean read BPartyGame;
@@ -405,28 +407,35 @@ begin
   end;
 end;
 
-//----------
-//GenScores - inc scores for cur. round
-//----------
+function TPartyGame.PointsForRank(Rank: integer): integer;
+begin
+  Result := 0;
+  case Length(Teams) of
+    2: if Rank = PR_First then Result := 1;
+    3: case Rank of
+         PR_First: Result := 3;
+         PR_Second: Result := 1;
+       end;
+  end;
+end;
+
+function TPartyGame.CurrentRoundPoints(Team: integer): integer;
+var
+  Entry: TParty_TeamRanking;
+begin
+  Result := 0;
+  if (CurRound < 0) or (CurRound > High(Rounds)) then Exit;
+  for Entry in Rounds[CurRound].Ranking do
+    if Entry.Team = Team then
+      Inc(Result, PointsForRank(Entry.Rank));
+end;
+
 procedure TPartyGame.GenScores;
 var
-  I: Integer;
+  Team: integer;
 begin
-  if (Length(Teams) = 2) then
-  begin // score generation for 2 teams, winner gets 1 point
-    for I := 0 to High(Rounds[CurRound].Ranking) do
-      if (Rounds[CurRound].Ranking[I].Rank = PR_First) then
-        Inc(Teams[Rounds[CurRound].Ranking[I].Team].Score);
-  end
-  else if (Length(Teams) = 3) then
-  begin // score generation for 3 teams,
-    // winner gets 3 points 2nd gets 1 point
-    for I := 0 to High(Rounds[CurRound].Ranking) do
-      if (Rounds[CurRound].Ranking[I].Rank = PR_First) then
-        Inc(Teams[Rounds[CurRound].Ranking[I].Team].Score, 3)
-      else if (Rounds[CurRound].Ranking[I].Rank = PR_Second) then
-        Inc(Teams[Rounds[CurRound].Ranking[I].Team].Score);
-  end
+  for Team := 0 to High(Teams) do
+    Inc(Teams[Team].Score, CurrentRoundPoints(Team));
 end;
 
 { set the attributes of Info to default values }

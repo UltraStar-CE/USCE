@@ -915,6 +915,8 @@ type
   end;
 
   TThemePartyScore = class(TThemeBasic)
+    RoundPoints:      array[0..2] of TThemeText;
+    RoundPointsEnabled: array[0..2] of boolean;
     TextScoreTeam1:    TThemeText;
     TextScoreTeam2:    TThemeText;
     TextScoreTeam3:    TThemeText;
@@ -4884,6 +4886,8 @@ end;
 procedure TTheme.ThemePartyLoad;
 var
   SectionList: TThemeSectionList;
+  I: integer;
+  Section: string;
 begin
   OpenFile(Ini.Theme);
 
@@ -4939,6 +4943,13 @@ begin
 
   //Party Score
   ThemeLoadBasic(PartyScore, 'PartyScore');
+  for I := 0 to High(PartyScore.RoundPoints) do
+  begin
+    PartyScore.RoundPointsEnabled[I] := false;
+    Section := 'PartyScoreRoundPointsTeam' + IntToStr(I + 1);
+    if SectionExists(Section, PartyScore.RoundPointsEnabled[I]) and PartyScore.RoundPointsEnabled[I] then
+      ThemeLoadText(PartyScore.RoundPoints[I], Section);
+  end;
 
   ThemeLoadText (PartyScore.TextScoreTeam1, 'PartyScoreTextScoreTeam1');
   ThemeLoadText (PartyScore.TextScoreTeam2, 'PartyScoreTextScoreTeam2');

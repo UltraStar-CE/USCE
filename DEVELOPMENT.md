@@ -152,6 +152,9 @@ The logic code about how to handle key pressed events for each screen can be fou
 
 `PartyOptionsSelectHighscores` styles the Party highscore selector. Without that
 section it inherits the mode selector style and sits below the playlist fields.
+`PartyScoreRoundPointsTeam1` through `PartyScoreRoundPointsTeam3` define optional
+text positions for the points earned in the last classic Party round. The
+existing score texts show each team's cumulative points including that round.
 
 ### Optional rounded theme images
 

@@ -46,9 +46,8 @@ uses
 type
   TScreenPartyScore = class(TMenu)
     public
-      TextScoreTeam1:    cardinal;
-      TextScoreTeam2:    cardinal;
-      TextScoreTeam3:    cardinal;
+      TextScoreTeam:    array[0..2] of integer;
+      TextRoundPoints:  array[0..2] of integer;
       TextNameTeam1:     cardinal;
       TextNameTeam2:     cardinal;
       TextNameTeam3:     cardinal;
@@ -137,12 +136,19 @@ constructor TScreenPartyScore.Create;
 var
   R, G, B: real;
   Color: integer;
+  Team: integer;
 begin
   inherited Create;
 
-  TextScoreTeam1 := AddText (Theme.PartyScore.TextScoreTeam1);
-  TextScoreTeam2 := AddText (Theme.PartyScore.TextScoreTeam2);
-  TextScoreTeam3 := AddText (Theme.PartyScore.TextScoreTeam3);
+  TextScoreTeam[0] := AddText(Theme.PartyScore.TextScoreTeam1);
+  TextScoreTeam[1] := AddText(Theme.PartyScore.TextScoreTeam2);
+  TextScoreTeam[2] := AddText(Theme.PartyScore.TextScoreTeam3);
+  for Team := 0 to High(TextRoundPoints) do
+  begin
+    TextRoundPoints[Team] := -1;
+    if Theme.PartyScore.RoundPointsEnabled[Team] then
+      TextRoundPoints[Team] := AddText(Theme.PartyScore.RoundPoints[Team]);
+  end;
   TextNameTeam1 := AddText (Theme.PartyScore.TextNameTeam1);
   TextNameTeam2 := AddText (Theme.PartyScore.TextNameTeam2);
   TextNameTeam3 := AddText (Theme.PartyScore.TextNameTeam3);
@@ -207,6 +213,8 @@ end;
 procedure TScreenPartyScore.OnShow;
 var
   Ranking: AParty_TeamRanking;
+  Team, RoundPoints, TextIndex: integer;
+  HasTeam: boolean;
 begin
   inherited;
 
@@ -222,13 +230,27 @@ begin
 
   // get rankings for current round
   Ranking := Party.Rounds[Party.CurrentRound].Ranking;
+  for Team := 0 to High(TextRoundPoints) do
+  begin
+    HasTeam := Team < Length(Party.Teams);
+    Text[TextScoreTeam[Team]].Visible := HasTeam;
+    if HasTeam then
+    begin
+      RoundPoints := Party.CurrentRoundPoints(Team);
+      Text[TextScoreTeam[Team]].Text := IntToStr(Party.Teams[Team].Score + RoundPoints);
+    end;
+    TextIndex := TextRoundPoints[Team];
+    if TextIndex < 0 then Continue;
+    Text[TextIndex].Visible := HasTeam;
+    if HasTeam then
+      Text[TextIndex].Text := Format(Language.Translate('PARTY_SCORE_ROUND_POINTS'), [RoundPoints]);
+  end;
 
   //Set Winnertext
   Text[TextWinner].Text := Format(Language.Translate('PARTY_SCORE_WINS'), [Party.GetWinnerString(Party.CurrentRound)]);
 
   if (Length(Party.Teams) >= 1) then
   begin
-    Text[TextScoreTeam1].Text := InttoStr(Party.Teams[0].Score);
     Text[TextNameTeam1].Text := Utf8String(Party.Teams[0].Name);
 
     //Set Deco Texture
@@ -248,7 +270,6 @@ begin
       end;
     end;
 
-    Text[TextScoreTeam1].Visible := true;
     Text[TextNameTeam1].Visible := true;
     Statics[StaticTeam1].Visible := true;
     Statics[StaticTeam1BG].Visible := true;
@@ -256,7 +277,6 @@ begin
   end
   else
   begin
-    Text[TextScoreTeam1].Visible := false;
     Text[TextNameTeam1].Visible := false;
     Statics[StaticTeam1].Visible := false;
     Statics[StaticTeam1BG].Visible := false;
@@ -265,7 +285,6 @@ begin
 
   if (Length(Party.Teams) >= 2) then
   begin
-    Text[TextScoreTeam2].Text := InttoStr(Party.Teams[1].Score);
     Text[TextNameTeam2].Text := UTF8String(Party.Teams[1].Name);
 
     //Set Deco Texture
@@ -286,7 +305,6 @@ begin
       end;
     end;
 
-    Text[TextScoreTeam2].Visible := true;
     Text[TextNameTeam2].Visible := true;
     Statics[StaticTeam2].Visible := true;
     Statics[StaticTeam2BG].Visible := true;
@@ -294,7 +312,6 @@ begin
   end
   else
   begin
-    Text[TextScoreTeam2].Visible := false;
     Text[TextNameTeam2].Visible := false;
     Statics[StaticTeam2].Visible := false;
     Statics[StaticTeam2BG].Visible := false;
@@ -303,7 +320,6 @@ begin
 
   if (Length(Party.Teams) >= 3) then
   begin
-    Text[TextScoreTeam3].Text := InttoStr(Party.Teams[2].Score);
     Text[TextNameTeam3].Text := UTF8String(Party.Teams[2].Name);
 
     //Set Deco Texture
@@ -323,7 +339,6 @@ begin
       end;
     end;
 
-    Text[TextScoreTeam3].Visible := true;
     Text[TextNameTeam3].Visible := true;
     Statics[StaticTeam3].Visible := true;
     Statics[StaticTeam3BG].Visible := true;
@@ -331,7 +346,6 @@ begin
   end
   else
   begin
-    Text[TextScoreTeam3].Visible := false;
     Text[TextNameTeam3].Visible := false;
     Statics[StaticTeam3].Visible := false;
     Statics[StaticTeam3BG].Visible := false;
