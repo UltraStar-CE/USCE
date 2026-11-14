@@ -33,6 +33,10 @@ interface
 
 {$I switches.inc}
 
+{$IFDEF DARWIN}
+  {$modeswitch objectivec1}
+{$ENDIF}
+
 uses
   UDisplay,
   UFiles,
@@ -65,7 +69,11 @@ uses
   ULanguage,
   ULog,
   UUnicodeUtils,
-  SysUtils{$IFDEF WINDOWS}, Windows, CommDlg{$ENDIF};
+  SysUtils
+  {$IF Defined(WINDOWS)}, Windows, CommDlg
+  {$ELSEIF Defined(DARWIN)}, CocoaAll, UPath
+  {$ELSEIF Defined(UNIX)}, BaseUnix, Process, UPath
+  {$ENDIF};
 
 type
   InteractionID = (
@@ -80,13 +88,13 @@ type
     iBackButton
   );
 
-{$IFDEF WINDOWS}
+{$IF Defined(WINDOWS)}
 type PEditorFilename = ^TOpenFilenameW;
 
 function ChooseEditorFile(Dialog: PEditorFilename): BOOL; stdcall;
   external 'comdlg32.dll' name 'GetOpenFileNameW';
 
-procedure BrowseSongEditor;
+function PickEditorFile(out Selected: UTF8String): boolean;
 var
   Dialog: TOpenFilenameW;
   Filename: array[0..32767] of WideChar;
@@ -103,13 +111,86 @@ begin
   Dialog.lpstrFile := @Filename[0];
   Dialog.nMaxFile := Length(Filename);
   Dialog.Flags := OFN_FILEMUSTEXIST or OFN_PATHMUSTEXIST or OFN_NOCHANGEDIR;
-  if ChooseEditorFile(@Dialog) then
-  begin
-    Ini.ExternalSongEditorPath := UTF8Encode(UnicodeString(PWideChar(@Filename[0])));
-    Ini.Save;
-  end;
+  Result := ChooseEditorFile(@Dialog);
+  if Result then
+    Selected := UTF8Encode(UnicodeString(PWideChar(@Filename[0])));
 end;
-{$ELSE}
+{$ELSEIF Defined(DARWIN)}
+function PickEditorFile(out Selected: UTF8String): boolean;
+var
+  Panel: NSOpenPanel;
+  SelectedURL, ExecutableURL: NSURL;
+  Bundle: NSBundle;
+  Folder: UTF8String;
+begin
+  Result := false;
+  Panel := NSOpenPanel.openPanel;
+  Panel.setTitle(NSString.stringWithUTF8String(PChar(Language.Translate('EXTERNAL_SONG_EDITOR_PATH'))));
+  Panel.setCanChooseFiles(true);
+  Panel.setCanChooseDirectories(false);
+  Panel.setTreatsFilePackagesAsDirectories(false);
+  Panel.setAllowsMultipleSelection(false);
+  if Ini.ExternalSongEditorPath <> '' then
+  begin
+    Folder := Path(Ini.ExternalSongEditorPath).GetParent.ToUTF8;
+    if SameText(ExtractFileName(ExcludeTrailingPathDelimiter(Folder)), 'MacOS') then
+    begin
+      Folder := Path(Folder).GetParent.GetParent.ToUTF8;
+      if SameText(ExtractFileExt(ExcludeTrailingPathDelimiter(Folder)), '.app') then
+        Folder := Path(Folder).GetParent.ToUTF8
+      else
+        Folder := Path(Ini.ExternalSongEditorPath).GetParent.ToUTF8;
+    end;
+    Panel.setDirectoryURL(NSURL.fileURLWithPath_isDirectory(NSString.stringWithUTF8String(PChar(Folder)), true));
+  end;
+  if Panel.runModal <> NSModalResponseOK then Exit;
+
+  SelectedURL := Panel.URL;
+  if SelectedURL = nil then Exit;
+  Selected := UTF8String(SelectedURL.fileSystemRepresentation);
+  if LowerCase(ExtractFileExt(ExcludeTrailingPathDelimiter(Selected))) = '.app' then
+  begin
+    Bundle := NSBundle.bundleWithURL(SelectedURL);
+    if Bundle = nil then Exit;
+    ExecutableURL := Bundle.executableURL;
+    if ExecutableURL = nil then Exit;
+    Selected := UTF8String(ExecutableURL.fileSystemRepresentation);
+  end;
+  Result := Path(Selected).IsFile;
+end;
+{$ELSEIF Defined(UNIX)}
+function FindEditorPicker(KDE: boolean): string;
+begin
+  if KDE then
+    Result := FileSearch('kdialog', GetEnvironmentVariable('PATH'), false)
+  else
+    Result := FileSearch('zenity', GetEnvironmentVariable('PATH'), false);
+  if (Result = '') or not Path(Result).IsAbsolute or (fpAccess(PChar(Result), X_OK) <> 0) then
+    Result := '';
+end;
+
+function PickEditorFile(const Picker: string; KDE: boolean; out Selected: UTF8String): boolean;
+var
+  Title, StartPath, Output: string;
+begin
+  Title := Language.Translate('EXTERNAL_SONG_EDITOR_PATH');
+  StartPath := Ini.ExternalSongEditorPath;
+  if StartPath = '' then StartPath := IncludeTrailingPathDelimiter(GetUserDir);
+  if KDE then
+    Result := RunCommand(Picker, ['--title', Title, '--getopenfilename', StartPath], Output, [poRunIdle])
+  else
+    Result := RunCommand(Picker, ['--title=' + Title, '--file-selection', '--filename=' + StartPath], Output, [poRunIdle]);
+  if not Result then Exit;
+  // The helpers append a newline to the selected path.
+  if (Output <> '') and (Output[Length(Output)] = #10) then
+    SetLength(Output, Length(Output) - 1);
+  Selected := Output;
+  Result := Path(Selected).IsAbsolute and Path(Selected).IsFile and
+    (fpAccess(PChar(Selected), X_OK) = 0);
+end;
+{$ENDIF}
+
+{$IF Defined(UNIX) and not Defined(DARWIN)}
 procedure ExternalToolPathEntered(Value: boolean; Data: Pointer);
 begin
   if not Value then Exit;
@@ -118,6 +199,47 @@ begin
 end;
 
 {$ENDIF}
+
+procedure BrowseSongEditor;
+var
+  Selected: UTF8String;
+  {$IF Defined(UNIX) and not Defined(DARWIN)}
+  KDE: boolean;
+  Picker: string;
+  {$ENDIF}
+begin
+  {$IF Defined(WINDOWS) or Defined(DARWIN)}
+  if not PickEditorFile(Selected) then Exit;
+  {$ELSEIF Defined(UNIX)}
+  KDE := Pos(':KDE:', ':' + UpperCase(GetEnvironmentVariable('XDG_CURRENT_DESKTOP')) + ':') > 0;
+  Picker := FindEditorPicker(KDE);
+  if Picker = '' then
+  begin
+    KDE := not KDE;
+    Picker := FindEditorPicker(KDE);
+  end;
+  if Picker = '' then
+  begin
+    ScreenPopupInsertUser.ShowTextPrompt(Language.Translate('EXTERNAL_SONG_EDITOR_PATH'),
+      'EXTERNAL_SONG_PATH_HINT', Language.Translate('FILTER_PRESET_SAVE'),
+      @ExternalToolPathEntered, nil, Ini.ExternalSongEditorPath, 'EXTERNAL_SONG_PATH');
+    Exit;
+  end;
+  try
+    if not PickEditorFile(Picker, KDE, Selected) then Exit;
+  except
+    on E: Exception do
+    begin
+      Log.LogError(E.Message, 'External song editor picker');
+      Exit;
+    end;
+  end;
+  {$ELSE}
+  Exit;
+  {$ENDIF}
+  Ini.ExternalSongEditorPath := Selected;
+  Ini.Save;
+end;
 
 function TScreenOptionsAdvanced.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
 begin
@@ -152,13 +274,7 @@ begin
           begin
             if Interactions[SelInteraction].Num = EditorPathButton then
             begin
-              {$IFDEF WINDOWS}
               BrowseSongEditor;
-              {$ELSE}
-              ScreenPopupInsertUser.ShowTextPrompt(Language.Translate('EXTERNAL_SONG_EDITOR_PATH'),
-                'EXTERNAL_SONG_PATH_HINT', Language.Translate('FILTER_PRESET_SAVE'),
-                @ExternalToolPathEntered, nil, Ini.ExternalSongEditorPath, 'EXTERNAL_SONG_PATH');
-              {$ENDIF}
               Exit;
             end;
             Ini.Save;
