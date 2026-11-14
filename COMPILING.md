@@ -98,11 +98,9 @@ identity alone does not guarantee that macOS will retain microphone permission.
 
 ## Flatpak packaging
 
-USCE does not yet have a published Flathub package. The upstream USDX manifest
-at https://github.com/flathub/eu.usdx.UltraStarDeluxe is a reference only;
-installing it installs USDX, not this edition. A USCE manifest must select the
-USCE source commit, app ID `org.ultrastarce.usce`, executable `usce`, and the
-matching reviewed dependencies before publication.
+The [USCE Flatpak test bundle](dists/flatpak/README.md) builds the pinned release
+and Themes snapshot for x86-64 and ARM64. It uses the Flatpak ID
+`io.github.ultrastar_ce.USCE`. Flathub distribution remains pending.
 
 # Windows installer
 The CI does this for you, but if you need to do it manually:
