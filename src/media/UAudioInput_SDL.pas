@@ -184,6 +184,13 @@ begin
       Reopen := not RetriedSilence and (Now >= LastSignal + 1500);
       if Reopen then RetriedSilence := true;
       SDL_UnlockAudioDevice(DevID);
+      if Reopen then
+      begin
+        // Silence alone does not justify closing a stream we cannot identify.
+        if not UniqueAtScan then Exit;
+        if CaptureNameMatches(Name, Exact) <> 1 then Exit;
+        if not Exact then Exit;
+      end;
     end;
     if not Reopen then Exit;
     SDL_CloseAudioDevice(DevID);
