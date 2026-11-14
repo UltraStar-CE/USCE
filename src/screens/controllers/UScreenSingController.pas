@@ -322,6 +322,7 @@ begin
         for VoiceIndex := 0 to High(Player) do Player[VoiceIndex].ResetScores;
         SeekTo(fStartTime);
         PlaybackSeeked := false;
+        SungToEnd := false;
         AnnounceRemoteSongStarted;
 
         Exit;
