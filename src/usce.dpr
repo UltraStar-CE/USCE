@@ -261,6 +261,7 @@ uses
 
   UGapCountdown             in 'base\UGapCountdown.pas',
   UMusic                    in 'base\UMusic.pas',
+  UVideoPresenter           in 'media\UVideoPresenter.pas',
   UAudioPlaybackBase        in 'media\UAudioPlaybackBase.pas',
 {$IF Defined(UsePortaudioPlayback) or Defined(UseSDLPlayback)}
   UFFT                      in 'lib\fft\UFFT.pas',
@@ -274,6 +275,11 @@ uses
   // This means the first entry has highest priority, the last lowest.
   //******************************
 
+{$IFDEF UseMpvVideo}
+  mpv                       in 'lib\mpv\mpv.pas',
+  UVideoSync                in 'media\UVideoSync.pas',
+  UVideo_MPV                in 'media\UVideo_MPV.pas',
+{$ENDIF}
 {$IFDEF UseFFmpegVideo}
   UVideo                    in 'media\UVideo.pas',
 {$ENDIF}

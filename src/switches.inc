@@ -102,6 +102,11 @@
   {$DEFINE UseFFmpegVideo}
 {$ENDIF}
 
+// optional hardware video backend
+{$IF Defined(HaveMpv)}
+  {$DEFINE UseMpvVideo}
+{$IFEND}
+
 // projectM config
 {$IF Defined(HaveProjectM)}
   {$DEFINE UseProjectM}

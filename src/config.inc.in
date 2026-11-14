@@ -73,6 +73,7 @@
 
 
 {$@DEFINE_HAVE_PROJECTM@ HaveProjectM}
+{$@DEFINE_HAVE_MPV@ HaveMpv}
 {$IF Defined(HaveProjectM) and Defined(IncludeConstants)}
   PROJECTM_VERSION_MAJOR   = @libprojectM_VERSION_MAJOR@;
   PROJECTM_VERSION_MINOR   = @libprojectM_VERSION_MINOR@;

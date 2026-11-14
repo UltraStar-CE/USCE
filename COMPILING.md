@@ -150,3 +150,27 @@ from the native executable and adds the dynamically loaded runtime libraries.
 Ubuntu packages are published by the separate [UltraStar-CE/apt repository](https://github.com/UltraStar-CE/apt).
 See its README for supported distributions, installation and signing/publication setup.
 The DEB packages themselves remain part of USCE releases.
+
+## Optional MPV video playback
+
+FFmpeg stays the default video backend. To add the optional libmpv backend,
+install the libmpv development files (`libmpv-dev` on Ubuntu), then configure
+with `./configure --with-mpv` and run `make`. On Windows, `./configure --with-mpv`
+in the MSYS2 shell writes the define into the generated `src/config-win.inc`
+(`--with-mpv=nocheck` skips the pkg-config test); the packaging scripts leave it
+off and ship no libmpv.
+
+libmpv is loaded at run time and must match the game's architecture: `libmpv.so.2`
+or `libmpv.so.1` on Linux, `libmpv-2.dll` or `mpv-2.dll` with its dependencies
+beside the executable on Windows, `libmpv.2.dylib` or `libmpv.1.dylib` on macOS.
+Without it the game uses FFmpeg.
+
+To use it, choose MPV under Video playback in Tools » Options » Graphics.
+Newly opened videos use the selected backend. Restart to also apply the choice
+to cached menu video backgrounds. Hardware video decoding `Auto` tries the
+available decoders; `Off` decodes in software.
+
+MPV then plays song videos while singing, menu video backgrounds and the editor's
+video. FFmpeg takes over when MPV cannot open a video. Song previews in song
+selection are read into memory so their files stay replaceable, and FFmpeg always
+decodes them.

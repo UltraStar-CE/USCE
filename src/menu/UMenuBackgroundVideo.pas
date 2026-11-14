@@ -159,6 +159,10 @@ begin
     CachedMenuVideo := TMenuVideoState.Create(FileName);
   end;
   Result := CachedMenuVideo;
+  { Pause toggles both video backends; Play does not resume FFmpeg. }
+  if (Result.Users = 0) and (Result.Timer.GetState = rtsPaused) and
+     (Result.Video <> nil) then
+    Result.Video.Pause;
   Inc(Result.Users);
   Result.Timer.Start;
 end;
@@ -173,6 +177,8 @@ begin
   if Old.Users = 0 then
   begin
     Old.Timer.Pause;
+    if Old.Video <> nil then
+      Old.Video.Pause;
     if Old <> CachedMenuVideo then Old.Free;
   end;
 end;
