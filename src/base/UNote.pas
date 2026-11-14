@@ -188,7 +188,6 @@ uses
   UJoystick,
   ULanguage,
   MidiOut,
-  UParty,
   UPathUtils,
   UPlatform,
   UPlaylist,
@@ -925,8 +924,8 @@ begin
 
       IsRemotePlayer := RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) and
         not PhoneAudio.Enabled;
-      SlotAbsent := (not IsRemotePlayer) and (ScreenSong.Mode = smNormal) and
-        not Party.bPartyGame and (PlayerIndex >= ScreenName.LocalPlayerCount) and
+      SlotAbsent := (not IsRemotePlayer) and Screen.UsesSelectedLocalRoster and
+        (PlayerIndex >= ScreenName.LocalPlayerCount) and
         not RemoteInputProcessor.HasAssignedPlayer(PlayerIndex);
       PlayerDelayMs := ConfiguredPlayerDelayMs(PlayerIndex);
       if IsRemotePlayer then
