@@ -48,6 +48,8 @@ type
       constructor Create; override;
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       procedure OnShow; override;
+    private
+      SyncerPortButton, SyncerFolderButton: integer;
     protected
       procedure LoadWidgets; override;
   end;
@@ -63,7 +65,7 @@ uses
   ULanguage,
   ULog,
   UUnicodeUtils,
-  SysUtils;
+  SysUtils, USyncerWeb, USongs, UPath;
 
 type
   InteractionID = (
@@ -78,7 +80,31 @@ type
     iBackButton
   );
 
+procedure SyncerFolderConfirmed(Value: boolean; Data: Pointer);
+var Folder: IPath;
+begin
+  if not Value then Exit;
+  Folder := TSyncerClient.SongFolder;
+  if Folder.IsDirectory and Ini.AddSongDirectory(Folder) then
+    Songs.RequestRefresh(Folder);
+end;
+
+procedure SyncerPortEntered(Value: boolean; Data: Pointer);
+var Port: integer;
+begin
+  if not Value or (Trim(ScreenPopupInsertUser.Username) = '') then Exit;
+  Port := StrToIntDef(Trim(ScreenPopupInsertUser.Username), -1);
+  if (Port < 0) or (Port > 65535) then
+  begin
+    ScreenPopupError.ShowPopup(Language.Translate('SYNCER_INVALID_PORT'));
+    Exit;
+  end;
+  Ini.SyncerPort := Port;
+  Ini.Save;
+end;
+
 function TScreenOptionsAdvanced.ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean;
+var Folder: IPath;
 begin
   Result := true;
   if (PressedDown) then
@@ -109,6 +135,24 @@ begin
         begin
           if Interactions[SelInteraction].Typ = iButton then
           begin
+            if Interactions[SelInteraction].Num = SyncerPortButton then
+            begin
+              ScreenPopupInsertUser.ShowTextPrompt(
+                Format(Language.Translate('SYNCER_CURRENT_PORT'), [Ini.SyncerPort]),
+                'SYNCER_PORT_HINT', Language.Translate('FILTER_PRESET_SAVE'),
+                @SyncerPortEntered, nil, '', 'SYNCER_PORT');
+              Exit;
+            end;
+            if Interactions[SelInteraction].Num = SyncerFolderButton then
+            begin
+              Folder := TSyncerClient.SongFolder;
+              if Folder.IsDirectory then
+                ScreenPopupCheck.ShowPopup(Format(Language.Translate('SYNCER_CONFIRM_FOLDER'), [Folder.ToUTF8]),
+                  @SyncerFolderConfirmed, nil)
+              else
+                ScreenPopupInfo.ShowPopup(Language.Translate('SYNCER_FOLDER_UNKNOWN'));
+              Exit;
+            end;
             Ini.Save;
             AudioPlayback.PlaySound(SoundLib.Back);
             FadeTo(@ScreenOptions);
@@ -176,6 +220,12 @@ begin
   DefaultSuffix := ' (' + Language.Translate('OPTION_VALUE_DEFAULT') + ')';
   for Weight := Low(WeightOptions) to High(WeightOptions) do
     WeightOptions[Weight] := IntToStr(Weight) + '%';
+
+  AddSection('SYNCER_SECTION');
+  AddSelectSlide('EXTERNAL_SONG_SEARCH', Ini.ExternalSongSearch,
+    [Language.Translate('OPTION_VALUE_OFF'), Language.Translate('OPTION_VALUE_ON')]);
+  SyncerPortButton := AddButton('SYNCER_PORT');
+  SyncerFolderButton := AddButton('SYNCER_ADD_FOLDER');
 
   AddSection('SING_OPTIONS_ADVANCED_SCORING');
   for NoteType := Low(TNoteType) to High(TNoteType) do

@@ -238,6 +238,8 @@ type
       ScreenFade:     integer;
       AskBeforeDel:   integer;
       OnSongClick:    integer;
+      ExternalSongSearch: integer;
+      SyncerPort, SyncerLastPort: integer;
       PartyPopup:     integer;
       PartyHighscores: integer;
       SingScores:     integer;
@@ -294,6 +296,7 @@ type
       procedure SaveHighScoreScreenSettings;
       procedure SaveWebcamSettings();
       procedure SaveNumberOfPlayers;
+      function AddSongDirectory(const Folder: IPath): boolean;
       procedure SaveStatDetailCount;
       procedure SaveStatPeriod;
       procedure SaveSingTimebarMode;
@@ -446,6 +449,7 @@ const
   ISingScores:    array[0..3] of UTF8String = ('Off', 'On', 'Bar Rating', 'Remaining Score');
   IDuetScores:    array[0..3] of UTF8String = ('Off', 'Separate', 'Combined', 'Both');
   ITopScores:     array[0..1] of UTF8String = ('All', 'Player');
+  IExternalSongSearch: array[0..1] of UTF8String = ('Off', 'On');
   IOnSongClick:   array[0..2] of UTF8String = ('Sing', 'Select Players', 'Open Menu');
   sStartSing = 0;
   sSelectPlayer = 1;
@@ -1684,7 +1688,7 @@ var
   ReadPianoKeysLow: TPianoKeyArray;
   ReadPianoKeysHigh: TPianoKeyArray;
   View: TCompanionView;
-  LegacyWebApp: string;
+  LegacyWebApp, LegacySyncerAddress: string;
 
   function ReadVolumePercent(const Section, Key: string; DefaultValue: integer): integer;
   var
@@ -1958,6 +1962,13 @@ begin
   // AskbeforeDel
   AskBeforeDel := ReadArrayIndex(IAskbeforeDel, IniFile, 'Advanced', 'AskbeforeDel', IGNORE_INDEX, 'On');
 
+  ExternalSongSearch := ReadArrayIndex(IExternalSongSearch, IniFile, 'ExternalSongTools', 'Search', IGNORE_INDEX, 'Off');
+  LegacySyncerAddress := IniFile.ReadString('ExternalSongTools', 'SyncerAddress', '');
+  SyncerPort := StrToIntDef(Copy(LegacySyncerAddress, LastDelimiter(':', LegacySyncerAddress) + 1, MaxInt), 0);
+  SyncerPort := IniFile.ReadInteger('ExternalSongTools', 'SyncerPort', SyncerPort);
+  if (SyncerPort < 0) or (SyncerPort > 65535) then SyncerPort := 0;
+  InterlockedExchange(SyncerLastPort, IniFile.ReadInteger('ExternalSongTools', 'SyncerLastPort', 0));
+
   // OnSongClick
   OnSongClick := ReadArrayIndex(IOnSongClick, IniFile, 'Advanced', 'OnSongClick', IGNORE_INDEX, 'Sing');
 
@@ -2224,6 +2235,11 @@ begin
 
     //AskbeforeDel
     IniFile.WriteString('Advanced', 'AskbeforeDel', IAskbeforeDel[AskBeforeDel]);
+
+    IniFile.WriteString('ExternalSongTools', 'Search', IExternalSongSearch[ExternalSongSearch]);
+    IniFile.WriteInteger('ExternalSongTools', 'SyncerPort', SyncerPort);
+    IniFile.WriteInteger('ExternalSongTools', 'SyncerLastPort', InterlockedExchangeAdd(SyncerLastPort, 0));
+    IniFile.DeleteKey('ExternalSongTools', 'SyncerAddress');
 
     //OnSongClick
     IniFile.WriteString('Advanced', 'OnSongClick', IOnSongClick[OnSongClick]);
@@ -2510,6 +2526,37 @@ begin
   finally
     IniFile.Free;
   end;
+end;
+
+function TIni.AddSongDirectory(const Folder: IPath): boolean;
+var
+  IniFile: TIniFile;
+  Key: string;
+  I: integer;
+  Root, Existing: IPath;
+begin
+  Result := false;
+  if not Folder.IsDirectory then Exit;
+  Root := Folder.GetAbsolutePath.RemovePathDelim;
+  if Assigned(SongPaths) then
+    for I := 0 to SongPaths.Count - 1 do
+    begin
+      Existing := (SongPaths[I] as IPath).GetAbsolutePath.RemovePathDelim;
+      if Root.Equals(Existing, not FileSystem.IsCaseSensitive) or Root.IsChildOf(Existing, false) then Exit;
+    end;
+  AddSongPath(Root, false);
+  IniFile := TSafeIniFile.Create(Filename.ToNative, 'TIni.AddSongDirectory');
+  try
+    I := 1;
+    repeat
+      Key := 'SongDir' + IntToStr(I);
+      Inc(I);
+    until Trim(IniFile.ReadString('Directories', Key, '')) = '';
+    IniFile.WriteString('Directories', Key, Folder.ToUTF8);
+  finally
+    IniFile.Free;
+  end;
+  Result := true;
 end;
 
 procedure TIni.SaveStatDetailCount;
