@@ -190,6 +190,7 @@ type
     procedure ApplySettings; //< applies changes of settings record
     procedure EndSong;
 
+    function UsesSelectedLocalRoster: boolean;
     procedure RefreshInputRoster(NewCount: integer);
     constructor Create; override;
     destructor Destroy; override;
@@ -687,6 +688,11 @@ begin
   AnnounceRemoteSongPosition('seek');
 end;
 
+function TScreenSingController.UsesSelectedLocalRoster: boolean;
+begin
+  Result := (ScreenSong.Mode in [smNormal, smMedley]) and not Party.bPartyGame;
+end;
+
 procedure TScreenSingController.RefreshInputRoster(NewCount: integer);
 var I, OldCount: integer; Color: TRGB; Levels: array[0..UIni.IMaxPlayerCount-1] of integer;
   Names: array[0..UIni.IMaxPlayerCount-1] of UTF8String;
@@ -807,7 +813,7 @@ begin
 
   ScoringTailActive := false;
   RemoteBridgeIPC.RefreshRemoteInputs(true);
-  if (ScreenSong.Mode = smNormal) and not Party.bPartyGame then
+  if UsesSelectedLocalRoster then
   begin
     // Input loss preserves this song's scores, but must not retain next-song lanes.
     ScreenName.LoadPlayersFromIni(true);
@@ -862,7 +868,7 @@ begin
   Text[screenSingViewRef.SongNameText].Visible := false;
 
   BadPlayer := 0;
-  if (PlayersPlay > 0) and ((ScreenSong.Mode <> smNormal) or Party.bPartyGame) then
+  if (PlayersPlay > 0) and not UsesSelectedLocalRoster then
     BadPlayer := AudioInputProcessor.CheckPlayersConfig(PlayersPlay);
 
   if (BadPlayer <> 0) and CheckPlayerConfigOnNextSong then
@@ -1362,7 +1368,7 @@ begin
   // prepare and start voice-capture
   if PlayersPlay > 0 then
   begin
-    if (ScreenSong.Mode = smNormal) and not Party.bPartyGame then
+    if UsesSelectedLocalRoster then
       AudioInput.CaptureStart(Min(PlayersPlay, ScreenName.LocalPlayerCount))
     else
       AudioInput.CaptureStart;
