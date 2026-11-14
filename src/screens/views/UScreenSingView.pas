@@ -66,6 +66,7 @@ type
     procedure DrawHeaders;
     procedure DrawLanePanels;
     procedure DrawGapCountdown;
+    procedure DrawPracticeLoop(X, Y, W, H: real);
   public
 
     //StaticDuet: array of cardinal;
@@ -1267,6 +1268,25 @@ begin
   end;
 end;
 
+procedure TScreenSingView.DrawPracticeLoop(X, Y, W, H: real);
+var StartX, EndX, Duration: real;
+begin
+  if not ScreenSing.PracticeLoop.HasStart then Exit;
+  Duration := LyricsState.TotalTime - CurrentSong.Start;
+  if (Duration <= 0) or (W <= 0) or (H <= 0) then Exit;
+  with ScreenSing.PracticeLoop do
+  begin
+    StartX := X + W * EnsureRange((StartTime - CurrentSong.Start) / Duration, 0.0, 1.0);
+    if HasEnd then
+    begin
+      EndX := X + W * EnsureRange((EndTime - CurrentSong.Start) / Duration, 0.0, 1.0);
+      Renderer.DrawQuad(StartX, Y, 0, EndX - StartX, H, 1, 1, 1, 0.24);
+      Renderer.DrawQuad(EndX - 1, Y - 2, 0, 2, H + 4, 1, 1, 1, 1);
+    end;
+    Renderer.DrawQuad(StartX - 1, Y - 2, 0, 2, H + 4, 1, 1, 1, 1);
+  end;
+end;
+
 procedure TScreenSingView.DrawInfoLyricBar();
 var
   SongStart:       real;
@@ -1364,6 +1384,7 @@ begin
   QuadList[I].ColB := Theme.Sing.StaticTimeProgress.ColB;
   QuadList[I].Alpha := 1;
   Renderer.DrawQuads(QuadList);
+  DrawPracticeLoop(X, Y, W, H);
 end;
 
 end.
