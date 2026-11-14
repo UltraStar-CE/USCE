@@ -1,6 +1,6 @@
 program SongCompletionTest;
 {$mode Delphi}
-uses Classes, SysUtils, UMusic, USong, UNote, UPath, ULog, UVoiceParts;
+uses {$IFDEF UNIX}cthreads, cwstring,{$ENDIF} Classes, SysUtils, UMusic, USong, UNote, UPath, ULog, UVoiceParts;
 
 var Song: TSong; ChartFile: TextFile; I, Weight: integer; Chart: string;
     Kind: TNoteType; BaseNote, TailMarker: char;

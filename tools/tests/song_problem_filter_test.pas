@@ -1,11 +1,14 @@
 program SongProblemFilterTest;
 {$mode Delphi}
-uses SysUtils, USong, USongs, USongProblems, UPath, UPlatform;
+uses {$IFDEF UNIX}cthreads, cwstring,{$ENDIF} SysUtils, USong, USongs, USongProblems, UPath, UPlatform;
 var A,B: TSong; Rows: TSongFilterRows;
 procedure Check(Value: boolean; const Msg: string);
 begin if not Value then raise Exception.Create(Msg); end;
 begin
  Platform.Init;
+ Check(Platform.GetGameUserPath.RemovePathDelim.Equals(
+   Path(UTF8String(ParamStr(1))).RemovePathDelim, {$IFDEF MSWINDOWS}true{$ELSE}false{$ENDIF}),
+   'flag store must use the test directory');
  A := TSong.Create; B := TSong.Create;
  A.Path := Path(UTF8String(ParamStr(1))); A.FileName := Path('a.txt'); A.ArtistASCII := 'alpha';
  B.Path := A.Path; B.FileName := Path('b.txt'); B.ArtistASCII := 'beta';

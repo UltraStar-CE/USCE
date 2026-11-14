@@ -1,6 +1,6 @@
 program Identity;
 {$mode delphi}{$codepage utf8}
-uses Classes,SysUtils,USong,USongIdentity,UPath,UTextEncoding;
+uses {$IFDEF UNIX}cthreads, cwstring,{$ENDIF} Classes,SysUtils,USong,USongIdentity,UPath,UTextEncoding;
 var LibrarySongs:TList;A,B,C,D,X,Y:TSong;Root:IPath;Original,Expected,OldBytes:RawByteString;Failed:boolean;I:integer;
 procedure Check(Value:boolean;const Msg:string);begin if not Value then raise Exception.Create(Msg);end;
 procedure WriteFile(const FilePath:IPath;const Value:RawByteString);
