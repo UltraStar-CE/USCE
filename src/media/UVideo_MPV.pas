@@ -608,6 +608,33 @@ begin
   end;
 end;
 
+{$IF Defined(LINUX) and Defined(CPUAARCH64)}
+function UsePi5HEVCDecoder(const Codec: string): boolean;
+const
+  ModelPrefix = 'Raspberry Pi 5 Model B';
+var
+  ModelFile: TFileStream;
+  Model: array[1..Length(ModelPrefix)] of AnsiChar;
+begin
+  Result := false;
+  // Older libmpv versions append the codec description to the short name.
+  if (Codec <> 'hevc') and (Pos('hevc (', Codec) <> 1) then
+    Exit;
+  try
+    ModelFile := TFileStream.Create('/proc/device-tree/model', fmOpenRead or fmShareDenyNone);
+    try
+      Result := (ModelFile.Read(Model, SizeOf(Model)) = SizeOf(Model)) and
+        CompareMem(@Model[1], PAnsiChar(ModelPrefix), SizeOf(Model));
+    finally
+      ModelFile.Free;
+    end;
+  except
+    on E: EStreamError do
+      Result := false;
+  end;
+end;
+{$ENDIF}
+
 procedure TVideo_MPV.SelectHardwareDecoder;
 var
   wanted: AnsiString;
@@ -627,6 +654,12 @@ begin
   else
   begin
     wanted := AnsiString(Ini.VideoHardwareDecoding);
+    {$IF Defined(LINUX) and Defined(CPUAARCH64)}
+    // Direct DRM frames cannot be rendered on the Pi 5 stack we tested.
+    // libmpv falls back to software if DRM copy-back cannot start.
+    if (wanted = 'auto') and UsePi5HEVCDecoder(fCodec) then
+      wanted := 'drm-copy';
+    {$ENDIF}
     Log.LogInfo('Probing hardware decoding for ' + fCodec, 'TVideo_MPV');
   end;
   value := PAnsiChar(wanted);
