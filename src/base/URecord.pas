@@ -206,8 +206,7 @@ type
        * Same as the array version but it does not output a state for each player.
        *}
       function CheckPlayersConfig(PlayerCount: cardinal): integer; overload;
-      function ConfiguredPlayerCount: integer; overload;
-      function ConfiguredPlayerCount(out Slots: cardinal): integer; overload;
+      function ConfiguredPlayerCount(LocalCount: integer; out Slots: cardinal): integer;
 
       {**
        * Handle microphone input
@@ -1061,20 +1060,14 @@ begin
   Result := CheckPlayersConfig(PlayerCount, PlayerState);
 end;
 
-function TAudioInputProcessor.ConfiguredPlayerCount: integer;
-var Slots: cardinal;
-begin
-  Result := ConfiguredPlayerCount(Slots);
-end;
-
-function TAudioInputProcessor.ConfiguredPlayerCount(out Slots: cardinal): integer;
+function TAudioInputProcessor.ConfiguredPlayerCount(LocalCount: integer; out Slots: cardinal): integer;
 var Local: TBooleanDynArray; I: integer;
 begin
   CheckPlayersConfig(UIni.IMaxPlayerCount, Local);
   Slots := 0;
   Result := 0;
   for I := 0 to High(Local) do
-    if Local[I] or RemoteInputProcessor.HasAssignedPlayer(I) then
+    if ((I < LocalCount) and Local[I]) or RemoteInputProcessor.HasAssignedPlayer(I) then
     begin
       Slots := Slots or (cardinal(1) shl I);
       Result := I + 1;

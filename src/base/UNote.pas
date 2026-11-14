@@ -900,6 +900,7 @@ var
   PlayerCurBeat:       integer;
   FirstBeatToAnalyze:  integer;
   IsRemotePlayer:      boolean;
+  SlotAbsent:          boolean;
   CanUpdatePlayerNote: boolean;
   SongTimeUs:          int64;
   RemoteTone:          TRemoteToneSample;
@@ -924,6 +925,9 @@ begin
 
       IsRemotePlayer := RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) and
         not PhoneAudio.Enabled;
+      SlotAbsent := (not IsRemotePlayer) and (ScreenSong.Mode = smNormal) and
+        not Party.bPartyGame and (PlayerIndex >= ScreenName.LocalPlayerCount) and
+        not RemoteInputProcessor.HasAssignedPlayer(PlayerIndex);
       PlayerDelayMs := ConfiguredPlayerDelayMs(PlayerIndex);
       if IsRemotePlayer then
       begin
@@ -962,7 +966,6 @@ begin
         if Screen.ScoringTailActive then
           PlayerCurBeat := Min(PlayerCurBeat, Screen.ScoringTailEndBeat);
         FirstBeatToAnalyze := PlayerOldBeat + 1;
-
       end;
 
       // Other players can still be before their shifted scoring start when a
@@ -987,6 +990,9 @@ begin
               if ActualBeat = SentenceEnd then
                 Screen.OnSentenceEnd(CP, EndLineIndex, PlayerIndex);
             end;
+        // Keep already-earned line bonuses while skipping input for absent beats.
+        if SlotAbsent then Continue;
+
         // check for an active note at the current time defined in the lyrics
         NoteAvailable := false;
         SentenceDetected := SentenceMin;

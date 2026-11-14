@@ -69,7 +69,7 @@ type
     procedure Start;
     procedure Stop;
     procedure UpdateCompanionViews;
-    procedure ApplyPendingPlayerCount(RefreshProfiles: boolean = false);
+    procedure RefreshRemoteInputs(RefreshProfiles: boolean = false);
     procedure SendAck(const PlayerId: UTF8String; CommandId: integer;
       Accepted: boolean; const Reason: UTF8String; GameStateSeq: integer);
     procedure SendSongStarted(SongSeq: integer; SongId: integer; MediaStartUs: int64;
@@ -960,13 +960,13 @@ begin
   end;
 end;
 
-procedure TRemoteBridgeIPC.ApplyPendingPlayerCount(RefreshProfiles: boolean = false);
+procedure TRemoteBridgeIPC.RefreshRemoteInputs(RefreshProfiles: boolean = false);
 var
   Count, I, Slot, A: integer;
   Local: TBooleanDynArray;
   InputState, SourceName: string;
   PlayerColor: TRGB;
-  Remote: boolean;
+  Remote, LocalInput: boolean;
   Profiles: array of TRemoteBridgePlayer;
 begin
   // Transport callbacks queue settings; only the game thread changes scoring trim.
@@ -1022,13 +1022,17 @@ begin
   if (FLastInputTick = 0) or (GetTickCount64 - FLastInputTick >= 100) then
   begin
     FLastInputTick := GetTickCount64;
-    AudioInputProcessor.CheckPlayersConfig(IMaxPlayerCount, Local);
+    if Assigned(ScreenName) then
+      AudioInputProcessor.CheckPlayersConfig(ScreenName.LocalPlayerCount, Local)
+    else
+      AudioInputProcessor.CheckPlayersConfig(IMaxPlayerCount, Local);
     InputState := '{"type":"input.state","playerCount":' + IntToStr(Count) + ',"inputs":[';
     Slot := 0;
-    for I := 0 to High(Local) do
+    for I := 0 to IMaxPlayerCount - 1 do
     begin
       Remote := RemoteInputProcessor.HasAssignedPlayer(I);
-      if not Local[I] and not Remote then Continue;
+      LocalInput := (I < Length(Local)) and Local[I];
+      if not LocalInput and not Remote then Continue;
       if Slot > 0 then InputState := InputState + ',';
       Inc(Slot);
       case PlayerInputSource(I) of
@@ -1036,7 +1040,7 @@ begin
         pisDirect: SourceName := 'direct';
         else SourceName := 'server';
       end;
-      InputState := InputState + '{"slot":' + IntToStr(I+1) + ',"local":' + LowerCase(BoolToStr(Local[I],true)) +
+      InputState := InputState + '{"slot":' + IntToStr(I+1) + ',"local":' + LowerCase(BoolToStr(LocalInput,true)) +
         ',"source":"' + SourceName + '","name":"' + JsonEscape(Ini.Name[I]) + '"}';
     end;
     InputState := InputState + '],"playerColors":[';
