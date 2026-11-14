@@ -362,7 +362,7 @@ uses
 
   UWebcam                 in 'base\UWebcam.pas',
 
-  UDLLManager             in 'base\UDLLManager.pas',
+  UDLLManager             in 'base\udllmanager.pas',
 
   UPartyTournament              in 'base\UPartyTournament.pas',
   UScreenPartyTournamentRounds  in 'screens\UScreenPartyTournamentRounds.pas',

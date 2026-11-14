@@ -1,6 +1,6 @@
 program SongProblemsTest;
 {$mode Delphi}{$codepage utf8}
-uses SysUtils, Classes, UPath, USongProblems;
+uses {$IFDEF UNIX}cthreads, cwstring,{$ENDIF} SysUtils, Classes, UPath, USongProblems;
 var Stream: TBinaryFileStream; Bad: UTF8String; Store: TSongProblems; FileName, A, B: IPath; Failed: boolean;
 procedure Check(Value: boolean; const Msg: string);
 begin if not Value then raise Exception.Create(Msg); end;

@@ -1,6 +1,6 @@
 program SongClippingTest;
 {$mode Delphi}
-uses Classes, SysUtils, UMusic, USong, UNote, UPath, ULog, UIni;
+uses {$IFDEF UNIX}cthreads, cwstring,{$ENDIF} Classes, SysUtils, UMusic, USong, UNote, UPath, ULog, UIni;
 var Song: TSong; ChartFile: TextFile;
 
 procedure Check(Value: boolean; const MessageText: string);

@@ -7,6 +7,8 @@ import os
 import shutil
 import subprocess
 import tempfile
+
+from song_test_units import unit_flags
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,15 +25,11 @@ def main():
         parser.error('Run autogen.sh and configure first')
     with tempfile.TemporaryDirectory(prefix='usce-completion-') as tmp:
         out = Path(tmp)
+        (out / 'languages').mkdir()  # Select portable mode and isolate the flag store.
         command = [args.fpc, '-B', '-Si', '-Ciro', '-gl', '-v0',
                    '-Fi' + str(ROOT / 'src'), '-Fi' + str(ROOT / 'src/base'),
                    '-FU' + str(out), '-FE' + str(out), '-Fl' + str(args.library_dir.resolve())]
-        if os.name == 'nt':
-            command += ['-Px86_64', '-WC']
-        directories = sorted({p.parent for p in (ROOT / 'src').rglob('*.pas')
-            if 'ctypes' not in p.parts and not any(
-                part.startswith('ffmpeg-') and part != 'ffmpeg-8.0' for part in p.parts)})
-        command += ['-Fu' + str(p) for p in directories]
+        command += unit_flags(ROOT / 'src')
         env = os.environ.copy()
         env['XDG_CONFIG_HOME'] = str(out)
         env['HOME'] = str(out)
