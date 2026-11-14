@@ -1,0 +1,47 @@
+name: Flatpak bundle
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/flatpak.yml
+      - dists/flatpak/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+    runs-on: ${{ matrix.runner }}
+    env:
+      APP_ID: io.github.ultrastar_ce.USCE
+      ARCH: ${{ matrix.arch }}
+
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends flatpak flatpak-builder elfutils
+      - name: Build Flatpak
+        run: |
+          flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak-builder --user --install-deps-from=flathub --disable-rofiles-fuse --repo=flatpak-repo build-flatpak "dists/flatpak/$APP_ID.yml"
+          flatpak build-bundle --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo flatpak-repo "USCE-$ARCH.flatpak" "$APP_ID"
+          sha256sum "USCE-$ARCH.flatpak" > "USCE-$ARCH.flatpak.sha256"
+      - name: Upload Flatpak bundle
+        uses: actions/upload-artifact@v6
+        with:
+          name: USCE-Flatpak-${{ matrix.arch }}
+          path: |
+            USCE-${{ matrix.arch }}.flatpak
+            USCE-${{ matrix.arch }}.flatpak.sha256
+          if-no-files-found: error

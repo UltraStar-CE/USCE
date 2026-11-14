@@ -1,0 +1,119 @@
+id: io.github.ultrastar_ce.USCE
+runtime: org.freedesktop.Platform
+runtime-version: '26.08'
+sdk: org.freedesktop.Sdk
+command: usce
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.freepascal
+finish-args:
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+  - --socket=pulseaudio
+  - --device=dri
+  - --share=network
+  - --filesystem=xdg-music:ro
+  - --persist=.usce
+cleanup:
+  - /include
+  - /lib/cmake
+  - /lib/pkgconfig
+  - '*.a'
+build-options:
+  append-path: /usr/lib/sdk/freepascal/bin
+  env:
+    FPCDIR: /usr/lib/sdk/freepascal/fpcsrc
+  no-debuginfo-compression: true
+  cflags: -gdwarf-3
+  cxxflags: -gdwarf-3
+modules:
+  - name: lua
+    buildsystem: simple
+    build-commands:
+      - |
+        cd src
+        for source in *.c; do
+          case "$source" in lua.c|luac.c|onelua.c) continue ;; esac
+          cc $CPPFLAGS $CFLAGS -DLUA_USE_LINUX -fPIC -c "$source"
+        done
+        cc $LDFLAGS -shared -Wl,-soname,liblua5.4.so.0 -o liblua5.4.so.0 *.o -lm -ldl
+        install -Dm755 liblua5.4.so.0 /app/lib/liblua5.4.so.0
+        ln -s liblua5.4.so.0 /app/lib/liblua5.4.so
+        install -Dm644 lua.h luaconf.h lualib.h lauxlib.h -t /app/include/lua5.4
+        install -d /app/lib/pkgconfig
+        printf '%s\n' 'Name: Lua' 'Description: Lua programming language' 'Version: 5.4.9' 'Libs: -L/app/lib -llua5.4' 'Cflags: -I/app/include/lua5.4' > /app/lib/pkgconfig/lua5.4.pc
+        install -Dm644 ../doc/readme.html /app/share/licenses/io.github.ultrastar_ce.USCE/lua/readme.html
+    sources:
+      - type: archive
+        url: https://www.lua.org/ftp/lua-5.4.9.tar.gz
+        sha256: 2335b6c582a52654f94612bf10d2f4672805d05329aa6568b1d8cd9e5c6fb8e6
+
+  - name: SDL2_image
+    buildsystem: cmake-ninja
+    builddir: true
+    config-opts:
+      - -DCMAKE_INSTALL_LIBDIR=lib
+      - -DSDL2IMAGE_BACKEND_STB=OFF
+      - -DSDL2IMAGE_DEPS_SHARED=OFF
+      - -DSDL2IMAGE_STRICT=ON
+      - -DSDL2IMAGE_AVIF=OFF
+      - -DSDL2IMAGE_JXL=OFF
+    sources:
+      - type: archive
+        url: https://github.com/libsdl-org/SDL_image/releases/download/release-2.8.12/SDL2_image-2.8.12.tar.gz
+        sha256: 393f5efb50536ec13ca4f4affb69cc9966d3c3f969e6c5e701faddf9f9785381
+
+  - name: usce
+    buildsystem: simple
+    build-commands:
+      # FPC searches for its config in both configure's and make's directories.
+      - cp /usr/lib/sdk/freepascal/etc/fpc.cfg fpc.cfg
+      - printf '%s\n' "-Fl$(dirname "$(gcc -print-file-name=crtbegin.o)")" >> fpc.cfg
+      - ln -s ../fpc.cfg src/fpc.cfg
+      - ./autogen.sh
+      - ./configure --prefix=/app --without-portaudio --without-opencv
+      - python3 tools/bundle-themes.py bundle --source flatpak-sources/themes --destination flatpak-themes
+      - |
+        cmake -S native/phone-audio -B phone-flatpak -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
+          -DFETCHCONTENT_FULLY_DISCONNECTED=ON \
+          -DOPENSSL_USE_STATIC_LIBS=FALSE \
+          -DFETCHCONTENT_SOURCE_DIR_DATACHANNEL="$PWD/flatpak-sources/libdatachannel" \
+          -DFETCHCONTENT_SOURCE_DIR_JSON="$PWD/flatpak-sources/json"
+        cmake --build phone-flatpak --parallel "$FLATPAK_BUILDER_N_JOBS"
+        install -m755 phone-flatpak/libusce-phone-audio.so game/libusce-phone-audio.so
+        install -Dm644 flatpak-sources/libdatachannel/LICENSE /app/share/licenses/io.github.ultrastar_ce.USCE/libdatachannel/LICENSE
+        install -Dm644 flatpak-sources/libdatachannel/deps/libjuice/LICENSE /app/share/licenses/io.github.ultrastar_ce.USCE/libjuice/LICENSE
+        install -Dm644 flatpak-sources/libdatachannel/deps/plog/LICENSE /app/share/licenses/io.github.ultrastar_ce.USCE/plog/LICENSE
+        install -Dm644 flatpak-sources/libdatachannel/deps/usrsctp/LICENSE.md /app/share/licenses/io.github.ultrastar_ce.USCE/usrsctp/LICENSE.md
+        install -Dm644 flatpak-sources/json/LICENSE.MIT /app/share/licenses/io.github.ultrastar_ce.USCE/nlohmann-json/LICENSE.MIT
+      # FPC passes these flags to ld directly rather than through gcc.
+      - make -j"$FLATPAK_BUILDER_N_JOBS" LDFLAGS='-z relro -z now --as-needed'
+      - make install USCE_THEMES_DIR="$PWD/flatpak-themes"
+      - install -Dm644 LICENSE /app/share/licenses/io.github.ultrastar_ce.USCE/usce/LICENSE
+      - install -Dm644 icons/usce-icon_256.png /app/share/icons/hicolor/256x256/apps/io.github.ultrastar_ce.USCE.png
+      - install -d /app/share/applications /app/share/metainfo
+      - sed 's/^Icon=usce$/Icon=io.github.ultrastar_ce.USCE/' dists/usce.desktop > /app/share/applications/io.github.ultrastar_ce.USCE.desktop
+      - |
+        sed -e 's|<id>org.ultrastarce.usce</id>|<id>io.github.ultrastar_ce.USCE</id>|' \
+            -e 's|>usce.desktop<|>io.github.ultrastar_ce.USCE.desktop<|' \
+            -e 's|<project_license>GPL-2.0</project_license>|<project_license>GPL-2.0-only</project_license>|' \
+            dists/usce.appdata.xml > /app/share/metainfo/io.github.ultrastar_ce.USCE.metainfo.xml
+    sources:
+      - type: git
+        url: https://github.com/UltraStar-CE/USCE.git
+        tag: v2026.11.0
+        commit: da6823c12bb1eb8a155ab802e78c0f054807894d
+        disable-submodules: true
+      - type: git
+        url: https://github.com/UltraStar-CE/Themes.git
+        commit: d892d99465480a08f395d5e7b932f18f8f3ee68d
+        disable-submodules: true
+        dest: flatpak-sources/themes
+      - type: git
+        url: https://github.com/paullouisageneau/libdatachannel.git
+        commit: 6b1e2e620f1e37f0eafeee702eaea0043cb305fd
+        dest: flatpak-sources/libdatachannel
+      - type: archive
+        url: https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
+        sha256: 42f6e95cad6ec532fd372391373363b62a14af6d771056dbfc86160e6dfff7aa
+        dest: flatpak-sources/json
