@@ -324,6 +324,7 @@ uses
   UScreenOptionsLyrics    in 'screens\UScreenOptionsLyrics.pas',
   UScreenOptionsThemes    in 'screens\UScreenOptionsThemes.pas',
   UScreenOptionsRecord    in 'screens\UScreenOptionsRecord.pas',
+  UExternalSongTools in 'base\UExternalSongTools.pas',
   UScreenOptionsAdvanced  in 'screens\UScreenOptionsAdvanced.pas',
   UScreenOptionsNetwork   in 'screens\UScreenOptionsNetwork.pas',
   UScreenOptionsWebcam    in 'screens\UScreenOptionsWebcam.pas',
