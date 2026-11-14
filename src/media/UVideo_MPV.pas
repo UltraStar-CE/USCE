@@ -147,8 +147,11 @@ type
   end;
 
 var
-  { One idle player outlives Close so the next Open reuses its decoder devices.
-    CUDA device creation alone took 3 s on every open. }
+  { One idle player outlives Close so the next Open reuses it instead of
+    creating a player and a render context. Until the first frame is in the
+    texture, a new player took 630 to 1000 ms and a reused one 22 to 62 ms
+    (Windows, RTX 2080 SUPER, software decoding and nvdec). The smoke test
+    reports both times. }
   parkedHandle: Pmpv_handle;
   parkedContext: Pmpv_render_context;
   parkedTarget: TRenderTarget;
