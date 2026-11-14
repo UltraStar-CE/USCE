@@ -178,16 +178,26 @@ test('a new fork alias excludes ancestors of assessed heads even when old invent
   const x = fixture({previous});
   const change = sha => ({sha, commit: {message: 'Source change',
     author: {name: 'Author', date: '2026-10-20T00:00:00Z'}}});
-  x.github.rest.repos.compareCommitsWithBasehead = async args => ({data: {
-    ahead_by: args.basehead.startsWith('9'.repeat(40)) ? 1 : 2, behind_by: 0,
-    commits: args.basehead.startsWith('9'.repeat(40)) ? [change('6'.repeat(40))]
-      : [change('5'.repeat(40)), change('6'.repeat(40))]}});
+  const ancestryCalls = [];
+  x.github.rest.repos.compareCommitsWithBasehead = async args => {
+    if (args.basehead.startsWith('9'.repeat(40))) {
+      ancestryCalls.push(args);
+      // A large, divergent comparison needs only its count.
+      return {data: {ahead_by: args.basehead.endsWith('5'.repeat(40)) ? 0 : 2584}};
+    }
+    return {data: {ahead_by: 2, behind_by: 0,
+      commits: [change('5'.repeat(40)), change('6'.repeat(40))]}};
+  };
   await trackForks(x);
   const records = JSON.parse(x.trees[0].tree[0].content).forks;
   const first = records.find(f => f.repository === 'contributor/USDX');
   assert.deepEqual(first.newCommits.map(c => c.sha), ['6'.repeat(40)]);
   assert.equal(first.ignoredKnownHistoryCommitCount, 1);
   assert.deepEqual(records[0], previous.forks[0]);
+  assert.deepEqual(ancestryCalls.map(args => [args.basehead, args.per_page, args.page]), [
+    ['9'.repeat(40) + '...' + '5'.repeat(40), 1, undefined],
+    ['9'.repeat(40) + '...' + '6'.repeat(40), 1, undefined],
+  ]);
 });
 
 test('rediscovering only known ancestry creates no empty assessment PR', async () => {
@@ -199,5 +209,16 @@ test('rediscovering only known ancestry creates no empty assessment PR', async (
   x.github.rest.repos.compareCommitsWithBasehead = async args => args.basehead.startsWith('9'.repeat(40))
     ? {data: {ahead_by: 0, behind_by: 1, commits: []}} : original(args);
   await trackForks(x);
+  assert.equal(x.proposals.length, 0);
+});
+
+test('incomplete ancestry counts fail closed', async () => {
+  const x = fixture({previous: {repository: 'UltraStar-Deluxe/USDX', forks: [
+    {...snapshot('other/USDX', '9'.repeat(40)), commits: []},
+  ]}});
+  const compare = x.github.rest.repos.compareCommitsWithBasehead;
+  x.github.rest.repos.compareCommitsWithBasehead = async args => args.per_page === 1
+    ? {data: {ahead_by: null}} : compare(args);
+  await assert.rejects(trackForks(x), /Incomplete assessed ancestry comparison/);
   assert.equal(x.proposals.length, 0);
 });
