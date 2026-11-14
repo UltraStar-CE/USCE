@@ -93,6 +93,7 @@ async function trackForks({github, context, core, now = new Date()}) {
   if ([...knownHeads].some(head => !shaPattern.test(head))) throw Error('Invalid assessed source head');
   const knownCommits = new Set((previous?.forks || []).flatMap(f =>
     [...(f.commits || []), ...(f.assessmentHistory || []).flatMap(h => h.commits || [])].map(c => c.sha)));
+  const assessedAncestry = new Map();
   const unavailableForks = [];
   for (const fork of forks) {
     const [owner, repo] = fork.full_name.split('/');
@@ -149,11 +150,30 @@ async function trackForks({github, context, core, now = new Date()}) {
       // Old checkpoints may contain only excerpts. Reachability from their full
       // immutable heads also excludes history rediscovered under another fork
       // or branch name; a new label is not new development.
-      for (const known of knownHeads) {
-        if (!novel.length) break;
-        const delta = new Set((await compare(known)).commits.map(c => c.sha));
-        novel = novel.filter(c => delta.has(c.sha));
+      const unassessed = [];
+      for (const candidate of novel) {
+        if (!shaPattern.test(candidate.sha)) throw Error('Invalid fork commit SHA');
+        if (!assessedAncestry.has(candidate.sha)) assessedAncestry.set(candidate.sha, new Map());
+        const ancestry = assessedAncestry.get(candidate.sha);
+        let covered = false;
+        for (const known of knownHeads) {
+          if (!ancestry.has(known)) {
+            // A candidate reachable from an assessed head is zero commits ahead.
+            // Fetch only the count; a full comparison can span thousands of commits.
+            const {data} = await github.rest.repos.compareCommitsWithBasehead({
+              ...context.repo, basehead: known + '...' + candidate.sha, per_page: 1});
+            if (!Number.isSafeInteger(data.ahead_by) || data.ahead_by < 0)
+              throw Error('Incomplete assessed ancestry comparison: ' + fork.full_name);
+            ancestry.set(known, data.ahead_by === 0);
+          }
+          if (ancestry.get(known)) {
+            covered = true;
+            break;
+          }
+        }
+        if (!covered) unassessed.push(candidate);
       }
+      novel = unassessed;
       if (!novel.length) continue;
       knownHeads.add(head);
       for (const c of eligible) knownCommits.add(c.sha);
