@@ -92,6 +92,29 @@ begin
     decision := sync.Update(4.82, 4.8, 1.34, 10, true, false, false, false);
     Check(not decision.Paused and not decision.Seek, 'Continue once the clock has caught up');
 
+    { A resume continues at the clock position where the pause began. The
+      decoder may have kept playing meanwhile: a hidden menu background pumps
+      no events, so a pause queued behind an unacknowledged unpause never
+      reached it. Bring it back with a seek instead of freezing the picture
+      until the clock catches up. }
+    sync.Resume;
+    decision := sync.Update(5, 6.1, 0, 10, true, true, false, false);
+    Check(decision.Seek and (decision.Position = 5),
+      'A decoder that ran ahead during a pause is brought back on resume');
+    sync.Resume;
+    decision := sync.Update(5, 5.04, 0, 10, true, true, false, false);
+    Check(not decision.Seek, 'A resume in step with the clock needs no seek');
+    decision := sync.Update(5.02, 5.04, 0.02, 10, true, true, false, false);
+    decision := sync.Update(5.5, 5.9, 0.5, 10, true, true, false, false);
+    Check(decision.Paused and not decision.Seek,
+      'After the resume a video that runs ahead waits for the clock again');
+    sync.Resume;
+    decision := sync.Update(5, 0, 0, 10, false, true, false, false);
+    Check(not decision.Seek, 'No resume correction without a known playback position');
+    decision := sync.Update(5.02, 6.1, 0.02, 10, true, true, false, false);
+    Check(decision.Seek and (Abs(decision.Position - 5.02) < 0.000001),
+      'The resume correction waits for the playback position');
+
     { Playback positions arrive once per decoded frame. A low frame rate
       produces brief sawtooth drift that must not cause corrective seeks. }
     sync.Reset;

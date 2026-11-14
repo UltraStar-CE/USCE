@@ -966,6 +966,7 @@ begin
       FloatToStrF(fSentSeekPosition, ffFixed, 18, 6, format), 'absolute+exact']);
     fSeeking := fSeekPending;
     fSeekNotified := false;
+    fSync.Reset;
     fSeekStarted := MonotonicTime;
     fSeekWanted := false;
     { The previous frame stays on screen until the seek result is rendered. }
@@ -1097,21 +1098,25 @@ end;
 
 procedure TVideo_MPV.Play;
 begin
+  if fPaused or fStopped then
+    fSync.Resume
+  else
+    fSync.Reset;
   fPaused := false;
   fStopped := false;
-  fSync.Reset;
 end;
 
 procedure TVideo_MPV.Pause;
 begin
   fPaused := not fPaused;
-  fSync.Reset;
   if fPaused then
   begin
     fDesiredPause := true;
     fDesiredSpeed := 1;
     ApplyControl;
-  end;
+  end
+  else
+    fSync.Resume;
 end;
 
 procedure TVideo_MPV.Stop;

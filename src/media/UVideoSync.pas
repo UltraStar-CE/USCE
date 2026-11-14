@@ -26,10 +26,13 @@ type
   end;
 
   { The game's audio clock owns the timeline. The decoder's clock only runs
-    between samples; small differences are corrected without repeated seeks. }
+    between samples; small differences are corrected without repeated seeks.
+    Reset starts a new timeline (open, seek, loop change); Resume continues
+    the current one after a pause. }
   TExternalVideoSync = class
     private
       fHaveRequest: boolean;
+      fResumed: boolean;
       fLastRequest: double;
       fLastSampleTime: double;
       fLastMovementTime: double;
@@ -40,6 +43,7 @@ type
     public
       constructor Create;
       procedure Reset;
+      procedure Resume;
       function Update(RequestedTime, PlaybackTime, ClockTime, Duration: double;
         HavePlayback, Loop, Paused, EndReached: boolean): TVideoSyncDecision;
   end;
@@ -73,6 +77,7 @@ end;
 procedure TExternalVideoSync.Reset;
 begin
   fHaveRequest := false;
+  fResumed := false;
   fLastRequest := 0;
   fLastSampleTime := 0;
   fLastMovementTime := -1;
@@ -82,11 +87,18 @@ begin
   fSpeed := 1;
 end;
 
+{ The clock continues where a pause began. See the resume case in Update. }
+procedure TExternalVideoSync.Resume;
+begin
+  Reset;
+  fResumed := true;
+end;
+
 function TExternalVideoSync.Update(RequestedTime, PlaybackTime, ClockTime,
   Duration: double; HavePlayback, Loop, Paused, EndReached: boolean): TVideoSyncDecision;
 var
   elapsed, delta, drift: double;
-  discontinuity, firstRequest, atEnd: boolean;
+  discontinuity, firstRequest, atEnd, resumed: boolean;
 begin
   Result.Position := VideoLoopPosition(RequestedTime, Duration, Loop);
   Result.Seek := false;
@@ -112,6 +124,8 @@ begin
 
   if HavePlayback then
   begin
+    resumed := fResumed;
+    fResumed := false;
     drift := Result.Position - PlaybackTime;
     { Compare the nearest positions around the loop boundary. }
     if Loop and (Duration > 0) then
@@ -137,9 +151,15 @@ begin
       does, instead of seeking backwards; the sing screen relies on this while
       it requests the bare video gap before its transition finishes. Once the
       clock reaches EOF, hold the final frame rather than repeatedly
-      correcting that expected difference. }
+      correcting that expected difference.
+      A resume is the exception: the clock did not move during the pause,
+      so a decoder found ahead kept playing unobserved (a hidden menu
+      background pumps no events, and its pause can sit behind an
+      unacknowledged unpause). It is brought back instead of freezing
+      the picture until the clock catches up. }
     if ((discontinuity or firstRequest) and (drift > 0.100)) or
       (discontinuity and (drift < -0.100)) or
+      (resumed and (drift < -0.250)) or
       (not atEnd and (drift > 0.750) and
        (ClockTime - fLargeDriftSince >= 0.500) and
        (ClockTime - fLastSeekTime >= 1)) then
