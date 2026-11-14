@@ -6,8 +6,16 @@
 
 Download the [latest USCE release](https://github.com/UltraStar-CE/USCE/releases/latest).
 On Windows, choose the installer or the portable ZIP. On macOS, choose the ARM
-DMG for Apple Silicon or the x86 DMG for Intel. On Linux, choose the AppImage or
-the `.deb` package.
+DMG for Apple Silicon or the x86 DMG for Intel.
+
+### Linux installation
+
+| Option | Availability |
+| --- | --- |
+| AppImage | Download the x86-64 AppImage from the release, make the file executable, and run it. |
+| Ubuntu package | Download the Ubuntu 22.04 amd64 `.deb` from the release. From its folder, run `sudo apt install ./USCE-linux-deb-VERSION.deb` with the downloaded filename. |
+| Automatic APT updates | The [signed APT archive](https://github.com/UltraStar-CE/apt) is planned. The package is currently available as a direct download. |
+| Flatpak / Flathub | [Prototype packaging is planned](https://github.com/UltraStar-CE/USCE/issues/217). |
 
 The program is called `usce.exe` on Windows, `usce` on Linux, and
 `UltraStar Community Edition.app` on macOS.
