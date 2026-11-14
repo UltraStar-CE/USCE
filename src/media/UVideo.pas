@@ -160,6 +160,11 @@ type
     fCodec:         PAVCodec;
 
     fAVFrame:     PAVFrame;
+    {$IFDEF USCE_DRM_COPY}
+    fCopyFrame: PAVFrame;
+    fUseDRM: boolean;
+    fLoggedDRM: boolean;
+    {$ENDIF}
 
     fSwScaleContext: PSwsContext;
     fSwsColorSpace: integer; //**< frame colorspace last passed to swscale, -1: none yet (decode thread only)
@@ -223,6 +228,13 @@ var
   FFmpegCore: TMediaCore_FFmpeg;
   PreferredCodecs: array of PAVCodec;
   PreferredCodecsParsed: boolean = false;
+
+{$IFDEF USCE_DRM_COPY}
+function usce_video_enable_drm(Context: PAVCodecContext; Codec: PAVCodec): cint; cdecl; external;
+function usce_video_transfer_drm(Source, Target: PAVFrame): cint; cdecl; external;
+function usce_video_scaler(Context: PSwsContext; Frame: PAVFrame;
+  Width, Height: cint; Fmt: TAVPixelFormat): PSwsContext; cdecl; external;
+{$ENDIF}
 
 function IsSupportedScalingInput(Fmt: TAVPixelFormat): boolean;
 begin
@@ -505,6 +517,10 @@ begin
       continue;
 
     fCodecContext^.get_format := @SelectFormat;
+    {$IFDEF USCE_DRM_COPY}
+    fUseDRM := (GetEnvironmentVariable('USCE_FFMPEG_DRM_COPY') = '1') and
+      (usce_video_enable_drm(fCodecContext, fCodec) <> 0);
+    {$ENDIF}
 
     // set debug options
     fCodecContext^.debug := 0;
@@ -615,13 +631,20 @@ begin
   // The BGR565-formats (GL_UNSIGNED_SHORT_5_6_5) is way too slow because of its
   // bad OpenGL support. The BGR formats have MMX(2) implementations but no speed-up
   // could be observed in comparison to the RGB versions.
+  {$IFDEF USCE_DRM_COPY}
+  fLoggedDRM := false;
+  if fUseDRM then
+    fCopyFrame := av_frame_alloc()
+  else
+  {$ENDIF}
   fSwScaleContext := sws_getContext(
       fCodecContext^.width, fCodecContext^.height,
       fCodecContext^.pix_fmt,
       fScaledWidth, fScaledHeight,
       PIXEL_FMT_FFMPEG,
       SWS_FAST_BILINEAR, nil, nil, nil);
-  if (fSwScaleContext = nil) then
+  if (fSwScaleContext = nil)
+    {$IFDEF USCE_DRM_COPY} and (fCopyFrame = nil) {$ENDIF} then
   begin
     Log.LogError('Failed to get swscale context', 'TVideoPlayback_ffmpeg.Open');
     Close();
@@ -771,6 +794,9 @@ var
   Drops: integer;
   errnum: integer;
   LockHeld: boolean;
+  {$IFDEF USCE_DRM_COPY}
+  ScaleFrame: PAVFrame;
+  {$ENDIF}
 begin
   Drops := 0;
   SDL_LockMutex(fLock);
@@ -837,11 +863,49 @@ begin
       LockHeld := false;
       SDL_UnlockMutex(fLock);
 
+      {$IFDEF USCE_DRM_COPY}
+      ScaleFrame := fAVFrame;
+      if fUseDRM then
+      begin
+        errnum := usce_video_transfer_drm(fAVFrame, fCopyFrame);
+        if errnum < 0 then
+        begin
+          Log.LogError('Failed to copy a DRM video frame', 'TVideoPlayback_FFmpeg.DecodeLoop');
+          SDL_LockMutex(fLock);
+          LockHeld := true;
+          fDecoderFailed := true;
+          Exit;
+        end;
+        if errnum > 0 then
+        begin
+          ScaleFrame := fCopyFrame;
+          if not fLoggedDRM then
+          begin
+            Log.LogInfo('Using FFmpeg DRM copy-back', 'TVideoPlayback_FFmpeg.DecodeLoop');
+            fLoggedDRM := true;
+          end;
+        end;
+        fSwScaleContext := usce_video_scaler(fSwScaleContext, ScaleFrame,
+          fScaledWidth, fScaledHeight, PIXEL_FMT_FFMPEG);
+        if fSwScaleContext = nil then
+        begin
+          SDL_LockMutex(fLock);
+          LockHeld := true;
+          fDecoderFailed := true;
+          Exit;
+        end;
+      end;
+      {$ENDIF}
       UpdateColorspace(fAVFrame);
       errnum := -1;
       try
+        {$IFDEF USCE_DRM_COPY}
+        errnum := sws_scale(fSwScaleContext, @ScaleFrame^.data, @ScaleFrame^.linesize,
+                0, fCodecContext^.Height,
+        {$ELSE}
         errnum := sws_scale(fSwScaleContext, @fAVFrame.data, @fAVFrame.linesize,
                 0, fCodecContext^.Height,
+        {$ENDIF}
                 @fSlots[Slot].Data[0], @fSlots[Slot].Linesize[0]);
       except
         ;
@@ -948,6 +1012,9 @@ begin
 
   FreeSlots();
   av_frame_free(@fAVFrame);
+  {$IFDEF USCE_DRM_COPY}
+  av_frame_free(@fCopyFrame);
+  {$ENDIF}
 
   if (fCodecContext <> nil) then
   begin

@@ -183,6 +183,11 @@ endif
 #################################################
 
 CWRAPPER_LIBS :=
+DRM_COPY_OBJECT :=
+ifeq ($(USCE_DRM_COPY),1)
+DRM_COPY_OBJECT := video_drm.o
+PFLAGS_ALL += -dUSCE_DRM_COPY -k$(abspath $(DRM_COPY_OBJECT))
+endif
 ifeq ($(USE_PROJECTM_CWRAPPER), yes)
 CWRAPPER_LIBS += $(PROJECTM_CWRAPPER_LIB)
 endif
@@ -265,7 +270,10 @@ $(WINDOW_RESOURCES): $(top_srcdir)/res/link.rc $(top_srcdir)/res/usce.exe.manife
 endif
 
 # check if any src-file changed and rebuild
-$(USCE_BIN): $(USCE_PROJ) $(CWRAPPER_LIBS) $(SRC_FILES) $(WINDOW_RESOURCES)
+video_drm.o: media/video_drm.c
+	$(CC) $(CFLAGS) $(shell pkg-config --cflags libavcodec libavutil libswscale) -o $@ -c $<
+
+$(USCE_BIN): $(USCE_PROJ) $(CWRAPPER_LIBS) $(SRC_FILES) $(WINDOW_RESOURCES) $(DRM_COPY_OBJECT)
 	@echo "==================================="
 	@echo "Changed files:"
 	@echo "$?"

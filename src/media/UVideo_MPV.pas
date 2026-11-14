@@ -627,6 +627,8 @@ begin
   else
   begin
     wanted := AnsiString(Ini.VideoHardwareDecoding);
+    if GetEnvironmentVariable('USCE_MPV_DRM_COPY') = '1' then
+      wanted := 'drm-copy';
     Log.LogInfo('Probing hardware decoding for ' + fCodec, 'TVideo_MPV');
   end;
   value := PAnsiChar(wanted);
