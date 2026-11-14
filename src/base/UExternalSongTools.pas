@@ -12,12 +12,13 @@ procedure OpenExternalSongEditor(Song: TSong);
 
 implementation
 
-uses SysUtils, ProcessUnicode, UPath, UIni, ULanguage, UGraphic, ULibraryLockdown, ULog;
+uses SysUtils, {$IFDEF MSWINDOWS}ProcessUnicode{$ELSE}Process{$ENDIF},
+  UPath, UIni, ULanguage, UGraphic, ULibraryLockdown, ULog;
 
 procedure Launch(const Executable: UTF8String; const Args: array of UTF8String);
 var
   ProgramPath: IPath;
-  Child: ProcessUnicode.TProcess;
+  Child: TProcess;
   Arg: UTF8String;
 begin
   if LibraryLockdown.Active then Exit;
@@ -26,12 +27,19 @@ begin
     if not ProgramPath.IsAbsolute or not ProgramPath.IsFile then
       raise Exception.Create('Executable path is missing or invalid');
 
-    Child := ProcessUnicode.TProcess.Create(nil);
+    Child := TProcess.Create(nil);
     try
+      {$IFDEF MSWINDOWS}
       Child.Executable := ProgramPath.ToWide;
       Child.CurrentDirectory := ProgramPath.GetParent.ToWide;
       for Arg in Args do
         Child.Parameters.Add(UTF8Decode(Arg));
+      {$ELSE}
+      Child.Executable := ProgramPath.ToNative;
+      Child.CurrentDirectory := ProgramPath.GetParent.ToNative;
+      for Arg in Args do
+        Child.Parameters.Add(Arg);
+      {$ENDIF}
       Child.Execute;
     finally
       Child.Free;
