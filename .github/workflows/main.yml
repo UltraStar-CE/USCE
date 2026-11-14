@@ -98,6 +98,9 @@ concurrency:
 jobs:
   platforms:
     name: Platforms
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/platform-builds.yml
     with:
       ref: ${{ github.sha }}

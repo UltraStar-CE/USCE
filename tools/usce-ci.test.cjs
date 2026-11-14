@@ -78,18 +78,20 @@ test('candidate publisher requires every platform and whitespace on the resolved
   const text = fs.readFileSync(path.join(__dirname, '../.github/workflows/candidate-validation.yml'), 'utf8');
   const body = text.slice(text.lastIndexOf('          script: |') + '          script: |'.length)
     .split('\n').map(line => line.replace(/^            /, '')).join('\n');
-  const names = ['Build for Windows', 'Build for Linux', 'Build for MacOS (macos-15)', 'Build for MacOS (macos-15-intel)'];
+  const names = ['Build for Windows', 'Build for Linux', 'Build for MacOS (ARM)', 'Build for MacOS (x86)'];
   async function publish(results, lint = 'success', platform = 'success') {
     const statuses = [];
     const github = {paginate: async () => results, rest: {actions: {listJobsForWorkflowRun() {}},
       repos: {createCommitStatus: async value => { statuses.push(value); }}}};
     await vm.runInNewContext(`(async () => {${body}\n})()`, {github,
       context: {...context, serverUrl: 'https://github.com', runId: 123},
+      require: require('node:module').createRequire(path.join(__dirname, '../package.json')),
       process: {env: {TARGET_SHA: sha, LINT_RESULT: lint, PLATFORM_RESULT: platform}}});
     assert(statuses.every(value => value.sha === sha));
     return statuses.find(value => value.context === 'Check trailing whitespace').state;
   }
-  const jobs = names.map(name => ({name: 'Candidate platforms / ' + name, conclusion: 'success'}));
+  const jobs = names.map(name => ({name: 'Candidate platforms / ' + name, conclusion: 'success',
+    steps: [{name: 'Record successful build', conclusion: 'success'}]}));
   assert.equal(await publish(jobs), 'success');
   assert.equal(await publish(jobs.slice(1)), 'failure');
   assert.equal(await publish([...jobs, jobs[0]]), 'failure');
@@ -106,7 +108,7 @@ test('failure diagnostics identify runner cancellations and actual failed steps'
   f.args.github.paginate = async (_, args) => {
     assert.equal(args.run_id, 42);
     assert.equal(args.filter, 'latest');
-    return [{name: 'Build for MacOS (macos-15)', conclusion: 'cancelled', steps: []},
+    return [{name: 'Build for MacOS (ARM)', conclusion: 'cancelled', steps: []},
       {name: 'Build for Linux', conclusion: 'failure', steps: [{name: 'Compile', conclusion: 'failure'}]},
       {name: 'Build for Windows', conclusion: 'success', steps: []}];
   };
@@ -124,12 +126,60 @@ test('unavailable failure details cannot make a failed build pass', async () => 
   await assert.rejects(waitForBuilds(f.args), /Required main.yml finished with failure/);
 });
 
-test('ARM macOS uses an explicit supported image and remains required for candidates', () => {
+test('macOS keeps both architectures required and limits retries to CI', () => {
   const fs = require('node:fs');
   const path = require('node:path');
   const workflow = fs.readFileSync(path.join(__dirname, '../.github/workflows/platform-builds.yml'), 'utf8');
-  assert.match(workflow, /os: \[macos-15, macos-15-intel\]/);
-  assert.match(workflow, /fail-fast: false/);
+  assert.match(workflow, /fail-fast: false\s+matrix:\s+arch: \[ARM, x86\]/);
+  assert.match(workflow, /runs-on: .*'macos-15' \|\| 'macos-15-intel'/);
+  assert.match(workflow, /runs-on: .*'macos-latest' \|\| 'macos-26-intel'/);
+  assert.match(workflow, /continue-on-error: .*inputs\.release-version == ''/);
+  assert.match(workflow, /if: .*inputs\.release-version == ''/);
+  assert.match(workflow, /if: .*needs\.mac_retry_plan\.outputs\.retry != '\[\]'/);
   const candidate = fs.readFileSync(path.join(__dirname, '../.github/workflows/candidate-validation.yml'), 'utf8');
-  assert(candidate.includes("'Build for MacOS (macos-15)'"));
+  assert(candidate.includes("'Build for MacOS (ARM)'") && candidate.includes("'Build for MacOS (x86)'"));
+});
+
+test('macOS fallback accepts startup failures and rejects checkout and build failures', async () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const vm = require('node:vm');
+  const text = fs.readFileSync(path.join(__dirname, '../.github/workflows/platform-builds.yml'), 'utf8');
+  const script = text.split('  mac_retry_plan:\n')[1].split('          script: |\n')[1].split('\n\n  build_mac_retry:')[0];
+  const job = (conclusion, steps, arch = 'ARM') => ({name: `Platforms / Build for MacOS (${arch})`, status: 'completed', conclusion, steps});
+  const step = (name, conclusion) => ({name, conclusion});
+  const setup = step('Set up job', 'success');
+  async function retry(...jobs) {
+    const intel = job('success', [step('Record successful build', 'success')], 'x86');
+    const github = {paginate: async () => [...jobs, intel], rest: {actions: {listJobsForWorkflowRun() {}}}};
+    return Array.from(await vm.runInNewContext(`(async () => {${script}\n})()`, {github, context: {repo: {}, runId: 1}}));
+  }
+  assert.deepEqual(await retry(job('success', [setup, step('Record successful build', 'success')])), []);
+  assert.deepEqual(await retry(job('failure', [])), ['ARM']);
+  assert.deepEqual(await retry(job('cancelled', [])), ['ARM']);
+  assert.deepEqual(await retry(job('success', [step('Set up job', 'failure'), step('Checkout Repository', 'skipped')])), ['ARM']);
+  for (const failure of [job('success', []), job('cancelled', [setup]),
+    job('failure', [setup, step('Checkout Repository', 'failure')]), job('success', [setup, step('Build', 'failure')])]) {
+    await assert.rejects(retry(failure), /no confirmed startup failure/);
+  }
+  await assert.rejects(retry({...job(null, []), status: 'queued'}), /Incomplete or ambiguous/);
+  await assert.rejects(retry(job('failure', []), job('failure', [])), /Incomplete or ambiguous/);
+});
+
+test('a successful retry can recover only the affected macOS check', async () => {
+  const f = fixture(['src/a.pas'], () => [run('cancelled')]);
+  const job = (name, conclusion = 'success') => ({name, conclusion,
+    steps: conclusion === 'success' ? [{name: 'Record successful build', conclusion}] : []});
+  const jobs = ['Resolve build source', 'Build for Windows', 'Build for Linux',
+    'Build Ubuntu 22.04 package (amd64)', 'Check macOS build results', 'Build for MacOS (x86)', 'Retry MacOS (ARM)']
+    .map(name => job(name));
+  jobs.push(job('Build for MacOS (ARM)', 'cancelled'));
+  f.args.github.rest.actions.listJobsForWorkflowRun = () => {};
+  f.args.github.paginate = async () => jobs;
+  await waitForBuilds(f.args);
+  jobs.find(job => job.name === 'Build for MacOS (ARM)').steps.push({name: 'Build', conclusion: 'failure'});
+  await assert.rejects(waitForBuilds(f.args), /MacOS.*failure at Build|MacOS.*at Build/);
+  jobs.find(job => job.name === 'Build for MacOS (ARM)').steps.pop();
+  jobs.find(job => job.name === 'Build for Linux').conclusion = 'failure';
+  await assert.rejects(waitForBuilds(f.args), /Linux: failure/);
 });

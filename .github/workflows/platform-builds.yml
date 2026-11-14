@@ -206,22 +206,20 @@ jobs:
 
   build_mac:
     needs: resolve
-    name: Build for MacOS (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+    name: Build for MacOS (${{ matrix.arch }})
+    runs-on: ${{ matrix.arch == 'ARM' && 'macos-15' || 'macos-15-intel' }}
+    continue-on-error: ${{ inputs.release-version == '' }}
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-15, macos-15-intel]
+        arch: [ARM, x86]
     env:
       USCE_RELEASE_VERSION: ${{ inputs.release-version }}
       USCE_BUILD_CHANNEL: development
-      SDL2_VERSION: 2.32.10
-      SDL2_SHA: 5f5993c530f084535c65a6879e9b26ad441169b3e25d789d83287040a9ca5165
-      SDL2_IMAGE_VERSION: 2.8.12
-      SDL2_IMAGE_SHA: 393f5efb50536ec13ca4f4affb69cc9966d3c3f969e6c5e701faddf9f9785381
       PROJECTM_VERSION: 4.1.7
       PROJECTM_SHA: 16e4610b4d58981f7a2351faa58d507d3f40163a7b26ba81e19aec928c66641f
-    steps:
+      USCE_MACOS_RUNNER: ${{ matrix.arch == 'ARM' && 'macos-15' || 'macos-15-intel' }}
+    steps: &build_steps
       - name: Checkout Repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -234,27 +232,25 @@ jobs:
           echo "versionName=$VNAME" >> $GITHUB_ENV
       - name: Bundle reviewed themes
         uses: ./.github/actions/bundle-themes
-      - name: Determine Arch
-        run: |
-          if [ "${{ matrix.os }}" = "macos-15-intel" ]; then
-            echo "arch=x86" >> $GITHUB_ENV
-          else
-            echo "arch=ARM" >> $GITHUB_ENV
-          fi
       - name: Locate Homebrew downloads
         if: inputs.use-caches
         id: homebrew-downloads
         run: |
           echo "path=$(brew --cache)/downloads" >> "$GITHUB_OUTPUT"
           echo "week=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
+          image="$USCE_MACOS_RUNNER"
+          if [[ "$image" == macos-latest ]]; then
+            image="$image-$(sw_vers -productVersion | cut -d. -f1)"
+          fi
+          echo "image=$image" >> "$GITHUB_OUTPUT"
       - name: Cache Homebrew downloads
         if: inputs.use-caches
         uses: actions/cache@v6
         with:
           path: ${{ steps.homebrew-downloads.outputs.path }}
-          key: homebrew-downloads-v1-${{ matrix.os }}-${{ runner.arch }}-${{ steps.homebrew-downloads.outputs.week }}
+          key: homebrew-downloads-v1-${{ steps.homebrew-downloads.outputs.image }}-${{ runner.arch }}-${{ steps.homebrew-downloads.outputs.week }}
           restore-keys: |
-            homebrew-downloads-v1-${{ matrix.os }}-${{ runner.arch }}-
+            homebrew-downloads-v1-${{ steps.homebrew-downloads.outputs.image }}-${{ runner.arch }}-
       - name: Install Homebrew Dependencies
         run: |
           brew install fpc sdl2-compat sdl2_image automake portaudio lua ffmpeg opencv cmake ninja openssl@3
@@ -266,7 +262,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ${{github.workspace}}/projectm
-          key: projectm-${{matrix.os}}-${{env.PROJECTM_VERSION}}
+          key: projectm-${{ steps.homebrew-downloads.outputs.image }}-${{ env.PROJECTM_VERSION }}
       - name: Build ProjectM
         if: steps.cache-projectm.outputs.cache-hit != 'true'
         run: |
@@ -303,14 +299,73 @@ jobs:
       - name: Build
         run: make USCE_THEMES_DIR=".release-themes/bundle" macos-dmg
       - name: Rename DMG
-        run: mv "UltraStar Community Edition.dmg" "USCE-mac-${{ env.arch }}-${{ env.versionName }}.dmg"
+        run: mv "UltraStar Community Edition.dmg" "USCE-mac-${{ matrix.arch }}-${{ env.versionName }}.dmg"
       - name: Upload Image Artifact
         uses: actions/upload-artifact@v6
         with:
-          name: USCE-mac-${{ env.arch }}-${{ env.versionName }}
-          path: USCE-mac-${{ env.arch }}-${{ env.versionName }}.dmg
+          name: USCE-mac-${{ matrix.arch }}-${{ env.versionName }}
+          path: USCE-mac-${{ matrix.arch }}-${{ env.versionName }}.dmg
           if-no-files-found: error
           retention-days: 7
+      - name: Record successful build
+        id: built
+        run: echo 'ok=true' >> "$GITHUB_OUTPUT"
+
+  mac_retry_plan:
+    name: Check macOS build results
+    needs: build_mac
+    if: ${{ !cancelled() && inputs.release-version == '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    outputs:
+      retry: ${{ steps.plan.outputs.result }}
+    steps:
+      - id: plan
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          script: |
+            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun,
+              {...context.repo, run_id: context.runId, filter: 'latest', per_page: 100});
+            const retry = [];
+            for (const arch of ['ARM', 'x86']) {
+              const name = `Build for MacOS (${arch})`;
+              const matches = jobs.filter(job => job.name === name || job.name.endsWith(' / ' + name));
+              if (matches.length !== 1 || matches[0].status !== 'completed' || !Array.isArray(matches[0].steps)) {
+                throw Error(`Incomplete or ambiguous results for ${name}`);
+              }
+              const job = matches[0];
+              if (job.conclusion === 'success' && job.steps.some(step =>
+                step.name === 'Record successful build' && step.conclusion === 'success') &&
+                job.steps.every(step => ['success', 'skipped'].includes(step.conclusion))) continue;
+              const failed = ['failure', 'cancelled', 'startup_failure', 'timed_out'];
+              const setup = job.steps.find(step => step.name === 'Set up job');
+              const started = job.steps.some(step => step.name !== 'Set up job' &&
+                step.name !== 'Complete job' && step.conclusion !== 'skipped');
+              if (started || !(setup ? failed.includes(setup.conclusion) :
+                job.steps.length === 0 && failed.includes(job.conclusion))) {
+                throw Error(`${name} failed after startup or has no confirmed startup failure`);
+              }
+              retry.push(arch);
+            }
+            return retry;
+
+  build_mac_retry:
+    needs: [resolve, mac_retry_plan]
+    if: ${{ !cancelled() && needs.mac_retry_plan.result == 'success' && needs.mac_retry_plan.outputs.retry != '[]' }}
+    name: Retry MacOS (${{ matrix.arch }})
+    runs-on: ${{ matrix.arch == 'ARM' && 'macos-latest' || 'macos-26-intel' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ${{ fromJSON(needs.mac_retry_plan.outputs.retry) }}
+    env:
+      USCE_RELEASE_VERSION: ${{ inputs.release-version }}
+      USCE_BUILD_CHANNEL: development
+      PROJECTM_VERSION: 4.1.7
+      PROJECTM_SHA: 16e4610b4d58981f7a2351faa58d507d3f40163a7b26ba81e19aec928c66641f
+      USCE_MACOS_RUNNER: ${{ matrix.arch == 'ARM' && 'macos-latest' || 'macos-26-intel' }}
+    steps: *build_steps
 
   build_linux:
     env:

@@ -32,6 +32,37 @@ function requiredWorkflows(files) {
   return workflows;
 }
 
+function workflowJob(jobs, name) {
+  const matches = jobs.filter(job => job.name === name || job.name.endsWith(' / ' + name));
+  return matches.length === 1 ? matches[0] : undefined;
+}
+
+function macBuildPassed(jobs, arch) {
+  const built = job => job?.conclusion === 'success' && job.steps?.some(step =>
+    step.name === 'Record successful build' && step.conclusion === 'success') &&
+    job.steps.every(step => ['success', 'skipped'].includes(step.conclusion));
+  const primary = workflowJob(jobs, `Build for MacOS (${arch})`);
+  if (built(primary)) return true;
+  const failed = ['failure', 'cancelled', 'startup_failure', 'timed_out'];
+  const setup = primary?.steps?.find(step => step.name === 'Set up job');
+  const startupFailed = setup ? failed.includes(setup.conclusion) && primary.steps.every(step =>
+    ['Set up job', 'Complete job'].includes(step.name) || step.conclusion === 'skipped') :
+    primary?.steps?.length === 0 && failed.includes(primary.conclusion);
+  return startupFailed && workflowJob(jobs, 'Check macOS build results')?.conclusion === 'success' &&
+    Boolean(built(workflowJob(jobs, `Retry MacOS (${arch})`)));
+}
+
+function recoveredMacBuild(jobs) {
+  if (!['Resolve build source', 'Build for Windows', 'Build for Linux',
+    'Build Ubuntu 22.04 package (amd64)', 'Check macOS build results']
+    .every(name => workflowJob(jobs, name)?.conclusion === 'success')) return false;
+  const arches = ['ARM', 'x86'];
+  const recovered = arches.filter(arch => workflowJob(jobs, `Retry MacOS (${arch})`)?.conclusion === 'success');
+  return recovered.length > 0 && arches.every(arch => macBuildPassed(jobs, arch)) &&
+    jobs.every(job => ['success', 'skipped'].includes(job.conclusion) ||
+      recovered.some(arch => job === workflowJob(jobs, `Build for MacOS (${arch})`)));
+}
+
 async function waitForBuilds({github, context, core, files, now = Date.now,
   sleep = ms => new Promise(resolve => setTimeout(resolve, ms)),
   timeoutMs = 55 * 60 * 1000, pollMs = 20000}) {
@@ -67,6 +98,10 @@ async function waitForBuilds({github, context, core, files, now = Date.now,
         try {
           const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun,
             {...context.repo, run_id: run.id, per_page: 100, filter: 'latest'});
+          if (workflow === 'main.yml' && ['failure', 'cancelled'].includes(run.conclusion) && recoveredMacBuild(jobs)) {
+            core.info('Both macOS builds passed after a runner startup retry.');
+            continue;
+          }
           details = jobs.filter(job => job.conclusion && job.conclusion !== 'success' &&
               job.conclusion !== 'skipped').map(job => {
             const failedSteps = (job.steps || []).filter(step => step.conclusion === 'failure');
@@ -107,4 +142,5 @@ async function validatePullRequest({github, context, core}) {
   return waitForBuilds({github, context, core, files});
 }
 
-module.exports = {matches, selected, requiredWorkflows, waitForBuilds, validatePullRequest, pullRequestFiles};
+module.exports = {matches, selected, requiredWorkflows, waitForBuilds, validatePullRequest, pullRequestFiles,
+  workflowJob, macBuildPassed, recoveredMacBuild};
