@@ -95,6 +95,12 @@ uses
 {$IFDEF UseSDLInput}
   UAudioInput_SDL,
 {$ENDIF}
+{$IF (Defined(LINUX) or Defined(DARWIN)) and Defined(UsePortaudioInput)}
+  UAudioInput_Portaudio,
+{$IFEND}
+{$IF Defined(MSWINDOWS) and Defined(UseBASSInput)}
+  UAudioInput_Bass,
+{$IFEND}
   UPhoneAudio,
   URemoteBridgeIPC,
   URemoteSongLibrary,
@@ -992,6 +998,12 @@ begin
 {$IFDEF UseSDLInput}
       CheckSDLCaptureDevices;
 {$ENDIF}
+{$IF (Defined(LINUX) or Defined(DARWIN)) and Defined(UsePortaudioInput)}
+      CheckPortaudioCaptureDevices;
+{$IFEND}
+{$IF Defined(MSWINDOWS) and Defined(UseBASSInput)}
+      CheckBassCaptureDevices;
+{$IFEND}
       UpdatePhoneAudio((Display.CurrentScreen <> @ScreenSing) and
         (Display.NextScreen <> @ScreenSing));
       RemoteBridgeIPC.ApplyPendingPlayerCount;

@@ -148,6 +148,7 @@ type
     public
       CfgIndex:      integer;   // index of this device in Ini.InputDeviceConfig
       Name:          UTF8String;    // soundcard name
+      CaptureSerial: UTF8String;    // display only, never a config key
       Source:        array of TAudioInputSource; // soundcard input-sources
       SourceRestore: integer;  // source-index that will be selected after capturing (-1: not detected)
       MicSource:     integer;  // source-index of mic (-1: none detected)

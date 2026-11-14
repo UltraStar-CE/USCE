@@ -39,6 +39,10 @@ uses
   URecord,
   UMusic;
 
+{$IFDEF MSWINDOWS}
+procedure CheckBassCaptureDevices;
+{$ENDIF}
+
 implementation
 
 uses
@@ -68,6 +72,15 @@ type
       RecordStream: HSTREAM;
       BassDeviceID: DWORD; // DeviceID used by BASS
       SingleIn: boolean;
+{$IFDEF MSWINDOWS}
+      EndpointID: RawByteString;
+      USBIdentity: UnicodeString;
+      CaptureWanted: boolean;
+      NextRetry: QWord;
+      procedure CheckCapture(Now: QWord);
+      function MatchesEndpoint(const Info: BASS_DEVICEINFO): boolean; overload;
+      function MatchesEndpoint(DeviceID: DWORD): boolean; overload;
+{$ENDIF}
 
       function SetInputSource(SourceIndex: integer): boolean;
       function GetInputSource(): integer;
@@ -83,6 +96,9 @@ type
 
 var
   BassCore: TAudioCore_Bass;
+{$IFDEF MSWINDOWS}
+  NextCaptureCheck: QWord;
+{$ENDIF}
 
 
 { Global }
@@ -181,6 +197,78 @@ begin
   Result := true;
 end;
 
+{$IFDEF MSWINDOWS}
+function CM_Locate_DevNodeW(out Node: DWORD; InstanceID: PWideChar; Flags: DWORD): DWORD;
+  stdcall; external 'cfgmgr32.dll';
+function CM_Get_Parent(out Parent: DWORD; Node, Flags: DWORD): DWORD;
+  stdcall; external 'cfgmgr32.dll';
+function CM_Get_Device_IDW(Node: DWORD; Buffer: PWideChar; Length, Flags: DWORD): DWORD;
+  stdcall; external 'cfgmgr32.dll';
+function CM_Get_DevNode_Registry_PropertyW(Node, Prop: DWORD; Kind, Buffer,
+  Size: PDWORD; Flags: DWORD): DWORD; stdcall; external 'cfgmgr32.dll';
+
+function USBEndpointIdentity(const Endpoint: RawByteString; out Serial: UTF8String): UnicodeString;
+const
+  CR_SUCCESS = 0;
+  CM_DRP_CAPABILITIES = $10;
+  CM_DEVCAP_UNIQUEID = $10;
+var
+  Node, Parent, Caps, Kind, Size: DWORD;
+  Buffer: array[0..199] of WideChar;
+  ID, Model: UnicodeString;
+  Slash, Depth: integer;
+begin
+  Result := '';
+  Serial := '';
+  if Endpoint = '' then Exit;
+
+  // Start at the exact MMDevice endpoint exposed by BASS, never at a
+  // device found by comparing friendly names or enumeration order.
+  ID := 'SWD\MMDEVAPI\' + UnicodeString(Endpoint);
+  if CM_Locate_DevNodeW(Node, PWideChar(ID), 0) <> CR_SUCCESS then Exit;
+  for Depth := 1 to 16 do
+  begin
+    if CM_Get_Parent(Parent, Node, 0) <> CR_SUCCESS then Exit;
+    Node := Parent;
+    if CM_Get_Device_IDW(Node, @Buffer[0], Length(Buffer), 0) <> CR_SUCCESS then Exit;
+    ID := UpperCase(UnicodeString(PWideChar(@Buffer[0])));
+    if Copy(ID, 1, 8) <> 'USB\VID_' then Continue;
+    Slash := Length(ID);
+    while (Slash > 0) and (ID[Slash] <> '\') do Dec(Slash);
+    Model := Copy(ID, 5, Slash - 5);
+    if Pos('&MI_', Model) <> 0 then Continue; // composite function, not the USB device
+    // Stop at the first physical USB device, even if it has no serial.
+    // Its parent may be a hub shared by both microphones.
+    if (Slash <= 5) or (Slash >= Length(ID)) then Exit;
+    Size := SizeOf(Caps);
+    if (CM_Get_DevNode_Registry_PropertyW(Node, CM_DRP_CAPABILITIES, @Kind,
+        @Caps, @Size, 0) <> CR_SUCCESS) or (Kind <> REG_DWORD) or
+       (Size <> SizeOf(Caps)) or ((Caps and CM_DEVCAP_UNIQUEID) = 0) then Exit;
+    Serial := UTF8Encode(Copy(ID, Slash + 1, MaxInt));
+    Result := ID;
+    Exit;
+  end;
+end;
+
+function TBassInputDevice.MatchesEndpoint(const Info: BASS_DEVICEINFO): boolean;
+var Serial: UTF8String;
+begin
+  Result := false;
+  if (Info.driver = nil) or ((Info.flags and BASS_DEVICE_ENABLED) = 0) or
+     ((Info.flags and BASS_DEVICE_LOOPBACK) <> 0) then Exit;
+  if USBIdentity <> '' then
+    Result := USBEndpointIdentity(RawByteString(Info.driver), Serial) = USBIdentity
+  else
+    Result := (EndpointID <> '') and (RawByteString(Info.driver) = EndpointID);
+end;
+
+function TBassInputDevice.MatchesEndpoint(DeviceID: DWORD): boolean;
+var Info: BASS_DEVICEINFO;
+begin
+  Result := BASS_RecordGetDeviceInfo(DeviceID, Info) and MatchesEndpoint(Info);
+end;
+{$ENDIF}
+
 function TBassInputDevice.Open(): boolean;
 var
   FormatFlags: DWORD;
@@ -190,6 +278,15 @@ const
 begin
   Result := false;
 
+{$IFDEF MSWINDOWS}
+  // BASS device numbers may change when Windows redetects an endpoint.
+  if (EndpointID <> '') and not MatchesEndpoint(BassDeviceID) then
+  begin
+    Log.LogError('Windows input endpoint changed for "' + Name +
+      '". Check its assignment in Recording Settings.', 'TBassInputDevice.Open');
+    Exit;
+  end;
+{$ENDIF}
   if (not BASS_RecordInit(BassDeviceID)) then
   begin
     Log.LogError('BASS_RecordInit['+Name+']: ' +
@@ -200,6 +297,7 @@ begin
   if (not BassCore.ConvertAudioFormatToBASSFlags(AudioFormat.Format, FormatFlags)) then
   begin
     Log.LogError('Unhandled sample-format', 'TBassInputDevice.Open');
+    BASS_RecordFree;
     Exit;
   end;
 
@@ -213,6 +311,18 @@ begin
     BASS_RecordFree;
     Exit;
   end;
+
+{$IFDEF MSWINDOWS}
+  // Check the actual paused stream before it can feed the player.
+  if (EndpointID <> '') and not MatchesEndpoint(BASS_ChannelGetDevice(RecordStream)) then
+  begin
+    BASS_RecordFree;
+    RecordStream := 0;
+    Log.LogError('Cannot verify the Windows input endpoint for "' + Name +
+      '". Check its assignment in Recording Settings.', 'TBassInputDevice.Open');
+    Exit;
+  end;
+{$ENDIF}
 
   // save current source selection and select new source
   SourceIndex := Ini.InputDeviceConfig[CfgIndex].Input-1;
@@ -238,15 +348,23 @@ begin
 
   // recording already started -> stop first
   if (RecordStream <> 0) then
+  begin
     Stop();
+    if RecordStream <> 0 then Exit;
+  end;
 
-  // TODO: Do not open the device here (takes too much time).
+{$IFDEF MSWINDOWS}
+  CaptureWanted := true;
+  NextRetry := GetTickCount64 + 1000;
+{$ENDIF}
+
   if not Open() then
     Exit;
 
   if (not BASS_ChannelPlay(RecordStream, true)) then
   begin
     Log.LogError('BASS_ChannelPlay: ' + BassCore.ErrorGetString(), 'TBassInputDevice.Start');
+    Stop();
     Exit;
   end;
 
@@ -258,10 +376,19 @@ function TBassInputDevice.Stop(): boolean;
 begin
   Result := false;
 
+{$IFDEF MSWINDOWS}
+  CaptureWanted := false;
+{$ENDIF}
   if (RecordStream = 0) then
     Exit;
-  if (not BASS_RecordSetDevice(BassDeviceID)) then
+  if not BASS_RecordSetDevice(BassDeviceID) then
+  begin
+    // Never free the thread's fallback device if this device disappeared.
+    if BASS_ChannelStop(RecordStream) or
+       (BASS_ChannelIsActive(RecordStream) = BASS_ACTIVE_STOPPED) then
+      RecordStream := 0;
     Exit;
+  end;
 
   if (not BASS_ChannelStop(RecordStream)) then
   begin
@@ -293,6 +420,69 @@ begin
 
   RecordStream := 0;
 end;
+
+{$IFDEF MSWINDOWS}
+procedure TBassInputDevice.CheckCapture(Now: QWord);
+var
+  Activity, DeviceID, Candidate: DWORD;
+  Info: BASS_DEVICEINFO;
+  Channel: TCaptureBuffer;
+begin
+  if not CaptureWanted then Exit;
+  if RecordStream <> 0 then
+  begin
+    Activity := BASS_ChannelIsActive(RecordStream);
+    if (Activity <> BASS_ACTIVE_STOPPED) and (Activity <> BASS_ACTIVE_PAUSED_DEVICE) then Exit;
+    Stop();
+    if RecordStream <> 0 then
+    begin
+      CaptureWanted := true;
+      Exit;
+    end;
+    for Channel in CaptureChannel do
+      if Assigned(Channel) then Channel.Clear;
+    CaptureWanted := EndpointID <> '';
+    Log.LogStatus('Windows input disconnected: "' + Name +
+      '". If it does not return, check Recording Settings.', 'BASS');
+    if not CaptureWanted then Exit;
+  end;
+  if (EndpointID = '') or (Now < NextRetry) then Exit;
+  NextRetry := Now + 1000;
+
+  Candidate := High(DWORD);
+  DeviceID := 0;
+  while BASS_RecordGetDeviceInfo(DeviceID, Info) do
+  begin
+    if MatchesEndpoint(Info) then
+    begin
+      if Candidate <> High(DWORD) then Exit;
+      Candidate := DeviceID;
+    end;
+    Inc(DeviceID);
+  end;
+  if Candidate = High(DWORD) then Exit;
+  BassDeviceID := Candidate;
+  if Start() then
+    Log.LogStatus('Verified Windows input endpoint reopened: "' + Name + '"', 'BASS')
+  else
+    CaptureWanted := true;
+end;
+
+procedure CheckBassCaptureDevices;
+var
+  Device: TAudioInputDevice;
+  Now: QWord;
+const
+  CheckInterval = 250;
+begin
+  if not Assigned(AudioInputProcessor) then Exit;
+  Now := GetTickCount64;
+  if Now < NextCaptureCheck then Exit;
+  NextCaptureCheck := Now + CheckInterval;
+  for Device in AudioInputProcessor.DeviceList do
+    if Device is TBassInputDevice then TBassInputDevice(Device).CheckCapture(Now);
+end;
+{$ENDIF}
 
 function TBassInputDevice.GetVolume(): single;
 var
@@ -409,6 +599,13 @@ begin
       AudioInputProcessor.DeviceList[DeviceIndex] := BassDevice;
 
       BassDevice.BassDeviceID := BassDeviceID;
+{$IFDEF MSWINDOWS}
+      if DeviceInfo.driver <> nil then
+      begin
+        BassDevice.EndpointID := RawByteString(DeviceInfo.driver);
+        BassDevice.USBIdentity := USBEndpointIdentity(BassDevice.EndpointID, BassDevice.CaptureSerial);
+      end;
+{$ENDIF}
 
       BassDevice.Name := DeviceName;
       Log.LogStatus('Attempting to configure InputDevice "' + BassDevice.Name + '"', 'Bass.EnumDevices');

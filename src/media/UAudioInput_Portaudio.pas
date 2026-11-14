@@ -38,6 +38,10 @@ uses
   SysUtils,
   UMusic;
 
+{$IF Defined(LINUX) or Defined(DARWIN)}
+procedure CheckPortaudioCaptureDevices;
+{$ENDIF}
+
 implementation
 
 uses
@@ -45,6 +49,12 @@ uses
   portmixer,
   {$ENDIF}
   portaudio,
+{$IFDEF LINUX}
+  Dynlibs,
+{$ENDIF}
+{$IFDEF DARWIN}
+  MacOSAll,
+{$ENDIF}
   ctypes,
   UAudioCore_Portaudio,
   UUnicodeUtils,
@@ -72,6 +82,12 @@ type
       Mixer: PPxMixer;
       {$ENDIF}
       PaDeviceIndex:  TPaDeviceIndex;
+{$IF Defined(LINUX) or Defined(DARWIN)}
+      CaptureIdentity: UTF8String;
+      CaptureWanted, NeedsReassignment: boolean;
+      NextRetry: QWord;
+      procedure CheckCapture(Now: QWord);
+{$ENDIF}
     public
       function Open():  boolean;
       function Close(): boolean;
@@ -135,12 +151,162 @@ begin
   end;
 end;
 
+{$IFDEF LINUX}
+var
+  ALSAExtensionLibrary: TLibHandle;
+  ALSAExtensionChecked: boolean;
+  PaAlsaGetInputCard: function(Stream: PPaStream; out Card: cint): TPaError; cdecl;
+
+function CaptureRealPath(Name, Buffer: PChar): PChar; cdecl; external 'c' name 'realpath';
+
+function ReadUSBAttribute(const Path: string): UTF8String;
+var
+  Handle: THandle;
+  Buffer: array[0..255] of AnsiChar;
+  Count: integer;
+begin
+  Result := '';
+  Handle := FileOpen(Path, fmOpenRead);
+  if Handle = THandle(-1) then Exit;
+  try
+    Count := FileRead(Handle, Buffer, SizeOf(Buffer));
+    if (Count <= 0) or (Count = SizeOf(Buffer)) then Exit;
+    SetString(Result, PAnsiChar(@Buffer[0]), Count);
+    Result := Trim(Result);
+  finally
+    FileClose(Handle);
+  end;
+end;
+
+function ALSACaptureIdentity(Stream: PPaStream; Device: PPaDeviceInfo;
+  out Serial: UTF8String): UTF8String;
+var
+  Host: PPaHostApiInfo;
+  Card: cint;
+  Buffer: array[0..4095] of AnsiChar;
+  Path, Parent, Vendor, Product, Candidate: string;
+  Entry: TSearchRec;
+  Matches: integer;
+begin
+  Result := '';
+  Serial := '';
+  if Device = nil then Exit;
+  Host := Pa_GetHostApiInfo(Device^.hostApi);
+  if (Host = nil) or (Host^._type <> paALSA) then Exit;
+  if not ALSAExtensionChecked then
+  begin
+    ALSAExtensionChecked := true;
+    ALSAExtensionLibrary := LoadLibrary(LibName);
+    if ALSAExtensionLibrary <> NilHandle then
+      @PaAlsaGetInputCard := GetProcedureAddress(ALSAExtensionLibrary,
+        'PaAlsa_GetStreamInputCard');
+  end;
+  if not Assigned(PaAlsaGetInputCard) then Exit;
+  Card := -1;
+  if (PaAlsaGetInputCard(Stream, Card) <> paNoError) or (Card < 0) then Exit;
+  Path := '/sys/class/sound/card' + IntToStr(Card) + '/device';
+  if CaptureRealPath(PChar(Path), @Buffer[0]) = nil then Exit;
+  Path := PAnsiChar(@Buffer[0]);
+  while Pos('/sys/devices/', Path) = 1 do
+  begin
+    Vendor := ReadUSBAttribute(Path + '/idVendor');
+    Product := ReadUSBAttribute(Path + '/idProduct');
+    if (Vendor <> '') and (Product <> '') then
+    begin
+      // The first USB device is the microphone. Never take a hub's serial.
+      Serial := ReadUSBAttribute(Path + '/serial');
+      if Serial = '' then Exit;
+      // Reject duplicate firmware serials, including twins that are not
+      // exposed as PortAudio devices. Never infer uniqueness from card order.
+      if FindFirst('/sys/bus/usb/devices/*', faAnyFile, Entry) <> 0 then
+      begin
+        Serial := '';
+        Exit;
+      end;
+      Matches := 0;
+      try
+        repeat
+          Candidate := '/sys/bus/usb/devices/' + Entry.Name;
+          if (ReadUSBAttribute(Candidate + '/idVendor') = Vendor) and
+             (ReadUSBAttribute(Candidate + '/idProduct') = Product) and
+             (ReadUSBAttribute(Candidate + '/serial') = Serial) then Inc(Matches);
+        until (Matches > 1) or (FindNext(Entry) <> 0);
+      finally
+        FindClose(Entry);
+      end;
+      if Matches = 1 then Result := Vendor + ':' + Product + ':' + Serial
+      else Serial := '';
+      Exit;
+    end;
+    Parent := ExtractFileDir(Path);
+    if Parent = Path then Exit;
+    Path := Parent;
+  end;
+end;
+{$ENDIF}
+
+{$IFDEF DARWIN}
+{$linkframework CoreAudio}
+function PaMacCore_GetStreamInputDevice(Stream: PPaStream): cuint32; cdecl; external LibName;
+{$ENDIF}
+
+{$IF Defined(LINUX) or Defined(DARWIN)}
+var NextCaptureCheck: QWord;
+
+function VerifiedCaptureIdentity(Stream: PPaStream; Device: PPaDeviceInfo;
+  out Serial: UTF8String): UTF8String;
+{$IFDEF DARWIN}
+var
+  Host: PPaHostApiInfo;
+  DeviceID, Size, Alive: UInt32;
+  Address: AudioObjectPropertyAddress;
+  UID: CFStringRef;
+  Buffer: array[0..1023] of AnsiChar;
+{$ENDIF}
+begin
+{$IFDEF LINUX}
+  Result := ALSACaptureIdentity(Stream, Device, Serial);
+{$ELSE}
+  Result := '';
+  Serial := '';
+  if Device = nil then Exit;
+  Host := Pa_GetHostApiInfo(Device^.hostApi);
+  if (Host = nil) or (Host^._type <> paCoreAudio) then Exit;
+  DeviceID := PaMacCore_GetStreamInputDevice(Stream);
+  if DeviceID = 0 then Exit;
+  Address.mScope := kAudioObjectPropertyScopeGlobal;
+  Address.mElement := 0;
+  Address.mSelector := kAudioDevicePropertyDeviceIsAlive;
+  Size := SizeOf(Alive);
+  if (AudioObjectGetPropertyData(DeviceID, Address, 0, nil, Size, @Alive) <> 0) or
+     (Alive = 0) then Exit;
+  Address.mSelector := kAudioDevicePropertyDeviceUID;
+  UID := nil;
+  Size := SizeOf(UID);
+  if (AudioObjectGetPropertyData(DeviceID, Address, 0, nil, Size, @UID) <> 0) or
+     (UID = nil) then Exit;
+  try
+    // A USB UID can encode a port instead of a serial. Only resume the
+    // same live Core Audio object and UID, never a replacement object.
+    if CFStringGetCString(UID, @Buffer[0], SizeOf(Buffer), kCFStringEncodingUTF8) and
+       (Buffer[0] <> #0) then
+      Result := IntToStr(DeviceID) + ':' + UTF8String(PAnsiChar(@Buffer[0]));
+  finally
+    CFRelease(UID);
+  end;
+{$ENDIF}
+end;
+{$ENDIF}
+
 function TPortaudioInputDevice.Open(): boolean;
 var
   Error:       TPaError;
   inputParams: TPaStreamParameters;
   deviceInfo:  PPaDeviceInfo;
   StreamInfo : PPaStreamInfo;
+{$IF Defined(LINUX) or Defined(DARWIN)}
+  Serial: UTF8String;
+{$ENDIF}
   {$IFDEF UsePortmixer}
   SourceIndex: integer;
   {$ENDIF}
@@ -149,6 +315,7 @@ begin
 
   // get input latency info
   deviceInfo := Pa_GetDeviceInfo(PaDeviceIndex);
+  if deviceInfo = nil then Exit;
 
   // set input stream parameters
   with inputParams do
@@ -173,6 +340,14 @@ begin
     Exit;
   end;
 
+{$IF Defined(LINUX) or Defined(DARWIN)}
+  if (CaptureIdentity <> '') and
+     (VerifiedCaptureIdentity(RecordStream, deviceInfo, Serial) <> CaptureIdentity) then
+  begin
+    Close();
+    Exit;
+  end;
+{$ENDIF}
   StreamInfo := Pa_GetStreamInfo(RecordStream);
   if (StreamInfo <> nil) then
     Log.LogStatus('Latency of ' + deviceInfo^.name + ': ' +
@@ -219,7 +394,11 @@ begin
   if (RecordStream <> nil) then
     Stop();
 
-  // TODO: Do not open the device here (takes too much time).
+{$IF Defined(LINUX) or Defined(DARWIN)}
+  if NeedsReassignment then Exit;
+  CaptureWanted := true;
+  NextRetry := GetTickCount64 + 1000;
+{$ENDIF}
   if (not Open()) then
     Exit;
 
@@ -240,6 +419,9 @@ function TPortaudioInputDevice.Stop(): boolean;
 var
   Error: TPaError;
 begin
+{$IF Defined(LINUX) or Defined(DARWIN)}
+  CaptureWanted := false;
+{$ENDIF}
   Result := false;
 
   if (RecordStream = nil) then
@@ -289,6 +471,43 @@ begin
 
   RecordStream := nil;
 end;
+
+{$IF Defined(LINUX) or Defined(DARWIN)}
+procedure TPortaudioInputDevice.CheckCapture(Now: QWord);
+var Channel: TCaptureBuffer;
+begin
+  if not CaptureWanted then Exit;
+  if RecordStream <> nil then
+  begin
+    if Pa_IsStreamActive(RecordStream) = 1 then Exit;
+    Stop();
+    NeedsReassignment := CaptureIdentity = '';
+    CaptureWanted := not NeedsReassignment;
+    for Channel in CaptureChannel do
+      if Assigned(Channel) then Channel.Clear;
+    Log.LogStatus('Input interrupted: "' + Name +
+      '". If it does not return, check Recording Settings.', 'PortAudio');
+  end;
+  if (CaptureIdentity = '') or (Now < NextRetry) then Exit;
+  // PortAudio's device list is a snapshot. Try the original PCM only.
+  // Open verifies its hardware identity before Pa_StartStream.
+  if Start() then
+    Log.LogStatus('Verified input reopened: "' + Name + '"', 'PortAudio');
+end;
+
+procedure CheckPortaudioCaptureDevices;
+var
+  Device: TAudioInputDevice;
+  Now: QWord;
+begin
+  if not Assigned(AudioInputProcessor) then Exit;
+  Now := GetTickCount64;
+  if Now < NextCaptureCheck then Exit;
+  NextCaptureCheck := Now + 250;
+  for Device in AudioInputProcessor.DeviceList do
+    if Device is TPortaudioInputDevice then TPortaudioInputDevice(Device).CheckCapture(Now);
+end;
+{$ENDIF}
 
 function TPortaudioInputDevice.GetVolume(): single;
 begin
@@ -492,6 +711,9 @@ begin
       Px_CloseMixer(mixer);
     {$ENDIF}
 
+{$IF Defined(LINUX) or Defined(DARWIN)}
+    paDevice.CaptureIdentity := VerifiedCaptureIdentity(stream, paDeviceInfo, paDevice.CaptureSerial);
+{$ENDIF}
     // close test-stream
     Pa_CloseStream(stream);
 
