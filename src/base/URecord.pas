@@ -128,7 +128,8 @@ type
       procedure LockAnalysisBuffer();
       procedure UnlockAnalysisBuffer();
 
-      function MaxSampleVolume: single;
+      function MaxSampleVolume: single; overload;
+      function MaxSampleVolume(out Clipped: boolean): single; overload;
       property ToneString: string READ GetToneString;
       property ToneCandidateCount: integer read fToneCandidateCount;
       property ToneCandidates[Index: integer]: TToneCandidate read GetToneCandidate;
@@ -765,23 +766,33 @@ begin
 end;
 
 function TCaptureBuffer.MaxSampleVolume: single;
+var Clipped: boolean;
+begin
+  Result := MaxSampleVolume(Clipped);
+end;
+
+function TCaptureBuffer.MaxSampleVolume(out Clipped: boolean): single;
 var
   lSampleIndex: integer;
-  lMaxVol:      longint;
-begin;
+  Sample, MaxVolume: integer;
+begin
+  Clipped := false;
+  MaxVolume := 0;
   LockAnalysisBuffer();
   try
-    lMaxVol := 0;
     for lSampleIndex := 0 to High(AnalysisBuffer) do
     begin
-      if Abs(AnalysisBuffer[lSampleIndex]) > lMaxVol then
-        lMaxVol := Abs(AnalysisBuffer[lSampleIndex]);
+      Sample := AnalysisBuffer[lSampleIndex];
+      if (Sample = Low(SmallInt)) or (Sample = High(SmallInt)) then
+        Clipped := true;
+      if Abs(Sample) > MaxVolume then
+        MaxVolume := Abs(Sample);
     end;
   finally
     UnlockAnalysisBuffer();
   end;
 
-  result := lMaxVol / -Low(Smallint);
+  Result := MaxVolume / -Low(SmallInt);
 end;
 
 const
