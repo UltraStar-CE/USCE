@@ -28,13 +28,7 @@ administrative responsibilities, not a technical veto. Maintainer appointments
 and removals follow the public proposal process. Our current responsibilities
 and roster appear in [MAINTAINERS.md](MAINTAINERS.md).
 
-The project currently has one human developer, dgruss. During this recorded
-solo phase, the maintainer may merge their own PR after required CI passes,
-review findings are addressed, and testing and the absence of independent human
-review are recorded. Direct pushes, force pushes and automatic merges remain
-prohibited. We review this status monthly. The exception ends when a second
-human developer joins the roster, without waiting for that newcomer to earn
-two merged PRs.
+Direct pushes, force pushes and automatic merges are prohibited.
 
 ## Active developers and approvals
 
@@ -48,9 +42,9 @@ feedback; a bare approval or automated review does not qualify.
 We review the roster monthly through a public PR with contribution links.
 Anyone can correct an omission or question a decision through the public
 proposal process. Contribution quality matters; raw commit counts do not define
-it. The initial solo roster is explicitly identified.
+it.
 
-Outside the solo exception, every PR needs **one independent human developer
+Every PR needs **one independent human developer
 approval with four or fewer active developers, and two with more than four**.
 The author cannot approve their own PR. Maintainers, owners and bots follow the
 same PR route. AI feedback never counts as a required human approval.

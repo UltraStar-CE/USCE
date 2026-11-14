@@ -32,10 +32,8 @@ for the next available review slot. Drafts and already-reviewed commits do not
 receive duplicate requests. See [AUTOMATION.md](AUTOMATION.md).
 
 Every change uses a PR and required CI under [GOVERNANCE.md](GOVERNANCE.md).
-While the project has one human developer, the sole maintainer can merge after
-checking CI and review findings, with the absence of independent review stated.
-Once a second human developer joins, one independent approval is required;
-when there are more than four active developers, two are required. Authors
+One independent approval is required, or two when there are more than four
+active developers. Authors
 cannot approve their own work. Automation cannot merge or supply an approval.
 
 AI-assisted contributions are welcome when the contributor can explain the
