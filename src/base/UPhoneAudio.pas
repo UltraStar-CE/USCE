@@ -47,6 +47,7 @@ type
       out Generation: LongWord): integer;
     function ReadCaptureWindow(PlayerIndex: integer; EndHostUs: Int64;
       Samples: pointer; Count: LongWord): boolean;
+    function SupportsCaptureTimestamps: boolean;
     function PollCalibration(Samples: pointer; Capacity: integer; PlayerIndex: integer): integer;
     function Status(PlayerIndex: integer = 0): UTF8String;
     procedure Signal(const Json: UTF8String);
@@ -188,10 +189,15 @@ begin
   end;
 end;
 
+function TPhoneAudio.SupportsCaptureTimestamps: boolean;
+begin
+  Result := Enabled and Assigned(FCaptureWindow);
+end;
+
 function TPhoneAudio.ReadCaptureWindow(PlayerIndex: integer; EndHostUs: Int64;
   Samples: pointer; Count: LongWord): boolean;
 begin
-  Result := Enabled and Assigned(FCaptureWindow) and
+  Result := SupportsCaptureTimestamps and
     (PlayerIndex >= 0) and (PlayerIndex <= High(FContexts)) and
     (FContexts[PlayerIndex] <> nil) and
     (FCaptureWindow(FContexts[PlayerIndex], EndHostUs, Samples, Count) = 1);

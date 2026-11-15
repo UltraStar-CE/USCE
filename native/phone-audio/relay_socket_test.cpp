@@ -43,11 +43,14 @@ int main(int argc, char **argv) {
         auto request = nlohmann::json::parse(*text);
         const auto type = request.value("type", "");
         if (type == "host.hello") {
+          bool captureTimestamps = false;
+          for (const auto &capability : request.at("capabilities"))
+            if (capability == "captureTimestampsV1") captureTimestamps = true;
           const bool resumed = request.value("roomId", "") == "fixture-room" &&
             request.value("hostToken", "") == "fixture-token";
           socket->send(nlohmann::json({{"type", resumed ? "room.resumed" : "room.created"},
             {"protocol", 1}, {"roomId", "fixture-room"}, {"hostToken", "fixture-token"},
-            {"displayCode", "TEST"}}).dump());
+            {"displayCode", "TEST"}, {"captureTimestampsV1", captureTimestamps}}).dump());
           if (!resumed) for (int i = 0; i < 64; ++i)
             socket->send(std::string("{\"type\":\"fixture.work\",\"protocol\":1}"));
         } else if (type == "host.heartbeat") {

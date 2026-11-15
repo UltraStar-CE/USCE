@@ -20,6 +20,7 @@ type
     FOnMessage: TRelayMessageEvent;
     FViewsPolicy: LongInt;
     FViewsDirty: boolean;
+    FCaptureTimestamps: boolean;
     procedure Hello;
     procedure Handle(Message: TJSONObject);
     procedure Heartbeat;
@@ -27,7 +28,7 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-    procedure Start(const Url, LibraryPath, GameVersion: string);
+    procedure Start(const Url, LibraryPath, GameVersion: string; CaptureTimestamps: boolean = false);
     procedure Stop;
     procedure SetCompanionViews(Policy: LongInt);
     procedure Reconnect;
@@ -79,12 +80,13 @@ begin
   inherited;
 end;
 
-procedure TRemoteRelaySession.Start(const Url, LibraryPath, GameVersion: string);
+procedure TRemoteRelaySession.Start(const Url, LibraryPath, GameVersion: string; CaptureTimestamps: boolean);
 begin
   Stop;
   FUrl := NormalizeRelayHostUrl(Url);
   FLibraryPath := LibraryPath;
   FGameVersion := GameVersion;
+  FCaptureTimestamps := CaptureTimestamps;
   FRunning := true;
   FRetryAt := 0;
 end;
@@ -144,14 +146,17 @@ end;
 
 procedure TRemoteRelaySession.Hello;
 var Message: TJSONObject;
+    Capabilities: TJSONArray;
 begin
   // Advertise only implemented capabilities. Catalog/Party will be added as
   // their handlers move into the game; this session alone is not feature parity.
   Message := TJSONObject.Create(['type', 'host.hello', 'gameVersion', FGameVersion,
     'bridgeVersion', 'usce-native', 'maxPlayers', 12]);
   try
-    Message.Add('capabilities', TJSONArray.Create(['remoteControl', 'clockSync',
-      'p2pDataChannel', 'rawPcmV1', 'audioCalibrationV1']));
+    Capabilities := TJSONArray.Create(['remoteControl', 'clockSync',
+      'p2pDataChannel', 'rawPcmV1', 'audioCalibrationV1']);
+    Message.Add('capabilities', Capabilities);
+    if FCaptureTimestamps then Capabilities.Add('captureTimestampsV1');
     Message.Add('companionViews', CompanionViewsJson(FViewsPolicy));
     if (FViewsPolicy shr 3) = Ord(cvCatalog) then Message.Add('webApp', 'catalog');
     if FRoomId <> '' then
