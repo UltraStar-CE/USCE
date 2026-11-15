@@ -173,11 +173,18 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
                   return;
                 }
                 // A duplicate may have reached the game through the relay first.
-                if (data->size() == 980 && bytes[0] == 'U' && bytes[1] == 'A' && bytes[2] == 'P' && bytes[3] == '1' &&
+                auto size = data->size();
+                const bool stamped = size == CaptureHistory::stampedPcmBytes;
+                if (stamped) size = CaptureHistory::pcmBytes;
+                if (size == CaptureHistory::pcmBytes && PcmQueue::u32(bytes) == 0x31504155 &&
                     PcmQueue::u32(bytes + 8) == 48000 && PcmQueue::u32(bytes + 12) == 480) {
                   owner->lastDirectPacket = Clock::now(); owner->directSequence = PcmQueue::u32(bytes + 4);
+                  if (stamped && owner->gameClock.ready) {
+                    if (!owner->captureHistory) owner->captureHistory = std::make_unique<CaptureHistory>();
+                    owner->captureHistory->pushStamped(bytes, data->size(), owner->gameClock.nowUs());
+                  }
                 }
-                if (owner->pcm.push(bytes, data->size())) owner->state = "receiving PCM";
+                if (owner->pcm.push(bytes, size)) owner->state = "receiving PCM";
               }
             }
           } catch (...) {}

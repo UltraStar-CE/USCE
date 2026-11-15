@@ -18,9 +18,23 @@ class CaptureHistory {
   bool started = false;
 
 public:
+  // Direct PCM appends an optional little-endian host timestamp and capture
+  // epoch to the original UAP1 payload. The legacy PCM reader sees only UAP1.
+  static constexpr size_t pcmBytes = 980;
+  static constexpr size_t stampedPcmBytes = pcmBytes + 12;
+
+  void pushStamped(const uint8_t *data, size_t size, int64_t hostNowUs) {
+    if (size != stampedPcmBytes) return;
+    const auto stamp = uint64_t(PcmQueue::u32(data + pcmBytes)) |
+      (uint64_t(PcmQueue::u32(data + pcmBytes + 4)) << 32);
+    if (stamp > INT64_MAX) return;
+    push(data, pcmBytes, static_cast<int64_t>(stamp), hostNowUs,
+      PcmQueue::u32(data + pcmBytes + 8));
+  }
+
   void push(const uint8_t *data, size_t size, int64_t endUs, int64_t hostNowUs,
             uint32_t captureEpoch = 0) {
-    if (size != 980 || PcmQueue::u32(data) != 0x31504155 ||
+    if (size != pcmBytes || PcmQueue::u32(data) != 0x31504155 ||
         PcmQueue::u32(data + 8) != 48000 || PcmQueue::u32(data + 12) != samplesPerPacket ||
         endUs <= 0 || hostNowUs <= 0 ||
         endUs < hostNowUs - 1500000 || endUs > hostNowUs + 50000) return;
