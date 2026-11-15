@@ -42,7 +42,6 @@ uses
   UPlayerLayout;
 
 procedure SingDraw;
-procedure SingDrawLines;
 procedure SingDrawBackground;
 procedure SingDrawOscilloscopes;
 procedure SingDrawOscilloscope(Position: TThemePosition; NrSound: integer);
@@ -109,6 +108,10 @@ uses UMenuBackground,
   UScreenSingController,
   USong,
   UWebcam;
+
+const
+  NotePreviewBeats = 40; // Also the lead-in for the moving lyric cue.
+  NoteHoldBeats = 15; // Match the final lyric fade.
 
 function NoteAlpha(NoteType: TNoteType; Alpha: real): real; inline;
 begin
@@ -852,7 +855,6 @@ var
 const
   DefaultBarWidth  = 50; // width  of the lyric helper bar
   DefaultBarHeight = 30; // height of the lyric helper bar
-  BarMoveLimit = 40; // max. number of beats remaining before the bar starts to move
 begin
   // get current lyrics line and the time in beats of its first note
   CurLine := @CurrentSong.Tracks[CP].Lines[CurrentSong.Tracks[CP].CurrentLine];
@@ -889,12 +891,12 @@ begin
 
       // if the number of beats to the first note is too big,
       // the bar stays on the left side.
-      if (BarMoveDelta > BarMoveLimit) then
-        BarMoveDelta := BarMoveLimit;
+      if (BarMoveDelta > NotePreviewBeats) then
+        BarMoveDelta := NotePreviewBeats;
 
       // limit number of beats the bar moves
-      if (FirstNoteDelta > BarMoveLimit) then
-        FirstNoteDelta := BarMoveLimit;
+      if (FirstNoteDelta > NotePreviewBeats) then
+        FirstNoteDelta := NotePreviewBeats;
 
       // calc bar progress
       BarProgress := 1 - BarMoveDelta / FirstNoteDelta;
@@ -950,61 +952,17 @@ begin
   end;
 end;
 
-procedure SingDrawLines;
+function HasNearbyTargetNotes(const Line: TLine; Beat: real): boolean;
 var
-  NR: TRecR;         // lyrics area bounds (NR = NoteRec?)
-  PlayerIndex: integer;
-  LocalIndex: integer;
-  LineTop: real;
-  LineSpacing: integer;
-  PlayerCountOnScreen: integer;
-  LaneLeft: real;
-  LaneRight: real;
-  procedure GetLaneLayout(const CurrentPlayerIndex: integer; out Left, Right, Top: real; out Spacing: integer);
-  var
-    Layout: TSingLaneLayout;
-  begin
-    if Screens > 1 then
-    begin
-      PlayerCountOnScreen := GetScreenPlayerCount(PlayersPlay, Screens, ScreenAct);
-      LocalIndex := GetPlayerIndexOnScreen(CurrentPlayerIndex, PlayersPlay, Screens);
-    end
-    else
-    begin
-      PlayerCountOnScreen := PlayersPlay;
-      LocalIndex := CurrentPlayerIndex;
-    end;
-
-    Layout := GetSingLaneLayout(PlayerCountOnScreen, LocalIndex, Theme.Sing.PlayerLayout,
-      CurrentSong.isDuet);
-    Left := Layout.GridLeft;
-    Right := Layout.GridRight;
-    Top := Layout.GuideTopY;
-    Spacing := Layout.NoteLineSpacing;
-  end;
+  NoteIndex: integer;
 begin
-  // positions
-  NR.Left := 20;
-  NR.Right := 780;
-  NR.Width := 760; //NR.Right - NR.Left;
-  NR.WMid  := 380;//NR.Width / 2;
-  NR.Mid   := 400;//NR.Left + NR.WMid;
-
-  // draw note-lines
-
-  if Ini.NoteLines <> 1 then
-    Exit;
-
-  for PlayerIndex := 0 to PlayersPlay - 1 do
-  begin
-    if (Screens > 1) and (GetPlayerScreen(PlayerIndex, PlayersPlay, Screens) <> ScreenAct) then
-      Continue;
-    if not ScreenSing.Settings.NotesVisible[PlayerIndex] then
-      Continue;
-
-    GetLaneLayout(PlayerIndex, LaneLeft, LaneRight, LineTop, LineSpacing);
-    SingDrawNoteLines(LaneLeft, LineTop, LaneRight, LineSpacing);
-  end;
+  for NoteIndex := 0 to Line.HighNote do
+    with Line.Notes[NoteIndex] do
+      if (Beat >= StartBeat - NotePreviewBeats) and
+         (Beat < StartBeat + Duration + NoteHoldBeats) and
+         (NoteAlpha(NoteType, 1) > 0) then
+        Exit(true);
+  Result := false;
 end;
 
 procedure SingDraw;
@@ -1146,10 +1104,7 @@ begin
     NotesW[I - 1] := Max(1.0, BaseNoteW * ContentScale);
   end;
 
-  // draw notes lines
-  if (ScreenSing.Settings.InputVisible) then
-    SingDrawLines;
-  // Draw the Notes
+  // Draw each voice's staff with its target notes.
   for PlayerIndex := 0 to PlayersPlay - 1 do
   begin
     if (Screens > 1) and (GetPlayerScreen(PlayerIndex, PlayersPlay, Screens) <> ScreenAct) then
@@ -1158,19 +1113,17 @@ begin
     GetLaneLayout(PlayerIndex, LaneLeft, LaneRight, LaneWidth, LineTop, LineSpacing);
 
     TrackIndex := Player[PlayerIndex].Track;
-    if CurrentSong.isDuet then
-      LyricEngine := ScreenSing.VoiceLyrics[TrackIndex]
-    else
-      LyricEngine := ScreenSing.Lyrics;
-    // Clear the final target notes and sung trace when their lyrics fade out.
-    // Each duet voice finishes independently; scoring is unaffected.
-    if LyricEngine.GetUpperLine.LastLine and
-      not LyricEngine.HasVisibleText(LyricsState.MidBeat) then
-    begin
-      if Ini.PitchTrace <> 0 then
-        SingDrawPlayerLine(LaneLeft, LineTop, LaneWidth, TrackIndex, PlayerIndex, LineSpacing, true);
-      Continue;
-    end;
+    with CurrentSong.Tracks[TrackIndex] do
+      if not HasNearbyTargetNotes(Lines[CurrentLine], LyricsState.MidBeat) then
+      begin
+        if Ini.PitchTrace <> 0 then
+          SingDrawPlayerLine(LaneLeft, LineTop, LaneWidth, TrackIndex, PlayerIndex, LineSpacing, true);
+        Continue;
+      end;
+
+    if (Ini.NoteLines = 1) and ScreenSing.Settings.InputVisible and
+       ScreenSing.Settings.NotesVisible[PlayerIndex] and ScreenSing.Settings.NotesVisible[TrackIndex] then
+      SingDrawNoteLines(LaneLeft, Layout.GuideTopY, LaneRight, LineSpacing);
 
     SingDrawPlayerBGLine(LaneLeft, LineTop, LaneRight, TrackIndex, PlayerIndex, LineSpacing);
     SingDrawLine(LaneLeft, LineTop, LaneRight, TrackIndex, PlayerIndex, LineSpacing);
