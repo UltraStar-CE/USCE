@@ -63,6 +63,56 @@ modules:
         url: https://github.com/libsdl-org/SDL_image/releases/download/release-2.8.12/SDL2_image-2.8.12.tar.gz
         sha256: 393f5efb50536ec13ca4f4affb69cc9966d3c3f969e6c5e701faddf9f9785381
 
+  - name: projectM
+    buildsystem: cmake-ninja
+    builddir: true
+    config-opts:
+      # projectM installs its pkg-config file for named configurations.
+      - -DCMAKE_BUILD_TYPE=RelWithDebInfo
+      - -DCMAKE_INSTALL_LIBDIR=lib
+      - -DENABLE_PLAYLIST=OFF
+      - -DENABLE_SYSTEM_PROJECTM_EVAL=OFF
+    post-install:
+      - install -Dm644 ../LICENSE.txt /app/share/licenses/io.github.ultrastar_ce.USCE/projectM/LICENSE.txt
+      - install -Dm644 ../vendor/hlslparser/LICENSE /app/share/licenses/io.github.ultrastar_ce.USCE/projectM/hlslparser-LICENSE
+      - install -Dm644 ../vendor/projectm-eval/LICENSE.md /app/share/licenses/io.github.ultrastar_ce.USCE/projectM/projectm-eval-LICENSE.md
+    sources:
+      - type: archive
+        url: https://github.com/projectM-visualizer/projectm/releases/download/v4.1.7/libprojectM-4.1.7.tar.gz
+        sha256: 16e4610b4d58981f7a2351faa58d507d3f40163a7b26ba81e19aec928c66641f
+
+  - name: opencv
+    buildsystem: cmake-ninja
+    builddir: true
+    config-opts:
+      - -DCMAKE_INSTALL_LIBDIR=lib
+      - -DBUILD_LIST=core,imgproc,videoio
+      - -DBUILD_TESTS=OFF
+      - -DBUILD_PERF_TESTS=OFF
+      - -DBUILD_opencv_apps=OFF
+      - -DOPENCV_GENERATE_PKGCONFIG=ON
+      # USCE uses V4L2 through OpenCV for cameras and its own FFmpeg for media.
+      - -DWITH_V4L=ON
+      - -DWITH_FFMPEG=OFF
+      - -DWITH_GSTREAMER=OFF
+      - -DWITH_1394=OFF
+      - -DWITH_OBSENSOR=OFF
+      - -DWITH_VA=OFF
+      # videoio needs imgcodecs for camera frames. Keep JPEG for MJPEG cameras.
+      - -DWITH_AVIF=OFF
+      - -DWITH_OPENEXR=OFF
+      # Disable optional dependencies that would trigger configure-time downloads.
+      - -DWITH_ADE=OFF
+      - -DWITH_IPP=OFF
+      - -DWITH_ITT=OFF
+      - -DWITH_OPENCL=OFF
+    post-install:
+      - install -Dm644 ../LICENSE /app/share/licenses/io.github.ultrastar_ce.USCE/opencv/LICENSE
+    sources:
+      - type: archive
+        url: https://github.com/opencv/opencv/archive/refs/tags/4.13.0.tar.gz
+        sha256: 1d40ca017ea51c533cf9fd5cbde5b5fe7ae248291ddf2af99d4c17cf8e13017d
+
   - name: usce
     buildsystem: simple
     build-commands:
@@ -71,7 +121,7 @@ modules:
       - printf '%s\n' "-Fl$(dirname "$(gcc -print-file-name=crtbegin.o)")" >> fpc.cfg
       - ln -s ../fpc.cfg src/fpc.cfg
       - ./autogen.sh
-      - ./configure --prefix=/app --without-portaudio --without-opencv
+      - ./configure --prefix=/app --without-portaudio --with-opencv --with-libprojectM
       - python3 tools/bundle-themes.py bundle --source flatpak-sources/themes --destination flatpak-themes
       - |
         cmake -S native/phone-audio -B phone-flatpak -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
@@ -89,6 +139,15 @@ modules:
       # FPC passes these flags to ld directly rather than through gcc.
       - make -j"$FLATPAK_BUILDER_N_JOBS" LDFLAGS='-z relro -z now --as-needed'
       - make install USCE_THEMES_DIR="$PWD/flatpak-themes"
+      - |
+        set -eu
+        libraries=$(ldd /app/bin/usce)
+        if printf '%s\n' "$libraries" | grep -F 'not found'; then
+          exit 1
+        fi
+        printf '%s\n' "$libraries" | grep -F 'libprojectM-4.so'
+        printf '%s\n' "$libraries" | grep -F 'libopencv_videoio.so'
+        test -d /app/share/usce/visuals/projectM/presets
       - install -Dm644 LICENSE /app/share/licenses/io.github.ultrastar_ce.USCE/usce/LICENSE
       - install -Dm644 icons/usce-icon_256.png /app/share/icons/hicolor/256x256/apps/io.github.ultrastar_ce.USCE.png
       - install -d /app/share/applications /app/share/metainfo
