@@ -113,8 +113,21 @@ int main() {
   assert(usce_pa_signal(receiver, "{\"type\":\"bridge.ready\",\"displayCode\":null}") == 0);
   assert(usce_pa_signal(receiver, "not json") == -1);
   assert(usce_pa_signal(receiver, "{\"type\":\"room.created\",\"displayCode\":\"TEST\"}") == 0);
-  const auto pcm = std::string("{\"type\":\"audio.pcm\",\"slot\":1,\"pcm\":\"") + base64(packet(1)) + "\"}";
-  assert(usce_pa_signal(receiver, pcm.c_str()) == 0);
+  const auto timedPcm = [](int seq, int64_t stamp, const char *player = "") {
+    return std::string("{\"type\":\"audio.pcm\",\"slot\":1,\"playerId\":\"") + player +
+      "\",\"captureEpoch\":1,\"captureEndHostUs\":" + std::to_string(stamp) +
+      ",\"pcm\":\"" + base64(packet(seq)) + "\"}";
+  };
+  const auto unstamped = std::string("{\"type\":\"audio.pcm\",\"slot\":1,\"pcm\":\"") + base64(packet(1)) + "\"}";
+  assert(usce_pa_signal(receiver, unstamped.c_str()) == 0);
+  assert(usce_pa_poll(receiver, out, 9600) == 0);
+  usce_pa_set_clock(receiver, 2000000);
+  assert(usce_pa_signal(receiver, unstamped.c_str()) == 0);
+  assert(usce_pa_poll(receiver, out, 9600) == 0);
+  assert(usce_pa_signal(receiver, timedPcm(1, 100000).c_str()) == 0);
+  assert(usce_pa_poll(receiver, out, 9600) == 0);
+  assert(usce_pa_has_capture_history(receiver) == 0);
+  assert(usce_pa_signal(receiver, timedPcm(1, 1980000).c_str()) == 0);
   uint32_t generation = 0;
   assert(usce_pa_poll_generation(receiver, out, 200, &generation) == 200);
   assert(generation != 0);
@@ -131,21 +144,9 @@ int main() {
   assert(usce_pa_poll(receiver, out, 9600) == 0); // Calibration cannot become a singing sample.
   assert(usce_pa_poll_calibration(receiver, out, 9600) == 480);
   assert(out[0] == 16384);
-  const auto realMicrophone = std::string("{\"type\":\"audio.pcm\",\"slot\":1,\"pcm\":\"") + base64(packet(2)) + "\"}";
-  assert(usce_pa_signal(receiver, realMicrophone.c_str()) == 0);
+  assert(usce_pa_signal(receiver, timedPcm(2, 1990000).c_str()) == 0);
   assert(usce_pa_poll_calibration(receiver, out, 9600) == 0);
   assert(usce_pa_poll(receiver, out, 9600) == 480); // Same sequence, independent queues.
-  assert(usce_pa_has_capture_history(receiver) == 0);
-  usce_pa_set_clock(receiver, 2000000);
-  const auto timedPcm = [](int seq, int64_t stamp) {
-    return std::string("{\"type\":\"audio.pcm\",\"slot\":1,\"captureEpoch\":1,\"captureEndHostUs\":") +
-      std::to_string(stamp) + ",\"pcm\":\"" + base64(packet(seq)) + "\"}";
-  };
-  assert(usce_pa_signal(receiver, timedPcm(3, 100000).c_str()) == 0);
-  assert(usce_pa_poll(receiver, out, 9600) == 480);
-  assert(usce_pa_has_capture_history(receiver) == 0); // An invalid stamp still permits legacy PCM.
-  assert(usce_pa_signal(receiver, timedPcm(4, 1990000).c_str()) == 0);
-  assert(usce_pa_poll(receiver, out, 9600) == 480);
   assert(usce_pa_has_capture_history(receiver) == 1);
   char status[4096];
   assert(usce_pa_status(receiver, status, sizeof(status)) > 0);
@@ -155,12 +156,15 @@ int main() {
   assert(second);
   assert(usce_pa_signal(receiver, "{\"type\":\"player.assigned\",\"playerId\":\"one\",\"slot\":1}") == 0);
   assert(usce_pa_signal(second, "{\"type\":\"player.assigned\",\"playerId\":\"two\",\"slot\":1}") == 0);
-  const auto firstPcm = std::string("{\"type\":\"audio.pcm\",\"playerId\":\"one\",\"slot\":1,\"pcm\":\"") + base64(packet(1)) + "\"}";
-  const auto secondPcm = std::string("{\"type\":\"audio.pcm\",\"playerId\":\"two\",\"slot\":1,\"pcm\":\"") + base64(packet(1)) + "\"}";
+  assert(usce_pa_poll(receiver, out, 9600) == 0);
+  assert(usce_pa_has_capture_history(receiver) == 0); // A new owner starts without timing history.
+  usce_pa_set_clock(second, 2000000);
+  const auto firstPcm = timedPcm(1, 1990000, "one");
+  const auto secondPcm = timedPcm(1, 1990000, "two");
   assert(usce_pa_signal(receiver, firstPcm.c_str()) == 0);
   assert(usce_pa_signal(second, secondPcm.c_str()) == 0);
   assert(usce_pa_poll(receiver, out, 9600) == 480);
-  assert(usce_pa_has_capture_history(receiver) == 0); // A new owner starts without timing history.
+  assert(usce_pa_has_capture_history(receiver) == 1);
   assert(usce_pa_poll(second, out, 9600) == 480);
   const auto secondCalibration = std::string("{\"type\":\"audio.calibration.pcm\",\"playerId\":\"two\",\"slot\":1,\"pcm\":\"") + base64(calibrationPacket) + "\"}";
   assert(usce_pa_signal(second, secondCalibration.c_str()) == 0);
