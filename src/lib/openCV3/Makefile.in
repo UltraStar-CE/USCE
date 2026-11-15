@@ -9,6 +9,9 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 
 OBJECTS	= ApiWrapper.o
+ifeq (@enable_camera_portal@,yes)
+OBJECTS += CameraPortal.o
+endif
 ifneq ($(filter win32 win64,@FPC_PLATFORM@),)
 LIBRARY = ../../../game/opencvwrapper.dll
 else
@@ -17,7 +20,7 @@ endif
 
 CXX      = @CXX@
 CPPFLAGS = @CPPFLAGS@
-CXXFLAGS += @CXXFLAGS@ @OpenCV_CXXFLAGS@
+CXXFLAGS += @CXXFLAGS@ @OpenCV_CXXFLAGS@ @CAMERA_PORTAL_CFLAGS@
 RANLIB   = @RANLIB@
 
 .PHONY: all clean distclean
@@ -37,6 +40,10 @@ endif
 
 %.o: %.cpp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(<) -o $@
+
+ifeq (@enable_camera_portal@,yes)
+ApiWrapper.o CameraPortal.o: CameraPortal.hpp
+endif
 
 clean:
 	rm -f $(LIBRARY)

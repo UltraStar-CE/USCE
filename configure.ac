@@ -467,6 +467,21 @@ if [[ x$with_OpenCV != xno ]] ; then
 fi
 AC_SUBST_DEFINE(USE_OPENCV_CWRAPPER, $opencv_USE_CWRAPPER)
 AC_SUBST(USE_OPENCV_CWRAPPER, $opencv_USE_CWRAPPER)
+AC_ARG_ENABLE([camera-portal],
+    [AS_HELP_STRING([--enable-camera-portal], [use the desktop camera portal and PipeWire for webcams])],
+    [], [enable_camera_portal=no])
+if [[ "$enable_camera_portal" = yes ]] ; then
+    if [[ "$opencv_USE_CWRAPPER" != yes || "$FPC_PLATFORM" != linux ]] ; then
+        AC_MSG_FAILURE([The camera portal requires a Linux build with OpenCV])
+    fi
+    camera_portal_packages="gio-unix-2.0 gstreamer-app-1.0 gstreamer-video-1.0"
+    if ! $PKG_CONFIG --exists $camera_portal_packages ; then
+        AC_MSG_FAILURE([The camera portal requires GIO and GStreamer development files])
+    fi
+    CAMERA_PORTAL_CFLAGS="-DUSCE_CAMERA_PORTAL $($PKG_CONFIG --cflags $camera_portal_packages)"
+fi
+AC_SUBST(enable_camera_portal)
+AC_SUBST(CAMERA_PORTAL_CFLAGS)
 AC_SUBST_DEFINE(OPENCV_CORE_STANDALONE, $opencv_core_standalone)
 AC_SUBST_DEFINE(OPENCV_IMGPROC_STANDALONE, $opencv_imgproc_standalone)
 AC_SUBST_DEFINE(OPENCV_VIDEOIO_STANDALONE, $opencv_videoio_standalone)
