@@ -272,3 +272,18 @@ test('branch inventory stops when the checkpoint batch is full', async () => {
   assert.equal(x.comparisons.length, 40);
   assert.equal(JSON.parse(x.trees[0].tree[0].content).forks.length, 20);
 });
+
+test('only the 25 most recently pushed forks have their branches inspected', async () => {
+  const x = fixture();
+  const forks = Array.from({length: 27}, (_, i) => fork('author' + i + '/USDX', {
+    pushed_at: new Date(Date.UTC(2026, 9, 1, i)).toISOString(),
+  }));
+  x.github.rest.repos.listForks = async () => ({data: forks});
+  const visited = [];
+  x.github.rest.repos.listBranches = async ({owner}) => {
+    visited.push(owner);
+    return {data: []};
+  };
+  await trackForks(x);
+  assert.deepEqual(visited, forks.slice(2).reverse().map(f => f.full_name.split('/')[0]));
+});
