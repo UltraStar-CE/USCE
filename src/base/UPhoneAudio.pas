@@ -158,7 +158,6 @@ begin
   end;
   if FLibrary <> NilHandle then UnloadLibrary(FLibrary);
   FLibrary := NilHandle;
-  FCalibration.ClearCaptureOffsets;
   finally LeaveCriticalSection(FSignalLock); end;
 end;
 
