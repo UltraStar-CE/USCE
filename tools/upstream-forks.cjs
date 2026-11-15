@@ -12,6 +12,7 @@ const path = 'doc/upstream/usdx-forks.json';
 const shaPattern = /^[a-f0-9]{40}$/;
 const recordKey = fork => fork.repository + '#' + fork.branch;
 const batchLimit = 20;
+const forkScanLimit = 25;
 
 function createAssessedAncestry(remote) {
   let directory;
@@ -132,7 +133,7 @@ async function trackForks({github, context, core, now = new Date(), ancestry = c
   const upstreamHead = (await github.rest.repos.getBranch({...source, branch: upstream.default_branch})).data.commit.sha;
   if (!shaPattern.test(upstreamHead)) throw Error('Missing upstream head');
   const forks = activeForks(await github.paginate(github.rest.repos.listForks,
-    {...source, sort: 'newest', per_page: 100}), now, ownRepository);
+    {...source, sort: 'newest', per_page: 100}), now, ownRepository).slice(0, forkScanLimit);
   let scan;
   try {
     scan = await scanForks({github, context, core, now, ancestry, previous, forks, sha, upstreamHead, ownRepository});
