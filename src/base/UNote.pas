@@ -417,11 +417,21 @@ begin
   Result := PhoneAudio.Calibration.CaptureOffset(RemoteInputProcessor.AssignedPlayerId(PlayerIndex, true));
 end;
 
-function ConfiguredPhoneCaptureOffsetMs(PlayerIndex: integer): integer;
+const UnavailablePhoneCaptureOffset = Low(integer);
+
+function ConfiguredInputTrimMs(PlayerIndex: integer): integer;
 begin
-  Result := -1;
-  if PhoneAudio.HasCaptureHistory(PlayerIndex) then
-    Result := MeasuredPhoneCaptureOffsetMs(PlayerIndex);
+  Result := Ini.PlayerDelay[PlayerIndex] + RemoteInputProcessor.AssignedMicDelayMs(PlayerIndex);
+end;
+
+function ConfiguredPhoneCaptureOffsetMs(PlayerIndex: integer): integer;
+var Measurement: integer;
+begin
+  Result := UnavailablePhoneCaptureOffset;
+  if not PhoneAudio.HasCaptureHistory(PlayerIndex) then Exit;
+  Measurement := MeasuredPhoneCaptureOffsetMs(PlayerIndex);
+  if Measurement >= 0 then
+    Result := Measurement + ConfiguredInputTrimMs(PlayerIndex);
 end;
 
 function ConfiguredPlayerDelayMs(PlayerIndex: integer): integer;
@@ -431,11 +441,11 @@ const
 var
   CaptureOffset: integer;
 begin
-  Result := Ini.PlayerDelay[PlayerIndex];
+  Result := ConfiguredInputTrimMs(PlayerIndex);
   if PhoneAudio.Enabled and RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) then
     Result := PhoneAudio.Calibration.EffectivePlayerDelay(PlayerIndex, Ini.MicDelay, Result);
   CaptureOffset := ConfiguredPhoneCaptureOffsetMs(PlayerIndex);
-  if CaptureOffset >= 0 then
+  if CaptureOffset <> UnavailablePhoneCaptureOffset then
     Result := Max(Result, CaptureOffset + PhoneCaptureDeadlineMarginMs - Ini.MicDelay);
 end;
 
@@ -453,7 +463,7 @@ begin
   // the microphone sample captured at its shifted time.
   for PlayerIndex := 0 to PlayersPlay - 1 do
   begin
-    if (ConfiguredPhoneCaptureOffsetMs(PlayerIndex) >= 0) and
+    if (ConfiguredPhoneCaptureOffsetMs(PlayerIndex) <> UnavailablePhoneCaptureOffset) and
       (LyricsState.MidBeat >= 0.5) then Exit(true);
     DelayBeats := GetBeats(CurrentSong.BPM, ConfiguredPlayerDelayMs(PlayerIndex) / 1000);
     if Floor(LyricsState.MidBeatD - DelayBeats) >= 0 then
@@ -1098,7 +1108,7 @@ begin
         (PlayerIndex >= ScreenName.LocalPlayerCount) and
         not RemoteInputProcessor.HasAssignedPlayer(PlayerIndex);
       CaptureOffsetMs := ConfiguredPhoneCaptureOffsetMs(PlayerIndex);
-      ScoreWhenReady := (CaptureOffsetMs >= 0) and (LyricsState.FrameHostUs > 0);
+      ScoreWhenReady := (CaptureOffsetMs <> UnavailablePhoneCaptureOffset) and (LyricsState.FrameHostUs > 0);
       DeadlineBeat := 0;
       PlayerDelayMs := ConfiguredPlayerDelayMs(PlayerIndex);
       if IsRemotePlayer then

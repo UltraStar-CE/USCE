@@ -135,6 +135,7 @@ type
     function TryConsumeToneForBeat(PlayerIndex, Beat: integer; SongTimeUs: int64; out Tone: TRemoteToneSample): boolean;
     function HasAssignedPlayer(PlayerIndex: integer): boolean;
     function AssignedPlayerId(PlayerIndex: integer; ForCalibration: boolean = false): UTF8String;
+    function AssignedMicDelayMs(PlayerIndex: integer): integer;
     function RequiredGameDelayMs(): integer;
 
     property CurrentSongSeq: integer read FCurrentSongSeq;
@@ -814,6 +815,19 @@ begin
       if ForCalibration and (Buffer.FMicrophoneCalibrationId <> '') then
         Result := Buffer.FMicrophoneCalibrationId;
     end;
+  finally SDL_UnlockMutex(Buffer.FLock); end;
+end;
+
+function TRemoteInputProcessor.AssignedMicDelayMs(PlayerIndex: integer): integer;
+var Buffer: TRemotePlayerBuffer;
+begin
+  Result := 0;
+  Buffer := GetPlayerBuffer(PlayerIndex);
+  if Buffer = nil then Exit;
+  SDL_LockMutex(Buffer.FLock);
+  try
+    if Buffer.FEnabled then
+      Result := Buffer.FMicDelayMs;
   finally SDL_UnlockMutex(Buffer.FLock); end;
 end;
 

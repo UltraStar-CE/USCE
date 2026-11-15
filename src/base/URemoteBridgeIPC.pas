@@ -48,15 +48,12 @@ type
     FGameStateSeq: integer;
     FCompanionViews: LongInt;
     FProfilesDirty: boolean;
-    FPlayerDelayDirty: array[0..REMOTE_INPUT_MAX_PLAYERS-1] of boolean;
-    FPlayerDelays: array[0..REMOTE_INPUT_MAX_PLAYERS-1] of integer;
     FPlayers: array of TRemoteBridgePlayer;
     FLastInputState: string;
     FLastInputTick: QWord;
     procedure ClearRoomStatus;
     procedure SetRoomStatus(Connected: boolean; const DisplayCode: UTF8String);
     procedure ClearPlayers;
-    procedure QueuePlayerDelay(PlayerIndex, DelayMs: integer);
     procedure UpsertPlayer(const PlayerId, Name, Role: UTF8String; Slot, Difficulty: integer;
       const AvatarId, AvatarFile: UTF8String);
     procedure SetPlayerConnected(const PlayerId: UTF8String; Connected: boolean);
@@ -377,24 +374,10 @@ begin
 end;
 
 procedure TRemoteBridgeIPC.ClearPlayers;
-var I: integer;
 begin
   EnterCriticalSection(FStatusLock);
   try
     SetLength(FPlayers, 0);
-    for I := 0 to High(FPlayerDelayDirty) do FPlayerDelayDirty[I] := false;
-  finally
-    LeaveCriticalSection(FStatusLock);
-  end;
-end;
-
-procedure TRemoteBridgeIPC.QueuePlayerDelay(PlayerIndex, DelayMs: integer);
-begin
-  if (PlayerIndex < 0) or (PlayerIndex > High(FPlayerDelays)) then Exit;
-  EnterCriticalSection(FStatusLock);
-  try
-    FPlayerDelays[PlayerIndex] := DelayMs;
-    FPlayerDelayDirty[PlayerIndex] := true;
   finally
     LeaveCriticalSection(FStatusLock);
   end;
@@ -970,18 +953,6 @@ var
   Remote, LocalInput: boolean;
   Profiles: array of TRemoteBridgePlayer;
 begin
-  // Transport callbacks queue settings; only the game thread changes scoring trim.
-  EnterCriticalSection(FStatusLock);
-  try
-    for I := 0 to High(FPlayerDelayDirty) do
-      if FPlayerDelayDirty[I] then
-      begin
-        Ini.PlayerDelay[I] := FPlayerDelays[I];
-        FPlayerDelayDirty[I] := false;
-      end;
-  finally
-    LeaveCriticalSection(FStatusLock);
-  end;
   if Assigned(Party) and Party.bPartyGame then Exit;
   EnterCriticalSection(FStatusLock);
   try
@@ -1126,8 +1097,6 @@ begin
       MicDelayMs,
       UTF8String(JsonGetString(Obj, 'microphoneCalibrationId', ''))
     );
-  if Obj.Find('micDelayMs') <> nil then
-    FOwner.QueuePlayerDelay(PlayerIndex, MicDelayMs);
   FOwner.SendPlayerAssigned(PlayerId, Role, Slot);
 end;
 
@@ -1163,7 +1132,6 @@ begin
 
   PlayerIndex := SlotToPlayerIndex(Slot);
   RemoteInputProcessor.SetPlayerDelayMs(PlayerIndex, MicDelayMs);
-  FOwner.QueuePlayerDelay(PlayerIndex, MicDelayMs);
 end;
 
 procedure TRemoteBridgeIPCThread.HandlePlayerDisconnected(Obj: TJSONObject);
