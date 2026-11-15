@@ -1,5 +1,9 @@
 'use strict';
 const crypto = require('node:crypto');
+const {spawnSync} = require('node:child_process');
+const {mkdtempSync, rmSync} = require('node:fs');
+const {tmpdir} = require('node:os');
+const {join, resolve} = require('node:path');
 const {forkReport} = require('./assessment-report.cjs');
 const {openDraft} = require('./usce-automation.cjs');
 const source = {owner: 'UltraStar-Deluxe', repo: 'USDX'};
@@ -7,6 +11,48 @@ const prefix = 'automation/upstream-forks-';
 const path = 'doc/upstream/usdx-forks.json';
 const shaPattern = /^[a-f0-9]{40}$/;
 const recordKey = fork => fork.repository + '#' + fork.branch;
+const batchLimit = 20;
+
+function createAssessedAncestry(remote) {
+  let directory;
+  const ancestors = new Set();
+
+  function git(args, input) {
+    const result = spawnSync('git', ['--git-dir=' + directory, ...args], {
+      input, encoding: 'utf8', timeout: 60_000, maxBuffer: 16 * 1024 * 1024,
+      env: {...process.env, GIT_TERMINAL_PROMPT: '0', GIT_NO_REPLACE_OBJECTS: '1'},
+    });
+    if (result.error || result.status !== 0)
+      throw Error('Unable to read assessed commit history: ' + (result.error?.message || result.stderr.trim()));
+    return result.stdout;
+  }
+
+  return {
+    include(heads) {
+      if (heads.some(head => !shaPattern.test(head))) throw Error('Invalid assessed source head');
+      const missing = [...new Set(heads)].filter(head => !ancestors.has(head));
+      if (!missing.length) return;
+      if (!directory) {
+        directory = mkdtempSync(join(resolve(tmpdir()), 'usce-fork-graph-'));
+        git(['init', '--quiet', '--bare', '--template=']);
+      }
+
+      // A treeless fetch retains all commit parents without downloading source files.
+      const input = missing.join('\n') + '\n';
+      git(['-c', 'remote.origin.url=' + remote, '-c', 'remote.origin.promisor=true',
+        '-c', 'remote.origin.partialclonefilter=tree:0', 'fetch', '--quiet',
+        '--no-tags', '--no-write-fetch-head', '--filter=tree:0', '--stdin', 'origin'], input);
+      const reachable = new Set(git(['rev-list', '--stdin'], input).trim().split(/\r?\n/));
+      if (missing.some(head => !reachable.has(head)))
+        throw Error('Incomplete assessed commit history');
+      for (const head of reachable) ancestors.add(head);
+    },
+    has(head) { return ancestors.has(head); },
+    close() {
+      if (directory) rmSync(directory, {recursive: true, force: true});
+    },
+  };
+}
 
 function activeForks(forks, now, ownRepository) {
   const cutoff = new Date(now); cutoff.setUTCFullYear(cutoff.getUTCFullYear() - 2);
@@ -51,7 +97,7 @@ function forkChanges(previous, snapshots) {
     if (!fork.repository || !fork.branch || !shaPattern.test(fork.head) || !Number.isSafeInteger(fork.ahead) || fork.ahead < 0)
       throw Error('Invalid fork comparison');
     return fork.ahead > 0 && ![...records.values()].some(old => old.repository === fork.repository && old.head === fork.head);
-  }).slice(0, 20);
+  }).slice(0, batchLimit);
   if (!batch.length) return null;
   const seen = new Set((previous?.forks || []).flatMap(f => [...(f.commits || []), ...(f.assessmentHistory || []).flatMap(h => h.commits || [])].map(c => c.sha)));
   for (const fork of batch) {
@@ -68,7 +114,8 @@ function forkChanges(previous, snapshots) {
   return {batch, checkpoint: {repository: 'UltraStar-Deluxe/USDX', forks: [...records.values()]}};
 }
 
-async function trackForks({github, context, core, now = new Date()}) {
+async function trackForks({github, context, core, now = new Date(), ancestry = createAssessedAncestry(
+  'https://github.com/' + context.repo.owner + '/' + context.repo.repo + '.git')}) {
   const ownRepository = context.repo.owner + '/' + context.repo.repo;
   const open = await github.paginate(github.rest.pulls.list, {...context.repo, state: 'open', per_page: 100});
   if (open.some(pr => pr.head?.repo?.full_name === ownRepository && pr.head.ref.startsWith(prefix))) return;
@@ -86,6 +133,27 @@ async function trackForks({github, context, core, now = new Date()}) {
   if (!shaPattern.test(upstreamHead)) throw Error('Missing upstream head');
   const forks = activeForks(await github.paginate(github.rest.repos.listForks,
     {...source, sort: 'newest', per_page: 100}), now, ownRepository);
+  let scan;
+  try {
+    scan = await scanForks({github, context, core, now, ancestry, previous, forks, sha, upstreamHead, ownRepository});
+  } finally {
+    ancestry.close();
+  }
+  const {snapshots, unavailableForks} = scan;
+  const changes = forkChanges(previous, snapshots);
+  if (!changes) return;
+  changes.checkpoint.unavailableForks = unavailableForks;
+  const identity = crypto.createHash('sha256').update(JSON.stringify(changes.batch.map(f => [f.repository, f.branch, f.head])))
+    .digest('hex').slice(0, 12);
+  const pr = await openDraft(github, context, {branch, sha, tree: commit.tree.sha}, prefix + identity,
+    [{path, content: JSON.stringify(changes.checkpoint, null, 2) + '\n'}],
+    'Assess active USDX fork changes',
+    forkReport(changes) +
+    (unavailableForks.length ? '\n\nUnavailable forks, not assessed: ' + unavailableForks.join(', ') : ''), {reopenClosed: true});
+  core.notice('Fork assessment: ' + pr.html_url);
+}
+
+async function scanForks({github, context, core, now, ancestry, previous, forks, sha, upstreamHead, ownRepository}) {
   const snapshots = [];
   const knownHeads = new Set((previous?.forks || []).flatMap(f =>
     [f.head, f.previousHead, f.previouslyAssessedSourceHead,
@@ -93,9 +161,9 @@ async function trackForks({github, context, core, now = new Date()}) {
   if ([...knownHeads].some(head => !shaPattern.test(head))) throw Error('Invalid assessed source head');
   const knownCommits = new Set((previous?.forks || []).flatMap(f =>
     [...(f.commits || []), ...(f.assessmentHistory || []).flatMap(h => h.commits || [])].map(c => c.sha)));
-  const assessedAncestry = new Map();
+  const pendingHeads = new Set(knownHeads);
   const unavailableForks = [];
-  for (const fork of forks) {
+  scan: for (const fork of forks) {
     const [owner, repo] = fork.full_name.split('/');
     let branches;
     try {
@@ -146,36 +214,18 @@ async function trackForks({github, context, core, now = new Date()}) {
         authoredAt: c.commit.author.date}));
       const eligible = recentCommits(inventory, now);
       if (!eligible.length) continue;
-      let novel = eligible.filter(c => !knownCommits.has(c.sha));
-      // Old checkpoints may contain only excerpts. Reachability from their full
-      // immutable heads also excludes history rediscovered under another fork
-      // or branch name; a new label is not new development.
-      const unassessed = [];
-      for (const candidate of novel) {
-        if (!shaPattern.test(candidate.sha)) throw Error('Invalid fork commit SHA');
-        if (!assessedAncestry.has(candidate.sha)) assessedAncestry.set(candidate.sha, new Map());
-        const ancestry = assessedAncestry.get(candidate.sha);
-        let covered = false;
-        for (const known of knownHeads) {
-          if (!ancestry.has(known)) {
-            // A candidate reachable from an assessed head is zero commits ahead.
-            // Fetch only the count; a full comparison can span thousands of commits.
-            const {data} = await github.rest.repos.compareCommitsWithBasehead({
-              ...context.repo, basehead: known + '...' + candidate.sha, per_page: 1});
-            if (!Number.isSafeInteger(data.ahead_by) || data.ahead_by < 0)
-              throw Error('Incomplete assessed ancestry comparison: ' + fork.full_name);
-            ancestry.set(known, data.ahead_by === 0);
-          }
-          if (ancestry.get(known)) {
-            covered = true;
-            break;
-          }
-        }
-        if (!covered) unassessed.push(candidate);
-      }
-      novel = unassessed;
+      const candidates = eligible.filter(c => !knownCommits.has(c.sha));
+      if (!candidates.length) continue;
+      if (candidates.some(c => !shaPattern.test(c.sha))) throw Error('Invalid fork commit SHA');
+
+      // Check complete history by immutable head, including aliases and old excerpts.
+      // Fetch all pending heads together when the next candidate needs the graph.
+      ancestry.include([...pendingHeads]);
+      pendingHeads.clear();
+      const novel = candidates.filter(c => !ancestry.has(c.sha));
       if (!novel.length) continue;
       knownHeads.add(head);
+      pendingHeads.add(head);
       for (const c of eligible) knownCommits.add(c.sha);
       snapshots.push({repository: fork.full_name, branch: branch.name, head, upstreamHead,
         comparisonBase: base, comparisonKind: prior ? 'since-checkpoint' : 'outside-usce',
@@ -186,18 +236,10 @@ async function trackForks({github, context, core, now = new Date()}) {
         ignoredUpstreamCommitCount: commits.length - sourceCommits.length,
         ignoredOldCommitCount: inventory.length - eligible.length,
         commits: eligible});
+      if (snapshots.length === batchLimit) break scan;
     }
   }
-  const changes = forkChanges(previous, snapshots);
-  if (!changes) return;
-  changes.checkpoint.unavailableForks = unavailableForks;
-  const identity = crypto.createHash('sha256').update(JSON.stringify(changes.batch.map(f => [f.repository, f.branch, f.head])))
-    .digest('hex').slice(0, 12);
-  const pr = await openDraft(github, context, {branch, sha, tree: commit.tree.sha}, prefix + identity,
-    [{path, content: JSON.stringify(changes.checkpoint, null, 2) + '\n'}],
-    'Assess active USDX fork changes',
-    forkReport(changes) +
-    (unavailableForks.length ? '\n\nUnavailable forks, not assessed: ' + unavailableForks.join(', ') : ''), {reopenClosed: true});
-  core.notice('Fork assessment: ' + pr.html_url);
+  return {snapshots, unavailableForks};
 }
-module.exports = {activeForks, recentCommits, forkChanges, trackForks};
+
+module.exports = {activeForks, recentCommits, forkChanges, createAssessedAncestry, trackForks};
