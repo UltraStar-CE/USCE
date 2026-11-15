@@ -87,12 +87,13 @@ type
       procedure StopCapture();
 
       procedure ResetToneDiagnostics;
-      procedure SetFrequenciesAndDelays;
+      procedure SetFrequenciesAndDelays(SampleRate: double);
+      procedure AnalyzeSamples(const Samples: array of smallint; Count: integer; SampleRate: double);
       // we call it to analyze sound by checking AMDF
-      function AnalyzePitch(PDA: TPDAType): boolean;
+      function AnalyzePitch(PDA: TPDAType; const Samples: array of smallint; Count: integer; SampleRate: double): boolean;
       // use this to check one frequency by AMDF
-      function AverageMagnitudeDifference(): TCorrelationArray;
-      function CircularAverageMagnitudeDifference(): TCorrelationArray;
+      function AverageMagnitudeDifference(const Samples: array of smallint; Count: integer): TCorrelationArray;
+      function CircularAverageMagnitudeDifference(const Samples: array of smallint; Count: integer): TCorrelationArray;
       function ArrayIndexOfMinimum(const AValues: array of real): Integer;
       procedure UpdateToneCandidatesSimple(const Correlation: TCorrelationArray);
     public
@@ -555,91 +556,69 @@ begin
 end;
 
 procedure TCaptureBuffer.AnalyzeBuffer;
-var
-  StartedCounter: UInt64;
-  Volume:      single;
-  MaxVolume:   single;
-  SampleIndex: integer;
-  Threshold:   single;
 begin
-  StartedCounter := SDL_GetPerformanceCounter;
-  if (AnalysisBufferSize <> 512) and (AnalysisBufferSize <> 1024) and (AnalysisBufferSize <> 2048) and
-    (AnalysisBufferSize <> 4096) then
+  if (AnalysisBufferSize <> 512) and (AnalysisBufferSize <> 1024) and
+    (AnalysisBufferSize <> 2048) and (AnalysisBufferSize <> 4096) then
     AnalysisBufferSize := Length(AnalysisBuffer);
-  ToneValid := false;
-  ToneAbs := -1;
-  Tone    := -1;
-  ResetToneDiagnostics;
-
-  LockAnalysisBuffer();
+  LockAnalysisBuffer;
   try
-
-    // find maximum volume across the analysis buffer
-    MaxVolume := 0;
-    for SampleIndex := 0 to AnalysisBufferSize - 1 do
-    begin
-      Volume := Abs(AnalysisBuffer[Length(AnalysisBuffer)-AnalysisBufferSize+SampleIndex]) / -Low(Smallint);
-      if Volume > MaxVolume then
-         MaxVolume := Volume;
-    end;
-
-    Threshold := IThresholdVals[Ini.ThresholdIndex];
-
-    // check if signal has an acceptable volume (ignore background-noise)
-    if MaxVolume >= Threshold then
-    begin
-      // analyse the current voice pitch
-      //ToneValid := AnalyzePitch(PDA_AMDF);
-      //Write('AMDF: ',ToneAbs:2,' (f: ',Frequencies[ToneAbs]:7:2,' Hz)');
-      //Write(Tone:2);
-      ToneValid := AnalyzePitch(PitchAlgorithm);
-      //Writeln('   /   CAMDF: ',ToneAbs:2,' (f: ',Frequencies[ToneAbs]:7:2,' Hz)');
-      //Writeln(' ',Tone:2);
-    end;
-
+    if Assigned(AudioFormat) then
+      AnalyzeSamples(AnalysisBuffer, AnalysisBufferSize, AudioFormat.SampleRate)
+    else
+      AnalyzeSamples(AnalysisBuffer, AnalysisBufferSize, 0);
   finally
-    UnlockAnalysisBuffer();
-    LastAnalysisMicroseconds := (SDL_GetPerformanceCounter - StartedCounter) * 1000000.0 / SDL_GetPerformanceFrequency;
+    UnlockAnalysisBuffer;
   end;
 end;
 
+procedure TCaptureBuffer.AnalyzeSamples(const Samples: array of smallint; Count: integer; SampleRate: double);
+var
+  StartedCounter: UInt64;
+  MaxSample, SampleIndex: integer;
+  MaxVolume: single;
+begin
+  StartedCounter := SDL_GetPerformanceCounter;
+  ToneValid := false;
+  ToneAbs := -1;
+  Tone := -1;
+  ResetToneDiagnostics;
+
+  if SampleRate > 0 then
+  begin
+    MaxSample := 0;
+    for SampleIndex := Length(Samples) - Count to High(Samples) do
+      MaxSample := Max(MaxSample, Abs(integer(Samples[SampleIndex])));
+    MaxVolume := MaxSample / -Low(SmallInt);
+    if MaxVolume >= IThresholdVals[Ini.ThresholdIndex] then
+      ToneValid := AnalyzePitch(PitchAlgorithm, Samples, Count, SampleRate);
+  end;
+
+  LastAnalysisMicroseconds := (SDL_GetPerformanceCounter - StartedCounter) * 1000000.0 / SDL_GetPerformanceFrequency;
+end;
+
 function TCaptureBuffer.AnalyzePhoneWindow(PlayerIndex: integer; CenterHostUs: Int64): boolean;
-var Window, Saved: array[0..4095] of SmallInt;
-    First, Count, SavedSize: integer;
+const PhoneSampleRate = 48000;
+var Window: array[0..4095] of SmallInt;
+    Count: integer;
     function ReadWindow: boolean;
     begin
-      First := Length(AnalysisBuffer) - Count;
       Result := PhoneAudio.ReadCaptureWindow(PlayerIndex,
-        CenterHostUs + Round(Count * 500000.0 / 48000), @Window[First], Count);
+        CenterHostUs + Round(Count * 500000.0 / PhoneSampleRate),
+        @Window[Length(Window) - Count], Count);
     end;
 begin
   Result := false;
-  if (AnalysisBufferSize < 1) or (AnalysisBufferSize > Length(AnalysisBuffer)) then Exit;
-  SavedSize := AnalysisBufferSize;
-  Count := SavedSize;
+  Count := AnalysisBufferSize;
+  if (Count < 1) or (Count > Length(Window)) then Exit;
   if not ReadWindow then
   begin
-    // Prefer a shorter contiguous window at the correct time when a wider
-    // window crosses a hole. The pitch detector still reads only real PCM.
-    if Count <> 4096 then Exit;
-    Count := 2048;
+    // Use a shorter contiguous window when the usual window crosses a hole.
+    if Count <> Length(Window) then Exit;
+    Count := Length(Window) div 2;
     if not ReadWindow then Exit;
   end;
-  LockAnalysisBuffer;
-  try
-    Move(AnalysisBuffer[First], Saved[First], Count * SizeOf(SmallInt));
-    Move(Window[First], AnalysisBuffer[First], Count * SizeOf(SmallInt));
-  finally UnlockAnalysisBuffer; end;
-  try
-    AnalysisBufferSize := Count;
-    AnalyzeBuffer;
-    Result := true;
-  finally
-    LockAnalysisBuffer;
-    AnalysisBufferSize := SavedSize;
-    try Move(Saved[First], AnalysisBuffer[First], Count * SizeOf(SmallInt));
-    finally UnlockAnalysisBuffer; end;
-  end;
+  AnalyzeSamples(Window, Count, PhoneSampleRate);
+  Result := true;
 end;
 
 procedure TCaptureBuffer.SubmitPhonePcm(Samples: pointer; Count: integer);
@@ -735,7 +714,7 @@ begin
       fToneCandidates[idx].Confidence := fToneCandidates[idx].Confidence / totalWeight;
 end;
 
-procedure TCaptureBuffer.SetFrequenciesAndDelays;
+procedure TCaptureBuffer.SetFrequenciesAndDelays(SampleRate: double);
 var
   ToneIndex:   integer;
 begin
@@ -743,16 +722,16 @@ begin
   begin
     // Freq(ToneIndex) = 440 Hz * 2^((ToneIndex-33)/12) --> Freq(ToneIndex=0) = 65.4064 Hz = C2
     Frequencies[ToneIndex] := BaseToneFreq * Power(2, (ToneIndex-33)/12);
-    Delays[ToneIndex] := Round(AudioFormat.SampleRate/Frequencies[ToneIndex]);
+    Delays[ToneIndex] := Round(SampleRate/Frequencies[ToneIndex]);
   end;
 end;
 
-function TCaptureBuffer.AnalyzePitch(PDA: TPDAType): boolean;
+function TCaptureBuffer.AnalyzePitch(PDA: TPDAType; const Samples: array of smallint; Count: integer; SampleRate: double): boolean;
 var
   Correlation: TCorrelationArray;
 begin
   // prepare to analyze
-  SetFrequenciesAndDelays;
+  SetFrequenciesAndDelays(SampleRate);
 
   // analyze halftones
   // Note: at the lowest tone (~65 Hz) and a buffer-size of 4096
@@ -761,12 +740,12 @@ begin
   case PDA of
     PDA_AMDF:
       begin
-        Correlation := AverageMagnitudeDifference();
+        Correlation := AverageMagnitudeDifference(Samples, Count);
         ToneAbs := ArrayIndexOfMinimum(Correlation);
       end;
     PDA_CAMDF:
       begin
-        Correlation := CircularAverageMagnitudeDifference();
+        Correlation := CircularAverageMagnitudeDifference(Samples, Count);
         ToneAbs := ArrayIndexOfMinimum(Correlation);
       end;
   end;
@@ -793,24 +772,24 @@ end;
 //   D(\tau)=\frac{1}{N-\tau-1}\sum_{n=0}^{N-\tau-1}|x(n) - x(n+\tau)|
 // where \tau = Delay, n = SampleIndex, N = AnalysisBufferSize, x = AnalysisBuffer
 // See: Equation (1) in http://www.utdallas.edu/~hxb076000/citing_papers/Muhammad%20Extended%20Average%20Magnitude%20Difference.pdf
-function TCaptureBuffer.AverageMagnitudeDifference(): TCorrelationArray;
+function TCaptureBuffer.AverageMagnitudeDifference(const Samples: array of smallint; Count: integer): TCorrelationArray;
 var
   ToneIndex:   integer;
   Correlation: TCorrelationArray;
   SampleIndex: integer; // index of sample to analyze
 begin
-  // accumulate the magnitude differences for samples in AnalysisBuffer
+  // accumulate the magnitude differences for samples in Samples
   for ToneIndex := 0 to NumHalftones-1 do
     begin
       Correlation[ToneIndex] := 0;
-      for SampleIndex := 0 to (AnalysisBufferSize-Delays[ToneIndex]-1) do
+      for SampleIndex := 0 to (Count-Delays[ToneIndex]-1) do
       begin
         Correlation[ToneIndex] := Correlation[ToneIndex] + Abs(
-          AnalysisBuffer[Length(AnalysisBuffer)-AnalysisBufferSize+SampleIndex] -
-          AnalysisBuffer[Length(AnalysisBuffer)-AnalysisBufferSize+SampleIndex+Delays[ToneIndex]]);
+          Samples[Length(Samples)-Count+SampleIndex] -
+          Samples[Length(Samples)-Count+SampleIndex+Delays[ToneIndex]]);
       end;
-      if AnalysisBufferSize > Delays[ToneIndex] then
-        Correlation[ToneIndex] := Correlation[ToneIndex] / (AnalysisBufferSize-Delays[ToneIndex])
+      if Count > Delays[ToneIndex] then
+        Correlation[ToneIndex] := Correlation[ToneIndex] / (Count-Delays[ToneIndex])
       else
         Correlation[ToneIndex] := MaxDouble;
     end;
@@ -822,28 +801,28 @@ end;
 
 // Circular Average Magnitude Difference Function (CAMDF) is defined as
 //   D_C(\tau)=\sum_{n=0}^{N-1}|x(mod(n+\tau, N)) - x(n)|
-// where \tau = Delay, n = SampleIndex, N = AnalysisBufferSize, x = AnalysisBuffer
+// where \tau = Delay, n = SampleIndex, N = Count, x = Samples
 // See: Equation (4) in http://www.utdallas.edu/~hxb076000/citing_papers/Muhammad%20Extended%20Average%20Magnitude%20Difference.pdf
-function TCaptureBuffer.CircularAverageMagnitudeDifference(): TCorrelationArray;
+function TCaptureBuffer.CircularAverageMagnitudeDifference(const Samples: array of smallint; Count: integer): TCorrelationArray;
 var
   ToneIndex:   integer;
   Correlation: TCorrelationArray;
   SampleIndex: integer; // index of sample to analyze
 begin
-  // accumulate the magnitude differences for samples in AnalysisBuffer
+  // accumulate the magnitude differences for samples in Samples
   for ToneIndex := 0 to NumHalftones-1 do
   begin
     Correlation[ToneIndex] := 0;
-    for SampleIndex := 0 to (AnalysisBufferSize-1) do
+    for SampleIndex := 0 to (Count-1) do
     begin
       // Suggestion for calculation efficiency improvement from deuteragenie:
       // Replacing 'i mod buffersize' by 'i & (buffersize-1)' when i is positive and buffersize is a power of two should speed the modulo compuation by 5x-10x
-      //Correlation[ToneIndex] += Abs(AnalysisBuffer[(SampleIndex+Delays[ToneIndex]) mod AnalysisBufferSize] - AnalysisBuffer[SampleIndex]);
+      //Correlation[ToneIndex] += Abs(Samples[(SampleIndex+Delays[ToneIndex]) mod Count] - Samples[SampleIndex]);
       Correlation[ToneIndex] := Correlation[ToneIndex] + Abs(
-        AnalysisBuffer[Length(AnalysisBuffer)-AnalysisBufferSize+((SampleIndex+Delays[ToneIndex]) and (AnalysisBufferSize-1))] -
-        AnalysisBuffer[Length(AnalysisBuffer)-AnalysisBufferSize+SampleIndex]);
+        Samples[Length(Samples)-Count+((SampleIndex+Delays[ToneIndex]) and (Count-1))] -
+        Samples[Length(Samples)-Count+SampleIndex]);
     end;
-    Correlation[ToneIndex] := Correlation[ToneIndex] / AnalysisBufferSize;
+    Correlation[ToneIndex] := Correlation[ToneIndex] / Count;
   end;
 
   // return circular average magnitude difference

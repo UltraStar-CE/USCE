@@ -96,6 +96,18 @@ int main() {
   // A real capture interruption still rejects a window that spans it, even
   // when the timestamps look continuous.
   assert(!sourceClock.read(1050000, out, 960));
+  CaptureHistory directCapture;
+  p = packet(1);
+  p.resize(CaptureHistory::stampedPcmBytes);
+  const auto directStamp = uint64_t{1} << 33;
+  for (size_t i = 0; i < 8; ++i)
+    p[CaptureHistory::pcmBytes + i] = static_cast<uint8_t>(directStamp >> (8 * i));
+  p[CaptureHistory::pcmBytes + 8] = 1;
+  directCapture.pushStamped(p.data(), p.size() - 1, directStamp + 10000);
+  assert(!directCapture.read(directStamp, out, 480));
+  directCapture.pushStamped(p.data(), p.size(), directStamp + 10000);
+  assert(directCapture.read(directStamp, out, 480));
+  assert(out[0] == 16384);
   auto receiver = usce_pa_create("ipc://", "");
   assert(receiver);
   assert(usce_pa_signal(receiver, "{\"type\":\"bridge.ready\",\"displayCode\":null}") == 0);
