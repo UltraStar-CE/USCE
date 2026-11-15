@@ -63,6 +63,7 @@ latency measurements. Remote audio is neither played through speakers nor added
 to microphone debug recordings by this integration.
 
 With a companion that negotiates `captureTimestampsV1`, a measured phone
-capture offset follows the assigned phone across slot changes in the room.
+capture offset follows the companion across slots and room joins during the
+game session. The host slot and companion adjustments apply independently.
 It aligns the song timeline with timestamped microphone audio. The game uses
 existing compensation until the phone has a measurement and valid timestamped PCM.
