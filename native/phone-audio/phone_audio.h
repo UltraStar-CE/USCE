@@ -27,6 +27,8 @@ USCE_PA int32_t usce_pa_poll_generation(void *context, int16_t *samples, int32_t
 // Returns 1 for a complete time-indexed window, 0 for a hole, -1 if unavailable.
 USCE_PA int32_t usce_pa_capture_window(void *context, int64_t target_end_us,
                                      int16_t *samples, uint32_t count);
+// Returns 1 after the current stream has provided valid timestamped PCM.
+USCE_PA int32_t usce_pa_has_capture_history(void *context);
 // Separate digital test input. These samples must never enter singing/scoring.
 USCE_PA int32_t usce_pa_poll_calibration(void *context, int16_t *samples, int32_t capacity);
 USCE_PA int32_t usce_pa_status(void *context, char *json, int32_t capacity);

@@ -22,6 +22,7 @@ public:
   // epoch to the original UAP1 payload. The legacy PCM reader sees only UAP1.
   static constexpr size_t pcmBytes = 980;
   static constexpr size_t stampedPcmBytes = pcmBytes + 12;
+  bool hasSamples() const { return started; }
 
   void pushStamped(const uint8_t *data, size_t size, int64_t hostNowUs) {
     if (size != stampedPcmBytes) return;

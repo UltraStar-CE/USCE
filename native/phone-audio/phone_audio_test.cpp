@@ -135,6 +135,18 @@ int main() {
   assert(usce_pa_signal(receiver, realMicrophone.c_str()) == 0);
   assert(usce_pa_poll_calibration(receiver, out, 9600) == 0);
   assert(usce_pa_poll(receiver, out, 9600) == 480); // Same sequence, independent queues.
+  assert(usce_pa_has_capture_history(receiver) == 0);
+  usce_pa_set_clock(receiver, 2000000);
+  const auto timedPcm = [](int seq, int64_t stamp) {
+    return std::string("{\"type\":\"audio.pcm\",\"slot\":1,\"captureEpoch\":1,\"captureEndHostUs\":") +
+      std::to_string(stamp) + ",\"pcm\":\"" + base64(packet(seq)) + "\"}";
+  };
+  assert(usce_pa_signal(receiver, timedPcm(3, 100000).c_str()) == 0);
+  assert(usce_pa_poll(receiver, out, 9600) == 480);
+  assert(usce_pa_has_capture_history(receiver) == 0); // An invalid stamp still permits legacy PCM.
+  assert(usce_pa_signal(receiver, timedPcm(4, 1990000).c_str()) == 0);
+  assert(usce_pa_poll(receiver, out, 9600) == 480);
+  assert(usce_pa_has_capture_history(receiver) == 1);
   char status[4096];
   assert(usce_pa_status(receiver, status, sizeof(status)) > 0);
   assert(std::string(status).find("TEST") != std::string::npos);
@@ -148,6 +160,7 @@ int main() {
   assert(usce_pa_signal(receiver, firstPcm.c_str()) == 0);
   assert(usce_pa_signal(second, secondPcm.c_str()) == 0);
   assert(usce_pa_poll(receiver, out, 9600) == 480);
+  assert(usce_pa_has_capture_history(receiver) == 0); // A new owner starts without timing history.
   assert(usce_pa_poll(second, out, 9600) == 480);
   const auto secondCalibration = std::string("{\"type\":\"audio.calibration.pcm\",\"playerId\":\"two\",\"slot\":1,\"pcm\":\"") + base64(calibrationPacket) + "\"}";
   assert(usce_pa_signal(second, secondCalibration.c_str()) == 0);

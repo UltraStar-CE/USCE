@@ -15,6 +15,7 @@ type
     Generation: PLongWord): longint; cdecl;
   TPaCaptureWindow = function(Context: pointer; EndHostUs: Int64;
     Samples: pointer; Count: LongWord): longint; cdecl;
+  TPaHasCaptureHistory = function(Context: pointer): longint; cdecl;
   TPaStatus = function(Context: pointer; Buffer: PAnsiChar; Capacity: longint): longint; cdecl;
   TPaSetClock = procedure(Context: pointer; HostTimeUs: int64); cdecl;
   TPaVersion = function: longint; cdecl;
@@ -31,6 +32,7 @@ type
     FPoll: TPaPoll;
     FPollGeneration: TPaPollGeneration;
     FCaptureWindow: TPaCaptureWindow;
+    FHasCaptureHistory: TPaHasCaptureHistory;
     FPollCalibration: TPaPoll;
     FSetClock: TPaSetClock;
     FStatus: TPaStatus;
@@ -48,6 +50,7 @@ type
     function ReadCaptureWindow(PlayerIndex: integer; EndHostUs: Int64;
       Samples: pointer; Count: LongWord): boolean;
     function SupportsCaptureTimestamps: boolean;
+    function HasCaptureHistory(PlayerIndex: integer): boolean;
     function PollCalibration(Samples: pointer; Capacity: integer; PlayerIndex: integer): integer;
     function Status(PlayerIndex: integer = 0): UTF8String;
     procedure Signal(const Json: UTF8String);
@@ -109,6 +112,7 @@ begin
     FPoll := TPaPoll(GetProcedureAddress(FLibrary, 'usce_pa_poll'));
     FPollGeneration := TPaPollGeneration(GetProcedureAddress(FLibrary, 'usce_pa_poll_generation'));
     FCaptureWindow := TPaCaptureWindow(GetProcedureAddress(FLibrary, 'usce_pa_capture_window'));
+    FHasCaptureHistory := TPaHasCaptureHistory(GetProcedureAddress(FLibrary, 'usce_pa_has_capture_history'));
     FPollCalibration := TPaPoll(GetProcedureAddress(FLibrary, 'usce_pa_poll_calibration'));
     FStatus := TPaStatus(GetProcedureAddress(FLibrary, 'usce_pa_status'));
     FSignal := TPaSignal(GetProcedureAddress(FLibrary, 'usce_pa_signal'));
@@ -191,7 +195,14 @@ end;
 
 function TPhoneAudio.SupportsCaptureTimestamps: boolean;
 begin
-  Result := Enabled and Assigned(FCaptureWindow);
+  Result := Enabled and Assigned(FCaptureWindow) and Assigned(FHasCaptureHistory);
+end;
+
+function TPhoneAudio.HasCaptureHistory(PlayerIndex: integer): boolean;
+begin
+  Result := SupportsCaptureTimestamps and
+    (PlayerIndex >= 0) and (PlayerIndex <= High(FContexts)) and
+    (FContexts[PlayerIndex] <> nil) and (FHasCaptureHistory(FContexts[PlayerIndex]) = 1);
 end;
 
 function TPhoneAudio.ReadCaptureWindow(PlayerIndex: integer; EndHostUs: Int64;
