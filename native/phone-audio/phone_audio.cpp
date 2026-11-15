@@ -172,19 +172,13 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
                   owner->calibration.push(bytes, data->size());
                   return;
                 }
+                if (!owner->gameClock.ready || data->size() != CaptureHistory::stampedPcmBytes) return;
+                if (!owner->captureHistory) owner->captureHistory = std::make_unique<CaptureHistory>();
+                if (!owner->captureHistory->pushStamped(bytes, data->size(), owner->gameClock.nowUs())) return;
                 // A duplicate may have reached the game through the relay first.
-                auto size = data->size();
-                const bool stamped = size == CaptureHistory::stampedPcmBytes;
-                if (stamped) size = CaptureHistory::pcmBytes;
-                if (size == CaptureHistory::pcmBytes && PcmQueue::u32(bytes) == 0x31504155 &&
-                    PcmQueue::u32(bytes + 8) == 48000 && PcmQueue::u32(bytes + 12) == 480) {
-                  owner->lastDirectPacket = Clock::now(); owner->directSequence = PcmQueue::u32(bytes + 4);
-                  if (stamped && owner->gameClock.ready) {
-                    if (!owner->captureHistory) owner->captureHistory = std::make_unique<CaptureHistory>();
-                    owner->captureHistory->pushStamped(bytes, data->size(), owner->gameClock.nowUs());
-                  }
-                }
-                if (owner->pcm.push(bytes, size)) owner->state = "receiving PCM";
+                owner->lastDirectPacket = Clock::now();
+                owner->directSequence = PcmQueue::u32(bytes + 4);
+                if (owner->pcm.push(bytes, CaptureHistory::pcmBytes)) owner->state = "receiving PCM";
               }
             }
           } catch (...) {}
@@ -208,7 +202,7 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
     const auto type = m.value("type", "");
     if (type == "native.open") {
       send({{"type", "host.hello"}, {"maxPlayers", 1}, {"gameVersion", "usce-native-pcm-prototype"},
-        {"capabilities", Json::array({"p2pDataChannel", "rawPcmV1"})}});
+        {"capabilities", Json::array({"p2pDataChannel", "rawPcmV1", "captureTimestampsV1"})}});
     } else if (type == "room.created" || type == "room.resumed" || type == "bridge.ready") {
       if (!m.contains("displayCode") || !m["displayCode"].is_string()) return;
       code = m["displayCode"].get<std::string>();
@@ -234,21 +228,18 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
           calibration.push(bytes.data(), bytes.size());
           return;
         }
-        const auto rejected = pcm.rejected;
-        if (pcm.push(bytes.data(), bytes.size())) state = "receiving PCM";
         const auto stamp = m.find("captureEndHostUs");
-        if (gameClock.ready && stamp != m.end() && stamp->is_number_integer()) {
-          const auto endUs = stamp->get<int64_t>();
-          if (endUs > 0 && endUs <= 9000000000000000LL) {
-            uint32_t captureEpoch = 0;
-            const auto epoch = m.find("captureEpoch");
-            if (epoch != m.end() && epoch->is_number_unsigned() && epoch->get<uint64_t>() <= UINT32_MAX)
-              captureEpoch = epoch->get<uint32_t>();
-            if (!captureHistory) captureHistory = std::make_unique<CaptureHistory>();
-            captureHistory->push(bytes.data(), bytes.size(), endUs, gameClock.nowUs(), captureEpoch);
-          }
-        }
-        if (pcm.rejected == rejected) lastRelayPacket = Clock::now();
+        const auto epoch = m.find("captureEpoch");
+        if (!gameClock.ready || stamp == m.end() || !stamp->is_number_unsigned() ||
+            epoch == m.end() || !epoch->is_number_unsigned()) return;
+        const auto endUs = stamp->get<uint64_t>();
+        const auto captureEpoch = epoch->get<uint64_t>();
+        if (endUs > 9000000000000000ULL || !captureEpoch || captureEpoch > UINT32_MAX) return;
+        if (!captureHistory) captureHistory = std::make_unique<CaptureHistory>();
+        if (!captureHistory->push(bytes.data(), bytes.size(), static_cast<int64_t>(endUs),
+            gameClock.nowUs(), static_cast<uint32_t>(captureEpoch))) return;
+        if (pcm.push(bytes.data(), bytes.size())) state = "receiving PCM";
+        lastRelayPacket = Clock::now();
       }
     } else if (type == "p2p.offer") {
       offer(m);

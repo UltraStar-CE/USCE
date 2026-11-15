@@ -4,7 +4,7 @@
 
 // Bounded retained PCM, indexed by captured time in the game clock domain.
 // A missing packet remains a hole until that packet arrives. Reading a
-// window has no effect on subsequent readers or on the legacy FIFO.
+// window has no effect on subsequent readers or on the live monitoring FIFO.
 class CaptureHistory {
   static constexpr uint32_t samplesPerPacket = 480;
   static constexpr uint32_t packetCount = 128;
@@ -18,31 +18,30 @@ class CaptureHistory {
   bool started = false;
 
 public:
-  // Direct PCM appends an optional little-endian host timestamp and capture
-  // epoch to the original UAP1 payload. The legacy PCM reader sees only UAP1.
+  // Direct PCM appends a little-endian host timestamp and capture epoch to UAP1.
   static constexpr size_t pcmBytes = 980;
   static constexpr size_t stampedPcmBytes = pcmBytes + 12;
   bool hasSamples() const { return started; }
 
-  void pushStamped(const uint8_t *data, size_t size, int64_t hostNowUs) {
-    if (size != stampedPcmBytes) return;
+  bool pushStamped(const uint8_t *data, size_t size, int64_t hostNowUs) {
+    if (size != stampedPcmBytes) return false;
     const auto stamp = uint64_t(PcmQueue::u32(data + pcmBytes)) |
       (uint64_t(PcmQueue::u32(data + pcmBytes + 4)) << 32);
-    if (stamp > INT64_MAX) return;
-    push(data, pcmBytes, static_cast<int64_t>(stamp), hostNowUs,
-      PcmQueue::u32(data + pcmBytes + 8));
+    const auto captureEpoch = PcmQueue::u32(data + pcmBytes + 8);
+    if (stamp > INT64_MAX || captureEpoch == 0) return false;
+    return push(data, pcmBytes, static_cast<int64_t>(stamp), hostNowUs, captureEpoch);
   }
 
-  void push(const uint8_t *data, size_t size, int64_t endUs, int64_t hostNowUs,
+  bool push(const uint8_t *data, size_t size, int64_t endUs, int64_t hostNowUs,
             uint32_t captureEpoch = 0) {
     if (size != pcmBytes || PcmQueue::u32(data) != 0x31504155 ||
         PcmQueue::u32(data + 8) != 48000 || PcmQueue::u32(data + 12) != samplesPerPacket ||
         endUs <= 0 || hostNowUs <= 0 ||
-        endUs < hostNowUs - 1500000 || endUs > hostNowUs + 50000) return;
+        endUs < hostNowUs - 1500000 || endUs > hostNowUs + 50000) return false;
     const auto sequence = PcmQueue::u32(data + 4);
     if (started) {
       const auto delta = static_cast<int32_t>(sequence - newestSequence);
-      if (delta <= -static_cast<int32_t>(packetCount)) return;
+      if (delta <= -static_cast<int32_t>(packetCount)) return false;
       if (delta >= static_cast<int32_t>(packetCount)) packets = {};
       if (delta > 0) newestSequence = sequence;
     } else {
@@ -50,7 +49,7 @@ public:
       newestSequence = sequence;
     }
     auto &packet = packets[sequence % packetCount];
-    if (packet.endUs && packet.sequence == sequence) return;
+    if (packet.endUs && packet.sequence == sequence) return true;
     packet.endUs = endUs;
     packet.sequence = sequence;
     packet.firstSample = PcmQueue::u32(data + 16);
@@ -59,6 +58,7 @@ public:
       const auto sample = uint16_t(data[20 + 2*i]) | (uint16_t(data[21 + 2*i]) << 8);
       packet.samples[i] = static_cast<int16_t>(sample);
     }
+    return true;
   }
 
   bool read(int64_t targetEndUs, int16_t *out, uint32_t count) {
