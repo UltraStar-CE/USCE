@@ -61,3 +61,9 @@ Direct clock replies use the game's monotonic clock. Network/audio round trips
 include their return path and are not compensation values or mouth-to-screen
 latency measurements. Remote audio is neither played through speakers nor added
 to microphone debug recordings by this integration.
+
+When using a companion that negotiates `captureTimestampsV1`, a measured phone
+capture offset can be stored in the `[PhoneCaptureOffset]` section of the game
+config. Use `P1`, `P2`, and so on for the corresponding slot. Values are
+milliseconds between the song timeline and the corresponding timestamped
+microphone audio. An unset value leaves existing compensation in use.

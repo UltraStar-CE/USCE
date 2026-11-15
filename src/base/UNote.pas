@@ -412,11 +412,27 @@ begin
   Result := BPM * msTime / 60;
 end;
 
+function ConfiguredPhoneCaptureOffsetMs(PlayerIndex: integer): integer;
+begin
+  Result := -1;
+  if PhoneAudio.SupportsCaptureTimestamps and RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) and
+    (Ini.PhoneCaptureOffset[PlayerIndex] >= 0) and (Ini.PhoneCaptureOffset[PlayerIndex] <= 1000) then
+    Result := Ini.PhoneCaptureOffset[PlayerIndex];
+end;
+
 function ConfiguredPlayerDelayMs(PlayerIndex: integer): integer;
+const
+  // Leave time for the rest of the pitch window and bounded PCM retransmissions.
+  PhoneCaptureDeadlineMarginMs = 350;
+var
+  CaptureOffset: integer;
 begin
   Result := Ini.PlayerDelay[PlayerIndex];
   if PhoneAudio.Enabled and RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) then
     Result := PhoneAudio.Calibration.EffectivePlayerDelay(PlayerIndex, Ini.MicDelay, Result);
+  CaptureOffset := ConfiguredPhoneCaptureOffsetMs(PlayerIndex);
+  if CaptureOffset >= 0 then
+    Result := Max(Result, CaptureOffset + PhoneCaptureDeadlineMarginMs - Ini.MicDelay);
 end;
 
 function ShouldRunNoteDetection: boolean;
@@ -433,8 +449,7 @@ begin
   // the microphone sample captured at its shifted time.
   for PlayerIndex := 0 to PlayersPlay - 1 do
   begin
-    if (GetEnvironmentVariable('USCE_TEST_SCORE_WHEN_READY') = '1') and
-      PhoneAudio.Enabled and RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) and
+    if (ConfiguredPhoneCaptureOffsetMs(PlayerIndex) >= 0) and
       (LyricsState.MidBeat >= 0.5) then Exit(true);
     DelayBeats := GetBeats(CurrentSong.BPM, ConfiguredPlayerDelayMs(PlayerIndex) / 1000);
     if Floor(LyricsState.MidBeatD - DelayBeats) >= 0 then
@@ -1058,7 +1073,6 @@ begin
   ActualTone := 0;
   NoteHit := false;
   LastPracticeBeat := Screen.LastPracticeBeat;
-  CaptureOffsetMs := StrToIntDef(GetEnvironmentVariable('USCE_CAPTURE_OFFSET_MS'), -1);
 
   // TODO: add duet mode support
   // use CurrentSong.Tracks[LineSetIndex] with LineSetIndex depending on the current player
@@ -1079,9 +1093,8 @@ begin
       SlotAbsent := (not IsRemotePlayer) and Screen.UsesSelectedLocalRoster and
         (PlayerIndex >= ScreenName.LocalPlayerCount) and
         not RemoteInputProcessor.HasAssignedPlayer(PlayerIndex);
-      ScoreWhenReady := (GetEnvironmentVariable('USCE_TEST_SCORE_WHEN_READY') = '1') and
-        (CaptureOffsetMs >= 0) and (CaptureOffsetMs <= 1000) and (LyricsState.FrameHostUs > 0) and
-        PhoneAudio.Enabled and RemoteInputProcessor.HasAssignedPlayer(PlayerIndex);
+      CaptureOffsetMs := ConfiguredPhoneCaptureOffsetMs(PlayerIndex);
+      ScoreWhenReady := (CaptureOffsetMs >= 0) and (LyricsState.FrameHostUs > 0);
       DeadlineBeat := 0;
       PlayerDelayMs := ConfiguredPlayerDelayMs(PlayerIndex);
       if IsRemotePlayer then
@@ -1307,15 +1320,13 @@ begin
         end
         else
         begin
-          if not UsedTimedWindow and (CaptureOffsetMs >= 0) and (CaptureOffsetMs <= 1000) and
-            PhoneAudio.Enabled and RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) and
-            (LyricsState.FrameHostUs > 0) then
+          if ScoreWhenReady and not UsedTimedWindow then
           begin
             // Translate the scoring beat's midpoint into the host clock, then
             // add the acoustic offset in the shared clock.
             CaptureCenterHostUs := CaptureCenterForBeat(ActualBeat);
             UsedTimedWindow := CurrentSound.AnalyzePhoneWindow(PlayerIndex, CaptureCenterHostUs);
-            if ScoreWhenReady and not UsedTimedWindow then
+            if not UsedTimedWindow then
               for CaptureShiftUs in CaptureRecoveryShiftsUs do
               begin
                 // At the deadline, prefer nearby contiguous capture over
