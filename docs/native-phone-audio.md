@@ -62,9 +62,7 @@ include their return path and are not compensation values or mouth-to-screen
 latency measurements. Remote audio is neither played through speakers nor added
 to microphone debug recordings by this integration.
 
-When using a companion that negotiates `captureTimestampsV1`, a measured phone
-capture offset can be stored in the `[PhoneCaptureOffset]` section of the game
-config. Use `P1`, `P2`, and so on for the corresponding slot. Values are
-milliseconds between the song timeline and the corresponding timestamped
-microphone audio. The game uses existing compensation when the value is unset
-or the input has yet to deliver valid timestamped PCM.
+With a companion that negotiates `captureTimestampsV1`, a measured phone
+capture offset follows the assigned phone across slot changes in the room.
+It aligns the song timeline with timestamped microphone audio. The game uses
+existing compensation until the phone has a measurement and valid timestamped PCM.

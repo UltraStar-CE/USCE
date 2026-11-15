@@ -8,6 +8,17 @@ var Sessions: TAudioCalibrationSessions;
 begin
   Sessions := TAudioCalibrationSessions.Create;
   try
+    Sessions.SetCaptureOffset('phone-a', 112);
+    Sessions.SetCaptureOffset('phone-b', 64);
+    Sessions.Tick(0, 'phone-a', true, true, 1000000, Message);
+    Sessions.Tick(1, 'phone-b', true, true, 1000000, Message);
+    Sessions.Tick(0, 'phone-b', true, true, 1000001, Message);
+    Sessions.Tick(1, 'phone-a', true, true, 1000001, Message);
+    Assert(Sessions.CaptureOffset('phone-a') = 112);
+    Assert(Sessions.CaptureOffset('phone-b') = 64);
+    Assert(Sessions.CaptureOffset('phone-c') = -1);
+    Sessions.ClearCaptureOffsets;
+    Assert(Sessions.CaptureOffset('phone-a') = -1);
     Assert(not Sessions.Queue(-1, 'p', 'id', 0, 1000000));
     Assert(not Sessions.Queue(12, 'p', 'id', 0, 1000000));
     Assert(not Sessions.Queue(0, '', 'id', 0, 1000000));

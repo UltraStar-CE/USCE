@@ -3,7 +3,7 @@
 unit UAudioCalibrationSessions;
 {$IFDEF FPC}{$MODE Delphi}{$H+}{$ENDIF}
 interface
-uses SysUtils, UAudioCalibration;
+uses Classes, SysUtils, UAudioCalibration;
 type
   TAudioCalibrationSessions = class
   private
@@ -17,6 +17,7 @@ type
     end;
     var FLanes: array[0..11] of TLane;
         FLock: TRTLCriticalSection;
+        FCaptureOffsets: TStringList;
     function Reply(Index: integer; const Kind, Reason: string): UTF8String;
   public
     constructor Create;
@@ -28,6 +29,9 @@ type
     procedure Observe(Index: integer; NowUs: int64; Tone: integer; Valid: boolean);
     procedure Cancel(Index: integer; const PlayerId, RequestId: UTF8String);
     function EffectivePlayerDelay(Index, GlobalDelayMs, ManualTrimMs: integer): integer;
+    function CaptureOffset(const PlayerId: UTF8String): integer;
+    procedure SetCaptureOffset(const PlayerId: UTF8String; OffsetMs: integer);
+    procedure ClearCaptureOffsets;
   end;
 implementation
 uses Math, fpjson;
@@ -37,6 +41,8 @@ var I: integer;
 begin
   inherited Create;
   InitCriticalSection(FLock);
+  FCaptureOffsets := TStringList.Create;
+  FCaptureOffsets.CaseSensitive := true;
   for I := Low(FLanes) to High(FLanes) do FLanes[I].Estimator := TAudioCalibration.Create;
 end;
 
@@ -44,6 +50,7 @@ destructor TAudioCalibrationSessions.Destroy;
 var I: integer;
 begin
   for I := Low(FLanes) to High(FLanes) do FLanes[I].Estimator.Free;
+  FCaptureOffsets.Free;
   DoneCriticalSection(FLock);
   inherited;
 end;
@@ -195,4 +202,32 @@ begin
     Result := EnsureRange(Delay, int64(Low(integer)), int64(High(integer)));
   finally LeaveCriticalSection(FLock); end;
 end;
+function TAudioCalibrationSessions.CaptureOffset(const PlayerId: UTF8String): integer;
+begin
+  Result := -1;
+  if PlayerId = '' then Exit;
+  EnterCriticalSection(FLock);
+  try
+    Result := StrToIntDef(FCaptureOffsets.Values[PlayerId], -1);
+  finally LeaveCriticalSection(FLock); end;
+end;
+
+procedure TAudioCalibrationSessions.SetCaptureOffset(const PlayerId: UTF8String; OffsetMs: integer);
+begin
+  if (PlayerId = '') or (Pos('=', PlayerId) <> 0) or
+    (OffsetMs < 0) or (OffsetMs > AUDIO_CALIBRATION_MAX_DELAY_MS) then Exit;
+  EnterCriticalSection(FLock);
+  try
+    FCaptureOffsets.Values[PlayerId] := IntToStr(OffsetMs);
+  finally LeaveCriticalSection(FLock); end;
+end;
+
+procedure TAudioCalibrationSessions.ClearCaptureOffsets;
+begin
+  EnterCriticalSection(FLock);
+  try
+    FCaptureOffsets.Clear;
+  finally LeaveCriticalSection(FLock); end;
+end;
+
 end.
