@@ -20,6 +20,14 @@ USCE_PA void *usce_pa_create(const char *relay_url, const char *ice_server);
 USCE_PA void usce_pa_destroy(void *context);
 // Called on the game thread. Performs signaling, drains fresh mono S16/48k PCM.
 USCE_PA int32_t usce_pa_poll(void *context, int16_t *samples, int32_t capacity);
+// As above, with the sample position immediately after the returned PCM and a
+// generation that changes when the receiver cannot provide a contiguous stream.
+// Outputs are set only when the return value is positive. Counters wrap at 32 bits.
+USCE_PA int32_t usce_pa_poll_position(void *context, int16_t *samples, int32_t capacity,
+                                    uint32_t *end_sample, uint32_t *generation);
+// Returns 1 for a complete time-indexed window, 0 for a hole, -1 if unavailable.
+USCE_PA int32_t usce_pa_capture_window(void *context, int64_t target_end_us,
+                                     int16_t *samples, uint32_t count);
 // Separate digital test input. These samples must never enter singing/scoring.
 USCE_PA int32_t usce_pa_poll_calibration(void *context, int16_t *samples, int32_t capacity);
 USCE_PA int32_t usce_pa_status(void *context, char *json, int32_t capacity);

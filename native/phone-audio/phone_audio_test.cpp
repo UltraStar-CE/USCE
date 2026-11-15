@@ -1,4 +1,5 @@
 #include "pcm_queue.h"
+#include "capture_history.h"
 #include "game_clock.h"
 #include "phone_audio.h"
 #include <cassert>
@@ -51,13 +52,50 @@ int main() {
   assert(q.read(out, 9600, now) == 1440);
   assert(q.readEndSampleCounter == 4 * 480);
   assert(out[0] == 16384 && out[480] == 0 && out[960] == 16384);
+  const auto continuousCapture = q.captureGeneration;
+  p = packet(20);
+  assert(q.push(p.data(), p.size(), now));
+  assert(q.captureGeneration != continuousCapture);
+  assert(q.read(out, 240, now) == 240);
+  assert(q.readEndSampleCounter == 20 * 480 + 240);
+  assert(q.read(out, 240, now) == 240);
+  assert(q.readEndSampleCounter == 21 * 480);
   p[8] = 0; assert(!q.push(p.data(), p.size(), now));
-  for (int i = 4; i < 40; ++i) { p = packet(i); assert(q.push(p.data(), p.size(), now)); }
+  const auto beforeOverflow = q.captureGeneration;
+  for (int i = 21; i < 49; ++i) { p = packet(i); assert(q.push(p.data(), p.size(), now)); }
   assert(q.samples.size() == PcmQueue::limit && q.dropped > 0);
+  assert(q.captureGeneration != beforeOverflow);
+  const auto beforeStall = q.captureGeneration;
   assert(q.read(out, 9600, now + std::chrono::milliseconds(251)) == 0);
+  assert(q.captureGeneration != beforeStall);
   p = packet(0xffffffff); assert(q.push(p.data(), p.size(), now));
   p = packet(0); assert(q.push(p.data(), p.size(), now));
   p = packet(1); p.resize(24); assert(!q.push(p.data(), p.size(), now));
+  CaptureHistory history;
+  p = packet(1); history.push(p.data(), p.size(), 1010000, 1040000);
+  p = packet(3);
+  for (int i = 0; i < 480; ++i) p[21 + i*2] = 32;
+  history.push(p.data(), p.size(), 1030000, 1040000);
+  assert(history.read(1030000, out, 480));
+  assert(!history.read(1030000, out, 1000));
+  p = packet(2); history.push(p.data(), p.size(), 1020000, 1045000);
+  assert(history.read(1030000, out, 1000));
+  assert(out[0] == 16384 && out[999] == 8192);
+  assert(history.read(1025000, out, 480));
+  assert(out[239] == 16384 && out[240] == 8192);
+  assert(history.read(1020000, out, 600)); // Historical selection is independent of newest packet.
+  p = packet(4); history.push(p.data(), p.size(), 1060000, 1070000);
+  assert(!history.read(1060000, out, 600)); // Timeline break even with consecutive sequence numbers.
+  assert(!history.read(1075000, out, 480));
+  CaptureHistory sourceClock;
+  p = packet(1); sourceClock.push(p.data(), p.size(), 1010000, 1040000, 1);
+  p = packet(2); sourceClock.push(p.data(), p.size(), 1040000, 1050000, 1);
+  // Consecutive source PCM can cross a noisy timestamp correction.
+  assert(sourceClock.read(1040000, out, 960));
+  p = packet(3); sourceClock.push(p.data(), p.size(), 1050000, 1060000, 2);
+  // A real capture interruption still rejects a window that spans it, even
+  // when the timestamps look continuous.
+  assert(!sourceClock.read(1050000, out, 960));
   auto receiver = usce_pa_create("ipc://", "");
   assert(receiver);
   assert(usce_pa_signal(receiver, "{\"type\":\"bridge.ready\",\"displayCode\":null}") == 0);
@@ -65,7 +103,12 @@ int main() {
   assert(usce_pa_signal(receiver, "{\"type\":\"room.created\",\"displayCode\":\"TEST\"}") == 0);
   const auto pcm = std::string("{\"type\":\"audio.pcm\",\"slot\":1,\"pcm\":\"") + base64(packet(1)) + "\"}";
   assert(usce_pa_signal(receiver, pcm.c_str()) == 0);
-  assert(usce_pa_poll(receiver, out, 9600) == 480);
+  uint32_t endSample = 0, generation = 0;
+  assert(usce_pa_poll_position(receiver, out, 200, &endSample, &generation) == 200);
+  assert(endSample == 680 && generation != 0);
+  const auto firstGeneration = generation;
+  assert(usce_pa_poll_position(receiver, out, 9600, &endSample, &generation) == 280);
+  assert(endSample == 960 && generation == firstGeneration);
   assert(out[0] == 16384);
   auto calibrationPacket = packet(2);
   calibrationPacket[2] = 'C';
