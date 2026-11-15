@@ -136,7 +136,6 @@ type
       PlayerColor:    array[0..(IMaxPlayerCount-1)] of integer;
       TeamColor:      array[0..2] of integer;
       PlayerDelay:    array[0..(IMaxPlayerCount-1)] of integer;
-      PhoneCaptureOffset: array[0..(IMaxPlayerCount-1)] of integer; // ms, -1 when unset
 
       PlayerAvatar:   array[0..(IMaxPlayerCount-1)] of UTF8String;
       PlayerLevel:    array[0..(IMaxPlayerCount-1)] of integer;
@@ -1756,7 +1755,6 @@ begin
     PlayerLevel[I] := IniFile.ReadInteger('PlayerLevel', 'P'+IntToStr(I+1), 1);
     // Player Delay
     PlayerDelay[I] := IniFile.ReadInteger('PlayerDelay', 'P'+IntToStr(I+1), 0);
-    PhoneCaptureOffset[I] := IniFile.ReadInteger('PhoneCaptureOffset', 'P'+IntToStr(I+1), -1);
   end;
 
   // Color Team
@@ -2349,13 +2347,7 @@ begin
   IniFile := TSafeIniFile.Create(Filename.ToNative, 'TIni.SaveDelays');
   try
     for I := 0 to High(PlayerDelay) do
-    begin
       IniFile.WriteInteger('PlayerDelay', 'P' + IntToStr(I+1), PlayerDelay[I]);
-      if PhoneCaptureOffset[I] >= 0 then
-        IniFile.WriteInteger('PhoneCaptureOffset', 'P' + IntToStr(I+1), PhoneCaptureOffset[I])
-      else
-        IniFile.DeleteKey('PhoneCaptureOffset', 'P' + IntToStr(I+1));
-    end;
   finally
     IniFile.Free;
   end;
@@ -2376,10 +2368,7 @@ begin
 
   try
     for I := 0 to IMaxPlayerCount-1 do
-    begin
       PlayerDelay[I] := IniFile.ReadInteger('PlayerDelay', 'P'+IntToStr(I+1), 0);
-      PhoneCaptureOffset[I] := IniFile.ReadInteger('PhoneCaptureOffset', 'P'+IntToStr(I+1), -1);
-    end;
   finally
     IniFile.Free;
   end;
