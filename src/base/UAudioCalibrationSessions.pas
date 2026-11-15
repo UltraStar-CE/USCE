@@ -31,7 +31,6 @@ type
     function EffectivePlayerDelay(Index, GlobalDelayMs, ManualTrimMs: integer): integer;
     function CaptureOffset(const PlayerId: UTF8String): integer;
     procedure SetCaptureOffset(const PlayerId: UTF8String; OffsetMs: integer);
-    procedure ClearCaptureOffsets;
   end;
 implementation
 uses Math, fpjson;
@@ -219,14 +218,6 @@ begin
   EnterCriticalSection(FLock);
   try
     FCaptureOffsets.Values[PlayerId] := IntToStr(OffsetMs);
-  finally LeaveCriticalSection(FLock); end;
-end;
-
-procedure TAudioCalibrationSessions.ClearCaptureOffsets;
-begin
-  EnterCriticalSection(FLock);
-  try
-    FCaptureOffsets.Clear;
   finally LeaveCriticalSection(FLock); end;
 end;
 
