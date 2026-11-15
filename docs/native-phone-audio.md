@@ -65,5 +65,5 @@ to microphone debug recordings by this integration.
 Phone singing PCM requires capture timestamps on both direct and relay routes.
 A measured capture offset follows the companion across slots and room joins during the
 game session. The host slot and companion adjustments apply independently.
-It aligns the song timeline with timestamped microphone audio. The game uses
-existing compensation until the phone has a measurement and valid timestamped PCM.
+It aligns the song timeline with timestamped microphone audio. If an aligned
+window is still missing at the scoring deadline, the game records a miss.

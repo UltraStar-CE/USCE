@@ -428,7 +428,7 @@ function ConfiguredPhoneCaptureOffsetMs(PlayerIndex: integer): integer;
 var Measurement: integer;
 begin
   Result := UnavailablePhoneCaptureOffset;
-  if not PhoneAudio.HasCaptureHistory(PlayerIndex) then Exit;
+  if not PhoneAudio.SupportsCaptureTimestamps then Exit;
   Measurement := MeasuredPhoneCaptureOffsetMs(PlayerIndex);
   if Measurement >= 0 then
     Result := Measurement + ConfiguredInputTrimMs(PlayerIndex);
@@ -1356,7 +1356,13 @@ begin
                 if UsedTimedWindow then Break;
               end;
           end;
-          if not UsedTimedWindow then CurrentSound.AnalyzeBuffer;
+          if not UsedTimedWindow then
+          begin
+            if CaptureOffsetMs <> UnavailablePhoneCaptureOffset then
+              CurrentSound.ToneValid := false
+            else
+              CurrentSound.AnalyzeBuffer;
+          end;
           if (Ini.PitchTrace <> 0) and not NoteAvailable and CurrentSound.ToneValid then
             AddGapSungNote(PlayerIndex, ActualBeat, CurrentSound.Tone);
           if PhoneAudio.Enabled and RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) and
