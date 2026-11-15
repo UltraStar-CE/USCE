@@ -19,13 +19,18 @@ public:
   bool haveSequence = false;
   uint32_t sequence = 0;
   uint32_t endSampleCounter = 0, readEndSampleCounter = 0;
+  uint32_t captureGeneration = 1;
   Clock::time_point last{};
   float peak = 0;
   double maxPacketIntervalMs = 0, maxQueuedMs = 0;
   static uint32_t u32(const uint8_t *p) {
     return uint32_t(p[0]) | (uint32_t(p[1]) << 8) | (uint32_t(p[2]) << 16) | (uint32_t(p[3]) << 24);
   }
-  void reset() { samples.clear(); haveSequence = false; peak = 0; last = {}; endSampleCounter = readEndSampleCounter = 0; }
+  void reset() {
+    if (haveSequence) advanceCaptureGeneration();
+    samples.clear(); haveSequence = false; peak = 0; last = {};
+    endSampleCounter = readEndSampleCounter = 0;
+  }
   bool push(const uint8_t *data, size_t size, Clock::time_point now = Clock::now()) {
     if (size < 20 || data[0] != 'U' || data[1] != 'A' || data[2] != marker || data[3] != '1') { ++rejected; return false; }
     const auto seq = u32(data + 4), rate = u32(data + 8), count = u32(data + 12);
@@ -42,7 +47,10 @@ public:
         gaps += uint32_t(delta - 1);
         // Preserve short gaps as silence. Large gaps restart the live window.
         if (delta <= 11) samples.insert(samples.end(), size_t(delta - 1) * 480, 0);
-        else samples.clear();
+        else {
+          samples.clear();
+          advanceCaptureGeneration();
+        }
       }
     }
     peak = 0;
@@ -52,7 +60,10 @@ public:
       samples.push_back(sample);
       peak = std::max(peak, std::abs(float(sample)) / 32768.f);
     }
-    while (samples.size() > limit) { samples.pop_front(); ++dropped; }
+    if (samples.size() > limit) {
+      advanceCaptureGeneration();
+      while (samples.size() > limit) { samples.pop_front(); ++dropped; }
+    }
     maxQueuedMs = std::max(maxQueuedMs, samples.size() / 48.0);
     last = now; sequence = seq; haveSequence = true; ++packets;
     endSampleCounter = u32(data + 16) + count;
@@ -64,5 +75,10 @@ public:
     for (size_t i = 0; i < count; ++i) { out[i] = samples.front(); samples.pop_front(); }
     if (count) readEndSampleCounter = endSampleCounter - uint32_t(samples.size());
     return int32_t(count);
+  }
+private:
+  void advanceCaptureGeneration() {
+    // Zero is reserved for callers using an older receiver library.
+    if (++captureGeneration == 0) ++captureGeneration;
   }
 };

@@ -11,6 +11,13 @@ type
   TPaCreate = function(Url, Ice: PAnsiChar): pointer; cdecl;
   TPaDestroy = procedure(Context: pointer); cdecl;
   TPaPoll = function(Context: pointer; Samples: pointer; Capacity: longint): longint; cdecl;
+  TPaCapturePosition = record
+    EndSample, Generation: LongWord;
+  end;
+  TPaPollPosition = function(Context: pointer; Samples: pointer; Capacity: longint;
+    EndSample, Generation: PLongWord): longint; cdecl;
+  TPaCaptureWindow = function(Context: pointer; EndHostUs: Int64;
+    Samples: pointer; Count: LongWord): longint; cdecl;
   TPaStatus = function(Context: pointer; Buffer: PAnsiChar; Capacity: longint): longint; cdecl;
   TPaSetClock = procedure(Context: pointer; HostTimeUs: int64); cdecl;
   TPaVersion = function: longint; cdecl;
@@ -25,6 +32,8 @@ type
     FCreate: TPaCreate;
     FDestroy: TPaDestroy;
     FPoll: TPaPoll;
+    FPollPosition: TPaPollPosition;
+    FCaptureWindow: TPaCaptureWindow;
     FPollCalibration: TPaPoll;
     FSetClock: TPaSetClock;
     FStatus: TPaStatus;
@@ -38,6 +47,10 @@ type
     function Start(const Url, Ice: UTF8String; const LibraryPath: string = ''): boolean;
     procedure Stop;
     function Poll(Samples: pointer; Capacity: integer; PlayerIndex: integer = 0): integer;
+    function PollPosition(Samples: pointer; Capacity, PlayerIndex: integer;
+      out Position: TPaCapturePosition): integer;
+    function ReadCaptureWindow(PlayerIndex: integer; EndHostUs: Int64;
+      Samples: pointer; Count: LongWord): boolean;
     function PollCalibration(Samples: pointer; Capacity: integer; PlayerIndex: integer): integer;
     function Status(PlayerIndex: integer = 0): UTF8String;
     procedure Signal(const Json: UTF8String);
@@ -97,6 +110,8 @@ begin
     FCreate := TPaCreate(GetProcedureAddress(FLibrary, 'usce_pa_create'));
     FDestroy := TPaDestroy(GetProcedureAddress(FLibrary, 'usce_pa_destroy'));
     FPoll := TPaPoll(GetProcedureAddress(FLibrary, 'usce_pa_poll'));
+    FPollPosition := TPaPollPosition(GetProcedureAddress(FLibrary, 'usce_pa_poll_position'));
+    FCaptureWindow := TPaCaptureWindow(GetProcedureAddress(FLibrary, 'usce_pa_capture_window'));
     FPollCalibration := TPaPoll(GetProcedureAddress(FLibrary, 'usce_pa_poll_calibration'));
     FStatus := TPaStatus(GetProcedureAddress(FLibrary, 'usce_pa_status'));
     FSignal := TPaSignal(GetProcedureAddress(FLibrary, 'usce_pa_signal'));
@@ -154,15 +169,27 @@ begin
 end;
 
 function TPhoneAudio.Poll(Samples: pointer; Capacity: integer; PlayerIndex: integer): integer;
+var Position: TPaCapturePosition;
+begin
+  Result := PollPosition(Samples, Capacity, PlayerIndex, Position);
+end;
+
+function TPhoneAudio.PollPosition(Samples: pointer; Capacity, PlayerIndex: integer;
+  out Position: TPaCapturePosition): integer;
 var Buffer: array[0..131071] of AnsiChar;
     I, Count: integer;
 begin
   Result := 0;
+  Position.EndSample := 0;
+  Position.Generation := 0;
   if Enabled and (PlayerIndex >= 0) and (PlayerIndex <= High(FContexts)) and
     (FContexts[PlayerIndex] <> nil) then
   begin
     FSetClock(FContexts[PlayerIndex], int64(GetTickCount64) * 1000);
-    Result := FPoll(FContexts[PlayerIndex], Samples, Capacity);
+    if Assigned(FPollPosition) then
+      Result := FPollPosition(FContexts[PlayerIndex], Samples, Capacity, @Position.EndSample, @Position.Generation)
+    else
+      Result := FPoll(FContexts[PlayerIndex], Samples, Capacity);
     for I := 1 to 128 do
     begin
       Count := FEvent(FContexts[PlayerIndex], @Buffer[0], Length(Buffer));
@@ -170,6 +197,15 @@ begin
       RemoteBridgeIPC.SendJsonMessage(string(PAnsiChar(@Buffer[0])));
     end;
   end;
+end;
+
+function TPhoneAudio.ReadCaptureWindow(PlayerIndex: integer; EndHostUs: Int64;
+  Samples: pointer; Count: LongWord): boolean;
+begin
+  Result := Enabled and Assigned(FCaptureWindow) and
+    (PlayerIndex >= 0) and (PlayerIndex <= High(FContexts)) and
+    (FContexts[PlayerIndex] <> nil) and
+    (FCaptureWindow(FContexts[PlayerIndex], EndHostUs, Samples, Count) = 1);
 end;
 
 function TPhoneAudio.PollCalibration(Samples: pointer; Capacity: integer; PlayerIndex: integer): integer;

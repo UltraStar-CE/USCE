@@ -1,5 +1,6 @@
 #include "phone_audio.h"
 #include "pcm_queue.h"
+#include "capture_history.h"
 #include "game_clock.h"
 #include <rtc/rtc.hpp>
 #include <nlohmann/json.hpp>
@@ -28,6 +29,7 @@ std::vector<uint8_t> decodePcm(const std::string &text) {
 struct Receiver : std::enable_shared_from_this<Receiver> {
   std::mutex mutex;
   PcmQueue pcm;
+  std::unique_ptr<CaptureHistory> captureHistory;
   PcmQueue calibration{true};
   GameClockAnchor gameClock;
   std::deque<Json> incoming, outgoing, externalEvents;
@@ -42,6 +44,7 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
   Clock::time_point heartbeat{};
   Clock::time_point previousPoll{};
   double maxPollIntervalMs = 0;
+  int64_t lastRelayTransitUs = -1, lastCaptureToSendUs = -1;
   Clock::time_point lastDirectPacket{}, lastDirectAck{}, lastRelayPacket{};
   uint32_t directSequence = 0;
   std::atomic<bool> stopped{false};
@@ -70,7 +73,8 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
     {
       std::lock_guard<std::mutex> lock(mutex);
       old.swap(channel);
-      outgoing.clear(); pcm.reset(); calibration.reset(); lastDirectPacket = {}; lastRelayPacket = {}; state = "waiting for phone";
+      outgoing.clear(); pcm.reset(); calibration.reset(); captureHistory.reset();
+      lastDirectPacket = {}; lastRelayPacket = {}; state = "waiting for phone";
     }
     if (old) { old->resetCallbacks(); old->close(); }
   }
@@ -226,6 +230,33 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
         }
         const auto rejected = pcm.rejected;
         if (pcm.push(bytes.data(), bytes.size())) state = "receiving PCM";
+        const auto stamp = m.find("captureEndHostUs");
+        const auto sent = m.find("sendHostUs");
+        lastRelayTransitUs = -1;
+        lastCaptureToSendUs = -1;
+        if (gameClock.ready && sent != m.end() && sent->is_number_integer()) {
+          const auto sentUs = sent->get<int64_t>();
+          const auto nowUs = gameClock.nowUs();
+          if (sentUs >= nowUs - 2000000 && sentUs <= nowUs + 30000) {
+            lastRelayTransitUs = nowUs - sentUs;
+            if (stamp != m.end() && stamp->is_number_integer()) {
+              const auto captureUs = stamp->get<int64_t>();
+              if (captureUs >= sentUs - 2000000 && captureUs <= sentUs + 30000)
+                lastCaptureToSendUs = sentUs - captureUs;
+            }
+          }
+        }
+        if (gameClock.ready && stamp != m.end() && stamp->is_number_integer()) {
+          const auto endUs = stamp->get<int64_t>();
+          if (endUs > 0 && endUs <= 9000000000000000LL) {
+            uint32_t captureEpoch = 0;
+            const auto epoch = m.find("captureEpoch");
+            if (epoch != m.end() && epoch->is_number_unsigned() && epoch->get<uint64_t>() <= UINT32_MAX)
+              captureEpoch = epoch->get<uint32_t>();
+            if (!captureHistory) captureHistory = std::make_unique<CaptureHistory>();
+            captureHistory->push(bytes.data(), bytes.size(), endUs, gameClock.nowUs(), captureEpoch);
+          }
+        }
         if (pcm.rejected == rejected) lastRelayPacket = Clock::now();
       }
     } else if (type == "p2p.offer") {
@@ -436,6 +467,10 @@ void usce_pa_destroy(void *p) {
   if (--contextCount == 0) try { rtc::Cleanup().wait(); } catch (...) {}
 }
 int32_t usce_pa_poll(void *p, int16_t *samples, int32_t capacity) {
+  return usce_pa_poll_position(p, samples, capacity, nullptr, nullptr);
+}
+int32_t usce_pa_poll_position(void *p, int16_t *samples, int32_t capacity,
+                              uint32_t *endSample, uint32_t *generation) {
   if (!p || !samples || capacity <= 0 || capacity > 9600) return -1;
   try {
     const auto &self = *static_cast<Handle *>(p);
@@ -446,6 +481,10 @@ int32_t usce_pa_poll(void *p, int16_t *samples, int32_t capacity) {
     {
       std::lock_guard<std::mutex> lock(self->mutex);
       count = self->pcm.read(samples, capacity);
+      if (count > 0) {
+        if (endSample) *endSample = self->pcm.readEndSampleCounter;
+        if (generation) *generation = self->pcm.captureGeneration;
+      }
       const auto now = Clock::now();
       if (count > 0 && self->lastDirectPacket != Clock::time_point{} && now - self->lastDirectPacket < std::chrono::milliseconds(250) &&
           now - self->lastDirectAck > std::chrono::milliseconds(100)) {
@@ -461,6 +500,15 @@ int32_t usce_pa_poll(void *p, int16_t *samples, int32_t capacity) {
       }
     } catch (...) { /* A lost acknowledgment must not discard drained audio. */ }
     return count;
+  } catch (...) { return -1; }
+}
+int32_t usce_pa_capture_window(void *p, int64_t targetEndUs, int16_t *samples, uint32_t count) {
+  if (!p || targetEndUs <= 0 || targetEndUs > 9000000000000000LL) return -1;
+  try {
+    const auto &self = *static_cast<Handle *>(p);
+    std::lock_guard<std::mutex> lock(self->mutex);
+    if (!self->captureHistory) return -1;
+    return self->captureHistory->read(targetEndUs, samples, count) ? 1 : 0;
   } catch (...) { return -1; }
 }
 int32_t usce_pa_poll_calibration(void *p, int16_t *samples, int32_t capacity) {
@@ -488,7 +536,7 @@ int32_t usce_pa_status(void *p, char *buffer, int32_t capacity) {
     const bool recentRelay = self->lastRelayPacket != Clock::time_point{} && now - self->lastRelayPacket < std::chrono::milliseconds(250);
     const char *route = age < 0 || age >= 250 ? "inactive" :
       recentDirect && directPath && !recentRelay ? "direct" : "server";
-    const auto text = Json({{"code", self->code}, {"state", self->state}, {"error", self->error},
+    auto status = Json({{"code", self->code}, {"state", self->state}, {"error", self->error},
       {"audioRoute", route},
       {"packets", q.packets}, {"gaps", q.gaps}, {"rejected", q.rejected}, {"droppedSamples", q.dropped},
       {"calibrationPackets", self->calibration.packets},
@@ -496,7 +544,17 @@ int32_t usce_pa_status(void *p, char *buffer, int32_t capacity) {
       {"sequence", q.sequence}, {"readEndSampleCounter", q.readEndSampleCounter},
       {"queueMs", q.samples.size() / 48.0}, {"packetAgeMs", age}, {"peak", q.peak},
       {"maxQueueMs", q.maxQueuedMs}, {"maxPacketIntervalMs", q.maxPacketIntervalMs},
-      {"maxGamePollIntervalMs", self->maxPollIntervalMs}}).dump();
+      {"maxGamePollIntervalMs", self->maxPollIntervalMs}});
+    if (const auto &history = self->captureHistory)
+      status["captureWindowFailures"] = {{"noEndpoint", history->noEndpoint},
+        {"packetHoles", history->packetHoles}, {"sourceBreaks", history->sourceBreaks},
+        {"clockDiscontinuities", history->clockDiscontinuities},
+        {"beforeRetainedAudio", history->beforeRetainedAudio},
+        {"afterRetainedAudio", history->afterRetainedAudio},
+        {"betweenTimestamps", history->betweenTimestamps}};
+    status["lastRelayTransitUs"] = self->lastRelayTransitUs;
+    status["lastCaptureToSendUs"] = self->lastCaptureToSendUs;
+    const auto text = status.dump();
     if (text.size() + 1 > size_t(capacity)) return -1;
     std::memcpy(buffer, text.c_str(), text.size() + 1);
     return int32_t(text.size());

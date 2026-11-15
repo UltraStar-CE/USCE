@@ -433,6 +433,9 @@ begin
   // the microphone sample captured at its shifted time.
   for PlayerIndex := 0 to PlayersPlay - 1 do
   begin
+    if (GetEnvironmentVariable('USCE_TEST_SCORE_WHEN_READY') = '1') and
+      PhoneAudio.Enabled and RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) and
+      (LyricsState.MidBeat >= 0.5) then Exit(true);
     DelayBeats := GetBeats(CurrentSong.BPM, ConfiguredPlayerDelayMs(PlayerIndex) / 1000);
     if Floor(LyricsState.MidBeatD - DelayBeats) >= 0 then
     begin
@@ -991,7 +994,50 @@ begin
 
 end;
 
+var
+  CaptureOffsetNextReadUs, CaptureOffsetValidUntilUs: int64;
+  LastTestCaptureOffset: integer;
+
+function ReadTestCaptureOffset(Fallback: integer; out Adaptive: boolean): integer;
+var
+  Path, Line: string;
+  Input: TextFile;
+  NowUs, Expires: int64;
+  Separator, Offset: integer;
+begin
+  Adaptive := false;
+  Result := Fallback;
+  Path := GetEnvironmentVariable('USCE_TEST_CAPTURE_OFFSET_FILE');
+  if Path = '' then Exit;
+  NowUs := int64(GetTickCount64) * 1000;
+  if NowUs >= CaptureOffsetNextReadUs then
+  begin
+    CaptureOffsetNextReadUs := NowUs + 250000;
+    if FileExists(Path) then
+      try
+        AssignFile(Input, Path);
+        Reset(Input);
+        try ReadLn(Input, Line); finally CloseFile(Input); end;
+        Separator := Pos(' ', Line);
+        if (Separator > 0) and TryStrToInt64(Copy(Line, 1, Separator - 1), Expires) and
+          TryStrToInt(Copy(Line, Separator + 1, MaxInt), Offset) and
+          (Expires > NowUs) and (Expires <= NowUs + 5000000) and
+          (Offset >= 0) and (Offset <= 750) then
+        begin
+          LastTestCaptureOffset := Offset;
+          CaptureOffsetValidUntilUs := Expires;
+        end;
+      except
+        on EInOutError do ; // A missing fixture update leaves the old estimate to expire.
+      end;
+  end;
+  Adaptive := NowUs < CaptureOffsetValidUntilUs;
+  if Adaptive then Result := LastTestCaptureOffset;
+end;
+
 procedure NewNote(CP: integer; Screen: TScreenSingController);
+const
+  CaptureRecoveryShiftsUs: array[0..3] of integer = (-10000, 10000, -20000, 20000);
 var
   LineFragmentIndex:   integer;
   CurrentLineFragment: PLineFragment;
@@ -1023,6 +1069,13 @@ var
   SlotAbsent:          boolean;
   CanUpdatePlayerNote: boolean;
   SongTimeUs:          int64;
+  CaptureCenterHostUs: int64;
+  CaptureShiftUs: integer;
+  CaptureOffsetMs:    integer;
+  UsedTimedWindow:     boolean;
+  AdaptiveCapture:     boolean;
+  DeadlineBeat:        integer;
+  ScoreWhenReady, EarlyReady: boolean;
   RemoteTone:          TRemoteToneSample;
   EndLineIndex, SentenceEnd: integer;
   LastPracticeBeat: integer;
@@ -1035,10 +1088,20 @@ var
       CurrentPlayer.SentenceFinalized[CP][SentenceDetected] then
       Screen.OnSentenceEnd(CP, SentenceDetected, PlayerIndex, false);
   end;
+
+  function CaptureCenterForBeat(Beat: integer): int64;
+  begin
+    Result := LyricsState.FrameHostUs +
+      Round((GetTimeFromBeat(Beat) + LyricsState.StartTime / 1000 -
+        CurrentSong.GAP / 1000 + 30 / CurrentSong.BPM - LyricsState.FrameTime) * 1000000) +
+      Int64(CaptureOffsetMs) * 1000;
+  end;
 begin
   ActualTone := 0;
   NoteHit := false;
   LastPracticeBeat := Screen.LastPracticeBeat;
+  CaptureOffsetMs := ReadTestCaptureOffset(
+    StrToIntDef(GetEnvironmentVariable('USCE_CAPTURE_OFFSET_MS'), -1), AdaptiveCapture);
 
   // TODO: add duet mode support
   // use CurrentSong.Tracks[LineSetIndex] with LineSetIndex depending on the current player
@@ -1059,6 +1122,10 @@ begin
       SlotAbsent := (not IsRemotePlayer) and Screen.UsesSelectedLocalRoster and
         (PlayerIndex >= ScreenName.LocalPlayerCount) and
         not RemoteInputProcessor.HasAssignedPlayer(PlayerIndex);
+      ScoreWhenReady := (GetEnvironmentVariable('USCE_TEST_SCORE_WHEN_READY') = '1') and
+        (CaptureOffsetMs >= 0) and (CaptureOffsetMs <= 1000) and (LyricsState.FrameHostUs > 0) and
+        PhoneAudio.Enabled and RemoteInputProcessor.HasAssignedPlayer(PlayerIndex);
+      DeadlineBeat := 0;
       PlayerDelayMs := ConfiguredPlayerDelayMs(PlayerIndex);
       if IsRemotePlayer then
       begin
@@ -1095,6 +1162,8 @@ begin
           Player[PlayerIndex].DetectionReady := true;
           DelayBeats := GetBeats(CurrentSong.BPM, Player[PlayerIndex].DetectionDelay / 1000);
           Player[PlayerIndex].DetectionBeat := Floor(LyricsState.MidBeatD - DelayBeats) - 1;
+          if ScoreWhenReady then
+            Player[PlayerIndex].DetectionBeat := Max(-1, Player[PlayerIndex].DetectionBeat);
           // The delayed capture cursor can start past the seek point.
           // Those beats have no new sample, so discard the previous take.
           ClearUnsampledScoredBeats(Screen, PlayerIndex, CP, Screen.ScoringSeekStartBeat,
@@ -1103,6 +1172,10 @@ begin
         DelayBeats := GetBeats(CurrentSong.BPM, Player[PlayerIndex].DetectionDelay / 1000);
         PlayerOldBeat := Player[PlayerIndex].DetectionBeat;
         PlayerCurBeat := Floor(LyricsState.MidBeatD - DelayBeats);
+        DeadlineBeat := PlayerCurBeat;
+        if ScoreWhenReady then
+          PlayerCurBeat := Max(PlayerCurBeat,
+            Floor(LyricsState.MidBeat - 0.5 - GetBeats(CurrentSong.BPM, CaptureOffsetMs / 1000)));
         if Screen.ScoringTailActive then
           PlayerCurBeat := Min(PlayerCurBeat, Screen.ScoringTailEndBeat);
         PlayerCurBeat := Min(PlayerCurBeat, LastPracticeBeat);
@@ -1119,9 +1192,24 @@ begin
       end;
 
       FirstBeatToAnalyze := Max(Screen.ScoringSeekStartBeat, FirstBeatToAnalyze);
+      CurrentSound := AudioInputProcessor.Sound[PlayerIndex];
       for ActualBeat := FirstBeatToAnalyze to PlayerCurBeat do
 
       begin
+        UsedTimedWindow := false;
+        CaptureShiftUs := 0;
+        EarlyReady := ScoreWhenReady and (ActualBeat > DeadlineBeat);
+        if EarlyReady then
+        begin
+          UsedTimedWindow := CurrentSound.AnalyzePhoneWindow(PlayerIndex, CaptureCenterForBeat(ActualBeat));
+          if not UsedTimedWindow then
+          begin
+            // Keep the cursor on the first pending beat. A later frame
+            // retries it or reaches the existing scoring deadline.
+            PlayerCurBeat := ActualBeat - 1;
+            Break;
+          end;
+        end;
         // Finish each player's line after its last delayed beat and before
         // scoring any following line. Other players may still be singing it.
         for EndLineIndex := 0 to CurrentSong.Tracks[CP].High do
@@ -1167,7 +1255,6 @@ begin
         end;
 
         CurrentPlayer := @Player[PlayerIndex];
-        CurrentSound := AudioInputProcessor.Sound[PlayerIndex];
 
         // at the beginning of the song there is no previous note
         if (Length(CurrentPlayer.Note) > 0) and (CurrentPlayer.HighNote > -1) then
@@ -1264,7 +1351,26 @@ begin
         end
         else
         begin
-          CurrentSound.AnalyzeBuffer;
+          if not UsedTimedWindow and (CaptureOffsetMs >= 0) and (CaptureOffsetMs <= 1000) and
+            PhoneAudio.Enabled and RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) and
+            (LyricsState.FrameHostUs > 0) then
+          begin
+            // Translate the scoring beat's midpoint into the host clock, then
+            // add the acoustic offset in the shared clock.
+            CaptureCenterHostUs := CaptureCenterForBeat(ActualBeat);
+            UsedTimedWindow := CurrentSound.AnalyzePhoneWindow(PlayerIndex, CaptureCenterHostUs);
+            if ScoreWhenReady and not UsedTimedWindow then
+              for CaptureShiftUs in CaptureRecoveryShiftsUs do
+              begin
+                // At the deadline, prefer nearby contiguous capture over
+                // the unrelated audio currently at the head of the FIFO.
+                UsedTimedWindow := CurrentSound.AnalyzePhoneWindow(PlayerIndex,
+                  CaptureCenterHostUs + CaptureShiftUs);
+                if UsedTimedWindow then Break;
+              end;
+          end;
+          if not UsedTimedWindow then CaptureShiftUs := 0;
+          if not UsedTimedWindow then CurrentSound.AnalyzeBuffer;
           if (Ini.PitchTrace <> 0) and not NoteAvailable and CurrentSound.ToneValid then
             AddGapSungNote(PlayerIndex, ActualBeat, CurrentSound.Tone);
           if PhoneAudio.Enabled and RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) and
@@ -1281,7 +1387,17 @@ begin
               ',"valid":' + LowerCase(BoolToStr(CurrentSound.ToneValid, true)) +
               ',"globalDelayMs":' + IntToStr(Ini.MicDelay) +
               ',"playerDelayMs":' + IntToStr(Player[PlayerIndex].DetectionDelay) +
-              ',"windowSamples":' + IntToStr(CurrentSound.AnalysisBufferSize) +
+              ',"windowSamples":' + IntToStr(CurrentSound.LastAnalysisWindowSamples) +
+              ',"analysisPeakPermille":' + IntToStr(Round(CurrentSound.LastAnalysisPeak * 1000)) +
+              ',"analysisThresholdPermille":' + IntToStr(Round(CurrentSound.LastAnalysisThreshold * 1000)) +
+              ',"captureEndSample":' + IntToStr(CurrentSound.PhoneCaptureEndSample) +
+              ',"captureGeneration":' + IntToStr(CurrentSound.PhoneCaptureGeneration) +
+              ',"timedWindow":' + LowerCase(BoolToStr(UsedTimedWindow, true)) +
+              ',"captureShiftUs":' + IntToStr(CaptureShiftUs) +
+              ',"judgedOnArrival":' + LowerCase(BoolToStr(EarlyReady, true)) +
+              ',"adaptiveOffsetAvailable":' + LowerCase(BoolToStr(AdaptiveCapture, true)) +
+              ',"adaptiveCapture":' + LowerCase(BoolToStr(AdaptiveCapture and UsedTimedWindow, true)) +
+              ',"captureOffsetMs":' + IntToStr(CaptureOffsetMs) +
               ',"native":' + string(PhoneAudio.Status(PlayerIndex)) + '}', 'Audio alignment');
           end;
         end;
