@@ -11,11 +11,8 @@ type
   TPaCreate = function(Url, Ice: PAnsiChar): pointer; cdecl;
   TPaDestroy = procedure(Context: pointer); cdecl;
   TPaPoll = function(Context: pointer; Samples: pointer; Capacity: longint): longint; cdecl;
-  TPaCapturePosition = record
-    EndSample, Generation: LongWord;
-  end;
-  TPaPollPosition = function(Context: pointer; Samples: pointer; Capacity: longint;
-    EndSample, Generation: PLongWord): longint; cdecl;
+  TPaPollGeneration = function(Context: pointer; Samples: pointer; Capacity: longint;
+    Generation: PLongWord): longint; cdecl;
   TPaCaptureWindow = function(Context: pointer; EndHostUs: Int64;
     Samples: pointer; Count: LongWord): longint; cdecl;
   TPaStatus = function(Context: pointer; Buffer: PAnsiChar; Capacity: longint): longint; cdecl;
@@ -32,7 +29,7 @@ type
     FCreate: TPaCreate;
     FDestroy: TPaDestroy;
     FPoll: TPaPoll;
-    FPollPosition: TPaPollPosition;
+    FPollGeneration: TPaPollGeneration;
     FCaptureWindow: TPaCaptureWindow;
     FPollCalibration: TPaPoll;
     FSetClock: TPaSetClock;
@@ -46,9 +43,8 @@ type
     destructor Destroy; override;
     function Start(const Url, Ice: UTF8String; const LibraryPath: string = ''): boolean;
     procedure Stop;
-    function Poll(Samples: pointer; Capacity: integer; PlayerIndex: integer = 0): integer;
-    function PollPosition(Samples: pointer; Capacity, PlayerIndex: integer;
-      out Position: TPaCapturePosition): integer;
+    function Poll(Samples: pointer; Capacity, PlayerIndex: integer;
+      out Generation: LongWord): integer;
     function ReadCaptureWindow(PlayerIndex: integer; EndHostUs: Int64;
       Samples: pointer; Count: LongWord): boolean;
     function PollCalibration(Samples: pointer; Capacity: integer; PlayerIndex: integer): integer;
@@ -110,7 +106,7 @@ begin
     FCreate := TPaCreate(GetProcedureAddress(FLibrary, 'usce_pa_create'));
     FDestroy := TPaDestroy(GetProcedureAddress(FLibrary, 'usce_pa_destroy'));
     FPoll := TPaPoll(GetProcedureAddress(FLibrary, 'usce_pa_poll'));
-    FPollPosition := TPaPollPosition(GetProcedureAddress(FLibrary, 'usce_pa_poll_position'));
+    FPollGeneration := TPaPollGeneration(GetProcedureAddress(FLibrary, 'usce_pa_poll_generation'));
     FCaptureWindow := TPaCaptureWindow(GetProcedureAddress(FLibrary, 'usce_pa_capture_window'));
     FPollCalibration := TPaPoll(GetProcedureAddress(FLibrary, 'usce_pa_poll_calibration'));
     FStatus := TPaStatus(GetProcedureAddress(FLibrary, 'usce_pa_status'));
@@ -168,26 +164,19 @@ begin
   inherited;
 end;
 
-function TPhoneAudio.Poll(Samples: pointer; Capacity: integer; PlayerIndex: integer): integer;
-var Position: TPaCapturePosition;
-begin
-  Result := PollPosition(Samples, Capacity, PlayerIndex, Position);
-end;
-
-function TPhoneAudio.PollPosition(Samples: pointer; Capacity, PlayerIndex: integer;
-  out Position: TPaCapturePosition): integer;
+function TPhoneAudio.Poll(Samples: pointer; Capacity, PlayerIndex: integer;
+  out Generation: LongWord): integer;
 var Buffer: array[0..131071] of AnsiChar;
     I, Count: integer;
 begin
   Result := 0;
-  Position.EndSample := 0;
-  Position.Generation := 0;
+  Generation := 0;
   if Enabled and (PlayerIndex >= 0) and (PlayerIndex <= High(FContexts)) and
     (FContexts[PlayerIndex] <> nil) then
   begin
     FSetClock(FContexts[PlayerIndex], int64(GetTickCount64) * 1000);
-    if Assigned(FPollPosition) then
-      Result := FPollPosition(FContexts[PlayerIndex], Samples, Capacity, @Position.EndSample, @Position.Generation)
+    if Assigned(FPollGeneration) then
+      Result := FPollGeneration(FContexts[PlayerIndex], Samples, Capacity, @Generation)
     else
       Result := FPoll(FContexts[PlayerIndex], Samples, Capacity);
     for I := 1 to 128 do

@@ -458,10 +458,9 @@ void usce_pa_destroy(void *p) {
   if (--contextCount == 0) try { rtc::Cleanup().wait(); } catch (...) {}
 }
 int32_t usce_pa_poll(void *p, int16_t *samples, int32_t capacity) {
-  return usce_pa_poll_position(p, samples, capacity, nullptr, nullptr);
+  return usce_pa_poll_generation(p, samples, capacity, nullptr);
 }
-int32_t usce_pa_poll_position(void *p, int16_t *samples, int32_t capacity,
-                              uint32_t *endSample, uint32_t *generation) {
+int32_t usce_pa_poll_generation(void *p, int16_t *samples, int32_t capacity, uint32_t *generation) {
   if (!p || !samples || capacity <= 0 || capacity > 9600) return -1;
   try {
     const auto &self = *static_cast<Handle *>(p);
@@ -472,10 +471,7 @@ int32_t usce_pa_poll_position(void *p, int16_t *samples, int32_t capacity,
     {
       std::lock_guard<std::mutex> lock(self->mutex);
       count = self->pcm.read(samples, capacity);
-      if (count > 0) {
-        if (endSample) *endSample = self->pcm.readEndSampleCounter;
-        if (generation) *generation = self->pcm.captureGeneration;
-      }
+      if (count > 0 && generation) *generation = self->pcm.captureGeneration;
       const auto now = Clock::now();
       if (count > 0 && self->lastDirectPacket != Clock::time_point{} && now - self->lastDirectPacket < std::chrono::milliseconds(250) &&
           now - self->lastDirectAck > std::chrono::milliseconds(100)) {
