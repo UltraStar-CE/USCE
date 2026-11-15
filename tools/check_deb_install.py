@@ -26,6 +26,10 @@ with tempfile.TemporaryDirectory(prefix='usce-deb-test-') as temp:
     subprocess.run(command + ['--install', str(package)], check=True)
     assert (root / 'usr/bin/usce').is_file()
     assert (root / 'usr/bin/libusce-phone-audio.so').is_file()
+    assert len(list((root / 'usr/lib/usce').glob('libprojectM-4.so.*'))) == 1
+    assert any((root / 'usr/share/usce/visuals/projectM/presets').glob('*.milk'))
+    for license_name in ('copyright', 'hlslparser-license', 'projectm-eval-license'):
+        assert (root / 'usr/share/doc/usce' / f'projectm-{license_name}').is_file()
     assert (root / 'usr/share/applications/usce.desktop').is_file()
     unpack = Path(temp) / 'upgrade'
     subprocess.run(['dpkg-deb', '--raw-extract', str(package), str(unpack)], check=True)
