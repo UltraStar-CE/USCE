@@ -415,8 +415,8 @@ end;
 function ConfiguredPhoneCaptureOffsetMs(PlayerIndex: integer): integer;
 begin
   Result := -1;
-  if PhoneAudio.SupportsCaptureTimestamps and RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) and
-    (Ini.PhoneCaptureOffset[PlayerIndex] >= 0) and (Ini.PhoneCaptureOffset[PlayerIndex] <= 1000) then
+  if (Ini.PhoneCaptureOffset[PlayerIndex] >= 0) and (Ini.PhoneCaptureOffset[PlayerIndex] <= 1000) and
+    RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) and PhoneAudio.HasCaptureHistory(PlayerIndex) then
     Result := Ini.PhoneCaptureOffset[PlayerIndex];
 end;
 
@@ -1139,6 +1139,8 @@ begin
           ClearUnsampledScoredBeats(Screen, PlayerIndex, CP, Screen.ScoringSeekStartBeat,
             Min(Player[PlayerIndex].DetectionBeat, LastPracticeBeat));
         end;
+        if ScoreWhenReady then
+          Player[PlayerIndex].DetectionDelay := Max(Player[PlayerIndex].DetectionDelay, PlayerDelayMs);
         DelayBeats := GetBeats(CurrentSong.BPM, Player[PlayerIndex].DetectionDelay / 1000);
         PlayerOldBeat := Player[PlayerIndex].DetectionBeat;
         PlayerCurBeat := Floor(LyricsState.MidBeatD - DelayBeats);
@@ -1148,6 +1150,11 @@ begin
             Floor(LyricsState.MidBeat - 0.5 - GetBeats(CurrentSong.BPM, CaptureOffsetMs / 1000)));
         if Screen.ScoringTailActive then
           PlayerCurBeat := Min(PlayerCurBeat, Screen.ScoringTailEndBeat);
+        // Timing history can become available or reset during the song.
+        // Never move the scoring cursor behind a beat already processed.
+        if (Ini.PhoneCaptureOffset[PlayerIndex] >= 0) and PhoneAudio.Enabled and
+          RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) then
+          PlayerCurBeat := Max(PlayerOldBeat, PlayerCurBeat);
         PlayerCurBeat := Min(PlayerCurBeat, LastPracticeBeat);
         FirstBeatToAnalyze := PlayerOldBeat + 1;
       end;
