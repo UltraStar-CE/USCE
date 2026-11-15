@@ -414,7 +414,7 @@ end;
 
 function MeasuredPhoneCaptureOffsetMs(PlayerIndex: integer): integer;
 begin
-  Result := PhoneAudio.Calibration.CaptureOffset(RemoteInputProcessor.AssignedPlayerId(PlayerIndex));
+  Result := PhoneAudio.Calibration.CaptureOffset(RemoteInputProcessor.AssignedPlayerId(PlayerIndex, true));
 end;
 
 function ConfiguredPhoneCaptureOffsetMs(PlayerIndex: integer): integer;

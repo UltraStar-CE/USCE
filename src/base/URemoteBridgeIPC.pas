@@ -1123,7 +1123,8 @@ begin
       PlayerId,
       Role,
       Slot,
-      MicDelayMs
+      MicDelayMs,
+      UTF8String(JsonGetString(Obj, 'microphoneCalibrationId', ''))
     );
   if Obj.Find('micDelayMs') <> nil then
     FOwner.QueuePlayerDelay(PlayerIndex, MicDelayMs);

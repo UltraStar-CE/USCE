@@ -73,6 +73,7 @@ type
     FBeatTones: array of TRemoteBeatTone;
     FLock: PSDL_Mutex;
     FPlayerId: UTF8String;
+    FMicrophoneCalibrationId: UTF8String;
     FRole: UTF8String;
     FSlot: integer;
     FMicDelayMs: integer;
@@ -90,7 +91,8 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    procedure AssignPlayer(const PlayerId, Role: UTF8String; Slot, MicDelayMs: integer);
+    procedure AssignPlayer(const PlayerId, Role: UTF8String; Slot, MicDelayMs: integer;
+      const MicrophoneCalibrationId: UTF8String = '');
     procedure Clear;
     procedure ClearFrames;
     procedure SetMicDelayMs(MicDelayMs: integer);
@@ -123,7 +125,8 @@ type
     procedure Clear;
     procedure ClearFrames;
     procedure SetSongSeq(SongSeq: integer);
-    procedure AssignPlayerSlot(PlayerIndex: integer; const PlayerId, Role: UTF8String; Slot, MicDelayMs: integer);
+    procedure AssignPlayerSlot(PlayerIndex: integer; const PlayerId, Role: UTF8String; Slot, MicDelayMs: integer;
+      const MicrophoneCalibrationId: UTF8String = '');
     procedure ClearPlayerSlot(PlayerIndex: integer);
     procedure SetPlayerDelayMs(PlayerIndex, MicDelayMs: integer);
     procedure AddPitchFrame(PlayerIndex: integer; const Frame: TRemotePitchFrame);
@@ -131,7 +134,7 @@ type
     function TryGetTone(PlayerIndex: integer; SongTimeUs: int64; out Tone: TRemoteToneSample): boolean;
     function TryConsumeToneForBeat(PlayerIndex, Beat: integer; SongTimeUs: int64; out Tone: TRemoteToneSample): boolean;
     function HasAssignedPlayer(PlayerIndex: integer): boolean;
-    function AssignedPlayerId(PlayerIndex: integer): UTF8String;
+    function AssignedPlayerId(PlayerIndex: integer; ForCalibration: boolean = false): UTF8String;
     function RequiredGameDelayMs(): integer;
 
     property CurrentSongSeq: integer read FCurrentSongSeq;
@@ -187,13 +190,16 @@ begin
   inherited;
 end;
 
-procedure TRemotePlayerBuffer.AssignPlayer(const PlayerId, Role: UTF8String; Slot, MicDelayMs: integer);
+procedure TRemotePlayerBuffer.AssignPlayer(const PlayerId, Role: UTF8String; Slot, MicDelayMs: integer;
+  const MicrophoneCalibrationId: UTF8String);
 var
   SameAssignment: boolean;
 begin
   SDL_LockMutex(FLock);
   try
     SameAssignment := FEnabled and (FPlayerId = PlayerId) and (FRole = Role) and (FSlot = Slot);
+    if (FPlayerId <> PlayerId) or (MicrophoneCalibrationId <> '') then
+      FMicrophoneCalibrationId := MicrophoneCalibrationId;
     FPlayerId := PlayerId;
     FRole := Role;
     FSlot := Slot;
@@ -216,6 +222,7 @@ begin
   try
     SetLength(FFrames, 0);
     FPlayerId := '';
+    FMicrophoneCalibrationId := '';
     FRole := '';
     FSlot := 0;
     FMicDelayMs := 0;
@@ -707,10 +714,11 @@ begin
     Result := FPlayers[PlayerIndex];
 end;
 
-procedure TRemoteInputProcessor.AssignPlayerSlot(PlayerIndex: integer; const PlayerId, Role: UTF8String; Slot, MicDelayMs: integer);
+procedure TRemoteInputProcessor.AssignPlayerSlot(PlayerIndex: integer; const PlayerId, Role: UTF8String; Slot, MicDelayMs: integer;
+  const MicrophoneCalibrationId: UTF8String);
 begin
   if (GetPlayerBuffer(PlayerIndex) <> nil) then
-    FPlayers[PlayerIndex].AssignPlayer(PlayerId, Role, Slot, MicDelayMs);
+    FPlayers[PlayerIndex].AssignPlayer(PlayerId, Role, Slot, MicDelayMs, MicrophoneCalibrationId);
 end;
 
 procedure TRemoteInputProcessor.ClearPlayerSlot(PlayerIndex: integer);
@@ -792,7 +800,7 @@ begin
   end;
 end;
 
-function TRemoteInputProcessor.AssignedPlayerId(PlayerIndex: integer): UTF8String;
+function TRemoteInputProcessor.AssignedPlayerId(PlayerIndex: integer; ForCalibration: boolean): UTF8String;
 var Buffer: TRemotePlayerBuffer;
 begin
   Result := '';
@@ -801,7 +809,11 @@ begin
   SDL_LockMutex(Buffer.FLock);
   try
     if Buffer.FEnabled and ((Buffer.FRole = 'singer') or (Buffer.FRole = 'controller')) then
+    begin
       Result := Buffer.FPlayerId;
+      if ForCalibration and (Buffer.FMicrophoneCalibrationId <> '') then
+        Result := Buffer.FMicrophoneCalibrationId;
+    end;
   finally SDL_UnlockMutex(Buffer.FLock); end;
 end;
 
