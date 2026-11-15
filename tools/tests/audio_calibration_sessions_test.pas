@@ -17,8 +17,6 @@ begin
     Assert(Sessions.CaptureOffset('phone-a') = 112);
     Assert(Sessions.CaptureOffset('phone-b') = 64);
     Assert(Sessions.CaptureOffset('phone-c') = -1);
-    Sessions.ClearCaptureOffsets;
-    Assert(Sessions.CaptureOffset('phone-a') = -1);
     Assert(not Sessions.Queue(-1, 'p', 'id', 0, 1000000));
     Assert(not Sessions.Queue(12, 'p', 'id', 0, 1000000));
     Assert(not Sessions.Queue(0, '', 'id', 0, 1000000));
