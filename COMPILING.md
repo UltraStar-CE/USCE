@@ -101,8 +101,8 @@ identity alone does not guarantee that macOS will retain microphone permission.
 
 ## Flatpak packaging
 
-The [USCE Flatpak test bundle](dists/flatpak/README.md) builds the pinned release
-and Themes snapshot for x86-64 and ARM64. It uses the Flatpak ID
+The [USCE Flatpak test bundle](dists/flatpak/README.md) builds the checked-out
+commit and its pinned Themes snapshot for x86-64 and ARM64. It uses the Flatpak ID
 `io.github.ultrastar_ce.USCE`. Flathub distribution remains pending.
 
 # Windows installer
