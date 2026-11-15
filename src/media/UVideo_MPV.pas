@@ -608,30 +608,40 @@ begin
   end;
 end;
 
-{$IF Defined(LINUX) and Defined(CPUAARCH64)}
-function UsePi5HEVCDecoder(const Codec: string): boolean;
-const
-  ModelPrefix = 'Raspberry Pi 5 Model B';
+{$IF Defined(LINUX) and (Defined(CPUARM) or Defined(CPUAARCH64))}
+function RaspberryPiHardwareDecoder(const Codec: string): AnsiString;
 var
   ModelFile: TFileStream;
-  Model: array[1..Length(ModelPrefix)] of AnsiChar;
+  Buffer: array[0..63] of AnsiChar;
+  Model: AnsiString;
+  Count: integer;
+  H264, HEVC: boolean;
 begin
-  Result := false;
+  Result := 'auto';
   // Older libmpv versions append the codec description to the short name.
-  if (Codec <> 'hevc') and (Pos('hevc (', Codec) <> 1) then
+  H264 := (Codec = 'h264') or (Pos('h264 (', Codec) = 1);
+  HEVC := (Codec = 'hevc') or (Pos('hevc (', Codec) = 1);
+  if not (H264 or HEVC) then
     Exit;
   try
     ModelFile := TFileStream.Create('/proc/device-tree/model', fmOpenRead or fmShareDenyNone);
     try
-      Result := (ModelFile.Read(Model, SizeOf(Model)) = SizeOf(Model)) and
-        CompareMem(@Model[1], PAnsiChar(ModelPrefix), SizeOf(Model));
+      Count := ModelFile.Read(Buffer, SizeOf(Buffer));
+      SetString(Model, PAnsiChar(@Buffer[0]), Count);
     finally
       ModelFile.Free;
     end;
   except
     on E: EStreamError do
-      Result := false;
+      Exit;
   end;
+  if H264 and (Pos('Raspberry Pi 4 Model B', Model) = 1) then
+    Result := 'v4l2m2m-copy';
+  {$IFDEF CPUAARCH64}
+  // Direct DRM frames cannot be rendered on the Pi 5 stack we tested.
+  if HEVC and (Pos('Raspberry Pi 5 Model B', Model) = 1) then
+    Result := 'drm-copy';
+  {$ENDIF}
 end;
 {$ENDIF}
 
@@ -654,11 +664,10 @@ begin
   else
   begin
     wanted := AnsiString(Ini.VideoHardwareDecoding);
-    {$IF Defined(LINUX) and Defined(CPUAARCH64)}
-    // Direct DRM frames cannot be rendered on the Pi 5 stack we tested.
-    // libmpv falls back to software if DRM copy-back cannot start.
-    if (wanted = 'auto') and UsePi5HEVCDecoder(fCodec) then
-      wanted := 'drm-copy';
+    {$IF Defined(LINUX) and (Defined(CPUARM) or Defined(CPUAARCH64))}
+    // libmpv falls back to software if the chosen hardware path cannot start.
+    if wanted = 'auto' then
+      wanted := RaspberryPiHardwareDecoder(fCodec);
     {$ENDIF}
     Log.LogInfo('Probing hardware decoding for ' + fCodec, 'TVideo_MPV');
   end;
