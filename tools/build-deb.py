@@ -8,7 +8,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 
-def build(version, output, themes):
+def build(version, output, themes, projectm_prefix):
     version = version.replace('-dev.', '~dev.')
     if not re.fullmatch(r'[0-9]{4}\.(?:[1-9]|1[0-2])\.[0-9]+(?:[~+][a-zA-Z0-9.+~]+)?', version):
         raise ValueError('Invalid Debian package version')
@@ -33,13 +33,32 @@ def build(version, output, themes):
         icon = stage / 'usr/share/icons/hicolor/256x256/apps/usce.png'
         icon.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / 'icons/usce-icon_256.png', icon)
+        projectm_prefix = Path(projectm_prefix).resolve()
+        library = projectm_prefix / 'lib/libprojectM-4.so'
+        soname = subprocess.check_output(['patchelf', '--print-soname', str(library)], text=True).strip()
+        match = re.fullmatch(r'(libprojectM-4)\.so\.(\d+)', soname)
+        if not match:
+            raise ValueError('Unexpected projectM 4 SONAME: ' + soname)
+        needed = subprocess.check_output(['patchelf', '--print-needed', str(executable)], text=True).splitlines()
+        if soname not in needed or not any(name.startswith('libopencv_videoio.so.') for name in needed):
+            raise ValueError('Build USCE with both projectM 4 and OpenCV webcam support')
+        bundled_library = stage / 'usr/lib/usce' / soname
+        bundled_library.parent.mkdir(parents=True)
+        shutil.copyfile(library, bundled_library)
+        for license_name in ('copyright', 'hlslparser-license', 'projectm-eval-license'):
+            shutil.copyfile(projectm_prefix / 'share/doc/projectm' / license_name,
+                            stage / 'usr/share/doc/usce' / f'projectm-{license_name}')
         (work / 'debian').mkdir()
+        (work / 'debian/shlibs.local').write_text(f'{match[1]} {match[2]} usce\n')
         (work / 'debian/control').write_text('Source: usce\nSection: games\nPriority: optional\nMaintainer: UltraStar Community Edition contributors <noreply@github.com>\n\nPackage: usce\nArchitecture: any\nDescription: UltraStar Community Edition karaoke game\n')
         receiver = stage / 'usr/bin/libusce-phone-audio.so'
         if not receiver.is_file():
             raise ValueError('Build and stage the native phone receiver before packaging')
         result = subprocess.check_output(['dpkg-shlibdeps', '-O', '-S' + str(stage),
-                                          '-e' + str(executable), '-e' + str(receiver)], cwd=work, text=True)
+                                          '-l' + str(bundled_library.parent), '-xusce',
+                                          '-e' + str(executable), '-e' + str(receiver),
+                                          '-e' + str(bundled_library)], cwd=work, text=True)
+        subprocess.run(['patchelf', '--set-rpath', '$ORIGIN/../lib/usce', str(executable)], check=True)
         dependencies = result.strip().removeprefix('shlibs:Depends=')
         # These are loaded dynamically and therefore absent from ELF NEEDED.
         linked = {part.strip().split()[0] for part in dependencies.split(',')}
@@ -57,5 +76,6 @@ if __name__ == '__main__':
     parser.add_argument('--version', required=True)
     parser.add_argument('--output', required=True)
     parser.add_argument('--themes', required=True)
+    parser.add_argument('--projectm-prefix', required=True, help='Installation prefix for the private projectM 4 library and licenses')
     args = parser.parse_args()
-    print(build(args.version, args.output, args.themes))
+    print(build(args.version, args.output, args.themes, args.projectm_prefix))

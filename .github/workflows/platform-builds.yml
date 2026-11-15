@@ -485,7 +485,26 @@ jobs:
       - name: Install native build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y fpc automake build-essential cmake ninja-build libssl-dev pkg-config libsdl2-image-dev libavformat-dev libavcodec-dev libavutil-dev libswresample-dev libswscale-dev libsqlite3-dev libfreetype6-dev portaudio19-dev liblua5.3-dev fonts-dejavu-core dpkg-dev desktop-file-utils
+          sudo apt-get install -y fpc automake build-essential cmake ninja-build libssl-dev pkg-config libsdl2-image-dev libavformat-dev libavcodec-dev libavutil-dev libswresample-dev libswscale-dev libsqlite3-dev libfreetype6-dev portaudio19-dev liblua5.3-dev fonts-dejavu-core dpkg-dev desktop-file-utils libopencv-dev libgl-dev patchelf
+      - name: Build projectM 4
+        env:
+          PROJECTM_VERSION: 4.1.7
+          PROJECTM_SHA: 16e4610b4d58981f7a2351faa58d507d3f40163a7b26ba81e19aec928c66641f
+        run: |
+          archive="libprojectM-$PROJECTM_VERSION.tar.gz"
+          curl -fL --retry 3 -o "$RUNNER_TEMP/$archive" "https://github.com/projectM-visualizer/projectm/releases/download/v$PROJECTM_VERSION/$archive"
+          echo "$PROJECTM_SHA  $RUNNER_TEMP/$archive" | sha256sum -c -
+          tar -xf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP"
+          source="$RUNNER_TEMP/libprojectM-$PROJECTM_VERSION"
+          prefix="$RUNNER_TEMP/usce-projectm"
+          cmake -S "$source" -B build/projectm -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_INSTALL_LIBDIR=lib \
+            -DBUILD_SHARED_LIBS=ON -DENABLE_PLAYLIST=OFF -DENABLE_SYSTEM_PROJECTM_EVAL=OFF
+          cmake --build build/projectm --target install --parallel 2
+          install -Dm644 "$source/LICENSE.txt" "$prefix/share/doc/projectm/copyright"
+          install -Dm644 "$source/vendor/hlslparser/LICENSE" "$prefix/share/doc/projectm/hlslparser-license"
+          install -Dm644 "$source/vendor/projectm-eval/LICENSE.md" "$prefix/share/doc/projectm/projectm-eval-license"
+          echo "USCE_PROJECTM_PREFIX=$prefix" >> "$GITHUB_ENV"
       - name: Stage native phone receiver
         run: |
           cmake -S native/phone-audio -B build/phone-audio -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -495,15 +514,22 @@ jobs:
       - name: Build native game
         run: |
           ./autogen.sh
-          ./configure --prefix=/usr --with-opencv=no --with-libprojectM=no
+          PKG_CONFIG_PATH="$USCE_PROJECTM_PREFIX/lib/pkgconfig" \
+            ./configure --prefix=/usr --with-opencv --with-libprojectM
           make -j2
           v=$(python3 tools/generate-version.py)
           echo "versionName=${v/-dev./~dev.}" >> "$GITHUB_ENV"
       - name: Build and inspect Debian package
         run: |
-          python3 tools/build-deb.py --version "$versionName" --output deb-output --themes .release-themes/bundle
+          python3 tools/build-deb.py --version "$versionName" --output deb-output --themes .release-themes/bundle --projectm-prefix "$USCE_PROJECTM_PREFIX"
           python3 tools/check_deb_install.py deb-output/*.deb
           sudo apt-get install -y ./deb-output/*.deb
+          ldd -r /usr/bin/usce | tee deb-linkage.txt
+          if grep -E "not found|undefined symbol" deb-linkage.txt; then
+            exit 1
+          fi
+          grep -E "libprojectM-4.* => /usr/(bin/\.\./)?lib/usce/" deb-linkage.txt
+          grep -E "libopencv_videoio.* => " deb-linkage.txt
           usce -help
       - name: Upload Debian package
         uses: actions/upload-artifact@v6
