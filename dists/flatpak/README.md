@@ -18,7 +18,15 @@ flatpak run io.github.ultrastar_ce.USCE -songpath "$(xdg-user-dir MUSIC)/Karaoke
 
 The package uses SDL audio through PulseAudio or PipeWire's PulseAudio service.
 It requests network access for optional phone microphones, companion views and
-online features. Webcam and projectM support are omitted from these test bundles.
+online features. projectM visualizations and presets are included.
+
+The webcam uses OpenCV and needs access to the host's V4L2 camera device.
+To use a webcam, grant host device access for that launch only. This option
+exposes all host devices that your account can access.
+
+```sh
+flatpak run --device=all io.github.ultrastar_ce.USCE
+```
 
 To build locally with Flatpak Builder:
 
