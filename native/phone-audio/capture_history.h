@@ -21,7 +21,6 @@ public:
   // Direct PCM appends a little-endian host timestamp and capture epoch to UAP1.
   static constexpr size_t pcmBytes = 980;
   static constexpr size_t stampedPcmBytes = pcmBytes + 12;
-  bool hasSamples() const { return started; }
 
   bool pushStamped(const uint8_t *data, size_t size, int64_t hostNowUs) {
     if (size != stampedPcmBytes) return false;

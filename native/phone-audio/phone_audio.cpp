@@ -489,14 +489,6 @@ int32_t usce_pa_capture_window(void *p, int64_t targetEndUs, int16_t *samples, u
     return self->captureHistory->read(targetEndUs, samples, count) ? 1 : 0;
   } catch (...) { return -1; }
 }
-int32_t usce_pa_has_capture_history(void *p) {
-  if (!p) return 0;
-  try {
-    const auto &self = *static_cast<Handle *>(p);
-    std::lock_guard<std::mutex> lock(self->mutex);
-    return self->captureHistory && self->captureHistory->hasSamples() ? 1 : 0;
-  } catch (...) { return 0; }
-}
 int32_t usce_pa_poll_calibration(void *p, int16_t *samples, int32_t capacity) {
   if (!p || !samples || capacity <= 0 || capacity > 9600) return -1;
   try {

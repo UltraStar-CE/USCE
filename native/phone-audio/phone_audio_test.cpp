@@ -126,7 +126,7 @@ int main() {
   assert(usce_pa_poll(receiver, out, 9600) == 0);
   assert(usce_pa_signal(receiver, timedPcm(1, 100000).c_str()) == 0);
   assert(usce_pa_poll(receiver, out, 9600) == 0);
-  assert(usce_pa_has_capture_history(receiver) == 0);
+  assert(usce_pa_capture_window(receiver, 1990000, out, 480) != 1);
   assert(usce_pa_signal(receiver, timedPcm(1, 1980000).c_str()) == 0);
   uint32_t generation = 0;
   assert(usce_pa_poll_generation(receiver, out, 200, &generation) == 200);
@@ -147,7 +147,7 @@ int main() {
   assert(usce_pa_signal(receiver, timedPcm(2, 1990000).c_str()) == 0);
   assert(usce_pa_poll_calibration(receiver, out, 9600) == 0);
   assert(usce_pa_poll(receiver, out, 9600) == 480); // Same sequence, independent queues.
-  assert(usce_pa_has_capture_history(receiver) == 1);
+  assert(usce_pa_capture_window(receiver, 1990000, out, 480) == 1);
   char status[4096];
   assert(usce_pa_status(receiver, status, sizeof(status)) > 0);
   assert(std::string(status).find("TEST") != std::string::npos);
@@ -157,14 +157,14 @@ int main() {
   assert(usce_pa_signal(receiver, "{\"type\":\"player.assigned\",\"playerId\":\"one\",\"slot\":1}") == 0);
   assert(usce_pa_signal(second, "{\"type\":\"player.assigned\",\"playerId\":\"two\",\"slot\":1}") == 0);
   assert(usce_pa_poll(receiver, out, 9600) == 0);
-  assert(usce_pa_has_capture_history(receiver) == 0); // A new owner starts without timing history.
+  assert(usce_pa_capture_window(receiver, 1990000, out, 480) != 1); // A new owner starts without timing history.
   usce_pa_set_clock(second, 2000000);
   const auto firstPcm = timedPcm(1, 1990000, "one");
   const auto secondPcm = timedPcm(1, 1990000, "two");
   assert(usce_pa_signal(receiver, firstPcm.c_str()) == 0);
   assert(usce_pa_signal(second, secondPcm.c_str()) == 0);
   assert(usce_pa_poll(receiver, out, 9600) == 480);
-  assert(usce_pa_has_capture_history(receiver) == 1);
+  assert(usce_pa_capture_window(receiver, 1990000, out, 480) == 1);
   assert(usce_pa_poll(second, out, 9600) == 480);
   const auto secondCalibration = std::string("{\"type\":\"audio.calibration.pcm\",\"playerId\":\"two\",\"slot\":1,\"pcm\":\"") + base64(calibrationPacket) + "\"}";
   assert(usce_pa_signal(second, secondCalibration.c_str()) == 0);
