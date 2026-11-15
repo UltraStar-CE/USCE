@@ -180,17 +180,19 @@ begin
     begin
       // Some SDL backends keep a disconnected stream open and deliver zeros.
       // Try once per silent period so a muted mic does not repeatedly reopen.
+      if not UniqueAtScan then Exit;
+      SDL_LockAudioDevice(DevID);
+      Reopen := not RetriedSilence and (Now >= LastSignal + 1500);
+      SDL_UnlockAudioDevice(DevID);
+      if not Reopen then Exit;
+      if CaptureNameMatches(Name, Exact) <> 1 then Exit;
+      if not Exact then Exit;
+
+      // The callback can receive audio while the device list is being checked.
       SDL_LockAudioDevice(DevID);
       Reopen := not RetriedSilence and (Now >= LastSignal + 1500);
       if Reopen then RetriedSilence := true;
       SDL_UnlockAudioDevice(DevID);
-      if Reopen then
-      begin
-        // Silence alone does not justify closing a stream we cannot identify.
-        if not UniqueAtScan then Exit;
-        if CaptureNameMatches(Name, Exact) <> 1 then Exit;
-        if not Exact then Exit;
-      end;
     end;
     if not Reopen then Exit;
     SDL_CloseAudioDevice(DevID);
