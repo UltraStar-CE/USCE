@@ -1,6 +1,6 @@
 # USCE Flatpak test bundles
 
-The [Flatpak bundle workflow](https://github.com/UltraStar-CE/USCE/actions/workflows/flatpak.yml) builds the pinned USCE release for x86-64 and ARM64. Download the artifact for your architecture and extract it.
+The [Flatpak bundle workflow](https://github.com/UltraStar-CE/USCE/actions/workflows/flatpak.yml) builds the checked-out USCE commit for x86-64 and ARM64. Download the artifact for your architecture and extract it.
 
 ```sh
 sha256sum -c USCE-x86_64.flatpak.sha256
@@ -20,13 +20,9 @@ The package uses SDL audio through PulseAudio or PipeWire's PulseAudio service.
 It requests network access for optional phone microphones, companion views and
 online features. projectM visualizations and presets are included.
 
-The webcam uses OpenCV and needs access to the host's V4L2 camera device.
-To use a webcam, grant host device access for that launch only. This option
-exposes all host devices that your account can access.
-
-```sh
-flatpak run --device=all io.github.ultrastar_ce.USCE
-```
+Select a webcam and enable its preview in USCE to request access through the
+desktop's Camera portal. The desktop may remember your choice. This requires a
+working Camera portal and PipeWire on the host.
 
 To build locally with Flatpak Builder:
 
@@ -36,5 +32,5 @@ flatpak-builder --user --install-deps-from=flathub --repo=flatpak-repo build-fla
 flatpak build-bundle --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo flatpak-repo USCE.flatpak io.github.ultrastar_ce.USCE
 ```
 
-When advancing the release, update the USCE tag, its commit SHA and the Themes
-commit from that tag's `themes.json` together.
+Keep the manifest's Themes commit in sync with `themes.json`. For publication,
+replace the local Git source with the matching USCE release tag and commit SHA.

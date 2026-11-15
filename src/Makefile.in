@@ -130,6 +130,9 @@ endif
 ###
 
 LIBS       ?= @LIBS@
+ifeq (@enable_camera_portal@,yes)
+PDEFINES += -dUSCE_CAMERA_PORTAL
+endif
 LDFLAGS    ?= @LDFLAGS@
 linkflags  := $(LDFLAGS) $(sort $(LIBS))
 ifneq ($(linkflags),)

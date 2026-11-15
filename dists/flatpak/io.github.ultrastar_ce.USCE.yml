@@ -91,7 +91,7 @@ modules:
       - -DBUILD_PERF_TESTS=OFF
       - -DBUILD_opencv_apps=OFF
       - -DOPENCV_GENERATE_PKGCONFIG=ON
-      # USCE uses V4L2 through OpenCV for cameras and its own FFmpeg for media.
+      # Keep V4L2 available in OpenCV. USCE uses the camera portal in this build.
       - -DWITH_V4L=ON
       - -DWITH_FFMPEG=OFF
       - -DWITH_GSTREAMER=OFF
@@ -121,7 +121,7 @@ modules:
       - printf '%s\n' "-Fl$(dirname "$(gcc -print-file-name=crtbegin.o)")" >> fpc.cfg
       - ln -s ../fpc.cfg src/fpc.cfg
       - ./autogen.sh
-      - ./configure --prefix=/app --without-portaudio --with-opencv --with-libprojectM
+      - ./configure --prefix=/app --without-portaudio --with-opencv --with-libprojectM --enable-camera-portal
       - python3 tools/bundle-themes.py bundle --source flatpak-sources/themes --destination flatpak-themes
       - |
         cmake -S native/phone-audio -B phone-flatpak -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
@@ -146,7 +146,9 @@ modules:
           exit 1
         fi
         printf '%s\n' "$libraries" | grep -F 'libprojectM-4.so'
-        printf '%s\n' "$libraries" | grep -F 'libopencv_videoio.so'
+        printf '%s\n' "$libraries" | grep -F 'libopencv_imgproc.so'
+        printf '%s\n' "$libraries" | grep -F 'libgstapp-1.0.so'
+        gst-inspect-1.0 pipewire | grep -F pipewiredeviceprovider
         test -d /app/share/usce/visuals/projectM/presets
       - install -Dm644 LICENSE /app/share/licenses/io.github.ultrastar_ce.USCE/usce/LICENSE
       - install -Dm644 icons/usce-icon_256.png /app/share/icons/hicolor/256x256/apps/io.github.ultrastar_ce.USCE.png
@@ -159,13 +161,12 @@ modules:
             dists/usce.appdata.xml > /app/share/metainfo/io.github.ultrastar_ce.USCE.metainfo.xml
     sources:
       - type: git
-        url: https://github.com/UltraStar-CE/USCE.git
-        tag: v2026.11.0
-        commit: da6823c12bb1eb8a155ab802e78c0f054807894d
+        path: ../..
+        branch: HEAD
         disable-submodules: true
       - type: git
         url: https://github.com/UltraStar-CE/Themes.git
-        commit: d892d99465480a08f395d5e7b932f18f8f3ee68d
+        commit: 92639dac9c23f5f30836c1866fb10df5d25ea69d
         disable-submodules: true
         dest: flatpak-sources/themes
       - type: git

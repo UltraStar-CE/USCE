@@ -73,6 +73,7 @@ type
       procedure Start;
       procedure Release;
       procedure Restart;
+      function CaptureFailed: boolean;
       procedure GetWebcamFrame();
       function FrameEffect(Nr_Effect: integer; Frame: PIplImage): PIplImage;
       function FrameAdjust(Frame: PIplImage): PIplImage;
@@ -87,6 +88,7 @@ type
       procedure Start;
       procedure Release;
       procedure Restart;
+      function CaptureFailed: boolean;
       procedure GetWebcamFrame();
    end;
 {$ENDIF}
@@ -158,7 +160,7 @@ begin
   begin
     try
       Capture := cvCreateCameraCapture(Ini.WebCamID - 1);
-      IsEnabled := true;
+      IsEnabled := Capture <> nil;
     except
       IsEnabled:=false;
     end;
@@ -176,6 +178,8 @@ begin
 
       Interval := 1000 div StrToInt(IWebcamFPS[Ini.WebCamFPS]);
       CaptureThread := SDL_CreateThread(@TWebcam.CaptureThreadMain, nil, Self);
+      if CaptureThread = nil then
+        Release;
     end;
   end;
 
@@ -189,13 +193,33 @@ begin
     IsEnabled := false;
     SDL_CondSignal(StopCond);
     SDL_UnlockMutex(Mutex);
-    SDL_WaitThread(CaptureThread, nil);
+    {$IFDEF USCE_CAMERA_PORTAL}
+    cvCancelCameraCapture(Capture);
+    {$ENDIF}
+    if CaptureThread <> nil then
+    begin
+      SDL_WaitThread(CaptureThread, nil);
+      CaptureThread := nil;
+    end;
     try
       cvReleaseCapture(@Capture);
     except
       ;
     end;
+    cvReleaseImage(@CurrentFrame);
+    FreeAndNil(TextureCam);
   end;
+end;
+
+function TWebcam.CaptureFailed: boolean;
+begin
+  if Capture = nil then
+    Exit(true);
+  {$IFDEF USCE_CAMERA_PORTAL}
+  Result := cvCameraCaptureFailed(Capture) <> 0;
+  {$ELSE}
+  Result := false;
+  {$ENDIF}
 end;
 
 procedure TWebcam.Restart;
@@ -485,6 +509,11 @@ procedure TWebcam.Restart;
 begin
   Release;
   Start;
+end;
+
+function TWebcam.CaptureFailed: boolean;
+begin
+  Result := true;
 end;
 
 procedure TWebcam.GetWebcamFrame();

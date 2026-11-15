@@ -90,6 +90,9 @@ check that `make -C dists/windows install` completed successfully, then rerun
 * `--with-opencv`: Enable webcam support with OpenCV. By default, configure
   auto-detects OpenCV 3+ and disables webcam support if OpenCV is not found.
 * `--without-opencv`: Build without webcam support even if OpenCV is installed.
+* `--enable-camera-portal`: On Linux, use the desktop Camera portal and
+  PipeWire for webcam capture. Requires OpenCV, GIO, GStreamer app/video
+  development files, and the GStreamer PipeWire plugin at runtime.
 
 For local macOS builds, use `make macos-standalone-app MACOS_SIGN_IDENTITY="Your certificate name"`
 or the same variable with `macos-dmg`. Both signing steps use that identity.

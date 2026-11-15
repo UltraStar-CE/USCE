@@ -10,6 +10,15 @@ interface
 
 {$IFNDEF MSWINDOWS}
   {$L ApiWrapper.o}
+  {$IFDEF USCE_CAMERA_PORTAL}
+    {$L CameraPortal.o}
+    {$LINKLIB gio-2.0}
+    {$LINKLIB gobject-2.0}
+    {$LINKLIB glib-2.0}
+    {$LINKLIB gstapp-1.0}
+    {$LINKLIB gstvideo-1.0}
+    {$LINKLIB gstreamer-1.0}
+  {$ENDIF}
   {$IFDEF OpenCVVideoioStandalone}
     {$IFNDEF OpenCVManualLink}
       {$LINKLIB opencv_videoio}
@@ -61,6 +70,10 @@ function USDX_cvQueryFrame(capture: PCvCapture): PUMatWrapper; cdecl;
 function cvQueryFrame(capture: PCvCapture): PIplImage;
 procedure cvReleaseCapture(capture: PPCvCapture); cdecl;
   {$IF Defined(MSWINDOWS)}external libopencvwrapper{$ELSE}external{$ENDIF} name 'USDX_cvReleaseCapture';
+{$IFDEF USCE_CAMERA_PORTAL}
+procedure cvCancelCameraCapture(capture: PCvCapture); cdecl; external name 'USCE_cancelCameraCapture';
+function cvCameraCaptureFailed(capture: PCvCapture): cint; cdecl; external name 'USCE_cameraCaptureFailed';
+{$ENDIF}
 
 const
     CV_CAP_PROP_DC1394_OFF         = -4;

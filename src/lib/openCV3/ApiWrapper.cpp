@@ -2,6 +2,9 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/videoio.hpp>
 #include <cstdio>
+#ifdef USCE_CAMERA_PORTAL
+#include "CameraPortal.hpp"
+#endif
 
 // OpenCV 4 no longer defines these by default
 #define CV_CANNY_L2_GRADIENT	(1 << 31)
@@ -23,9 +26,14 @@ struct UMatWrapper {
 };
 
 struct USDX_CvCapture {
+#ifdef USCE_CAMERA_PORTAL
+	explicit USDX_CvCapture(int index) : index(index) {}
+	int index;
+	CameraPortal portal;
+#else
 	USDX_CvCapture(int index) : cap(index) {}
-
 	cv::VideoCapture cap;
+#endif
 	UMatWrapper frame;
 };
 
@@ -377,14 +385,30 @@ double USDX_cvInvert(cv::Mat *src, cv::Mat *dst, int method)
 USDX_CvCapture *USDX_cvCreateCameraCapture(int index)
 {
 	try {
+#ifdef USCE_CAMERA_PORTAL
+		return new USDX_CvCapture(index);
+#else
 		USDX_CvCapture *c = new USDX_CvCapture(index);
 		if (c->cap.isOpened())
 			return c;
 		delete c;
+#endif
 	} catch(...) {}
 	return NULL;
 
 }
+
+#ifdef USCE_CAMERA_PORTAL
+extern "C" void USCE_cancelCameraCapture(USDX_CvCapture *capture)
+{
+	capture->portal.cancel();
+}
+
+extern "C" int USCE_cameraCaptureFailed(USDX_CvCapture *capture)
+{
+	return capture->portal.failed();
+}
+#endif
 
 void USDX_cvReleaseCapture(USDX_CvCapture **capture)
 {
@@ -400,7 +424,11 @@ UMatWrapper* USDX_cvQueryFrame(USDX_CvCapture *capture)
 {
 	if (capture) {
 		try {
+#ifdef USCE_CAMERA_PORTAL
+			if (capture->portal.read(capture->index, capture->frame.umat))
+#else
 			if (capture->cap.read(capture->frame.umat))
+#endif
 				return &capture->frame;
 		} catch (...) {}
 	}
@@ -411,7 +439,17 @@ int USDX_cvSetCaptureProperty(USDX_CvCapture* capture, int property_id, double v
 {
 	if (capture) {
 		try {
+#ifdef USCE_CAMERA_PORTAL
+			if (property_id == cv::CAP_PROP_FRAME_WIDTH)
+				capture->portal.width = value;
+			else if (property_id == cv::CAP_PROP_FRAME_HEIGHT)
+				capture->portal.height = value;
+			else
+				return 0;
+			return 1;
+#else
 			return capture->cap.set(property_id, value);
+#endif
 		} catch (...) {}
 	}
 	return 0;
