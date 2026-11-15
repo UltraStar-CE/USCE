@@ -18,8 +18,6 @@ class CaptureHistory {
   bool started = false;
 
 public:
-  uint64_t noEndpoint = 0, packetHoles = 0, sourceBreaks = 0, clockDiscontinuities = 0;
-  uint64_t beforeRetainedAudio = 0, afterRetainedAudio = 0, betweenTimestamps = 0;
   void push(const uint8_t *data, size_t size, int64_t endUs, int64_t hostNowUs,
             uint32_t captureEpoch = 0) {
     if (size != 980 || PcmQueue::u32(data) != 0x31504155 ||
@@ -54,11 +52,8 @@ public:
     int64_t best = 7001;
     const Packet *bracketEnd = nullptr;
     uint32_t bracketSkip = 0;
-    int64_t earliest = 0, latest = 0;
     for (const auto &packet : packets) {
       if (!packet.endUs || newestSequence - packet.sequence >= packetCount) continue;
-      if (!earliest || packet.endUs < earliest) earliest = packet.endUs;
-      if (packet.endUs > latest) latest = packet.endUs;
       // The caller bounds both clocks to the game session's monotonic range.
       const auto delta = packet.endUs - targetEndUs;
       const auto distance = delta < 0 ? -delta : delta;
@@ -75,25 +70,12 @@ public:
       end = bracketEnd;
       skip = bracketSkip;
     }
-    if (!end) {
-      ++noEndpoint;
-      if (earliest) {
-        if (targetEndUs < earliest) ++beforeRetainedAudio;
-        else if (targetEndUs > latest) ++afterRetainedAudio;
-        else ++betweenTimestamps;
-      }
-      return false;
-    }
+    if (!end) return false;
     const auto chunks = (count + skip + samplesPerPacket - 1) / samplesPerPacket;
     for (uint32_t i = 1; i < chunks; ++i) {
       const auto &next = packets[(end->sequence - i + 1) % packetCount];
       const auto &prev = packets[(end->sequence - i) % packetCount];
-      if (!consecutiveSamples(prev, next)) { ++packetHoles; return false; }
-      if (prev.captureEpoch != next.captureEpoch) { ++sourceBreaks; return false; }
-      if (!next.captureEpoch && !validTimeStep(next.endUs-prev.endUs)) {
-        ++clockDiscontinuities;
-        return false;
-      }
+      if (!contiguous(prev, next)) return false;
     }
     for (uint32_t remaining = count, i = 0; remaining != 0; ++i) {
       const auto &packet = packets[(end->sequence - i) % packetCount];

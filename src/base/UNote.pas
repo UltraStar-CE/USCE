@@ -994,47 +994,6 @@ begin
 
 end;
 
-var
-  CaptureOffsetNextReadUs, CaptureOffsetValidUntilUs: int64;
-  LastTestCaptureOffset: integer;
-
-function ReadTestCaptureOffset(Fallback: integer; out Adaptive: boolean): integer;
-var
-  Path, Line: string;
-  Input: TextFile;
-  NowUs, Expires: int64;
-  Separator, Offset: integer;
-begin
-  Adaptive := false;
-  Result := Fallback;
-  Path := GetEnvironmentVariable('USCE_TEST_CAPTURE_OFFSET_FILE');
-  if Path = '' then Exit;
-  NowUs := int64(GetTickCount64) * 1000;
-  if NowUs >= CaptureOffsetNextReadUs then
-  begin
-    CaptureOffsetNextReadUs := NowUs + 250000;
-    if FileExists(Path) then
-      try
-        AssignFile(Input, Path);
-        Reset(Input);
-        try ReadLn(Input, Line); finally CloseFile(Input); end;
-        Separator := Pos(' ', Line);
-        if (Separator > 0) and TryStrToInt64(Copy(Line, 1, Separator - 1), Expires) and
-          TryStrToInt(Copy(Line, Separator + 1, MaxInt), Offset) and
-          (Expires > NowUs) and (Expires <= NowUs + 5000000) and
-          (Offset >= 0) and (Offset <= 750) then
-        begin
-          LastTestCaptureOffset := Offset;
-          CaptureOffsetValidUntilUs := Expires;
-        end;
-      except
-        on EInOutError do ; // A missing fixture update leaves the old estimate to expire.
-      end;
-  end;
-  Adaptive := NowUs < CaptureOffsetValidUntilUs;
-  if Adaptive then Result := LastTestCaptureOffset;
-end;
-
 procedure NewNote(CP: integer; Screen: TScreenSingController);
 const
   CaptureRecoveryShiftsUs: array[0..3] of integer = (-10000, 10000, -20000, 20000);
@@ -1073,7 +1032,6 @@ var
   CaptureShiftUs: integer;
   CaptureOffsetMs:    integer;
   UsedTimedWindow:     boolean;
-  AdaptiveCapture:     boolean;
   DeadlineBeat:        integer;
   ScoreWhenReady, EarlyReady: boolean;
   RemoteTone:          TRemoteToneSample;
@@ -1100,8 +1058,7 @@ begin
   ActualTone := 0;
   NoteHit := false;
   LastPracticeBeat := Screen.LastPracticeBeat;
-  CaptureOffsetMs := ReadTestCaptureOffset(
-    StrToIntDef(GetEnvironmentVariable('USCE_CAPTURE_OFFSET_MS'), -1), AdaptiveCapture);
+  CaptureOffsetMs := StrToIntDef(GetEnvironmentVariable('USCE_CAPTURE_OFFSET_MS'), -1);
 
   // TODO: add duet mode support
   // use CurrentSong.Tracks[LineSetIndex] with LineSetIndex depending on the current player
@@ -1197,7 +1154,6 @@ begin
 
       begin
         UsedTimedWindow := false;
-        CaptureShiftUs := 0;
         EarlyReady := ScoreWhenReady and (ActualBeat > DeadlineBeat);
         if EarlyReady then
         begin
@@ -1369,7 +1325,6 @@ begin
                 if UsedTimedWindow then Break;
               end;
           end;
-          if not UsedTimedWindow then CaptureShiftUs := 0;
           if not UsedTimedWindow then CurrentSound.AnalyzeBuffer;
           if (Ini.PitchTrace <> 0) and not NoteAvailable and CurrentSound.ToneValid then
             AddGapSungNote(PlayerIndex, ActualBeat, CurrentSound.Tone);
@@ -1387,16 +1342,8 @@ begin
               ',"valid":' + LowerCase(BoolToStr(CurrentSound.ToneValid, true)) +
               ',"globalDelayMs":' + IntToStr(Ini.MicDelay) +
               ',"playerDelayMs":' + IntToStr(Player[PlayerIndex].DetectionDelay) +
-              ',"windowSamples":' + IntToStr(CurrentSound.LastAnalysisWindowSamples) +
-              ',"analysisPeakPermille":' + IntToStr(Round(CurrentSound.LastAnalysisPeak * 1000)) +
-              ',"analysisThresholdPermille":' + IntToStr(Round(CurrentSound.LastAnalysisThreshold * 1000)) +
-              ',"captureEndSample":' + IntToStr(CurrentSound.PhoneCaptureEndSample) +
-              ',"captureGeneration":' + IntToStr(CurrentSound.PhoneCaptureGeneration) +
               ',"timedWindow":' + LowerCase(BoolToStr(UsedTimedWindow, true)) +
-              ',"captureShiftUs":' + IntToStr(CaptureShiftUs) +
               ',"judgedOnArrival":' + LowerCase(BoolToStr(EarlyReady, true)) +
-              ',"adaptiveOffsetAvailable":' + LowerCase(BoolToStr(AdaptiveCapture, true)) +
-              ',"adaptiveCapture":' + LowerCase(BoolToStr(AdaptiveCapture and UsedTimedWindow, true)) +
               ',"captureOffsetMs":' + IntToStr(CaptureOffsetMs) +
               ',"native":' + string(PhoneAudio.Status(PlayerIndex)) + '}', 'Audio alignment');
           end;
