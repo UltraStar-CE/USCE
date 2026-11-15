@@ -40,8 +40,7 @@ uses
   SysUtils,
   UCommon,
   UMusic,
-  UIni,
-  UPhoneNoiseGate;
+  UIni;
 
 const
   BaseToneFreq = 440; // A4 concert pitch of 440 Hz
@@ -53,8 +52,7 @@ type
   // pitch detection algorithm (PDA)
   TPDAType = (
     PDA_AMDF,   // average magnitude difference function
-    PDA_CAMDF, // circular average magnitude difference function
-    PDA_HARMONIC_CAMDF
+    PDA_CAMDF  // circular average magnitude difference function
   );
 
   TFrequencyArray   = array[0..NumHalftones-1] of real;
@@ -77,8 +75,6 @@ type
       Delays: TDelayArray;
       fToneCandidates: array[0..MaxToneCandidates-1] of TToneCandidate;
       fToneCandidateCount: integer;
-      fPhoneNoiseGate: TPhoneNoiseGate;
-      fPhoneNoiseOwner: UTF8String;
 
       function GetToneString: string; // converts a tone to its string representation;
       function GetToneCandidate(Index: integer): TToneCandidate;
@@ -94,7 +90,6 @@ type
       procedure SetFrequenciesAndDelays;
       // we call it to analyze sound by checking AMDF
       function AnalyzePitch(PDA: TPDAType): boolean;
-      function ResolveTriplePeriod(ToneIndex: integer): integer;
       // use this to check one frequency by AMDF
       function AverageMagnitudeDifference(): TCorrelationArray;
       function CircularAverageMagnitudeDifference(): TCorrelationArray;
@@ -118,9 +113,7 @@ type
       LastInputTicks: QWord;
       LastInputBlockMs: double;
       LastAnalysisMicroseconds: double;
-      LastAnalysisPeak, LastAnalysisThreshold: single;
-      LastAnalysisWindowSamples: integer;
-      PhoneCaptureEndSample, PhoneCaptureGeneration: LongWord;
+      PhoneCaptureGeneration: LongWord;
       PitchAlgorithm: TPDAType;
 
       // methods
@@ -135,8 +128,6 @@ type
       function AnalyzePhoneWindow(PlayerIndex: integer; CenterHostUs: Int64): boolean;
       // Experimental native phone input, mono S16 at 48 kHz. Main thread only.
       procedure SubmitPhonePcm(Samples: pointer; Count: integer);
-      procedure ObservePhoneNoise(const Owner: UTF8String; Idle: boolean;
-        Samples: PSmallInt; Count: integer);
       procedure LockAnalysisBuffer();
       procedure UnlockAnalysisBuffer();
 
@@ -331,8 +322,6 @@ begin
     Capture := AudioInputProcessor.Sound[I];
     Count := PhoneAudio.PollPosition(@Samples[0], Length(Samples), I, Position);
     Owner := RemoteInputProcessor.AssignedPlayerId(I);
-    if GetEnvironmentVariable('USCE_TEST_PHONE_AUTO_GATE') = '1' then
-      Capture.ObservePhoneNoise(Owner, CalibrationAllowed, @Samples[0], Count);
     if RemoteInputProcessor.HasAssignedPlayer(I) or (Count > 0) then
       Capture.SubmitPhonePcm(nil, 0);
     if Count > 0 then
@@ -341,7 +330,6 @@ begin
         (Capture.PhoneCaptureGeneration <> Position.Generation) then
         Capture.Clear;
       Capture.SubmitPhonePcm(@Samples[0], Count);
-      Capture.PhoneCaptureEndSample := Position.EndSample;
       Capture.PhoneCaptureGeneration := Position.Generation;
       PhoneInputLastSamples[I] := GetTickCount64;
       PhoneInputWasLive[I] := true;
@@ -438,7 +426,6 @@ begin
   AnalysisBufferSize := Length(AnalysisBuffer);
   PitchAlgorithm := PDA_CAMDF;
   if GetEnvironmentVariable('USCE_AUDIO_DETECTOR') = 'amdf' then PitchAlgorithm := PDA_AMDF;
-  if GetEnvironmentVariable('USCE_AUDIO_DETECTOR') = 'harmonic' then PitchAlgorithm := PDA_HARMONIC_CAMDF;
   // Experimental comparison for physical and phone microphones alike.
   case StrToIntDef(GetEnvironmentVariable('USCE_AUDIO_WINDOW'), 4096) of
     1024: AnalysisBufferSize := 1024;
@@ -492,7 +479,6 @@ end;
 
 procedure TCaptureBuffer.Clear;
 begin
-  PhoneCaptureEndSample := 0;
   PhoneCaptureGeneration := 0;
   if assigned(LogBuffer) then
     LogBuffer.Clear;
@@ -580,7 +566,6 @@ begin
   if (AnalysisBufferSize <> 512) and (AnalysisBufferSize <> 1024) and (AnalysisBufferSize <> 2048) and
     (AnalysisBufferSize <> 4096) then
     AnalysisBufferSize := Length(AnalysisBuffer);
-  LastAnalysisWindowSamples := AnalysisBufferSize;
   ToneValid := false;
   ToneAbs := -1;
   Tone    := -1;
@@ -599,9 +584,6 @@ begin
     end;
 
     Threshold := IThresholdVals[Ini.ThresholdIndex];
-    if fPhoneNoiseOwner <> '' then Threshold := fPhoneNoiseGate.Threshold(Threshold);
-    LastAnalysisPeak := MaxVolume;
-    LastAnalysisThreshold := Threshold;
 
     // check if signal has an acceptable volume (ignore background-noise)
     if MaxVolume >= Threshold then
@@ -658,17 +640,6 @@ begin
     try Move(Saved[First], AnalysisBuffer[First], Count * SizeOf(SmallInt));
     finally UnlockAnalysisBuffer; end;
   end;
-end;
-
-procedure TCaptureBuffer.ObservePhoneNoise(const Owner: UTF8String; Idle: boolean;
-  Samples: PSmallInt; Count: integer);
-begin
-  if Owner <> fPhoneNoiseOwner then
-  begin
-    fPhoneNoiseOwner := Owner;
-    fPhoneNoiseGate.Reset;
-  end;
-  if Idle and (Owner <> '') and (Count > 0) then fPhoneNoiseGate.Observe(Samples, Count);
 end;
 
 procedure TCaptureBuffer.SubmitPhonePcm(Samples: pointer; Count: integer);
@@ -776,37 +747,6 @@ begin
   end;
 end;
 
-function TCaptureBuffer.ResolveTriplePeriod(ToneIndex: integer): integer;
-const
-  TripledFrequencySemitones = 19;
-var
-  Higher, Index, Count, Base, Longer, Shorter: integer;
-  Signal, LongDifference, ShortDifference: int64;
-begin
-  Result := ToneIndex;
-  Higher := ToneIndex + TripledFrequencySemitones;
-  if (ToneIndex < 0) or (Higher >= NumHalftones) then Exit;
-  Longer := Delays[ToneIndex];
-  Shorter := Delays[Higher];
-  Count := AnalysisBufferSize - Longer;
-  if Count < Longer then Exit;
-  Base := Length(AnalysisBuffer) - AnalysisBufferSize;
-  Signal := 0;
-  LongDifference := 0;
-  ShortDifference := 0;
-  // Compare the same non-wrapping segment at both lags. A true shorter
-  // period can also repeat three periods later, confusing a raw minimum.
-  for Index := Base to Base + Count - 1 do
-  begin
-    Inc(Signal, Abs(integer(AnalysisBuffer[Index])));
-    Inc(LongDifference, Abs(integer(AnalysisBuffer[Index]) - AnalysisBuffer[Index + Longer]));
-    Inc(ShortDifference, Abs(integer(AnalysisBuffer[Index]) - AnalysisBuffer[Index + Shorter]));
-  end;
-  if (Signal > 0) and (ShortDifference * 8 <= Signal) and
-    (ShortDifference * 25 <= LongDifference * 25 + Signal) then
-    Result := Higher;
-end;
-
 function TCaptureBuffer.AnalyzePitch(PDA: TPDAType): boolean;
 var
   Correlation: TCorrelationArray;
@@ -824,11 +764,10 @@ begin
         Correlation := AverageMagnitudeDifference();
         ToneAbs := ArrayIndexOfMinimum(Correlation);
       end;
-    PDA_CAMDF, PDA_HARMONIC_CAMDF:
+    PDA_CAMDF:
       begin
         Correlation := CircularAverageMagnitudeDifference();
         ToneAbs := ArrayIndexOfMinimum(Correlation);
-        if PDA = PDA_HARMONIC_CAMDF then ToneAbs := ResolveTriplePeriod(ToneAbs);
       end;
   end;
 

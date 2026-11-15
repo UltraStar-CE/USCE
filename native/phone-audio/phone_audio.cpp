@@ -44,7 +44,6 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
   Clock::time_point heartbeat{};
   Clock::time_point previousPoll{};
   double maxPollIntervalMs = 0;
-  int64_t lastRelayTransitUs = -1, lastCaptureToSendUs = -1;
   Clock::time_point lastDirectPacket{}, lastDirectAck{}, lastRelayPacket{};
   uint32_t directSequence = 0;
   std::atomic<bool> stopped{false};
@@ -231,21 +230,6 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
         const auto rejected = pcm.rejected;
         if (pcm.push(bytes.data(), bytes.size())) state = "receiving PCM";
         const auto stamp = m.find("captureEndHostUs");
-        const auto sent = m.find("sendHostUs");
-        lastRelayTransitUs = -1;
-        lastCaptureToSendUs = -1;
-        if (gameClock.ready && sent != m.end() && sent->is_number_integer()) {
-          const auto sentUs = sent->get<int64_t>();
-          const auto nowUs = gameClock.nowUs();
-          if (sentUs >= nowUs - 2000000 && sentUs <= nowUs + 30000) {
-            lastRelayTransitUs = nowUs - sentUs;
-            if (stamp != m.end() && stamp->is_number_integer()) {
-              const auto captureUs = stamp->get<int64_t>();
-              if (captureUs >= sentUs - 2000000 && captureUs <= sentUs + 30000)
-                lastCaptureToSendUs = sentUs - captureUs;
-            }
-          }
-        }
         if (gameClock.ready && stamp != m.end() && stamp->is_number_integer()) {
           const auto endUs = stamp->get<int64_t>();
           if (endUs > 0 && endUs <= 9000000000000000LL) {
@@ -545,15 +529,6 @@ int32_t usce_pa_status(void *p, char *buffer, int32_t capacity) {
       {"queueMs", q.samples.size() / 48.0}, {"packetAgeMs", age}, {"peak", q.peak},
       {"maxQueueMs", q.maxQueuedMs}, {"maxPacketIntervalMs", q.maxPacketIntervalMs},
       {"maxGamePollIntervalMs", self->maxPollIntervalMs}});
-    if (const auto &history = self->captureHistory)
-      status["captureWindowFailures"] = {{"noEndpoint", history->noEndpoint},
-        {"packetHoles", history->packetHoles}, {"sourceBreaks", history->sourceBreaks},
-        {"clockDiscontinuities", history->clockDiscontinuities},
-        {"beforeRetainedAudio", history->beforeRetainedAudio},
-        {"afterRetainedAudio", history->afterRetainedAudio},
-        {"betweenTimestamps", history->betweenTimestamps}};
-    status["lastRelayTransitUs"] = self->lastRelayTransitUs;
-    status["lastCaptureToSendUs"] = self->lastCaptureToSendUs;
     const auto text = status.dump();
     if (text.size() + 1 > size_t(capacity)) return -1;
     std::memcpy(buffer, text.c_str(), text.size() + 1);
