@@ -115,12 +115,12 @@ int main() {
   assert(usce_pa_signal(receiver, "{\"type\":\"room.created\",\"displayCode\":\"TEST\"}") == 0);
   const auto pcm = std::string("{\"type\":\"audio.pcm\",\"slot\":1,\"pcm\":\"") + base64(packet(1)) + "\"}";
   assert(usce_pa_signal(receiver, pcm.c_str()) == 0);
-  uint32_t endSample = 0, generation = 0;
-  assert(usce_pa_poll_position(receiver, out, 200, &endSample, &generation) == 200);
-  assert(endSample == 680 && generation != 0);
+  uint32_t generation = 0;
+  assert(usce_pa_poll_generation(receiver, out, 200, &generation) == 200);
+  assert(generation != 0);
   const auto firstGeneration = generation;
-  assert(usce_pa_poll_position(receiver, out, 9600, &endSample, &generation) == 280);
-  assert(endSample == 960 && generation == firstGeneration);
+  assert(usce_pa_poll_generation(receiver, out, 9600, &generation) == 280);
+  assert(generation == firstGeneration);
   assert(out[0] == 16384);
   auto calibrationPacket = packet(2);
   calibrationPacket[2] = 'C';

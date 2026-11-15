@@ -311,7 +311,7 @@ end;
 procedure UpdatePhoneAudio(CalibrationAllowed: boolean);
 var Samples: array[0..9599] of smallint;
     Count, I: integer;
-    Position: TPaCapturePosition;
+    Generation: LongWord;
     Capture: TCaptureBuffer;
     Message, Owner: UTF8String;
     NowUs: int64;
@@ -321,17 +321,17 @@ begin
   for I := 0 to High(AudioInputProcessor.Sound) do
   begin
     Capture := AudioInputProcessor.Sound[I];
-    Count := PhoneAudio.PollPosition(@Samples[0], Length(Samples), I, Position);
+    Count := PhoneAudio.Poll(@Samples[0], Length(Samples), I, Generation);
     Owner := RemoteInputProcessor.AssignedPlayerId(I);
     if RemoteInputProcessor.HasAssignedPlayer(I) or (Count > 0) then
       Capture.SubmitPhonePcm(nil, 0);
     if Count > 0 then
     begin
-      if (Capture.PhoneCaptureGeneration <> 0) and (Position.Generation <> 0) and
-        (Capture.PhoneCaptureGeneration <> Position.Generation) then
+      if (Capture.PhoneCaptureGeneration <> 0) and (Generation <> 0) and
+        (Capture.PhoneCaptureGeneration <> Generation) then
         Capture.Clear;
       Capture.SubmitPhonePcm(@Samples[0], Count);
-      Capture.PhoneCaptureGeneration := Position.Generation;
+      Capture.PhoneCaptureGeneration := Generation;
       PhoneInputLastSamples[I] := GetTickCount64;
       PhoneInputWasLive[I] := true;
     end
