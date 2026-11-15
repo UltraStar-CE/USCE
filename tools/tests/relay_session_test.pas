@@ -11,10 +11,14 @@ type
   end;
 
 procedure TObserver.Handle(Message: TJSONObject);
+var Kind: string;
 begin
-  if Message.Get('type', '') = 'room.created' then Inc(Created);
-  if Message.Get('type', '') = 'room.resumed' then Inc(Resumed);
-  if Message.Get('type', '') = 'fixture.work' then
+  Kind := Message.Get('type', '');
+  if (Kind = 'room.created') or (Kind = 'room.resumed') then
+    Assert(Message.Get('captureTimestampsV1', false), 'Missing capture timing capability');
+  if Kind = 'room.created' then Inc(Created);
+  if Kind = 'room.resumed' then Inc(Resumed);
+  if Kind = 'fixture.work' then
   begin
     Inc(Work);
     Sleep(15);
@@ -37,7 +41,7 @@ begin
   Observer := TObserver.Create;
   try
     Session.OnMessage := Observer.Handle;
-    Session.Start(ParamStr(2), ParamStr(1), 'native-session-test');
+    Session.Start(ParamStr(2), ParamStr(1), 'native-session-test', true);
     for I := 1 to 2 do
     begin
       Deadline := GetTickCount64 + 10000;
