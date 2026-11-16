@@ -1948,6 +1948,13 @@ end;
 
 function TScreenSingController.Draw: boolean;
 begin
+  if fShowWebcam and Webcam.CaptureFailed then
+  begin
+    Webcam.Release;
+    fShowWebcam := false;
+    fShowBackground := true;
+    ScreenPopupError.ShowPopup(Language.Translate('SING_OPTIONS_WEBCAM_NO_WEBCAM'));
+  end;
   SendRemoteScoreSnapshot(false);
   Result := true;
   if not ScreenContinuousPlayback.Session.Active or
