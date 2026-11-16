@@ -72,7 +72,8 @@ procedure cvReleaseCapture(capture: PPCvCapture); cdecl;
   {$IF Defined(MSWINDOWS)}external libopencvwrapper{$ELSE}external{$ENDIF} name 'USDX_cvReleaseCapture';
 {$IFDEF USCE_CAMERA_PORTAL}
 procedure cvCancelCameraCapture(capture: PCvCapture); cdecl; external name 'USCE_cancelCameraCapture';
-function cvCameraCaptureFailed(capture: PCvCapture): cint; cdecl; external name 'USCE_cameraCaptureFailed';
+function cvCameraCaptureError(capture: PCvCapture): cint; cdecl; external name 'USCE_cameraCaptureError';
+const CV_CAMERA_CAPTURE_PERMISSION_ERROR = 2; // CameraPortal::Failure::Permission
 {$ENDIF}
 
 const

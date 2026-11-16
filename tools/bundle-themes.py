@@ -146,7 +146,7 @@ def modern(source, destination, pin, sync=False):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['pin', 'bundle', 'portable', 'setup', 'check-modern', 'sync-modern'])
+    parser.add_argument('command', choices=['pin', 'bundle', 'portable', 'setup', 'check-modern', 'sync-modern', 'flatpak-source'])
     parser.add_argument('--pin', default=str(ROOT / 'themes.json'))
     parser.add_argument('--source', default=str(ROOT / '.release-themes/source'))
     parser.add_argument('--destination')
@@ -155,6 +155,14 @@ if __name__ == '__main__':
     pin = read_pin(args.pin)
     if args.command == 'pin':
         print('sha=' + pin['sha'])
+    elif args.command == 'flatpak-source':
+        print(json.dumps({
+            'type': 'git',
+            'url': 'https://github.com/' + pin['repository'] + '.git',
+            'commit': pin['sha'],
+            'disable-submodules': True,
+            'dest': 'flatpak-sources/themes',
+        }, indent=2))
     elif args.command == 'bundle':
         manifest = bundle(args.source, args.destination or ROOT / '.release-themes/bundle', pin)
         print('Bundled {} themes from {}'.format(len(manifest['themes']), manifest['sha']))

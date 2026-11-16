@@ -71,6 +71,8 @@ int CameraPortal::requestAccess()
     g_free(sender);
 
     int remote = -1;
+    if (response == 1)
+        failure = Failure::Permission;
     if (response == 0 && !g_cancellable_is_cancelled(cancellable)) {
         GUnixFDList *fds = nullptr;
         GVariant *reply = g_dbus_connection_call_with_unix_fd_list_sync(bus, desktop,
@@ -172,10 +174,11 @@ bool CameraPortal::start(int index)
 
 bool CameraPortal::read(int index, cv::UMat &frame)
 {
-    if (failure || g_cancellable_is_cancelled(cancellable))
+    if (error() != Failure::None || g_cancellable_is_cancelled(cancellable))
         return false;
     if (!pipeline && !start(index)) {
-        failure = true;
+        if (error() == Failure::None)
+            failure = Failure::Capture;
         return false;
     }
 
@@ -184,14 +187,14 @@ bool CameraPortal::read(int index, cv::UMat &frame)
     gst_object_unref(bus);
     if (message) {
         gst_message_unref(message);
-        failure = true;
+        failure = Failure::Capture;
         return false;
     }
 
     GstSample *sample = gst_app_sink_try_pull_sample(sink, 0);
     if (!sample) {
         if (firstFrameDeadline && g_get_monotonic_time() >= firstFrameDeadline)
-            failure = true;
+            failure = Failure::Capture;
         return false;
     }
 
@@ -216,6 +219,6 @@ bool CameraPortal::read(int index, cv::UMat &frame)
     if (received)
         firstFrameDeadline = 0;
     else if (firstFrameDeadline && g_get_monotonic_time() >= firstFrameDeadline)
-        failure = true;
+        failure = Failure::Capture;
     return received;
 }

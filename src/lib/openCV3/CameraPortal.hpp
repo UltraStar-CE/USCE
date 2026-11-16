@@ -7,13 +7,15 @@
 
 class CameraPortal {
 public:
+    enum class Failure { None, Capture, Permission };
+
     CameraPortal() = default;
     ~CameraPortal();
     CameraPortal(const CameraPortal &) = delete;
     CameraPortal &operator=(const CameraPortal &) = delete;
 
     void cancel() { g_cancellable_cancel(cancellable); }
-    bool failed() const { return failure.load(); }
+    Failure error() const { return failure.load(); }
     bool read(int index, cv::UMat &frame);
     int width = 0;
     int height = 0;
@@ -27,5 +29,5 @@ private:
     GstAppSink *sink = nullptr;
     int fd = -1;
     gint64 firstFrameDeadline = 0;
-    std::atomic<bool> failure{false};
+    std::atomic<Failure> failure{Failure::None};
 };

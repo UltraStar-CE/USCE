@@ -404,9 +404,9 @@ extern "C" void USCE_cancelCameraCapture(USDX_CvCapture *capture)
 	capture->portal.cancel();
 }
 
-extern "C" int USCE_cameraCaptureFailed(USDX_CvCapture *capture)
+extern "C" int USCE_cameraCaptureError(USDX_CvCapture *capture)
 {
-	return capture->portal.failed();
+	return static_cast<int>(capture->portal.error());
 }
 #endif
 
