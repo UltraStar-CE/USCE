@@ -5,6 +5,7 @@
 #include <cassert>
 #include <iostream>
 #include <string>
+#include <thread>
 static std::string base64(const std::vector<uint8_t> &bytes) {
   const char *alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
   std::string text;
@@ -96,6 +97,15 @@ int main() {
   // A real capture interruption still rejects a window that spans it, even
   // when the timestamps look continuous.
   assert(!sourceClock.read(1050000, out, 960));
+  CaptureHistory restarted;
+  p = packet(5000);
+  assert(restarted.push(p.data(), p.size(), 1000000, 1000000, 1));
+  p = packet(0);
+  assert(!restarted.push(p.data(), p.size(), 990000, 1400000, 1));
+  assert(!restarted.push(p.data(), p.size(), 1010000, 1010000, 1));
+  assert(restarted.push(p.data(), p.size(), 1300000, 1300000, 1));
+  assert(restarted.read(1300000, out, 480));
+  assert(!restarted.read(1000000, out, 480));
   CaptureHistory directCapture;
   p = packet(1);
   p.resize(CaptureHistory::stampedPcmBytes);
@@ -113,21 +123,23 @@ int main() {
   assert(usce_pa_signal(receiver, "{\"type\":\"bridge.ready\",\"displayCode\":null}") == 0);
   assert(usce_pa_signal(receiver, "not json") == -1);
   assert(usce_pa_signal(receiver, "{\"type\":\"room.created\",\"displayCode\":\"TEST\"}") == 0);
-  const auto timedPcm = [](int seq, int64_t stamp, const char *player = "") {
+  const auto timedPcm = [](int seq, int64_t stamp, const char *player = "", int epoch = 1) {
     return std::string("{\"type\":\"audio.pcm\",\"slot\":1,\"playerId\":\"") + player +
-      "\",\"captureEpoch\":1,\"captureEndHostUs\":" + std::to_string(stamp) +
+      "\",\"captureEpoch\":" + std::to_string(epoch) + ",\"captureEndHostUs\":" + std::to_string(stamp) +
       ",\"pcm\":\"" + base64(packet(seq)) + "\"}";
   };
-  const auto unstamped = std::string("{\"type\":\"audio.pcm\",\"slot\":1,\"pcm\":\"") + base64(packet(1)) + "\"}";
-  assert(usce_pa_signal(receiver, unstamped.c_str()) == 0);
-  assert(usce_pa_poll(receiver, out, 9600) == 0);
+  const auto unstamped = [](int seq) {
+    return std::string("{\"type\":\"audio.pcm\",\"slot\":1,\"pcm\":\"") + base64(packet(seq)) + "\"}";
+  };
+  assert(usce_pa_signal(receiver, unstamped(0).c_str()) == 0);
+  assert(usce_pa_poll(receiver, out, 9600) == 480);
   usce_pa_set_clock(receiver, 2000000);
-  assert(usce_pa_signal(receiver, unstamped.c_str()) == 0);
-  assert(usce_pa_poll(receiver, out, 9600) == 0);
-  assert(usce_pa_signal(receiver, timedPcm(1, 100000).c_str()) == 0);
-  assert(usce_pa_poll(receiver, out, 9600) == 0);
-  assert(usce_pa_capture_window(receiver, 1990000, out, 480) != 1);
-  assert(usce_pa_signal(receiver, timedPcm(1, 1980000).c_str()) == 0);
+  assert(usce_pa_signal(receiver, unstamped(1).c_str()) == 0);
+  assert(usce_pa_poll(receiver, out, 9600) == 480);
+  assert(usce_pa_signal(receiver, timedPcm(2, 100000).c_str()) == 0);
+  assert(usce_pa_poll(receiver, out, 9600) == 480);
+  assert(usce_pa_capture_window(receiver, 100000, out, 480) != 1);
+  assert(usce_pa_signal(receiver, timedPcm(3, 1980000).c_str()) == 0);
   uint32_t generation = 0;
   assert(usce_pa_poll_generation(receiver, out, 200, &generation) == 200);
   assert(generation != 0);
@@ -135,7 +147,7 @@ int main() {
   assert(usce_pa_poll_generation(receiver, out, 9600, &generation) == 280);
   assert(generation == firstGeneration);
   assert(out[0] == 16384);
-  auto calibrationPacket = packet(2);
+  auto calibrationPacket = packet(4);
   calibrationPacket[2] = 'C';
   const auto calibrationMessage = std::string("{\"type\":\"audio.calibration.pcm\",\"slot\":1,\"pcm\":\"") + base64(calibrationPacket) + "\"}";
   const auto wronglyLabelled = std::string("{\"type\":\"audio.pcm\",\"slot\":1,\"pcm\":\"") + base64(calibrationPacket) + "\"}";
@@ -144,7 +156,7 @@ int main() {
   assert(usce_pa_poll(receiver, out, 9600) == 0); // Calibration cannot become a singing sample.
   assert(usce_pa_poll_calibration(receiver, out, 9600) == 480);
   assert(out[0] == 16384);
-  assert(usce_pa_signal(receiver, timedPcm(2, 1990000).c_str()) == 0);
+  assert(usce_pa_signal(receiver, timedPcm(4, 1990000).c_str()) == 0);
   assert(usce_pa_poll_calibration(receiver, out, 9600) == 0);
   assert(usce_pa_poll(receiver, out, 9600) == 480); // Same sequence, independent queues.
   assert(usce_pa_capture_window(receiver, 1990000, out, 480) == 1);
@@ -152,6 +164,19 @@ int main() {
   assert(usce_pa_status(receiver, status, sizeof(status)) > 0);
   assert(std::string(status).find("TEST") != std::string::npos);
   assert(usce_pa_event(receiver, status, sizeof(status)) == 0);
+  assert(usce_pa_signal(receiver, timedPcm(5000, 2000000).c_str()) == 0);
+  assert(usce_pa_poll(receiver, out, 9600) == 480);
+  std::this_thread::sleep_for(std::chrono::milliseconds(300));
+  usce_pa_set_clock(receiver, 2300000);
+  assert(usce_pa_signal(receiver, timedPcm(0, 2300000).c_str()) == 0);
+  assert(usce_pa_poll(receiver, out, 9600) == 480);
+  assert(usce_pa_capture_window(receiver, 2300000, out, 480) == 1);
+  assert(usce_pa_capture_window(receiver, 2000000, out, 480) != 1);
+  assert(usce_pa_signal(receiver, timedPcm(5000, 2300000).c_str()) == 0);
+  assert(usce_pa_poll(receiver, out, 9600) == 480);
+  // A positively identified new source epoch recovers even before the stall timer.
+  assert(usce_pa_signal(receiver, timedPcm(0, 2300001, "", 2).c_str()) == 0);
+  assert(usce_pa_poll(receiver, out, 9600) == 480);
   auto second = usce_pa_create("ipc://", "");
   assert(second);
   assert(usce_pa_signal(receiver, "{\"type\":\"player.assigned\",\"playerId\":\"one\",\"slot\":1}") == 0);
