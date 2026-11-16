@@ -530,7 +530,7 @@ var
   SendInfo: TSendInfo;
   Website, index: integer;
 begin
-  if CurrentSong.isDuet then
+  if CurrentSong.isDuet or not ScreenSing.LocalHighscoresAllowed then
     Exit;
 
   if (Value = 1) or (Value = 2) then
@@ -608,7 +608,7 @@ begin
 
       SDLK_RETURN:
         begin
-         if (Interaction <> -1) then
+         if (Interaction <> -1) and ScreenSing.LocalHighscoresAllowed then
             ScreenPopupSendScore.ShowPopup(Language.Translate('SCORE_SEND_DESC'), @OnSendScore, nil)
          else
          begin
@@ -655,7 +655,7 @@ begin
           end
           else
           begin
-            if (ScreenSing.SungToEnd) and (Length(DllMan.Websites) > 0) then
+            if ScreenSing.LocalHighscoresAllowed and (Length(DllMan.Websites) > 0) then
               InteractNext;
           end;
         end;
@@ -680,7 +680,7 @@ begin
           end
           else
           begin
-            if (ScreenSing.SungToEnd) and (Length(DllMan.Websites) > 0) then
+            if ScreenSing.LocalHighscoresAllowed and (Length(DllMan.Websites) > 0) then
               InteractPrev;
           end;
 
@@ -1194,7 +1194,7 @@ begin
   end;
 
   // Show Send Score Buttons
-  if ScreenSing.SungToEnd and not CurrentSong.isDuet and (Length(DllMan.Websites) > 0) then
+  if ScreenSing.LocalHighscoresAllowed and not CurrentSong.isDuet and (Length(DllMan.Websites) > 0) then
   begin
     I := GetScoreButtonLayout(PlayersPlay, Screens) - 1;
     Button[I].Visible := true;

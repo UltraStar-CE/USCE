@@ -1,6 +1,7 @@
 program SeekScoringTest;
 {$mode Delphi}
-uses SysUtils, Math, UMusic, USong, UNote, UScreenSingController,
+uses {$IFDEF UNIX}cthreads,{$ENDIF}
+  SysUtils, Math, UMusic, USong, UNote, UScreenSingController,
   UIni, URecord, UBeatTimer, UGraphic, UScreenSong, USingScores, UCommon;
 var Screen: TScreenSingController; Track, I: integer; Points, Before, Bonus: real;
   Loop: TPracticeLoop;
@@ -105,7 +106,7 @@ begin
     Screen.Scores.AddPlayer(nil, Color);
     Screen.Scores.SpawnPopUp(0, 8, 1000);
     Screen.Scores.SpawnPopUp(1, 8, 2000);
-    Screen.Scores.SetScore(0, 500);
+    Screen.Scores.SpawnPopUp(0, 3, 500);
     Equal(Screen.Scores.Players[0].ScoreDisplayed, 500, 'revised display discards obsolete animated points');
     Equal(Screen.Scores.Players[1].Score, 2000, 'other singer popup is preserved');
     Screen.Scores.KillAllPopUps;
