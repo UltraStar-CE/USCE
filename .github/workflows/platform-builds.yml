@@ -504,6 +504,7 @@ jobs:
           install -Dm644 "$source/LICENSE.txt" "$prefix/share/doc/projectm/copyright"
           install -Dm644 "$source/vendor/hlslparser/LICENSE" "$prefix/share/doc/projectm/hlslparser-license"
           install -Dm644 "$source/vendor/projectm-eval/LICENSE.md" "$prefix/share/doc/projectm/projectm-eval-license"
+          sed -n '1,/^$/p' "$source/vendor/SOIL2/etc1_utils.c" > "$prefix/share/doc/projectm/soil2-etc1-notice"
           echo "USCE_PROJECTM_PREFIX=$prefix" >> "$GITHUB_ENV"
       - name: Stage native phone receiver
         run: |

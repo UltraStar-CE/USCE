@@ -141,7 +141,7 @@ including OpenCV for webcam support. The package ships its own projectM 4
 library for visualizations. Songs, configuration and scores remain in your user
 directory after uninstalling the package.
 
-For a local package, install OpenCV development libraries and build projectM 4
+For a local package, install OpenCV development libraries and `patchelf` and build projectM 4
 as a shared library in a private prefix. Follow the platform workflow to stage
 its licenses. Configure with `--prefix=/usr --with-opencv --with-libprojectM` and
 include that prefix's `lib/pkgconfig` in `PKG_CONFIG_PATH`. Build the game, stage
@@ -150,6 +150,7 @@ the native phone receiver, then run:
 ```sh
 python3 tools/build-deb.py --version VERSION --output deb-output --themes PATH --projectm-prefix PREFIX
 ```
+The equivalent make target accepts `make deb USCE_PROJECTM_PREFIX=PREFIX USCE_THEMES_DIR=PATH`.
 The package builder derives linked dependencies from the native executable and
 adds the dynamically loaded runtime libraries.
 
