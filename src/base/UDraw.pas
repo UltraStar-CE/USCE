@@ -415,7 +415,7 @@ var
   ColorR, ColorG, ColorB, A: single;
   GoldenStarPos: real;
 begin
-  if (ScreenSing.settings.NotesVisible[Track]) then
+  if ScreenSing.Settings.NotesVisible[PlayerIndex] then
   begin
     // the textures start counting at 1, but everything else just starts at 0
     PlayerNumber := PlayerIndex + 1;
@@ -1114,7 +1114,8 @@ begin
 
     TrackIndex := Player[PlayerIndex].Track;
     with CurrentSong.Tracks[TrackIndex] do
-      if not HasNearbyTargetNotes(Lines[CurrentLine], LyricsState.MidBeat) then
+      if not HasNearbyTargetNotes(Lines[CurrentLine], LyricsState.MidBeat) and
+         not ((CurrentLine < High) and HasNearbyTargetNotes(Lines[CurrentLine + 1], LyricsState.MidBeat)) then
       begin
         if Ini.PitchTrace <> 0 then
           SingDrawPlayerLine(LaneLeft, LineTop, LaneWidth, TrackIndex, PlayerIndex, LineSpacing, true);
@@ -1122,7 +1123,7 @@ begin
       end;
 
     if (Ini.NoteLines = 1) and ScreenSing.Settings.InputVisible and
-       ScreenSing.Settings.NotesVisible[PlayerIndex] and ScreenSing.Settings.NotesVisible[TrackIndex] then
+       ScreenSing.Settings.NotesVisible[PlayerIndex] then
       SingDrawNoteLines(LaneLeft, Layout.GuideTopY, LaneRight, LineSpacing);
 
     SingDrawPlayerBGLine(LaneLeft, LineTop, LaneRight, TrackIndex, PlayerIndex, LineSpacing);
