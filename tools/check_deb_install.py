@@ -28,7 +28,8 @@ with tempfile.TemporaryDirectory(prefix='usce-deb-test-') as temp:
     assert (root / 'usr/bin/libusce-phone-audio.so').is_file()
     assert len(list((root / 'usr/lib/usce').glob('libprojectM-4.so.*'))) == 1
     assert any((root / 'usr/share/usce/visuals/projectM/presets').glob('*.milk'))
-    for license_name in ('copyright', 'hlslparser-license', 'projectm-eval-license'):
+    for license_name in ('copyright', 'hlslparser-license', 'projectm-eval-license',
+                         'glm-license', 'soil2-etc1-notice', 'soil2-etc1-license'):
         assert (root / 'usr/share/doc/usce' / f'projectm-{license_name}').is_file()
     assert (root / 'usr/share/applications/usce.desktop').is_file()
     unpack = Path(temp) / 'upgrade'
