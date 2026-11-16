@@ -5,6 +5,17 @@ on:
     paths:
       - .github/workflows/flatpak.yml
       - dists/flatpak/**
+      - dists/usce.*
+      - configure.ac
+      - Makefile.in
+      - native/phone-audio/**
+      - src/Makefile.in
+      - src/base/UWebcam.pas
+      - src/lib/openCV3/**
+      - src/screens/UScreenOptionsWebcam.pas
+      - src/screens/controllers/UScreenSingController.pas
+      - themes.json
+      - tools/bundle-themes.py
   workflow_dispatch:
 
 permissions:

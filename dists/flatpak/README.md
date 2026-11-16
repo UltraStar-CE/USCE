@@ -23,6 +23,9 @@ online features. projectM visualizations and presets are included.
 Select a webcam and enable its preview in USCE to request access through the
 desktop's Camera portal. The desktop may remember your choice. This requires a
 working Camera portal and PipeWire on the host.
+To ask again after denying access, reset the camera permission in your desktop's
+privacy settings. You can also reset this app's saved portal permissions with
+`flatpak permission-reset io.github.ultrastar_ce.USCE`.
 
 To build locally with Flatpak Builder:
 
