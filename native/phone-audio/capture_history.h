@@ -15,6 +15,8 @@ class CaptureHistory {
   };
   std::array<Packet, packetCount> packets{};
   uint32_t newestSequence = 0;
+  uint32_t newestEpoch = 0;
+  int64_t newestEndUs = 0, lastArrivalUs = 0;
   bool started = false;
 
 public:
@@ -22,30 +24,39 @@ public:
   static constexpr size_t pcmBytes = 980;
   static constexpr size_t stampedPcmBytes = pcmBytes + 12;
 
-  bool pushStamped(const uint8_t *data, size_t size, int64_t hostNowUs) {
+  bool pushStamped(const uint8_t *data, size_t size, int64_t hostNowUs, bool *restarted = nullptr) {
     if (size != stampedPcmBytes) return false;
     const auto stamp = uint64_t(PcmQueue::u32(data + pcmBytes)) |
       (uint64_t(PcmQueue::u32(data + pcmBytes + 4)) << 32);
     const auto captureEpoch = PcmQueue::u32(data + pcmBytes + 8);
     if (stamp > INT64_MAX || captureEpoch == 0) return false;
-    return push(data, pcmBytes, static_cast<int64_t>(stamp), hostNowUs, captureEpoch);
+    return push(data, pcmBytes, static_cast<int64_t>(stamp), hostNowUs, captureEpoch, restarted);
   }
 
   bool push(const uint8_t *data, size_t size, int64_t endUs, int64_t hostNowUs,
-            uint32_t captureEpoch = 0) {
-    if (size != pcmBytes || PcmQueue::u32(data) != 0x31504155 ||
-        PcmQueue::u32(data + 8) != 48000 || PcmQueue::u32(data + 12) != samplesPerPacket ||
+            uint32_t captureEpoch = 0, bool *restarted = nullptr) {
+    if (!PcmQueue::validPacket(data, size) ||
         endUs <= 0 || hostNowUs <= 0 ||
         endUs < hostNowUs - 1500000 || endUs > hostNowUs + 50000) return false;
     const auto sequence = PcmQueue::u32(data + 4);
     if (started) {
       const auto delta = static_cast<int32_t>(sequence - newestSequence);
-      if (delta <= -static_cast<int32_t>(packetCount)) return false;
+      // A restarted worklet may start again at zero on the same data channel.
+      // A stale out-of-order packet cannot reset a running capture.
+      if (delta <= -static_cast<int32_t>(packetCount)) {
+        if (endUs <= newestEndUs ||
+            (captureEpoch == newestEpoch && hostNowUs - lastArrivalUs <= 250000)) return false;
+        packets = {};
+        started = false;
+        if (restarted) *restarted = true;
+      }
       if (delta >= static_cast<int32_t>(packetCount)) packets = {};
-      if (delta > 0) newestSequence = sequence;
-    } else {
+    }
+    if (!started || static_cast<int32_t>(sequence - newestSequence) > 0) {
       started = true;
       newestSequence = sequence;
+      newestEpoch = captureEpoch;
+      newestEndUs = endUs;
     }
     auto &packet = packets[sequence % packetCount];
     if (packet.endUs && packet.sequence == sequence) return true;
@@ -53,6 +64,7 @@ public:
     packet.sequence = sequence;
     packet.firstSample = PcmQueue::u32(data + 16);
     packet.captureEpoch = captureEpoch;
+    lastArrivalUs = hostNowUs;
     for (uint32_t i = 0; i < samplesPerPacket; ++i) {
       const auto sample = uint16_t(data[20 + 2*i]) | (uint16_t(data[21 + 2*i]) << 8);
       packet.samples[i] = static_cast<int16_t>(sample);

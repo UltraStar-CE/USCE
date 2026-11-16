@@ -62,8 +62,9 @@ include their return path and are not compensation values or mouth-to-screen
 latency measurements. Remote audio is neither played through speakers nor added
 to microphone debug recordings by this integration.
 
-Phone singing PCM requires capture timestamps on both direct and relay routes.
-A measured capture offset follows the companion across slots and room joins during the
-game session. The host slot and companion adjustments apply independently.
-It aligns the song timeline with timestamped microphone audio. If an aligned
-window is still missing at the scoring deadline, the game records a miss.
+The receiver accepts existing phone singing PCM on both direct and relay routes.
+It retains a separate capture-time history when the companion and relay supply
+valid timing data. Capture-timed judging is groundwork here. It needs a companion
+that sends timestamps, a relay that preserves them, and game calibration that
+sets a measured capture offset for the assigned microphone. Until that integration
+is available, phone audio uses the live PCM path.

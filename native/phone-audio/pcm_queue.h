@@ -26,15 +26,18 @@ public:
   static uint32_t u32(const uint8_t *p) {
     return uint32_t(p[0]) | (uint32_t(p[1]) << 8) | (uint32_t(p[2]) << 16) | (uint32_t(p[3]) << 24);
   }
+  static bool validPacket(const uint8_t *data, size_t size, uint8_t marker = 'P') {
+    return size == 980 && data[0] == 'U' && data[1] == 'A' &&
+      data[2] == marker && data[3] == '1' && u32(data + 8) == 48000 && u32(data + 12) == 480;
+  }
   void reset() {
     if (haveSequence) advanceCaptureGeneration();
     samples.clear(); haveSequence = false; peak = 0; last = {};
     endSampleCounter = readEndSampleCounter = 0;
   }
   bool push(const uint8_t *data, size_t size, Clock::time_point now = Clock::now()) {
-    if (size < 20 || data[0] != 'U' || data[1] != 'A' || data[2] != marker || data[3] != '1') { ++rejected; return false; }
-    const auto seq = u32(data + 4), rate = u32(data + 8), count = u32(data + 12);
-    if (rate != 48000 || count != 480 || size != 20 + count * 2) { ++rejected; return false; }
+    if (!validPacket(data, size, marker)) { ++rejected; return false; }
+    const auto seq = u32(data + 4), count = u32(data + 12);
     // Forget the old timeline after a stall; never score old buffered sound.
     if (last != Clock::time_point{}) {
       maxPacketIntervalMs = std::max(maxPacketIntervalMs, std::chrono::duration<double, std::milli>(now - last).count());

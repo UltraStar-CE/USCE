@@ -172,13 +172,21 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
                   owner->calibration.push(bytes, data->size());
                   return;
                 }
-                if (!owner->gameClock.ready || data->size() != CaptureHistory::stampedPcmBytes) return;
-                if (!owner->captureHistory) owner->captureHistory = std::make_unique<CaptureHistory>();
-                if (!owner->captureHistory->pushStamped(bytes, data->size(), owner->gameClock.nowUs())) return;
-                // A duplicate may have reached the game through the relay first.
-                owner->lastDirectPacket = Clock::now();
-                owner->directSequence = PcmQueue::u32(bytes + 4);
-                if (owner->pcm.push(bytes, CaptureHistory::pcmBytes)) owner->state = "receiving PCM";
+                const bool stamped = data->size() == CaptureHistory::stampedPcmBytes;
+                const auto size = stamped ? CaptureHistory::pcmBytes : data->size();
+                if (stamped && owner->gameClock.ready) {
+                  if (!owner->captureHistory) owner->captureHistory = std::make_unique<CaptureHistory>();
+                  bool restarted = false;
+                  owner->captureHistory->pushStamped(bytes, data->size(), owner->gameClock.nowUs(), &restarted);
+                  if (restarted) owner->pcm.reset();
+                }
+                if (owner->pcm.push(bytes, size)) owner->state = "receiving PCM";
+                // The relay copy can reach the live queue first. A valid direct
+                // duplicate still counts as direct delivery for transport ACKs.
+                if (PcmQueue::validPacket(bytes, size)) {
+                  owner->lastDirectPacket = Clock::now();
+                  owner->directSequence = PcmQueue::u32(bytes + 4);
+                }
               }
             }
           } catch (...) {}
@@ -230,16 +238,20 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
         }
         const auto stamp = m.find("captureEndHostUs");
         const auto epoch = m.find("captureEpoch");
-        if (!gameClock.ready || stamp == m.end() || !stamp->is_number_unsigned() ||
-            epoch == m.end() || !epoch->is_number_unsigned()) return;
-        const auto endUs = stamp->get<uint64_t>();
-        const auto captureEpoch = epoch->get<uint64_t>();
-        if (endUs > 9000000000000000ULL || !captureEpoch || captureEpoch > UINT32_MAX) return;
-        if (!captureHistory) captureHistory = std::make_unique<CaptureHistory>();
-        if (!captureHistory->push(bytes.data(), bytes.size(), static_cast<int64_t>(endUs),
-            gameClock.nowUs(), static_cast<uint32_t>(captureEpoch))) return;
+        if (gameClock.ready && stamp != m.end() && stamp->is_number_unsigned() &&
+            epoch != m.end() && epoch->is_number_unsigned()) {
+          const auto endUs = stamp->get<uint64_t>();
+          const auto captureEpoch = epoch->get<uint64_t>();
+          if (endUs <= 9000000000000000ULL && captureEpoch && captureEpoch <= UINT32_MAX) {
+            if (!captureHistory) captureHistory = std::make_unique<CaptureHistory>();
+            bool restarted = false;
+            captureHistory->push(bytes.data(), bytes.size(), static_cast<int64_t>(endUs),
+                gameClock.nowUs(), static_cast<uint32_t>(captureEpoch), &restarted);
+            if (restarted) pcm.reset();
+          }
+        }
         if (pcm.push(bytes.data(), bytes.size())) state = "receiving PCM";
-        lastRelayPacket = Clock::now();
+        if (PcmQueue::validPacket(bytes.data(), bytes.size())) lastRelayPacket = Clock::now();
       }
     } else if (type == "p2p.offer") {
       offer(m);

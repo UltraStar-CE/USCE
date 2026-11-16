@@ -43,8 +43,9 @@ type
     destructor Destroy; override;
     function Start(const Url, Ice: UTF8String; const LibraryPath: string = ''): boolean;
     procedure Stop;
+    function Poll(Samples: pointer; Capacity: integer; PlayerIndex: integer = 0): integer; overload;
     function Poll(Samples: pointer; Capacity, PlayerIndex: integer;
-      out Generation: LongWord): integer;
+      out Generation: LongWord): integer; overload;
     function ReadCaptureWindow(PlayerIndex: integer; EndHostUs: Int64;
       Samples: pointer; Count: LongWord): boolean;
     function SupportsCaptureTimestamps: boolean;
@@ -163,6 +164,12 @@ begin
   FCalibration.Free;
   DoneCriticalSection(FSignalLock);
   inherited;
+end;
+
+function TPhoneAudio.Poll(Samples: pointer; Capacity, PlayerIndex: integer): integer;
+var Generation: LongWord;
+begin
+  Result := Poll(Samples, Capacity, PlayerIndex, Generation);
 end;
 
 function TPhoneAudio.Poll(Samples: pointer; Capacity, PlayerIndex: integer;
