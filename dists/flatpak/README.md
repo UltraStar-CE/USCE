@@ -27,13 +27,21 @@ To ask again after denying access, reset the camera permission in your desktop's
 privacy settings. You can also reset this app's saved portal permissions with
 `flatpak permission-reset io.github.ultrastar_ce.USCE`.
 
+Gamepad users can grant access to Linux input devices for one launch using
+Flatpak 1.15.6 or newer:
+
+```sh
+flatpak run --device=input io.github.ultrastar_ce.USCE
+```
+
 To build locally with Flatpak Builder:
 
 ```sh
 flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+python3 tools/bundle-themes.py flatpak-source > dists/flatpak/themes.generated.json
 flatpak-builder --user --install-deps-from=flathub --repo=flatpak-repo build-flatpak dists/flatpak/io.github.ultrastar_ce.USCE.yml
 flatpak build-bundle --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo flatpak-repo USCE.flatpak io.github.ultrastar_ce.USCE
 ```
 
-Keep the manifest's Themes commit in sync with `themes.json`. For publication,
+The generated source uses the reviewed Themes commit in `themes.json`. For publication,
 replace the local Git source with the matching USCE release tag and commit SHA.

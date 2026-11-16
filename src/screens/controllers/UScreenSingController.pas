@@ -1947,13 +1947,19 @@ begin
 end;
 
 function TScreenSingController.Draw: boolean;
+var
+  ErrorKey: string;
 begin
-  if fShowWebcam and Webcam.CaptureFailed then
+  if fShowWebcam then
   begin
-    Webcam.Release;
-    fShowWebcam := false;
-    fShowBackground := true;
-    ScreenPopupError.ShowPopup(Language.Translate('SING_OPTIONS_WEBCAM_NO_WEBCAM'));
+    ErrorKey := Webcam.CaptureErrorKey;
+    if ErrorKey <> '' then
+    begin
+      Webcam.Release;
+      fShowWebcam := false;
+      fShowBackground := true;
+      ScreenPopupError.ShowPopup(Language.Translate(ErrorKey));
+    end;
   end;
   SendRemoteScoreSnapshot(false);
   Result := true;

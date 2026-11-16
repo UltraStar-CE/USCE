@@ -73,7 +73,7 @@ type
       procedure Start;
       procedure Release;
       procedure Restart;
-      function CaptureFailed: boolean;
+      function CaptureErrorKey: string;
       procedure GetWebcamFrame();
       function FrameEffect(Nr_Effect: integer; Frame: PIplImage): PIplImage;
       function FrameAdjust(Frame: PIplImage): PIplImage;
@@ -88,7 +88,7 @@ type
       procedure Start;
       procedure Release;
       procedure Restart;
-      function CaptureFailed: boolean;
+      function CaptureErrorKey: string;
       procedure GetWebcamFrame();
    end;
 {$ENDIF}
@@ -211,14 +211,18 @@ begin
   end;
 end;
 
-function TWebcam.CaptureFailed: boolean;
+function TWebcam.CaptureErrorKey: string;
 begin
   if Capture = nil then
-    Exit(true);
+    Exit('SING_OPTIONS_WEBCAM_NO_WEBCAM');
+  Result := '';
   {$IFDEF USCE_CAMERA_PORTAL}
-  Result := cvCameraCaptureFailed(Capture) <> 0;
-  {$ELSE}
-  Result := false;
+  case cvCameraCaptureError(Capture) of
+    0: ;
+    CV_CAMERA_CAPTURE_PERMISSION_ERROR: Result := 'SING_OPTIONS_WEBCAM_PERMISSION';
+  else
+    Result := 'SING_OPTIONS_WEBCAM_NO_WEBCAM';
+  end;
   {$ENDIF}
 end;
 
@@ -511,9 +515,9 @@ begin
   Start;
 end;
 
-function TWebcam.CaptureFailed: boolean;
+function TWebcam.CaptureErrorKey: string;
 begin
-  Result := true;
+  Result := 'SING_OPTIONS_WEBCAM_NO_WEBCAM';
 end;
 
 procedure TWebcam.GetWebcamFrame();

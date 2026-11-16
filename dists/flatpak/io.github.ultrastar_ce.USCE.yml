@@ -164,11 +164,7 @@ modules:
         path: ../..
         branch: HEAD
         disable-submodules: true
-      - type: git
-        url: https://github.com/UltraStar-CE/Themes.git
-        commit: 92639dac9c23f5f30836c1866fb10df5d25ea69d
-        disable-submodules: true
-        dest: flatpak-sources/themes
+      - themes.generated.json
       - type: git
         url: https://github.com/paullouisageneau/libdatachannel.git
         commit: 6b1e2e620f1e37f0eafeee702eaea0043cb305fd

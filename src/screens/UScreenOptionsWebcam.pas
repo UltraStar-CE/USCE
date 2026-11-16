@@ -242,14 +242,19 @@ function TScreenOptionsWebcam.Draw: boolean;
 var
   I: integer;
   Alpha: real;
+  ErrorKey: string;
 begin
-  if PreVisualization and (SelectsS[WebcamID].SelectOptInt > 0) and Webcam.CaptureFailed then
+  if PreVisualization and (SelectsS[WebcamID].SelectOptInt > 0) then
   begin
-    Webcam.Release;
-    PreVisualization := false;
-    ChangeElementAlpha;
-    Button[0].Text[0].Text := Language.Translate('SING_OPTIONS_WEBCAM_ENABLE_PREVIEW');
-    ScreenPopupError.ShowPopup(Language.Translate('SING_OPTIONS_WEBCAM_NO_WEBCAM'));
+    ErrorKey := Webcam.CaptureErrorKey;
+    if ErrorKey <> '' then
+    begin
+      Webcam.Release;
+      PreVisualization := false;
+      ChangeElementAlpha;
+      Button[0].Text[0].Text := Language.Translate('SING_OPTIONS_WEBCAM_ENABLE_PREVIEW');
+      ScreenPopupError.ShowPopup(Language.Translate(ErrorKey));
+    end;
   end;
   if (PreVisualization) and (SelectsS[WebcamID].SelectOptInt > 0) then
   begin
