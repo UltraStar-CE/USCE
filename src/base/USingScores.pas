@@ -545,6 +545,8 @@ var
 begin
   if (PlayerIndex < PlayerCount) then
   begin
+    if Score < aPlayers[PlayerIndex].Score then
+      SetScore(PlayerIndex, Score);
     // get memory and add data
     GetMem(Cur, SizeOf(TScorePopUp));
 

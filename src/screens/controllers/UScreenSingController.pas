@@ -109,6 +109,7 @@ type
     function RemoteMediaStartUs: int64;
     function RemoteSongDurationUs: int64;
     procedure ResumeAfterScoringTail;
+    function HasPendingDelayedScoring(EndBeat: integer): boolean;
   public
     PracticeLoop: TPracticeLoop;
     ScoringTailActive: boolean;
@@ -759,7 +760,7 @@ begin
   Finished := AudioPlayback.Finished;
   if not PracticeLoop.ReachedEnd(LyricsState.GetCurrentTime(), Finished) then Exit;
   Sing(Self);
-  // Unavailable delayed input at the very end cannot retain an earlier hit.
+  if HasPendingDelayedScoring(LastPracticeBeat) then Exit;
   FinishPracticePassScoring(Self);
   SeekTo(PracticeLoop.StartTime);
   if Finished then AudioPlayback.Play;
@@ -2064,19 +2065,11 @@ begin
   if not Paused then AudioPlayback.Play;
 end;
 
-function TScreenSingController.ContinueDelayedScoring: boolean;
+function TScreenSingController.HasPendingDelayedScoring(EndBeat: integer): boolean;
 var
   PlayerIndex, TrackIndex, LineIndex, LastBeat, TargetBeat: integer;
-  EndTime: real;
 begin
   Result := false;
-  if Settings.Finish or FadeOut then Exit;
-  EndTime := AudioPlayback.Length;
-  if CurrentSong.Finish > 0 then
-    EndTime := Min(EndTime, CurrentSong.Finish / 1000);
-  if ScreenSong.Mode = smMedley then
-    EndTime := Min(EndTime, MedleyEnd);
-  ScoringTailEndBeat := Floor(GetMidBeat(EndTime - CurrentSong.Gap / 1000));
   for PlayerIndex := 0 to PlayersPlay - 1 do
   begin
     if not Player[PlayerIndex].DetectionReady or
@@ -2089,10 +2082,24 @@ begin
       with CurrentSong.Tracks[TrackIndex].Lines[LineIndex] do
         if HighNote >= 0 then
           LastBeat := Max(LastBeat, Notes[HighNote].StartBeat + Notes[HighNote].Duration);
-    TargetBeat := Min(LastBeat, ScoringTailEndBeat);
+    TargetBeat := Min(LastBeat, EndBeat);
     if Player[PlayerIndex].DetectionBeat < TargetBeat then
-      Result := true;
+      Exit(true);
   end;
+end;
+
+function TScreenSingController.ContinueDelayedScoring: boolean;
+var EndTime: real;
+begin
+  Result := false;
+  if Settings.Finish or FadeOut then Exit;
+  EndTime := AudioPlayback.Length;
+  if CurrentSong.Finish > 0 then
+    EndTime := Min(EndTime, CurrentSong.Finish / 1000);
+  if ScreenSong.Mode = smMedley then
+    EndTime := Min(EndTime, MedleyEnd);
+  ScoringTailEndBeat := Min(Floor(GetMidBeat(EndTime - CurrentSong.Gap / 1000)), LastPracticeBeat);
+  Result := HasPendingDelayedScoring(ScoringTailEndBeat);
   if not Result then Exit;
   if Paused then Exit;
   if not ScoringTailActive then
