@@ -41,9 +41,17 @@ int CameraPortal::requestAccess()
             g_variant_get_child(values, 0, "u", &status);
             *static_cast<int *>(data) = status;
         }, &response, nullptr);
+    GError *accessError = nullptr;
     GVariant *handle = g_dbus_connection_call_sync(bus, desktop, desktopPath, camera,
         "AccessCamera", cameraOptions(token), G_VARIANT_TYPE("(o)"),
-        G_DBUS_CALL_FLAGS_NONE, 5000, cancellable, nullptr);
+        G_DBUS_CALL_FLAGS_NONE, 5000, cancellable, &accessError);
+    if (accessError) {
+        gchar *name = g_dbus_error_get_remote_error(accessError);
+        if (g_strcmp0(name, "org.freedesktop.portal.Error.NotAllowed") == 0)
+            failure = Failure::Permission;
+        g_free(name);
+        g_error_free(accessError);
+    }
 
     bool requestOpen = false;
     if (handle) {

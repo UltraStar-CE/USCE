@@ -362,14 +362,10 @@ begin
       begin
         if (fShowWebCam = false) then
         begin
-          fCurrentVideo := nil;
-          fShowVisualization := false;
-          fShowBackground := false;
           Webcam.Restart;
           if (Webcam.Capture = nil) then
           begin
             fShowWebCam := false;
-            fShowBackground := true;
             ScreenPopupError.ShowPopup(Language.Translate('SING_OPTIONS_WEBCAM_NO_WEBCAM'))
           end
           else
@@ -1957,7 +1953,6 @@ begin
     begin
       Webcam.Release;
       fShowWebcam := false;
-      fShowBackground := true;
       ScreenPopupError.ShowPopup(Language.Translate(ErrorKey));
     end;
   end;
