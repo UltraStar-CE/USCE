@@ -16205,6 +16205,2772 @@
         ],
         "reviewedCommitCount": 3
       }
+    },
+    {
+      "repository": "ComictypX/USDX",
+      "branch": "master",
+      "head": "f68809c71f054424f959ed46ce6bea39350631ca",
+      "upstreamHead": "7f49e685c7d7affcd0bd6501f46f6af801e4d880",
+      "comparisonBase": "32a2989274d8f85f54e936eda85faf48b276e480",
+      "comparisonKind": "outside-usce",
+      "ahead": 23,
+      "behind": 714,
+      "compareUrl": "https://github.com/UltraStar-CE/USCE/compare/32a2989274d8f85f54e936eda85faf48b276e480...f68809c71f054424f959ed46ce6bea39350631ca",
+      "novelCommits": [
+        {
+          "sha": "b60008c76f0dc44c6fecd8f5e757db022150fb30",
+          "title": "Merge pull request #4 from ComictypX/copilot/fix-thread-synchronization-issues",
+          "author": "ComictypX",
+          "authoredAt": "2026-11-01T19:05:33Z"
+        },
+        {
+          "sha": "ae8d9b277dd1cbdc87d564f427a7999b3a05cad5",
+          "title": "Merge remote-tracking branch 'upstream/master'",
+          "author": "ComictypX",
+          "authoredAt": "2026-11-01T19:29:08Z"
+        },
+        {
+          "sha": "f68809c71f054424f959ed46ce6bea39350631ca",
+          "title": "Cleanup",
+          "author": "ComictypX",
+          "authoredAt": "2026-11-01T19:31:28Z"
+        }
+      ],
+      "ignoredKnownHistoryCommitCount": 0,
+      "ignoredUpstreamCommitCount": 0,
+      "ignoredOldCommitCount": 20,
+      "commits": [
+        {
+          "sha": "b60008c76f0dc44c6fecd8f5e757db022150fb30",
+          "title": "Merge pull request #4 from ComictypX/copilot/fix-thread-synchronization-issues",
+          "author": "ComictypX",
+          "authoredAt": "2026-11-01T19:05:33Z"
+        },
+        {
+          "sha": "ae8d9b277dd1cbdc87d564f427a7999b3a05cad5",
+          "title": "Merge remote-tracking branch 'upstream/master'",
+          "author": "ComictypX",
+          "authoredAt": "2026-11-01T19:29:08Z"
+        },
+        {
+          "sha": "f68809c71f054424f959ed46ce6bea39350631ca",
+          "title": "Cleanup",
+          "author": "ComictypX",
+          "authoredAt": "2026-11-01T19:31:28Z"
+        }
+      ],
+      "newCommits": [
+        {
+          "sha": "b60008c76f0dc44c6fecd8f5e757db022150fb30",
+          "title": "Merge pull request #4 from ComictypX/copilot/fix-thread-synchronization-issues",
+          "author": "ComictypX",
+          "authoredAt": "2026-11-01T19:05:33Z"
+        },
+        {
+          "sha": "ae8d9b277dd1cbdc87d564f427a7999b3a05cad5",
+          "title": "Merge remote-tracking branch 'upstream/master'",
+          "author": "ComictypX",
+          "authoredAt": "2026-11-01T19:29:08Z"
+        },
+        {
+          "sha": "f68809c71f054424f959ed46ce6bea39350631ca",
+          "title": "Cleanup",
+          "author": "ComictypX",
+          "authoredAt": "2026-11-01T19:31:28Z"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "dgruss/USDX",
+      "branch": "removejukebox",
+      "head": "e27bc1113b5cf4d1280ac643d106a5c5e61e0edc",
+      "upstreamHead": "7f49e685c7d7affcd0bd6501f46f6af801e4d880",
+      "comparisonBase": "32a2989274d8f85f54e936eda85faf48b276e480",
+      "comparisonKind": "outside-usce",
+      "ahead": 7,
+      "behind": 843,
+      "compareUrl": "https://github.com/UltraStar-CE/USCE/compare/32a2989274d8f85f54e936eda85faf48b276e480...e27bc1113b5cf4d1280ac643d106a5c5e61e0edc",
+      "novelCommits": [
+        {
+          "sha": "f076c0b0543ebfc905ad5c0fd5e6c5a822187953",
+          "title": "Fix loop mode rendering",
+          "author": "dgruss",
+          "authoredAt": "2026-08-02T18:18:40Z"
+        }
+      ],
+      "ignoredKnownHistoryCommitCount": 3,
+      "ignoredUpstreamCommitCount": 0,
+      "ignoredOldCommitCount": 3,
+      "commits": [
+        {
+          "sha": "37d47b0b6f9b8151d5a92ba64322a6a3da93df67",
+          "title": "Add song selection loop mode",
+          "author": "dgruss",
+          "authoredAt": "2026-05-23T18:19:05Z"
+        },
+        {
+          "sha": "36715a33338876090472f350bf06e9f64dfe06cc",
+          "title": "Add loop mode progress overlay",
+          "author": "dgruss",
+          "authoredAt": "2026-05-23T18:20:56Z"
+        },
+        {
+          "sha": "302a1b57c0c6c080a8c839bfbca89b465a749df0",
+          "title": "Show lyrics in song loop mode",
+          "author": "dgruss",
+          "authoredAt": "2026-05-23T18:23:29Z"
+        },
+        {
+          "sha": "f076c0b0543ebfc905ad5c0fd5e6c5a822187953",
+          "title": "Fix loop mode rendering",
+          "author": "dgruss",
+          "authoredAt": "2026-08-02T18:18:40Z"
+        }
+      ],
+      "newCommits": [
+        {
+          "sha": "f076c0b0543ebfc905ad5c0fd5e6c5a822187953",
+          "title": "Fix loop mode rendering",
+          "author": "dgruss",
+          "authoredAt": "2026-08-02T18:18:40Z"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "complexlogic/USDX",
+      "branch": "borderless",
+      "head": "e0586a99244e9a15658cafebb21715eb4fe4b5e6",
+      "upstreamHead": "7f49e685c7d7affcd0bd6501f46f6af801e4d880",
+      "comparisonBase": "32a2989274d8f85f54e936eda85faf48b276e480",
+      "comparisonKind": "outside-usce",
+      "ahead": 1,
+      "behind": 794,
+      "compareUrl": "https://github.com/UltraStar-CE/USCE/compare/32a2989274d8f85f54e936eda85faf48b276e480...e0586a99244e9a15658cafebb21715eb4fe4b5e6",
+      "novelCommits": [
+        {
+          "sha": "e0586a99244e9a15658cafebb21715eb4fe4b5e6",
+          "title": "update",
+          "author": "complexlogic",
+          "authoredAt": "2026-09-09T03:15:51Z"
+        }
+      ],
+      "ignoredKnownHistoryCommitCount": 0,
+      "ignoredUpstreamCommitCount": 0,
+      "ignoredOldCommitCount": 0,
+      "commits": [
+        {
+          "sha": "e0586a99244e9a15658cafebb21715eb4fe4b5e6",
+          "title": "update",
+          "author": "complexlogic",
+          "authoredAt": "2026-09-09T03:15:51Z"
+        }
+      ],
+      "newCommits": [
+        {
+          "sha": "e0586a99244e9a15658cafebb21715eb4fe4b5e6",
+          "title": "update",
+          "author": "complexlogic",
+          "authoredAt": "2026-09-09T03:15:51Z"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "complexlogic/USDX",
+      "branch": "dll-update",
+      "head": "0c54c7f54977b41687a83abd9fe021615632ea55",
+      "upstreamHead": "7f49e685c7d7affcd0bd6501f46f6af801e4d880",
+      "comparisonBase": "32a2989274d8f85f54e936eda85faf48b276e480",
+      "comparisonKind": "outside-usce",
+      "ahead": 3,
+      "behind": 726,
+      "compareUrl": "https://github.com/UltraStar-CE/USCE/compare/32a2989274d8f85f54e936eda85faf48b276e480...0c54c7f54977b41687a83abd9fe021615632ea55",
+      "novelCommits": [
+        {
+          "sha": "5ae341f5f12291a9a5d711b316e79c26b5bcbe9f",
+          "title": "update",
+          "author": "complexlogic",
+          "authoredAt": "2026-10-24T13:57:49Z"
+        },
+        {
+          "sha": "3e923b3fd866f4917e97a86f51c3438169feaf79",
+          "title": "update",
+          "author": "complexlogic",
+          "authoredAt": "2026-10-24T17:13:31Z"
+        },
+        {
+          "sha": "0c54c7f54977b41687a83abd9fe021615632ea55",
+          "title": "update",
+          "author": "complexlogic",
+          "authoredAt": "2026-10-24T17:26:14Z"
+        }
+      ],
+      "ignoredKnownHistoryCommitCount": 0,
+      "ignoredUpstreamCommitCount": 0,
+      "ignoredOldCommitCount": 0,
+      "commits": [
+        {
+          "sha": "5ae341f5f12291a9a5d711b316e79c26b5bcbe9f",
+          "title": "update",
+          "author": "complexlogic",
+          "authoredAt": "2026-10-24T13:57:49Z"
+        },
+        {
+          "sha": "3e923b3fd866f4917e97a86f51c3438169feaf79",
+          "title": "update",
+          "author": "complexlogic",
+          "authoredAt": "2026-10-24T17:13:31Z"
+        },
+        {
+          "sha": "0c54c7f54977b41687a83abd9fe021615632ea55",
+          "title": "update",
+          "author": "complexlogic",
+          "authoredAt": "2026-10-24T17:26:14Z"
+        }
+      ],
+      "newCommits": [
+        {
+          "sha": "5ae341f5f12291a9a5d711b316e79c26b5bcbe9f",
+          "title": "update",
+          "author": "complexlogic",
+          "authoredAt": "2026-10-24T13:57:49Z"
+        },
+        {
+          "sha": "3e923b3fd866f4917e97a86f51c3438169feaf79",
+          "title": "update",
+          "author": "complexlogic",
+          "authoredAt": "2026-10-24T17:13:31Z"
+        },
+        {
+          "sha": "0c54c7f54977b41687a83abd9fe021615632ea55",
+          "title": "update",
+          "author": "complexlogic",
+          "authoredAt": "2026-10-24T17:26:14Z"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "complexlogic/USDX",
+      "branch": "font",
+      "head": "1245249c8a7f8afd614703620e6ccba631118454",
+      "upstreamHead": "7f49e685c7d7affcd0bd6501f46f6af801e4d880",
+      "comparisonBase": "32a2989274d8f85f54e936eda85faf48b276e480",
+      "comparisonKind": "outside-usce",
+      "ahead": 1,
+      "behind": 794,
+      "compareUrl": "https://github.com/UltraStar-CE/USCE/compare/32a2989274d8f85f54e936eda85faf48b276e480...1245249c8a7f8afd614703620e6ccba631118454",
+      "novelCommits": [
+        {
+          "sha": "1245249c8a7f8afd614703620e6ccba631118454",
+          "title": "better font",
+          "author": "complexlogic",
+          "authoredAt": "2026-09-07T13:21:46Z"
+        }
+      ],
+      "ignoredKnownHistoryCommitCount": 0,
+      "ignoredUpstreamCommitCount": 0,
+      "ignoredOldCommitCount": 0,
+      "commits": [
+        {
+          "sha": "1245249c8a7f8afd614703620e6ccba631118454",
+          "title": "better font",
+          "author": "complexlogic",
+          "authoredAt": "2026-09-07T13:21:46Z"
+        }
+      ],
+      "newCommits": [
+        {
+          "sha": "1245249c8a7f8afd614703620e6ccba631118454",
+          "title": "better font",
+          "author": "complexlogic",
+          "authoredAt": "2026-09-07T13:21:46Z"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "complexlogic/USDX",
+      "branch": "full_hd",
+      "head": "e1bf03d5d4aa227aa6ab5488078dd723e7d1d98a",
+      "upstreamHead": "7f49e685c7d7affcd0bd6501f46f6af801e4d880",
+      "comparisonBase": "32a2989274d8f85f54e936eda85faf48b276e480",
+      "comparisonKind": "outside-usce",
+      "ahead": 1,
+      "behind": 779,
+      "compareUrl": "https://github.com/UltraStar-CE/USCE/compare/32a2989274d8f85f54e936eda85faf48b276e480...e1bf03d5d4aa227aa6ab5488078dd723e7d1d98a",
+      "novelCommits": [
+        {
+          "sha": "e1bf03d5d4aa227aa6ab5488078dd723e7d1d98a",
+          "title": "Initial work to render at 1920x1080",
+          "author": "complexlogic",
+          "authoredAt": "2026-09-04T13:41:10Z"
+        }
+      ],
+      "ignoredKnownHistoryCommitCount": 0,
+      "ignoredUpstreamCommitCount": 0,
+      "ignoredOldCommitCount": 0,
+      "commits": [
+        {
+          "sha": "e1bf03d5d4aa227aa6ab5488078dd723e7d1d98a",
+          "title": "Initial work to render at 1920x1080",
+          "author": "complexlogic",
+          "authoredAt": "2026-09-04T13:41:10Z"
+        }
+      ],
+      "newCommits": [
+        {
+          "sha": "e1bf03d5d4aa227aa6ab5488078dd723e7d1d98a",
+          "title": "Initial work to render at 1920x1080",
+          "author": "complexlogic",
+          "authoredAt": "2026-09-04T13:41:10Z"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "complexlogic/USDX",
+      "branch": "fullscreen",
+      "head": "c5d896293f109a84a505b44df9b609b2f7bd2ffb",
+      "upstreamHead": "7f49e685c7d7affcd0bd6501f46f6af801e4d880",
+      "comparisonBase": "32a2989274d8f85f54e936eda85faf48b276e480",
+      "comparisonKind": "outside-usce",
+      "ahead": 1,
+      "behind": 754,
+      "compareUrl": "https://github.com/UltraStar-CE/USCE/compare/32a2989274d8f85f54e936eda85faf48b276e480...c5d896293f109a84a505b44df9b609b2f7bd2ffb",
+      "novelCommits": [
+        {
+          "sha": "c5d896293f109a84a505b44df9b609b2f7bd2ffb",
+          "title": "Fix fullscreen",
+          "author": "complexlogic",
+          "authoredAt": "2026-09-30T03:54:37Z"
+        }
+      ],
+      "ignoredKnownHistoryCommitCount": 0,
+      "ignoredUpstreamCommitCount": 0,
+      "ignoredOldCommitCount": 0,
+      "commits": [
+        {
+          "sha": "c5d896293f109a84a505b44df9b609b2f7bd2ffb",
+          "title": "Fix fullscreen",
+          "author": "complexlogic",
+          "authoredAt": "2026-09-30T03:54:37Z"
+        }
+      ],
+      "newCommits": [
+        {
+          "sha": "c5d896293f109a84a505b44df9b609b2f7bd2ffb",
+          "title": "Fix fullscreen",
+          "author": "complexlogic",
+          "authoredAt": "2026-09-30T03:54:37Z"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "Sinotoon1/USDX",
+      "branch": "feature/practice-play-python",
+      "head": "50e11690bd393872425031b7dcebac6f2a0264f5",
+      "upstreamHead": "7f49e685c7d7affcd0bd6501f46f6af801e4d880",
+      "comparisonBase": "32a2989274d8f85f54e936eda85faf48b276e480",
+      "comparisonKind": "outside-usce",
+      "ahead": 35,
+      "behind": 731,
+      "compareUrl": "https://github.com/UltraStar-CE/USCE/compare/32a2989274d8f85f54e936eda85faf48b276e480...50e11690bd393872425031b7dcebac6f2a0264f5",
+      "novelCommits": [
+        {
+          "sha": "e6b6322bc846560f3fcca63f971f61d0be1d6850",
+          "title": "feat: bridge existing Python vocal references into UltraStar song packs",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T03:38:08Z"
+        },
+        {
+          "sha": "557e1b8c628e8d40f221ee17f5ca939c27dc4dc6",
+          "title": "feat: add native practice and play modes with gated continuous pitch feedback",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T03:39:09Z"
+        },
+        {
+          "sha": "db7ac2a736c41df19f6976ee28ef1b78fa159a51",
+          "title": "ci: build and test Windows portable coach fork",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T03:39:09Z"
+        },
+        {
+          "sha": "401f2e5e3046718519f1dc636f7e80fce3325150",
+          "title": "fix: expose practice on main menu and retain feedback state across frames",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T03:47:18Z"
+        },
+        {
+          "sha": "a7df986d94dc0af913a184accb64562e3d1d4aab",
+          "title": "fix: verify copied reference hashes and keep practice overlay above notes",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T04:02:07Z"
+        },
+        {
+          "sha": "25f19cd150eb9c741f1025cb654f062b6871f187",
+          "title": "fix: load Chinese song names without overflowing transliteration offsets",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T05:02:09Z"
+        },
+        {
+          "sha": "5cd25dbb8e27aea6f4385e4c74688dbba71afe3f",
+          "title": "feat: ship Chinese studio layout and clickable practice controls",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T05:02:09Z"
+        },
+        {
+          "sha": "98e7bf6b22f095fc622821a6878a7ab6d415e47b",
+          "title": "ci: include native UI guide in the portable bundle",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T05:04:08Z"
+        },
+        {
+          "sha": "14dcc69407645254063d97fd540a63b50cec6309",
+          "title": "fix: fit default coach window to the usable desktop",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T05:49:56Z"
+        },
+        {
+          "sha": "f68a3b0d9be3fc8f80c9629404ce83a8e56f48d9",
+          "title": "feat(ui): add deterministic motion and pointer activation state",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T06:26:48Z"
+        },
+        {
+          "sha": "e46aef9a5d31eb6e2b132751a208e57b83367f10",
+          "title": "feat(ui): introduce native Studio controls and motion lifecycle",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T06:33:20Z"
+        },
+        {
+          "sha": "35198e38dd168748f7e50c1dbb06e1146ef7178d",
+          "title": "feat(ui): rebuild all-light Studio screens and interaction flows",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T07:33:49Z"
+        },
+        {
+          "sha": "40a48e5efc665ab1a66ab5a846526b832da610dd",
+          "title": "fix(ui): read Studio sources as UTF-8 on Windows locales",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T07:36:35Z"
+        },
+        {
+          "sha": "1a38a72176d8901c392d64c46cd00cb74ac3078b",
+          "title": "fix(ui): preserve explicit line breaks in unbounded text",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T07:52:20Z"
+        },
+        {
+          "sha": "5f773b0fcda565372c2002906156386b4508a99f",
+          "title": "docs(ui): record Studio native acceptance and delivery gates",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T07:57:32Z"
+        },
+        {
+          "sha": "7356493c6809f3f3320e261031f9c28849cb08d1",
+          "title": "feat(ui): adopt MiHome-inspired light desktop cards",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T08:44:36Z"
+        },
+        {
+          "sha": "2885bbf9a51df12c9e6a6207bbca34755a433f4e",
+          "title": "docs(ui): record MiHome native and Windows acceptance",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T08:55:50Z"
+        },
+        {
+          "sha": "0814c0a03a411e35db8d83f197c7674cdb7fef6e",
+          "title": "feat(import): add cancellable reference and reviewed song-pack worker",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T10:02:25Z"
+        },
+        {
+          "sha": "02f0ea47fdf9b9f4bd0a3ab5b66b3210d3028e37",
+          "title": "feat(import): add native music form and immediate library ingestion",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T10:32:40Z"
+        },
+        {
+          "sha": "58cfda87d9d93707f17807f8bfe88d678ef4053b",
+          "title": "fix(import): bind the Windows Unicode picker with its wide record ABI",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T10:35:38Z"
+        },
+        {
+          "sha": "d6e6629977dc71b999cc97776c3ee1b5c58ade86",
+          "title": "fix(import): preserve clipboard shortcut modifiers from queued key events",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T10:41:08Z"
+        },
+        {
+          "sha": "805c611450c194162a50c9675507c09c147dcd9d",
+          "title": "docs(import): document native music-to-library flow and verified runtime",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T10:56:16Z"
+        },
+        {
+          "sha": "b6862d551085e69763b3d85fb84ba771496a2da0",
+          "title": "chore(import): record completed portable and copy-rollback acceptance",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T11:00:25Z"
+        },
+        {
+          "sha": "705a58e19f7aebace257138a62f7fc9ad7ad3833",
+          "title": "fix(ui): release Studio pointer on leave and use the system cursor",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T12:38:30Z"
+        },
+        {
+          "sha": "17270542d71acad1b5b3c31a09811143a2dfcee4",
+          "title": "feat(lyrics): align measured ASR words to reference notes and export real-lyric packs",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T12:41:38Z"
+        },
+        {
+          "sha": "9807575703f92771272b23192e83cf139adabf5b",
+          "title": "feat(import): require recognized lyrics, surface alignment review and package local ASR tools",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T12:50:10Z"
+        },
+        {
+          "sha": "4a2c574ea9f60c5738674d9a44b1a9303eafabe5",
+          "title": "fix(lyrics): render Studio melisma notes without literal continuation glyphs",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T12:57:28Z"
+        },
+        {
+          "sha": "5706afc3c7a94ea47e5ccb1bb72bd22f75a6e0af",
+          "title": "fix(lyrics): begin phrase timing at the first measured word after an intro",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T13:12:36Z"
+        },
+        {
+          "sha": "8f5c8e5f1530db9d980c30d048d5e58558d3a54e",
+          "title": "docs(lyrics): record actual Rain Ai preview, local ASR and desktop-pointer acceptance",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T13:12:36Z"
+        },
+        {
+          "sha": "8a187e65edcfd61de1cf080da5434e5c94be62ff",
+          "title": "chore(lyrics): record completed package and copy-rollback verification",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T13:17:15Z"
+        },
+        {
+          "sha": "43c70e1af11c50564c6f7b3fceeb48077f9b301b",
+          "title": "fix: keep practice usable without a microphone",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T14:16:25Z"
+        },
+        {
+          "sha": "d755a59c9f7338d4af5e1b4a6cdabd0a5c0c7ffe",
+          "title": "ci: generate capture fixture with the Windows Python runtime",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T14:24:11Z"
+        },
+        {
+          "sha": "9e609e33e3e9d00a82cfa30a0d5fa3a775c7c354",
+          "title": "fix: preserve recorded playback when invalidating capture state",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T14:42:57Z"
+        },
+        {
+          "sha": "3164e29658b49ff18d986a4bf54ddcfea57a9fb8",
+          "title": "chore: order imports in the runtime manifest tool",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T14:43:22Z"
+        },
+        {
+          "sha": "50e11690bd393872425031b7dcebac6f2a0264f5",
+          "title": "fix: separate active input state from saved recording metadata",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T14:55:15Z"
+        }
+      ],
+      "ignoredKnownHistoryCommitCount": 0,
+      "ignoredUpstreamCommitCount": 0,
+      "ignoredOldCommitCount": 0,
+      "commits": [
+        {
+          "sha": "e6b6322bc846560f3fcca63f971f61d0be1d6850",
+          "title": "feat: bridge existing Python vocal references into UltraStar song packs",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T03:38:08Z"
+        },
+        {
+          "sha": "557e1b8c628e8d40f221ee17f5ca939c27dc4dc6",
+          "title": "feat: add native practice and play modes with gated continuous pitch feedback",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T03:39:09Z"
+        },
+        {
+          "sha": "db7ac2a736c41df19f6976ee28ef1b78fa159a51",
+          "title": "ci: build and test Windows portable coach fork",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T03:39:09Z"
+        },
+        {
+          "sha": "401f2e5e3046718519f1dc636f7e80fce3325150",
+          "title": "fix: expose practice on main menu and retain feedback state across frames",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T03:47:18Z"
+        },
+        {
+          "sha": "a7df986d94dc0af913a184accb64562e3d1d4aab",
+          "title": "fix: verify copied reference hashes and keep practice overlay above notes",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T04:02:07Z"
+        },
+        {
+          "sha": "25f19cd150eb9c741f1025cb654f062b6871f187",
+          "title": "fix: load Chinese song names without overflowing transliteration offsets",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T05:02:09Z"
+        },
+        {
+          "sha": "5cd25dbb8e27aea6f4385e4c74688dbba71afe3f",
+          "title": "feat: ship Chinese studio layout and clickable practice controls",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T05:02:09Z"
+        },
+        {
+          "sha": "98e7bf6b22f095fc622821a6878a7ab6d415e47b",
+          "title": "ci: include native UI guide in the portable bundle",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T05:04:08Z"
+        },
+        {
+          "sha": "14dcc69407645254063d97fd540a63b50cec6309",
+          "title": "fix: fit default coach window to the usable desktop",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T05:49:56Z"
+        },
+        {
+          "sha": "f68a3b0d9be3fc8f80c9629404ce83a8e56f48d9",
+          "title": "feat(ui): add deterministic motion and pointer activation state",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T06:26:48Z"
+        },
+        {
+          "sha": "e46aef9a5d31eb6e2b132751a208e57b83367f10",
+          "title": "feat(ui): introduce native Studio controls and motion lifecycle",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T06:33:20Z"
+        },
+        {
+          "sha": "35198e38dd168748f7e50c1dbb06e1146ef7178d",
+          "title": "feat(ui): rebuild all-light Studio screens and interaction flows",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T07:33:49Z"
+        },
+        {
+          "sha": "40a48e5efc665ab1a66ab5a846526b832da610dd",
+          "title": "fix(ui): read Studio sources as UTF-8 on Windows locales",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T07:36:35Z"
+        },
+        {
+          "sha": "1a38a72176d8901c392d64c46cd00cb74ac3078b",
+          "title": "fix(ui): preserve explicit line breaks in unbounded text",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T07:52:20Z"
+        },
+        {
+          "sha": "5f773b0fcda565372c2002906156386b4508a99f",
+          "title": "docs(ui): record Studio native acceptance and delivery gates",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T07:57:32Z"
+        },
+        {
+          "sha": "7356493c6809f3f3320e261031f9c28849cb08d1",
+          "title": "feat(ui): adopt MiHome-inspired light desktop cards",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T08:44:36Z"
+        },
+        {
+          "sha": "2885bbf9a51df12c9e6a6207bbca34755a433f4e",
+          "title": "docs(ui): record MiHome native and Windows acceptance",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T08:55:50Z"
+        },
+        {
+          "sha": "0814c0a03a411e35db8d83f197c7674cdb7fef6e",
+          "title": "feat(import): add cancellable reference and reviewed song-pack worker",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T10:02:25Z"
+        },
+        {
+          "sha": "02f0ea47fdf9b9f4bd0a3ab5b66b3210d3028e37",
+          "title": "feat(import): add native music form and immediate library ingestion",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T10:32:40Z"
+        },
+        {
+          "sha": "58cfda87d9d93707f17807f8bfe88d678ef4053b",
+          "title": "fix(import): bind the Windows Unicode picker with its wide record ABI",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T10:35:38Z"
+        },
+        {
+          "sha": "d6e6629977dc71b999cc97776c3ee1b5c58ade86",
+          "title": "fix(import): preserve clipboard shortcut modifiers from queued key events",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T10:41:08Z"
+        },
+        {
+          "sha": "805c611450c194162a50c9675507c09c147dcd9d",
+          "title": "docs(import): document native music-to-library flow and verified runtime",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T10:56:16Z"
+        },
+        {
+          "sha": "b6862d551085e69763b3d85fb84ba771496a2da0",
+          "title": "chore(import): record completed portable and copy-rollback acceptance",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T11:00:25Z"
+        },
+        {
+          "sha": "705a58e19f7aebace257138a62f7fc9ad7ad3833",
+          "title": "fix(ui): release Studio pointer on leave and use the system cursor",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T12:38:30Z"
+        },
+        {
+          "sha": "17270542d71acad1b5b3c31a09811143a2dfcee4",
+          "title": "feat(lyrics): align measured ASR words to reference notes and export real-lyric packs",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T12:41:38Z"
+        },
+        {
+          "sha": "9807575703f92771272b23192e83cf139adabf5b",
+          "title": "feat(import): require recognized lyrics, surface alignment review and package local ASR tools",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T12:50:10Z"
+        },
+        {
+          "sha": "4a2c574ea9f60c5738674d9a44b1a9303eafabe5",
+          "title": "fix(lyrics): render Studio melisma notes without literal continuation glyphs",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T12:57:28Z"
+        },
+        {
+          "sha": "5706afc3c7a94ea47e5ccb1bb72bd22f75a6e0af",
+          "title": "fix(lyrics): begin phrase timing at the first measured word after an intro",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T13:12:36Z"
+        },
+        {
+          "sha": "8f5c8e5f1530db9d980c30d048d5e58558d3a54e",
+          "title": "docs(lyrics): record actual Rain Ai preview, local ASR and desktop-pointer acceptance",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T13:12:36Z"
+        },
+        {
+          "sha": "8a187e65edcfd61de1cf080da5434e5c94be62ff",
+          "title": "chore(lyrics): record completed package and copy-rollback verification",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T13:17:15Z"
+        },
+        {
+          "sha": "43c70e1af11c50564c6f7b3fceeb48077f9b301b",
+          "title": "fix: keep practice usable without a microphone",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T14:16:25Z"
+        },
+        {
+          "sha": "d755a59c9f7338d4af5e1b4a6cdabd0a5c0c7ffe",
+          "title": "ci: generate capture fixture with the Windows Python runtime",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T14:24:11Z"
+        },
+        {
+          "sha": "9e609e33e3e9d00a82cfa30a0d5fa3a775c7c354",
+          "title": "fix: preserve recorded playback when invalidating capture state",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T14:42:57Z"
+        },
+        {
+          "sha": "3164e29658b49ff18d986a4bf54ddcfea57a9fb8",
+          "title": "chore: order imports in the runtime manifest tool",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T14:43:22Z"
+        },
+        {
+          "sha": "50e11690bd393872425031b7dcebac6f2a0264f5",
+          "title": "fix: separate active input state from saved recording metadata",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T14:55:15Z"
+        }
+      ],
+      "newCommits": [
+        {
+          "sha": "e6b6322bc846560f3fcca63f971f61d0be1d6850",
+          "title": "feat: bridge existing Python vocal references into UltraStar song packs",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T03:38:08Z"
+        },
+        {
+          "sha": "557e1b8c628e8d40f221ee17f5ca939c27dc4dc6",
+          "title": "feat: add native practice and play modes with gated continuous pitch feedback",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T03:39:09Z"
+        },
+        {
+          "sha": "db7ac2a736c41df19f6976ee28ef1b78fa159a51",
+          "title": "ci: build and test Windows portable coach fork",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T03:39:09Z"
+        },
+        {
+          "sha": "401f2e5e3046718519f1dc636f7e80fce3325150",
+          "title": "fix: expose practice on main menu and retain feedback state across frames",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T03:47:18Z"
+        },
+        {
+          "sha": "a7df986d94dc0af913a184accb64562e3d1d4aab",
+          "title": "fix: verify copied reference hashes and keep practice overlay above notes",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T04:02:07Z"
+        },
+        {
+          "sha": "25f19cd150eb9c741f1025cb654f062b6871f187",
+          "title": "fix: load Chinese song names without overflowing transliteration offsets",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T05:02:09Z"
+        },
+        {
+          "sha": "5cd25dbb8e27aea6f4385e4c74688dbba71afe3f",
+          "title": "feat: ship Chinese studio layout and clickable practice controls",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T05:02:09Z"
+        },
+        {
+          "sha": "98e7bf6b22f095fc622821a6878a7ab6d415e47b",
+          "title": "ci: include native UI guide in the portable bundle",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T05:04:08Z"
+        },
+        {
+          "sha": "14dcc69407645254063d97fd540a63b50cec6309",
+          "title": "fix: fit default coach window to the usable desktop",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T05:49:56Z"
+        },
+        {
+          "sha": "f68a3b0d9be3fc8f80c9629404ce83a8e56f48d9",
+          "title": "feat(ui): add deterministic motion and pointer activation state",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T06:26:48Z"
+        },
+        {
+          "sha": "e46aef9a5d31eb6e2b132751a208e57b83367f10",
+          "title": "feat(ui): introduce native Studio controls and motion lifecycle",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T06:33:20Z"
+        },
+        {
+          "sha": "35198e38dd168748f7e50c1dbb06e1146ef7178d",
+          "title": "feat(ui): rebuild all-light Studio screens and interaction flows",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T07:33:49Z"
+        },
+        {
+          "sha": "40a48e5efc665ab1a66ab5a846526b832da610dd",
+          "title": "fix(ui): read Studio sources as UTF-8 on Windows locales",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T07:36:35Z"
+        },
+        {
+          "sha": "1a38a72176d8901c392d64c46cd00cb74ac3078b",
+          "title": "fix(ui): preserve explicit line breaks in unbounded text",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T07:52:20Z"
+        },
+        {
+          "sha": "5f773b0fcda565372c2002906156386b4508a99f",
+          "title": "docs(ui): record Studio native acceptance and delivery gates",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T07:57:32Z"
+        },
+        {
+          "sha": "7356493c6809f3f3320e261031f9c28849cb08d1",
+          "title": "feat(ui): adopt MiHome-inspired light desktop cards",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T08:44:36Z"
+        },
+        {
+          "sha": "2885bbf9a51df12c9e6a6207bbca34755a433f4e",
+          "title": "docs(ui): record MiHome native and Windows acceptance",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T08:55:50Z"
+        },
+        {
+          "sha": "0814c0a03a411e35db8d83f197c7674cdb7fef6e",
+          "title": "feat(import): add cancellable reference and reviewed song-pack worker",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T10:02:25Z"
+        },
+        {
+          "sha": "02f0ea47fdf9b9f4bd0a3ab5b66b3210d3028e37",
+          "title": "feat(import): add native music form and immediate library ingestion",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T10:32:40Z"
+        },
+        {
+          "sha": "58cfda87d9d93707f17807f8bfe88d678ef4053b",
+          "title": "fix(import): bind the Windows Unicode picker with its wide record ABI",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T10:35:38Z"
+        },
+        {
+          "sha": "d6e6629977dc71b999cc97776c3ee1b5c58ade86",
+          "title": "fix(import): preserve clipboard shortcut modifiers from queued key events",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T10:41:08Z"
+        },
+        {
+          "sha": "805c611450c194162a50c9675507c09c147dcd9d",
+          "title": "docs(import): document native music-to-library flow and verified runtime",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T10:56:16Z"
+        },
+        {
+          "sha": "b6862d551085e69763b3d85fb84ba771496a2da0",
+          "title": "chore(import): record completed portable and copy-rollback acceptance",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T11:00:25Z"
+        },
+        {
+          "sha": "705a58e19f7aebace257138a62f7fc9ad7ad3833",
+          "title": "fix(ui): release Studio pointer on leave and use the system cursor",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T12:38:30Z"
+        },
+        {
+          "sha": "17270542d71acad1b5b3c31a09811143a2dfcee4",
+          "title": "feat(lyrics): align measured ASR words to reference notes and export real-lyric packs",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T12:41:38Z"
+        },
+        {
+          "sha": "9807575703f92771272b23192e83cf139adabf5b",
+          "title": "feat(import): require recognized lyrics, surface alignment review and package local ASR tools",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T12:50:10Z"
+        },
+        {
+          "sha": "4a2c574ea9f60c5738674d9a44b1a9303eafabe5",
+          "title": "fix(lyrics): render Studio melisma notes without literal continuation glyphs",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T12:57:28Z"
+        },
+        {
+          "sha": "5706afc3c7a94ea47e5ccb1bb72bd22f75a6e0af",
+          "title": "fix(lyrics): begin phrase timing at the first measured word after an intro",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T13:12:36Z"
+        },
+        {
+          "sha": "8f5c8e5f1530db9d980c30d048d5e58558d3a54e",
+          "title": "docs(lyrics): record actual Rain Ai preview, local ASR and desktop-pointer acceptance",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T13:12:36Z"
+        },
+        {
+          "sha": "8a187e65edcfd61de1cf080da5434e5c94be62ff",
+          "title": "chore(lyrics): record completed package and copy-rollback verification",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T13:17:15Z"
+        },
+        {
+          "sha": "43c70e1af11c50564c6f7b3fceeb48077f9b301b",
+          "title": "fix: keep practice usable without a microphone",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T14:16:25Z"
+        },
+        {
+          "sha": "d755a59c9f7338d4af5e1b4a6cdabd0a5c0c7ffe",
+          "title": "ci: generate capture fixture with the Windows Python runtime",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T14:24:11Z"
+        },
+        {
+          "sha": "9e609e33e3e9d00a82cfa30a0d5fa3a775c7c354",
+          "title": "fix: preserve recorded playback when invalidating capture state",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T14:42:57Z"
+        },
+        {
+          "sha": "3164e29658b49ff18d986a4bf54ddcfea57a9fb8",
+          "title": "chore: order imports in the runtime manifest tool",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T14:43:22Z"
+        },
+        {
+          "sha": "50e11690bd393872425031b7dcebac6f2a0264f5",
+          "title": "fix: separate active input state from saved recording metadata",
+          "author": "Sinotoon1",
+          "authoredAt": "2026-10-24T14:55:15Z"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "tobiasfroeschl/USDX",
+      "branch": "local",
+      "head": "57c77bd311dbad0e10f6f49d0f1eb2203c7255d0",
+      "upstreamHead": "7f49e685c7d7affcd0bd6501f46f6af801e4d880",
+      "comparisonBase": "32a2989274d8f85f54e936eda85faf48b276e480",
+      "comparisonKind": "outside-usce",
+      "ahead": 5,
+      "behind": 731,
+      "compareUrl": "https://github.com/UltraStar-CE/USCE/compare/32a2989274d8f85f54e936eda85faf48b276e480...57c77bd311dbad0e10f6f49d0f1eb2203c7255d0",
+      "novelCommits": [
+        {
+          "sha": "08b15faa5793f58f88bb5ae6f932616000699dea",
+          "title": "Accept libavformat 61.7.103 in the FFmpeg 7.0 headers",
+          "author": "tobiasfroeschl",
+          "authoredAt": "2026-10-19T20:05:51Z"
+        },
+        {
+          "sha": "57c77bd311dbad0e10f6f49d0f1eb2203c7255d0",
+          "title": "Restore [CO]/[BG] image fallback for songs",
+          "author": "tobiasfroeschl",
+          "authoredAt": "2026-10-19T20:06:50Z"
+        }
+      ],
+      "ignoredKnownHistoryCommitCount": 0,
+      "ignoredUpstreamCommitCount": 0,
+      "ignoredOldCommitCount": 3,
+      "commits": [
+        {
+          "sha": "08b15faa5793f58f88bb5ae6f932616000699dea",
+          "title": "Accept libavformat 61.7.103 in the FFmpeg 7.0 headers",
+          "author": "tobiasfroeschl",
+          "authoredAt": "2026-10-19T20:05:51Z"
+        },
+        {
+          "sha": "57c77bd311dbad0e10f6f49d0f1eb2203c7255d0",
+          "title": "Restore [CO]/[BG] image fallback for songs",
+          "author": "tobiasfroeschl",
+          "authoredAt": "2026-10-19T20:06:50Z"
+        }
+      ],
+      "newCommits": [
+        {
+          "sha": "08b15faa5793f58f88bb5ae6f932616000699dea",
+          "title": "Accept libavformat 61.7.103 in the FFmpeg 7.0 headers",
+          "author": "tobiasfroeschl",
+          "authoredAt": "2026-10-19T20:05:51Z"
+        },
+        {
+          "sha": "57c77bd311dbad0e10f6f49d0f1eb2203c7255d0",
+          "title": "Restore [CO]/[BG] image fallback for songs",
+          "author": "tobiasfroeschl",
+          "authoredAt": "2026-10-19T20:06:50Z"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "Yannis4444/USDX",
+      "branch": "single-song",
+      "head": "f3f349b644bb1af007bada3205e704246541d3d1",
+      "upstreamHead": "7f49e685c7d7affcd0bd6501f46f6af801e4d880",
+      "comparisonBase": "32a2989274d8f85f54e936eda85faf48b276e480",
+      "comparisonKind": "outside-usce",
+      "ahead": 7,
+      "behind": 748,
+      "compareUrl": "https://github.com/UltraStar-CE/USCE/compare/32a2989274d8f85f54e936eda85faf48b276e480...f3f349b644bb1af007bada3205e704246541d3d1",
+      "novelCommits": [
+        {
+          "sha": "9fb41e9bb4589a26a7c11828cf1e26bc9f65f8b1",
+          "title": "Add -song parameter to sing a single song and exit",
+          "author": "Yannis4444",
+          "authoredAt": "2026-10-02T23:58:57Z"
+        },
+        {
+          "sha": "4ae18b218278bebcf97e3375c2df255c4d96c5ec",
+          "title": "Load player avatars in single song mode",
+          "author": "Yannis4444",
+          "authoredAt": "2026-10-03T12:07:37Z"
+        },
+        {
+          "sha": "4a9b859b5d37f9993c7b548d9e9963eed0275a13",
+          "title": "Extract player setup from the name screen into a method",
+          "author": "Yannis4444",
+          "authoredAt": "2026-10-11T17:11:17Z"
+        },
+        {
+          "sha": "f847a6864a81c43540045255a391d99d3928e659",
+          "title": "Use the name screen's player setup in the song screen",
+          "author": "Yannis4444",
+          "authoredAt": "2026-10-11T17:11:48Z"
+        },
+        {
+          "sha": "22f0d7c14c3c180d65251266d168fd83bca8dc48",
+          "title": "Load only the given song when -song is used",
+          "author": "Yannis4444",
+          "authoredAt": "2026-10-11T17:12:11Z"
+        },
+        {
+          "sha": "dc5a2f55f099dfdb36d8b359aed2c2b650ed493c",
+          "title": "Move single song start to UMain",
+          "author": "Yannis4444",
+          "authoredAt": "2026-10-11T17:12:34Z"
+        },
+        {
+          "sha": "f3f349b644bb1af007bada3205e704246541d3d1",
+          "title": "Shorten the -song help text",
+          "author": "Yannis4444",
+          "authoredAt": "2026-10-11T17:25:42Z"
+        }
+      ],
+      "ignoredKnownHistoryCommitCount": 0,
+      "ignoredUpstreamCommitCount": 0,
+      "ignoredOldCommitCount": 0,
+      "commits": [
+        {
+          "sha": "9fb41e9bb4589a26a7c11828cf1e26bc9f65f8b1",
+          "title": "Add -song parameter to sing a single song and exit",
+          "author": "Yannis4444",
+          "authoredAt": "2026-10-02T23:58:57Z"
+        },
+        {
+          "sha": "4ae18b218278bebcf97e3375c2df255c4d96c5ec",
+          "title": "Load player avatars in single song mode",
+          "author": "Yannis4444",
+          "authoredAt": "2026-10-03T12:07:37Z"
+        },
+        {
+          "sha": "4a9b859b5d37f9993c7b548d9e9963eed0275a13",
+          "title": "Extract player setup from the name screen into a method",
+          "author": "Yannis4444",
+          "authoredAt": "2026-10-11T17:11:17Z"
+        },
+        {
+          "sha": "f847a6864a81c43540045255a391d99d3928e659",
+          "title": "Use the name screen's player setup in the song screen",
+          "author": "Yannis4444",
+          "authoredAt": "2026-10-11T17:11:48Z"
+        },
+        {
+          "sha": "22f0d7c14c3c180d65251266d168fd83bca8dc48",
+          "title": "Load only the given song when -song is used",
+          "author": "Yannis4444",
+          "authoredAt": "2026-10-11T17:12:11Z"
+        },
+        {
+          "sha": "dc5a2f55f099dfdb36d8b359aed2c2b650ed493c",
+          "title": "Move single song start to UMain",
+          "author": "Yannis4444",
+          "authoredAt": "2026-10-11T17:12:34Z"
+        },
+        {
+          "sha": "f3f349b644bb1af007bada3205e704246541d3d1",
+          "title": "Shorten the -song help text",
+          "author": "Yannis4444",
+          "authoredAt": "2026-10-11T17:25:42Z"
+        }
+      ],
+      "newCommits": [
+        {
+          "sha": "9fb41e9bb4589a26a7c11828cf1e26bc9f65f8b1",
+          "title": "Add -song parameter to sing a single song and exit",
+          "author": "Yannis4444",
+          "authoredAt": "2026-10-02T23:58:57Z"
+        },
+        {
+          "sha": "4ae18b218278bebcf97e3375c2df255c4d96c5ec",
+          "title": "Load player avatars in single song mode",
+          "author": "Yannis4444",
+          "authoredAt": "2026-10-03T12:07:37Z"
+        },
+        {
+          "sha": "4a9b859b5d37f9993c7b548d9e9963eed0275a13",
+          "title": "Extract player setup from the name screen into a method",
+          "author": "Yannis4444",
+          "authoredAt": "2026-10-11T17:11:17Z"
+        },
+        {
+          "sha": "f847a6864a81c43540045255a391d99d3928e659",
+          "title": "Use the name screen's player setup in the song screen",
+          "author": "Yannis4444",
+          "authoredAt": "2026-10-11T17:11:48Z"
+        },
+        {
+          "sha": "22f0d7c14c3c180d65251266d168fd83bca8dc48",
+          "title": "Load only the given song when -song is used",
+          "author": "Yannis4444",
+          "authoredAt": "2026-10-11T17:12:11Z"
+        },
+        {
+          "sha": "dc5a2f55f099dfdb36d8b359aed2c2b650ed493c",
+          "title": "Move single song start to UMain",
+          "author": "Yannis4444",
+          "authoredAt": "2026-10-11T17:12:34Z"
+        },
+        {
+          "sha": "f3f349b644bb1af007bada3205e704246541d3d1",
+          "title": "Shorten the -song help text",
+          "author": "Yannis4444",
+          "authoredAt": "2026-10-11T17:25:42Z"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "IchbinkeinReh/USDX",
+      "branch": "master",
+      "head": "3bc82f668710ac1f44832ae4306cf2297569553f",
+      "upstreamHead": "7f49e685c7d7affcd0bd6501f46f6af801e4d880",
+      "comparisonBase": "32a2989274d8f85f54e936eda85faf48b276e480",
+      "comparisonKind": "outside-usce",
+      "ahead": 75,
+      "behind": 777,
+      "compareUrl": "https://github.com/UltraStar-CE/USCE/compare/32a2989274d8f85f54e936eda85faf48b276e480...3bc82f668710ac1f44832ae4306cf2297569553f",
+      "novelCommits": [
+        {
+          "sha": "252cadd58a55d460e47c6a0d0ddbf860f11f0f40",
+          "title": "Suche: AND, OR, Klammern und Jahresbereiche",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-01T22:35:57Z"
+        },
+        {
+          "sha": "e315bb33cd767b55a24500c494a8b8e4a37d1f22",
+          "title": "Suche: Bereiche in jeder Suche, Negation mit \"!\"",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T05:20:31Z"
+        },
+        {
+          "sha": "6c3e71d7b87c77ddd8a430738c427fe61564dc08",
+          "title": "Merge: Suchsyntax mit AND, OR, Klammern, Bereichen und Negation",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T05:24:26Z"
+        },
+        {
+          "sha": "e633b7264ca0f662a686bd1b7371b0f3ace9c9a1",
+          "title": "Suchen speichern und laden",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T06:12:58Z"
+        },
+        {
+          "sha": "fd5da4c64dca91feb278c2f97ab105891419a0b5",
+          "title": "Merge: Suchen speichern und laden",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T06:20:44Z"
+        },
+        {
+          "sha": "4b57fea6cc84c8fba1dafd972a2450d94adcc4d6",
+          "title": "Absturz beim Speichern einer Suche: Namenskollision aufgeloest",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T06:40:48Z"
+        },
+        {
+          "sha": "25b774dddcdb0b3d97eeb77edb6babf1e75031b1",
+          "title": "Merge: Absturz beim Speichern einer Suche behoben",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T06:43:32Z"
+        },
+        {
+          "sha": "8b21eae5855ed0036a003c826b6cfa074b4fce03",
+          "title": "Suche: vorhandene Werte mit Hoch/Runter durchblaettern",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T08:38:47Z"
+        },
+        {
+          "sha": "7e368371a553304250e65edf08cf150212333c8f",
+          "title": "Suche: Werte in allen Modi durchblaettern, mit Sprung zum getippten Anfang",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T13:17:33Z"
+        },
+        {
+          "sha": "4e51cacb3ade1b367a1762b617355221597ff963",
+          "title": "Lieder parallel einlesen, Dateiliste blockweise vergroessern",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T15:56:11Z"
+        },
+        {
+          "sha": "077a45a2288606187ea1c32b1f5023d3dc790d15",
+          "title": "CI: naechtlichen Bau entfernt, automatische Release ergaenzt",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T16:02:50Z"
+        },
+        {
+          "sha": "df575acf5b39c0a2ef06010c34f02b3ea17e0546",
+          "title": "CI: Release lud ein fremdes Artefakt mit und scheiterte daran",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T16:12:44Z"
+        },
+        {
+          "sha": "60fdee1e1c51d699dd7d3bbd428b3bd1e3fdf35c",
+          "title": "Merge upstream/master",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T16:19:09Z"
+        },
+        {
+          "sha": "3fdc6317eeef89328d4a4a66eacfbb647e64a99e",
+          "title": "CI: eigenes Tag-Schema fuer die automatischen Releases",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T16:22:27Z"
+        },
+        {
+          "sha": "50bf0fedf5addb636e5a5521c2692656e6092b06",
+          "title": "Weboberflaeche zur Fernbedienung mit --web",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T17:01:40Z"
+        },
+        {
+          "sha": "b6b7a5a5356b6d30b7f6daaff3ae33d69279375e",
+          "title": "Weboberflaeche: Dokumentation nachgereicht",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T17:02:14Z"
+        },
+        {
+          "sha": "9208dc1e87f66c42dd7d7d55718ca1e8226ff63f",
+          "title": "Merge: Weboberflaeche zur Fernbedienung (--web)",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T18:04:00Z"
+        },
+        {
+          "sha": "49194e7058a2a7762c265ff12f155deb1f5e443c",
+          "title": "Singen im Browser unter --web",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T13:09:46Z"
+        },
+        {
+          "sha": "9d2889094b4055e14af70a1225a85eb62bd28d93",
+          "title": "Duette im Browser: zwei Stimmen, zwei Mikrofone, zwei Wertungen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T15:45:15Z"
+        },
+        {
+          "sha": "c5bfdd6d4500c47a8455950cb7f55cae98a2634f",
+          "title": "Webbetrieb ohne OpenGL: --web-only",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T15:57:18Z"
+        },
+        {
+          "sha": "0013a86a1b6de39666048529fdbbf2e1a542b340",
+          "title": "Video im Browser, Hintergrundbild als Rueckfall",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T16:51:32Z"
+        },
+        {
+          "sha": "cecbb5477dc5efd661441c89e81e6a0a1e3cb556",
+          "title": "Liedtext faerbt sich mit, und ein Vorlauf zeigt den Einsatz an",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T16:59:04Z"
+        },
+        {
+          "sha": "4e5bfce652866e3072b3c2155fafeae6de38e7c7",
+          "title": "Zeilenanzeiger aus dem Spiel portieren statt selbst erfinden",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T17:01:42Z"
+        },
+        {
+          "sha": "17fda0f7bd4063b8fff0506d01c55b1b89cb07e4",
+          "title": "--webhost: Bindeadresse waehlbar",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T17:17:25Z"
+        },
+        {
+          "sha": "8bed487fb4a81fb8823ff19ade549d958b55f686",
+          "title": "WEB.md: Betrieb hinter einem Vorschalt-Server",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T17:21:04Z"
+        },
+        {
+          "sha": "cf5f2a4095b7e3371facc77e29ef792d6b6985ca",
+          "title": "Antworten stueckeln: hoechstens 8 MB je Anfrage im Speicher",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T17:47:34Z"
+        },
+        {
+          "sha": "85598eef346e333ae454346c93bfcf1773b21f8a",
+          "title": "Gesungene Balken statt Spielstellen-Linie",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T18:15:52Z"
+        },
+        {
+          "sha": "446e84dd62893c29e54087685d85914ac04cced4",
+          "title": "Textband mit zwei Zeilen, Anzeiger endlich sichtbar",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T18:27:43Z"
+        },
+        {
+          "sha": "369cc4c6f25dadcdfe0f29e96de7ffe8ba59961d",
+          "title": "Liedauswahl und Singen trennen, auf dem Handy Vollbild und Querformat",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T18:34:04Z"
+        },
+        {
+          "sha": "b87df4caaa24d29a87619cc1762f7e6ac651554b",
+          "title": "Leerzeichen erhalten, in CSS-Punkten zeichnen, Vorschau weiss, Favicon",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T18:39:43Z"
+        },
+        {
+          "sha": "22728369943d133c10ef13ec90eca10aef62586d",
+          "title": "Mikrofon automatisch pegeln, Anzeiger auf die Textzeile, Start von Hand",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T21:09:35Z"
+        },
+        {
+          "sha": "5072624b60b731aad01f5fd63d8b6febb4745dfd",
+          "title": "Tonhoehenerkennung durch das Verfahren des Spiels ersetzen (CAMDF)",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T21:27:45Z"
+        },
+        {
+          "sha": "eee8283b111347df1a386a205485ee829001c8ac",
+          "title": "Schwierigkeitsstufen wie im Original, Voreinstellung leicht",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T21:35:19Z"
+        },
+        {
+          "sha": "69ee661a0a7c7a4b8245ec4752104af688146ff9",
+          "title": "Auch bei Sololiedern zu zweit singen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T21:37:23Z"
+        },
+        {
+          "sha": "a8d37b045103227c8b245fa1a70cf91fdc30ca5e",
+          "title": "Schrumpfende Notenfuellung entfernen, Fortschrittsbalken hinzufuegen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T21:42:29Z"
+        },
+        {
+          "sha": "9f8d5a9e180e0ce40fdad91de398b0d264a170d1",
+          "title": "Buehne aufraeumen: kein Fussbereich, Punkte in der Bahn, Text je nach Lage",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T21:51:10Z"
+        },
+        {
+          "sha": "2d228002670600728fc2e00244a3ebadc69e46c5",
+          "title": "Ergebnisseite nach dem Lied, Vollbild ueberall, Kopfleiste raus im Vollbild",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T21:55:11Z"
+        },
+        {
+          "sha": "7c771529eaffa2f1462a56d4af2c1b817be431f5",
+          "title": "Zeilenbonus und Bewertung je Zeile wie im Original",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-04T05:09:06Z"
+        },
+        {
+          "sha": "c53572ec37bfbeb0b73dcbd7d684a391bda23a6a",
+          "title": "Favicon: schraeges Handmikrofon statt Studiomikrofon",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-04T06:45:44Z"
+        },
+        {
+          "sha": "b2ec25fe691d71c9d1fccf5e8aa9b0a5d1d5fa51",
+          "title": "500er beim Laden beheben: Connection: close an jede Antwort",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-04T07:40:42Z"
+        },
+        {
+          "sha": "337e7c84a3ae6b50597e899695276707d4d9be96",
+          "title": "Adressen ohne Zugangsdaten bauen - Seite blieb sonst leer",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-04T07:44:09Z"
+        },
+        {
+          "sha": "15f71fefc82a99975c246a125e804b23ce15e1b8",
+          "title": "Ergebnisseite reparieren, Noten ausblenden, Spulen per Doppeltipp",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-04T07:58:57Z"
+        },
+        {
+          "sha": "b1d13448076ef3a2bb9b589049de93a58587fc50",
+          "title": "Spulen: kein Zeichen mehr einblenden, fuenf statt zehn Sekunden",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-04T08:10:03Z"
+        },
+        {
+          "sha": "91442d144849a0356c3a78fd2a2ecfa2c71c3508",
+          "title": "Suchtexte beim Veroeffentlichen vorbereiten statt bei jeder Anfrage",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-06T12:00:45Z"
+        },
+        {
+          "sha": "e48d1269939000321769c912982200c5bb3a806f",
+          "title": "Lieder mit langen Pfaden wurden lautlos uebersprungen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-06T12:07:10Z"
+        },
+        {
+          "sha": "1aff0ad768bfbac5c583e1220f216ca30c2cc7ff",
+          "title": "Liederliste alphabetisch sortieren und seitenweise nachladen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-06T12:11:53Z"
+        },
+        {
+          "sha": "9b5c2bc6ef821f5d873a7d358bdac7bd188706d9",
+          "title": "Auswahlleiste festsetzen, Titelbilder in der Liste",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-06T13:11:39Z"
+        },
+        {
+          "sha": "5bee56712706fc20eabef4e44fcfb234ebd6c012",
+          "title": "Liedauswahl und Singen in der URL festhalten, Neustart bei Nochmal singen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-07T17:46:42Z"
+        },
+        {
+          "sha": "dfecb477b817b87213a42d325b86f9a221d9d638",
+          "title": "Liedvorschau, Zufallslied, Trefferzahl und echtes Favicon",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-07T18:19:43Z"
+        },
+        {
+          "sha": "ee0e469ecfb2201068cb18de08fd80b55af2dcbc",
+          "title": "Mehrspieler-Lobbys: gemeinsames Singen mit synchronisierter Wiedergabe",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-09T08:25:34Z"
+        },
+        {
+          "sha": "b75a19720f076301b60af643c4228238f3e2c418",
+          "title": "Nochmal singen: /start meldete faelschlich \"kein Lied ausgewaehlt\"",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-09T08:32:15Z"
+        },
+        {
+          "sha": "37f2b726d86be063fbf2101cece4767b4d38fd92",
+          "title": "Zeilenanzeiger fehlte manchmal trotz laufender Gesangspause",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-09T08:41:11Z"
+        },
+        {
+          "sha": "b06fe3252fbe43fd8117d494ef14335da05aaa4c",
+          "title": "Linux-ARM64-Build in CI und Release aufnehmen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-11T07:37:52Z"
+        },
+        {
+          "sha": "9ee336272fedfceded66282d653415ef77dbedc3",
+          "title": "Lieddateien verschluesselt ausliefern, eigene Vorschau, Zaehlung des Gesungenen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-20T23:01:36Z"
+        },
+        {
+          "sha": "7af00040546a6f095d399aab128fea6c340a96bb",
+          "title": "Dienstarbeiter darf nicht hinter der Anmeldung stehen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-21T09:53:45Z"
+        },
+        {
+          "sha": "37131de47bb8a4516f6f75a90e69d27375144ea6",
+          "title": "Ton und Video erst beim Singen holen, nicht schon in der Liste",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-21T09:59:56Z"
+        },
+        {
+          "sha": "e94acb05149d4b51f98fdb0b36c264dcbd5c8993",
+          "title": "Ton, Video und Bild schon beim Betreten der Buehne holen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-21T10:56:25Z"
+        },
+        {
+          "sha": "85929a31afacf862734cbcdab4a520ebc9c61f3b",
+          "title": "Anmeldung des Dienstarbeiters wiederholen, statt aufzugeben",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-22T21:10:50Z"
+        },
+        {
+          "sha": "b982904e8d87d5bbc3c73194d29934ddbf4163d3",
+          "title": "Dienstarbeiter anmelden, ohne auf die Sitzung zu warten",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-22T21:24:51Z"
+        },
+        {
+          "sha": "44a1e78029917b947720b5fc61d1cad7f2b112e4",
+          "title": "Added possibility to sing karaoke version of if available",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-23T17:23:41Z"
+        },
+        {
+          "sha": "e521fe424135648462045890f02da6087ad564b9",
+          "title": "Add make install-web target for deploying the karaoke server",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-23T20:24:21Z"
+        },
+        {
+          "sha": "a040176625fb25965db64131b1bb19a259dd5aad",
+          "title": "Duett: beide Texte immer zeigen, Original als Voreinstellung",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-26T14:35:44Z"
+        },
+        {
+          "sha": "c7bf9fd6077ad181cea75060a528eb0b90feb0a9",
+          "title": "Nur Lieder mit Tondatei und Vorschau in der Liste",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-26T14:41:59Z"
+        },
+        {
+          "sha": "c9b174782bb15e33960aacbb4488a110383558da",
+          "title": "Startseite mit Party- und Radio-Modus",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-27T09:44:50Z"
+        },
+        {
+          "sha": "38aab976582d82ed0ac9b7951ef2b41bde6ec7ed",
+          "title": "Radio: Start haengt nicht mehr, Titel beim Liedwechsel einblenden",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-27T13:46:56Z"
+        },
+        {
+          "sha": "28177302eb081ee815075cbca8b7c112b09c591a",
+          "title": "Radio: Knoepfe in der Pause fuer Karaoke, vorheriges und naechstes Lied",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-27T13:57:54Z"
+        },
+        {
+          "sha": "3a62a1fd911154df781acd8a9439479d38a28bef",
+          "title": "Weboberflaeche als installierbare App (PWA)",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-27T14:11:29Z"
+        },
+        {
+          "sha": "ca319248e2f66ab4440c68406c4d0bd33e31f121",
+          "title": "Startseite: Installieren-Knopf zuverlaessig, sonst Hinweis je Geraet",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-27T14:30:18Z"
+        },
+        {
+          "sha": "ee8ea325138ed85bf5a20ef4624ea66f306cb6e5",
+          "title": "Duett-Text so gross wie beim Sololied, Bildschirm auf der Buehne wach",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-27T15:18:17Z"
+        },
+        {
+          "sha": "354e1fc1e05c313c9072b381928fe11e43a6c065",
+          "title": "Seite fuer Impressum, Datenschutz und Lizenzen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-27T15:30:07Z"
+        },
+        {
+          "sha": "47eae15d28ae63b04f91732911ba59c6e9d5f07f",
+          "title": "WEB.md: 401-Seite ohne Umlaut-Bytes (Apache schickt sie als iso-8859-1)",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-27T15:31:14Z"
+        },
+        {
+          "sha": "5830883d379a98d96881f6bb7bc0ff54212b1968",
+          "title": "Chromes Installationsbanner nicht mehr unterdruecken",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-27T21:13:10Z"
+        },
+        {
+          "sha": "e48063309bdc81f40943a60372d240bb8e3e4668",
+          "title": "Web: Lied ab #START und bis #END spielen wie im Spiel",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-27T22:01:15Z"
+        },
+        {
+          "sha": "38ccc45c421734c1f546bfd90f8cd88a2b5e098a",
+          "title": "Radio: Vollbild verlassen beendet das Radio nicht mehr",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-30T00:34:08Z"
+        },
+        {
+          "sha": "3bc82f668710ac1f44832ae4306cf2297569553f",
+          "title": "Pause zeigt alles zum Lied, Hinweis bei neuer Version, Karaoke-Wechsel zaehlt nicht",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-10-11T11:18:57Z"
+        }
+      ],
+      "ignoredKnownHistoryCommitCount": 0,
+      "ignoredUpstreamCommitCount": 0,
+      "ignoredOldCommitCount": 0,
+      "commits": [
+        {
+          "sha": "252cadd58a55d460e47c6a0d0ddbf860f11f0f40",
+          "title": "Suche: AND, OR, Klammern und Jahresbereiche",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-01T22:35:57Z"
+        },
+        {
+          "sha": "e315bb33cd767b55a24500c494a8b8e4a37d1f22",
+          "title": "Suche: Bereiche in jeder Suche, Negation mit \"!\"",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T05:20:31Z"
+        },
+        {
+          "sha": "6c3e71d7b87c77ddd8a430738c427fe61564dc08",
+          "title": "Merge: Suchsyntax mit AND, OR, Klammern, Bereichen und Negation",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T05:24:26Z"
+        },
+        {
+          "sha": "e633b7264ca0f662a686bd1b7371b0f3ace9c9a1",
+          "title": "Suchen speichern und laden",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T06:12:58Z"
+        },
+        {
+          "sha": "fd5da4c64dca91feb278c2f97ab105891419a0b5",
+          "title": "Merge: Suchen speichern und laden",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T06:20:44Z"
+        },
+        {
+          "sha": "4b57fea6cc84c8fba1dafd972a2450d94adcc4d6",
+          "title": "Absturz beim Speichern einer Suche: Namenskollision aufgeloest",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T06:40:48Z"
+        },
+        {
+          "sha": "25b774dddcdb0b3d97eeb77edb6babf1e75031b1",
+          "title": "Merge: Absturz beim Speichern einer Suche behoben",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T06:43:32Z"
+        },
+        {
+          "sha": "8b21eae5855ed0036a003c826b6cfa074b4fce03",
+          "title": "Suche: vorhandene Werte mit Hoch/Runter durchblaettern",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T08:38:47Z"
+        },
+        {
+          "sha": "7e368371a553304250e65edf08cf150212333c8f",
+          "title": "Suche: Werte in allen Modi durchblaettern, mit Sprung zum getippten Anfang",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T13:17:33Z"
+        },
+        {
+          "sha": "4e51cacb3ade1b367a1762b617355221597ff963",
+          "title": "Lieder parallel einlesen, Dateiliste blockweise vergroessern",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T15:56:11Z"
+        },
+        {
+          "sha": "077a45a2288606187ea1c32b1f5023d3dc790d15",
+          "title": "CI: naechtlichen Bau entfernt, automatische Release ergaenzt",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T16:02:50Z"
+        },
+        {
+          "sha": "df575acf5b39c0a2ef06010c34f02b3ea17e0546",
+          "title": "CI: Release lud ein fremdes Artefakt mit und scheiterte daran",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T16:12:44Z"
+        },
+        {
+          "sha": "60fdee1e1c51d699dd7d3bbd428b3bd1e3fdf35c",
+          "title": "Merge upstream/master",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T16:19:09Z"
+        },
+        {
+          "sha": "3fdc6317eeef89328d4a4a66eacfbb647e64a99e",
+          "title": "CI: eigenes Tag-Schema fuer die automatischen Releases",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T16:22:27Z"
+        },
+        {
+          "sha": "50bf0fedf5addb636e5a5521c2692656e6092b06",
+          "title": "Weboberflaeche zur Fernbedienung mit --web",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T17:01:40Z"
+        },
+        {
+          "sha": "b6b7a5a5356b6d30b7f6daaff3ae33d69279375e",
+          "title": "Weboberflaeche: Dokumentation nachgereicht",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T17:02:14Z"
+        },
+        {
+          "sha": "9208dc1e87f66c42dd7d7d55718ca1e8226ff63f",
+          "title": "Merge: Weboberflaeche zur Fernbedienung (--web)",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T18:04:00Z"
+        },
+        {
+          "sha": "49194e7058a2a7762c265ff12f155deb1f5e443c",
+          "title": "Singen im Browser unter --web",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T13:09:46Z"
+        },
+        {
+          "sha": "9d2889094b4055e14af70a1225a85eb62bd28d93",
+          "title": "Duette im Browser: zwei Stimmen, zwei Mikrofone, zwei Wertungen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T15:45:15Z"
+        },
+        {
+          "sha": "c5bfdd6d4500c47a8455950cb7f55cae98a2634f",
+          "title": "Webbetrieb ohne OpenGL: --web-only",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T15:57:18Z"
+        },
+        {
+          "sha": "0013a86a1b6de39666048529fdbbf2e1a542b340",
+          "title": "Video im Browser, Hintergrundbild als Rueckfall",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T16:51:32Z"
+        },
+        {
+          "sha": "cecbb5477dc5efd661441c89e81e6a0a1e3cb556",
+          "title": "Liedtext faerbt sich mit, und ein Vorlauf zeigt den Einsatz an",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T16:59:04Z"
+        },
+        {
+          "sha": "4e5bfce652866e3072b3c2155fafeae6de38e7c7",
+          "title": "Zeilenanzeiger aus dem Spiel portieren statt selbst erfinden",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T17:01:42Z"
+        },
+        {
+          "sha": "17fda0f7bd4063b8fff0506d01c55b1b89cb07e4",
+          "title": "--webhost: Bindeadresse waehlbar",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T17:17:25Z"
+        },
+        {
+          "sha": "8bed487fb4a81fb8823ff19ade549d958b55f686",
+          "title": "WEB.md: Betrieb hinter einem Vorschalt-Server",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T17:21:04Z"
+        },
+        {
+          "sha": "cf5f2a4095b7e3371facc77e29ef792d6b6985ca",
+          "title": "Antworten stueckeln: hoechstens 8 MB je Anfrage im Speicher",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T17:47:34Z"
+        },
+        {
+          "sha": "85598eef346e333ae454346c93bfcf1773b21f8a",
+          "title": "Gesungene Balken statt Spielstellen-Linie",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T18:15:52Z"
+        },
+        {
+          "sha": "446e84dd62893c29e54087685d85914ac04cced4",
+          "title": "Textband mit zwei Zeilen, Anzeiger endlich sichtbar",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T18:27:43Z"
+        },
+        {
+          "sha": "369cc4c6f25dadcdfe0f29e96de7ffe8ba59961d",
+          "title": "Liedauswahl und Singen trennen, auf dem Handy Vollbild und Querformat",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T18:34:04Z"
+        },
+        {
+          "sha": "b87df4caaa24d29a87619cc1762f7e6ac651554b",
+          "title": "Leerzeichen erhalten, in CSS-Punkten zeichnen, Vorschau weiss, Favicon",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T18:39:43Z"
+        },
+        {
+          "sha": "22728369943d133c10ef13ec90eca10aef62586d",
+          "title": "Mikrofon automatisch pegeln, Anzeiger auf die Textzeile, Start von Hand",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T21:09:35Z"
+        },
+        {
+          "sha": "5072624b60b731aad01f5fd63d8b6febb4745dfd",
+          "title": "Tonhoehenerkennung durch das Verfahren des Spiels ersetzen (CAMDF)",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T21:27:45Z"
+        },
+        {
+          "sha": "eee8283b111347df1a386a205485ee829001c8ac",
+          "title": "Schwierigkeitsstufen wie im Original, Voreinstellung leicht",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T21:35:19Z"
+        },
+        {
+          "sha": "69ee661a0a7c7a4b8245ec4752104af688146ff9",
+          "title": "Auch bei Sololiedern zu zweit singen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T21:37:23Z"
+        },
+        {
+          "sha": "a8d37b045103227c8b245fa1a70cf91fdc30ca5e",
+          "title": "Schrumpfende Notenfuellung entfernen, Fortschrittsbalken hinzufuegen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T21:42:29Z"
+        },
+        {
+          "sha": "9f8d5a9e180e0ce40fdad91de398b0d264a170d1",
+          "title": "Buehne aufraeumen: kein Fussbereich, Punkte in der Bahn, Text je nach Lage",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T21:51:10Z"
+        },
+        {
+          "sha": "2d228002670600728fc2e00244a3ebadc69e46c5",
+          "title": "Ergebnisseite nach dem Lied, Vollbild ueberall, Kopfleiste raus im Vollbild",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T21:55:11Z"
+        },
+        {
+          "sha": "7c771529eaffa2f1462a56d4af2c1b817be431f5",
+          "title": "Zeilenbonus und Bewertung je Zeile wie im Original",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-04T05:09:06Z"
+        },
+        {
+          "sha": "c53572ec37bfbeb0b73dcbd7d684a391bda23a6a",
+          "title": "Favicon: schraeges Handmikrofon statt Studiomikrofon",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-04T06:45:44Z"
+        },
+        {
+          "sha": "b2ec25fe691d71c9d1fccf5e8aa9b0a5d1d5fa51",
+          "title": "500er beim Laden beheben: Connection: close an jede Antwort",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-04T07:40:42Z"
+        },
+        {
+          "sha": "337e7c84a3ae6b50597e899695276707d4d9be96",
+          "title": "Adressen ohne Zugangsdaten bauen - Seite blieb sonst leer",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-04T07:44:09Z"
+        },
+        {
+          "sha": "15f71fefc82a99975c246a125e804b23ce15e1b8",
+          "title": "Ergebnisseite reparieren, Noten ausblenden, Spulen per Doppeltipp",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-04T07:58:57Z"
+        },
+        {
+          "sha": "b1d13448076ef3a2bb9b589049de93a58587fc50",
+          "title": "Spulen: kein Zeichen mehr einblenden, fuenf statt zehn Sekunden",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-04T08:10:03Z"
+        },
+        {
+          "sha": "91442d144849a0356c3a78fd2a2ecfa2c71c3508",
+          "title": "Suchtexte beim Veroeffentlichen vorbereiten statt bei jeder Anfrage",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-06T12:00:45Z"
+        },
+        {
+          "sha": "e48d1269939000321769c912982200c5bb3a806f",
+          "title": "Lieder mit langen Pfaden wurden lautlos uebersprungen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-06T12:07:10Z"
+        },
+        {
+          "sha": "1aff0ad768bfbac5c583e1220f216ca30c2cc7ff",
+          "title": "Liederliste alphabetisch sortieren und seitenweise nachladen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-06T12:11:53Z"
+        },
+        {
+          "sha": "9b5c2bc6ef821f5d873a7d358bdac7bd188706d9",
+          "title": "Auswahlleiste festsetzen, Titelbilder in der Liste",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-06T13:11:39Z"
+        },
+        {
+          "sha": "5bee56712706fc20eabef4e44fcfb234ebd6c012",
+          "title": "Liedauswahl und Singen in der URL festhalten, Neustart bei Nochmal singen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-07T17:46:42Z"
+        },
+        {
+          "sha": "dfecb477b817b87213a42d325b86f9a221d9d638",
+          "title": "Liedvorschau, Zufallslied, Trefferzahl und echtes Favicon",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-07T18:19:43Z"
+        },
+        {
+          "sha": "ee0e469ecfb2201068cb18de08fd80b55af2dcbc",
+          "title": "Mehrspieler-Lobbys: gemeinsames Singen mit synchronisierter Wiedergabe",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-09T08:25:34Z"
+        },
+        {
+          "sha": "b75a19720f076301b60af643c4228238f3e2c418",
+          "title": "Nochmal singen: /start meldete faelschlich \"kein Lied ausgewaehlt\"",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-09T08:32:15Z"
+        },
+        {
+          "sha": "37f2b726d86be063fbf2101cece4767b4d38fd92",
+          "title": "Zeilenanzeiger fehlte manchmal trotz laufender Gesangspause",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-09T08:41:11Z"
+        },
+        {
+          "sha": "b06fe3252fbe43fd8117d494ef14335da05aaa4c",
+          "title": "Linux-ARM64-Build in CI und Release aufnehmen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-11T07:37:52Z"
+        },
+        {
+          "sha": "9ee336272fedfceded66282d653415ef77dbedc3",
+          "title": "Lieddateien verschluesselt ausliefern, eigene Vorschau, Zaehlung des Gesungenen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-20T23:01:36Z"
+        },
+        {
+          "sha": "7af00040546a6f095d399aab128fea6c340a96bb",
+          "title": "Dienstarbeiter darf nicht hinter der Anmeldung stehen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-21T09:53:45Z"
+        },
+        {
+          "sha": "37131de47bb8a4516f6f75a90e69d27375144ea6",
+          "title": "Ton und Video erst beim Singen holen, nicht schon in der Liste",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-21T09:59:56Z"
+        },
+        {
+          "sha": "e94acb05149d4b51f98fdb0b36c264dcbd5c8993",
+          "title": "Ton, Video und Bild schon beim Betreten der Buehne holen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-21T10:56:25Z"
+        },
+        {
+          "sha": "85929a31afacf862734cbcdab4a520ebc9c61f3b",
+          "title": "Anmeldung des Dienstarbeiters wiederholen, statt aufzugeben",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-22T21:10:50Z"
+        },
+        {
+          "sha": "b982904e8d87d5bbc3c73194d29934ddbf4163d3",
+          "title": "Dienstarbeiter anmelden, ohne auf die Sitzung zu warten",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-22T21:24:51Z"
+        },
+        {
+          "sha": "44a1e78029917b947720b5fc61d1cad7f2b112e4",
+          "title": "Added possibility to sing karaoke version of if available",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-23T17:23:41Z"
+        },
+        {
+          "sha": "e521fe424135648462045890f02da6087ad564b9",
+          "title": "Add make install-web target for deploying the karaoke server",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-23T20:24:21Z"
+        },
+        {
+          "sha": "a040176625fb25965db64131b1bb19a259dd5aad",
+          "title": "Duett: beide Texte immer zeigen, Original als Voreinstellung",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-26T14:35:44Z"
+        },
+        {
+          "sha": "c7bf9fd6077ad181cea75060a528eb0b90feb0a9",
+          "title": "Nur Lieder mit Tondatei und Vorschau in der Liste",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-26T14:41:59Z"
+        },
+        {
+          "sha": "c9b174782bb15e33960aacbb4488a110383558da",
+          "title": "Startseite mit Party- und Radio-Modus",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-27T09:44:50Z"
+        },
+        {
+          "sha": "38aab976582d82ed0ac9b7951ef2b41bde6ec7ed",
+          "title": "Radio: Start haengt nicht mehr, Titel beim Liedwechsel einblenden",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-27T13:46:56Z"
+        },
+        {
+          "sha": "28177302eb081ee815075cbca8b7c112b09c591a",
+          "title": "Radio: Knoepfe in der Pause fuer Karaoke, vorheriges und naechstes Lied",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-27T13:57:54Z"
+        },
+        {
+          "sha": "3a62a1fd911154df781acd8a9439479d38a28bef",
+          "title": "Weboberflaeche als installierbare App (PWA)",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-27T14:11:29Z"
+        },
+        {
+          "sha": "ca319248e2f66ab4440c68406c4d0bd33e31f121",
+          "title": "Startseite: Installieren-Knopf zuverlaessig, sonst Hinweis je Geraet",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-27T14:30:18Z"
+        },
+        {
+          "sha": "ee8ea325138ed85bf5a20ef4624ea66f306cb6e5",
+          "title": "Duett-Text so gross wie beim Sololied, Bildschirm auf der Buehne wach",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-27T15:18:17Z"
+        },
+        {
+          "sha": "354e1fc1e05c313c9072b381928fe11e43a6c065",
+          "title": "Seite fuer Impressum, Datenschutz und Lizenzen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-27T15:30:07Z"
+        },
+        {
+          "sha": "47eae15d28ae63b04f91732911ba59c6e9d5f07f",
+          "title": "WEB.md: 401-Seite ohne Umlaut-Bytes (Apache schickt sie als iso-8859-1)",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-27T15:31:14Z"
+        },
+        {
+          "sha": "5830883d379a98d96881f6bb7bc0ff54212b1968",
+          "title": "Chromes Installationsbanner nicht mehr unterdruecken",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-27T21:13:10Z"
+        },
+        {
+          "sha": "e48063309bdc81f40943a60372d240bb8e3e4668",
+          "title": "Web: Lied ab #START und bis #END spielen wie im Spiel",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-27T22:01:15Z"
+        },
+        {
+          "sha": "38ccc45c421734c1f546bfd90f8cd88a2b5e098a",
+          "title": "Radio: Vollbild verlassen beendet das Radio nicht mehr",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-30T00:34:08Z"
+        },
+        {
+          "sha": "3bc82f668710ac1f44832ae4306cf2297569553f",
+          "title": "Pause zeigt alles zum Lied, Hinweis bei neuer Version, Karaoke-Wechsel zaehlt nicht",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-10-11T11:18:57Z"
+        }
+      ],
+      "newCommits": [
+        {
+          "sha": "252cadd58a55d460e47c6a0d0ddbf860f11f0f40",
+          "title": "Suche: AND, OR, Klammern und Jahresbereiche",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-01T22:35:57Z"
+        },
+        {
+          "sha": "e315bb33cd767b55a24500c494a8b8e4a37d1f22",
+          "title": "Suche: Bereiche in jeder Suche, Negation mit \"!\"",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T05:20:31Z"
+        },
+        {
+          "sha": "6c3e71d7b87c77ddd8a430738c427fe61564dc08",
+          "title": "Merge: Suchsyntax mit AND, OR, Klammern, Bereichen und Negation",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T05:24:26Z"
+        },
+        {
+          "sha": "e633b7264ca0f662a686bd1b7371b0f3ace9c9a1",
+          "title": "Suchen speichern und laden",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T06:12:58Z"
+        },
+        {
+          "sha": "fd5da4c64dca91feb278c2f97ab105891419a0b5",
+          "title": "Merge: Suchen speichern und laden",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T06:20:44Z"
+        },
+        {
+          "sha": "4b57fea6cc84c8fba1dafd972a2450d94adcc4d6",
+          "title": "Absturz beim Speichern einer Suche: Namenskollision aufgeloest",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T06:40:48Z"
+        },
+        {
+          "sha": "25b774dddcdb0b3d97eeb77edb6babf1e75031b1",
+          "title": "Merge: Absturz beim Speichern einer Suche behoben",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T06:43:32Z"
+        },
+        {
+          "sha": "8b21eae5855ed0036a003c826b6cfa074b4fce03",
+          "title": "Suche: vorhandene Werte mit Hoch/Runter durchblaettern",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T08:38:47Z"
+        },
+        {
+          "sha": "7e368371a553304250e65edf08cf150212333c8f",
+          "title": "Suche: Werte in allen Modi durchblaettern, mit Sprung zum getippten Anfang",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T13:17:33Z"
+        },
+        {
+          "sha": "4e51cacb3ade1b367a1762b617355221597ff963",
+          "title": "Lieder parallel einlesen, Dateiliste blockweise vergroessern",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T15:56:11Z"
+        },
+        {
+          "sha": "077a45a2288606187ea1c32b1f5023d3dc790d15",
+          "title": "CI: naechtlichen Bau entfernt, automatische Release ergaenzt",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T16:02:50Z"
+        },
+        {
+          "sha": "df575acf5b39c0a2ef06010c34f02b3ea17e0546",
+          "title": "CI: Release lud ein fremdes Artefakt mit und scheiterte daran",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T16:12:44Z"
+        },
+        {
+          "sha": "60fdee1e1c51d699dd7d3bbd428b3bd1e3fdf35c",
+          "title": "Merge upstream/master",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T16:19:09Z"
+        },
+        {
+          "sha": "3fdc6317eeef89328d4a4a66eacfbb647e64a99e",
+          "title": "CI: eigenes Tag-Schema fuer die automatischen Releases",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T16:22:27Z"
+        },
+        {
+          "sha": "50bf0fedf5addb636e5a5521c2692656e6092b06",
+          "title": "Weboberflaeche zur Fernbedienung mit --web",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T17:01:40Z"
+        },
+        {
+          "sha": "b6b7a5a5356b6d30b7f6daaff3ae33d69279375e",
+          "title": "Weboberflaeche: Dokumentation nachgereicht",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T17:02:14Z"
+        },
+        {
+          "sha": "9208dc1e87f66c42dd7d7d55718ca1e8226ff63f",
+          "title": "Merge: Weboberflaeche zur Fernbedienung (--web)",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-02T18:04:00Z"
+        },
+        {
+          "sha": "49194e7058a2a7762c265ff12f155deb1f5e443c",
+          "title": "Singen im Browser unter --web",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T13:09:46Z"
+        },
+        {
+          "sha": "9d2889094b4055e14af70a1225a85eb62bd28d93",
+          "title": "Duette im Browser: zwei Stimmen, zwei Mikrofone, zwei Wertungen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T15:45:15Z"
+        },
+        {
+          "sha": "c5bfdd6d4500c47a8455950cb7f55cae98a2634f",
+          "title": "Webbetrieb ohne OpenGL: --web-only",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T15:57:18Z"
+        },
+        {
+          "sha": "0013a86a1b6de39666048529fdbbf2e1a542b340",
+          "title": "Video im Browser, Hintergrundbild als Rueckfall",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T16:51:32Z"
+        },
+        {
+          "sha": "cecbb5477dc5efd661441c89e81e6a0a1e3cb556",
+          "title": "Liedtext faerbt sich mit, und ein Vorlauf zeigt den Einsatz an",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T16:59:04Z"
+        },
+        {
+          "sha": "4e5bfce652866e3072b3c2155fafeae6de38e7c7",
+          "title": "Zeilenanzeiger aus dem Spiel portieren statt selbst erfinden",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T17:01:42Z"
+        },
+        {
+          "sha": "17fda0f7bd4063b8fff0506d01c55b1b89cb07e4",
+          "title": "--webhost: Bindeadresse waehlbar",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T17:17:25Z"
+        },
+        {
+          "sha": "8bed487fb4a81fb8823ff19ade549d958b55f686",
+          "title": "WEB.md: Betrieb hinter einem Vorschalt-Server",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T17:21:04Z"
+        },
+        {
+          "sha": "cf5f2a4095b7e3371facc77e29ef792d6b6985ca",
+          "title": "Antworten stueckeln: hoechstens 8 MB je Anfrage im Speicher",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T17:47:34Z"
+        },
+        {
+          "sha": "85598eef346e333ae454346c93bfcf1773b21f8a",
+          "title": "Gesungene Balken statt Spielstellen-Linie",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T18:15:52Z"
+        },
+        {
+          "sha": "446e84dd62893c29e54087685d85914ac04cced4",
+          "title": "Textband mit zwei Zeilen, Anzeiger endlich sichtbar",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T18:27:43Z"
+        },
+        {
+          "sha": "369cc4c6f25dadcdfe0f29e96de7ffe8ba59961d",
+          "title": "Liedauswahl und Singen trennen, auf dem Handy Vollbild und Querformat",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T18:34:04Z"
+        },
+        {
+          "sha": "b87df4caaa24d29a87619cc1762f7e6ac651554b",
+          "title": "Leerzeichen erhalten, in CSS-Punkten zeichnen, Vorschau weiss, Favicon",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T18:39:43Z"
+        },
+        {
+          "sha": "22728369943d133c10ef13ec90eca10aef62586d",
+          "title": "Mikrofon automatisch pegeln, Anzeiger auf die Textzeile, Start von Hand",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T21:09:35Z"
+        },
+        {
+          "sha": "5072624b60b731aad01f5fd63d8b6febb4745dfd",
+          "title": "Tonhoehenerkennung durch das Verfahren des Spiels ersetzen (CAMDF)",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T21:27:45Z"
+        },
+        {
+          "sha": "eee8283b111347df1a386a205485ee829001c8ac",
+          "title": "Schwierigkeitsstufen wie im Original, Voreinstellung leicht",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T21:35:19Z"
+        },
+        {
+          "sha": "69ee661a0a7c7a4b8245ec4752104af688146ff9",
+          "title": "Auch bei Sololiedern zu zweit singen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T21:37:23Z"
+        },
+        {
+          "sha": "a8d37b045103227c8b245fa1a70cf91fdc30ca5e",
+          "title": "Schrumpfende Notenfuellung entfernen, Fortschrittsbalken hinzufuegen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T21:42:29Z"
+        },
+        {
+          "sha": "9f8d5a9e180e0ce40fdad91de398b0d264a170d1",
+          "title": "Buehne aufraeumen: kein Fussbereich, Punkte in der Bahn, Text je nach Lage",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T21:51:10Z"
+        },
+        {
+          "sha": "2d228002670600728fc2e00244a3ebadc69e46c5",
+          "title": "Ergebnisseite nach dem Lied, Vollbild ueberall, Kopfleiste raus im Vollbild",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-03T21:55:11Z"
+        },
+        {
+          "sha": "7c771529eaffa2f1462a56d4af2c1b817be431f5",
+          "title": "Zeilenbonus und Bewertung je Zeile wie im Original",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-04T05:09:06Z"
+        },
+        {
+          "sha": "c53572ec37bfbeb0b73dcbd7d684a391bda23a6a",
+          "title": "Favicon: schraeges Handmikrofon statt Studiomikrofon",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-04T06:45:44Z"
+        },
+        {
+          "sha": "b2ec25fe691d71c9d1fccf5e8aa9b0a5d1d5fa51",
+          "title": "500er beim Laden beheben: Connection: close an jede Antwort",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-04T07:40:42Z"
+        },
+        {
+          "sha": "337e7c84a3ae6b50597e899695276707d4d9be96",
+          "title": "Adressen ohne Zugangsdaten bauen - Seite blieb sonst leer",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-04T07:44:09Z"
+        },
+        {
+          "sha": "15f71fefc82a99975c246a125e804b23ce15e1b8",
+          "title": "Ergebnisseite reparieren, Noten ausblenden, Spulen per Doppeltipp",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-04T07:58:57Z"
+        },
+        {
+          "sha": "b1d13448076ef3a2bb9b589049de93a58587fc50",
+          "title": "Spulen: kein Zeichen mehr einblenden, fuenf statt zehn Sekunden",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-04T08:10:03Z"
+        },
+        {
+          "sha": "91442d144849a0356c3a78fd2a2ecfa2c71c3508",
+          "title": "Suchtexte beim Veroeffentlichen vorbereiten statt bei jeder Anfrage",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-06T12:00:45Z"
+        },
+        {
+          "sha": "e48d1269939000321769c912982200c5bb3a806f",
+          "title": "Lieder mit langen Pfaden wurden lautlos uebersprungen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-06T12:07:10Z"
+        },
+        {
+          "sha": "1aff0ad768bfbac5c583e1220f216ca30c2cc7ff",
+          "title": "Liederliste alphabetisch sortieren und seitenweise nachladen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-06T12:11:53Z"
+        },
+        {
+          "sha": "9b5c2bc6ef821f5d873a7d358bdac7bd188706d9",
+          "title": "Auswahlleiste festsetzen, Titelbilder in der Liste",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-06T13:11:39Z"
+        },
+        {
+          "sha": "5bee56712706fc20eabef4e44fcfb234ebd6c012",
+          "title": "Liedauswahl und Singen in der URL festhalten, Neustart bei Nochmal singen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-07T17:46:42Z"
+        },
+        {
+          "sha": "dfecb477b817b87213a42d325b86f9a221d9d638",
+          "title": "Liedvorschau, Zufallslied, Trefferzahl und echtes Favicon",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-07T18:19:43Z"
+        },
+        {
+          "sha": "ee0e469ecfb2201068cb18de08fd80b55af2dcbc",
+          "title": "Mehrspieler-Lobbys: gemeinsames Singen mit synchronisierter Wiedergabe",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-09T08:25:34Z"
+        },
+        {
+          "sha": "b75a19720f076301b60af643c4228238f3e2c418",
+          "title": "Nochmal singen: /start meldete faelschlich \"kein Lied ausgewaehlt\"",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-09T08:32:15Z"
+        },
+        {
+          "sha": "37f2b726d86be063fbf2101cece4767b4d38fd92",
+          "title": "Zeilenanzeiger fehlte manchmal trotz laufender Gesangspause",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-09T08:41:11Z"
+        },
+        {
+          "sha": "b06fe3252fbe43fd8117d494ef14335da05aaa4c",
+          "title": "Linux-ARM64-Build in CI und Release aufnehmen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-11T07:37:52Z"
+        },
+        {
+          "sha": "9ee336272fedfceded66282d653415ef77dbedc3",
+          "title": "Lieddateien verschluesselt ausliefern, eigene Vorschau, Zaehlung des Gesungenen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-20T23:01:36Z"
+        },
+        {
+          "sha": "7af00040546a6f095d399aab128fea6c340a96bb",
+          "title": "Dienstarbeiter darf nicht hinter der Anmeldung stehen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-21T09:53:45Z"
+        },
+        {
+          "sha": "37131de47bb8a4516f6f75a90e69d27375144ea6",
+          "title": "Ton und Video erst beim Singen holen, nicht schon in der Liste",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-21T09:59:56Z"
+        },
+        {
+          "sha": "e94acb05149d4b51f98fdb0b36c264dcbd5c8993",
+          "title": "Ton, Video und Bild schon beim Betreten der Buehne holen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-21T10:56:25Z"
+        },
+        {
+          "sha": "85929a31afacf862734cbcdab4a520ebc9c61f3b",
+          "title": "Anmeldung des Dienstarbeiters wiederholen, statt aufzugeben",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-22T21:10:50Z"
+        },
+        {
+          "sha": "b982904e8d87d5bbc3c73194d29934ddbf4163d3",
+          "title": "Dienstarbeiter anmelden, ohne auf die Sitzung zu warten",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-22T21:24:51Z"
+        },
+        {
+          "sha": "44a1e78029917b947720b5fc61d1cad7f2b112e4",
+          "title": "Added possibility to sing karaoke version of if available",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-23T17:23:41Z"
+        },
+        {
+          "sha": "e521fe424135648462045890f02da6087ad564b9",
+          "title": "Add make install-web target for deploying the karaoke server",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-23T20:24:21Z"
+        },
+        {
+          "sha": "a040176625fb25965db64131b1bb19a259dd5aad",
+          "title": "Duett: beide Texte immer zeigen, Original als Voreinstellung",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-26T14:35:44Z"
+        },
+        {
+          "sha": "c7bf9fd6077ad181cea75060a528eb0b90feb0a9",
+          "title": "Nur Lieder mit Tondatei und Vorschau in der Liste",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-26T14:41:59Z"
+        },
+        {
+          "sha": "c9b174782bb15e33960aacbb4488a110383558da",
+          "title": "Startseite mit Party- und Radio-Modus",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-27T09:44:50Z"
+        },
+        {
+          "sha": "38aab976582d82ed0ac9b7951ef2b41bde6ec7ed",
+          "title": "Radio: Start haengt nicht mehr, Titel beim Liedwechsel einblenden",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-27T13:46:56Z"
+        },
+        {
+          "sha": "28177302eb081ee815075cbca8b7c112b09c591a",
+          "title": "Radio: Knoepfe in der Pause fuer Karaoke, vorheriges und naechstes Lied",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-27T13:57:54Z"
+        },
+        {
+          "sha": "3a62a1fd911154df781acd8a9439479d38a28bef",
+          "title": "Weboberflaeche als installierbare App (PWA)",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-27T14:11:29Z"
+        },
+        {
+          "sha": "ca319248e2f66ab4440c68406c4d0bd33e31f121",
+          "title": "Startseite: Installieren-Knopf zuverlaessig, sonst Hinweis je Geraet",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-27T14:30:18Z"
+        },
+        {
+          "sha": "ee8ea325138ed85bf5a20ef4624ea66f306cb6e5",
+          "title": "Duett-Text so gross wie beim Sololied, Bildschirm auf der Buehne wach",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-27T15:18:17Z"
+        },
+        {
+          "sha": "354e1fc1e05c313c9072b381928fe11e43a6c065",
+          "title": "Seite fuer Impressum, Datenschutz und Lizenzen",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-27T15:30:07Z"
+        },
+        {
+          "sha": "47eae15d28ae63b04f91732911ba59c6e9d5f07f",
+          "title": "WEB.md: 401-Seite ohne Umlaut-Bytes (Apache schickt sie als iso-8859-1)",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-27T15:31:14Z"
+        },
+        {
+          "sha": "5830883d379a98d96881f6bb7bc0ff54212b1968",
+          "title": "Chromes Installationsbanner nicht mehr unterdruecken",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-27T21:13:10Z"
+        },
+        {
+          "sha": "e48063309bdc81f40943a60372d240bb8e3e4668",
+          "title": "Web: Lied ab #START und bis #END spielen wie im Spiel",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-27T22:01:15Z"
+        },
+        {
+          "sha": "38ccc45c421734c1f546bfd90f8cd88a2b5e098a",
+          "title": "Radio: Vollbild verlassen beendet das Radio nicht mehr",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-09-30T00:34:08Z"
+        },
+        {
+          "sha": "3bc82f668710ac1f44832ae4306cf2297569553f",
+          "title": "Pause zeigt alles zum Lied, Hinweis bei neuer Version, Karaoke-Wechsel zaehlt nicht",
+          "author": "IchbinkeinReh",
+          "authoredAt": "2026-10-11T11:18:57Z"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "davidgamero/USDX",
+      "branch": "instrumental-generation",
+      "head": "ef29cb7e5a9be12b3090d57db7ce12b6be4e6956",
+      "upstreamHead": "7f49e685c7d7affcd0bd6501f46f6af801e4d880",
+      "comparisonBase": "32a2989274d8f85f54e936eda85faf48b276e480",
+      "comparisonKind": "outside-usce",
+      "ahead": 6,
+      "behind": 736,
+      "compareUrl": "https://github.com/UltraStar-CE/USCE/compare/32a2989274d8f85f54e936eda85faf48b276e480...ef29cb7e5a9be12b3090d57db7ce12b6be4e6956",
+      "novelCommits": [
+        {
+          "sha": "1dbaaf9ad762dd2a2e3cec39a4b0d02eafc6cb41",
+          "title": "Refresh newly downloaded songs when entering song selection",
+          "author": "davidgamero",
+          "authoredAt": "2026-10-06T23:08:53Z"
+        },
+        {
+          "sha": "b37c79345604ce3145cd4dd08e3ceab0577d2a44",
+          "title": "Add on-demand instrumental generation to the song menu",
+          "author": "davidgamero",
+          "authoredAt": "2026-10-06T23:22:09Z"
+        },
+        {
+          "sha": "57f5209899b63c9e5262582601e4f9ff9c691bf2",
+          "title": "Show instrumental conversion progress and adaptive time estimates",
+          "author": "davidgamero",
+          "authoredAt": "2026-10-06T23:35:40Z"
+        },
+        {
+          "sha": "e0304e402261151f8ad06f4122d8cd71c5dd7bcd",
+          "title": "Fix UTF-8 BOM corruption in instrumental queue files",
+          "author": "davidgamero",
+          "authoredAt": "2026-10-06T23:40:03Z"
+        },
+        {
+          "sha": "d7d8c36ebb7bb701c9add444f52a828ad5712c04",
+          "title": "Run user-requested instrumental conversions at interactive priority",
+          "author": "davidgamero",
+          "authoredAt": "2026-10-06T23:49:18Z"
+        },
+        {
+          "sha": "ef29cb7e5a9be12b3090d57db7ce12b6be4e6956",
+          "title": "Add native USDB catalog search and optional song navigation sounds",
+          "author": "davidgamero",
+          "authoredAt": "2026-10-07T00:27:45Z"
+        }
+      ],
+      "ignoredKnownHistoryCommitCount": 0,
+      "ignoredUpstreamCommitCount": 0,
+      "ignoredOldCommitCount": 0,
+      "commits": [
+        {
+          "sha": "1dbaaf9ad762dd2a2e3cec39a4b0d02eafc6cb41",
+          "title": "Refresh newly downloaded songs when entering song selection",
+          "author": "davidgamero",
+          "authoredAt": "2026-10-06T23:08:53Z"
+        },
+        {
+          "sha": "b37c79345604ce3145cd4dd08e3ceab0577d2a44",
+          "title": "Add on-demand instrumental generation to the song menu",
+          "author": "davidgamero",
+          "authoredAt": "2026-10-06T23:22:09Z"
+        },
+        {
+          "sha": "57f5209899b63c9e5262582601e4f9ff9c691bf2",
+          "title": "Show instrumental conversion progress and adaptive time estimates",
+          "author": "davidgamero",
+          "authoredAt": "2026-10-06T23:35:40Z"
+        },
+        {
+          "sha": "e0304e402261151f8ad06f4122d8cd71c5dd7bcd",
+          "title": "Fix UTF-8 BOM corruption in instrumental queue files",
+          "author": "davidgamero",
+          "authoredAt": "2026-10-06T23:40:03Z"
+        },
+        {
+          "sha": "d7d8c36ebb7bb701c9add444f52a828ad5712c04",
+          "title": "Run user-requested instrumental conversions at interactive priority",
+          "author": "davidgamero",
+          "authoredAt": "2026-10-06T23:49:18Z"
+        },
+        {
+          "sha": "ef29cb7e5a9be12b3090d57db7ce12b6be4e6956",
+          "title": "Add native USDB catalog search and optional song navigation sounds",
+          "author": "davidgamero",
+          "authoredAt": "2026-10-07T00:27:45Z"
+        }
+      ],
+      "newCommits": [
+        {
+          "sha": "1dbaaf9ad762dd2a2e3cec39a4b0d02eafc6cb41",
+          "title": "Refresh newly downloaded songs when entering song selection",
+          "author": "davidgamero",
+          "authoredAt": "2026-10-06T23:08:53Z"
+        },
+        {
+          "sha": "b37c79345604ce3145cd4dd08e3ceab0577d2a44",
+          "title": "Add on-demand instrumental generation to the song menu",
+          "author": "davidgamero",
+          "authoredAt": "2026-10-06T23:22:09Z"
+        },
+        {
+          "sha": "57f5209899b63c9e5262582601e4f9ff9c691bf2",
+          "title": "Show instrumental conversion progress and adaptive time estimates",
+          "author": "davidgamero",
+          "authoredAt": "2026-10-06T23:35:40Z"
+        },
+        {
+          "sha": "e0304e402261151f8ad06f4122d8cd71c5dd7bcd",
+          "title": "Fix UTF-8 BOM corruption in instrumental queue files",
+          "author": "davidgamero",
+          "authoredAt": "2026-10-06T23:40:03Z"
+        },
+        {
+          "sha": "d7d8c36ebb7bb701c9add444f52a828ad5712c04",
+          "title": "Run user-requested instrumental conversions at interactive priority",
+          "author": "davidgamero",
+          "authoredAt": "2026-10-06T23:49:18Z"
+        },
+        {
+          "sha": "ef29cb7e5a9be12b3090d57db7ce12b6be4e6956",
+          "title": "Add native USDB catalog search and optional song navigation sounds",
+          "author": "davidgamero",
+          "authoredAt": "2026-10-07T00:27:45Z"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
     }
   ],
   "unavailableForks": []
