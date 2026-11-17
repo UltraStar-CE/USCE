@@ -39,6 +39,7 @@ uses
   sdl2,
   UGraphicClasses,
   UIni,
+  UMusic,
   UPlayerLayout;
 
 procedure SingDraw;
@@ -47,9 +48,8 @@ procedure SingDrawOscilloscopes;
 procedure SingDrawOscilloscope(Position: TThemePosition; NrSound: integer);
 procedure SingDrawNoteLines(Left, Top, Right: real; LineSpacing: integer = 15; LineThickness: single = 1);
 procedure SingDrawLyricHelper(CP: integer; Left, LyricsMid, IndicatorOffset: real);
-procedure SingDrawLine(Left, Top, Right: real; Track, PlayerIndex: integer; LineSpacing: integer = 15);
 procedure SingDrawPlayerLine(Left, Top, W: real; Track, PlayerIndex: integer; LineSpacing: integer = 15; OnlyGaps: boolean = false);
-procedure SingDrawPlayerBGLine(Left, Top, Right: real; Track, PlayerIndex: integer; LineSpacing: integer = 15);
+function GetVisibleNoteLine(const Track: TLines; Beat, BPM: real; ShowFreestyle: boolean): integer;
 
 //Draw Editor NoteLines
 procedure EditDrawBackgroundVoices(X, YBaseNote, W, H: real; SelectedTrack, VoiceCount: integer);
@@ -102,7 +102,6 @@ uses UMenuBackground,
   ULyrics,
   UNote,
   UParty,
-  UMusic,
   URecord,
   URenderer,
   UScreenSingController,
@@ -405,7 +404,7 @@ begin
 end;
 
 // draw blank Notebars
-procedure SingDrawLine(Left, Top, Right: real; Track, PlayerIndex: integer; LineSpacing: integer);
+procedure SingDrawLine(Left, Top, Right: real; const Line: TLine; PlayerIndex: integer; LineSpacing: integer);
 var
   Rec:   TRecR;
   Count: integer;
@@ -420,10 +419,10 @@ begin
     // the textures start counting at 1, but everything else just starts at 0
     PlayerNumber := PlayerIndex + 1;
 
-    if not CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine].HasLength(TempR) then TempR := 0
+    if not Line.HasLength(TempR) then TempR := 0
     else TempR := (Right-Left) / TempR;
 
-    with CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine] do
+    with Line do
     begin
       for Count := 0 to HighNote do
       begin
@@ -478,7 +477,7 @@ begin
             A := NoteAlpha(NoteType, A);
 
             // left part
-            Rec.Left  := (StartBeat - CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine].Notes[0].StartBeat) * TempR + Left + 0.5;
+            Rec.Left  := (StartBeat - Line.Notes[0].StartBeat) * TempR + Left + 0.5;
             Rec.Right := Rec.Left + NotesW[PlayerIndex];
             Rec.Top := Top - (DisplayTone-BaseNote)*LineSpacing/2 - NotesH[PlayerIndex];
             Rec.Bottom := Rec.Top + 2 * NotesH[PlayerIndex];
@@ -501,7 +500,7 @@ begin
 
             // middle part
             Rec.Left := Rec.Right;
-            Rec.Right := (StartBeat + Duration - CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine].Notes[0].StartBeat) * TempR + Left - NotesW[PlayerIndex] - 0.5;
+            Rec.Right := (StartBeat + Duration - Line.Notes[0].StartBeat) * TempR + Left - NotesW[PlayerIndex] - 0.5;
 
             // the left note is more right than the right note itself, sounds weird - so we fix that xD
             if Rec.Right <= Rec.Left then
@@ -731,7 +730,7 @@ begin
 end;
 
 //draw Note glow
-procedure SingDrawPlayerBGLine(Left, Top, Right: real; Track, PlayerIndex: integer; LineSpacing: integer);
+procedure SingDrawPlayerBGLine(Left, Top, Right: real; const Line: TLine; PlayerIndex: integer; LineSpacing: integer);
 var
   Rec:            TRecR;
   Count:          integer;
@@ -747,10 +746,10 @@ begin
   begin
     A := sqrt((1 + sin(AudioPlayback.Position * 3)))/2 + 0.05;
 
-    if not CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine].HasLength(TempR) then TempR := 0
+    if not Line.HasLength(TempR) then TempR := 0
     else TempR := (Right-Left) / TempR;
 
-    with CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine] do
+    with Line do
     begin
       for Count := 0 to HighNote do
       begin
@@ -765,7 +764,7 @@ begin
             H := NotesH[PlayerIndex] * 1.5 + GlowExtraH;
 
             // left
-            Rec.Right := (StartBeat - CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine].Notes[0].StartBeat) * TempR + Left + 0.5 + GlowPadX;
+            Rec.Right := (StartBeat - Line.Notes[0].StartBeat) * TempR + Left + 0.5 + GlowPadX;
             Rec.Left  := Rec.Right - W;
             Rec.Top := Top - (DisplayTone-BaseNote)*LineSpacing/2 - H;
             Rec.Bottom := Rec.Top + 2 * H;
@@ -786,7 +785,7 @@ begin
 
             // middle part
             Rec.Left  := Rec.Right;
-            Rec.Right := (StartBeat + Duration - CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine].Notes[0].StartBeat) * TempR + Left - 0.5 - GlowPadX;
+            Rec.Right := (StartBeat + Duration - Line.Notes[0].StartBeat) * TempR + Left - 0.5 - GlowPadX;
 
             // the left note is more right than the right note itself, sounds weird - so we fix that xD
             if Rec.Right <= Rec.Left then
@@ -952,17 +951,79 @@ begin
   end;
 end;
 
-function HasNearbyTargetNotes(const Line: TLine; Beat: real): boolean;
+function GetVisibleNoteLine(const Track: TLines; Beat, BPM: real; ShowFreestyle: boolean): integer;
+const
+  MinHiddenSeconds = 1.0;
 var
-  NoteIndex: integer;
+  LineIndex, PreviousLine, NextLine, PreviousEnd, NextStart: integer;
+
+  procedure FindNotes(Index: integer);
+  var NoteIndex: integer;
+  begin
+    with Track.Lines[Index] do
+      for NoteIndex := 0 to Min(HighNote, High(Notes)) do
+        with Notes[NoteIndex] do
+        begin
+          if (Duration <= 0) or ((NoteType = ntFreestyle) and not ShowFreestyle) then
+            Continue;
+          if StartBeat <= Beat then
+          begin
+            if StartBeat + Duration > PreviousEnd then
+            begin
+              PreviousEnd := StartBeat + Duration;
+              PreviousLine := Index;
+            end;
+          end
+          else if StartBeat < NextStart then
+          begin
+            NextStart := StartBeat;
+            NextLine := Index;
+          end;
+        end;
+  end;
+
 begin
-  for NoteIndex := 0 to Line.HighNote do
-    with Line.Notes[NoteIndex] do
-      if (Beat >= StartBeat - NotePreviewBeats) and
-         (Beat < StartBeat + Duration + NoteHoldBeats) and
-         (NoteAlpha(NoteType, 1) > 0) then
-        Exit(true);
-  Result := false;
+  Result := -1;
+  if (Track.CurrentLine < 0) or (Track.CurrentLine > Track.High) or
+     (Track.CurrentLine >= Length(Track.Lines)) then Exit;
+  PreviousLine := -1;
+  PreviousEnd := Low(integer);
+  NextLine := -1;
+  NextStart := High(integer);
+  FindNotes(Track.CurrentLine);
+
+  // The chart's phrase marker can be anywhere between consecutive notes.
+  LineIndex := Track.CurrentLine - 1;
+  while (LineIndex >= 0) and (PreviousLine < 0) do
+  begin
+    FindNotes(LineIndex);
+    Dec(LineIndex);
+  end;
+  LineIndex := Track.CurrentLine + 1;
+  while (LineIndex <= Min(Track.High, High(Track.Lines))) and (NextLine < 0) do
+  begin
+    FindNotes(LineIndex);
+    Inc(LineIndex);
+  end;
+
+  if (PreviousLine >= 0) and (Beat < PreviousEnd) then
+    Exit(PreviousLine);
+
+  // Keep short pauses continuous. Only hide a staff if its hidden interval
+  // between the hold and preview would last at least a second.
+  if (PreviousLine >= 0) and (NextLine >= 0) and (BPM > 0) and
+     ((NextStart - NotePreviewBeats - PreviousEnd - NoteHoldBeats) * 60.0 <
+       MinHiddenSeconds * BPM) then
+  begin
+    if (NextLine = Track.CurrentLine) or (Beat >= NextStart - NotePreviewBeats) then
+      Exit(NextLine);
+    Exit(PreviousLine);
+  end;
+
+  if (PreviousLine >= 0) and (Beat < PreviousEnd + NoteHoldBeats) then
+    Exit(PreviousLine);
+  if (NextLine >= 0) and (Beat >= NextStart - NotePreviewBeats) then
+    Exit(NextLine);
 end;
 
 procedure SingDraw;
@@ -977,6 +1038,7 @@ var
   LineTop: real;
   LineSpacing: integer;
   TrackIndex: integer;
+  TargetLine: integer;
   LaneLeft: real;
   LaneRight: real;
   LaneWidth: real;
@@ -1114,21 +1176,26 @@ begin
 
     TrackIndex := Player[PlayerIndex].Track;
     with CurrentSong.Tracks[TrackIndex] do
-      if not HasNearbyTargetNotes(Lines[CurrentLine], LyricsState.MidBeat) and
-         not ((CurrentLine < High) and HasNearbyTargetNotes(Lines[CurrentLine + 1], LyricsState.MidBeat)) then
+    begin
+      TargetLine := GetVisibleNoteLine(CurrentSong.Tracks[TrackIndex], LyricsState.MidBeat,
+        CurrentSong.BPM, Theme.Sing.FreestyleNoteAlpha > 0);
+      if TargetLine < 0 then
       begin
         if Ini.PitchTrace <> 0 then
           SingDrawPlayerLine(LaneLeft, LineTop, LaneWidth, TrackIndex, PlayerIndex, LineSpacing, true);
         Continue;
       end;
 
-    if (Ini.NoteLines = 1) and ScreenSing.Settings.InputVisible and
-       ScreenSing.Settings.NotesVisible[PlayerIndex] then
-      SingDrawNoteLines(LaneLeft, Layout.GuideTopY, LaneRight, LineSpacing);
+      if (Ini.NoteLines = 1) and ScreenSing.Settings.InputVisible and
+         ScreenSing.Settings.NotesVisible[PlayerIndex] then
+        SingDrawNoteLines(LaneLeft, Layout.GuideTopY, LaneRight, LineSpacing);
 
-    SingDrawPlayerBGLine(LaneLeft, LineTop, LaneRight, TrackIndex, PlayerIndex, LineSpacing);
-    SingDrawLine(LaneLeft, LineTop, LaneRight, TrackIndex, PlayerIndex, LineSpacing);
-    SingDrawPlayerLine(LaneLeft, LineTop, LaneWidth, TrackIndex, PlayerIndex, LineSpacing);
+      SingDrawPlayerBGLine(LaneLeft, LineTop, LaneRight, Lines[TargetLine], PlayerIndex, LineSpacing);
+      SingDrawLine(LaneLeft, LineTop, LaneRight, Lines[TargetLine], PlayerIndex, LineSpacing);
+      // Captured bars still belong to the scoring cursor's current line.
+      if TargetLine = CurrentLine then
+        SingDrawPlayerLine(LaneLeft, LineTop, LaneWidth, TrackIndex, PlayerIndex, LineSpacing);
+    end;
   end;
 end;
 
