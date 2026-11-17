@@ -44,7 +44,7 @@ Anyone can correct an omission or question a decision through the public
 proposal process. Contribution quality matters; raw commit counts do not define
 it.
 
-Every PR needs **one independent human developer
+A PR that changes any path outside the root `doc/` directory needs **one independent human developer
 approval with four or fewer active developers, and two with more than four**.
 The author cannot approve their own PR. Maintainers, owners and bots follow the
 same PR route. AI feedback never counts as a required human approval.
@@ -53,8 +53,11 @@ When the fifth developer qualifies, we raise the enforced requirement to two
 before further merges. An overdue roster review keeps the existing threshold;
 it never lowers it automatically. Any decrease is publicly recorded after review.
 
-We require passing CI, resolved review discussions and renewed approval when
-code changes invalidate a review. Default and release branches have no bypass
+Every change goes through a PR. A PR changing only paths under the root `doc/`
+directory is exempt from approval and lint, builds and tests. GitHub still
+records a required check that verifies the scope of the changes. All other
+PRs require passing CI and renewed approval when changes invalidate a review.
+All PRs require resolved review discussions. Default and release branches have no bypass
 actors. Administrative rule changes are publicly recorded.
 
 ## Transparency and reconsideration

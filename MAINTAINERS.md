@@ -7,7 +7,8 @@ after project settings.
 
 ## Current review policy
 
-We require one independent human approval before merging a PR. Once there are
+We require one independent human approval before merging a PR that changes
+any path outside the root `doc/` directory. Once there are
 more than four active developers, the
 requirement rises to two. [GOVERNANCE.md](GOVERNANCE.md) defines the active roster
 and how the community can question or propose changes to it.
