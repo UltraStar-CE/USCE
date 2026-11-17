@@ -377,9 +377,14 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "not-adopted",
+        "assessedAgainst": "7b4edd33961d1c3be497db089e11f3a98c448a58",
+        "assessedAt": "2026-11-17",
+        "reason": "Release metadata and CI schedule are fork-specific. USCE already handles bounded installer downloads. The remaining lyrics filename change is internal to the previously excluded automatic generator.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/358"
+        ],
+        "reviewedCommitCount": 6
       },
       "previousHead": "e7f55369bd366d3e117843971f0e1df657dcae4d",
       "previousAssessment": {
@@ -1755,9 +1760,14 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "already-covered",
+        "assessedAgainst": "7b4edd33961d1c3be497db089e11f3a98c448a58",
+        "assessedAt": "2026-11-17",
+        "reason": "The only non-merge change sets FFmpeg frame colour matrix and range. Main has the contributor's equivalent change via #370 (cacbc313).",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/370"
+        ],
+        "reviewedCommitCount": 1
       },
       "previousHead": "250c47a576ec6dbb6513ebdb5ea8a66302e700a2",
       "previousAssessment": {
@@ -2970,9 +2980,14 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "known-history",
+        "assessedAgainst": "7b4edd33961d1c3be497db089e11f3a98c448a58",
+        "assessedAt": "2026-11-17",
+        "reason": "The merge only brings in playlist carousel history already assessed under related MDDD87 branches. No new non-merge item after subtracting the earlier heads.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/274"
+        ],
+        "reviewedCommitCount": 0
       },
       "previousHead": "8d73d69ee08385e5f270399ed0019eddd4d0cb2d",
       "previousAssessment": {
@@ -11623,9 +11638,15 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "decision",
+        "assessedAgainst": "7b4edd33961d1c3be497db089e11f3a98c448a58",
+        "assessedAt": "2026-11-17",
+        "reason": "Chart-supplied readings are routed to #418. Preview-off already bypasses load and USCE has its own seek and scoring. Filename grouping does not preserve independent chart identity. Separate fork scoring, visualizer, packaging, pitch shifting and prefetch changes are not proposed. No comparable performance/sync evidence against current USCE.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/issues/418",
+          "https://github.com/UltraStar-CE/USCE/pull/396"
+        ],
+        "reviewedCommitCount": 55
       }
     },
     {
@@ -11990,9 +12011,15 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "existing-proposal",
+        "assessedAgainst": "7b4edd33961d1c3be497db089e11f3a98c448a58",
+        "assessedAt": "2026-11-17",
+        "reason": "Same optional libmpv port in rebases and diagnostic branches. Native provider, menu cache and asynchronous libmpv requests already reach #173. Fork-only startup and frame instrumentation and duplicate validation harnesses stay local. #327 is a separate experiment.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/173",
+          "https://github.com/UltraStar-CE/USCE/pull/327"
+        ],
+        "reviewedCommitCount": 18
       }
     },
     {
@@ -12321,9 +12348,15 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "existing-proposal",
+        "assessedAgainst": "7b4edd33961d1c3be497db089e11f3a98c448a58",
+        "assessedAt": "2026-11-17",
+        "reason": "Same optional libmpv port in rebases and diagnostic branches. Native provider, menu cache and asynchronous libmpv requests already reach #173. Fork-only startup and frame instrumentation and duplicate validation harnesses stay local. #327 is a separate experiment.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/173",
+          "https://github.com/UltraStar-CE/USCE/pull/327"
+        ],
+        "reviewedCommitCount": 17
       }
     },
     {
@@ -12670,9 +12703,15 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "existing-proposal",
+        "assessedAgainst": "7b4edd33961d1c3be497db089e11f3a98c448a58",
+        "assessedAt": "2026-11-17",
+        "reason": "Same optional libmpv port in rebases and diagnostic branches. Native provider, menu cache and asynchronous libmpv requests already reach #173. Fork-only startup and frame instrumentation and duplicate validation harnesses stay local. #327 is a separate experiment.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/173",
+          "https://github.com/UltraStar-CE/USCE/pull/327"
+        ],
+        "reviewedCommitCount": 18
       }
     },
     {
@@ -13313,9 +13352,15 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "existing-proposal",
+        "assessedAgainst": "7b4edd33961d1c3be497db089e11f3a98c448a58",
+        "assessedAt": "2026-11-17",
+        "reason": "Same optional libmpv port in rebases and diagnostic branches. Native provider, menu cache and asynchronous libmpv requests already reach #173. Fork-only startup and frame instrumentation and duplicate validation harnesses stay local. #327 is a separate experiment.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/173",
+          "https://github.com/UltraStar-CE/USCE/pull/327"
+        ],
+        "reviewedCommitCount": 44
       }
     },
     {
@@ -13710,9 +13755,15 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "existing-proposal",
+        "assessedAgainst": "7b4edd33961d1c3be497db089e11f3a98c448a58",
+        "assessedAt": "2026-11-17",
+        "reason": "Same optional libmpv port in rebases and diagnostic branches. Native provider, menu cache and asynchronous libmpv requests already reach #173. Fork-only startup and frame instrumentation and duplicate validation harnesses stay local. #327 is a separate experiment.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/173",
+          "https://github.com/UltraStar-CE/USCE/pull/327"
+        ],
+        "reviewedCommitCount": 43
       }
     },
     {
@@ -13771,9 +13822,16 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "existing-proposal",
+        "assessedAgainst": "7b4edd33961d1c3be497db089e11f3a98c448a58",
+        "assessedAt": "2026-11-17",
+        "reason": "SDL reconnect is routed to #386 and #388. #387 is the closed port-label alternative. The serial/verified-identity requirement stays with #388.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/386",
+          "https://github.com/UltraStar-CE/USCE/pull/388",
+          "https://github.com/UltraStar-CE/USCE/pull/387"
+        ],
+        "reviewedCommitCount": 2
       }
     },
     {
@@ -13850,9 +13908,16 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "existing-proposal",
+        "assessedAgainst": "7b4edd33961d1c3be497db089e11f3a98c448a58",
+        "assessedAt": "2026-11-17",
+        "reason": "SDL reconnect is routed to #386 and #388. #387 is the closed port-label alternative. The serial/verified-identity requirement stays with #388.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/386",
+          "https://github.com/UltraStar-CE/USCE/pull/388",
+          "https://github.com/UltraStar-CE/USCE/pull/387"
+        ],
+        "reviewedCommitCount": 3
       }
     },
     {
@@ -14907,9 +14972,21 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "routed",
+        "assessedAgainst": "7b4edd33961d1c3be497db089e11f3a98c448a58",
+        "assessedAt": "2026-11-17",
+        "reason": "Ported the reproduced narrow UTF-8 slider failure in #417 and verified the candidate with range checks. Queue/remote mic work uses usrelay; calibration and Syncer have existing outputs. Main already has refresh, skin inheritance, pitch trace and the same oscilloscope stride. No bulk port of the standalone score merge, theme pack or embedded web server.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/417",
+          "https://github.com/UltraStar-CE/USCE/pull/168",
+          "https://github.com/UltraStar-CE/usrelay/issues/16",
+          "https://github.com/UltraStar-CE/USCE/issues/193",
+          "https://github.com/UltraStar-CE/USCE/pull/405",
+          "https://github.com/UltraStar-CE/USCE/pull/367",
+          "https://github.com/UltraStar-CE/USCE/pull/31",
+          "https://github.com/UltraStar-CE/USCE/pull/52"
+        ],
+        "reviewedCommitCount": 55
       }
     },
     {
@@ -15310,9 +15387,15 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "superseded",
+        "assessedAgainst": "7b4edd33961d1c3be497db089e11f3a98c448a58",
+        "assessedAt": "2026-11-17",
+        "reason": "The local Windows bridge, branded launcher and dependency build are specific to this fork. Comparable player setup and queued remote controls already use USCE's game/relay protocol.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/168",
+          "https://github.com/UltraStar-CE/usrelay/issues/16"
+        ],
+        "reviewedCommitCount": 16
       }
     },
     {
@@ -15677,9 +15760,18 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "already-covered",
+        "assessedAgainst": "7b4edd33961d1c3be497db089e11f3a98c448a58",
+        "assessedAt": "2026-11-17",
+        "reason": "Main already localizes and restores Party/Tournament names with its own player counts, ships Esperanto, and uses bounded installer downloads. The Windows resolution form was removed, so its expanded list is not applicable.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/125",
+          "https://github.com/UltraStar-CE/USCE/pull/372",
+          "https://github.com/UltraStar-CE/USCE/pull/27",
+          "https://github.com/UltraStar-CE/USCE/pull/349",
+          "https://github.com/UltraStar-CE/USCE/issues/358"
+        ],
+        "reviewedCommitCount": 19
       }
     },
     {
@@ -15720,9 +15812,18 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "already-covered",
+        "assessedAgainst": "7b4edd33961d1c3be497db089e11f3a98c448a58",
+        "assessedAt": "2026-11-17",
+        "reason": "Main already localizes and restores Party/Tournament names with its own player counts, ships Esperanto, and uses bounded installer downloads. The Windows resolution form was removed, so its expanded list is not applicable.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/125",
+          "https://github.com/UltraStar-CE/USCE/pull/372",
+          "https://github.com/UltraStar-CE/USCE/pull/27",
+          "https://github.com/UltraStar-CE/USCE/pull/349",
+          "https://github.com/UltraStar-CE/USCE/issues/358"
+        ],
+        "reviewedCommitCount": 1
       }
     },
     {
@@ -15817,9 +15918,18 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "already-covered",
+        "assessedAgainst": "7b4edd33961d1c3be497db089e11f3a98c448a58",
+        "assessedAt": "2026-11-17",
+        "reason": "Main already localizes and restores Party/Tournament names with its own player counts, ships Esperanto, and uses bounded installer downloads. The Windows resolution form was removed, so its expanded list is not applicable.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/125",
+          "https://github.com/UltraStar-CE/USCE/pull/372",
+          "https://github.com/UltraStar-CE/USCE/pull/27",
+          "https://github.com/UltraStar-CE/USCE/pull/349",
+          "https://github.com/UltraStar-CE/USCE/issues/358"
+        ],
+        "reviewedCommitCount": 4
       }
     },
     {
@@ -15878,9 +15988,18 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "already-covered",
+        "assessedAgainst": "7b4edd33961d1c3be497db089e11f3a98c448a58",
+        "assessedAt": "2026-11-17",
+        "reason": "Main already localizes and restores Party/Tournament names with its own player counts, ships Esperanto, and uses bounded installer downloads. The Windows resolution form was removed, so its expanded list is not applicable.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/125",
+          "https://github.com/UltraStar-CE/USCE/pull/372",
+          "https://github.com/UltraStar-CE/USCE/pull/27",
+          "https://github.com/UltraStar-CE/USCE/pull/349",
+          "https://github.com/UltraStar-CE/USCE/issues/358"
+        ],
+        "reviewedCommitCount": 2
       }
     },
     {
@@ -15921,9 +16040,18 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "already-covered",
+        "assessedAgainst": "7b4edd33961d1c3be497db089e11f3a98c448a58",
+        "assessedAt": "2026-11-17",
+        "reason": "Main already localizes and restores Party/Tournament names with its own player counts, ships Esperanto, and uses bounded installer downloads. The Windows resolution form was removed, so its expanded list is not applicable.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/125",
+          "https://github.com/UltraStar-CE/USCE/pull/372",
+          "https://github.com/UltraStar-CE/USCE/pull/27",
+          "https://github.com/UltraStar-CE/USCE/pull/349",
+          "https://github.com/UltraStar-CE/USCE/issues/358"
+        ],
+        "reviewedCommitCount": 1
       }
     },
     {
@@ -16000,9 +16128,18 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "already-covered",
+        "assessedAgainst": "7b4edd33961d1c3be497db089e11f3a98c448a58",
+        "assessedAt": "2026-11-17",
+        "reason": "Main already localizes and restores Party/Tournament names with its own player counts, ships Esperanto, and uses bounded installer downloads. The Windows resolution form was removed, so its expanded list is not applicable.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/125",
+          "https://github.com/UltraStar-CE/USCE/pull/372",
+          "https://github.com/UltraStar-CE/USCE/pull/27",
+          "https://github.com/UltraStar-CE/USCE/pull/349",
+          "https://github.com/UltraStar-CE/USCE/issues/358"
+        ],
+        "reviewedCommitCount": 3
       }
     },
     {
@@ -16055,9 +16192,18 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "already-covered",
+        "assessedAgainst": "7b4edd33961d1c3be497db089e11f3a98c448a58",
+        "assessedAt": "2026-11-17",
+        "reason": "Main already localizes and restores Party/Tournament names with its own player counts, ships Esperanto, and uses bounded installer downloads. The Windows resolution form was removed, so its expanded list is not applicable.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/125",
+          "https://github.com/UltraStar-CE/USCE/pull/372",
+          "https://github.com/UltraStar-CE/USCE/pull/27",
+          "https://github.com/UltraStar-CE/USCE/pull/349",
+          "https://github.com/UltraStar-CE/USCE/issues/358"
+        ],
+        "reviewedCommitCount": 3
       }
     }
   ],
