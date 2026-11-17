@@ -39,7 +39,8 @@
     "!**/*.txt",
     "**/CMakeLists.txt",
     "release-plan.json",
-    "themes.json"
+    "themes.json",
+    "!doc/**"
   ],
   "automation": [
     "tools/**",

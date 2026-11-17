@@ -18,23 +18,38 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+      - name: Check whether all changes are under doc/
+        id: scope
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          # Disable rename detection so both paths are checked for moves across doc/.
+          if git diff --quiet --no-renames "$BASE_SHA...$HEAD_SHA" -- . ':(exclude,top)doc/**'; then
+            echo 'docs_only=true' >> "$GITHUB_OUTPUT"
+          fi
       - name: Whitespace errors
+        if: steps.scope.outputs.docs_only != 'true'
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: git -c core.whitespace=blank-at-eol diff --check --no-ext-diff "$BASE_SHA...$HEAD_SHA" -- . ':!src/lib' ':!src/webSDK'
       - name: Read pinned Modern revision
+        if: steps.scope.outputs.docs_only != 'true'
         id: modern-pin
         run: python3 tools/bundle-themes.py pin >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        if: steps.scope.outputs.docs_only != 'true'
         with:
           repository: UltraStar-CE/Themes
           ref: ${{ steps.modern-pin.outputs.sha }}
           path: .release-themes/source
           persist-credentials: false
       - name: Check bundled Modern against the pinned source
+        if: steps.scope.outputs.docs_only != 'true'
         run: python3 tools/bundle-themes.py check-modern
       - name: Required builds for code and build changes
+        if: steps.scope.outputs.docs_only != 'true'
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         with:
           script: |
