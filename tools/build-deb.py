@@ -8,13 +8,16 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 
-def build(version, output, themes, projectm_prefix):
+def build(version, output, themes, projectm_prefix, opencv_prefix):
     if not str(projectm_prefix).strip():
         raise ValueError('Set USCE_PROJECTM_PREFIX for make deb, or pass --projectm-prefix to this script')
     projectm_prefix = Path(projectm_prefix).resolve()
     library = projectm_prefix / 'lib/libprojectM-4.so'
     if not library.is_file():
         raise ValueError(f'Missing projectM 4 shared library: {library}')
+    if not str(opencv_prefix).strip():
+        raise ValueError('Set USCE_OPENCV_PREFIX for make deb, or pass --opencv-prefix to this script')
+    opencv_prefix = Path(opencv_prefix).resolve()
     version = version.replace('-dev.', '~dev.')
     if not re.fullmatch(r'[0-9]{4}\.(?:[1-9]|1[0-2])\.[0-9]+(?:[~+][a-zA-Z0-9.+~]+)?', version):
         raise ValueError('Invalid Debian package version')
@@ -49,15 +52,40 @@ def build(version, output, themes, projectm_prefix):
         bundled_library = stage / 'usr/lib/usce' / soname
         bundled_library.parent.mkdir(parents=True)
         shutil.copyfile(library, bundled_library)
-        for license_name in ('copyright', 'hlslparser-license', 'projectm-eval-license', 'soil2-etc1-notice'):
-            shutil.copyfile(projectm_prefix / 'share/doc/projectm' / license_name,
-                            stage / 'usr/share/doc/usce' / f'projectm-{license_name}')
-        shutil.copyfile(ROOT / 'dists/linux/projectm-glm-license.txt',
-                        stage / 'usr/share/doc/usce/projectm-glm-license')
-        shutil.copyfile('/usr/share/common-licenses/Apache-2.0',
-                        stage / 'usr/share/doc/usce/projectm-soil2-etc1-license')
+        notices = {name: projectm_prefix / 'share/doc/projectm' / name for name in (
+            'copyright', 'copying', 'milkdrop-fft-license', 'hlslparser-license',
+            'projectm-eval-license', 'soil2-etc1-notice')}
+        notices.update({
+            'glm-license': ROOT / 'dists/linux/projectm-glm-license.txt',
+            'soil2-etc1-license': Path('/usr/share/common-licenses/Apache-2.0'),
+        })
+        with (stage / 'usr/share/doc/usce/copyright').open('a', encoding='utf-8') as copyright_file:
+            for name, source in notices.items():
+                copyright_file.write(f'\n\n--- projectM {name} ---\n\n')
+                copyright_file.write(source.read_text(encoding='utf-8').rstrip() + '\n')
+            copyright_file.write('\n--- OpenCV LICENSE ---\n\n')
+            copyright_file.write((opencv_prefix / 'share/doc/opencv/LICENSE').read_text(encoding='utf-8'))
+
+        private_libs = [bundled_library]
+        shlibs = [f'{match[1]} {match[2]} usce']
+        for module in ('core', 'imgproc', 'imgcodecs', 'videoio'):
+            source = opencv_prefix / 'lib' / f'libopencv_{module}.so'
+            if not source.is_file():
+                raise ValueError(f'Missing private OpenCV library: {source}')
+            opencv_soname = subprocess.check_output(['patchelf', '--print-soname', str(source)], text=True).strip()
+            soname_match = re.fullmatch(rf'(libopencv_{module})\.so\.(\d+)', opencv_soname)
+            if not soname_match:
+                raise ValueError('Unexpected OpenCV SONAME: ' + opencv_soname)
+            if module == 'videoio' and opencv_soname not in needed:
+                raise ValueError('Build USCE against the private OpenCV prefix')
+            target = bundled_library.parent / opencv_soname
+            shutil.copyfile(source, target)
+            # RUNPATH on the executable does not apply to dependencies of these libraries.
+            subprocess.run(['patchelf', '--set-rpath', '$ORIGIN', str(target)], check=True)
+            private_libs.append(target)
+            shlibs.append(f'{soname_match[1]} {soname_match[2]} usce')
         (work / 'debian').mkdir()
-        (work / 'debian/shlibs.local').write_text(f'{match[1]} {match[2]} usce\n')
+        (work / 'debian/shlibs.local').write_text('\n'.join(shlibs) + '\n')
         (work / 'debian/control').write_text('Source: usce\nSection: games\nPriority: optional\nMaintainer: UltraStar Community Edition contributors <noreply@github.com>\n\nPackage: usce\nArchitecture: any\nDescription: UltraStar Community Edition karaoke game\n')
         receiver = stage / 'usr/bin/libusce-phone-audio.so'
         if not receiver.is_file():
@@ -65,7 +93,7 @@ def build(version, output, themes, projectm_prefix):
         result = subprocess.check_output(['dpkg-shlibdeps', '-O', '-S' + str(stage),
                                           '-l' + str(bundled_library.parent), '-xusce',
                                           '-e' + str(executable), '-e' + str(receiver),
-                                          '-e' + str(bundled_library)], cwd=work, text=True)
+                                          *['-e' + str(library) for library in private_libs]], cwd=work, text=True)
         subprocess.run(['patchelf', '--set-rpath', '$ORIGIN/../lib/usce', str(executable)], check=True)
         dependencies = result.strip().removeprefix('shlibs:Depends=')
         # These are loaded dynamically and therefore absent from ELF NEEDED.
@@ -85,8 +113,9 @@ if __name__ == '__main__':
     parser.add_argument('--output', required=True)
     parser.add_argument('--themes', required=True)
     parser.add_argument('--projectm-prefix', required=True, help='Installation prefix for the private projectM 4 library and licenses')
+    parser.add_argument('--opencv-prefix', required=True, help='Installation prefix for the private OpenCV libraries and license')
     args = parser.parse_args()
     try:
-        print(build(args.version, args.output, args.themes, args.projectm_prefix))
+        print(build(args.version, args.output, args.themes, args.projectm_prefix, args.opencv_prefix))
     except ValueError as error:
         parser.error(str(error))

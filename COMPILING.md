@@ -148,9 +148,9 @@ include that prefix's `lib/pkgconfig` in `PKG_CONFIG_PATH`. Build the game, stag
 the native phone receiver, then run:
 
 ```sh
-python3 tools/build-deb.py --version VERSION --output deb-output --themes PATH --projectm-prefix PREFIX
+python3 tools/build-deb.py --version VERSION --output deb-output --themes PATH --projectm-prefix PROJECTM_PREFIX --opencv-prefix OPENCV_PREFIX
 ```
-The equivalent make target accepts `make deb USCE_PROJECTM_PREFIX=PREFIX USCE_THEMES_DIR=PATH`.
+The equivalent make target accepts `make deb USCE_PROJECTM_PREFIX=PROJECTM_PREFIX USCE_OPENCV_PREFIX=OPENCV_PREFIX USCE_THEMES_DIR=PATH`.
 The package builder derives linked dependencies from the native executable and
 adds the dynamically loaded runtime libraries.
 
