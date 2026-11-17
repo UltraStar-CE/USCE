@@ -284,6 +284,7 @@ type
 
       procedure Load();
       procedure Save();
+      procedure SaveRecordingAssignments;
       procedure SaveNames;
       procedure RememberUsedNames(const Values: array of UTF8String);
       procedure RememberUsedTeamNames(const Values: array of UTF8String);
@@ -2344,6 +2345,18 @@ procedure TIni.RememberUsedTeamNames(const Values: array of UTF8String);
 var I: integer;
 begin
   for I := High(Values) downto 0 do RememberRecentName(RecentTeamNames, Values[I]);
+end;
+
+procedure TIni.SaveRecordingAssignments;
+var
+  IniFile: TIniFile;
+begin
+  IniFile := TSafeIniFile.Create(FileName.ToNative, 'TIni.SaveRecordingAssignments');
+  try
+    SaveInputDeviceCfg(IniFile);
+  finally
+    IniFile.Free;
+  end;
 end;
 
 procedure TIni.SaveNames;

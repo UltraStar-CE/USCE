@@ -169,6 +169,7 @@ type
       procedure ShowPopup(const Msg: UTF8String; const Captions: array of UTF8String;
           Handler: TPopupErrorHandler; HandlerData: Pointer; DefaultInteraction: integer;
           CancelValue: integer); overload;
+      procedure UpdateMessage(const Msg: UTF8String);
       function Draw: boolean; override;
   end;
 
@@ -1849,6 +1850,11 @@ begin
   Text[0].Text := Msg;
 
   ConfigureButtons(Captions, DefaultInteraction);
+end;
+
+procedure TScreenPopup.UpdateMessage(const Msg: UTF8String);
+begin
+  Text[0].Text := Msg;
 end;
 
 { TScreenPopupError }
