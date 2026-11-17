@@ -485,7 +485,7 @@ jobs:
       - name: Install native build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y fpc automake build-essential cmake ninja-build libssl-dev pkg-config libsdl2-image-dev libavformat-dev libavcodec-dev libavutil-dev libswresample-dev libswscale-dev libsqlite3-dev libfreetype6-dev portaudio19-dev liblua5.3-dev fonts-dejavu-core dpkg-dev desktop-file-utils libopencv-dev libgl-dev patchelf
+          sudo apt-get install -y fpc automake build-essential cmake ninja-build libssl-dev pkg-config libsdl2-image-dev libavformat-dev libavcodec-dev libavutil-dev libswresample-dev libswscale-dev libsqlite3-dev libfreetype6-dev portaudio19-dev liblua5.3-dev fonts-dejavu-core dpkg-dev desktop-file-utils libjpeg-dev libgl-dev patchelf
       - name: Build projectM 4
         env:
           PROJECTM_VERSION: 4.1.7
@@ -502,10 +502,36 @@ jobs:
             -DBUILD_SHARED_LIBS=ON -DENABLE_PLAYLIST=OFF -DENABLE_SYSTEM_PROJECTM_EVAL=OFF
           cmake --build build/projectm --target install --parallel 2
           install -Dm644 "$source/LICENSE.txt" "$prefix/share/doc/projectm/copyright"
+          install -Dm644 "$source/COPYING" "$prefix/share/doc/projectm/copying"
+          sed -n '1,/^\*\//p' "$source/src/libprojectM/Audio/MilkdropFFT.cpp" > "$prefix/share/doc/projectm/milkdrop-fft-license"
           install -Dm644 "$source/vendor/hlslparser/LICENSE" "$prefix/share/doc/projectm/hlslparser-license"
           install -Dm644 "$source/vendor/projectm-eval/LICENSE.md" "$prefix/share/doc/projectm/projectm-eval-license"
           sed -n '1,/^$/p' "$source/vendor/SOIL2/etc1_utils.c" > "$prefix/share/doc/projectm/soil2-etc1-notice"
           echo "USCE_PROJECTM_PREFIX=$prefix" >> "$GITHUB_ENV"
+      - name: Build minimal OpenCV for the DEB
+        env:
+          OPENCV_VERSION: 4.13.0
+          OPENCV_SHA: 1d40ca017ea51c533cf9fd5cbde5b5fe7ae248291ddf2af99d4c17cf8e13017d
+        run: |
+          archive="$RUNNER_TEMP/opencv-$OPENCV_VERSION.tar.gz"
+          curl -fL --retry 3 -o "$archive" "https://github.com/opencv/opencv/archive/refs/tags/$OPENCV_VERSION.tar.gz"
+          echo "$OPENCV_SHA  $archive" | sha256sum -c -
+          tar -xf "$archive" -C "$RUNNER_TEMP"
+          source="$RUNNER_TEMP/opencv-$OPENCV_VERSION"
+          prefix="$RUNNER_TEMP/usce-opencv"
+          cmake -S "$source" -B build/opencv -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$prefix" -DOPENCV_LIB_INSTALL_PATH=lib \
+            -DBUILD_LIST=core,imgproc,imgcodecs,videoio -DBUILD_SHARED_LIBS=ON \
+            -DOPENCV_GENERATE_PKGCONFIG=ON -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF \
+            -DBUILD_opencv_apps=OFF -DBUILD_JAVA=OFF -DBUILD_JPEG=OFF -DBUILD_ZLIB=OFF \
+            -DWITH_V4L=ON -DWITH_JPEG=ON -DWITH_PNG=OFF -DWITH_TIFF=OFF \
+            -DWITH_WEBP=OFF -DWITH_OPENJPEG=OFF -DWITH_JASPER=OFF -DWITH_AVIF=OFF \
+            -DWITH_OPENEXR=OFF -DWITH_FFMPEG=OFF -DWITH_GSTREAMER=OFF -DWITH_1394=OFF \
+            -DWITH_OBSENSOR=OFF -DWITH_GPHOTO2=OFF -DWITH_VA=OFF -DWITH_GDAL=OFF \
+            -DWITH_ADE=OFF -DWITH_IPP=OFF -DWITH_ITT=OFF -DWITH_OPENCL=OFF
+          cmake --build build/opencv --target install --parallel 2
+          install -Dm644 "$source/LICENSE" "$prefix/share/doc/opencv/LICENSE"
+          echo "USCE_OPENCV_PREFIX=$prefix" >> "$GITHUB_ENV"
       - name: Stage native phone receiver
         run: |
           cmake -S native/phone-audio -B build/phone-audio -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -515,14 +541,14 @@ jobs:
       - name: Build native game
         run: |
           ./autogen.sh
-          PKG_CONFIG_PATH="$USCE_PROJECTM_PREFIX/lib/pkgconfig" \
+          PKG_CONFIG_PATH="$USCE_PROJECTM_PREFIX/lib/pkgconfig:$USCE_OPENCV_PREFIX/lib/pkgconfig" \
             ./configure --prefix=/usr --with-opencv --with-libprojectM
           make -j2
           v=$(python3 tools/generate-version.py)
           echo "versionName=${v/-dev./~dev.}" >> "$GITHUB_ENV"
       - name: Build and inspect Debian package
         run: |
-          python3 tools/build-deb.py --version "$versionName" --output deb-output --themes .release-themes/bundle --projectm-prefix "$USCE_PROJECTM_PREFIX"
+          python3 tools/build-deb.py --version "$versionName" --output deb-output --themes .release-themes/bundle --projectm-prefix "$USCE_PROJECTM_PREFIX" --opencv-prefix "$USCE_OPENCV_PREFIX"
           python3 tools/check_deb_install.py deb-output/*.deb
           sudo apt-get install -y ./deb-output/*.deb
           ldd -r /usr/bin/usce | tee deb-linkage.txt
@@ -530,7 +556,7 @@ jobs:
             exit 1
           fi
           grep -E "libprojectM-4.* => /usr/(bin/\.\./)?lib/usce/" deb-linkage.txt
-          grep -E "libopencv_videoio.* => " deb-linkage.txt
+          grep -E "libopencv_videoio.* => /usr/(bin/\.\./)?lib/usce/" deb-linkage.txt
           usce -help
       - name: Upload Debian package
         uses: actions/upload-artifact@v6

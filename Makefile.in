@@ -370,7 +370,7 @@ dist:
 debpkgdir ?= dists/debian
 .PHONY: deb
 deb: all
-	python3 tools/build-deb.py --version "$(USCE_VERSION)" --output "$(debpkgdir)" --themes "$(USCE_THEMES_DIR)" --projectm-prefix "$(USCE_PROJECTM_PREFIX)"
+	python3 tools/build-deb.py --version "$(USCE_VERSION)" --output "$(debpkgdir)" --themes "$(USCE_THEMES_DIR)" --projectm-prefix "$(USCE_PROJECTM_PREFIX)" --opencv-prefix "$(USCE_OPENCV_PREFIX)"
 
 #################################################
 # RPM (TODO)
