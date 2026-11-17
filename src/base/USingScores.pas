@@ -874,9 +874,8 @@ begin
               aPlayers[PopUp.Player].ScoreDisplayed := Players[PopUp.Player].ScoreDisplayed + ScoreToAdd;
 
               // change bar positions
-              if PopUp.ScoreDiff = 0 then
-                aPlayers[PopUp.Player].RBTarget := 0
-              else
+              // Zero-point popups apply their rating when removed.
+              if PopUp.ScoreDiff > 0 then
                 aPlayers[PopUp.Player].RBTarget := aPlayers[PopUp.Player].RBTarget + ScoreToAdd/PopUp.ScoreDiff * (PopUp.Rating / 20 - 0.26);
               if (aPlayers[PopUp.Player].RBTarget > 1) then
                 aPlayers[PopUp.Player].RBTarget := 1
