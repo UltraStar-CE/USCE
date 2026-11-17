@@ -492,7 +492,11 @@ begin
         ScreenName.SetInteraction(0);
         ScreenName.ParseInput(SDLK_RETURN, 0, true);
       end;
-    psResults: FadeTo(@ScreenScore);
+    psResults:
+      begin
+        PrepareScoreScreen;
+        FadeTo(@ScreenScore);
+      end;
     psHighScores: FadeTo(@ScreenHighScores);
     psAdvance: if ResultsOnly then Stop else Advance;
   end;

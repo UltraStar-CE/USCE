@@ -269,6 +269,7 @@ uses
   USong,
   USongs,
   UNote,
+  UScreenScore,
   SysUtils;
 
 //-------------
@@ -995,7 +996,10 @@ begin
       if (ScreenSong.Mode = smPartyTournament) then
         Display.FadeTo(@ScreenPartyTournamentWin)
       else
+      begin
+        PrepareScoreScreen;
         Display.FadeTo(@ScreenScore);
+      end;
     end;
   end;
 end;

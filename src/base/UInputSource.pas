@@ -45,7 +45,7 @@ begin
   begin
     LocalCount := IMaxPlayerCount;
     if Assigned(ScreenName) and Assigned(ScreenSong) and Assigned(Party) and
-       not Party.bPartyGame and (ScreenSong.Mode = smNormal) then
+       not Party.bPartyGame and (ScreenSong.Mode in [smNormal, smMedley]) then
       LocalCount := ScreenName.LocalPlayerCount;
   end;
   if PlayerIndex >= LocalCount then Exit;

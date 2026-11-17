@@ -209,6 +209,8 @@ type
 const
   ID='ID_023';   //for help system
 
+procedure PrepareScoreScreen;
+
 implementation
 
 uses
@@ -887,6 +889,15 @@ begin
         (Screen = PlayerPositionMap[P-1].Screen);
     end;
   end;
+end;
+
+procedure PrepareScoreScreen;
+begin
+  // Phone assignments can increase PlayersPlay after the setup screen was built.
+  if Assigned(ScreenScore) and (Theme.Score.LayoutPlayers = PlayersPlay) then Exit;
+  FreeAndNil(ScreenScore);
+  Theme.ThemeScoreLoad(PlayersPlay);
+  ScreenScore := TScreenScore.Create;
 end;
 
 constructor TScreenScore.Create;

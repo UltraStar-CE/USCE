@@ -610,6 +610,7 @@ type
     TextArtistTitle:  TThemeText;
     PlayerLayoutArea: TPlayerSlotRect;
     PlayerLayoutExtraColsBias: integer;
+    LayoutPlayers: integer;
 
     PlayerStatic:     array[1..UIni.IMaxPlayerCount] of AThemeStatic;
     PlayerTexts:      array[1..UIni.IMaxPlayerCount] of AThemeText;
@@ -1288,8 +1289,8 @@ type
     procedure ThemeLoadPosition(var ThemePosition: TThemePosition; const Name: string);
     procedure ThemeLoadLyricBar(var LyricBar: TThemeLyricBar; const Name: string);
 
-    procedure ThemeScoreLoadData;
-    procedure ThemeScoreLoad;
+    procedure ThemeScoreLoadData(PlayerCount: integer = -1);
+    procedure ThemeScoreLoad(PlayerCount: integer = -1);
     procedure ThemePartyLoad;
     procedure ThemeSongLoad;
     procedure ThemeSongReload;
@@ -4966,7 +4967,7 @@ begin
   CloseFile;
 end;
 
-procedure TTheme.ThemeScoreLoadData;
+procedure TTheme.ThemeScoreLoadData(PlayerCount: integer);
 var
   I: integer;
   ScreenCount: integer;
@@ -5047,20 +5048,20 @@ begin
 
   BaseBounds := GetScoreTemplateBounds(BaseTemplate);
 
+  if PlayerCount < 0 then
+    PlayerCount := UIni.IPlayersVals[Ini.Players];
+  Score.LayoutPlayers := PlayerCount;
   ScreenCount := Ini.Screens + 1;
-  if ScreenCount > 1 then
-    LayoutPlayerCount := GetScreenPlayerCount(UIni.IPlayersVals[Ini.Players], ScreenCount, 1)
-  else
-    LayoutPlayerCount := UIni.IPlayersVals[Ini.Players];
+  LayoutPlayerCount := GetScreenPlayerCount(PlayerCount, ScreenCount, 1);
   LayoutBounds := GetThemePlayerScoreLayoutBounds(BaseBounds, Score.PlayerLayoutArea, LayoutPlayerCount);
   for LayoutPlayerIndex := 0 to LayoutPlayerCount - 1 do
     AssignScoreThemeSlot(Score, BaseTemplate, BaseBounds, LayoutBounds, LayoutPlayerCount, LayoutPlayerIndex, LayoutPlayerIndex + 1);
 end;
 
-procedure TTheme.ThemeScoreLoad;
+procedure TTheme.ThemeScoreLoad(PlayerCount: integer);
 begin
   OpenFile(Ini.Theme);
-  ThemeScoreLoadData;
+  ThemeScoreLoadData(PlayerCount);
   CloseFile;
 end;
 
