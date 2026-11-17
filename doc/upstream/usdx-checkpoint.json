@@ -16,5 +16,14 @@
       "url": "https://github.com/UltraStar-Deluxe/USDX/commit/7f49e685c7d7affcd0bd6501f46f6af801e4d880",
       "subject": "Merge pull request #1477 from UltraStar-Deluxe/time-fix"
     }
-  ]
+  ],
+  "assessment": {
+    "checkedAt": "2026-11-17T07:59:10.139Z",
+    "source": "https://github.com/UltraStar-Deluxe/USDX/pull/1477",
+    "decision": "already-covered",
+    "usceReferences": [
+      "https://github.com/UltraStar-CE/USCE/pull/244"
+    ],
+    "reason": "USCE 612520e calculates audio-end clipping from the note duration and applies relative chart timing and the rate multiplier. Current USCE main retains the implementation and clipping fixture."
+  }
 }
