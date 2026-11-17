@@ -15,6 +15,11 @@ function commitList(commits, limit = 30) {
     (commits.length > limit ? '\n- Additional commits are in the assessment file.' : '');
 }
 function upstreamReport(delta) {
+  if (delta.filtered) {
+    return delta.total + ' upstream commits authored within the last three calendar months:\n\n' +
+      delta.commits.slice(0, 30).map(c => '- [' + c.sha.slice(0, 12) + '](' + c.url + '): ' + text(c.subject, 220)).join('\n') +
+      (delta.commits.length > 30 ? '\n- Additional recent commits are in the assessment file.' : '') + review;
+  }
   const files = delta.files || [];
   return 'Upstream changes: ' + delta.url + '\n\n' + delta.total + ' commits since the recorded checkpoint.\n\n' + commitList(delta.commits) +
     '\n\nChanged files (' + files.length + (delta.filesTruncated ? '+; GitHub comparison limit reached' : '') + '):\n' +
@@ -29,16 +34,16 @@ function issueReport(changes, previous) {
     return '### ' + issue.source + ': ' + text(issue.title, 180) + '\n\n' +
       'Changed: ' + changed + '. Current state: ' + text(issue.state, 30) + '; comments: ' + issue.comments + '.\n\n' + quote(issue.description || '(No description supplied.)') +
       (old?.assessment ? '\n\nPrevious USCE decision: ' + text(old.assessment.decision, 60) + '. ' + text(old.assessment.reason, 300) : '');
-  }).join('\n\n') + review + '\n\nAn upstream report is not a verified USCE bug. Only reports created after the configured watch start are included.' +
+  }).join('\n\n') + review + '\n\nAn upstream report is not a verified USCE bug. Only reports opened within three calendar months and after the configured watch start are included.' +
     (changes.remaining ? '\n\nAdditional changed reports remain for the next assessment.' : '');
 }
 function forkReport(changes) {
   return boundedReport('New source commits awaiting follow-through:\n\n' + changes.batch.filter(f => !f.newCommits || f.newCommits.length).map(f =>
     '### ' + text(f.repository, 100) + ' / ' + text(f.branch, 100) + '\n\n' + f.compareUrl + '\n\n' +
     (f.newCommits || f.commits).length + ' newly discovered source commits after upstream and known-history exclusions.' +
-    '\n\n' + (f.ignoredUpstreamCommitCount ? f.ignoredUpstreamCommitCount + ' upstream-sync commits excluded.\n\n' : '') + (f.ignoredKnownHistoryCommitCount ? f.ignoredKnownHistoryCommitCount + ' previously seen history commits excluded.\n\n' : '') + (f.ignoredOldCommitCount ? f.ignoredOldCommitCount + ' older commits excluded by the six-month author-date cutoff.\n\n' : '') + commitList((f.newCommits || f.commits).slice(0, 6), 6) +
+    '\n\n' + (f.ignoredUpstreamCommitCount ? f.ignoredUpstreamCommitCount + ' upstream-sync commits excluded.\n\n' : '') + (f.ignoredKnownHistoryCommitCount ? f.ignoredKnownHistoryCommitCount + ' previously seen history commits excluded.\n\n' : '') + (f.ignoredOldCommitCount ? f.ignoredOldCommitCount + ' older commits excluded by the three-month author-date cutoff.\n\n' : '') + commitList((f.newCommits || f.commits).slice(0, 6), 6) +
     ((f.newCommits || f.commits).length > 6 ? '\n\nOnly ' + Math.min(6, f.commits.length) + ' commit titles are shown; inspect the full comparison before deciding.' : '')
-  ).join('\n\n') + review + '\n\nAssess the full inventory, not just these excerpts. Retain earlier decisions and inspect only the new delta on known branches. Group shared commits and equivalent features across forks. Check current USCE source and existing PRs before proposing work; exact ancestry alone does not detect rebased or adapted changes. Record already-covered, superseded and rejected work with evidence so it is not repeatedly presented as new. Keep unresolved candidates linked to their existing follow-up; do not create duplicate issues or PRs. Only commits authored within the last six calendar months are eligible. Older commits are excluded even if recently rebased or pushed. Prepare concrete recommendations and focused follow-ups; ask Daniel only for actual product decisions.\n\nFor rendering/backend changes, explain the proposed mechanism and what to measure on older laptops or Raspberry Pi. Do not infer a speedup from the title. Check USCE equivalents and dependencies before proposing a port.');
+  ).join('\n\n') + review + '\n\nAssess the full inventory, not just these excerpts. Retain earlier decisions and inspect only the new delta on known branches. Group shared commits and equivalent features across forks. Check current USCE source and existing PRs before proposing work; exact ancestry alone does not detect rebased or adapted changes. Record already-covered, superseded and rejected work with evidence so it is not repeatedly presented as new. Keep unresolved candidates linked to their existing follow-up; do not create duplicate issues or PRs. Only commits authored within the last three calendar months are eligible. Older commits are excluded even if recently rebased or pushed. Prepare concrete recommendations and focused follow-ups; ask Daniel only for actual product decisions.\n\nFor rendering/backend changes, explain the proposed mechanism and what to measure on older laptops or Raspberry Pi. Do not infer a speedup from the title. Check USCE equivalents and dependencies before proposing a port.');
 }
 // Escape source prose at its insertion points; comparison URL destinations stay exact.
 module.exports = {upstreamReport, issueReport, forkReport};

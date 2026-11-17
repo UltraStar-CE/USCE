@@ -1,4 +1,5 @@
 'use strict';
+const {upstreamCutoff} = require('./upstream-age.cjs');
 const crypto = require('node:crypto');
 const {spawnSync} = require('node:child_process');
 const {mkdtempSync, rmSync} = require('node:fs');
@@ -56,8 +57,7 @@ function createAssessedAncestry(remote) {
 }
 
 function activeForks(forks, now, ownRepository) {
-  const cutoff = new Date(now); cutoff.setUTCFullYear(cutoff.getUTCFullYear() - 2);
-  if (!Number.isFinite(cutoff.getTime())) throw Error('Invalid fork scan time');
+  const cutoff = upstreamCutoff(now);
   const seen = new Set();
   return forks.filter(fork => {
     if (!fork.full_name || !fork.default_branch || !Number.isFinite(Date.parse(fork.pushed_at)))
@@ -65,23 +65,16 @@ function activeForks(forks, now, ownRepository) {
     if (seen.has(fork.full_name)) return false;
     seen.add(fork.full_name);
     return !fork.archived && !fork.disabled && fork.full_name !== ownRepository &&
-      Date.parse(fork.pushed_at) >= cutoff.getTime();
+      Date.parse(fork.pushed_at) >= cutoff;
   }).sort((a, b) => Date.parse(b.pushed_at) - Date.parse(a.pushed_at) || a.full_name.localeCompare(b.full_name));
 }
 
 function recentCommits(commits, now) {
-  const cutoff = new Date(now);
-  // Clamp month ends (October 31 -> April 30), rather than overflowing into May.
-  const day = cutoff.getUTCDate();
-  cutoff.setUTCDate(1);
-  cutoff.setUTCMonth(cutoff.getUTCMonth() - 6);
-  const last = new Date(Date.UTC(cutoff.getUTCFullYear(), cutoff.getUTCMonth() + 1, 0)).getUTCDate();
-  cutoff.setUTCDate(Math.min(day, last));
-  if (!Number.isFinite(cutoff.getTime())) throw Error('Invalid assessment time');
+  const cutoff = upstreamCutoff(now);
   return commits.filter(c => {
     const time = Date.parse(c.authoredAt);
     if (!Number.isFinite(time)) throw Error('Missing commit author date');
-    return time >= cutoff.getTime();
+    return time >= cutoff;
   });
 }
 

@@ -13,7 +13,7 @@ const fork = (full_name = 'contributor/USDX', extra = {}) => ({full_name,
 const snapshot = (repository = 'contributor/USDX', head = 'b'.repeat(40)) => ({repository, branch: 'master', head, ahead: 2});
 
 test('discovery includes active forks, excludes old, archived, disabled and our own, and deduplicates pages', () => {
-  const result = activeForks([fork(), fork(), fork('old/USDX', {pushed_at: '2024-10-26T00:00:00Z'}),
+  const result = activeForks([fork(), fork(), fork('old/USDX', {pushed_at: '2026-07-26T00:00:00Z'}),
     fork('archived/USDX', {archived: true}), fork('disabled/USDX', {disabled: true}), fork('UltraStar-CE/USCE')], now, 'UltraStar-CE/USCE');
   assert.deepEqual(result.map(f => f.full_name), ['contributor/USDX']);
   assert.throws(() => activeForks([fork('bad/USDX', {pushed_at: null})], now, 'UltraStar-CE/USCE'));
@@ -133,16 +133,16 @@ test('complete inventories include later pages; missing pages never publish', as
   }
 });
 
-test('six calendar months use original author dates, inclusive boundary and month-end clamp', () => {
-  const commits = ['2026-04-27T22:59:59Z', '2026-04-27T23:00:00Z', '2026-10-20T00:00:00Z'].map(authoredAt => ({authoredAt}));
+test('three calendar months use original author dates, inclusive boundary and month-end clamp', () => {
+  const commits = ['2026-07-27T22:59:59Z', '2026-07-27T23:00:00Z', '2026-10-20T00:00:00Z'].map(authoredAt => ({authoredAt}));
   assert.deepEqual(recentCommits(commits, now), commits.slice(1));
-  assert.equal(recentCommits([{authoredAt: '2026-04-30T12:00:00Z'}], new Date('2026-10-31T12:00:00Z')).length, 1);
+  assert.equal(recentCommits([{authoredAt: '2026-02-28T12:00:00Z'}], new Date('2026-05-31T12:00:00Z')).length, 1);
   assert.throws(() => recentCommits([{}], now), /author date/);
 });
 test('a fork containing only old commits produces no assessment PR', async () => {
   const x = fixture();
   x.github.rest.repos.compareCommitsWithBasehead = async () => ({data: {ahead_by: 1, behind_by: 0,
-    commits: [{sha: 'b'.repeat(40), commit: {message: 'Old rebased work', author: {name: 'Author', date: '2025-01-01T00:00:00Z'}, committer: {date: '2026-10-20T00:00:00Z'}}}]}});
+    commits: [{sha: 'b'.repeat(40), commit: {message: 'Old rebased work', author: {name: 'Author', date: '2026-07-26T00:00:00Z'}, committer: {date: '2026-10-20T00:00:00Z'}}}]}});
   await trackForks(x);
   assert.equal(x.proposals.length, 0);
 });

@@ -26,6 +26,14 @@ test('old reports stay excluded despite new comments, edits or reopening', () =>
   assert.deepEqual(result.batch.map(row => row.number), [6]);
 });
 
+test('recent activity does not revive an issue outside the rolling window', () => {
+  const now = new Date('2027-02-01T00:00:00Z');
+  const original = issue(1, {updated_at: now.toISOString(), comments: 1});
+  const recent = issue(2, {created_at: '2026-11-01T00:00:00Z', updated_at: now.toISOString()});
+  const result = issueChanges({track, previous: null, issues: [original, recent], now});
+  assert.deepEqual(result.batch.map(row => row.number), [2]);
+});
+
 test('the first batch retains the creation cutoff while newly created closed reports remain', () => {
   const reports = Array.from({length: 23}, (_, i) => issue(i + 1, {state:'closed'}));
   const result = plan(reports);
