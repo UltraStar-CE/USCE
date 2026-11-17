@@ -118,6 +118,13 @@ int main() {
   directCapture.pushStamped(p.data(), p.size(), directStamp + 10000);
   assert(directCapture.read(directStamp, out, 480));
   assert(out[0] == 16384);
+  // A sequence number alone cannot identify a duplicate on the relay path.
+  p = packet(3);
+  assert(history.push(p.data(), p.size(), 1030000, 1070000));
+  assert(!history.push(p.data(), p.size(), 1030001, 1070000));
+  assert(!history.push(p.data(), p.size(), 1030000, 1070000, 2));
+  assert(history.read(1030000, out, 480) && out[0] == 8192);
+
   auto receiver = usce_pa_create("ipc://", "");
   assert(receiver);
   assert(usce_pa_signal(receiver, "{\"type\":\"bridge.ready\",\"displayCode\":null}") == 0);
@@ -177,6 +184,48 @@ int main() {
   // A positively identified new source epoch recovers even before the stall timer.
   assert(usce_pa_signal(receiver, timedPcm(0, 2300001, "", 2).c_str()) == 0);
   assert(usce_pa_poll(receiver, out, 9600) == 480);
+  const auto sendTimed = [&](void *audio, int sequence, int64_t stamp, int epoch = 1) {
+    assert(usce_pa_signal(audio, timedPcm(sequence, stamp, "", epoch).c_str()) == 0);
+    assert(usce_pa_poll(audio, out, 9600) >= 0);
+  };
+  const auto checkShortRestart = [&](int nextEpoch, int64_t restartPauseUs) {
+    auto audio = usce_pa_create("ipc://", "");
+    assert(audio);
+    usce_pa_set_clock(audio, 3490000);
+    for (int i = 0; i < 50; ++i)
+      sendTimed(audio, i, 3000000 + i * 10000);
+    assert(usce_pa_capture_window(audio, 3490000, out, 2048) == 1);
+
+    const auto restartUs = 3490000 + restartPauseUs;
+    usce_pa_set_clock(audio, restartUs);
+    // The first packet would have been a sequence-only duplicate before the fix.
+    sendTimed(audio, 0, restartUs, nextEpoch);
+    assert(usce_pa_capture_window(audio, restartUs, out, 480) == 1);
+    assert(usce_pa_capture_window(audio, 3490000, out, 480) != 1);
+    for (int i = 1; i < 6; ++i)
+      sendTimed(audio, i, restartUs + i * 10000, nextEpoch);
+    assert(usce_pa_capture_window(audio, restartUs + 50000, out, 2048) == 1);
+    usce_pa_destroy(audio);
+  };
+  checkShortRestart(2, 10000);  // New epoch even without a stall.
+  checkShortRestart(1, 300000); // Same epoch after a stall.
+
+  auto audio = usce_pa_create("ipc://", "");
+  assert(audio);
+  usce_pa_set_clock(audio, 4000000);
+  sendTimed(audio, 5099, 4000000);
+  usce_pa_set_clock(audio, 4340000);
+  for (int i = 0; i < 5; ++i)
+    sendTimed(audio, i, 4300000 + i * 10000, 2);
+  assert(usce_pa_capture_window(audio, 4340000, out, 2048) == 1);
+  // The delayed old epoch jumps forward in sequence, but not in capture time.
+  sendTimed(audio, 5100, 4010000);
+  // Neither can an old timestamp on a forward packet in the current epoch.
+  sendTimed(audio, 5100, 4010000, 2);
+  assert(usce_pa_capture_window(audio, 4340000, out, 2048) == 1);
+  assert(usce_pa_capture_window(audio, 4010000, out, 480) != 1);
+  usce_pa_destroy(audio);
+
   auto second = usce_pa_create("ipc://", "");
   assert(second);
   assert(usce_pa_signal(receiver, "{\"type\":\"player.assigned\",\"playerId\":\"one\",\"slot\":1}") == 0);
