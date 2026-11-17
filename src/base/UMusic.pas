@@ -580,7 +580,7 @@ type
       function FinalizeRecord(): boolean;
 
       function IsCapturing: boolean;
-      procedure CaptureStart(PlayerCount: integer = -1; MonitorOnly: boolean = false);
+      procedure CaptureStart(PlayerCount: integer = -1; MonitorOnly: boolean = false; LocalLimit: integer = -1);
       procedure CaptureStop(MonitorOnly: boolean = false);
   end;
 
