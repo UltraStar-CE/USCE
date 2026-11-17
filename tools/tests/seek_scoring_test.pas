@@ -2,7 +2,7 @@ program SeekScoringTest;
 {$mode Delphi}
 uses {$IFDEF UNIX}cthreads,{$ENDIF}
   SysUtils, Math, UMusic, USong, UNote, UScreenSingController,
-  UIni, URecord, UBeatTimer, UGraphic, UScreenSong, USingScores, UCommon;
+  UIni, URecord, UBeatTimer, UGraphic, UScreenSong, USingScores, UCommon, UThemes;
 var Screen: TScreenSingController; Track, I: integer; Points, Before, Bonus: real;
   Loop: TPracticeLoop;
 
@@ -22,7 +22,8 @@ begin
 end;
 
 procedure CheckMicrophoneRetries;
-var Device: TAudioInputDevice; Sound: TCaptureBuffer; I: integer; PerBeat: real; Color: TRGB;
+var Device: TAudioInputDevice; Sound: TCaptureBuffer; PerBeat: real; Color: TRGB;
+  RatingBefore: real;
 
   procedure SingBeat(Beat: integer; Voiced: boolean; Seek: boolean);
   var J: integer;
@@ -33,6 +34,7 @@ var Device: TAudioInputDevice; Sound: TCaptureBuffer; I: integer; PerBeat: real;
     if Seek then
     begin
       Player[0].DetectionReady := false;
+      SetLength(Player[0].SentenceEffectsShown, 0);
       Player[0].HighNote := -1;
       Player[0].LengthNote := 0;
       SetLength(Player[0].Note, 0);
@@ -46,6 +48,8 @@ begin
   Ini := TIni(TIni.NewInstance);
   LyricsState := TLyricsState(TLyricsState.NewInstance);
   ScreenSong := TScreenSong(TScreenSong.NewInstance);
+  Theme := TTheme(TTheme.NewInstance);
+  Theme.Sing := TThemeSing.Create;
   ScreenSong.Mode := smNormal;
   ScoreFactor := StandardScoreFactor;
   Device := TAudioInputDevice(TAudioInputDevice.NewInstance);
@@ -101,12 +105,40 @@ begin
     FinalizeLine(0, 0);
     Equal(Screen.Scores.Players[0].ScoreDisplayed, MAX_SONG_SCORE - 1,
       'display updates even when line bonus remains clamped at its maximum');
+    // A line whose bonus was already updated during a retry still rates once.
+    Screen.Scores.KillAllPopUps;
+    RatingBefore := Screen.Scores.Players[0].RBTarget;
+    Screen.OnSentenceEnd(0, 0, 0);
+    Screen.OnSentenceEnd(0, 0, 0);
+    Screen.Scores.Settings.Phase1Time := 0;
+    Screen.Scores.Settings.Phase2Time := 0;
+    Screen.Scores.Settings.Phase3Time := -1;
+    Screen.Scores.Draw(false, false);
+    Equal(Screen.Scores.Players[0].RBTarget, RatingBefore + 0.14,
+      'a revised and already finalized line rates exactly once per pass');
+
+    // A pre-existing score for a beat skipped by negative delay is replaced
+    // by zero, while the following beat can still score from the new capture.
+    Ini.PlayerDelay[0] := -250;
+    SingBeat(10, true, true);
+    Equal(Player[0].Score, PerBeat, 'negative delay clears the unsampled prefix');
+    Ini.PlayerDelay[0] := 0;
+
     Screen.Scores.ClearPlayers;
     Screen.Scores.AddPlayer(nil, Color);
     Screen.Scores.AddPlayer(nil, Color);
     Screen.Scores.SpawnPopUp(0, 8, 1000);
     Screen.Scores.SpawnPopUp(1, 8, 2000);
-    Screen.Scores.SpawnPopUp(0, 3, 500);
+    Screen.Scores.SpawnPopUp(0, 6, 500);
+    Screens := 1;
+    ScreenAct := 1;
+    Screen.Scores.Init;
+    RatingBefore := Screen.Scores.Players[0].RBTarget;
+    Screen.Scores.Settings.Phase1Time := -1;
+    Screen.Scores.Settings.Phase3Time := High(integer);
+    Screen.Scores.Draw(false, false);
+    Equal(Screen.Scores.Players[0].RBTarget, RatingBefore,
+      'a lower score does not reset the rating during the popup');
     Equal(Screen.Scores.Players[0].ScoreDisplayed, 500, 'revised display discards obsolete animated points');
     Equal(Screen.Scores.Players[1].Score, 2000, 'other singer popup is preserved');
     Screen.Scores.KillAllPopUps;
@@ -130,6 +162,8 @@ begin
   finally
     Screen.Scores.Free; Screen.Scores := nil;
     Device.AudioFormat.Free; Device.FreeInstance;
+    Theme.Sing.Free;
+    Theme.FreeInstance; Theme := nil;
     ScreenSong.FreeInstance; ScreenSong := nil;
     LyricsState.FreeInstance; LyricsState := nil;
     Ini.FreeInstance; Ini := nil;

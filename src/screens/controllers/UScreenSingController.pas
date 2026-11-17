@@ -735,6 +735,7 @@ begin
   for I := 0 to High(Player) do
   begin
     Player[I].DetectionReady := false;
+    SetLength(Player[I].SentenceEffectsShown, 0);
     // Draw the new pass from its destination, independently of stored points.
     Player[I].HighNote := -1;
     Player[I].LengthNote := 0;
@@ -2325,8 +2326,13 @@ begin
       LineBonus := MAX_SONG_LINE_BONUS / (Length(CurrentSong.Tracks[Track].Lines) -
         NumEmptySentences[Track]);
       LineBonus := LineBonus * LinePerfection;
-      if ShowEffects and CurrentPlayer.SentenceFinalized[Track][SentenceIndex] and
-         (CurrentPlayer.SentenceBonus[Track][SentenceIndex] = LineBonus) then Continue;
+      // Per-beat changes revise the bonus silently. Still show the line's
+      // rating once when this playback pass reaches its end.
+      if ShowEffects then
+      begin
+        if CurrentPlayer.SentenceEffectsShown[Track][SentenceIndex] then Continue;
+        CurrentPlayer.SentenceEffectsShown[Track][SentenceIndex] := true;
+      end;
       // apply line-bonus
       CurrentPlayer.ScoreLine :=
         CurrentPlayer.ScoreLine + LineBonus - CurrentPlayer.SentenceBonus[Track][SentenceIndex];

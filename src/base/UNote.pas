@@ -111,6 +111,7 @@ type
     SentenceScore:  array of array of real;
     SentenceBonus: array of array of real;
     SentenceFinalized: array of array of boolean;
+    SentenceEffectsShown: array of array of boolean;
     InputSource: integer;
     LastSungTone: integer;
     HasLastSungTone: boolean;
@@ -293,6 +294,7 @@ begin
   SetLength(SentenceScore, 0);
   SetLength(SentenceBonus, 0);
   SetLength(SentenceFinalized, 0);
+  SetLength(SentenceEffectsShown, 0);
 end;
 
 procedure EnsurePlayerSentenceScores(PlayerIndex: integer);
@@ -306,6 +308,7 @@ begin
     SetLength(Player[PlayerIndex].SentenceScore, Length(CurrentSong.Tracks));
   SetLength(Player[PlayerIndex].SentenceBonus, Length(CurrentSong.Tracks));
   SetLength(Player[PlayerIndex].SentenceFinalized, Length(CurrentSong.Tracks));
+  SetLength(Player[PlayerIndex].SentenceEffectsShown, Length(CurrentSong.Tracks));
 
   for TrackIndex := 0 to High(CurrentSong.Tracks) do
   begin
@@ -313,6 +316,7 @@ begin
       SetLength(Player[PlayerIndex].SentenceScore[TrackIndex], Length(CurrentSong.Tracks[TrackIndex].Lines));
     SetLength(Player[PlayerIndex].SentenceBonus[TrackIndex], Length(CurrentSong.Tracks[TrackIndex].Lines));
     SetLength(Player[PlayerIndex].SentenceFinalized[TrackIndex], Length(CurrentSong.Tracks[TrackIndex].Lines));
+    SetLength(Player[PlayerIndex].SentenceEffectsShown[TrackIndex], Length(CurrentSong.Tracks[TrackIndex].Lines));
   end;
 end;
 
@@ -918,10 +922,29 @@ begin
   for I := 0 to High(Player) do Player[I].HasLastSungTone := false;
 end;
 
+procedure ClearUnsampledScoredBeats(Screen: TScreenSingController;
+  PlayerIndex, Track, FirstBeat, LastBeat: integer);
+var
+  I: integer;
+  CurrentPlayer: PPlayer;
+  Previous: TScoredBeat;
+begin
+  if FirstBeat > LastBeat then Exit;
+  CurrentPlayer := @Player[PlayerIndex];
+  for I := 0 to CurrentPlayer.ScoredBeatCount - 1 do
+  begin
+    Previous := CurrentPlayer.ScoredBeats[I];
+    if (Previous.Track <> Track) or (Previous.Beat < FirstBeat) or
+      (Previous.Beat > LastBeat) or (Previous.Points = 0) then Continue;
+    if CurrentPlayer.ReplaceBeatScore(Track, Previous.SentenceIndex, Previous.Beat, 0, Previous.Golden) and
+      CurrentPlayer.SentenceFinalized[Track][Previous.SentenceIndex] then
+      Screen.OnSentenceEnd(Track, Previous.SentenceIndex, PlayerIndex, false);
+  end;
+end;
+
 procedure FinishPracticePassScoring(Screen: TScreenSingController);
 var PlayerIndex, I, Track, FirstBeat, LastBeat, LineEnd: integer;
   CurrentPlayer: PPlayer;
-  Previous: TScoredBeat;
 begin
   if not Screen.PracticeLoop.HasEnd then Exit;
   LastBeat := Screen.LastPracticeBeat;
@@ -934,15 +957,7 @@ begin
     if CurrentPlayer.DetectionReady then
       FirstBeat := Max(FirstBeat, CurrentPlayer.DetectionBeat + 1);
     if FirstBeat > LastBeat + 1 then Continue;
-    for I := 0 to CurrentPlayer.ScoredBeatCount - 1 do
-    begin
-      Previous := CurrentPlayer.ScoredBeats[I];
-      if (Previous.Track <> Track) or (Previous.Beat < FirstBeat) or
-        (Previous.Beat > LastBeat) or (Previous.Points = 0) then Continue;
-      if CurrentPlayer.ReplaceBeatScore(Track, Previous.SentenceIndex, Previous.Beat, 0, Previous.Golden) and
-        CurrentPlayer.SentenceFinalized[Track][Previous.SentenceIndex] then
-        Screen.OnSentenceEnd(Track, Previous.SentenceIndex, PlayerIndex, false);
-    end;
+    ClearUnsampledScoredBeats(Screen, PlayerIndex, Track, FirstBeat, LastBeat);
     // The scoring cursor is capped just before B, including when B is the
     // first beat after a lyric line and would normally award its line bonus.
     for I := 0 to CurrentSong.Tracks[Track].High do
@@ -1080,6 +1095,10 @@ begin
           Player[PlayerIndex].DetectionReady := true;
           DelayBeats := GetBeats(CurrentSong.BPM, Player[PlayerIndex].DetectionDelay / 1000);
           Player[PlayerIndex].DetectionBeat := Floor(LyricsState.MidBeatD - DelayBeats) - 1;
+          // The delayed capture cursor can start past the seek point.
+          // Those beats have no new sample, so discard the previous take.
+          ClearUnsampledScoredBeats(Screen, PlayerIndex, CP, Screen.ScoringSeekStartBeat,
+            Min(Player[PlayerIndex].DetectionBeat, LastPracticeBeat));
         end;
         DelayBeats := GetBeats(CurrentSong.BPM, Player[PlayerIndex].DetectionDelay / 1000);
         PlayerOldBeat := Player[PlayerIndex].DetectionBeat;
