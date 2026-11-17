@@ -1,4 +1,5 @@
 'use strict';
+const {upstreamCutoff} = require('./upstream-age.cjs');
 const crypto = require('node:crypto');
 const {issueReport} = require('./assessment-report.cjs');
 const {TRACKS, openDraft} = require('./usce-automation.cjs');
@@ -34,10 +35,11 @@ function issueChanges({track, previous, issues, now}) {
         Date.parse(issue.createdAt) < Date.parse(createdSince)) throw Error('Invalid upstream issue record');
     records.set(issue.number, issue);
   }
+  const cutoff = Math.max(Date.parse(createdSince), upstreamCutoff(now));
   const snapshots = new Map();
   for (const issue of issues.filter(issue => !issue.pull_request)) {
     if (!Number.isFinite(Date.parse(issue.created_at))) throw Error('Missing issue creation time');
-    if (Date.parse(issue.created_at) < Date.parse(createdSince)) continue;
+    if (Date.parse(issue.created_at) < cutoff) continue;
     const snapshot = issueSnapshot(issue, track.repo);
     const prior = snapshots.get(issue.number);
     if (!prior || Date.parse(prior.updatedAt) <= Date.parse(snapshot.updatedAt)) snapshots.set(issue.number, snapshot);
