@@ -818,7 +818,7 @@ begin
   if (OldCount=0) and (NewCount>0) then
   begin
     UpdatePlayerVisibility;
-    AudioInput.CaptureStart(Min(NewCount, ScreenName.LocalPlayerCount));
+    AudioInput.CaptureStart(NewCount, false, ScreenName.LocalCaptureLimit);
   end;
   if ScreenContinuousPlayback.Session.Active then ScreenContinuousPlayback.Session.Scored:=true;
   SendRemoteScoreSnapshot(true);
@@ -1458,7 +1458,7 @@ begin
   if PlayersPlay > 0 then
   begin
     if UsesSelectedLocalRoster then
-      AudioInput.CaptureStart(Min(PlayersPlay, ScreenName.LocalPlayerCount))
+      AudioInput.CaptureStart(PlayersPlay, false, ScreenName.LocalCaptureLimit)
     else
       AudioInput.CaptureStart;
   end;
