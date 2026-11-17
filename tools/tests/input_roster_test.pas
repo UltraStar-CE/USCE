@@ -6,10 +6,15 @@ type TTestDevice = class(TAudioInputDevice)
 end;
 function TTestDevice.Stop: boolean;
 begin Result := true; end;
-procedure ExpectCount(Expected: integer);
+procedure ExpectCount(Expected: integer; LocalCount: integer = IMaxPlayerCount;
+  ExpectedSlots: cardinal = High(cardinal));
+var Actual: integer; Slots: cardinal;
 begin
-  if AudioInputProcessor.ConfiguredPlayerCount <> Expected then
-    raise Exception.CreateFmt('Expected %d players, got %d', [Expected, AudioInputProcessor.ConfiguredPlayerCount]);
+  Actual := AudioInputProcessor.ConfiguredPlayerCount(LocalCount, Slots);
+  if Actual <> Expected then
+    raise Exception.CreateFmt('Expected %d players, got %d', [Expected, Actual]);
+  if (ExpectedSlots <> High(cardinal)) and (Slots <> ExpectedSlots) then
+    raise Exception.CreateFmt('Expected slot mask %d, got %d', [ExpectedSlots, Slots]);
 end;
 var Device: TAudioInputDevice;
 begin
@@ -33,10 +38,21 @@ begin
   SetLength(AudioInputProcessor.DeviceList, 1);
   AudioInputProcessor.DeviceList[0] := Device;
   ExpectCount(7);
+  ExpectCount(2, 1); // The configured local slot 7 is beyond the selection.
   RemoteInputProcessor.Clear;
   ExpectCount(7);
+  ExpectCount(0, 1);
   Ini.InputDeviceConfig[0].ChannelToPlayerMap[0] := IMaxPlayerCount;
   ExpectCount(IMaxPlayerCount);
+  SetLength(Ini.InputDeviceConfig[0].ChannelToPlayerMap, 2);
+  Ini.InputDeviceConfig[0].ChannelToPlayerMap[0] := 1;
+  Ini.InputDeviceConfig[0].ChannelToPlayerMap[1] := 2;
+  RemoteInputProcessor.AssignPlayerSlot(2, 'three', 'controller', 3, 0);
+  ExpectCount(3, 1, 5); // The second local mic must not fill slot 2.
+  ExpectCount(3, 0, 4);
+  RemoteInputProcessor.Clear;
+  ExpectCount(1, 1, 1);
+  SetLength(Ini.InputDeviceConfig[0].ChannelToPlayerMap, 1);
   Ini.InputDeviceConfig[0].ChannelToPlayerMap[0] := 0;
   ExpectCount(0);
   if ParamStr(1) <> '' then
@@ -50,5 +66,5 @@ begin
   Device.Free;
   Ini.Free;
   Ini := nil;
-  WriteLn('PASS: zero inputs, remote 1/2, sparse local 7/24, disconnects and full-array polling');
+  WriteLn('PASS: zero inputs, remote slots, sparse local slots, local limits, disconnects and full-array polling');
 end.
