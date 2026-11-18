@@ -19,6 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       sha: ${{ steps.source.outputs.sha }}
+      mac_arm_runners: ${{ steps.source.outputs.mac_arm_runners }}
     steps:
       - id: source
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
@@ -43,6 +44,12 @@ jobs:
               throw Error('Ordinary builds must use the triggering commit');
             }
             core.setOutput('sha', sha);
+            const runners = ['macos-15', 'macos-26', 'xcode-27'];
+            // Keep release builds pinned. Rotate the CI order across runs and reruns.
+            const offset = process.env.RELEASE_VERSION ? 0 :
+              (Number(process.env.GITHUB_RUN_NUMBER) + Number(process.env.GITHUB_RUN_ATTEMPT) - 2) % runners.length;
+            core.setOutput('mac_arm_runners', JSON.stringify(
+              [...runners.slice(offset), ...runners.slice(0, offset)]));
   build_windows:
     needs: resolve
     name: Build for Windows
@@ -207,7 +214,7 @@ jobs:
   build_mac:
     needs: resolve
     name: Build for MacOS (${{ matrix.arch }})
-    runs-on: ${{ matrix.arch == 'ARM' && 'xcode-27' || 'macos-15-intel' }}
+    runs-on: ${{ matrix.arch == 'ARM' && fromJSON(needs.resolve.outputs.mac_arm_runners)[0] || 'macos-15-intel' }}
     continue-on-error: ${{ inputs.release-version == '' }}
     strategy:
       fail-fast: false
@@ -218,7 +225,7 @@ jobs:
       USCE_BUILD_CHANNEL: development
       PROJECTM_VERSION: 4.1.7
       PROJECTM_SHA: 16e4610b4d58981f7a2351faa58d507d3f40163a7b26ba81e19aec928c66641f
-      USCE_MACOS_RUNNER: ${{ matrix.arch == 'ARM' && 'xcode-27' || 'macos-15-intel' }}
+      USCE_MACOS_RUNNER: ${{ matrix.arch == 'ARM' && fromJSON(needs.resolve.outputs.mac_arm_runners)[0] || 'macos-15-intel' }}
     steps: &build_steps
       - name: Checkout Repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -238,11 +245,7 @@ jobs:
         run: |
           echo "path=$(brew --cache)/downloads" >> "$GITHUB_OUTPUT"
           echo "week=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
-          image="$USCE_MACOS_RUNNER"
-          if [[ "$image" == macos-latest ]]; then
-            image="$image-$(sw_vers -productVersion | cut -d. -f1)"
-          fi
-          echo "image=$image" >> "$GITHUB_OUTPUT"
+          echo "image=$USCE_MACOS_RUNNER" >> "$GITHUB_OUTPUT"
       - name: Cache Homebrew downloads
         if: inputs.use-caches
         uses: actions/cache@v6
@@ -324,12 +327,13 @@ jobs:
       - id: plan
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         with:
-          script: |
+          script: &check_mac_startup |
             const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun,
               {...context.repo, run_id: context.runId, filter: 'latest', per_page: 100});
             const retry = [];
-            for (const arch of ['ARM', 'x86']) {
-              const name = `Build for MacOS (${arch})`;
+            const checkingRetry = process.env.CHECK_ARM_RETRY === 'true';
+            for (const arch of checkingRetry ? ['ARM'] : ['ARM', 'x86']) {
+              const name = `${checkingRetry ? 'Retry' : 'Build for'} MacOS (${arch})`;
               const matches = jobs.filter(job => job.name === name || job.name.endsWith(' / ' + name));
               if (matches.length !== 1 || matches[0].status !== 'completed' || !Array.isArray(matches[0].steps)) {
                 throw Error(`Incomplete or ambiguous results for ${name}`);
@@ -354,7 +358,7 @@ jobs:
     needs: [resolve, mac_retry_plan]
     if: ${{ !cancelled() && needs.mac_retry_plan.result == 'success' && needs.mac_retry_plan.outputs.retry != '[]' }}
     name: Retry MacOS (${{ matrix.arch }})
-    runs-on: ${{ matrix.arch == 'ARM' && 'macos-latest' || 'macos-26-intel' }}
+    runs-on: ${{ matrix.arch == 'ARM' && fromJSON(needs.resolve.outputs.mac_arm_runners)[1] || 'macos-26-intel' }}
     strategy:
       fail-fast: false
       matrix:
@@ -364,7 +368,40 @@ jobs:
       USCE_BUILD_CHANNEL: development
       PROJECTM_VERSION: 4.1.7
       PROJECTM_SHA: 16e4610b4d58981f7a2351faa58d507d3f40163a7b26ba81e19aec928c66641f
-      USCE_MACOS_RUNNER: ${{ matrix.arch == 'ARM' && 'macos-latest' || 'macos-26-intel' }}
+      USCE_MACOS_RUNNER: ${{ matrix.arch == 'ARM' && fromJSON(needs.resolve.outputs.mac_arm_runners)[1] || 'macos-26-intel' }}
+    steps: *build_steps
+
+  mac_final_retry_plan:
+    name: Check macOS ARM retry result
+    needs: [mac_retry_plan, build_mac_retry]
+    if: ${{ !cancelled() && needs.mac_retry_plan.result == 'success' && contains(fromJSON(needs.mac_retry_plan.outputs.retry), 'ARM') }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    outputs:
+      retry: ${{ steps.plan.outputs.result }}
+    steps:
+      - id: plan
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          CHECK_ARM_RETRY: 'true'
+        with:
+          script: *check_mac_startup
+
+  build_mac_final_retry:
+    needs: [resolve, mac_final_retry_plan]
+    if: ${{ !cancelled() && needs.mac_final_retry_plan.result == 'success' && needs.mac_final_retry_plan.outputs.retry == '["ARM"]' }}
+    name: Final retry MacOS (ARM)
+    runs-on: ${{ fromJSON(needs.resolve.outputs.mac_arm_runners)[2] }}
+    strategy:
+      matrix:
+        arch: [ARM]
+    env:
+      USCE_RELEASE_VERSION: ${{ inputs.release-version }}
+      USCE_BUILD_CHANNEL: development
+      PROJECTM_VERSION: 4.1.7
+      PROJECTM_SHA: 16e4610b4d58981f7a2351faa58d507d3f40163a7b26ba81e19aec928c66641f
+      USCE_MACOS_RUNNER: ${{ fromJSON(needs.resolve.outputs.mac_arm_runners)[2] }}
     steps: *build_steps
 
   build_linux:
