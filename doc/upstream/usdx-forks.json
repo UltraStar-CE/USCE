@@ -14992,139 +14992,31 @@
     {
       "repository": "simplykapsel/LisiaNora-USDX",
       "branch": "main",
-      "head": "6f1924c25d7dd0e879951dce50525ca39a9f8ede",
-      "upstreamHead": "7f49e685c7d7affcd0bd6501f46f6af801e4d880",
-      "comparisonBase": "7b4edd33961d1c3be497db089e11f3a98c448a58",
-      "comparisonKind": "outside-usce",
-      "ahead": 21,
-      "behind": 708,
-      "compareUrl": "https://github.com/UltraStar-CE/USCE/compare/7b4edd33961d1c3be497db089e11f3a98c448a58...6f1924c25d7dd0e879951dce50525ca39a9f8ede",
+      "head": "779a21c8d6d6ccaea318ff3bf08df8fbfaf425cd",
+      "upstreamHead": "c8aea5cfc9e3a9da4b56d9538266d2e62d2b9c73",
+      "comparisonBase": "6f1924c25d7dd0e879951dce50525ca39a9f8ede",
+      "comparisonKind": "since-checkpoint",
+      "ahead": 3,
+      "behind": 0,
+      "compareUrl": "https://github.com/UltraStar-CE/USCE/compare/6f1924c25d7dd0e879951dce50525ca39a9f8ede...779a21c8d6d6ccaea318ff3bf08df8fbfaf425cd",
       "novelCommits": [
         {
-          "sha": "8371a68e50e72a3b2e5905029ec87f7e91fe41ef",
-          "title": "Prepare Windows x64 development workflow for USDX 2026.9.0",
+          "sha": "cf63e1fcf22e719e487acdcf0858fd493337f143",
+          "title": "Find queue songs in every song directory the game uses",
           "author": "simplykapsel",
-          "authoredAt": "2026-09-22T07:24:14Z"
+          "authoredAt": "2026-11-18T00:43:58Z"
         },
         {
-          "sha": "1c7154e9eb8f0f921133bcbbb67fb244303c5ec2",
-          "title": "Download Lazarus installer directly from SourceForge mirrors",
+          "sha": "e4a0feaf14a71754d951ca9c0e8201e3dc5d98aa",
+          "title": "Bridge: take commands over the queue's WebSocket, react to game status at once",
           "author": "simplykapsel",
-          "authoredAt": "2026-09-22T07:26:55Z"
+          "authoredAt": "2026-11-18T00:52:12Z"
         },
         {
-          "sha": "c6ada6f7ff98f30d0ad4abf0aa5c1f68fa0f122f",
-          "title": "Use verified direct mirror for Lazarus CI installer",
+          "sha": "779a21c8d6d6ccaea318ff3bf08df8fbfaf425cd",
+          "title": "Merge feature/bridge-websocket: HTTP fallback and status watcher for main's WebSocket bridge",
           "author": "simplykapsel",
-          "authoredAt": "2026-09-22T07:29:43Z"
-        },
-        {
-          "sha": "74f79c7670b67633184a28b51d858931ef1da29a",
-          "title": "Select songs from the queue through a local session-bound bridge",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-22T08:12:23Z"
-        },
-        {
-          "sha": "908ee2edb342ed5e15987750337a0919594adc9a",
-          "title": "Require player setup before singing a remotely selected song",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-22T08:28:30Z"
-        },
-        {
-          "sha": "ef5bfe33e5e0b47dd4258176dba729fd33d67520",
-          "title": "Merge pull request #1 from simplykapsel/feature/queue-song-selection",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-22T08:47:11Z"
-        },
-        {
-          "sha": "44899090a43fc3762a1604e2f0f39b1a3f74057c",
-          "title": "Preserve confirmed players when selecting songs from the queue",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-22T10:03:36Z"
-        },
-        {
-          "sha": "234370bc0f61f1db7682aa88a3e32f59cd7286b5",
-          "title": "Merge pull request #2 from simplykapsel/fix/reuse-configured-players",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-22T10:07:23Z"
-        },
-        {
-          "sha": "11386e99eb4d455d521121b380f639d27ae23776",
-          "title": "Condense Windows build and queue protocol documentation",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-22T11:05:56Z"
-        },
-        {
-          "sha": "a43bbeea2738e09ffb1571f50538088b603c9596",
-          "title": "Merge pull request #3 from simplykapsel/docs/windows-release-workflow",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-22T11:09:37Z"
-        },
-        {
-          "sha": "dbdbf16a51bd348f311f0fd411201aac76e94794",
-          "title": "Merge remote-tracking branch 'origin/main'",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-22T12:48:54Z"
-        },
-        {
-          "sha": "276d71d09c2fdef1d411396fa0d3a7217588e67a",
-          "title": "Move Windows bridge and branded launcher into USDX",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-22T13:01:12Z"
-        },
-        {
-          "sha": "ea31021a2520980185243597ac718c2b8c220ee9",
-          "title": "Compare canonical Windows paths in bridge tests",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-22T13:10:06Z"
-        },
-        {
-          "sha": "543d7e376f9d8c73f13b5abe28d68aac0ea5fc7e",
-          "title": "Recover moved queue songs and configure players before selection",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-24T18:33:54Z"
-        },
-        {
-          "sha": "d5f839bd64eca58d82be0f813e8441815d6baa9f",
-          "title": "Default portable launcher to its bundled songs directory",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-24T18:51:53Z"
-        },
-        {
-          "sha": "52821969a31125e9b0d3cb6a964f8e3fb2f5dd5e",
-          "title": "Control song playback from the queue with confirmed Start and Reset",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-24T19:21:41Z"
-        },
-        {
-          "sha": "f361a78b37d23d0edc9bd0bbc2aacc26b4b0e6f8",
-          "title": "Preserve local launcher profiles and configured song directories",
-          "author": "simplykapsel",
-          "authoredAt": "2026-11-12T03:16:11Z"
-        },
-        {
-          "sha": "393c635d8b7eb5b5d03942657a21e2cb303d1428",
-          "title": "Merge UltraStar Deluxe v2026.11.0 and build the portable client with UCRT64",
-          "author": "simplykapsel",
-          "authoredAt": "2026-11-12T03:19:27Z"
-        },
-        {
-          "sha": "d037cadae697a20f1588c6f66c6f7d01255b6f09",
-          "title": "Report game changes over WebSocket and resume pending commands safely",
-          "author": "simplykapsel",
-          "authoredAt": "2026-11-12T03:25:16Z"
-        },
-        {
-          "sha": "ab044d323c077153d7dcc2428d8da34c651ca8ea",
-          "title": "Pass the canonical song library path to the Windows game",
-          "author": "simplykapsel",
-          "authoredAt": "2026-11-12T03:38:26Z"
-        },
-        {
-          "sha": "6f1924c25d7dd0e879951dce50525ca39a9f8ede",
-          "title": "Fall back to a verified Lua mirror when building Windows dependencies",
-          "author": "simplykapsel",
-          "authoredAt": "2026-11-12T03:44:49Z"
+          "authoredAt": "2026-11-18T04:28:13Z"
         }
       ],
       "ignoredKnownHistoryCommitCount": 0,
@@ -15132,261 +15024,51 @@
       "ignoredOldCommitCount": 0,
       "commits": [
         {
-          "sha": "8371a68e50e72a3b2e5905029ec87f7e91fe41ef",
-          "title": "Prepare Windows x64 development workflow for USDX 2026.9.0",
+          "sha": "cf63e1fcf22e719e487acdcf0858fd493337f143",
+          "title": "Find queue songs in every song directory the game uses",
           "author": "simplykapsel",
-          "authoredAt": "2026-09-22T07:24:14Z"
+          "authoredAt": "2026-11-18T00:43:58Z"
         },
         {
-          "sha": "1c7154e9eb8f0f921133bcbbb67fb244303c5ec2",
-          "title": "Download Lazarus installer directly from SourceForge mirrors",
+          "sha": "e4a0feaf14a71754d951ca9c0e8201e3dc5d98aa",
+          "title": "Bridge: take commands over the queue's WebSocket, react to game status at once",
           "author": "simplykapsel",
-          "authoredAt": "2026-09-22T07:26:55Z"
+          "authoredAt": "2026-11-18T00:52:12Z"
         },
         {
-          "sha": "c6ada6f7ff98f30d0ad4abf0aa5c1f68fa0f122f",
-          "title": "Use verified direct mirror for Lazarus CI installer",
+          "sha": "779a21c8d6d6ccaea318ff3bf08df8fbfaf425cd",
+          "title": "Merge feature/bridge-websocket: HTTP fallback and status watcher for main's WebSocket bridge",
           "author": "simplykapsel",
-          "authoredAt": "2026-09-22T07:29:43Z"
-        },
-        {
-          "sha": "74f79c7670b67633184a28b51d858931ef1da29a",
-          "title": "Select songs from the queue through a local session-bound bridge",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-22T08:12:23Z"
-        },
-        {
-          "sha": "908ee2edb342ed5e15987750337a0919594adc9a",
-          "title": "Require player setup before singing a remotely selected song",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-22T08:28:30Z"
-        },
-        {
-          "sha": "ef5bfe33e5e0b47dd4258176dba729fd33d67520",
-          "title": "Merge pull request #1 from simplykapsel/feature/queue-song-selection",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-22T08:47:11Z"
-        },
-        {
-          "sha": "44899090a43fc3762a1604e2f0f39b1a3f74057c",
-          "title": "Preserve confirmed players when selecting songs from the queue",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-22T10:03:36Z"
-        },
-        {
-          "sha": "234370bc0f61f1db7682aa88a3e32f59cd7286b5",
-          "title": "Merge pull request #2 from simplykapsel/fix/reuse-configured-players",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-22T10:07:23Z"
-        },
-        {
-          "sha": "11386e99eb4d455d521121b380f639d27ae23776",
-          "title": "Condense Windows build and queue protocol documentation",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-22T11:05:56Z"
-        },
-        {
-          "sha": "a43bbeea2738e09ffb1571f50538088b603c9596",
-          "title": "Merge pull request #3 from simplykapsel/docs/windows-release-workflow",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-22T11:09:37Z"
-        },
-        {
-          "sha": "dbdbf16a51bd348f311f0fd411201aac76e94794",
-          "title": "Merge remote-tracking branch 'origin/main'",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-22T12:48:54Z"
-        },
-        {
-          "sha": "276d71d09c2fdef1d411396fa0d3a7217588e67a",
-          "title": "Move Windows bridge and branded launcher into USDX",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-22T13:01:12Z"
-        },
-        {
-          "sha": "ea31021a2520980185243597ac718c2b8c220ee9",
-          "title": "Compare canonical Windows paths in bridge tests",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-22T13:10:06Z"
-        },
-        {
-          "sha": "543d7e376f9d8c73f13b5abe28d68aac0ea5fc7e",
-          "title": "Recover moved queue songs and configure players before selection",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-24T18:33:54Z"
-        },
-        {
-          "sha": "d5f839bd64eca58d82be0f813e8441815d6baa9f",
-          "title": "Default portable launcher to its bundled songs directory",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-24T18:51:53Z"
-        },
-        {
-          "sha": "52821969a31125e9b0d3cb6a964f8e3fb2f5dd5e",
-          "title": "Control song playback from the queue with confirmed Start and Reset",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-24T19:21:41Z"
-        },
-        {
-          "sha": "f361a78b37d23d0edc9bd0bbc2aacc26b4b0e6f8",
-          "title": "Preserve local launcher profiles and configured song directories",
-          "author": "simplykapsel",
-          "authoredAt": "2026-11-12T03:16:11Z"
-        },
-        {
-          "sha": "393c635d8b7eb5b5d03942657a21e2cb303d1428",
-          "title": "Merge UltraStar Deluxe v2026.11.0 and build the portable client with UCRT64",
-          "author": "simplykapsel",
-          "authoredAt": "2026-11-12T03:19:27Z"
-        },
-        {
-          "sha": "d037cadae697a20f1588c6f66c6f7d01255b6f09",
-          "title": "Report game changes over WebSocket and resume pending commands safely",
-          "author": "simplykapsel",
-          "authoredAt": "2026-11-12T03:25:16Z"
-        },
-        {
-          "sha": "ab044d323c077153d7dcc2428d8da34c651ca8ea",
-          "title": "Pass the canonical song library path to the Windows game",
-          "author": "simplykapsel",
-          "authoredAt": "2026-11-12T03:38:26Z"
-        },
-        {
-          "sha": "6f1924c25d7dd0e879951dce50525ca39a9f8ede",
-          "title": "Fall back to a verified Lua mirror when building Windows dependencies",
-          "author": "simplykapsel",
-          "authoredAt": "2026-11-12T03:44:49Z"
+          "authoredAt": "2026-11-18T04:28:13Z"
         }
       ],
       "newCommits": [
         {
-          "sha": "8371a68e50e72a3b2e5905029ec87f7e91fe41ef",
-          "title": "Prepare Windows x64 development workflow for USDX 2026.9.0",
+          "sha": "cf63e1fcf22e719e487acdcf0858fd493337f143",
+          "title": "Find queue songs in every song directory the game uses",
           "author": "simplykapsel",
-          "authoredAt": "2026-09-22T07:24:14Z"
+          "authoredAt": "2026-11-18T00:43:58Z"
         },
         {
-          "sha": "1c7154e9eb8f0f921133bcbbb67fb244303c5ec2",
-          "title": "Download Lazarus installer directly from SourceForge mirrors",
+          "sha": "e4a0feaf14a71754d951ca9c0e8201e3dc5d98aa",
+          "title": "Bridge: take commands over the queue's WebSocket, react to game status at once",
           "author": "simplykapsel",
-          "authoredAt": "2026-09-22T07:26:55Z"
+          "authoredAt": "2026-11-18T00:52:12Z"
         },
         {
-          "sha": "c6ada6f7ff98f30d0ad4abf0aa5c1f68fa0f122f",
-          "title": "Use verified direct mirror for Lazarus CI installer",
+          "sha": "779a21c8d6d6ccaea318ff3bf08df8fbfaf425cd",
+          "title": "Merge feature/bridge-websocket: HTTP fallback and status watcher for main's WebSocket bridge",
           "author": "simplykapsel",
-          "authoredAt": "2026-09-22T07:29:43Z"
-        },
-        {
-          "sha": "74f79c7670b67633184a28b51d858931ef1da29a",
-          "title": "Select songs from the queue through a local session-bound bridge",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-22T08:12:23Z"
-        },
-        {
-          "sha": "908ee2edb342ed5e15987750337a0919594adc9a",
-          "title": "Require player setup before singing a remotely selected song",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-22T08:28:30Z"
-        },
-        {
-          "sha": "ef5bfe33e5e0b47dd4258176dba729fd33d67520",
-          "title": "Merge pull request #1 from simplykapsel/feature/queue-song-selection",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-22T08:47:11Z"
-        },
-        {
-          "sha": "44899090a43fc3762a1604e2f0f39b1a3f74057c",
-          "title": "Preserve confirmed players when selecting songs from the queue",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-22T10:03:36Z"
-        },
-        {
-          "sha": "234370bc0f61f1db7682aa88a3e32f59cd7286b5",
-          "title": "Merge pull request #2 from simplykapsel/fix/reuse-configured-players",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-22T10:07:23Z"
-        },
-        {
-          "sha": "11386e99eb4d455d521121b380f639d27ae23776",
-          "title": "Condense Windows build and queue protocol documentation",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-22T11:05:56Z"
-        },
-        {
-          "sha": "a43bbeea2738e09ffb1571f50538088b603c9596",
-          "title": "Merge pull request #3 from simplykapsel/docs/windows-release-workflow",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-22T11:09:37Z"
-        },
-        {
-          "sha": "dbdbf16a51bd348f311f0fd411201aac76e94794",
-          "title": "Merge remote-tracking branch 'origin/main'",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-22T12:48:54Z"
-        },
-        {
-          "sha": "276d71d09c2fdef1d411396fa0d3a7217588e67a",
-          "title": "Move Windows bridge and branded launcher into USDX",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-22T13:01:12Z"
-        },
-        {
-          "sha": "ea31021a2520980185243597ac718c2b8c220ee9",
-          "title": "Compare canonical Windows paths in bridge tests",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-22T13:10:06Z"
-        },
-        {
-          "sha": "543d7e376f9d8c73f13b5abe28d68aac0ea5fc7e",
-          "title": "Recover moved queue songs and configure players before selection",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-24T18:33:54Z"
-        },
-        {
-          "sha": "d5f839bd64eca58d82be0f813e8441815d6baa9f",
-          "title": "Default portable launcher to its bundled songs directory",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-24T18:51:53Z"
-        },
-        {
-          "sha": "52821969a31125e9b0d3cb6a964f8e3fb2f5dd5e",
-          "title": "Control song playback from the queue with confirmed Start and Reset",
-          "author": "simplykapsel",
-          "authoredAt": "2026-09-24T19:21:41Z"
-        },
-        {
-          "sha": "f361a78b37d23d0edc9bd0bbc2aacc26b4b0e6f8",
-          "title": "Preserve local launcher profiles and configured song directories",
-          "author": "simplykapsel",
-          "authoredAt": "2026-11-12T03:16:11Z"
-        },
-        {
-          "sha": "393c635d8b7eb5b5d03942657a21e2cb303d1428",
-          "title": "Merge UltraStar Deluxe v2026.11.0 and build the portable client with UCRT64",
-          "author": "simplykapsel",
-          "authoredAt": "2026-11-12T03:19:27Z"
-        },
-        {
-          "sha": "d037cadae697a20f1588c6f66c6f7d01255b6f09",
-          "title": "Report game changes over WebSocket and resume pending commands safely",
-          "author": "simplykapsel",
-          "authoredAt": "2026-11-12T03:25:16Z"
-        },
-        {
-          "sha": "ab044d323c077153d7dcc2428d8da34c651ca8ea",
-          "title": "Pass the canonical song library path to the Windows game",
-          "author": "simplykapsel",
-          "authoredAt": "2026-11-12T03:38:26Z"
-        },
-        {
-          "sha": "6f1924c25d7dd0e879951dce50525ca39a9f8ede",
-          "title": "Fall back to a verified Lua mirror when building Windows dependencies",
-          "author": "simplykapsel",
-          "authoredAt": "2026-11-12T03:44:49Z"
+          "authoredAt": "2026-11-18T04:28:13Z"
         }
       ],
       "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      },
+      "previousHead": "6f1924c25d7dd0e879951dce50525ca39a9f8ede",
+      "previousAssessment": {
         "decision": "superseded",
         "assessedAgainst": "7b4edd33961d1c3be497db089e11f3a98c448a58",
         "assessedAt": "2026-11-17",
@@ -15396,7 +15078,151 @@
           "https://github.com/UltraStar-CE/usrelay/issues/16"
         ],
         "reviewedCommitCount": 16
-      }
+      },
+      "assessmentHistory": [
+        {
+          "head": "6f1924c25d7dd0e879951dce50525ca39a9f8ede",
+          "commits": [
+            {
+              "sha": "8371a68e50e72a3b2e5905029ec87f7e91fe41ef",
+              "title": "Prepare Windows x64 development workflow for USDX 2026.9.0",
+              "author": "simplykapsel",
+              "authoredAt": "2026-09-22T07:24:14Z"
+            },
+            {
+              "sha": "1c7154e9eb8f0f921133bcbbb67fb244303c5ec2",
+              "title": "Download Lazarus installer directly from SourceForge mirrors",
+              "author": "simplykapsel",
+              "authoredAt": "2026-09-22T07:26:55Z"
+            },
+            {
+              "sha": "c6ada6f7ff98f30d0ad4abf0aa5c1f68fa0f122f",
+              "title": "Use verified direct mirror for Lazarus CI installer",
+              "author": "simplykapsel",
+              "authoredAt": "2026-09-22T07:29:43Z"
+            },
+            {
+              "sha": "74f79c7670b67633184a28b51d858931ef1da29a",
+              "title": "Select songs from the queue through a local session-bound bridge",
+              "author": "simplykapsel",
+              "authoredAt": "2026-09-22T08:12:23Z"
+            },
+            {
+              "sha": "908ee2edb342ed5e15987750337a0919594adc9a",
+              "title": "Require player setup before singing a remotely selected song",
+              "author": "simplykapsel",
+              "authoredAt": "2026-09-22T08:28:30Z"
+            },
+            {
+              "sha": "ef5bfe33e5e0b47dd4258176dba729fd33d67520",
+              "title": "Merge pull request #1 from simplykapsel/feature/queue-song-selection",
+              "author": "simplykapsel",
+              "authoredAt": "2026-09-22T08:47:11Z"
+            },
+            {
+              "sha": "44899090a43fc3762a1604e2f0f39b1a3f74057c",
+              "title": "Preserve confirmed players when selecting songs from the queue",
+              "author": "simplykapsel",
+              "authoredAt": "2026-09-22T10:03:36Z"
+            },
+            {
+              "sha": "234370bc0f61f1db7682aa88a3e32f59cd7286b5",
+              "title": "Merge pull request #2 from simplykapsel/fix/reuse-configured-players",
+              "author": "simplykapsel",
+              "authoredAt": "2026-09-22T10:07:23Z"
+            },
+            {
+              "sha": "11386e99eb4d455d521121b380f639d27ae23776",
+              "title": "Condense Windows build and queue protocol documentation",
+              "author": "simplykapsel",
+              "authoredAt": "2026-09-22T11:05:56Z"
+            },
+            {
+              "sha": "a43bbeea2738e09ffb1571f50538088b603c9596",
+              "title": "Merge pull request #3 from simplykapsel/docs/windows-release-workflow",
+              "author": "simplykapsel",
+              "authoredAt": "2026-09-22T11:09:37Z"
+            },
+            {
+              "sha": "dbdbf16a51bd348f311f0fd411201aac76e94794",
+              "title": "Merge remote-tracking branch 'origin/main'",
+              "author": "simplykapsel",
+              "authoredAt": "2026-09-22T12:48:54Z"
+            },
+            {
+              "sha": "276d71d09c2fdef1d411396fa0d3a7217588e67a",
+              "title": "Move Windows bridge and branded launcher into USDX",
+              "author": "simplykapsel",
+              "authoredAt": "2026-09-22T13:01:12Z"
+            },
+            {
+              "sha": "ea31021a2520980185243597ac718c2b8c220ee9",
+              "title": "Compare canonical Windows paths in bridge tests",
+              "author": "simplykapsel",
+              "authoredAt": "2026-09-22T13:10:06Z"
+            },
+            {
+              "sha": "543d7e376f9d8c73f13b5abe28d68aac0ea5fc7e",
+              "title": "Recover moved queue songs and configure players before selection",
+              "author": "simplykapsel",
+              "authoredAt": "2026-09-24T18:33:54Z"
+            },
+            {
+              "sha": "d5f839bd64eca58d82be0f813e8441815d6baa9f",
+              "title": "Default portable launcher to its bundled songs directory",
+              "author": "simplykapsel",
+              "authoredAt": "2026-09-24T18:51:53Z"
+            },
+            {
+              "sha": "52821969a31125e9b0d3cb6a964f8e3fb2f5dd5e",
+              "title": "Control song playback from the queue with confirmed Start and Reset",
+              "author": "simplykapsel",
+              "authoredAt": "2026-09-24T19:21:41Z"
+            },
+            {
+              "sha": "f361a78b37d23d0edc9bd0bbc2aacc26b4b0e6f8",
+              "title": "Preserve local launcher profiles and configured song directories",
+              "author": "simplykapsel",
+              "authoredAt": "2026-11-12T03:16:11Z"
+            },
+            {
+              "sha": "393c635d8b7eb5b5d03942657a21e2cb303d1428",
+              "title": "Merge UltraStar Deluxe v2026.11.0 and build the portable client with UCRT64",
+              "author": "simplykapsel",
+              "authoredAt": "2026-11-12T03:19:27Z"
+            },
+            {
+              "sha": "d037cadae697a20f1588c6f66c6f7d01255b6f09",
+              "title": "Report game changes over WebSocket and resume pending commands safely",
+              "author": "simplykapsel",
+              "authoredAt": "2026-11-12T03:25:16Z"
+            },
+            {
+              "sha": "ab044d323c077153d7dcc2428d8da34c651ca8ea",
+              "title": "Pass the canonical song library path to the Windows game",
+              "author": "simplykapsel",
+              "authoredAt": "2026-11-12T03:38:26Z"
+            },
+            {
+              "sha": "6f1924c25d7dd0e879951dce50525ca39a9f8ede",
+              "title": "Fall back to a verified Lua mirror when building Windows dependencies",
+              "author": "simplykapsel",
+              "authoredAt": "2026-11-12T03:44:49Z"
+            }
+          ],
+          "assessment": {
+            "decision": "superseded",
+            "assessedAgainst": "7b4edd33961d1c3be497db089e11f3a98c448a58",
+            "assessedAt": "2026-11-17",
+            "reason": "The local Windows bridge, branded launcher and dependency build are specific to this fork. Comparable player setup and queued remote controls already use USCE's game/relay protocol.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/pull/168",
+              "https://github.com/UltraStar-CE/usrelay/issues/16"
+            ],
+            "reviewedCommitCount": 16
+          }
+        }
+      ]
     },
     {
       "repository": "Wiccio/USDX",
@@ -18964,6 +18790,49 @@
           "title": "Add native USDB catalog search and optional song navigation sounds",
           "author": "davidgamero",
           "authoredAt": "2026-10-07T00:27:45Z"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "ebertbros/hitsteroke",
+      "branch": "refactor-singdrawlines",
+      "head": "622d7bc69641d8d6f5852e27377a95e481528e5c",
+      "upstreamHead": "c8aea5cfc9e3a9da4b56d9538266d2e62d2b9c73",
+      "comparisonBase": "737078de0328b90719256348757270035593acf5",
+      "comparisonKind": "outside-usce",
+      "ahead": 3,
+      "behind": 718,
+      "compareUrl": "https://github.com/UltraStar-CE/USCE/compare/737078de0328b90719256348757270035593acf5...622d7bc69641d8d6f5852e27377a95e481528e5c",
+      "novelCommits": [
+        {
+          "sha": "622d7bc69641d8d6f5852e27377a95e481528e5c",
+          "title": "refactor SingDrawLines to have less places where the player-specific areas are defined",
+          "author": "barbeque-squared",
+          "authoredAt": "2026-11-17T14:06:49Z"
+        }
+      ],
+      "ignoredKnownHistoryCommitCount": 0,
+      "ignoredUpstreamCommitCount": 2,
+      "ignoredOldCommitCount": 0,
+      "commits": [
+        {
+          "sha": "622d7bc69641d8d6f5852e27377a95e481528e5c",
+          "title": "refactor SingDrawLines to have less places where the player-specific areas are defined",
+          "author": "barbeque-squared",
+          "authoredAt": "2026-11-17T14:06:49Z"
+        }
+      ],
+      "newCommits": [
+        {
+          "sha": "622d7bc69641d8d6f5852e27377a95e481528e5c",
+          "title": "refactor SingDrawLines to have less places where the player-specific areas are defined",
+          "author": "barbeque-squared",
+          "authoredAt": "2026-11-17T14:06:49Z"
         }
       ],
       "assessment": {
