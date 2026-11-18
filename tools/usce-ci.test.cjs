@@ -131,8 +131,9 @@ test('macOS keeps both architectures required and limits retries to CI', () => {
   const path = require('node:path');
   const workflow = fs.readFileSync(path.join(__dirname, '../.github/workflows/platform-builds.yml'), 'utf8');
   assert.match(workflow, /fail-fast: false\s+matrix:\s+arch: \[ARM, x86\]/);
-  assert.match(workflow, /runs-on: .*'xcode-27' \|\| 'macos-15-intel'/);
-  assert.match(workflow, /runs-on: .*'macos-latest' \|\| 'macos-26-intel'/);
+  assert.match(workflow, /runs-on: .*mac_arm_runners\)\[0\] \|\| 'macos-15-intel'/);
+  assert.match(workflow, /runs-on: .*mac_arm_runners\)\[1\] \|\| 'macos-26-intel'/);
+  assert.match(workflow, /runs-on: .*mac_arm_runners\)\[2\]/);
   assert.match(workflow, /continue-on-error: .*inputs\.release-version == ''/);
   assert.match(workflow, /if: .*inputs\.release-version == ''/);
   assert.match(workflow, /if: .*needs\.mac_retry_plan\.outputs\.retry != '\[\]'/);
@@ -140,19 +141,44 @@ test('macOS keeps both architectures required and limits retries to CI', () => {
   assert(candidate.includes("'Build for MacOS (ARM)'") && candidate.includes("'Build for MacOS (x86)'"));
 });
 
+test('macOS CI rotates the three distinct ARM runners and pins releases', async () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const vm = require('node:vm');
+  const workflow = fs.readFileSync(path.join(__dirname, '../.github/workflows/platform-builds.yml'), 'utf8');
+  const script = workflow.split('          script: |\n')[1].split('\n  build_windows:')[0];
+  async function order(run, attempt, release = '') {
+    const outputs = {};
+    const sha = 'a'.repeat(40);
+    await vm.runInNewContext(`(async () => {${script}\n})()`, {
+      context: release ? {eventName: 'workflow_dispatch', sha, ref: 'refs/heads/main',
+        payload: {repository: {default_branch: 'main'}}} : {eventName: 'pull_request', sha},
+      process: {env: {BUILD_REF: sha, RELEASE_VERSION: release,
+        GITHUB_RUN_NUMBER: String(run), GITHUB_RUN_ATTEMPT: String(attempt)}},
+      core: {setOutput: (name, value) => { outputs[name] = value; }},
+    });
+    return JSON.parse(outputs.mac_arm_runners);
+  }
+  assert.deepEqual(await order(1, 1), ['macos-15', 'macos-26', 'xcode-27']);
+  assert.deepEqual(await order(2, 1), ['macos-26', 'xcode-27', 'macos-15']);
+  assert.deepEqual(await order(3, 1), ['xcode-27', 'macos-15', 'macos-26']);
+  assert.deepEqual(await order(1, 2), await order(2, 1));
+  assert.deepEqual(await order(2, 2, '2026.11.0'), await order(1, 1));
+});
+
 test('macOS fallback accepts startup failures and rejects checkout and build failures', async () => {
   const fs = require('node:fs');
   const path = require('node:path');
   const vm = require('node:vm');
   const text = fs.readFileSync(path.join(__dirname, '../.github/workflows/platform-builds.yml'), 'utf8');
-  const script = text.split('  mac_retry_plan:\n')[1].split('          script: |\n')[1].split('\n\n  build_mac_retry:')[0];
+  const script = text.split('          script: &check_mac_startup |\n')[1].split('\n\n  build_mac_retry:')[0];
   const job = (conclusion, steps, arch = 'ARM') => ({name: `Platforms / Build for MacOS (${arch})`, status: 'completed', conclusion, steps});
   const step = (name, conclusion) => ({name, conclusion});
   const setup = step('Set up job', 'success');
   async function retry(...jobs) {
     const intel = job('success', [step('Record successful build', 'success')], 'x86');
     const github = {paginate: async () => [...jobs, intel], rest: {actions: {listJobsForWorkflowRun() {}}}};
-    return Array.from(await vm.runInNewContext(`(async () => {${script}\n})()`, {github, context: {repo: {}, runId: 1}}));
+    return Array.from(await vm.runInNewContext(`(async () => {${script}\n})()`, {github, context: {repo: {}, runId: 1}, process: {env: {}}}));
   }
   assert.deepEqual(await retry(job('success', [setup, step('Record successful build', 'success')])), []);
   assert.deepEqual(await retry(job('failure', [])), ['ARM']);
@@ -164,6 +190,19 @@ test('macOS fallback accepts startup failures and rejects checkout and build fai
   }
   await assert.rejects(retry({...job(null, []), status: 'queued'}), /Incomplete or ambiguous/);
   await assert.rejects(retry(job('failure', []), job('failure', [])), /Incomplete or ambiguous/);
+
+  const armRetry = (conclusion, steps) => ({
+    ...job(conclusion, steps), name: 'Platforms / Retry MacOS (ARM)',
+  });
+  async function finalRetry(arm) {
+    const github = {paginate: async () => [arm], rest: {actions: {listJobsForWorkflowRun() {}}}};
+    return Array.from(await vm.runInNewContext(`(async () => {${script}\n})()`, {
+      github, context: {repo: {}, runId: 1}, process: {env: {CHECK_ARM_RETRY: 'true'}},
+    }));
+  }
+  assert.deepEqual(await finalRetry(armRetry('cancelled', [])), ['ARM']);
+  assert.deepEqual(await finalRetry(armRetry('success', [setup, step('Record successful build', 'success')])), []);
+  await assert.rejects(finalRetry(armRetry('failure', [setup, step('Build', 'failure')])), /no confirmed startup failure/);
 });
 
 test('a successful retry can recover only the affected macOS check', async () => {
@@ -180,6 +219,14 @@ test('a successful retry can recover only the affected macOS check', async () =>
   jobs.find(job => job.name === 'Build for MacOS (ARM)').steps.push({name: 'Build', conclusion: 'failure'});
   await assert.rejects(waitForBuilds(f.args), /MacOS.*failure at Build|MacOS.*at Build/);
   jobs.find(job => job.name === 'Build for MacOS (ARM)').steps.pop();
+  const armRetry = jobs.find(job => job.name === 'Retry MacOS (ARM)');
+  armRetry.conclusion = 'cancelled';
+  armRetry.steps = [];
+  jobs.push(job('Check macOS ARM retry result'), job('Final retry MacOS (ARM)'));
+  await waitForBuilds(f.args);
+  armRetry.steps.push({name: 'Build', conclusion: 'failure'});
+  await assert.rejects(waitForBuilds(f.args), /Retry MacOS.*at Build/);
+  armRetry.steps.pop();
   jobs.find(job => job.name === 'Build for Linux').conclusion = 'failure';
   await assert.rejects(waitForBuilds(f.args), /Linux: failure/);
 });
