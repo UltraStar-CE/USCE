@@ -17,7 +17,7 @@
       "args": ["-songpath", "${input:songpath}"],
       "cwd": "${workspaceFolder}/game",
       "preLaunchTask": "[any] 2. make all",
-      "windows": {} 
+      "windows": {}
     },
     {
       "name": "[Linux] USDX (GDB)",
