@@ -131,7 +131,7 @@ test('macOS keeps both architectures required and limits retries to CI', () => {
   const path = require('node:path');
   const workflow = fs.readFileSync(path.join(__dirname, '../.github/workflows/platform-builds.yml'), 'utf8');
   assert.match(workflow, /fail-fast: false\s+matrix:\s+arch: \[ARM, x86\]/);
-  assert.match(workflow, /runs-on: .*'macos-15' \|\| 'macos-15-intel'/);
+  assert.match(workflow, /runs-on: .*'xcode-27' \|\| 'macos-15-intel'/);
   assert.match(workflow, /runs-on: .*'macos-latest' \|\| 'macos-26-intel'/);
   assert.match(workflow, /continue-on-error: .*inputs\.release-version == ''/);
   assert.match(workflow, /if: .*inputs\.release-version == ''/);

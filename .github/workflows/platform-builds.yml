@@ -207,7 +207,7 @@ jobs:
   build_mac:
     needs: resolve
     name: Build for MacOS (${{ matrix.arch }})
-    runs-on: ${{ matrix.arch == 'ARM' && 'macos-15' || 'macos-15-intel' }}
+    runs-on: ${{ matrix.arch == 'ARM' && 'xcode-27' || 'macos-15-intel' }}
     continue-on-error: ${{ inputs.release-version == '' }}
     strategy:
       fail-fast: false
@@ -218,7 +218,7 @@ jobs:
       USCE_BUILD_CHANNEL: development
       PROJECTM_VERSION: 4.1.7
       PROJECTM_SHA: 16e4610b4d58981f7a2351faa58d507d3f40163a7b26ba81e19aec928c66641f
-      USCE_MACOS_RUNNER: ${{ matrix.arch == 'ARM' && 'macos-15' || 'macos-15-intel' }}
+      USCE_MACOS_RUNNER: ${{ matrix.arch == 'ARM' && 'xcode-27' || 'macos-15-intel' }}
     steps: &build_steps
       - name: Checkout Repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
