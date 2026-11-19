@@ -624,6 +624,8 @@ begin
     begin
       if (ceil(RecArray[P].xTop) = ceil(Xtop)) and
       (ceil(RecArray[P].yTop) = ceil(Ytop)) and
+      (ceil(RecArray[P].xBottom) = ceil(Xbottom)) and
+      (ceil(RecArray[P].yBottom) = ceil(Ybottom)) and
       (ScreenAct = RecArray[P].Screen) then
       begin
         RecArray[P].DrawnThisFrame := true;
