@@ -1,7 +1,7 @@
 program NoteLaneVisibilityTest;
 {$mode Delphi}
 
-uses {$IFDEF UNIX}cthreads,{$ENDIF} SysUtils, UMusic, UDraw;
+uses {$IFDEF UNIX}cthreads,{$ENDIF} SysUtils, UMusic, UDraw, UGraphic, UGraphicClasses;
 
 const
   InternalBPM = 600; // #BPM:150 stores four chart beats per musical beat.
@@ -31,6 +31,35 @@ begin
   if Actual <> Expected then
     raise Exception.CreateFmt('%s: expected line %d at beat %g, got %d',
       [MessageText, Expected, Beat, Actual]);
+end;
+
+procedure CheckGoldenPreviewBounds;
+var
+  Effect: TEffectManager;
+  Bounds: RectanglePositions;
+  VisibleCount: integer;
+begin
+  ScreenAct := 1;
+  Effect := TEffectManager.Create;
+  try
+    Effect.SaveGoldenStarsRec(20, 100, 140, 112);
+    // The next line starts at the same position with a shorter golden note.
+    Effect.RecArray[0].DrawnThisFrame := false;
+    Effect.SaveGoldenStarsRec(20, 100, 56, 112);
+    Effect.SaveGoldenStarsRec(20, 100, 56, 112);
+    VisibleCount := 0;
+    for Bounds in Effect.RecArray do
+      if Bounds.DrawnThisFrame then
+      begin
+        Inc(VisibleCount);
+        if (Bounds.xBottom <> 56) or (Bounds.TotalStarCount <> 6) then
+          raise Exception.Create('Golden preview retained the previous note width');
+      end;
+    if VisibleCount <> 1 then
+      raise Exception.Create('Expected exactly one visible rectangle for the golden preview');
+  finally
+    Effect.Free;
+  end;
 end;
 
 begin
@@ -63,5 +92,7 @@ begin
 
   // At a slower tempo the same three chart beats last one second.
   Expect(0, 157, 180, -1, 'one-second blank between hold and preview can be hidden');
+  CheckGoldenPreviewBounds;
   WriteLn('PASS: note lanes follow actual notes across early and late breaks, avoid blinks, and hide in long gaps');
+  WriteLn('PASS: golden previews use the displayed note bounds and star count');
 end.
