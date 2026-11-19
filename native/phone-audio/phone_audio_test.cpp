@@ -98,12 +98,13 @@ int main() {
   // when the timestamps look continuous.
   assert(!sourceClock.read(1050000, out, 960));
   CaptureHistory restarted;
+  using CaptureUpdate = CaptureHistory::Update;
   p = packet(5000);
-  assert(restarted.push(p.data(), p.size(), 1000000, 1000000, 1));
+  assert(restarted.push(p.data(), p.size(), 1000000, 1000000, 1) == CaptureUpdate::retained);
   p = packet(0);
-  assert(!restarted.push(p.data(), p.size(), 990000, 1400000, 1));
-  assert(!restarted.push(p.data(), p.size(), 1010000, 1010000, 1));
-  assert(restarted.push(p.data(), p.size(), 1300000, 1300000, 1));
+  assert(restarted.push(p.data(), p.size(), 990000, 1400000, 1) == CaptureUpdate::unavailable);
+  assert(restarted.push(p.data(), p.size(), 1010000, 1010000, 1) == CaptureUpdate::unavailable);
+  assert(restarted.push(p.data(), p.size(), 1300000, 1300000, 1) == CaptureUpdate::restarted);
   assert(restarted.read(1300000, out, 480));
   assert(!restarted.read(1000000, out, 480));
   CaptureHistory directCapture;
@@ -120,9 +121,9 @@ int main() {
   assert(out[0] == 16384);
   // A sequence number alone cannot identify a duplicate on the relay path.
   p = packet(3);
-  assert(history.push(p.data(), p.size(), 1030000, 1070000));
-  assert(!history.push(p.data(), p.size(), 1030001, 1070000));
-  assert(!history.push(p.data(), p.size(), 1030000, 1070000, 2));
+  assert(history.push(p.data(), p.size(), 1030000, 1070000) == CaptureUpdate::retained);
+  assert(history.push(p.data(), p.size(), 1030001, 1070000) == CaptureUpdate::unavailable);
+  assert(history.push(p.data(), p.size(), 1030000, 1070000, 2) == CaptureUpdate::superseded);
   assert(history.read(1030000, out, 480) && out[0] == 8192);
 
   auto receiver = usce_pa_create("ipc://", "");
@@ -186,7 +187,9 @@ int main() {
   assert(usce_pa_poll(receiver, out, 9600) == 480);
   const auto sendTimed = [&](void *audio, int sequence, int64_t stamp, int epoch = 1) {
     assert(usce_pa_signal(audio, timedPcm(sequence, stamp, "", epoch).c_str()) == 0);
-    assert(usce_pa_poll(audio, out, 9600) >= 0);
+    const auto count = usce_pa_poll(audio, out, 9600);
+    assert(count >= 0);
+    return count;
   };
   const auto checkShortRestart = [&](int nextEpoch, int64_t restartPauseUs) {
     auto audio = usce_pa_create("ipc://", "");
@@ -219,11 +222,18 @@ int main() {
     sendTimed(audio, i, 4300000 + i * 10000, 2);
   assert(usce_pa_capture_window(audio, 4340000, out, 2048) == 1);
   // The delayed old epoch jumps forward in sequence, but not in capture time.
-  sendTimed(audio, 5100, 4010000);
+  assert(sendTimed(audio, 5100, 4010000) == 0);
   // Neither can an old timestamp on a forward packet in the current epoch.
-  sendTimed(audio, 5100, 4010000, 2);
-  assert(usce_pa_capture_window(audio, 4340000, out, 2048) == 1);
+  assert(sendTimed(audio, 5100, 4010000, 2) == 0);
+  assert(sendTimed(audio, 5, 4350000, 2) == 480);
+  assert(sendTimed(audio, 6, 4360000, 2) == 480);
+  assert(usce_pa_capture_window(audio, 4360000, out, 2048) == 1);
   assert(usce_pa_capture_window(audio, 4010000, out, 480) != 1);
+  usce_pa_set_clock(audio, 6000000);
+  assert(sendTimed(audio, 5101, 4020000) == 0); // Earlier than the retention window.
+  assert(usce_pa_signal(audio, unstamped(7).c_str()) == 0);
+  assert(usce_pa_poll(audio, out, 9600) == 480);
+  assert(sendTimed(audio, 8, 0, 2) == 480); // Invalid timing can still use live PCM.
   usce_pa_destroy(audio);
 
   auto second = usce_pa_create("ipc://", "");

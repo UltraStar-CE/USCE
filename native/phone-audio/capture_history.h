@@ -20,45 +20,51 @@ class CaptureHistory {
   bool started = false;
 
 public:
+  enum class Update { unavailable, retained, restarted, superseded };
+
   // Direct PCM appends a little-endian host timestamp and capture epoch to UAP1.
   static constexpr size_t pcmBytes = 980;
   static constexpr size_t stampedPcmBytes = pcmBytes + 12;
 
-  bool pushStamped(const uint8_t *data, size_t size, int64_t hostNowUs, bool *restarted = nullptr) {
-    if (size != stampedPcmBytes) return false;
+  Update pushStamped(const uint8_t *data, size_t size, int64_t hostNowUs) {
+    if (size != stampedPcmBytes) return Update::unavailable;
     const auto stamp = uint64_t(PcmQueue::u32(data + pcmBytes)) |
       (uint64_t(PcmQueue::u32(data + pcmBytes + 4)) << 32);
     const auto captureEpoch = PcmQueue::u32(data + pcmBytes + 8);
-    if (stamp > INT64_MAX || captureEpoch == 0) return false;
-    return push(data, pcmBytes, static_cast<int64_t>(stamp), hostNowUs, captureEpoch, restarted);
+    if (stamp > INT64_MAX || captureEpoch == 0) return Update::unavailable;
+    return push(data, pcmBytes, static_cast<int64_t>(stamp), hostNowUs, captureEpoch);
   }
 
-  bool push(const uint8_t *data, size_t size, int64_t endUs, int64_t hostNowUs,
-            uint32_t captureEpoch = 0, bool *restarted = nullptr) {
-    if (!PcmQueue::validPacket(data, size) ||
-        endUs <= 0 || hostNowUs <= 0 ||
-        endUs < hostNowUs - 1500000 || endUs > hostNowUs + 50000) return false;
+  Update push(const uint8_t *data, size_t size, int64_t endUs, int64_t hostNowUs,
+              uint32_t captureEpoch = 0) {
+    if (!PcmQueue::validPacket(data, size) || endUs <= 0 || hostNowUs <= 0)
+      return Update::unavailable;
+    // A timed packet that predates a verified restart must stay out of both
+    // buffers, even if it is too old for the retained capture window.
+    if (started && (endUs < captureStartUs ||
+        (captureEpoch != newestEpoch && endUs <= newestEndUs))) return Update::superseded;
+    if (endUs < hostNowUs - 1500000 || endUs > hostNowUs + 50000) return Update::unavailable;
     const auto sequence = PcmQueue::u32(data + 4);
     auto &packet = packets[sequence % packetCount];
     const auto delta = static_cast<int32_t>(sequence - newestSequence);
+    auto update = Update::retained;
     if (started) {
       const bool newerCapture = endUs > newestEndUs;
       const bool changedEpoch = captureEpoch != newestEpoch;
       const bool stalled = hostNowUs - lastProgressUs > 250000;
 
-      // Late packets from another epoch cannot advance or clear this timeline.
-      if (changedEpoch && !newerCapture) return false;
       if (newerCapture && (changedEpoch || stalled)) {
         packets = {};
         started = false;
         captureStartUs = endUs;
-        if (restarted) *restarted = true;
+        update = Update::restarted;
       } else {
-        if (delta <= -static_cast<int32_t>(packetCount) || endUs < captureStartUs) return false;
+        if (delta <= -static_cast<int32_t>(packetCount)) return Update::unavailable;
         if (packet.endUs && packet.sequence == sequence)
-          return packet.captureEpoch == captureEpoch && packet.endUs == endUs;
+          return packet.captureEpoch == captureEpoch && packet.endUs == endUs
+            ? Update::retained : Update::unavailable;
         // An older timestamp can fill a hole, but cannot move the front.
-        if ((delta > 0) != newerCapture) return false;
+        if ((delta > 0) != newerCapture) return Update::unavailable;
         if (delta >= static_cast<int32_t>(packetCount)) packets = {};
       }
     }
@@ -77,7 +83,7 @@ public:
       const auto sample = uint16_t(data[20 + 2*i]) | (uint16_t(data[21 + 2*i]) << 8);
       packet.samples[i] = static_cast<int16_t>(sample);
     }
-    return true;
+    return update;
   }
 
   bool read(int64_t targetEndUs, int16_t *out, uint32_t count) {
