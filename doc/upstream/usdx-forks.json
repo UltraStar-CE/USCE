@@ -15063,9 +15063,16 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "not-adopted",
+        "assessedAgainst": "e9df6b44b97a63969171a2d5bf8c8d600f1f31f7",
+        "assessedAt": "2026-11-19",
+        "reason": "The exact-path lookup and local command deadline fix apply to the fork queue bridge. USCE and usrelay use the in-game catalog and live control messages, so neither failure path applies. The lookup merge repeats the fix already reviewed in this delta.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/432",
+          "https://github.com/UltraStar-CE/USCE/pull/429",
+          "https://github.com/UltraStar-CE/usrelay/issues/16"
+        ],
+        "reviewedCommitCount": 3
       },
       "previousHead": "779a21c8d6d6ccaea318ff3bf08df8fbfaf425cd",
       "previousAssessment": {
@@ -18901,9 +18908,15 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "not-adopted",
+        "assessedAgainst": "e9df6b44b97a63969171a2d5bf8c8d600f1f31f7",
+        "assessedAt": "2026-11-19",
+        "reason": "The card-scan waiting screen, themed results and timed return form a branded kiosk flow. Keep it in the fork. USCE already has remote controls, library lockdown and continuous playback.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/432",
+          "https://github.com/UltraStar-CE/USCE/pull/168"
+        ],
+        "reviewedCommitCount": 1
       }
     }
   ],
