@@ -14992,31 +14992,31 @@
     {
       "repository": "simplykapsel/LisiaNora-USDX",
       "branch": "main",
-      "head": "779a21c8d6d6ccaea318ff3bf08df8fbfaf425cd",
+      "head": "ad592e4c96d24b3ca93071dd1b903473165e1a95",
       "upstreamHead": "c8aea5cfc9e3a9da4b56d9538266d2e62d2b9c73",
-      "comparisonBase": "6f1924c25d7dd0e879951dce50525ca39a9f8ede",
+      "comparisonBase": "779a21c8d6d6ccaea318ff3bf08df8fbfaf425cd",
       "comparisonKind": "since-checkpoint",
       "ahead": 3,
       "behind": 0,
-      "compareUrl": "https://github.com/UltraStar-CE/USCE/compare/6f1924c25d7dd0e879951dce50525ca39a9f8ede...779a21c8d6d6ccaea318ff3bf08df8fbfaf425cd",
+      "compareUrl": "https://github.com/UltraStar-CE/USCE/compare/779a21c8d6d6ccaea318ff3bf08df8fbfaf425cd...ad592e4c96d24b3ca93071dd1b903473165e1a95",
       "novelCommits": [
         {
-          "sha": "cf63e1fcf22e719e487acdcf0858fd493337f143",
-          "title": "Find queue songs in every song directory the game uses",
+          "sha": "f6c4d9734c70d55ae78124d683c22f0d587b4975",
+          "title": "Bridge: skip the library-wide chart search when the catalog path exists",
           "author": "simplykapsel",
-          "authoredAt": "2026-11-18T00:43:58Z"
+          "authoredAt": "2026-11-18T20:27:06Z"
         },
         {
-          "sha": "e4a0feaf14a71754d951ca9c0e8201e3dc5d98aa",
-          "title": "Bridge: take commands over the queue's WebSocket, react to game status at once",
+          "sha": "180b37e5542b58c2c21e27c546a763d7dda87d20",
+          "title": "Merge fix/bridge-direct-song-lookup: skip the library-wide chart search when the catalog path exists",
           "author": "simplykapsel",
-          "authoredAt": "2026-11-18T00:52:12Z"
+          "authoredAt": "2026-11-18T20:28:44Z"
         },
         {
-          "sha": "779a21c8d6d6ccaea318ff3bf08df8fbfaf425cd",
-          "title": "Merge feature/bridge-websocket: HTTP fallback and status watcher for main's WebSocket bridge",
+          "sha": "ad592e4c96d24b3ca93071dd1b903473165e1a95",
+          "title": "Bridge: set command deadlines on the local clock",
           "author": "simplykapsel",
-          "authoredAt": "2026-11-18T04:28:13Z"
+          "authoredAt": "2026-11-18T21:11:28Z"
         }
       ],
       "ignoredKnownHistoryCommitCount": 0,
@@ -15024,42 +15024,42 @@
       "ignoredOldCommitCount": 0,
       "commits": [
         {
-          "sha": "cf63e1fcf22e719e487acdcf0858fd493337f143",
-          "title": "Find queue songs in every song directory the game uses",
+          "sha": "f6c4d9734c70d55ae78124d683c22f0d587b4975",
+          "title": "Bridge: skip the library-wide chart search when the catalog path exists",
           "author": "simplykapsel",
-          "authoredAt": "2026-11-18T00:43:58Z"
+          "authoredAt": "2026-11-18T20:27:06Z"
         },
         {
-          "sha": "e4a0feaf14a71754d951ca9c0e8201e3dc5d98aa",
-          "title": "Bridge: take commands over the queue's WebSocket, react to game status at once",
+          "sha": "180b37e5542b58c2c21e27c546a763d7dda87d20",
+          "title": "Merge fix/bridge-direct-song-lookup: skip the library-wide chart search when the catalog path exists",
           "author": "simplykapsel",
-          "authoredAt": "2026-11-18T00:52:12Z"
+          "authoredAt": "2026-11-18T20:28:44Z"
         },
         {
-          "sha": "779a21c8d6d6ccaea318ff3bf08df8fbfaf425cd",
-          "title": "Merge feature/bridge-websocket: HTTP fallback and status watcher for main's WebSocket bridge",
+          "sha": "ad592e4c96d24b3ca93071dd1b903473165e1a95",
+          "title": "Bridge: set command deadlines on the local clock",
           "author": "simplykapsel",
-          "authoredAt": "2026-11-18T04:28:13Z"
+          "authoredAt": "2026-11-18T21:11:28Z"
         }
       ],
       "newCommits": [
         {
-          "sha": "cf63e1fcf22e719e487acdcf0858fd493337f143",
-          "title": "Find queue songs in every song directory the game uses",
+          "sha": "f6c4d9734c70d55ae78124d683c22f0d587b4975",
+          "title": "Bridge: skip the library-wide chart search when the catalog path exists",
           "author": "simplykapsel",
-          "authoredAt": "2026-11-18T00:43:58Z"
+          "authoredAt": "2026-11-18T20:27:06Z"
         },
         {
-          "sha": "e4a0feaf14a71754d951ca9c0e8201e3dc5d98aa",
-          "title": "Bridge: take commands over the queue's WebSocket, react to game status at once",
+          "sha": "180b37e5542b58c2c21e27c546a763d7dda87d20",
+          "title": "Merge fix/bridge-direct-song-lookup: skip the library-wide chart search when the catalog path exists",
           "author": "simplykapsel",
-          "authoredAt": "2026-11-18T00:52:12Z"
+          "authoredAt": "2026-11-18T20:28:44Z"
         },
         {
-          "sha": "779a21c8d6d6ccaea318ff3bf08df8fbfaf425cd",
-          "title": "Merge feature/bridge-websocket: HTTP fallback and status watcher for main's WebSocket bridge",
+          "sha": "ad592e4c96d24b3ca93071dd1b903473165e1a95",
+          "title": "Bridge: set command deadlines on the local clock",
           "author": "simplykapsel",
-          "authoredAt": "2026-11-18T04:28:13Z"
+          "authoredAt": "2026-11-18T21:11:28Z"
         }
       ],
       "assessment": {
@@ -15067,17 +15067,11 @@
         "usceReferences": [],
         "reason": ""
       },
-      "previousHead": "6f1924c25d7dd0e879951dce50525ca39a9f8ede",
+      "previousHead": "779a21c8d6d6ccaea318ff3bf08df8fbfaf425cd",
       "previousAssessment": {
-        "decision": "superseded",
-        "assessedAgainst": "7b4edd33961d1c3be497db089e11f3a98c448a58",
-        "assessedAt": "2026-11-17",
-        "reason": "The local Windows bridge, branded launcher and dependency build are specific to this fork. Comparable player setup and queued remote controls already use USCE's game/relay protocol.",
-        "usceReferences": [
-          "https://github.com/UltraStar-CE/USCE/pull/168",
-          "https://github.com/UltraStar-CE/usrelay/issues/16"
-        ],
-        "reviewedCommitCount": 16
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
       },
       "assessmentHistory": [
         {
@@ -15220,6 +15214,34 @@
               "https://github.com/UltraStar-CE/usrelay/issues/16"
             ],
             "reviewedCommitCount": 16
+          }
+        },
+        {
+          "head": "779a21c8d6d6ccaea318ff3bf08df8fbfaf425cd",
+          "commits": [
+            {
+              "sha": "cf63e1fcf22e719e487acdcf0858fd493337f143",
+              "title": "Find queue songs in every song directory the game uses",
+              "author": "simplykapsel",
+              "authoredAt": "2026-11-18T00:43:58Z"
+            },
+            {
+              "sha": "e4a0feaf14a71754d951ca9c0e8201e3dc5d98aa",
+              "title": "Bridge: take commands over the queue's WebSocket, react to game status at once",
+              "author": "simplykapsel",
+              "authoredAt": "2026-11-18T00:52:12Z"
+            },
+            {
+              "sha": "779a21c8d6d6ccaea318ff3bf08df8fbfaf425cd",
+              "title": "Merge feature/bridge-websocket: HTTP fallback and status watcher for main's WebSocket bridge",
+              "author": "simplykapsel",
+              "authoredAt": "2026-11-18T04:28:13Z"
+            }
+          ],
+          "assessment": {
+            "decision": "pending",
+            "usceReferences": [],
+            "reason": ""
           }
         }
       ]
@@ -18833,6 +18855,49 @@
           "title": "refactor SingDrawLines to have less places where the player-specific areas are defined",
           "author": "barbeque-squared",
           "authoredAt": "2026-11-17T14:06:49Z"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "ebertbros/hitsteroke",
+      "branch": "hitster",
+      "head": "26d8dfd3d6ead2e96e30bd01dd5e55182f5a1a5b",
+      "upstreamHead": "c8aea5cfc9e3a9da4b56d9538266d2e62d2b9c73",
+      "comparisonBase": "e9df6b44b97a63969171a2d5bf8c8d600f1f31f7",
+      "comparisonKind": "outside-usce",
+      "ahead": 1,
+      "behind": 740,
+      "compareUrl": "https://github.com/UltraStar-CE/USCE/compare/e9df6b44b97a63969171a2d5bf8c8d600f1f31f7...26d8dfd3d6ead2e96e30bd01dd5e55182f5a1a5b",
+      "novelCommits": [
+        {
+          "sha": "26d8dfd3d6ead2e96e30bd01dd5e55182f5a1a5b",
+          "title": "Hitster karaoke kiosk: remote control, event mode and stand screens",
+          "author": "grzesebe",
+          "authoredAt": "2026-11-19T09:22:48Z"
+        }
+      ],
+      "ignoredKnownHistoryCommitCount": 0,
+      "ignoredUpstreamCommitCount": 0,
+      "ignoredOldCommitCount": 0,
+      "commits": [
+        {
+          "sha": "26d8dfd3d6ead2e96e30bd01dd5e55182f5a1a5b",
+          "title": "Hitster karaoke kiosk: remote control, event mode and stand screens",
+          "author": "grzesebe",
+          "authoredAt": "2026-11-19T09:22:48Z"
+        }
+      ],
+      "newCommits": [
+        {
+          "sha": "26d8dfd3d6ead2e96e30bd01dd5e55182f5a1a5b",
+          "title": "Hitster karaoke kiosk: remote control, event mode and stand screens",
+          "author": "grzesebe",
+          "authoredAt": "2026-11-19T09:22:48Z"
         }
       ],
       "assessment": {
