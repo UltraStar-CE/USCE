@@ -1,16 +1,26 @@
 {
   "repository": "UltraStar-Deluxe/USDX",
   "branch": "master",
-  "from": "7f49e685c7d7affcd0bd6501f46f6af801e4d880",
-  "sha": "c8aea5cfc9e3a9da4b56d9538266d2e62d2b9c73",
-  "meaning": "Assessed upstream tip, not a claim that changes have been incorporated",
-  "comparison": "https://github.com/UltraStar-Deluxe/USDX/compare/7f49e685c7d7affcd0bd6501f46f6af801e4d880...c8aea5cfc9e3a9da4b56d9538266d2e62d2b9c73",
+  "from": "c8aea5cfc9e3a9da4b56d9538266d2e62d2b9c73",
+  "sha": "68acb0329cd84df7920fed608618d09f64310faf",
+  "meaning": "Assessed upstream tip with dispositions for each change",
+  "comparison": "https://github.com/UltraStar-Deluxe/USDX/compare/c8aea5cfc9e3a9da4b56d9538266d2e62d2b9c73...68acb0329cd84df7920fed608618d09f64310faf",
   "commits": [
     {
-      "sha": "c8aea5cfc9e3a9da4b56d9538266d2e62d2b9c73",
-      "url": "https://github.com/UltraStar-Deluxe/USDX/commit/c8aea5cfc9e3a9da4b56d9538266d2e62d2b9c73",
-      "authoredAt": "2026-11-17T19:57:22Z",
-      "subject": "fix: ERangeError in GetRemainingBufferSize after 3 hours 23 minutes long pause"
+      "sha": "e1586eeabf2316519c117f68dd7e85c1738a4100",
+      "url": "https://github.com/UltraStar-Deluxe/USDX/commit/e1586eeabf2316519c117f68dd7e85c1738a4100",
+      "authoredAt": "2026-11-19T21:25:54Z",
+      "subject": "chore: remove old unused vendored libraries + demos + OpenCV 2.4 leftovers (#1481)",
+      "disposition": "Merged. USCE removed all 214 files still present. The two MIDI demo files were already absent.",
+      "output": "https://github.com/UltraStar-CE/USCE/pull/434"
+    },
+    {
+      "sha": "68acb0329cd84df7920fed608618d09f64310faf",
+      "url": "https://github.com/UltraStar-Deluxe/USDX/commit/68acb0329cd84df7920fed608618d09f64310faf",
+      "authoredAt": "2026-11-19T21:26:45Z",
+      "subject": "fix: remove FFmpeg compile-time version checks from 4.0 - 7.0 bindings (#1480)",
+      "disposition": "Merged as a patch-equivalent cherry-pick.",
+      "output": "https://github.com/UltraStar-CE/USCE/pull/435"
     }
   ]
 }
