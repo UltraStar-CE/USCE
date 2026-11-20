@@ -2,7 +2,8 @@ program SeekScoringTest;
 {$mode Delphi}
 uses {$IFDEF UNIX}cthreads,{$ENDIF}
   SysUtils, Math, IniFiles, UMusic, USong, UNote, UScreenSingController,
-  UIni, URecord, UBeatTimer, UGraphic, UScreenSong, USingScores, UCommon, UThemes, UPath;
+  UIni, URecord, UBeatTimer, UGraphic, UScreenName, UScreenSong, USingScores,
+  UCommon, UParty, UThemes, UPath;
 type TSeekScoringScreen = class(TScreenSingController);
 var Screen: TSeekScoringScreen; Track, I: integer; Points, Before, Bonus: real;
   Loop: TPracticeLoop;
@@ -63,8 +64,13 @@ var Device: TAudioInputDevice; Sound: TCaptureBuffer; PerBeat: real; Color: TRGB
 begin
   Ini := TIni(TIni.NewInstance);
   Ini.Filename := Path(UTF8String(ParamStr(1))).Append('seek-delay.ini');
+  SetLength(IPlayersVals, 1);
+  IPlayersVals[0] := 1;
+  Ini.Players := 0;
   LyricsState := TLyricsState(TLyricsState.NewInstance);
   ScreenSong := TScreenSong(TScreenSong.NewInstance);
+  ScreenName := TScreenName(TScreenName.NewInstance);
+  Party := TPartyGame(TPartyGame.NewInstance);
   Theme := TTheme(TTheme.NewInstance);
   Theme.Sing := TThemeSing.Create;
   ScreenSong.Mode := smNormal;
@@ -202,10 +208,13 @@ begin
     Device.AudioFormat.Free; Device.FreeInstance;
     Theme.Sing.Free;
     Theme.FreeInstance; Theme := nil;
+    Party.FreeInstance; Party := nil;
+    ScreenName.FreeInstance; ScreenName := nil;
     ScreenSong.FreeInstance; ScreenSong := nil;
     LyricsState.FreeInstance; LyricsState := nil;
     Ini.Filename := nil;
     Ini.FreeInstance; Ini := nil;
+    IPlayersVals := nil;
   end;
 end;
 
