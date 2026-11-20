@@ -432,16 +432,21 @@ end;
 procedure DrawSingPitchGuides(const Layout: TSingLaneLayout; Top, PitchStep: real);
 const
   MinGuideGapPixels = 6;
+  MinorGuideAlpha = 0.7;
 var
   GuideStride, GuideSpacing, MinSpacing, Y: real;
   FirstGuide, LastGuide, Guide: integer;
+  HasMinorGuides: boolean;
   Lines: TLineList;
 begin
-  // Start at two semitones and keep every other guide as the lane gets tighter.
+  // Keep strong guides spaced out in compact lanes, with one faint guide between them.
   GuideStride := 2;
   MinSpacing := Max(MinSingGuideGap, MinGuideGapPixels * PixelH);
   while GuideStride * PitchStep < MinSpacing do
     GuideStride := GuideStride * 2;
+  HasMinorGuides := GuideStride > 2;
+  if HasMinorGuides then
+    GuideStride := GuideStride / 2;
   GuideSpacing := GuideStride * PitchStep;
   FirstGuide := Ceil((Top - Layout.RowAnchorY - 0.001) / GuideSpacing);
   LastGuide := Floor((Layout.GuideBottomY - Layout.RowAnchorY + 0.001) / GuideSpacing);
@@ -463,6 +468,8 @@ begin
       ColG := Skin_P1_LinesG;
       ColB := Skin_P1_LinesB;
       Alpha := Theme.Sing.GuideAlpha;
+      if HasMinorGuides and Odd(FirstGuide + Guide) then
+        Alpha := Alpha * MinorGuideAlpha;
     end;
   end;
   Renderer.DrawLines(Lines);
