@@ -126,6 +126,7 @@ type
 
       procedure LoadPaths(IniFile: TCustomIniFile);
       procedure LoadScreenModes(IniFile: TCustomIniFile);
+      procedure LoadSlotDelays(IniFile: TMemIniFile);
       procedure LoadWebcamSettings(IniFile: TCustomIniFile);
 
     public
@@ -135,7 +136,7 @@ type
       Name:           array[0..(IMaxPlayerCount-1)] of UTF8String;
       PlayerColor:    array[0..(IMaxPlayerCount-1)] of integer;
       TeamColor:      array[0..2] of integer;
-      PlayerDelay:    array[0..(IMaxPlayerCount-1)] of integer;
+      SlotDelay:    array[0..(IMaxPlayerCount-1)] of integer;
 
       PlayerAvatar:   array[0..(IMaxPlayerCount-1)] of UTF8String;
       PlayerLevel:    array[0..(IMaxPlayerCount-1)] of integer;
@@ -287,7 +288,7 @@ type
       procedure RememberUsedNames(const Values: array of UTF8String);
       procedure RememberUsedTeamNames(const Values: array of UTF8String);
       function ReloadNames: boolean;
-      procedure SaveDelays;
+      procedure SaveDelays(Slots: cardinal);
       procedure ReloadDelays;
       procedure SaveLevel;
       procedure SavePlayerColors;
@@ -1677,6 +1678,34 @@ begin
     if RemoteBridgeViews[View] <> 0 then Result := Result or (1 shl Ord(View));
 end;
 
+procedure TIni.LoadSlotDelays(IniFile: TMemIniFile);
+var
+  I: integer;
+  Key: string;
+  Migrate: boolean;
+begin
+  Migrate := IniFile.SectionExists('PlayerDelay');
+  for I := 0 to High(SlotDelay) do
+  begin
+    Key := 'P' + IntToStr(I + 1);
+    if Migrate and IniFile.ValueExists('PlayerDelay', Key) and
+        not IniFile.ValueExists('SlotDelay', Key) then
+      IniFile.WriteString('SlotDelay', Key, IniFile.ReadString('PlayerDelay', Key, ''));
+    SlotDelay[I] := IniFile.ReadInteger('SlotDelay', Key, 0);
+  end;
+
+  if Migrate then
+  begin
+    IniFile.EraseSection('PlayerDelay');
+    try
+      IniFile.UpdateFile;
+    except
+      on E: Exception do
+        Log.LogError('Could not migrate microphone trims: ' + E.Message, 'Ini');
+    end;
+  end;
+end;
+
 procedure TIni.Load();
 var
   IniFile: TMemIniFile;
@@ -1753,9 +1782,8 @@ begin
     PlayerAvatar[I] := IniFile.ReadString('PlayerAvatar', 'P'+IntToStr(I+1), '');
     // Level Player
     PlayerLevel[I] := IniFile.ReadInteger('PlayerLevel', 'P'+IntToStr(I+1), 1);
-    // Player Delay
-    PlayerDelay[I] := IniFile.ReadInteger('PlayerDelay', 'P'+IntToStr(I+1), 0);
   end;
+  LoadSlotDelays(IniFile);
 
   // Color Team
   for I := 0 to 2 do
@@ -2339,36 +2367,39 @@ begin
   end;
 end;
 
-procedure TIni.SaveDelays;
+procedure TIni.SaveDelays(Slots: cardinal);
 var
   IniFile: TIniFile;
   I: integer;
+  PreviousAge, SavedAge: LongInt;
 begin
+  PreviousAge := FileAge(Filename.ToNative);
   IniFile := TSafeIniFile.Create(Filename.ToNative, 'TIni.SaveDelays');
   try
-    for I := 0 to High(PlayerDelay) do
-      IniFile.WriteInteger('PlayerDelay', 'P' + IntToStr(I+1), PlayerDelay[I]);
+    for I := 0 to High(SlotDelay) do
+      if (Slots and (cardinal(1) shl I)) <> 0 then
+        IniFile.WriteInteger('SlotDelay', 'P' + IntToStr(I+1), SlotDelay[I]);
   finally
     IniFile.Free;
   end;
+  SavedAge := FileAge(Filename.ToNative);
+  if LastReadNames >= PreviousAge then LastReadNames := SavedAge;
+  if LastReadDelays >= PreviousAge then LastReadDelays := SavedAge;
 end;
 
 procedure TIni.ReloadDelays;
 var
-  IniFile: TIniFile;
-  I:       integer;
+  IniFile: TMemIniFile;
 begin
   if not FileExists(Filename.ToNative) or (FileAge(Filename.ToNative) <= LastReadDelays) then
   begin
     Exit;
   end;
   LastReadDelays := FileAge(Filename.ToNative);
-
-  IniFile := TIniFile.Create(Filename.ToNative);
+  IniFile := TMemIniFile.Create(Filename.ToNative);
 
   try
-    for I := 0 to IMaxPlayerCount-1 do
-      PlayerDelay[I] := IniFile.ReadInteger('PlayerDelay', 'P'+IntToStr(I+1), 0);
+    LoadSlotDelays(IniFile);
   finally
     IniFile.Free;
   end;

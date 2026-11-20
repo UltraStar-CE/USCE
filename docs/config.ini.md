@@ -239,12 +239,16 @@ slots run from `P1` to `P12`; the normal game menu selects up to six singers.
 Player color IDs `1`–`16` are, in order: Blue, Red, Green, Yellow, Orange, Pink,
 Violet, Brown, Gray, Dark Blue, Sky, Cyan, Flame, Orchid, Harlequin and Lime.
 
-## Per-player microphone delay
+## Microphone delay by slot
 
-File section: `[PlayerDelay]`. Set `P1` through `P12` to an additional timing
-correction in milliseconds; the default is `0` for every player. Positive values
+File section: `[SlotDelay]`. Set `P1` through `P24` to an additional timing
+correction in milliseconds. The default is `0` for each slot. Positive values
 compensate for later microphone input by scoring it against earlier song beats.
 The correction follows the player slot, so keep microphone assignments consistent.
+
+On first load, USCE moves legacy `[PlayerDelay]` trims into `[SlotDelay]` and
+removes the old section. Values already set in `[SlotDelay]` take precedence,
+including explicit zeros.
 
 These values supplement the global microphone delay. Start with small adjustments
 and compare timing during a familiar song. Changes take effect when the next song starts. They do not change audio playback or the displayed lyric timing.

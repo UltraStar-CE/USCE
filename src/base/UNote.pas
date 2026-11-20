@@ -425,7 +425,7 @@ const UnavailablePhoneCaptureOffset = Low(integer);
 
 function ConfiguredInputTrimMs(PlayerIndex: integer): integer;
 begin
-  Result := Ini.PlayerDelay[PlayerIndex] + RemoteInputProcessor.AssignedMicDelayMs(PlayerIndex);
+  Result := Ini.SlotDelay[PlayerIndex] + RemoteInputProcessor.AssignedMicDelayMs(PlayerIndex);
 end;
 
 function ConfiguredPhoneCaptureOffsetMs(PlayerIndex: integer): integer;
@@ -1159,7 +1159,7 @@ begin
           Ini.MicDelay + MaxConfiguredPlayerDelayMs + REMOTE_INPUT_GAME_DELAY_MARGIN_MS) - Ini.MicDelay;
       end;
 
-      // delay in beats (Ini.PlayerDelay or compensated remote game delay are ms)
+      // delay in beats (Ini.SlotDelay or compensated remote game delay are ms)
       DelayBeats := GetBeats(CurrentSong.BPM, PlayerDelayMs / 1000);
       if IsRemotePlayer then
       begin
@@ -1178,7 +1178,7 @@ begin
       end
       else
       begin
-        // delay in beats (Ini.PlayerDelay is ms)
+        // delay in beats (Ini.SlotDelay is ms)
         if not Player[PlayerIndex].DetectionReady then
         begin
           Player[PlayerIndex].DetectionDelay := PlayerDelayMs;

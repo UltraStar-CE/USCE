@@ -351,7 +351,7 @@ begin
     (ExpectedHandoff = HandoffId) and not ScreenPopupHelp.Visible and
     not ScreenPopupError.Visible and not ScreenPopupInfo.Visible and
     not ScreenPopupCheck.Visible and not ScreenPopupSendScore.Visible and
-    Display.CurrentScreen^.ShowFinish;
+    Display.CurrentScreen^.ShowFinish and not ScreenName.DelayMeasurementOpen;
   if not Result then Exit;
   ScreenName.SetInteraction(0);
   ScreenName.ParseInput(SDLK_RETURN, 0, true);
@@ -564,7 +564,8 @@ begin
   if ScreenAct <> Screens then Exit;
   Suspended := (Display.NextScreen <> nil) or ScreenPopupHelp.Visible or
     ScreenPopupError.Visible or ScreenPopupInfo.Visible or ScreenPopupCheck.Visible or
-    ScreenPopupSendScore.Visible or not Display.CurrentScreen^.ShowFinish;
+    ScreenPopupSendScore.Visible or not Display.CurrentScreen^.ShowFinish or
+    ((Display.CurrentScreen = @ScreenName) and ScreenName.DelayMeasurementOpen);
   if Session.Tick(SDL_GetTicks, Suspended) then StageChanged := true;
   if StageChanged and not Suspended then ChangeStage;
 end;

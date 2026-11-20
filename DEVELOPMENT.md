@@ -67,6 +67,13 @@ Thank you for helping improve the game.
 The defaults are white, opacity 1 for the markers and 0.24 for the range, and a
 marker width of 2.
 
+### Microphone delay measurement
+
+`[NameDelayMeasureButton]`, `[NameDelayApplyButton]` and `[NameDelayCancelButton]`
+use the usual theme button settings. They default to the confirmation popup
+style. `[NameDelayText]` can override the modal's font, text color and title
+position.
+
 ### Singing countdown theme settings
 
 The optional `[SingCountdown]` section styles the shared intro, medley and
