@@ -16,7 +16,7 @@ class PlayerCardMouseTests(unittest.TestCase):
         production = (root / 'src/screens/UScreenName.pas').read_text()
         geometry = 'function TScreenName.DifficultySegmentRect' + production.split(
             'function TScreenName.DifficultySegmentRect', 1)[1].split(
-            'function TScreenName.ParseMouse', 1)[0]
+            '\nend;', 1)[0] + '\nend;\n'
         method = production.split(
             'function TScreenName.ParseMouse(', 1)[1]
         method = 'function TScreenName.ParseMouse(' + method.split(
@@ -29,18 +29,28 @@ type
  TMouseOverRect = record X,Y,W,H: single; end;
  TText = record Text: string; end;
  TButton = record Selected, Selectable: boolean; Text: array[0..0] of TText; end;
- TSlide = class procedure SetSelectOpt(Value: integer); end;
+ TMouseClickAction = (maNone, maLeft, maRight);
+ TSlide = class
+  Visible: boolean;
+  procedure SetSelectOpt(Value: integer);
+  function GetMouseOverArea: TMouseOverRect;
+  function OnClick(X,Y: single): TMouseClickAction;
+ end;
  TBase = class
   Interaction: integer;
   function ParseMouse(MouseButton: integer; BtnDown: boolean; X,Y: integer): boolean; virtual;
  end;
  TScreenName = class(TBase)
   PlayerIndex, AvatarTarget, AvatarCurrent, LevelIndex, PlayerSelectIID: integer;
+  PlayerMic, PlayerMicIID, MicDelta: integer;
   SelectedPlayerCount: integer;
   PlayerNames: array[0..1] of string;
   PlayerAvatars, PlayerLevel: array[0..1] of integer;
   Button: array[0..0] of TButton;
-  SelectsS: array[0..0] of TSlide;
+  SelectsS: array[0..1] of TSlide;
+  function InRegion(X,Y: single; Bounds: TMouseOverRect): boolean;
+  procedure StopTextInput;
+  procedure ChangeMic(Delta: integer);
   function InteractAt(X,Y: integer): integer;
   function CardRect(I: integer): TPlayerSlotRect;
   function DifficultySegmentRect(PlayerID, Segment: integer): TMouseOverRect;
@@ -60,6 +70,10 @@ var
  Hit,Calls,LastX,LastY: integer; S:TScreenName;
 procedure SetTextInput(Value:boolean); begin end;
 procedure TSlide.SetSelectOpt(Value:integer); begin end;
+function TSlide.GetMouseOverArea: TMouseOverRect;
+begin Result.X:=100; Result.Y:=200; Result.W:=40; Result.H:=20; end;
+function TSlide.OnClick(X,Y:single): TMouseClickAction;
+begin if X < 120 then Result:=maLeft else Result:=maRight; end;
 function TBase.ParseMouse(MouseButton:integer; BtnDown:boolean; X,Y:integer):boolean;
 begin Inc(Calls);LastX:=X;LastY:=Y;Result:=true;end;
 function TScreenName.InteractAt(X,Y:integer):integer;
@@ -67,6 +81,13 @@ begin Result:=Hit;end;
 function TScreenName.CardRect(I:integer):TPlayerSlotRect;
 begin Result.X:=I*100;Result.Y:=0;Result.W:=100;Result.H:=100;end;
 procedure TScreenName.RefreshProfile; begin end;
+function TScreenName.InRegion(X,Y: single; Bounds: TMouseOverRect): boolean;
+begin
+ Result:=(X>=Bounds.X) and (X<=Bounds.X+Bounds.W) and
+         (Y>=Bounds.Y) and (Y<=Bounds.Y+Bounds.H);
+end;
+procedure TScreenName.StopTextInput; begin end;
+procedure TScreenName.ChangeMic(Delta:integer); begin MicDelta:=Delta; end;
 ''' + geometry + method + r'''
 procedure Check(Value:boolean;const Msg:string);
 begin if not Value then raise Exception.Create(Msg);end;
@@ -76,8 +97,14 @@ begin
  Theme.Name.Cards.Rows:=1;Theme.Name.Cards.Panel.H:=100;Theme.Name.Cards.Panel.W:=100;
  Theme.Name.SelectPlayerLevel.X:=10;
  S:=TScreenName.Create;S.SelectedPlayerCount:=2;S.SelectsS[0]:=TSlide.Create;
+ S.PlayerMic:=1;S.PlayerMicIID:=8;S.SelectsS[1]:=TSlide.Create;
  S.Button[PlayerName].Selectable:=true;S.PlayerSelectIID:=7;
  try
+  S.SelectsS[1].Visible:=true;
+  S.ParseMouse(1,true,210,420);
+  Check((Calls=0) and (S.Interaction=S.PlayerMicIID) and (S.MicDelta=-1),'mic left click submitted setup');
+  S.ParseMouse(1,true,260,420);
+  Check((Calls=0) and (S.Interaction=S.PlayerMicIID) and (S.MicDelta=1),'mic right click submitted setup');
   Hit:=PlayerAvatarIID;S.ParseMouse(1,true,40,40);
   Check((Calls=0) and (S.Interaction=PlayerAvatarIID),'avatar click submitted setup');
   Hit:=PlayerNameIID;S.ParseMouse(1,true,40,40);
@@ -99,8 +126,8 @@ begin
   Check((Calls=1) and (S.PlayerIndex=0) and (S.Interaction=S.PlayerSelectIID),'hidden name editor received focus');
   Theme.Name.Cards.Enabled:=false;Hit:=PlayerNameIID;
   S.ParseMouse(1,true,40,40);Check(Calls=2,'legacy click dispatch changed');
- finally S.SelectsS[0].Free;S.Free;end;
- WriteLn('PASS: card editors, external editor, card selection, slide coordinates, difficulty and legacy dispatch');
+ finally S.SelectsS[1].Free;S.SelectsS[0].Free;S.Free;end;
+ WriteLn('PASS: mic selector, card editors, external editor, card selection, slide coordinates, difficulty and legacy dispatch');
 end.
 '''
         with tempfile.TemporaryDirectory() as directory:
