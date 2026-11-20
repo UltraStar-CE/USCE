@@ -379,17 +379,17 @@ begin;
   MaxX := Position.W-1;
   MaxY := (Position.H-1) / 2;
   Sound.LockAnalysisBuffer();
-  SetLength(PointList, (Length(Sound.AnalysisBuffer) + SampleIndexStep - 1) div SampleIndexStep);
+  SetLength(PointList, (CaptureWindowSamples + SampleIndexStep - 1) div SampleIndexStep);
 
   for PointIndex := 0 to High(PointList) do
   begin
     SampleIndex := PointIndex * SampleIndexStep;
     PointList[PointIndex].X := SampleIndex;
-    PointList[PointIndex].Y := Sound.AnalysisBuffer[SampleIndex];
+    PointList[PointIndex].Y := Sound.AnalysisBuffer[Length(Sound.AnalysisBuffer) - CaptureWindowSamples + SampleIndex];
   end;
 
   Sound.UnlockAnalysisBuffer();
-  Renderer.DrawLineStrip(PointList, MaxX/High(Sound.AnalysisBuffer), MaxY/Low(Smallint), Position.X, Position.Y + MaxY, Col.R, Col.G, Col.B, 1);
+  Renderer.DrawLineStrip(PointList, MaxX/(CaptureWindowSamples - 1), MaxY/Low(Smallint), Position.X, Position.Y + MaxY, Col.R, Col.G, Col.B, 1);
 end;
 
 procedure SingDrawNoteLines(Left, Top, Right: real; LineSpacing: integer; LineThickness: single);

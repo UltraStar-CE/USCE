@@ -61,6 +61,16 @@ type
     function GetClock(): real; virtual; abstract;
   end;
 
+  TPlaybackPhase = record
+  private
+    FOffsets: array[0..14] of int64;
+    FCount, FNext: integer;
+    FPrevious: int64;
+  public
+    function Observe(ClockUs: int64; Position: double): int64;
+  end;
+
+function MonotonicMicroseconds: int64;
 procedure CountSkipTimeSet;
 procedure CountSkipTime;
 procedure CountMidTime;
@@ -78,7 +88,7 @@ var
 implementation
 
 uses
-  sdl2,
+  SysUtils, sdl2,
   UCommon;
   
 const
@@ -93,6 +103,45 @@ SDL_GetTicks
 http://www.gamedev.net/community/forums/topic.asp?topic_id=466145&whichpage=1%EE%8D%B7
 *)
 
+
+function MonotonicMicroseconds: int64;
+var Frequency: UInt64;
+begin
+  Frequency := SDL_GetPerformanceFrequency;
+  if Frequency = 0 then Exit(int64(GetTickCount64) * 1000);
+  Result := Trunc(SDL_GetPerformanceCounter / Frequency * 1000000.0);
+end;
+
+function TPlaybackPhase.Observe(ClockUs: int64; Position: double): int64;
+var
+  Offset, Value: int64;
+  Sorted: array[0..14] of int64;
+  I, J: integer;
+begin
+  Offset := ClockUs - Round(Position * 1000000);
+  if (FCount > 0) and (Abs(Offset - FPrevious) > 100000) then
+  begin
+    FCount := 0;
+    FNext := 0;
+  end;
+  FPrevious := Offset;
+  FOffsets[FNext] := Offset;
+  FNext := (FNext + 1) mod Length(FOffsets);
+  if FCount < Length(FOffsets) then Inc(FCount);
+  Move(FOffsets[0], Sorted[0], FCount * SizeOf(int64));
+  for I := 1 to FCount - 1 do
+  begin
+    Value := Sorted[I];
+    J := I - 1;
+    while (J >= 0) and (Sorted[J] > Value) do
+    begin
+      Sorted[J + 1] := Sorted[J];
+      Dec(J);
+    end;
+    Sorted[J + 1] := Value;
+  end;
+  Result := Sorted[FCount div 2];
+end;
 
 procedure CountSkipTimeSet;
 begin
