@@ -89,7 +89,8 @@ type
     fStartTime, fFirstNote: real;
     fScoringSeekStartBeat: integer;
 
-    procedure SeekTo(Position: real; DisqualifyScore: boolean = true);
+    procedure SeekTo(Position: real; DisqualifyScore: boolean = true;
+      KeepScoreFeedback: boolean = false);
     procedure SyncBackgroundVideo;
     procedure RepeatPracticePhrase;
     procedure LoadNextSong();
@@ -109,7 +110,9 @@ type
     function RemoteMediaStartUs: int64;
     function RemoteSongDurationUs: int64;
     procedure ResumeAfterScoringTail;
-    function HasPendingDelayedScoring(EndBeat: integer): boolean;
+  protected
+    function HasPendingDelayedScoring(EndBeat: integer;
+      WaitForBeatMidpoint: boolean = false): boolean;
   public
     PracticeLoop: TPracticeLoop;
     ScoringTailActive: boolean;
@@ -710,7 +713,7 @@ begin
     fCurrentVideo.Position := CurrentSong.VideoGAP + AudioPlayback.Position;
 end;
 
-procedure TScreenSingController.SeekTo(Position: real; DisqualifyScore: boolean);
+procedure TScreenSingController.SeekTo(Position: real; DisqualifyScore, KeepScoreFeedback: boolean);
 var I: integer; Color: TRGB;
 begin
   ResetSungPitchReference;
@@ -723,12 +726,16 @@ begin
     begin
       Player[I].ScoreLast := Player[I].Score + Player[I].ScoreGolden;
       Player[I].LastSentencePerfect := false;
+      if KeepScoreFeedback then Scores.SetScore(I, Player[I].ScoreTotalInt);
     end;
-    Scores.KillAllPopUps;
-    Scores.ClearPlayers;
-    Color.R := 0; Color.G := 0; Color.B := 0;
-    for I := 0 to PlayersPlay - 1 do Scores.AddPlayer(Tex_ScoreBG[I], Color, Player[I].ScoreTotalInt);
-    Scores.Init;
+    if not KeepScoreFeedback then
+    begin
+      Scores.KillAllPopUps;
+      Scores.ClearPlayers;
+      Color.R := 0; Color.G := 0; Color.B := 0;
+      for I := 0 to PlayersPlay - 1 do Scores.AddPlayer(Tex_ScoreBG[I], Color, Player[I].ScoreTotalInt);
+      Scores.Init;
+    end;
     GoldenRec.KillAll;
   end;
   // Resume detection at the destination without scoring the skipped beats.
@@ -761,9 +768,10 @@ begin
   Finished := AudioPlayback.Finished;
   if not PracticeLoop.ReachedEnd(LyricsState.GetCurrentTime(), Finished) then Exit;
   Sing(Self);
-  if HasPendingDelayedScoring(LastPracticeBeat) then Exit;
+  // A point inside a beat can precede its scoring midpoint at zero delay.
+  if HasPendingDelayedScoring(LastPracticeBeat, not Finished) then Exit;
   FinishPracticePassScoring(Self);
-  SeekTo(PracticeLoop.StartTime);
+  SeekTo(PracticeLoop.StartTime, true, true);
   if Finished then AudioPlayback.Play;
 end;
 
@@ -2066,7 +2074,8 @@ begin
   if not Paused then AudioPlayback.Play;
 end;
 
-function TScreenSingController.HasPendingDelayedScoring(EndBeat: integer): boolean;
+function TScreenSingController.HasPendingDelayedScoring(EndBeat: integer;
+  WaitForBeatMidpoint: boolean): boolean;
 var
   PlayerIndex, TrackIndex, LineIndex, LastBeat, TargetBeat: integer;
 begin
@@ -2074,7 +2083,7 @@ begin
   for PlayerIndex := 0 to PlayersPlay - 1 do
   begin
     if not Player[PlayerIndex].DetectionReady or
-      (Ini.MicDelay + Player[PlayerIndex].DetectionDelay <= 0) then Continue;
+      (not WaitForBeatMidpoint and (Ini.MicDelay + Player[PlayerIndex].DetectionDelay <= 0)) then Continue;
     TrackIndex := 0;
     if CurrentSong.isDuet then
       TrackIndex := Player[PlayerIndex].Track;

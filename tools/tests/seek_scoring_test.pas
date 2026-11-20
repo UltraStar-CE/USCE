@@ -1,9 +1,10 @@
 program SeekScoringTest;
 {$mode Delphi}
 uses {$IFDEF UNIX}cthreads,{$ENDIF}
-  SysUtils, Math, UMusic, USong, UNote, UScreenSingController,
-  UIni, URecord, UBeatTimer, UGraphic, UScreenSong, USingScores, UCommon, UThemes;
-var Screen: TScreenSingController; Track, I: integer; Points, Before, Bonus: real;
+  SysUtils, Math, IniFiles, UMusic, USong, UNote, UScreenSingController,
+  UIni, URecord, UBeatTimer, UGraphic, UScreenSong, USingScores, UCommon, UThemes, UPath;
+type TSeekScoringScreen = class(TScreenSingController);
+var Screen: TSeekScoringScreen; Track, I: integer; Points, Before, Bonus: real;
   Loop: TPracticeLoop;
 
 procedure Check(Value: boolean; const MessageText: string);
@@ -24,6 +25,21 @@ end;
 procedure CheckMicrophoneRetries;
 var Device: TAudioInputDevice; Sound: TCaptureBuffer; PerBeat: real; Color: TRGB;
   RatingBefore: real;
+
+  procedure SetTestDelay(Delay: integer);
+  var Config: TIniFile;
+  begin
+    Config := TIniFile.Create(Ini.FileName.ToNative);
+    try
+      // The legacy section loads on main and migrates on newer builds.
+      Config.EraseSection('SlotDelay');
+      Config.WriteInteger('PlayerDelay', 'P1', Delay);
+    finally
+      Config.Free;
+    end;
+    Ini.LastReadDelays := -1;
+    Ini.ReloadDelays;
+  end;
 
   procedure SingBeat(Beat: integer; Voiced: boolean; Seek: boolean);
   var J: integer;
@@ -46,6 +62,7 @@ var Device: TAudioInputDevice; Sound: TCaptureBuffer; PerBeat: real; Color: TRGB
 
 begin
   Ini := TIni(TIni.NewInstance);
+  Ini.Filename := Path(UTF8String(ParamStr(1))).Append('seek-delay.ini');
   LyricsState := TLyricsState(TLyricsState.NewInstance);
   ScreenSong := TScreenSong(TScreenSong.NewInstance);
   Theme := TTheme(TTheme.NewInstance);
@@ -103,8 +120,8 @@ begin
     Equal(Player[0].ScorePerfectRemaining, 0, 'retries cannot consume score potential again');
     Player[0].ReplaceBeatScore(0, 0, 10, PerBeat - 1, false);
     FinalizeLine(0, 0);
-    Equal(Screen.Scores.Players[0].ScoreDisplayed, MAX_SONG_SCORE - 1,
-      'display updates even when line bonus remains clamped at its maximum');
+    Equal(Screen.Scores.Players[0].Score, MAX_SONG_SCORE - 1,
+      'the target updates even when line bonus remains clamped at its maximum');
     // A line whose bonus was already updated during a retry still rates once.
     Screen.Scores.KillAllPopUps;
     RatingBefore := Screen.Scores.Players[0].RBTarget;
@@ -119,10 +136,10 @@ begin
 
     // A pre-existing score for a beat skipped by negative delay is replaced
     // by zero, while the following beat can still score from the new capture.
-    Ini.PlayerDelay[0] := -250;
+    SetTestDelay(-250);
     SingBeat(10, true, true);
     Equal(Player[0].Score, PerBeat, 'negative delay clears the unsampled prefix');
-    Ini.PlayerDelay[0] := 0;
+    SetTestDelay(0);
 
     Screen.Scores.ClearPlayers;
     Screen.Scores.AddPlayer(nil, Color);
@@ -139,11 +156,18 @@ begin
     Screen.Scores.Draw(false, false);
     Equal(Screen.Scores.Players[0].RBTarget, RatingBefore,
       'a lower score does not reset the rating during the popup');
-    Equal(Screen.Scores.Players[0].ScoreDisplayed, 500, 'revised display discards obsolete animated points');
+    Equal(Screen.Scores.Players[0].Score, 500, 'downward revision sets the new target');
     Equal(Screen.Scores.Players[1].Score, 2000, 'other singer popup is preserved');
-    Screen.Scores.KillAllPopUps;
     Screen.Scores.SetScore(0, 400);
+    Equal(Screen.Scores.Players[0].RBTarget, RatingBefore, 'a revision keeps both ratings pending');
+    Screen.Scores.Settings.Phase1Time := 0;
+    Screen.Scores.Settings.Phase2Time := 0;
+    Screen.Scores.Settings.Phase3Time := -1;
+    Screen.Scores.Draw(false, false);
     Equal(Screen.Scores.Players[0].ScoreDisplayed, 400, 'revised display cannot restore old popup points');
+    Equal(Screen.Scores.Players[0].RBTarget, RatingBefore + 0.18,
+      'both ratings finish after a downward revision');
+    Equal(Screen.Scores.Players[1].ScoreDisplayed, 2000, 'other singer points finish');
     Player[0].ResetScores;
     Check(GetPlayerSentenceScore(0, 0, 0, PerBeat), 'initialize loop scoring');
     Player[0].ReplaceBeatScore(0, 0, 9, 25, false);
@@ -158,6 +182,20 @@ begin
     Equal(Player[0].Score, 175, 'unsampled loop tail clears old points; both outside beats survive');
     Check(Player[0].SentenceFinalized[0][0], 'a line ending exactly at B still awards its revised bonus');
     Screen.PracticeLoop := Default(TPracticeLoop);
+    Screen.PracticeLoop.SelectPoint(GetTimeFromBeat(10));
+    Screen.PracticeLoop.SelectPoint(GetTimeFromBeat(29) + 0.3 * 60 / CurrentSong.BPM);
+    CurrentSong.Tracks[0].Lines[0].Notes[0].Duration := 20;
+    Player[0].DetectionDelay := 0;
+    Player[0].DetectionBeat := 28;
+    Check(Screen.LastPracticeBeat = 29, 'fractional B keeps its last beat');
+    Check(Screen.HasPendingDelayedScoring(Screen.LastPracticeBeat, true),
+      'practice waits for the last beat midpoint at zero delay');
+    Check(not Screen.HasPendingDelayedScoring(Screen.LastPracticeBeat),
+      'ordinary end still ignores an undelayed cursor');
+    Player[0].DetectionBeat := 29;
+    Check(not Screen.HasPendingDelayedScoring(Screen.LastPracticeBeat, true),
+      'practice wraps once the last beat is sampled');
+    Screen.PracticeLoop := Default(TPracticeLoop);
     WriteLn('Real PCM hit/miss retries and pending score display passed');
   finally
     Screen.Scores.Free; Screen.Scores := nil;
@@ -166,6 +204,7 @@ begin
     Theme.FreeInstance; Theme := nil;
     ScreenSong.FreeInstance; ScreenSong := nil;
     LyricsState.FreeInstance; LyricsState := nil;
+    Ini.Filename := nil;
     Ini.FreeInstance; Ini := nil;
   end;
 end;
@@ -193,7 +232,7 @@ begin
   SetLength(CurrentSong.Tracks, 8);
   CurrentSong.isDuet := true;
   // Exercise the real bonus calculation without creating a window or textures.
-  Screen := TScreenSingController(TScreenSingController.NewInstance);
+  Screen := TSeekScoringScreen(TSeekScoringScreen.NewInstance);
   SetLength(Screen.NumEmptySentences, 8);
   SetLength(Player, 2);
   PlayersPlay := 2;
