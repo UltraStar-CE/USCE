@@ -1,0 +1,166 @@
+[
+  {
+    "theme": "Clarity",
+    "skin": "Blue",
+    "screen": "sing-active",
+    "actual": "TScreenSingController",
+    "captured": true
+  },
+  {
+    "theme": "Clarity",
+    "skin": "Blue",
+    "screen": "highscores",
+    "actual": "TScreenHighScores",
+    "captured": true
+  },
+  {
+    "theme": "Modern",
+    "skin": "Blue",
+    "screen": "sing-active",
+    "actual": "TScreenSingController",
+    "captured": true
+  },
+  {
+    "theme": "Modern",
+    "skin": "Blue",
+    "screen": "highscores",
+    "actual": "TScreenHighScores",
+    "captured": true
+  },
+  {
+    "theme": "Candy",
+    "skin": "Clouds static",
+    "screen": "sing-active",
+    "actual": "TScreenSingController",
+    "captured": true
+  },
+  {
+    "theme": "Candy",
+    "skin": "Clouds static",
+    "screen": "highscores",
+    "actual": "TScreenHighScores",
+    "captured": true
+  },
+  {
+    "theme": "Deluxe",
+    "skin": "Blue",
+    "screen": "sing-active",
+    "actual": "TScreenSingController",
+    "captured": true
+  },
+  {
+    "theme": "Deluxe",
+    "skin": "Blue",
+    "screen": "highscores",
+    "actual": "TScreenHighScores",
+    "captured": true
+  },
+  {
+    "theme": "Karaoke",
+    "skin": "Negro",
+    "screen": "sing-active",
+    "actual": "TScreenSingController",
+    "captured": true
+  },
+  {
+    "theme": "Karaoke",
+    "skin": "Negro",
+    "screen": "highscores",
+    "actual": "TScreenHighScores",
+    "captured": true
+  },
+  {
+    "theme": "Midnight",
+    "skin": "Blue",
+    "screen": "sing-active",
+    "actual": "TScreenSingController",
+    "captured": true
+  },
+  {
+    "theme": "Midnight",
+    "skin": "Blue",
+    "screen": "highscores",
+    "actual": "TScreenHighScores",
+    "captured": true
+  },
+  {
+    "theme": "Neon",
+    "skin": "Pink",
+    "screen": "sing-active",
+    "actual": "TScreenSingController",
+    "captured": true
+  },
+  {
+    "theme": "Neon",
+    "skin": "Pink",
+    "screen": "highscores",
+    "actual": "TScreenHighScores",
+    "captured": true
+  },
+  {
+    "theme": "Temptation",
+    "skin": "Temptation (16-9)",
+    "screen": "sing-active",
+    "actual": "TScreenSingController",
+    "captured": true
+  },
+  {
+    "theme": "Temptation",
+    "skin": "Temptation (16-9)",
+    "screen": "highscores",
+    "actual": "TScreenHighScores",
+    "captured": true
+  },
+  {
+    "theme": "Verdure",
+    "skin": "Drippin",
+    "screen": "sing-active",
+    "actual": "TScreenSingController",
+    "captured": true
+  },
+  {
+    "theme": "Verdure",
+    "skin": "Drippin",
+    "screen": "highscores",
+    "actual": "TScreenHighScores",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyArgon",
+    "skin": "Basic Violet",
+    "screen": "sing-active",
+    "actual": "TScreenSingController",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyArgon",
+    "skin": "Basic Violet",
+    "screen": "highscores",
+    "actual": "TScreenHighScores",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyNeon",
+    "skin": "Static Violet",
+    "screen": "sing-active",
+    "actual": "TScreenSingController",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyNeon",
+    "skin": "Static Violet",
+    "screen": "highscores",
+    "actual": "TScreenHighScores",
+    "captured": true
+  },
+  {
+    "theme": "Classic",
+    "screen": "sing-active",
+    "captured": false
+  },
+  {
+    "theme": "Classic",
+    "screen": "highscores",
+    "captured": false
+  }
+]

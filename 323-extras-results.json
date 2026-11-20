@@ -1,0 +1,1232 @@
+[
+  {
+    "theme": "Candy",
+    "skin": "Clouds static",
+    "screen": "network",
+    "actual": "TScreenOptionsNetwork",
+    "captured": true
+  },
+  {
+    "theme": "Candy",
+    "skin": "Clouds static",
+    "screen": "score",
+    "actual": "TScreenScore",
+    "captured": true
+  },
+  {
+    "theme": "Candy",
+    "skin": "Clouds static",
+    "screen": "highscores",
+    "actual": "TScreenHighScores",
+    "captured": true
+  },
+  {
+    "theme": "Candy",
+    "skin": "Clouds static",
+    "screen": "party-rounds",
+    "actual": "TScreenPartyRounds",
+    "captured": true
+  },
+  {
+    "theme": "Candy",
+    "skin": "Clouds static",
+    "screen": "party-new-round",
+    "actual": "TScreenPartyNewRound",
+    "captured": true
+  },
+  {
+    "theme": "Candy",
+    "skin": "Clouds static",
+    "screen": "party-win",
+    "actual": "TScreenPartyWin",
+    "captured": true
+  },
+  {
+    "theme": "Candy",
+    "skin": "Clouds static",
+    "screen": "tournament-rounds",
+    "actual": "TScreenPartyTournamentRounds",
+    "captured": true
+  },
+  {
+    "theme": "Candy",
+    "skin": "Clouds static",
+    "screen": "tournament-win",
+    "actual": "TScreenPartyTournamentWin",
+    "captured": true
+  },
+  {
+    "theme": "Candy",
+    "skin": "Clouds static",
+    "screen": "song-menu",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Candy",
+    "skin": "Clouds static",
+    "screen": "duplicate",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Candy",
+    "skin": "Clouds static",
+    "screen": "popup-check",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Candy",
+    "skin": "Clouds static",
+    "screen": "popup-input",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Candy",
+    "skin": "Clouds static",
+    "screen": "popup-password",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Candy",
+    "skin": "Clouds static",
+    "screen": "popup-send-score",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Candy",
+    "skin": "Clouds static",
+    "screen": "popup-score-download",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Clarity",
+    "skin": "Blue",
+    "screen": "network",
+    "actual": "TScreenOptionsNetwork",
+    "captured": true
+  },
+  {
+    "theme": "Clarity",
+    "skin": "Blue",
+    "screen": "score",
+    "actual": "TScreenScore",
+    "captured": true
+  },
+  {
+    "theme": "Clarity",
+    "skin": "Blue",
+    "screen": "highscores",
+    "actual": "TScreenHighScores",
+    "captured": true
+  },
+  {
+    "theme": "Clarity",
+    "skin": "Blue",
+    "screen": "party-rounds",
+    "actual": "TScreenPartyRounds",
+    "captured": true
+  },
+  {
+    "theme": "Clarity",
+    "skin": "Blue",
+    "screen": "party-new-round",
+    "actual": "TScreenPartyNewRound",
+    "captured": true
+  },
+  {
+    "theme": "Clarity",
+    "skin": "Blue",
+    "screen": "party-win",
+    "actual": "TScreenPartyWin",
+    "captured": true
+  },
+  {
+    "theme": "Clarity",
+    "skin": "Blue",
+    "screen": "tournament-rounds",
+    "actual": "TScreenPartyTournamentRounds",
+    "captured": true
+  },
+  {
+    "theme": "Clarity",
+    "skin": "Blue",
+    "screen": "tournament-win",
+    "actual": "TScreenPartyTournamentWin",
+    "captured": true
+  },
+  {
+    "theme": "Clarity",
+    "skin": "Blue",
+    "screen": "song-menu",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Clarity",
+    "skin": "Blue",
+    "screen": "duplicate",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Clarity",
+    "skin": "Blue",
+    "screen": "popup-check",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Clarity",
+    "skin": "Blue",
+    "screen": "popup-input",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Clarity",
+    "skin": "Blue",
+    "screen": "popup-password",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Clarity",
+    "skin": "Blue",
+    "screen": "popup-send-score",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Clarity",
+    "skin": "Blue",
+    "screen": "popup-score-download",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Deluxe",
+    "skin": "Blue",
+    "screen": "network",
+    "actual": "TScreenOptionsNetwork",
+    "captured": true
+  },
+  {
+    "theme": "Deluxe",
+    "skin": "Blue",
+    "screen": "score",
+    "actual": "TScreenScore",
+    "captured": true
+  },
+  {
+    "theme": "Deluxe",
+    "skin": "Blue",
+    "screen": "highscores",
+    "actual": "TScreenHighScores",
+    "captured": true
+  },
+  {
+    "theme": "Deluxe",
+    "skin": "Blue",
+    "screen": "party-rounds",
+    "actual": "TScreenPartyRounds",
+    "captured": true
+  },
+  {
+    "theme": "Deluxe",
+    "skin": "Blue",
+    "screen": "party-new-round",
+    "actual": "TScreenPartyNewRound",
+    "captured": true
+  },
+  {
+    "theme": "Deluxe",
+    "skin": "Blue",
+    "screen": "party-win",
+    "actual": "TScreenPartyWin",
+    "captured": true
+  },
+  {
+    "theme": "Deluxe",
+    "skin": "Blue",
+    "screen": "tournament-rounds",
+    "actual": "TScreenPartyTournamentRounds",
+    "captured": true
+  },
+  {
+    "theme": "Deluxe",
+    "skin": "Blue",
+    "screen": "tournament-win",
+    "actual": "TScreenPartyTournamentWin",
+    "captured": true
+  },
+  {
+    "theme": "Deluxe",
+    "skin": "Blue",
+    "screen": "song-menu",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Deluxe",
+    "skin": "Blue",
+    "screen": "duplicate",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Deluxe",
+    "skin": "Blue",
+    "screen": "popup-check",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Deluxe",
+    "skin": "Blue",
+    "screen": "popup-input",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Deluxe",
+    "skin": "Blue",
+    "screen": "popup-password",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Deluxe",
+    "skin": "Blue",
+    "screen": "popup-send-score",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Deluxe",
+    "skin": "Blue",
+    "screen": "popup-score-download",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Karaoke",
+    "skin": "Negro",
+    "screen": "network",
+    "actual": "TScreenOptionsNetwork",
+    "captured": true
+  },
+  {
+    "theme": "Karaoke",
+    "skin": "Negro",
+    "screen": "score",
+    "actual": "TScreenScore",
+    "captured": true
+  },
+  {
+    "theme": "Karaoke",
+    "skin": "Negro",
+    "screen": "highscores",
+    "actual": "TScreenHighScores",
+    "captured": true
+  },
+  {
+    "theme": "Karaoke",
+    "skin": "Negro",
+    "screen": "party-rounds",
+    "actual": "TScreenPartyRounds",
+    "captured": true
+  },
+  {
+    "theme": "Karaoke",
+    "skin": "Negro",
+    "screen": "party-new-round",
+    "actual": "TScreenPartyNewRound",
+    "captured": true
+  },
+  {
+    "theme": "Karaoke",
+    "skin": "Negro",
+    "screen": "party-win",
+    "actual": "TScreenPartyWin",
+    "captured": true
+  },
+  {
+    "theme": "Karaoke",
+    "skin": "Negro",
+    "screen": "tournament-rounds",
+    "actual": "TScreenPartyTournamentRounds",
+    "captured": true
+  },
+  {
+    "theme": "Karaoke",
+    "skin": "Negro",
+    "screen": "tournament-win",
+    "actual": "TScreenPartyTournamentWin",
+    "captured": true
+  },
+  {
+    "theme": "Karaoke",
+    "skin": "Negro",
+    "screen": "song-menu",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Karaoke",
+    "skin": "Negro",
+    "screen": "duplicate",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Karaoke",
+    "skin": "Negro",
+    "screen": "popup-check",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Karaoke",
+    "skin": "Negro",
+    "screen": "popup-input",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Karaoke",
+    "skin": "Negro",
+    "screen": "popup-password",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Karaoke",
+    "skin": "Negro",
+    "screen": "popup-send-score",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Karaoke",
+    "skin": "Negro",
+    "screen": "popup-score-download",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Midnight",
+    "skin": "Blue",
+    "screen": "network",
+    "actual": "TScreenOptionsNetwork",
+    "captured": true
+  },
+  {
+    "theme": "Midnight",
+    "skin": "Blue",
+    "screen": "score",
+    "actual": "TScreenScore",
+    "captured": true
+  },
+  {
+    "theme": "Midnight",
+    "skin": "Blue",
+    "screen": "highscores",
+    "actual": "TScreenHighScores",
+    "captured": true
+  },
+  {
+    "theme": "Midnight",
+    "skin": "Blue",
+    "screen": "party-rounds",
+    "actual": "TScreenPartyRounds",
+    "captured": true
+  },
+  {
+    "theme": "Midnight",
+    "skin": "Blue",
+    "screen": "party-new-round",
+    "actual": "TScreenPartyNewRound",
+    "captured": true
+  },
+  {
+    "theme": "Midnight",
+    "skin": "Blue",
+    "screen": "party-win",
+    "actual": "TScreenPartyWin",
+    "captured": true
+  },
+  {
+    "theme": "Midnight",
+    "skin": "Blue",
+    "screen": "tournament-rounds",
+    "actual": "TScreenPartyTournamentRounds",
+    "captured": true
+  },
+  {
+    "theme": "Midnight",
+    "skin": "Blue",
+    "screen": "tournament-win",
+    "actual": "TScreenPartyTournamentWin",
+    "captured": true
+  },
+  {
+    "theme": "Midnight",
+    "skin": "Blue",
+    "screen": "song-menu",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Midnight",
+    "skin": "Blue",
+    "screen": "duplicate",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Midnight",
+    "skin": "Blue",
+    "screen": "popup-check",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Midnight",
+    "skin": "Blue",
+    "screen": "popup-input",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Midnight",
+    "skin": "Blue",
+    "screen": "popup-password",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Midnight",
+    "skin": "Blue",
+    "screen": "popup-send-score",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Midnight",
+    "skin": "Blue",
+    "screen": "popup-score-download",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Modern",
+    "skin": "Blue",
+    "screen": "network",
+    "actual": "TScreenOptionsNetwork",
+    "captured": true
+  },
+  {
+    "theme": "Modern",
+    "skin": "Blue",
+    "screen": "score",
+    "actual": "TScreenScore",
+    "captured": true
+  },
+  {
+    "theme": "Modern",
+    "skin": "Blue",
+    "screen": "highscores",
+    "actual": "TScreenHighScores",
+    "captured": true
+  },
+  {
+    "theme": "Modern",
+    "skin": "Blue",
+    "screen": "party-rounds",
+    "actual": "TScreenPartyRounds",
+    "captured": true
+  },
+  {
+    "theme": "Modern",
+    "skin": "Blue",
+    "screen": "party-new-round",
+    "actual": "TScreenPartyNewRound",
+    "captured": true
+  },
+  {
+    "theme": "Modern",
+    "skin": "Blue",
+    "screen": "party-win",
+    "actual": "TScreenPartyWin",
+    "captured": true
+  },
+  {
+    "theme": "Modern",
+    "skin": "Blue",
+    "screen": "tournament-rounds",
+    "actual": "TScreenPartyTournamentRounds",
+    "captured": true
+  },
+  {
+    "theme": "Modern",
+    "skin": "Blue",
+    "screen": "tournament-win",
+    "actual": "TScreenPartyTournamentWin",
+    "captured": true
+  },
+  {
+    "theme": "Modern",
+    "skin": "Blue",
+    "screen": "song-menu",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Modern",
+    "skin": "Blue",
+    "screen": "duplicate",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Modern",
+    "skin": "Blue",
+    "screen": "popup-check",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Modern",
+    "skin": "Blue",
+    "screen": "popup-input",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Modern",
+    "skin": "Blue",
+    "screen": "popup-password",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Modern",
+    "skin": "Blue",
+    "screen": "popup-send-score",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Modern",
+    "skin": "Blue",
+    "screen": "popup-score-download",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Neon",
+    "skin": "Pink",
+    "screen": "network",
+    "actual": "TScreenOptionsNetwork",
+    "captured": true
+  },
+  {
+    "theme": "Neon",
+    "skin": "Pink",
+    "screen": "score",
+    "actual": "TScreenScore",
+    "captured": true
+  },
+  {
+    "theme": "Neon",
+    "skin": "Pink",
+    "screen": "highscores",
+    "actual": "TScreenHighScores",
+    "captured": true
+  },
+  {
+    "theme": "Neon",
+    "skin": "Pink",
+    "screen": "party-rounds",
+    "actual": "TScreenPartyRounds",
+    "captured": true
+  },
+  {
+    "theme": "Neon",
+    "skin": "Pink",
+    "screen": "party-new-round",
+    "actual": "TScreenPartyNewRound",
+    "captured": true
+  },
+  {
+    "theme": "Neon",
+    "skin": "Pink",
+    "screen": "party-win",
+    "actual": "TScreenPartyWin",
+    "captured": true
+  },
+  {
+    "theme": "Neon",
+    "skin": "Pink",
+    "screen": "tournament-rounds",
+    "actual": "TScreenPartyTournamentRounds",
+    "captured": true
+  },
+  {
+    "theme": "Neon",
+    "skin": "Pink",
+    "screen": "tournament-win",
+    "actual": "TScreenPartyTournamentWin",
+    "captured": true
+  },
+  {
+    "theme": "Neon",
+    "skin": "Pink",
+    "screen": "song-menu",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Neon",
+    "skin": "Pink",
+    "screen": "duplicate",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Neon",
+    "skin": "Pink",
+    "screen": "popup-check",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Neon",
+    "skin": "Pink",
+    "screen": "popup-input",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Neon",
+    "skin": "Pink",
+    "screen": "popup-password",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Neon",
+    "skin": "Pink",
+    "screen": "popup-send-score",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Neon",
+    "skin": "Pink",
+    "screen": "popup-score-download",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Temptation",
+    "skin": "Temptation (16-9)",
+    "screen": "network",
+    "actual": "TScreenOptionsNetwork",
+    "captured": true
+  },
+  {
+    "theme": "Temptation",
+    "skin": "Temptation (16-9)",
+    "screen": "score",
+    "actual": "TScreenScore",
+    "captured": true
+  },
+  {
+    "theme": "Temptation",
+    "skin": "Temptation (16-9)",
+    "screen": "highscores",
+    "actual": "TScreenHighScores",
+    "captured": true
+  },
+  {
+    "theme": "Temptation",
+    "skin": "Temptation (16-9)",
+    "screen": "party-rounds",
+    "actual": "TScreenPartyRounds",
+    "captured": true
+  },
+  {
+    "theme": "Temptation",
+    "skin": "Temptation (16-9)",
+    "screen": "party-new-round",
+    "actual": "TScreenPartyNewRound",
+    "captured": true
+  },
+  {
+    "theme": "Temptation",
+    "skin": "Temptation (16-9)",
+    "screen": "party-win",
+    "actual": "TScreenPartyWin",
+    "captured": true
+  },
+  {
+    "theme": "Temptation",
+    "skin": "Temptation (16-9)",
+    "screen": "tournament-rounds",
+    "actual": "TScreenPartyTournamentRounds",
+    "captured": true
+  },
+  {
+    "theme": "Temptation",
+    "skin": "Temptation (16-9)",
+    "screen": "tournament-win",
+    "actual": "TScreenPartyTournamentWin",
+    "captured": true
+  },
+  {
+    "theme": "Temptation",
+    "skin": "Temptation (16-9)",
+    "screen": "song-menu",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Temptation",
+    "skin": "Temptation (16-9)",
+    "screen": "duplicate",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Temptation",
+    "skin": "Temptation (16-9)",
+    "screen": "popup-check",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Temptation",
+    "skin": "Temptation (16-9)",
+    "screen": "popup-input",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Temptation",
+    "skin": "Temptation (16-9)",
+    "screen": "popup-password",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Temptation",
+    "skin": "Temptation (16-9)",
+    "screen": "popup-send-score",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Temptation",
+    "skin": "Temptation (16-9)",
+    "screen": "popup-score-download",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Verdure",
+    "skin": "Drippin",
+    "screen": "network",
+    "actual": "TScreenOptionsNetwork",
+    "captured": true
+  },
+  {
+    "theme": "Verdure",
+    "skin": "Drippin",
+    "screen": "score",
+    "actual": "TScreenScore",
+    "captured": true
+  },
+  {
+    "theme": "Verdure",
+    "skin": "Drippin",
+    "screen": "highscores",
+    "actual": "TScreenHighScores",
+    "captured": true
+  },
+  {
+    "theme": "Verdure",
+    "skin": "Drippin",
+    "screen": "party-rounds",
+    "actual": "TScreenPartyRounds",
+    "captured": true
+  },
+  {
+    "theme": "Verdure",
+    "skin": "Drippin",
+    "screen": "party-new-round",
+    "actual": "TScreenPartyNewRound",
+    "captured": true
+  },
+  {
+    "theme": "Verdure",
+    "skin": "Drippin",
+    "screen": "party-win",
+    "actual": "TScreenPartyWin",
+    "captured": true
+  },
+  {
+    "theme": "Verdure",
+    "skin": "Drippin",
+    "screen": "tournament-rounds",
+    "actual": "TScreenPartyTournamentRounds",
+    "captured": true
+  },
+  {
+    "theme": "Verdure",
+    "skin": "Drippin",
+    "screen": "tournament-win",
+    "actual": "TScreenPartyTournamentWin",
+    "captured": true
+  },
+  {
+    "theme": "Verdure",
+    "skin": "Drippin",
+    "screen": "song-menu",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Verdure",
+    "skin": "Drippin",
+    "screen": "duplicate",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Verdure",
+    "skin": "Drippin",
+    "screen": "popup-check",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Verdure",
+    "skin": "Drippin",
+    "screen": "popup-input",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Verdure",
+    "skin": "Drippin",
+    "screen": "popup-password",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Verdure",
+    "skin": "Drippin",
+    "screen": "popup-send-score",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Verdure",
+    "skin": "Drippin",
+    "screen": "popup-score-download",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyArgon",
+    "skin": "Basic Violet",
+    "screen": "network",
+    "actual": "TScreenOptionsNetwork",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyArgon",
+    "skin": "Basic Violet",
+    "screen": "score",
+    "actual": "TScreenScore",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyArgon",
+    "skin": "Basic Violet",
+    "screen": "highscores",
+    "actual": "TScreenHighScores",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyArgon",
+    "skin": "Basic Violet",
+    "screen": "party-rounds",
+    "actual": "TScreenPartyRounds",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyArgon",
+    "skin": "Basic Violet",
+    "screen": "party-new-round",
+    "actual": "TScreenPartyNewRound",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyArgon",
+    "skin": "Basic Violet",
+    "screen": "party-win",
+    "actual": "TScreenPartyWin",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyArgon",
+    "skin": "Basic Violet",
+    "screen": "tournament-rounds",
+    "actual": "TScreenPartyTournamentRounds",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyArgon",
+    "skin": "Basic Violet",
+    "screen": "tournament-win",
+    "actual": "TScreenPartyTournamentWin",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyArgon",
+    "skin": "Basic Violet",
+    "screen": "song-menu",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyArgon",
+    "skin": "Basic Violet",
+    "screen": "duplicate",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyArgon",
+    "skin": "Basic Violet",
+    "screen": "popup-check",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyArgon",
+    "skin": "Basic Violet",
+    "screen": "popup-input",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyArgon",
+    "skin": "Basic Violet",
+    "screen": "popup-password",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyArgon",
+    "skin": "Basic Violet",
+    "screen": "popup-send-score",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyArgon",
+    "skin": "Basic Violet",
+    "screen": "popup-score-download",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyNeon",
+    "skin": "Static Violet",
+    "screen": "network",
+    "actual": "TScreenOptionsNetwork",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyNeon",
+    "skin": "Static Violet",
+    "screen": "score",
+    "actual": "TScreenScore",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyNeon",
+    "skin": "Static Violet",
+    "screen": "highscores",
+    "actual": "TScreenHighScores",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyNeon",
+    "skin": "Static Violet",
+    "screen": "party-rounds",
+    "actual": "TScreenPartyRounds",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyNeon",
+    "skin": "Static Violet",
+    "screen": "party-new-round",
+    "actual": "TScreenPartyNewRound",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyNeon",
+    "skin": "Static Violet",
+    "screen": "party-win",
+    "actual": "TScreenPartyWin",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyNeon",
+    "skin": "Static Violet",
+    "screen": "tournament-rounds",
+    "actual": "TScreenPartyTournamentRounds",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyNeon",
+    "skin": "Static Violet",
+    "screen": "tournament-win",
+    "actual": "TScreenPartyTournamentWin",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyNeon",
+    "skin": "Static Violet",
+    "screen": "song-menu",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyNeon",
+    "skin": "Static Violet",
+    "screen": "duplicate",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyNeon",
+    "skin": "Static Violet",
+    "screen": "popup-check",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyNeon",
+    "skin": "Static Violet",
+    "screen": "popup-input",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyNeon",
+    "skin": "Static Violet",
+    "screen": "popup-password",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyNeon",
+    "skin": "Static Violet",
+    "screen": "popup-send-score",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "WorldPartyNeon",
+    "skin": "Static Violet",
+    "screen": "popup-score-download",
+    "actual": "TScreenSong",
+    "captured": true
+  },
+  {
+    "theme": "Classic",
+    "screen": "network",
+    "captured": false
+  },
+  {
+    "theme": "Classic",
+    "screen": "score",
+    "captured": false
+  },
+  {
+    "theme": "Classic",
+    "screen": "highscores",
+    "captured": false
+  },
+  {
+    "theme": "Classic",
+    "screen": "party-rounds",
+    "captured": false
+  },
+  {
+    "theme": "Classic",
+    "screen": "party-new-round",
+    "captured": false
+  },
+  {
+    "theme": "Classic",
+    "screen": "party-win",
+    "captured": false
+  },
+  {
+    "theme": "Classic",
+    "screen": "tournament-rounds",
+    "captured": false
+  },
+  {
+    "theme": "Classic",
+    "screen": "tournament-win",
+    "captured": false
+  },
+  {
+    "theme": "Classic",
+    "screen": "song-menu",
+    "captured": false
+  },
+  {
+    "theme": "Classic",
+    "screen": "duplicate",
+    "captured": false
+  },
+  {
+    "theme": "Classic",
+    "screen": "popup-check",
+    "captured": false
+  },
+  {
+    "theme": "Classic",
+    "screen": "popup-input",
+    "captured": false
+  },
+  {
+    "theme": "Classic",
+    "screen": "popup-password",
+    "captured": false
+  },
+  {
+    "theme": "Classic",
+    "screen": "popup-send-score",
+    "captured": false
+  },
+  {
+    "theme": "Classic",
+    "screen": "popup-score-download",
+    "captured": false
+  }
+]
