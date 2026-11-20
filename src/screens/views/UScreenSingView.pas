@@ -651,7 +651,7 @@ begin
     LanePanelTexture.X := Layout.GridLeft - Padding;
     LanePanelTexture.Y := Layout.GuideTopY - Padding;
     LanePanelTexture.W := Layout.GridWidth + 2 * Padding;
-    LanePanelTexture.H := 9 * Layout.NoteLineSpacing + 2 * Padding;
+    LanePanelTexture.H := Layout.GuideBottomY - Layout.GuideTopY + 2 * Padding;
     LanePanelTexture.Z := Theme.Sing.LanePanel.Z;
     Renderer.DrawTexture(LanePanelTexture);
     if Theme.Sing.LaneAccentWidth > 0 then

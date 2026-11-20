@@ -55,6 +55,7 @@ type
     GridWidth: integer;
     RowAnchorY: integer;
     GuideTopY: integer;
+    GuideBottomY: integer;
     NoteLineSpacing: integer;
     SlotScale: real;
     ContentScale: real;
@@ -330,6 +331,7 @@ begin
   Result.NoteLineSpacing := Max(6, Min(MaxLineSpacing, Round(BaseLineSpacing * Result.ContentScale)));
   TopPadding := Max(0, SlotHeight - GuideLineCount * Result.NoteLineSpacing);
   Result.GuideTopY := SlotTopY + (TopPadding div 2);
+  Result.GuideBottomY := Result.GuideTopY + (GuideLineCount - 1) * Result.NoteLineSpacing;
   Result.RowAnchorY := Result.GuideTopY + RowAnchorGuideIndex * Result.NoteLineSpacing;
   GridInsetX := Max(1, Round(Config.GridExtraLeft * Result.ContentScale));
   Result.GridLeft := Result.ColumnLeft - GridInsetX;
