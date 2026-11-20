@@ -47,6 +47,9 @@ const
   NumHalftones = 49;  // C2 to C6 (1046.5023 Hz)
   ToneStringOctaveOffset = 2;
   MaxToneCandidates = 5;
+  PhonePcmSampleRate = 48000;
+  CaptureWindowSamples = 4096;
+  CaptureHistorySamples = 2 * CaptureWindowSamples;
 
 type
   // pitch detection algorithm (PDA)
@@ -71,6 +74,8 @@ type
       fVoiceStream: TAudioVoiceStream; // stream for voice passthrough
       fAnalysisBufferLock: PSDL_Mutex;
       fAudioFormat: TAudioFormatInfo;
+      FLocalCaptureEndUs: int64;
+      FLocalSamples: integer;
       Frequencies: TFrequencyArray;
       Delays: TDelayArray;
       fToneCandidates: array[0..MaxToneCandidates-1] of TToneCandidate;
@@ -81,14 +86,15 @@ type
 
       procedure BoostBuffer(Buffer: PByteArray; Size: integer);
       procedure ProcessNewBuffer(Buffer: PByteArray; BufferSize: integer; AllowRecording: boolean = true;
-        AllowBoost: boolean = true);
+        AllowBoost: boolean = true; CaptureEndUs: int64 = 0);
 
       procedure StartCapture(Format: TAudioFormatInfo);
       procedure StopCapture();
 
       procedure ResetToneDiagnostics;
       procedure SetFrequenciesAndDelays(SampleRate: double);
-      procedure AnalyzeSamples(const Samples: array of smallint; Count: integer; SampleRate: double);
+      procedure AnalyzeSamples(const Samples: array of smallint; Count: integer; SampleRate: double; Gain: integer = 1);
+      function AnalysisGain: integer;
       // we call it to analyze sound by checking AMDF
       function AnalyzePitch(PDA: TPDAType; const Samples: array of smallint; Count: integer; SampleRate: double): boolean;
       // use this to check one frequency by AMDF
@@ -97,7 +103,7 @@ type
       function ArrayIndexOfMinimum(const AValues: array of real): Integer;
       procedure UpdateToneCandidatesSimple(const Correlation: TCorrelationArray);
     public
-      AnalysisBuffer:  array[0..4095] of smallint; // newest 4096 samples (MUST BE POWER OF TWO!)
+      AnalysisBuffer: array[0..CaptureHistorySamples-1] of smallint;
       AnalysisBufferSize: integer; // number of samples of BufferArray to analyze
 
       MonitorOnly: boolean; // level preview: no voice playback or recording
@@ -125,8 +131,11 @@ type
       procedure ResetAnalysis;
 
       // use to analyze sound from buffers to get new pitch
-      procedure AnalyzeBuffer;
-      function AnalyzePhoneWindow(PlayerIndex: integer; CenterHostUs: Int64): boolean;
+      procedure AnalyzeBuffer; overload;
+      procedure AnalyzeBuffer(out WindowCenterUs: int64); overload;
+      function AnalyzeLocalWindow(CenterUs: int64; Count: integer): boolean;
+      function HasLocalCapture: boolean;
+      function AnalyzePhoneWindow(PlayerIndex: integer; CenterHostUs: Int64; WindowSamples: integer = 0): boolean;
       // Experimental native phone input, mono S16 at 48 kHz. Main thread only.
       procedure SubmitPhonePcm(Samples: pointer; Count: integer);
       procedure LockAnalysisBuffer();
@@ -262,6 +271,7 @@ uses
   UPhoneAudio,
   URemoteBridgeIPC,
   URemoteInput,
+  UTime,
   UNote;
 
 var
@@ -424,11 +434,11 @@ begin
   inherited;
   LogBuffer := TMemoryStream.Create;
   fAnalysisBufferLock := SDL_CreateMutex();
-  AnalysisBufferSize := Length(AnalysisBuffer);
+  AnalysisBufferSize := CaptureWindowSamples;
   PitchAlgorithm := PDA_CAMDF;
   if GetEnvironmentVariable('USCE_AUDIO_DETECTOR') = 'amdf' then PitchAlgorithm := PDA_AMDF;
   // Experimental comparison for physical and phone microphones alike.
-  case StrToIntDef(GetEnvironmentVariable('USCE_AUDIO_WINDOW'), 4096) of
+  case StrToIntDef(GetEnvironmentVariable('USCE_AUDIO_WINDOW'), CaptureWindowSamples) of
     1024: AnalysisBufferSize := 1024;
     2048: AnalysisBufferSize := 2048;
   end;
@@ -489,37 +499,30 @@ end;
 procedure TCaptureBuffer.ResetAnalysis;
 begin
   LockAnalysisBuffer();
+  FLocalCaptureEndUs := 0;
+  FLocalSamples := 0;
   FillChar(AnalysisBuffer[0], Length(AnalysisBuffer) * SizeOf(SmallInt), 0);
   UnlockAnalysisBuffer();
   ResetToneDiagnostics;
 end;
 
 procedure TCaptureBuffer.ProcessNewBuffer(Buffer: PByteArray; BufferSize: integer; AllowRecording: boolean;
-  AllowBoost: boolean);
+  AllowBoost: boolean; CaptureEndUs: int64);
 var
+  BlockUs, ExpectedEndUs: int64;
   BufferOffset: integer;
   SampleCount:  integer;
-  i:            integer;
 begin
   LastInputTicks := GetTickCount64;
   if (AudioFormat <> nil) and (AudioFormat.SampleRate > 0) then
     LastInputBlockMs := BufferSize * 1000 / (SizeOf(smallint) * AudioFormat.SampleRate);
-  // apply software boost
-  if AllowBoost then BoostBuffer(Buffer, BufferSize);
-
-  // voice passthrough (send data to playback-device)
-  if (assigned(fVoiceStream)) then
-    fVoiceStream.WriteData(Buffer, BufferSize);
-
-  // we assume that samples are in S16Int format
-  // TODO: support float too
-  if (AudioFormat.Format <> asfS16) then
-    Exit;
+  if (AudioFormat = nil) or (AudioFormat.Format <> asfS16) then Exit;
 
   // process BufferArray
   BufferOffset := 0;
 
   SampleCount := BufferSize div SizeOf(SmallInt);
+  if SampleCount = 0 then Exit;
 
   // check if we have more new samples than we can store
   if (SampleCount > Length(AnalysisBuffer)) then
@@ -532,9 +535,21 @@ begin
   LockAnalysisBuffer();
   try
 
-    // move old samples to the beginning of the array (if necessary)
-    for i := 0 to High(AnalysisBuffer)-SampleCount do
-      AnalysisBuffer[i] := AnalysisBuffer[i+SampleCount];
+    if (CaptureEndUs > 0) and (AudioFormat.SampleRate > 0) then
+    begin
+      BlockUs := Round((BufferSize div SizeOf(smallint)) * 1000000.0 / AudioFormat.SampleRate);
+      ExpectedEndUs := FLocalCaptureEndUs + BlockUs;
+      if (FLocalCaptureEndUs = 0) or (Abs(CaptureEndUs - ExpectedEndUs) > Max(30000, BlockUs)) then
+        FLocalSamples := 0
+      else
+        CaptureEndUs := ExpectedEndUs + EnsureRange(CaptureEndUs - ExpectedEndUs, -1000, 1000);
+      FLocalCaptureEndUs := CaptureEndUs;
+      FLocalSamples := Min(FLocalSamples + SampleCount, Length(AnalysisBuffer));
+    end;
+    // Keep enough history to retrieve a full window from before the last callback.
+    if SampleCount < Length(AnalysisBuffer) then
+      Move(AnalysisBuffer[SampleCount], AnalysisBuffer[0],
+        (Length(AnalysisBuffer) - SampleCount) * SizeOf(SmallInt));
 
     // copy new samples to analysis buffer
     Move(Buffer[BufferOffset], AnalysisBuffer[Length(AnalysisBuffer)-SampleCount],
@@ -543,6 +558,11 @@ begin
   finally
     UnlockAnalysisBuffer();
   end;
+
+  // Keep unmodified PCM for pitch analysis. Apply the gain to audible and saved output.
+  if AllowBoost and (Assigned(fVoiceStream) or ((Ini.SavePlayback = 1) and not MonitorOnly)) then
+    BoostBuffer(Buffer, BufferSize);
+  if Assigned(fVoiceStream) then fVoiceStream.WriteData(Buffer, BufferSize);
 
   // save capture-data to BufferLong if enabled
   if AllowRecording and (Ini.SavePlayback = 1) and not MonitorOnly then
@@ -555,15 +575,43 @@ begin
   end;
 end;
 
-procedure TCaptureBuffer.AnalyzeBuffer;
+function TCaptureBuffer.AnalysisGain: integer;
 begin
+  Result := 1;
+  if (FLocalCaptureEndUs > 0) and (Ini.MicBoost in [0..3]) then
+    Result := 1 shl Ini.MicBoost;
+end;
+
+function TCaptureBuffer.HasLocalCapture: boolean;
+begin
+  LockAnalysisBuffer;
+  try
+    Result := FLocalCaptureEndUs > 0;
+  finally
+    UnlockAnalysisBuffer;
+  end;
+end;
+
+procedure TCaptureBuffer.AnalyzeBuffer;
+var Unused: int64;
+begin
+  AnalyzeBuffer(Unused);
+end;
+
+procedure TCaptureBuffer.AnalyzeBuffer(out WindowCenterUs: int64);
+begin
+  WindowCenterUs := 0;
   if (AnalysisBufferSize <> 512) and (AnalysisBufferSize <> 1024) and
-    (AnalysisBufferSize <> 2048) and (AnalysisBufferSize <> 4096) then
-    AnalysisBufferSize := Length(AnalysisBuffer);
+    (AnalysisBufferSize <> 2048) and (AnalysisBufferSize <> CaptureWindowSamples) then
+    AnalysisBufferSize := CaptureWindowSamples;
   LockAnalysisBuffer;
   try
     if Assigned(AudioFormat) then
-      AnalyzeSamples(AnalysisBuffer, AnalysisBufferSize, AudioFormat.SampleRate)
+    begin
+      if (FLocalSamples >= AnalysisBufferSize) and (AudioFormat.SampleRate > 0) then
+        WindowCenterUs := FLocalCaptureEndUs - Round(AnalysisBufferSize * 500000.0 / AudioFormat.SampleRate);
+      AnalyzeSamples(AnalysisBuffer, AnalysisBufferSize, AudioFormat.SampleRate, AnalysisGain);
+    end
     else
       AnalyzeSamples(AnalysisBuffer, AnalysisBufferSize, 0);
   finally
@@ -571,7 +619,32 @@ begin
   end;
 end;
 
-procedure TCaptureBuffer.AnalyzeSamples(const Samples: array of smallint; Count: integer; SampleRate: double);
+function TCaptureBuffer.AnalyzeLocalWindow(CenterUs: int64; Count: integer): boolean;
+var
+  Window: array[0..4095] of smallint;
+  Rate: double;
+  EndIndex, Gain: integer;
+begin
+  Result := false;
+  LockAnalysisBuffer;
+  try
+    if (AudioFormat = nil) or (FLocalCaptureEndUs = 0) then Exit;
+    Rate := AudioFormat.SampleRate;
+    if (Rate <= 0) or (Count < 1) or (Count > Length(Window)) then Exit;
+    EndIndex := Length(AnalysisBuffer) - Round((FLocalCaptureEndUs - CenterUs) * Rate / 1000000.0) + Count div 2;
+    if (EndIndex > Length(AnalysisBuffer)) or
+       (EndIndex - Count < Length(AnalysisBuffer) - FLocalSamples) then Exit;
+    Move(AnalysisBuffer[EndIndex - Count], Window[Length(Window) - Count], Count * SizeOf(smallint));
+    Gain := AnalysisGain;
+  finally
+    UnlockAnalysisBuffer;
+  end;
+  AnalyzeSamples(Window, Count, Rate, Gain);
+  Result := true;
+end;
+
+procedure TCaptureBuffer.AnalyzeSamples(const Samples: array of smallint; Count: integer; SampleRate: double;
+  Gain: integer);
 var
   StartedCounter: UInt64;
   MaxSample, SampleIndex: integer;
@@ -588,7 +661,7 @@ begin
     MaxSample := 0;
     for SampleIndex := Length(Samples) - Count to High(Samples) do
       MaxSample := Max(MaxSample, Abs(integer(Samples[SampleIndex])));
-    MaxVolume := MaxSample / -Low(SmallInt);
+    MaxVolume := MaxSample * Gain / -Low(SmallInt);
     if MaxVolume >= IThresholdVals[Ini.ThresholdIndex] then
       ToneValid := AnalyzePitch(PitchAlgorithm, Samples, Count, SampleRate);
   end;
@@ -596,19 +669,19 @@ begin
   LastAnalysisMicroseconds := (SDL_GetPerformanceCounter - StartedCounter) * 1000000.0 / SDL_GetPerformanceFrequency;
 end;
 
-function TCaptureBuffer.AnalyzePhoneWindow(PlayerIndex: integer; CenterHostUs: Int64): boolean;
-const PhoneSampleRate = 48000;
+function TCaptureBuffer.AnalyzePhoneWindow(PlayerIndex: integer; CenterHostUs: Int64; WindowSamples: integer): boolean;
 var Window: array[0..4095] of SmallInt;
     Count: integer;
     function ReadWindow: boolean;
     begin
       Result := PhoneAudio.ReadCaptureWindow(PlayerIndex,
-        CenterHostUs + Round(Count * 500000.0 / PhoneSampleRate),
+        CenterHostUs + Round(Count * 500000.0 / PhonePcmSampleRate),
         @Window[Length(Window) - Count], Count);
     end;
 begin
   Result := false;
-  Count := AnalysisBufferSize;
+  Count := WindowSamples;
+  if Count = 0 then Count := AnalysisBufferSize;
   if (Count < 1) or (Count > Length(Window)) then Exit;
   if not ReadWindow then
   begin
@@ -617,7 +690,7 @@ begin
     Count := Length(Window) div 2;
     if not ReadWindow then Exit;
   end;
-  AnalyzeSamples(Window, Count, PhoneSampleRate);
+  AnalyzeSamples(Window, Count, PhonePcmSampleRate);
   Result := true;
 end;
 
@@ -844,7 +917,7 @@ begin
   MaxVolume := 0;
   LockAnalysisBuffer();
   try
-    for lSampleIndex := 0 to High(AnalysisBuffer) do
+    for lSampleIndex := Length(AnalysisBuffer) - CaptureWindowSamples to High(AnalysisBuffer) do
     begin
       Sample := AnalysisBuffer[lSampleIndex];
       if (Sample = Low(SmallInt)) or (Sample = High(SmallInt)) then
@@ -852,11 +925,13 @@ begin
       if Abs(Sample) > MaxVolume then
         MaxVolume := Abs(Sample);
     end;
+    MaxVolume := MaxVolume * AnalysisGain;
   finally
     UnlockAnalysisBuffer();
   end;
 
-  Result := MaxVolume / -Low(SmallInt);
+  Clipped := Clipped or (MaxVolume > High(SmallInt));
+  Result := Min(1.0, MaxVolume / -Low(SmallInt));
 end;
 
 const
@@ -1172,7 +1247,9 @@ var
   i:                       integer;
   SourcePtr:               PByte;
   DestPtr:                 PByte;
+  CaptureEndUs:            int64;
 begin
+  CaptureEndUs := MonotonicMicroseconds;
   AudioFormat := InputDevice.AudioFormat;
   if (AudioFormat = nil) then
     Exit;
@@ -1213,7 +1290,7 @@ begin
           Inc(SourcePtr, AudioFormat.FrameSize);
           Inc(DestPtr, SampleSize);
         end;
-        CaptureChannel.ProcessNewBuffer(SingleChannelBuffer, SingleChannelBufferSize);
+        CaptureChannel.ProcessNewBuffer(SingleChannelBuffer, SingleChannelBufferSize, true, true, CaptureEndUs);
       end;
     end;
   finally

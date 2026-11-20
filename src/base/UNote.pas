@@ -221,6 +221,8 @@ var
   BeatClickOutput: TMidiOutput = nil;
   BeatClickClock: TSingClickClock = nil;
   BeatClickScheduled: boolean = false;
+  ScoringPlaybackPhase: TPlaybackPhase;
+  ScoringPlaybackOriginUs: int64;
 
 function TSingClickClock.GetClock: real;
 begin
@@ -436,8 +438,9 @@ end;
 
 function ConfiguredPlayerDelayMs(PlayerIndex: integer): integer;
 const
-  // Leave time for the rest of the pitch window and bounded PCM retransmissions.
-  PhoneCaptureDeadlineMarginMs = 350;
+  // Most beats score as soon as the window arrives. Keep a bounded deadline
+  // for PCM delivered in bursts over the WebSocket fallback.
+  PhoneCaptureDeadlineMarginMs = 750;
 var
   CaptureOffset: integer;
 begin
@@ -952,6 +955,8 @@ procedure ResetSungPitchReference;
 var I: integer;
 begin
   for I := 0 to High(Player) do Player[I].HasLastSungTone := false;
+  ScoringPlaybackPhase := Default(TPlaybackPhase);
+  ScoringPlaybackOriginUs := 0;
 end;
 
 procedure ClearUnsampledScoredBeats(Screen: TScreenSingController;
@@ -1062,7 +1067,11 @@ var
   CaptureOffsetMs:    integer;
   UsedTimedWindow:     boolean;
   DeadlineBeat:        integer;
-  ScoreWhenReady, EarlyReady: boolean;
+  ScoreWhenReady, EarlyReady, UseLocalClock: boolean;
+  LocalClockUs, BeatMediaUs: int64;
+  WindowSamples: integer;
+  WindowRate: double;
+  LocalPlaybackPosition: double;
   RemoteTone:          TRemoteToneSample;
   EndLineIndex, SentenceEnd: integer;
   LastPracticeBeat: integer;
@@ -1076,17 +1085,41 @@ var
       Screen.OnSentenceEnd(CP, SentenceDetected, PlayerIndex, false);
   end;
 
+  function NoteWindowCenterUs(Beat: integer): int64;
+  var NoteStartUs, NoteEndUs, HalfWindowUs: int64;
+  begin
+    Result := Round((Beat + 0.5) * 60000000 / CurrentSong.BPM);
+    if not Assigned(CurrentLineFragment) or not Assigned(CurrentSound.AudioFormat) or
+       (CurrentSound.AudioFormat.SampleRate <= 0) then Exit;
+    NoteStartUs := Round(CurrentLineFragment.StartBeat * 60000000.0 / CurrentSong.BPM);
+    NoteEndUs := NoteStartUs + Round(CurrentLineFragment.Duration * 60000000.0 / CurrentSong.BPM);
+    HalfWindowUs := Round(WindowSamples * 500000.0 / CurrentSound.AudioFormat.SampleRate) + 3000;
+    // Keep the window inside a note where it can fit, on either input path.
+    if NoteEndUs - NoteStartUs >= 2 * HalfWindowUs then
+      Result := EnsureRange(Result, NoteStartUs + HalfWindowUs, NoteEndUs - HalfWindowUs);
+  end;
+
   function CaptureCenterForBeat(Beat: integer): int64;
   begin
     Result := LyricsState.FrameHostUs +
       Round((GetTimeFromBeat(Beat) + LyricsState.StartTime / 1000 -
         CurrentSong.GAP / 1000 + 30 / CurrentSong.BPM - LyricsState.FrameTime) * 1000000) +
-      Int64(CaptureOffsetMs) * 1000;
+      Int64(CaptureOffsetMs) * 1000 + NoteWindowCenterUs(Beat) -
+      Round((Beat + 0.5) * 60000000 / CurrentSong.BPM);
   end;
 begin
   ActualTone := 0;
   NoteHit := false;
   LastPracticeBeat := Screen.LastPracticeBeat;
+  if not Screen.ScoringTailActive then
+  begin
+    LocalPlaybackPosition := AudioPlayback.Position;
+    LocalClockUs := MonotonicMicroseconds;
+    if LocalPlaybackPosition >= 0 then
+      ScoringPlaybackOriginUs := ScoringPlaybackPhase.Observe(LocalClockUs, LocalPlaybackPosition);
+  end
+  else
+    LocalClockUs := MonotonicMicroseconds;
 
   // TODO: add duet mode support
   // use CurrentSong.Tracks[LineSetIndex] with LineSetIndex depending on the current player
@@ -1183,35 +1216,11 @@ begin
 
       FirstBeatToAnalyze := Max(Screen.ScoringSeekStartBeat, FirstBeatToAnalyze);
       CurrentSound := AudioInputProcessor.Sound[PlayerIndex];
+      UseLocalClock := (ScoringPlaybackOriginUs <> 0) and not IsRemotePlayer and not SlotAbsent and
+        (CaptureOffsetMs = UnavailablePhoneCaptureOffset) and CurrentSound.HasLocalCapture;
       for ActualBeat := FirstBeatToAnalyze to PlayerCurBeat do
 
       begin
-        UsedTimedWindow := false;
-        EarlyReady := ScoreWhenReady and (ActualBeat > DeadlineBeat);
-        if EarlyReady then
-        begin
-          UsedTimedWindow := CurrentSound.AnalyzePhoneWindow(PlayerIndex, CaptureCenterForBeat(ActualBeat));
-          if not UsedTimedWindow then
-          begin
-            // Keep the cursor on the first pending beat. A later frame
-            // retries it or reaches the existing scoring deadline.
-            PlayerCurBeat := ActualBeat - 1;
-            Break;
-          end;
-        end;
-        // Finish each player's line after its last delayed beat and before
-        // scoring any following line. Other players may still be singing it.
-        for EndLineIndex := 0 to CurrentSong.Tracks[CP].High do
-          with CurrentSong.Tracks[CP].Lines[EndLineIndex] do
-            if HighNote >= 0 then
-            begin
-              SentenceEnd := Notes[HighNote].StartBeat + Notes[HighNote].Duration;
-              if ActualBeat = SentenceEnd then
-                Screen.OnSentenceEnd(CP, EndLineIndex, PlayerIndex);
-            end;
-        // Keep already-earned line bonuses while skipping input for absent beats.
-        if SlotAbsent then Continue;
-
         // check for an active note at the current time defined in the lyrics
         NoteAvailable := false;
         SentenceDetected := SentenceMin;
@@ -1272,39 +1281,53 @@ begin
           end;
         end;
 
-        CurNotePoints := 0;
-        if (CurrentLineFragment <> nil) and (CurrentSong.Tracks[CP].ScoreValue > 0) then
+        WindowSamples := CurrentSound.AnalysisBufferSize;
+        WindowRate := 0;
+        if ScoreWhenReady then WindowRate := PhonePcmSampleRate
+        else if UseLocalClock and Assigned(CurrentSound.AudioFormat) then
+          WindowRate := CurrentSound.AudioFormat.SampleRate;
+        if (WindowRate > 0) and Assigned(CurrentLineFragment) and
+           (CurrentLineFragment.Duration * 60.0 / CurrentSong.BPM < WindowSamples / WindowRate) then
+          // A full window would combine samples from this note and its neighbors.
+          WindowSamples := Min(WindowSamples, CaptureWindowSamples div 2);
+        UsedTimedWindow := false;
+        EarlyReady := ScoreWhenReady and (ActualBeat > DeadlineBeat);
+        if EarlyReady then
         begin
-          MaxSongPoints := MAX_SONG_SCORE - MAX_SONG_LINE_BONUS;
-
-          // Note: ScoreValue is the sum of all note values of the song
-          // (MaxSongPoints / ScoreValue) is the points that a player
-          // gets for a hit of one beat of a normal note
-          // CurNotePoints is the amount of points that is meassured
-          // for a hit of the note per full beat
-          CurNotePoints := (MaxSongPoints / CurrentSong.Tracks[CP].ScoreValue) *
-            ScoreFactor[CurrentLineFragment.NoteType];
-        end;
-
-        Line := nil;
-        CurrentLineFragment := nil;
-        CurrentNoteType := ntNormal;
-
-        if NoteAvailable then
-        begin
-          Line := @CurrentSong.Tracks[CP].Lines[SentenceDetected];
-          for LineFragmentIndex := 0 to Line.HighNote do
+          UsedTimedWindow := CurrentSound.AnalyzePhoneWindow(PlayerIndex, CaptureCenterForBeat(ActualBeat), WindowSamples);
+          if not UsedTimedWindow then
           begin
-            if (Line.Notes[LineFragmentIndex].StartBeat <= ActualBeat) and
-               (Line.Notes[LineFragmentIndex].StartBeat + Line.Notes[LineFragmentIndex].Duration > ActualBeat) then
-            begin
-              CurrentLineFragment := @Line.Notes[LineFragmentIndex];
-              CurrentNoteType := CurrentLineFragment.NoteType;
-              Break;
-            end;
+            // Keep the cursor on the first pending beat. A later frame
+            // retries it or reaches the existing scoring deadline.
+            PlayerCurBeat := ActualBeat - 1;
+            Break;
           end;
         end;
-
+        if UseLocalClock and not UsedTimedWindow then
+        begin
+          BeatMediaUs := Round(LyricsState.StartTime * 1000) + NoteWindowCenterUs(ActualBeat);
+          CaptureCenterHostUs := ScoringPlaybackOriginUs + BeatMediaUs +
+            Int64(Ini.MicDelay + Player[PlayerIndex].DetectionDelay) * 1000;
+          UsedTimedWindow := CurrentSound.AnalyzeLocalWindow(CaptureCenterHostUs, WindowSamples);
+          if not UsedTimedWindow and NoteAvailable and
+             (LocalClockUs - CaptureCenterHostUs < 90000) then
+          begin
+            PlayerCurBeat := ActualBeat - 1;
+            Break;
+          end;
+        end;
+        // Finish each player's line after its last delayed beat and before
+        // scoring any following line. Other players may still be singing it.
+        for EndLineIndex := 0 to CurrentSong.Tracks[CP].High do
+          with CurrentSong.Tracks[CP].Lines[EndLineIndex] do
+            if HighNote >= 0 then
+            begin
+              SentenceEnd := Notes[HighNote].StartBeat + Notes[HighNote].Duration;
+              if ActualBeat = SentenceEnd then
+                Screen.OnSentenceEnd(CP, EndLineIndex, PlayerIndex);
+            end;
+        // Keep already-earned line bonuses while skipping input for absent beats.
+        if SlotAbsent then Continue;
         CurNotePoints := 0;
         if (CurrentLineFragment <> nil) and (CurrentSong.Tracks[CP].ScoreValue > 0) then
         begin
@@ -1345,20 +1368,20 @@ begin
             // Translate the scoring beat's midpoint into the host clock, then
             // add the acoustic offset in the shared clock.
             CaptureCenterHostUs := CaptureCenterForBeat(ActualBeat);
-            UsedTimedWindow := CurrentSound.AnalyzePhoneWindow(PlayerIndex, CaptureCenterHostUs);
+            UsedTimedWindow := CurrentSound.AnalyzePhoneWindow(PlayerIndex, CaptureCenterHostUs, WindowSamples);
             if not UsedTimedWindow then
               for CaptureShiftUs in CaptureRecoveryShiftsUs do
               begin
                 // At the deadline, prefer nearby contiguous capture over
                 // the unrelated audio currently at the head of the FIFO.
                 UsedTimedWindow := CurrentSound.AnalyzePhoneWindow(PlayerIndex,
-                  CaptureCenterHostUs + CaptureShiftUs);
+                  CaptureCenterHostUs + CaptureShiftUs, WindowSamples);
                 if UsedTimedWindow then Break;
               end;
           end;
           if not UsedTimedWindow then
           begin
-            if CaptureOffsetMs <> UnavailablePhoneCaptureOffset then
+            if UseLocalClock or (CaptureOffsetMs <> UnavailablePhoneCaptureOffset) then
               CurrentSound.ToneValid := false
             else
               CurrentSound.AnalyzeBuffer;
