@@ -14,7 +14,7 @@ const
 
 type
   TAudioCalibrationResult = record
-    Accepted: boolean;
+    Accepted, HasEstimate: boolean;
     DelayMs, UncertaintyMs, Observations, Matches: integer;
   end;
   TAudioCalibration = class
@@ -99,7 +99,7 @@ begin
     Best := Max(Best, Scores[Candidate]);
   end;
   Result.Matches := Best;
-  if Best * 100 < FCount * 80 then Exit;
+  if Best * 2 < FCount then Exit;
   Tolerance := Max(1, FCount div 100);
   LowDelay := -1;
   HighDelay := -1;
@@ -118,7 +118,8 @@ begin
   // same temporal precision as the 10 ms synthetic unit-test observations.
   Result.UncertaintyMs := (HighDelay - LowDelay + 1) div 2 + ClockUncertaintyMs +
     (FMaxGapUs + 1999) div 2000;
-  Result.Accepted := true;
+  Result.HasEstimate := true;
+  Result.Accepted := Best * 100 >= FCount * 80;
 end;
 
 end.

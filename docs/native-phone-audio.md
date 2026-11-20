@@ -64,7 +64,8 @@ to microphone debug recordings by this integration.
 
 The receiver accepts existing phone singing PCM on both direct and relay routes.
 It retains a separate capture-time history when the companion and relay supply
-valid timing data. Capture-timed judging is groundwork here. It needs a companion
-that sends timestamps, a relay that preserves them, and game calibration that
-sets a measured capture offset for the assigned microphone. Until that integration
-is available, phone audio uses the live PCM path.
+valid timing data. Measure mic delays in player setup to calibrate the assigned
+phone against the game's audio playback clock. With a measured offset, scoring
+uses the matching capture window as soon as it arrives and waits briefly for late
+packets. An unmeasured phone or a companion without capture timestamps can still
+use the live PCM path.
