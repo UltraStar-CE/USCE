@@ -2292,6 +2292,10 @@ begin
 
   // Load widgets from the subclass
   YNextWidget := Theme.OptionsSub.Area.Y;
+  ScrollArea.X := Theme.OptionsSub.Area.X;
+  ScrollArea.Y := Theme.OptionsSub.Area.Y;
+  ScrollArea.W := Theme.OptionsSub.Area.W;
+  ScrollArea.H := 0;
   LoadWidgets;
 
   // Initialize scrolling if neesssary
