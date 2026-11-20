@@ -1,4 +1,4 @@
-"""Run gap sung-bar detector and display-data regression tests without a window.
+"""Run capture-window and gap pitch-trace regression tests without a window.
 Requires a configured checkout, FPC and the game shared libraries.
 Example: python tools/test_pitch_trace.py --fpc C:/FPC/3.2.2/bin/i386-win32/fpc.exe --library-dir D:/games/uscedev/game
 """
@@ -37,7 +37,7 @@ def main():
         env['PATH'] = str(args.library_dir.resolve()) + os.pathsep + env.get('PATH', '')
         if os.name != 'nt':
             env['LD_LIBRARY_PATH'] = str(args.library_dir.resolve()) + os.pathsep + env.get('LD_LIBRARY_PATH', '')
-        for name in ('gap_sung_notes_test',):
+        for name in ('gap_sung_notes_test', 'local_capture_window_test'):
             subprocess.run(command + [str(ROOT / 'tools/tests' / (name + '.pas'))], cwd=ROOT / 'src', check=True)
             exe = out / (name + ('.exe' if os.name == 'nt' else ''))
             subprocess.run([str(exe)], env=env, check=True)

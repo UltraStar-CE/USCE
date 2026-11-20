@@ -1068,7 +1068,7 @@ var
   UsedTimedWindow:     boolean;
   DeadlineBeat:        integer;
   ScoreWhenReady, EarlyReady, UseLocalClock: boolean;
-  LocalClockUs, BeatMediaUs: int64;
+  LocalClockUs, BeatMediaUs, LocalWindowWaitUntilUs: int64;
   WindowSamples: integer;
   WindowRate: double;
   LocalPlaybackPosition: double;
@@ -1308,9 +1308,9 @@ begin
           BeatMediaUs := Round(LyricsState.StartTime * 1000) + NoteWindowCenterUs(ActualBeat);
           CaptureCenterHostUs := ScoringPlaybackOriginUs + BeatMediaUs +
             Int64(Ini.MicDelay + Player[PlayerIndex].DetectionDelay) * 1000;
-          UsedTimedWindow := CurrentSound.AnalyzeLocalWindow(CaptureCenterHostUs, WindowSamples);
+          UsedTimedWindow := CurrentSound.AnalyzeLocalWindow(CaptureCenterHostUs, WindowSamples, LocalWindowWaitUntilUs);
           if not UsedTimedWindow and NoteAvailable and
-             (LocalClockUs - CaptureCenterHostUs < 90000) then
+             (LocalClockUs < LocalWindowWaitUntilUs) then
           begin
             PlayerCurBeat := ActualBeat - 1;
             Break;

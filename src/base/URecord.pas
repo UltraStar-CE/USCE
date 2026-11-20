@@ -75,6 +75,7 @@ type
       fAnalysisBufferLock: PSDL_Mutex;
       fAudioFormat: TAudioFormatInfo;
       FLocalCaptureEndUs: int64;
+      FLocalBlockUs: int64;
       FLocalSamples: integer;
       Frequencies: TFrequencyArray;
       Delays: TDelayArray;
@@ -103,7 +104,7 @@ type
       function ArrayIndexOfMinimum(const AValues: array of real): Integer;
       procedure UpdateToneCandidatesSimple(const Correlation: TCorrelationArray);
     public
-      AnalysisBuffer: array[0..CaptureHistorySamples-1] of smallint;
+      AnalysisBuffer: array of smallint;
       AnalysisBufferSize: integer; // number of samples of BufferArray to analyze
 
       MonitorOnly: boolean; // level preview: no voice playback or recording
@@ -133,7 +134,7 @@ type
       // use to analyze sound from buffers to get new pitch
       procedure AnalyzeBuffer; overload;
       procedure AnalyzeBuffer(out WindowCenterUs: int64); overload;
-      function AnalyzeLocalWindow(CenterUs: int64; Count: integer): boolean;
+      function AnalyzeLocalWindow(CenterUs: int64; Count: integer; out WaitUntilUs: int64): boolean;
       function HasLocalCapture: boolean;
       function AnalyzePhoneWindow(PlayerIndex: integer; CenterHostUs: Int64; WindowSamples: integer = 0): boolean;
       // Experimental native phone input, mono S16 at 48 kHz. Main thread only.
@@ -434,6 +435,7 @@ begin
   inherited;
   LogBuffer := TMemoryStream.Create;
   fAnalysisBufferLock := SDL_CreateMutex();
+  SetLength(AnalysisBuffer, CaptureHistorySamples);
   AnalysisBufferSize := CaptureWindowSamples;
   PitchAlgorithm := PDA_CAMDF;
   if GetEnvironmentVariable('USCE_AUDIO_DETECTOR') = 'amdf' then PitchAlgorithm := PDA_AMDF;
@@ -500,6 +502,7 @@ procedure TCaptureBuffer.ResetAnalysis;
 begin
   LockAnalysisBuffer();
   FLocalCaptureEndUs := 0;
+  FLocalBlockUs := 0;
   FLocalSamples := 0;
   FillChar(AnalysisBuffer[0], Length(AnalysisBuffer) * SizeOf(SmallInt), 0);
   UnlockAnalysisBuffer();
@@ -510,7 +513,7 @@ procedure TCaptureBuffer.ProcessNewBuffer(Buffer: PByteArray; BufferSize: intege
   AllowBoost: boolean; CaptureEndUs: int64);
 var
   BlockUs, ExpectedEndUs: int64;
-  BufferOffset: integer;
+  BufferOffset, HistorySize, PreviousSize: integer;
   SampleCount:  integer;
 begin
   LastInputTicks := GetTickCount64;
@@ -524,20 +527,24 @@ begin
   SampleCount := BufferSize div SizeOf(SmallInt);
   if SampleCount = 0 then Exit;
 
-  // check if we have more new samples than we can store
-  if (SampleCount > Length(AnalysisBuffer)) then
-  begin
-    // discard the oldest of the new samples
-    BufferOffset := (SampleCount - Length(AnalysisBuffer)) * SizeOf(SmallInt);
-    SampleCount := Length(AnalysisBuffer);
-  end;
-
   LockAnalysisBuffer();
   try
-
     if (CaptureEndUs > 0) and (AudioFormat.SampleRate > 0) then
     begin
-      BlockUs := Round((BufferSize div SizeOf(smallint)) * 1000000.0 / AudioFormat.SampleRate);
+      // Retain a complete window that straddles a callback boundary. Limit
+      // growth to the maximum callback frame count representable by SDL.
+      HistorySize := Min(SampleCount, High(Word)) + CaptureWindowSamples;
+      PreviousSize := Length(AnalysisBuffer);
+      if HistorySize > PreviousSize then
+      begin
+        SetLength(AnalysisBuffer, HistorySize);
+        if FLocalSamples > 0 then
+          Move(AnalysisBuffer[PreviousSize - FLocalSamples],
+            AnalysisBuffer[HistorySize - FLocalSamples], FLocalSamples * SizeOf(smallint));
+      end;
+
+      BlockUs := Round(SampleCount * 1000000.0 / AudioFormat.SampleRate);
+      FLocalBlockUs := BlockUs;
       ExpectedEndUs := FLocalCaptureEndUs + BlockUs;
       if (FLocalCaptureEndUs = 0) or (Abs(CaptureEndUs - ExpectedEndUs) > Max(30000, BlockUs)) then
         FLocalSamples := 0
@@ -545,6 +552,11 @@ begin
         CaptureEndUs := ExpectedEndUs + EnsureRange(CaptureEndUs - ExpectedEndUs, -1000, 1000);
       FLocalCaptureEndUs := CaptureEndUs;
       FLocalSamples := Min(FLocalSamples + SampleCount, Length(AnalysisBuffer));
+    end;
+    if SampleCount > Length(AnalysisBuffer) then
+    begin
+      BufferOffset := (SampleCount - Length(AnalysisBuffer)) * SizeOf(smallint);
+      SampleCount := Length(AnalysisBuffer);
     end;
     // Keep enough history to retrieve a full window from before the last callback.
     if SampleCount < Length(AnalysisBuffer) then
@@ -619,21 +631,28 @@ begin
   end;
 end;
 
-function TCaptureBuffer.AnalyzeLocalWindow(CenterUs: int64; Count: integer): boolean;
+function TCaptureBuffer.AnalyzeLocalWindow(CenterUs: int64; Count: integer; out WaitUntilUs: int64): boolean;
 var
   Window: array[0..4095] of smallint;
   Rate: double;
   EndIndex, Gain: integer;
 begin
   Result := false;
+  WaitUntilUs := 0;
   LockAnalysisBuffer;
   try
     if (AudioFormat = nil) or (FLocalCaptureEndUs = 0) then Exit;
     Rate := AudioFormat.SampleRate;
     if (Rate <= 0) or (Count < 1) or (Count > Length(Window)) then Exit;
     EndIndex := Length(AnalysisBuffer) - Round((FLocalCaptureEndUs - CenterUs) * Rate / 1000000.0) + Count div 2;
-    if (EndIndex > Length(AnalysisBuffer)) or
-       (EndIndex - Count < Length(AnalysisBuffer) - FLocalSamples) then Exit;
+    if EndIndex - Count < Length(AnalysisBuffer) - FLocalSamples then Exit;
+    if EndIndex > Length(AnalysisBuffer) then
+    begin
+      // The window's end can fall just after a callback and wait a full
+      // block for the next one. Allow 10 ms extra for callback scheduling.
+      WaitUntilUs := CenterUs + Max(int64(90000), FLocalBlockUs + Ceil((Count div 2) * 1000000.0 / Rate) + 10000);
+      Exit;
+    end;
     Move(AnalysisBuffer[EndIndex - Count], Window[Length(Window) - Count], Count * SizeOf(smallint));
     Gain := AnalysisGain;
   finally
