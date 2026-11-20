@@ -51,7 +51,8 @@ public:
     if (started) {
       const bool newerCapture = endUs > newestEndUs;
       const bool changedEpoch = captureEpoch != newestEpoch;
-      const bool stalled = hostNowUs - lastProgressUs > 250000;
+      // A delivery stall alone does not invalidate a stream whose sequence advances.
+      const bool stalled = delta <= 0 && hostNowUs - lastProgressUs > 250000;
 
       if (newerCapture && (changedEpoch || stalled)) {
         packets = {};
