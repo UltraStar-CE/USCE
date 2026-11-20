@@ -85,7 +85,7 @@ type
       RemoteSlots: cardinal;
       AvailableChannels: integer;
       PlayerMic, PlayerMicIID, MicOption: integer;
-      MicTheme: TThemeSelectSlide;
+      MicDevicesScanned: boolean;
       PlayerIndex:  integer;
       ColorIndex:   integer;
       LevelIndex:   integer;
@@ -130,6 +130,7 @@ type
       MicPickerChoices: array of TSetupMicChannel;
       PendingMic: TSetupMicChannel;
       procedure RefreshMicSelector;
+      function ScanMicDevices: boolean;
       procedure ChangeMic(Delta: integer);
       function CurrentMicChoiceValid: boolean;
       procedure ApplyMicChoice;
@@ -139,6 +140,7 @@ type
       procedure PlaceVoiceBesideMic;
       procedure UpdateAssignedPlayers(Force: boolean = false);
       function DisplayPlayerName(Index: integer): UTF8String;
+      function IsRosterGap(Index: integer): boolean;
       procedure UpdateMicActivity;
       function MicColor(PlayerID: integer): TRGB;
       function SelectedPlayerCount: integer;
@@ -288,6 +290,15 @@ begin
   Result.Y := R.Y + Theme.Name.SelectPlayerLevel.Y * SY;
   Result.W := (SegmentW - 4) * SX;
   Result.H := 29 * SY;
+end;
+
+function TScreenName.ScanMicDevices: boolean;
+begin
+  Result := not MicDevicesScanned and not Party.bPartyGame and not AudioInput.IsCapturing;
+  if not Result then Exit;
+  MicDevicesScanned := true;
+  // Startup only probes assigned microphones. Include free channels in setup.
+  RefreshAudioInputDevices(aimFull);
 end;
 
 procedure ConfirmSetupMicMove(Confirmed: boolean; Data: Pointer);
@@ -1165,9 +1176,18 @@ begin
   if not Force then RefreshPlayers;
 end;
 
+function TScreenName.IsRosterGap(Index: integer): boolean;
+begin
+  Result := not Party.bPartyGame and (Index >= SelectedLocalPlayerCount) and
+    not RemoteInputProcessor.HasAssignedPlayer(Index);
+end;
+
 function TScreenName.DisplayPlayerName(Index: integer): UTF8String;
 begin
-  Result := PlayerNames[Index];
+  if IsRosterGap(Index) then
+    Result := Language.Translate('SING_OPTIONS_RECORD_NOONE')
+  else
+    Result := PlayerNames[Index];
 end;
 
 procedure TScreenName.RefreshPlayers();
@@ -1265,7 +1285,7 @@ var
   Used: boolean;
 begin
   if SelectedPlayerCount = 0 then Exit;
-  Button[PlayerName].Visible := true;
+  Button[PlayerName].Visible := not IsRosterGap(PlayerIndex);
   Button[PlayerName].Selectable := Button[PlayerName].Visible;
   // no-avatar for current player
   Button[PlayerAvatarButton[0]].Texture.Free;
@@ -1594,9 +1614,7 @@ begin
     PlayerNames[I] := Ini.Name[I];
     PlayerLevel[I] := Ini.PlayerLevel[I];
     PlayerAvatars[I] := Max(0, GetArrayIndex(AvatarsMD5, Ini.PlayerAvatar[I]));
-    if not Party.bPartyGame and ((PlayerInputSource(I) = pisNone) or
-        ((LocalPlayerCount >= 0) and (I >= LocalPlayerCount) and
-         not RemoteInputProcessor.HasAssignedPlayer(I))) then
+    if not Party.bPartyGame and (PlayerInputSource(I) = pisNone) then
       Player[I].Name := Language.Translate('SING_OPTIONS_RECORD_NOONE')
     else
       Player[I].Name := Ini.Name[I];
@@ -1641,6 +1659,7 @@ begin
   StopTextInput;
   if OwnsMicPreview then AudioInput.CaptureStop(true);
   OwnsMicPreview := false;
+  MicDevicesScanned := false;
   FillChar(MicActivity, SizeOf(MicActivity), 0);
   FillChar(MicClippedUntil, SizeOf(MicClippedUntil), 0);
   inherited;
@@ -1835,6 +1854,7 @@ begin
   end
   else
   begin
+    ScanMicDevices;
     CountIndex := LyricsOnlyIndex;
     if not LyricsOnly then
     begin
@@ -1843,10 +1863,10 @@ begin
       begin
         Count := 0;
         for I := 0 to UIni.IMaxPlayerCount - 1 do
-          if PlayerInputSource(I) = pisLocal then Count := I + 1;
-        if (Count = 0) and (HighestRemoteSlot = 0) then Count := 1;
+          if PlayerInputSource(I, UIni.IMaxPlayerCount) = pisLocal then Count := I + 1;
       end;
-      CountIndex := PhonesOnlyIndex + Count;
+      if (Count > 0) or (HighestRemoteSlot > 0) then
+        CountIndex := PhonesOnlyIndex + Count;
     end;
     UpdateAssignedPlayers(true);
   end;
@@ -2323,10 +2343,17 @@ function TScreenName.Draw: boolean;
 var
   dx: real;
   dt: real;
-  I: integer;
+  I, LocalCount: integer;
 begin
   ScreenSong.UpdateTransitionPreview;
-  UpdateAssignedPlayers;
+  if ScanMicDevices then
+  begin
+    UpdateAssignedPlayers(true);
+    RefreshPlayers;
+    RefreshProfile;
+  end
+  else
+    UpdateAssignedPlayers;
   //inherited Draw;
   //heres a little Hack, that causes the Statics
   //are Drawn after the Buttons because of some Blending Problems.
@@ -2376,7 +2403,8 @@ begin
   if SelectedPlayerCount > 0 then SetAvatarScroll;
 
   // set current name = name in list
-  Text[PlayerCurrentText[PlayerIndex]].Text := Button[PlayerName].Text[0].Text;
+  if Button[PlayerName].Visible then
+    Text[PlayerCurrentText[PlayerIndex]].Text := Button[PlayerName].Text[0].Text;
 
   //Instead of Draw FG Procedure:
   //We draw Buttons for our own
@@ -2394,12 +2422,13 @@ begin
     Statics[I].Draw;
 
   // and texts
+  LocalCount := -1;
+  if not Party.bPartyGame then LocalCount := SelectedLocalPlayerCount;
   for I := 0 to SelectedPlayerCount - 1 do
     if Statics[PlayerCurrentAvatar[I]].Visible and (Party.bPartyGame or
        not IsRosterGap(I)) then
       with Statics[PlayerCurrentAvatar[I]].Texture do
-        DrawInputSourceBadge(PlayerInputSource(I, IfThen(Party.bPartyGame, IMaxPlayerCount, SelectedLocalPlayerCount)),
-          X, Y, W, H, ibsSetup, Alpha, ScaleMode);
+        DrawInputSourceBadge(PlayerInputSource(I, LocalCount), X, Y, W, H, ibsSetup, Alpha, ScaleMode);
   for I := 0 to High(Text) do
     Text[I].Draw;
 

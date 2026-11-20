@@ -2357,6 +2357,8 @@ begin
   finally
     IniFile.Free;
   end;
+  // This write changes only capture assignments, not the names being edited.
+  LastReadNames := FileAge(FileName.ToNative);
 end;
 
 procedure TIni.SaveNames;
