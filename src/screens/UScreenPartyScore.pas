@@ -215,6 +215,7 @@ var
   Ranking: AParty_TeamRanking;
   Team, RoundPoints, TextIndex: integer;
   HasTeam: boolean;
+  Total, Gain: UTF8String;
 begin
   inherited;
 
@@ -234,16 +235,18 @@ begin
   begin
     HasTeam := Team < Length(Party.Teams);
     Text[TextScoreTeam[Team]].Visible := HasTeam;
-    if HasTeam then
-    begin
-      RoundPoints := Party.CurrentRoundPoints(Team);
-      Text[TextScoreTeam[Team]].Text := IntToStr(Party.Teams[Team].Score + RoundPoints);
-    end;
     TextIndex := TextRoundPoints[Team];
-    if TextIndex < 0 then Continue;
-    Text[TextIndex].Visible := HasTeam;
-    if HasTeam then
-      Text[TextIndex].Text := Format(Language.Translate('PARTY_SCORE_ROUND_POINTS'), [RoundPoints]);
+    if TextIndex >= 0 then Text[TextIndex].Visible := HasTeam;
+    if not HasTeam then Continue;
+
+    RoundPoints := Party.CurrentRoundPoints(Team);
+    Total := IntToStr(Party.Teams[Team].Score + RoundPoints);
+    Gain := Format(Language.Translate('PARTY_SCORE_ROUND_POINTS'), [RoundPoints]);
+    if TextIndex >= 0 then
+      Text[TextIndex].Text := Gain
+    else
+      Total := Total + ' (' + Gain + ')';
+    Text[TextScoreTeam[Team]].Text := Total;
   end;
 
   //Set Winnertext

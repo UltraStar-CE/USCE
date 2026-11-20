@@ -4888,6 +4888,7 @@ var
   SectionList: TThemeSectionList;
   I: integer;
   Section: string;
+  RoundPointsFile: TMemIniFile;
 begin
   OpenFile(Ini.Theme);
 
@@ -4947,7 +4948,13 @@ begin
   begin
     PartyScore.RoundPointsEnabled[I] := false;
     Section := 'PartyScoreRoundPointsTeam' + IntToStr(I + 1);
-    if SectionExists(Section, PartyScore.RoundPointsEnabled[I]) and PartyScore.RoundPointsEnabled[I] then
+    RoundPointsFile := ResolveThemeFile(Section);
+    if RoundPointsFile = nil then Continue;
+    // Inherited label positions belong to the layout that defines the score row.
+    if (RoundPointsFile <> ThemeIni) and
+       (RoundPointsFile <> ResolveThemeFile('PartyScoreTextScoreTeam' + IntToStr(I + 1))) then Continue;
+    PartyScore.RoundPointsEnabled[I] := RoundPointsFile.ReadBool(Section, 'Enabled', true);
+    if PartyScore.RoundPointsEnabled[I] then
       ThemeLoadText(PartyScore.RoundPoints[I], Section);
   end;
 
