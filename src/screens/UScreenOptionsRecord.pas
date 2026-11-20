@@ -666,10 +666,7 @@ begin
   Load;
 
   // store InteractionID
-  if (Length(AudioInputProcessor.DeviceList) > 0) then
-    ExitButtonIID := ord(iBackButton)
-  else
-    ExitButtonIID := ord(iInputSlide) + 1;
+  ExitButtonIID := High(Interactions);
 
   // set focus
   Interaction := 0;
