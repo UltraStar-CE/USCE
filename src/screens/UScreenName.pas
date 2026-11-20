@@ -104,6 +104,7 @@ type
       MicPreviewCount: integer;
       OwnsMicPreview: boolean;
       MicActivity: array[0..UIni.IMaxPlayerCount-1] of single;
+      MicClippedUntil: array[0..UIni.IMaxPlayerCount-1] of QWord;
       procedure UpdateAssignedPlayers(Force: boolean = false);
       function DisplayPlayerName(Index: integer): UTF8String;
       procedure UpdateMicActivity;
@@ -176,6 +177,10 @@ uses
   UTime,
   UUnicodeUtils,
   Math;
+
+const
+  MicPreviewFreshMs = 250;
+  MicClipHoldMs = 500;
 
 function GetNamePlayerSelectBaseBounds: TPlayerSlotRect;
 begin
@@ -1316,6 +1321,7 @@ begin
   if OwnsMicPreview then AudioInput.CaptureStop(true);
   OwnsMicPreview := false;
   FillChar(MicActivity, SizeOf(MicActivity), 0);
+  FillChar(MicClippedUntil, SizeOf(MicClippedUntil), 0);
   inherited;
 end;
 
@@ -1544,6 +1550,8 @@ procedure TScreenName.UpdateMicActivity;
 var
   I, Count: integer;
   Target, Threshold, Blend: single;
+  NowTicks, LastInput: QWord;
+  Clipped: boolean;
   C: TRGB;
 begin
   Count := SelectedPlayerCount;
@@ -1553,6 +1561,7 @@ begin
     OwnsMicPreview := false;
     MicPreviewCount := Count;
     FillChar(MicActivity, SizeOf(MicActivity), 0);
+    FillChar(MicClippedUntil, SizeOf(MicClippedUntil), 0);
   end;
   // Retry after an outgoing singing screen releases its capture at fade end.
   if (Count > 0) and not AudioInput.IsCapturing then
@@ -1561,12 +1570,21 @@ begin
     OwnsMicPreview := true;
   end;
   Threshold := IThresholdVals[EnsureRange(Ini.ThresholdIndex, 0, High(IThresholdVals))];
+  NowTicks := GetTickCount64;
   for I := 0 to Count - 1 do
   begin
     Target := 0;
     if OwnsMicPreview then
-      Target := AudioInputProcessor.Sound[I].MaxSampleVolume;
-    // Ignore background hiss; reserve white for peaks near full input level.
+    begin
+      LastInput := AudioInputProcessor.Sound[I].LastInputTicks;
+      if (LastInput <> 0) and (LastInput <= NowTicks) and
+         (NowTicks - LastInput <= MicPreviewFreshMs) then
+      begin
+        Target := AudioInputProcessor.Sound[I].MaxSampleVolume(Clipped);
+        if Clipped then MicClippedUntil[I] := NowTicks + MicClipHoldMs;
+      end;
+    end;
+    // Ignore background hiss; brightening shows activity below clipping.
     Target := EnsureRange((Target - Threshold) / (1 - Threshold), 0, 1);
     if Target > MicActivity[I] then Blend := 1 - Exp(-Max(0, TimeSkip) / 0.04)
     else Blend := 1 - Exp(-Max(0, TimeSkip) / 0.25);
@@ -1583,6 +1601,8 @@ end;
 
 function TScreenName.MicColor(PlayerID: integer): TRGB;
 begin
+  if GetTickCount64 < MicClippedUntil[PlayerID] then
+    Exit(Default(TRGB));
   Result := GetPlayerColor(Num[PlayerID]);
   Result.R := Result.R + (1 - Result.R) * MicActivity[PlayerID];
   Result.G := Result.G + (1 - Result.G) * MicActivity[PlayerID];
