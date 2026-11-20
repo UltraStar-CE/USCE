@@ -82,7 +82,7 @@ type
     Visible:        boolean;  // is the score display visible
     Score:          word;     // current score of the player (displayed / rounded)
     ScoreActual:    single;   // precise accumulated score (unrounded)
-    ScoreDisplayed: word;     // score cur. displayed (for counting up)
+    ScoreDisplayed: integer;  // score cur. displayed (for counting up)
     ScoreBG:        TTexture; // texture of the players scores bg
     Color:          TRGB;     // the players color
     RBPos:          real;     // cur. percentille of the rating bar
@@ -518,22 +518,13 @@ end;
  * sets the score of a specified player to the specified score
  *}
 procedure TSingScores.SetScore(Player: byte; Score: integer);
-var Cur, Previous, Next: PScorePopUp;
 begin
   if Player >= PlayerCount then Exit;
-  // A revised line score replaces any still-animating points for this singer.
-  Previous := nil;
-  Cur := FirstPopUp;
-  while Cur <> nil do
-  begin
-    Next := Cur.Next;
-    if Cur.Player = Player then KillPopUp(Previous, Cur)
-    else Previous := Cur;
-    Cur := Next;
-  end;
   aPlayers[Player].Score := Score;
   aPlayers[Player].ScoreActual := Score;
-  aPlayers[Player].ScoreDisplayed := Score;
+  // Reserve the remaining animated points. They still finish normally and
+  // take the display to the revised total, even after a downward correction.
+  aPlayers[Player].ScoreDisplayed := Score - GetPopUpPoints(Player);
 end;
 
 {**
@@ -993,7 +984,7 @@ begin
     Renderer.DrawTexture(Players[Index].ScoreBG);
 
     // draw score text
-    ScoreStr := IntToStr(Players[Index].ScoreDisplayed);
+    ScoreStr := IntToStr(Max(0, Players[Index].ScoreDisplayed));
     while (Length(ScoreStr) < Theme.Sing.ScoreDigits) do
       ScoreStr := '0' + ScoreStr;
 
