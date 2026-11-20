@@ -213,6 +213,36 @@ int main() {
   checkShortRestart(2, 10000);  // New epoch even without a stall.
   checkShortRestart(1, 300000); // Same epoch after a stall.
 
+  for (const bool liveDuringStall : {false, true}) {
+    auto stalledDelivery = usce_pa_create("ipc://", "");
+    assert(stalledDelivery);
+    usce_pa_set_clock(stalledDelivery, 8040000);
+    uint32_t beforeStall = 0;
+    for (int sequence = 0; sequence < 5; ++sequence) {
+      assert(usce_pa_signal(stalledDelivery, timedPcm(sequence, 8000000 + sequence * 10000).c_str()) == 0);
+      assert(usce_pa_poll_generation(stalledDelivery, out, 9600, &beforeStall) == 480);
+    }
+    assert(beforeStall != 0);
+    usce_pa_set_clock(stalledDelivery, 8340000);
+    auto nextSequence = 5;
+    if (liveDuringStall) {
+      // Older relays can carry the live samples but strip their capture stamps.
+      for (; nextSequence < 34; ++nextSequence) {
+        assert(usce_pa_signal(stalledDelivery, unstamped(nextSequence).c_str()) == 0);
+        assert(usce_pa_poll(stalledDelivery, out, 9600) == 480);
+      }
+    }
+    const auto nextCaptureUs = 8000000 + nextSequence * 10000;
+    assert(usce_pa_signal(stalledDelivery, timedPcm(nextSequence, nextCaptureUs).c_str()) == 0);
+    uint32_t afterStall = 0;
+    assert(usce_pa_poll_generation(stalledDelivery, out, 9600, &afterStall) == 480);
+    assert(afterStall == beforeStall);
+    assert(usce_pa_capture_window(stalledDelivery, 8040000, out, 2048) == 1);
+    assert(usce_pa_capture_window(stalledDelivery, nextCaptureUs, out, 2048) ==
+      (liveDuringStall ? 0 : 1));
+    usce_pa_destroy(stalledDelivery);
+  }
+
   auto audio = usce_pa_create("ipc://", "");
   assert(audio);
   usce_pa_set_clock(audio, 4000000);
