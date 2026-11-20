@@ -48,7 +48,8 @@ procedure SingDrawOscilloscopes;
 procedure SingDrawOscilloscope(Position: TThemePosition; NrSound: integer);
 procedure SingDrawNoteLines(Left, Top, Right: real; LineSpacing: integer = 15; LineThickness: single = 1);
 procedure SingDrawLyricHelper(CP: integer; Left, LyricsMid, IndicatorOffset: real);
-procedure SingDrawPlayerLine(Left, Top, W: real; Track, PlayerIndex: integer; LineSpacing: integer = 15; OnlyGaps: boolean = false);
+procedure SingDrawPlayerLine(Left, Top, W: real; Track, PlayerIndex: integer;
+  LineSpacing: integer = 15; OnlyGaps: boolean = false; DisplayedLine: integer = -1);
 function GetVisibleNoteLine(const Track: TLines; Beat, BPM: real; ShowFreestyle: boolean): integer;
 
 //Draw Editor NoteLines
@@ -562,7 +563,8 @@ begin
 end;
 
 // draw sung notes
-procedure SingDrawPlayerLine(Left, Top, W: real; Track, PlayerIndex: integer; LineSpacing: integer; OnlyGaps: boolean);
+procedure SingDrawPlayerLine(Left, Top, W: real; Track, PlayerIndex: integer;
+  LineSpacing: integer; OnlyGaps: boolean; DisplayedLine: integer);
 var
   TempR:      real;
   Rec:        TRecR;
@@ -600,6 +602,8 @@ begin
         with CurrentSong.Tracks[Track].Lines[CurrentSong.Tracks[Track].CurrentLine] do
           if Length(Notes)>0 then begin FirstBeat:=Notes[0].StartBeat;BaseTone:=BaseNote;end
           else begin FirstBeat:=Player[PlayerIndex].DetectionBeat-15;BaseTone:=Player[PlayerIndex].LastSungTone;TempR:=W/16;end;
+        if DrawingGap and (DisplayedLine >= 0) then
+          BaseTone := CurrentSong.Tracks[Track].Lines[DisplayedLine].BaseNote;
         WindowStart := FirstBeat;
         if DrawingGap and (TempR > 0) and
           ((Player[PlayerIndex].DetectionBeat < FirstBeat) or
@@ -1191,7 +1195,8 @@ begin
       // Captured bars still belong to the scoring cursor's current line.
       OnlyGapTrace := (TargetLine < 0) or (TargetLine <> CurrentLine);
       if not OnlyGapTrace or (Ini.PitchTrace <> 0) then
-        SingDrawPlayerLine(LaneLeft, LineTop, LaneWidth, TrackIndex, PlayerIndex, LineSpacing, OnlyGapTrace);
+        SingDrawPlayerLine(LaneLeft, LineTop, LaneWidth, TrackIndex, PlayerIndex,
+          LineSpacing, OnlyGapTrace, TargetLine);
     end;
   end;
 end;

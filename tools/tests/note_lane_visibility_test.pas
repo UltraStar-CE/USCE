@@ -1,7 +1,21 @@
 program NoteLaneVisibilityTest;
 {$mode Delphi}
 
-uses {$IFDEF UNIX}cthreads,{$ENDIF} SysUtils, UMusic, UDraw, UGraphic, UGraphicClasses;
+uses {$IFDEF UNIX}cthreads,{$ENDIF} SysUtils, UMusic, UDraw, UGraphic, UGraphicClasses,
+  UBeatTimer, UIni, UNote, URenderer, URenderer_OpenGL, UScreenSingController, USong;
+
+type
+  TTraceRenderer = class(TRenderer_OpenGL2)
+    DrawCount: integer;
+    Center: single;
+    procedure DrawTexture(Texture: TTexture); override;
+  end;
+
+procedure TTraceRenderer.DrawTexture(Texture: TTexture);
+begin
+  Inc(DrawCount);
+  Center := Texture.Y + Texture.H / 2;
+end;
 
 const
   InternalBPM = 600; // #BPM:150 stores four chart beats per musical beat.
@@ -62,6 +76,66 @@ begin
   end;
 end;
 
+procedure CheckGapTracePitch;
+var
+  Trace: TTraceRenderer;
+  NoteTexture: TTexture;
+begin
+  Ini := TIni(TIni.NewInstance);
+  LyricsState := TLyricsState(TLyricsState.NewInstance);
+  CurrentSong := TSong.Create;
+  ScreenSing := TScreenSingController(TScreenSingController.NewInstance);
+  Trace := TTraceRenderer(TTraceRenderer.NewInstance);
+  NoteTexture := TTexture(TTexture.NewInstance);
+  try
+    Renderer := Trace;
+    Tex_Left[1] := NoteTexture;
+    Tex_Mid[1] := NoteTexture;
+    Tex_Right[1] := NoteTexture;
+    NotesW[0] := 1;
+    NotesH[0] := 2;
+    ScreenSing.Settings.InputVisible := true;
+    Ini.PitchTrace := 1;
+    SetLength(CurrentSong.Tracks, 1);
+    CurrentSong.Tracks[0] := Track;
+    CurrentSong.Tracks[0].CurrentLine := 2;
+    CurrentSong.Tracks[0].Lines[2].BaseNote := 0;
+    CurrentSong.Tracks[0].Lines[2].EndBeat := 297;
+    CurrentSong.Tracks[0].Lines[3].BaseNote := 6;
+    SetLength(Player, 1);
+    SetLength(Player[0].Note, 2);
+    Player[0].HighNote := 1;
+    Player[0].DetectionBeat := 275;
+    Player[0].Note[0].Start := 273;
+    Player[0].Note[0].Duration := 2;
+    Player[0].Note[0].Tone := 6;
+    Player[0].Note[0].IsGap := true;
+    Player[0].Note[0].NoteType := ntNormal;
+    Player[0].Note[1] := Player[0].Note[0];
+    Player[0].Note[1].IsGap := false;
+
+    SingDrawPlayerLine(0, 100, 120, 0, 0, 15, true, 3);
+    if (Trace.DrawCount <> 3) or (Abs(Trace.Center - 100) > 0.01) then
+      raise Exception.Create('Gap trace does not match the displayed phrase base pitch');
+    Trace.DrawCount := 0;
+    SingDrawPlayerLine(0, 100, 120, 0, 0, 15, true);
+    if (Trace.DrawCount <> 3) or (Abs(Trace.Center - 55) > 0.01) then
+      raise Exception.Create('Hidden lane no longer uses the scoring phrase base pitch');
+  finally
+    Tex_Left[1] := nil;
+    Tex_Mid[1] := nil;
+    Tex_Right[1] := nil;
+    NoteTexture.FreeInstance;
+    Renderer := nil;
+    Trace.FreeInstance;
+    ScreenSing.FreeInstance; ScreenSing := nil;
+    CurrentSong.Free; CurrentSong := nil;
+    LyricsState.FreeInstance; LyricsState := nil;
+    Ini.FreeInstance; Ini := nil;
+    SetLength(Player, 0);
+  end;
+end;
+
 begin
   SetLength(Track.Lines, 6);
   Track.High := High(Track.Lines);
@@ -93,6 +167,8 @@ begin
   // At a slower tempo the same three chart beats last one second.
   Expect(0, 157, 180, -1, 'one-second blank between hold and preview can be hidden');
   CheckGoldenPreviewBounds;
+  CheckGapTracePitch;
   WriteLn('PASS: note lanes follow actual notes across early and late breaks, avoid blinks, and hide in long gaps');
   WriteLn('PASS: golden previews use the displayed note bounds and star count');
+  WriteLn('PASS: gap traces use the displayed phrase pitch without drawing scored bars');
 end.
