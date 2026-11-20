@@ -130,6 +130,7 @@ begin
   Video := VideoPlayback.Open(FileName);
   if Video <> nil then
   begin
+    Video.SetAspectCorrection(acoCrop);
     Video.Loop := true;
     Video.Play;
   end;
