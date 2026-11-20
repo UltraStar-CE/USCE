@@ -48,8 +48,6 @@ procedure SingDrawOscilloscopes;
 procedure SingDrawOscilloscope(Position: TThemePosition; NrSound: integer);
 procedure SingDrawNoteLines(Left, Top, Right: real; LineSpacing: integer = 15; LineThickness: single = 1);
 procedure SingDrawLyricHelper(CP: integer; Left, LyricsMid, IndicatorOffset: real);
-procedure SingDrawPlayerLine(Left, Top, W: real; Track, PlayerIndex: integer;
-  PitchStep: real = 7.5; OnlyGaps: boolean = false; DisplayedLine: integer = -1);
 function GetVisibleNoteLine(const Track: TLines; Beat, BPM: real; ShowFreestyle: boolean): integer;
 
 //Draw Editor NoteLines
@@ -411,13 +409,15 @@ begin
   Result := AnchorY - PitchOffset * PitchStep;
 end;
 
-function GetSingPitchStep(const Line: TLine; const Layout: TSingLaneLayout;
-  Top, NoteHalfHeight: real): real;
+procedure GetSingPitchGeometry(const Line: TLine; const Layout: TSingLaneLayout;
+  Top, NoteHalfHeight: real; out PitchAnchor, PitchStep: real);
 var
   NoteIndex, HighestTone: integer;
+  ToneSpan: Int64;
   AvailableHeight: real;
 begin
-  Result := Layout.NoteLineSpacing / 2;
+  PitchAnchor := Layout.RowAnchorY;
+  PitchStep := Layout.NoteLineSpacing / 2;
   AvailableHeight := Layout.RowAnchorY - Top - NoteHalfHeight;
   if AvailableHeight <= 0 then
     Exit;
@@ -425,11 +425,22 @@ begin
   HighestTone := Line.BaseNote;
   for NoteIndex := 0 to Line.HighNote do
     HighestTone := Max(HighestTone, Line.Notes[NoteIndex].DisplayTone);
-  if HighestTone > Line.BaseNote then
-    Result := Min(Result, AvailableHeight / (Int64(HighestTone) - Line.BaseNote));
+
+  ToneSpan := Int64(HighestTone) - Line.BaseNote;
+  if ToneSpan > 0 then
+    PitchStep := Min(PitchStep, AvailableHeight / ToneSpan);
+
+  // A lowest note between guides needs one semitone of room below its center.
+  if (Line.HighNote >= 0) and Odd(Line.BaseNote) then
+  begin
+    AvailableHeight := Layout.GuideBottomY - Top - NoteHalfHeight;
+    PitchStep := Min(PitchStep, AvailableHeight / (ToneSpan + 1));
+    PitchAnchor := Min(PitchAnchor, Layout.GuideBottomY - PitchStep);
+  end;
 end;
 
-procedure DrawSingPitchGuides(const Layout: TSingLaneLayout; Top, PitchStep: real; BaseNote: integer);
+procedure DrawSingPitchGuides(const Layout: TSingLaneLayout; Top, PitchAnchor, PitchStep: real;
+  BaseNote: integer);
 const
   WholeTone = 2;
   MinGuideSpacingPixels = 2;
@@ -447,7 +458,7 @@ begin
     Exit;
 
   // Keep the guides on the same pitch classes across phrases, even when the lowest note moves.
-  GuideAnchor := SingPitchY(Layout.RowAnchorY, -Ord(Odd(BaseNote)), PitchStep);
+  GuideAnchor := SingPitchY(PitchAnchor, -Ord(Odd(BaseNote)), PitchStep);
   FirstGuide := Ceil((Top - GuideAnchor - 0.001) / GuideSpacing);
   LastGuide := Floor((Layout.GuideBottomY - GuideAnchor + 0.001) / GuideSpacing);
   if LastGuide < FirstGuide then
@@ -1112,7 +1123,7 @@ var
   PlayerCountOnScreen: integer;
   PlayerIndex: integer;
   LocalIndex: integer;
-  GuideTop, PitchStep: real;
+  GuideTop, PitchAnchor, PitchStep: real;
   TrackIndex: integer;
   TargetLine: integer;
   OnlyGapTrace: boolean;
@@ -1223,22 +1234,24 @@ begin
     begin
       TargetLine := GetVisibleNoteLine(CurrentSong.Tracks[TrackIndex], LyricsState.MidBeat,
         CurrentSong.BPM, Theme.Sing.FreestyleNoteAlpha > 0);
+      PitchAnchor := Layout.RowAnchorY;
       PitchStep := Layout.NoteLineSpacing / 2;
       if TargetLine >= 0 then
       begin
-        PitchStep := GetSingPitchStep(Lines[TargetLine], Layout, GuideTop, NotesH[PlayerIndex]);
+        GetSingPitchGeometry(Lines[TargetLine], Layout, GuideTop, NotesH[PlayerIndex],
+          PitchAnchor, PitchStep);
         if (Ini.NoteLines = 1) and ScreenSing.Settings.InputVisible and
            ScreenSing.Settings.NotesVisible[PlayerIndex] then
-          DrawSingPitchGuides(Layout, GuideTop, PitchStep, Lines[TargetLine].BaseNote);
-        SingDrawPlayerBGLine(Layout.GridLeft, Layout.RowAnchorY, Layout.GridRight,
+          DrawSingPitchGuides(Layout, GuideTop, PitchAnchor, PitchStep, Lines[TargetLine].BaseNote);
+        SingDrawPlayerBGLine(Layout.GridLeft, PitchAnchor, Layout.GridRight,
           Lines[TargetLine], PlayerIndex, PitchStep);
-        SingDrawLine(Layout.GridLeft, Layout.RowAnchorY, Layout.GridRight,
+        SingDrawLine(Layout.GridLeft, PitchAnchor, Layout.GridRight,
           Lines[TargetLine], PlayerIndex, PitchStep);
       end;
       // Captured bars still belong to the scoring cursor's current line.
       OnlyGapTrace := (TargetLine < 0) or (TargetLine <> CurrentLine);
       if not OnlyGapTrace or (Ini.PitchTrace <> 0) then
-        SingDrawPlayerLine(Layout.GridLeft, Layout.RowAnchorY, Layout.GridWidth,
+        SingDrawPlayerLine(Layout.GridLeft, PitchAnchor, Layout.GridWidth,
           TrackIndex, PlayerIndex, PitchStep, OnlyGapTrace, TargetLine);
     end;
   end;
