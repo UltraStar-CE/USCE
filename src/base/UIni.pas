@@ -189,6 +189,10 @@ type
       VideoPreview:   integer;
       VideoEnabled:   integer;
       PreferredCodecNames: string;
+{$IFDEF UseMpvVideo}
+      VideoBackend: string;
+      VideoHardwareDecoding: string;
+{$ENDIF}
 
       // Sound
       MicBoost:       integer;
@@ -1878,6 +1882,20 @@ begin
   VideoEnabled := ReadArrayIndex(IVideoEnabled, IniFile, 'Graphics', 'VideoEnabled', 1);
 
   PreferredCodecNames := IniFile.ReadString('Graphics', 'PreferredCodecs', '');
+{$IFDEF UseMpvVideo}
+  VideoBackend := LowerCase(IniFile.ReadString('Graphics', 'VideoBackend', 'ffmpeg'));
+  if (VideoBackend <> 'ffmpeg') and (VideoBackend <> 'mpv') then
+  begin
+    Log.LogError('Unknown VideoBackend; using ffmpeg', 'TIni.Load');
+    VideoBackend := 'ffmpeg';
+  end;
+  VideoHardwareDecoding := LowerCase(IniFile.ReadString('Graphics', 'VideoHardwareDecoding', 'auto'));
+  if (VideoHardwareDecoding <> 'auto') and (VideoHardwareDecoding <> 'no') then
+  begin
+    Log.LogError('Unknown VideoHardwareDecoding; using auto', 'TIni.Load');
+    VideoHardwareDecoding := 'auto';
+  end;
+{$ENDIF}
 
   ClickSound := ReadArrayIndex(IClickSound, IniFile, 'Sound', 'ClickSound', IGNORE_INDEX, 'Original');
   SynthTone := ReadArrayIndex(ISynthTone, IniFile, 'Sound', 'SynthTone', IGNORE_INDEX, 'Organ');
@@ -2148,6 +2166,10 @@ begin
 
     // VideoEnabled
     IniFile.WriteString('Graphics', 'VideoEnabled', IVideoEnabled[VideoEnabled]);
+{$IFDEF UseMpvVideo}
+    IniFile.WriteString('Graphics', 'VideoBackend', VideoBackend);
+    IniFile.WriteString('Graphics', 'VideoHardwareDecoding', VideoHardwareDecoding);
+{$ENDIF}
 
     IniFile.WriteString('Sound', 'ClickSound', IClickSound[ClickSound]);
     IniFile.WriteString('Sound', 'SynthTone', ISynthTone[SynthTone]);

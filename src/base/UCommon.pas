@@ -285,13 +285,18 @@ begin
 end;
 
 // data used by the ...Locale() functions
-{$IF Defined(Linux) or Defined(FreeBSD)}
+{$IF Defined(Linux) or Defined(FreeBSD) or (Defined(Darwin) and Defined(UseMpvVideo))}
 
 var
   PrevNumLocale: string;
 
 const
+  // glibc numbers LC_NUMERIC 1; FreeBSD and macOS number it 4 (1 is LC_COLLATE there).
+  {$IF Defined(Linux)}
   LC_NUMERIC  = 1;
+  {$ELSE}
+  LC_NUMERIC  = 4;
+  {$IFEND}
 
 function setlocale(category: integer; locale: pchar): pchar; cdecl; external 'c' name 'setlocale';
 
@@ -306,6 +311,7 @@ function setlocale(category: integer; locale: pchar): pchar; cdecl; external 'c'
 // able to parse strings correctly
 // (e.g. in Germany "0.9" is not recognized as a valid number anymore but "0,9" is).
 // So we reset the numeric settings to the default ('C').
+// libmpv requires LC_NUMERIC to stay 'C' while its client API is in use.
 // Note: The behaviour of Pascal parsing functions (e.g. strtofloat()) is not
 //   changed by this because it doesn't use the locale-settings.
 // TODO:
@@ -315,7 +321,7 @@ function setlocale(category: integer; locale: pchar): pchar; cdecl; external 'c'
 //   for each call to projectM instead of changing it globally.
 procedure SetDefaultNumericLocale();
 begin
-  {$IF Defined(LINUX) or Defined(FreeBSD)}
+  {$IF Defined(LINUX) or Defined(FreeBSD) or (Defined(Darwin) and Defined(UseMpvVideo))}
   PrevNumLocale := setlocale(LC_NUMERIC, nil);
   setlocale(LC_NUMERIC, 'C');
   {$IFEND}
@@ -323,7 +329,7 @@ end;
 
 procedure RestoreNumericLocale();
 begin
-  {$IF Defined(LINUX) or Defined(FreeBSD)}
+  {$IF Defined(LINUX) or Defined(FreeBSD) or (Defined(Darwin) and Defined(UseMpvVideo))}
   setlocale(LC_NUMERIC, PChar(PrevNumLocale));
   {$IFEND}
 end;
