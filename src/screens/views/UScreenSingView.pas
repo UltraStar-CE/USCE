@@ -1274,16 +1274,21 @@ begin
   if not ScreenSing.PracticeLoop.HasStart then Exit;
   Duration := LyricsState.TotalTime - CurrentSong.Start;
   if (Duration <= 0) or (W <= 0) or (H <= 0) then Exit;
-  with ScreenSing.PracticeLoop do
+  with ScreenSing.PracticeLoop, Theme.Sing do
   begin
     StartX := X + W * EnsureRange((StartTime - CurrentSong.Start) / Duration, 0.0, 1.0);
     if HasEnd then
     begin
       EndX := X + W * EnsureRange((EndTime - CurrentSong.Start) / Duration, 0.0, 1.0);
-      Renderer.DrawQuad(StartX, Y, 0, EndX - StartX, H, 1, 1, 1, 0.24);
-      Renderer.DrawQuad(EndX - 1, Y - 2, 0, 2, H + 4, 1, 1, 1, 1);
+      with PracticeRangeColor do
+        Renderer.DrawQuad(StartX, Y, 0, EndX - StartX, H, R, G, B, PracticeRangeAlpha);
+      with PracticeMarkerColor do
+        Renderer.DrawQuad(EndX - PracticeMarkerWidth / 2, Y - 2, 0,
+          PracticeMarkerWidth, H + 4, R, G, B, PracticeMarkerAlpha);
     end;
-    Renderer.DrawQuad(StartX - 1, Y - 2, 0, 2, H + 4, 1, 1, 1, 1);
+    with PracticeMarkerColor do
+      Renderer.DrawQuad(StartX - PracticeMarkerWidth / 2, Y - 2, 0,
+        PracticeMarkerWidth, H + 4, R, G, B, PracticeMarkerAlpha);
   end;
 end;
 

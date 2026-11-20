@@ -583,6 +583,8 @@ type
 
     StaticSongName:   TThemeStatic;
     TextSongName:     TThemeText;
+    PracticeMarkerColor, PracticeRangeColor: record R, G, B: real; end;
+    PracticeMarkerAlpha, PracticeRangeAlpha, PracticeMarkerWidth: real;
     Countdown: record
       X, Y, Size, ColR, ColG, ColB, Alpha: real;
       Font, Style: integer;
@@ -2425,6 +2427,18 @@ begin
 
       ThemeLoadStatic(Sing.StaticSongName, 'SingSongNameStatic');
       ThemeLoadText(Sing.TextSongName, 'SingSongNameText');
+      SectionList := GetSectionList('SingPracticeLoop');
+      with Sing do
+      begin
+        LoadColor(PracticeMarkerColor.R, PracticeMarkerColor.G, PracticeMarkerColor.B,
+          ReadString(SectionList, 'MarkerColor', 'White'));
+        LoadColor(PracticeRangeColor.R, PracticeRangeColor.G, PracticeRangeColor.B,
+          ReadString(SectionList, 'RangeColor', 'White'));
+        PracticeMarkerAlpha := EnsureRange(ReadFloat(SectionList, 'MarkerAlpha', 1), 0.0, 1.0);
+        PracticeRangeAlpha := EnsureRange(ReadFloat(SectionList, 'RangeAlpha', 0.24), 0.0, 1.0);
+        PracticeMarkerWidth := Max(1.0, ReadFloat(SectionList, 'MarkerWidth', 2));
+      end;
+
       SectionList := GetSectionList('SingCountdown');
       // Countdown center uses the standard 800x600 theme reference coordinates.
       Sing.Countdown.X := ReadFloat(SectionList, 'X', 400);

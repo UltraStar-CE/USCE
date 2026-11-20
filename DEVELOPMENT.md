@@ -60,6 +60,13 @@ A git version of this SVN can be found in the [legacy-sourceforge-svn-mirror](ht
 - Don't let anyone else tell you what to work on. Do what you like and be free!
 Thank you for helping improve the game.
 
+### Singing practice loop
+
+`[SingPracticeLoop]` accepts named theme colors `MarkerColor` and `RangeColor`,
+`MarkerAlpha` and `RangeAlpha` from 0 to 1, and `MarkerWidth` in theme units.
+The defaults are white, opacity 1 for the markers and 0.24 for the range, and a
+marker width of 2.
+
 ### Singing countdown theme settings
 
 The optional `[SingCountdown]` section styles the shared intro, medley and
