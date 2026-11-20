@@ -2197,6 +2197,24 @@ begin
       ThemeLoadButton(Name.PlayerAvatar, 'NamePlayerAvatar');
 
       ThemeLoadSelectSlide(Name.SelectPlayersCount, 'NameSelectPlayerCount');
+      // Some older themes place the count control outside the screen.
+      // Keep the local player count available when there are no microphones.
+      with Name.SelectPlayersCount do
+        if (X < 0) or (Y < 0) or (X + W + SkipX + SBGW > 800) or
+           (Y + H > 600) or (H <= 1) or (SBGW <= 1) then
+        begin
+          ThemeLoadSelectSlide(Name.SelectPlayersCount, 'OptionsSubSelectSlide');
+          X := 170;
+          Y := 130;
+          W := 200;
+          H := 32;
+          SkipX := 8;
+          SBGW := 270;
+          TextSize := 16;
+          Text := Language.Translate('NAME_PLAYERS_COUNT');
+          ArrowW := 16;
+          ArrowH := 18;
+        end;
       ThemeLoadSelectSlide(Name.SelectPlayerColor, 'NameSelectPlayerColor');
       ThemeLoadSelectSlide(Name.SelectPlayerLevel, 'NameSelectPlayerLevel');
       Name.SelectPlayerVoice := Name.SelectPlayerLevel;

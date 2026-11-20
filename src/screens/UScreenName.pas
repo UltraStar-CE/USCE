@@ -76,6 +76,7 @@ type
       NoLocalPlayers: boolean;
       AssignedPlayerCount: integer;
       AssignedPlayerSlots: cardinal;
+      NoInputText: integer;
       PlayerIndex:  integer;
       ColorIndex:   integer;
       LevelIndex:   integer;
@@ -1148,8 +1149,21 @@ constructor TScreenName.Create;
 var
   I: integer;
   WhitePixel: cardinal;
+  Notice: TThemeText;
 begin
   inherited Create;
+  Notice := Theme.Name.PlayerSelectTemplateText;
+  Notice.X := 400;
+  Notice.Y := 300;
+  Notice.W := 620;
+  Notice.Align := 1;
+  Notice.Size := 21;
+  Notice.ColR := 1;
+  Notice.ColG := 1;
+  Notice.ColB := 1;
+  Notice.Reflection := false;
+  Notice.Text := Language.Translate('SING_SETUP_NO_LOCAL_INPUT');
+  NoInputText := AddText(Notice);
 
   LoadFromTheme(Theme.Name);
 
@@ -1868,6 +1882,10 @@ begin
   end;
 
   UpdateMicActivity;
+  Text[NoInputText].Visible := not Party.bPartyGame and
+    (CountIndex > 0) and (AssignedPlayerCount = 0);
+  if Text[NoInputText].Visible then
+    Renderer.DrawQuad(70, 283, 0, 660, 56, 0.08, 0.08, 0.10, 0.9);
   if Theme.Name.Cards.Enabled then
   begin
     DrawCards;
