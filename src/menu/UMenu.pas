@@ -1746,6 +1746,7 @@ begin
 
   SelectsS[High(SelectsS)].showArrows := ThemeSelectS.showArrows;
   SelectsS[High(SelectsS)].oneItemOnly := ThemeSelectS.oneItemOnly;
+  SelectsS[High(SelectsS)].UseInactiveValueColor := ThemeSelectS.UseInactiveValueColor;
 
   //Generate Lines
   SelectsS[High(SelectsS)].GenLines;
