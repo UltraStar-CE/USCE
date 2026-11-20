@@ -43,6 +43,7 @@ type
     procedure QueueClick(Velocity: Byte = 127; Time: Double = -1.0);
     procedure StopAll(Time: Double = -1.0);
     procedure SetPosition(Time: Double);
+    function PlaybackPosition: double;
     procedure SetSyncSource(Source: TSyncSource);
     procedure Play;
     procedure Stop;
@@ -203,6 +204,14 @@ procedure TMidiOutput.SetSyncSource(Source: TSyncSource);
 begin
   if Assigned(FPlaybackStream) then
     FPlaybackStream.SetSyncSource(Source);
+end;
+
+function TMidiOutput.PlaybackPosition: double;
+begin
+  if Assigned(FPlaybackStream) then
+    Result := FPlaybackStream.Position
+  else
+    Result := -1;
 end;
 
 procedure TMidiOutput.Stop;

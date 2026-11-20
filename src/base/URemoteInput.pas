@@ -134,6 +134,7 @@ type
     function TryGetTone(PlayerIndex: integer; SongTimeUs: int64; out Tone: TRemoteToneSample): boolean;
     function TryConsumeToneForBeat(PlayerIndex, Beat: integer; SongTimeUs: int64; out Tone: TRemoteToneSample): boolean;
     function HasAssignedPlayer(PlayerIndex: integer): boolean;
+    procedure GetAssignedPlayerIds(PlayerIndex: integer; out PlayerId, CalibrationId: UTF8String);
     function AssignedPlayerId(PlayerIndex: integer; ForCalibration: boolean = false): UTF8String;
     function AssignedMicDelayMs(PlayerIndex: integer): integer;
     function RequiredGameDelayMs(): integer;
@@ -801,21 +802,31 @@ begin
   end;
 end;
 
-function TRemoteInputProcessor.AssignedPlayerId(PlayerIndex: integer; ForCalibration: boolean): UTF8String;
+procedure TRemoteInputProcessor.GetAssignedPlayerIds(PlayerIndex: integer;
+  out PlayerId, CalibrationId: UTF8String);
 var Buffer: TRemotePlayerBuffer;
 begin
-  Result := '';
+  PlayerId := '';
+  CalibrationId := '';
   Buffer := GetPlayerBuffer(PlayerIndex);
   if Buffer = nil then Exit;
   SDL_LockMutex(Buffer.FLock);
   try
     if Buffer.FEnabled and ((Buffer.FRole = 'singer') or (Buffer.FRole = 'controller')) then
     begin
-      Result := Buffer.FPlayerId;
-      if ForCalibration and (Buffer.FMicrophoneCalibrationId <> '') then
-        Result := Buffer.FMicrophoneCalibrationId;
+      PlayerId := Buffer.FPlayerId;
+      CalibrationId := Buffer.FMicrophoneCalibrationId;
+      if CalibrationId = '' then CalibrationId := PlayerId;
     end;
   finally SDL_UnlockMutex(Buffer.FLock); end;
+end;
+
+function TRemoteInputProcessor.AssignedPlayerId(PlayerIndex: integer; ForCalibration: boolean): UTF8String;
+var PlayerId, CalibrationId: UTF8String;
+begin
+  GetAssignedPlayerIds(PlayerIndex, PlayerId, CalibrationId);
+  if ForCalibration then Result := CalibrationId
+  else Result := PlayerId;
 end;
 
 function TRemoteInputProcessor.AssignedMicDelayMs(PlayerIndex: integer): integer;

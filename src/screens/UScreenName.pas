@@ -1527,7 +1527,7 @@ begin
       if (DelayMeasurement.Slots and (cardinal(1) shl Slot)) <> 0 then
       begin
         Fit := DelayMeasurement.ResultFor(Slot);
-        if Fit.Accepted then
+        if Fit.HasEstimate then
           Caption := Format(Language.Translate('SLOT_DELAY_RESULT'), [Slot + 1, Fit.DelayMs, Fit.UncertaintyMs])
         else
           Caption := Format(Language.Translate('SLOT_DELAY_NO_RESULT'), [Slot + 1]);
