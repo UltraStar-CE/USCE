@@ -260,6 +260,7 @@ type
 
     showArrows:boolean;
     oneItemOnly:boolean;
+    UseInactiveValueColor: boolean;
 
     Text:   UTF8String;
     ColR,  ColG,  ColB,  Int:     real;
@@ -3982,6 +3983,7 @@ begin
 
   ThemeSelectS.showArrows := ReadBool(SectionList, 'ShowArrows', false);
   ThemeSelectS.oneItemOnly := ReadBool(SectionList, 'OneItemOnly', false);
+  ThemeSelectS.UseInactiveValueColor := ReadBool(SectionList, 'UseInactiveValueColor', false);
 end;
 
 procedure TTheme.ThemeLoadEqualizer(var ThemeEqualizer: TThemeEqualizer; const Name: string);

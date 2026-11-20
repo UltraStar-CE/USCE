@@ -125,6 +125,7 @@ type
       STDColG:    single;
       STDColB:    single;
       STDInt:     single;
+      UseInactiveValueColor: boolean;
       
       // position and size
       procedure SetX(PosX: single); override;
@@ -406,6 +407,16 @@ begin
       TextureSBG.Int := SBGDInt;
     end;
   end;
+  if UseInactiveValueColor and (FocusOption >= 0) and (FocusOption <= High(TextOpt)) then
+    with TextOpt[FocusOption] do
+      if SelectBool then
+      begin
+        ColR := STColR; ColG := STColG; ColB := STColB; Int := STInt;
+      end
+      else
+      begin
+        ColR := STDColR; ColG := STDColG; ColB := STDColB; Int := STDInt;
+      end;
 end;
 
 procedure TSelectSlide.SetSelectOpt(Value: integer);
@@ -427,7 +438,7 @@ var
       TextOpt[I].Int := STDInt;
     end;
 
-    if (integer(Sel) <= High(TextOpt)) then
+    if (integer(Sel) <= High(TextOpt)) and (not UseInactiveValueColor or SelectBool) then
     begin
       TextOpt[Sel].ColR := STColR;
       TextOpt[Sel].ColG := STColG;
