@@ -1039,6 +1039,7 @@ var
   LineSpacing: integer;
   TrackIndex: integer;
   TargetLine: integer;
+  OnlyGapTrace: boolean;
   LaneLeft: real;
   LaneRight: real;
   LaneWidth: real;
@@ -1179,22 +1180,18 @@ begin
     begin
       TargetLine := GetVisibleNoteLine(CurrentSong.Tracks[TrackIndex], LyricsState.MidBeat,
         CurrentSong.BPM, Theme.Sing.FreestyleNoteAlpha > 0);
-      if TargetLine < 0 then
+      if TargetLine >= 0 then
       begin
-        if Ini.PitchTrace <> 0 then
-          SingDrawPlayerLine(LaneLeft, LineTop, LaneWidth, TrackIndex, PlayerIndex, LineSpacing, true);
-        Continue;
+        if (Ini.NoteLines = 1) and ScreenSing.Settings.InputVisible and
+           ScreenSing.Settings.NotesVisible[PlayerIndex] then
+          SingDrawNoteLines(LaneLeft, Layout.GuideTopY, LaneRight, LineSpacing);
+        SingDrawPlayerBGLine(LaneLeft, LineTop, LaneRight, Lines[TargetLine], PlayerIndex, LineSpacing);
+        SingDrawLine(LaneLeft, LineTop, LaneRight, Lines[TargetLine], PlayerIndex, LineSpacing);
       end;
-
-      if (Ini.NoteLines = 1) and ScreenSing.Settings.InputVisible and
-         ScreenSing.Settings.NotesVisible[PlayerIndex] then
-        SingDrawNoteLines(LaneLeft, Layout.GuideTopY, LaneRight, LineSpacing);
-
-      SingDrawPlayerBGLine(LaneLeft, LineTop, LaneRight, Lines[TargetLine], PlayerIndex, LineSpacing);
-      SingDrawLine(LaneLeft, LineTop, LaneRight, Lines[TargetLine], PlayerIndex, LineSpacing);
       // Captured bars still belong to the scoring cursor's current line.
-      if TargetLine = CurrentLine then
-        SingDrawPlayerLine(LaneLeft, LineTop, LaneWidth, TrackIndex, PlayerIndex, LineSpacing);
+      OnlyGapTrace := (TargetLine < 0) or (TargetLine <> CurrentLine);
+      if not OnlyGapTrace or (Ini.PitchTrace <> 0) then
+        SingDrawPlayerLine(LaneLeft, LineTop, LaneWidth, TrackIndex, PlayerIndex, LineSpacing, OnlyGapTrace);
     end;
   end;
 end;

@@ -571,7 +571,7 @@ begin
       with RecArray[P] do
       if ((xBottom >= Right) and (xTop <= Right) and
           (yTop <= H) and (yBottom >= H))
-          and (Screen = ScreenAct) then
+          and (Screen = ScreenAct) and DrawnThisFrame then
       begin
         TwinkleArray[Player] := Right; // remember twinkle position for this player
         for C := 1 to 10 do
