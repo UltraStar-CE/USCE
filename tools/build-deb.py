@@ -18,6 +18,14 @@ def build(version, output, themes, projectm_prefix, opencv_prefix):
     if not str(opencv_prefix).strip():
         raise ValueError('Set USCE_OPENCV_PREFIX for make deb, or pass --opencv-prefix to this script')
     opencv_prefix = Path(opencv_prefix).resolve()
+    opencv_notices = {
+        'LICENSE': opencv_prefix / 'share/doc/opencv/LICENSE',
+        'SoftFloat-COPYING.txt': opencv_prefix / 'share/licenses/opencv4/SoftFloat-COPYING.txt',
+    }
+    for source in opencv_notices.values():
+        if not source.is_file():
+            raise ValueError(f'Missing private OpenCV license notice: {source}. '
+                             'Follow the OpenCV build and license staging steps in .github/workflows/platform-builds.yml')
     version = version.replace('-dev.', '~dev.')
     if not re.fullmatch(r'[0-9]{4}\.(?:[1-9]|1[0-2])\.[0-9]+(?:[~+][a-zA-Z0-9.+~]+)?', version):
         raise ValueError('Invalid Debian package version')
@@ -63,8 +71,9 @@ def build(version, output, themes, projectm_prefix, opencv_prefix):
             for name, source in notices.items():
                 copyright_file.write(f'\n\n--- projectM {name} ---\n\n')
                 copyright_file.write(source.read_text(encoding='utf-8').rstrip() + '\n')
-            copyright_file.write('\n--- OpenCV LICENSE ---\n\n')
-            copyright_file.write((opencv_prefix / 'share/doc/opencv/LICENSE').read_text(encoding='utf-8'))
+            for name, source in opencv_notices.items():
+                copyright_file.write(f'\n\n--- OpenCV {name} ---\n\n')
+                copyright_file.write(source.read_text(encoding='utf-8').rstrip() + '\n')
 
         private_libs = [bundled_library]
         shlibs = [f'{match[1]} {match[2]} usce']
@@ -113,7 +122,7 @@ if __name__ == '__main__':
     parser.add_argument('--output', required=True)
     parser.add_argument('--themes', required=True)
     parser.add_argument('--projectm-prefix', required=True, help='Installation prefix for the private projectM 4 library and licenses')
-    parser.add_argument('--opencv-prefix', required=True, help='Installation prefix for the private OpenCV libraries and license')
+    parser.add_argument('--opencv-prefix', required=True, help='Installation prefix for the private OpenCV libraries and license notices')
     args = parser.parse_args()
     try:
         print(build(args.version, args.output, args.themes, args.projectm_prefix, args.opencv_prefix))

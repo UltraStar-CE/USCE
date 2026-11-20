@@ -35,6 +35,9 @@ with tempfile.TemporaryDirectory(prefix='usce-deb-test-') as temp:
                    'projectm-eval-license', 'glm-license', 'soil2-etc1-notice', 'soil2-etc1-license'):
         assert f'--- projectM {notice} ---' in notices
     assert 'Nullsoft' in notices and '--- OpenCV LICENSE ---' in notices
+    softfloat_notice = notices.partition('--- OpenCV SoftFloat-COPYING.txt ---')[2]
+    assert 'License for Berkeley SoftFloat Release 3c' in softfloat_notice
+    assert 'John R. Hauser' in softfloat_notice
     assert (root / 'usr/share/applications/usce.desktop').is_file()
     unpack = Path(temp) / 'upgrade'
     subprocess.run(['dpkg-deb', '--raw-extract', str(package), str(unpack)], check=True)
