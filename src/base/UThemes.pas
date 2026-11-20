@@ -417,6 +417,8 @@ type
     SelectPlayerColor:   TThemeSelectSlide;
     SelectPlayerLevel:   TThemeSelectSlide;
     SelectPlayerVoice:   TThemeSelectSlide;
+    DelayMeasureButton, DelayApplyButton, DelayCancelButton: TThemeButton;
+    DelayText: TThemeText;
   end;
 
   TThemeSong = class(TThemeBasic)
@@ -1273,7 +1275,7 @@ type
     procedure ThemeLoadMainButtons;
     procedure ThemeLoadMainPreviews;
     procedure ThemeLoadHighScoreList(var List: TThemeHighScoreList; const Name: string);
-    procedure ThemeLoadText(var ThemeText: TThemeText; const Name: string);
+    procedure ThemeLoadText(var ThemeText: TThemeText; const Name: string; KeepStyle: boolean = false);
     procedure ThemeLoadTexts(var ThemeText: AThemeText; const Name: string);
 
     procedure ThemeLoadOptionalStatic(var ThemeStatic: TThemeStatic; const Name: string);
@@ -2591,6 +2593,38 @@ begin
       ThemeLoadButton(CheckPopup.Button2, 'CheckPopupButton2');
       ThemeLoadText(CheckPopup.TextCheck , 'CheckPopupText');
 
+      Name.DelayText := CheckPopup.TextCheck;
+      Name.DelayText.X := 400;
+      Name.DelayText.Y := 65;
+      Name.DelayText.Size := 25;
+      // The modal draws over a dark scrim even in light themes.
+      Name.DelayText.ColR := 1;
+      Name.DelayText.ColG := 1;
+      Name.DelayText.ColB := 1;
+      if ResolveThemeFile('NameDelayText') <> nil then
+        ThemeLoadText(Name.DelayText, 'NameDelayText', true);
+      Name.DelayMeasureButton := CheckPopup.Button1;
+      with Name.DelayMeasureButton do
+      begin
+        X := 482; Y := 86; W := 300; H := 28;
+      end;
+      Name.DelayApplyButton := CheckPopup.Button1;
+      with Name.DelayApplyButton do
+      begin
+        X := 180; Y := 500; W := 210; H := 36;
+      end;
+      Name.DelayCancelButton := CheckPopup.Button2;
+      with Name.DelayCancelButton do
+      begin
+        X := 410; Y := 500; W := 210; H := 36;
+      end;
+      if ResolveThemeFile('NameDelayMeasureButton') <> nil then
+        ThemeLoadButton(Name.DelayMeasureButton, 'NameDelayMeasureButton');
+      if ResolveThemeFile('NameDelayApplyButton') <> nil then
+        ThemeLoadButton(Name.DelayApplyButton, 'NameDelayApplyButton');
+      if ResolveThemeFile('NameDelayCancelButton') <> nil then
+        ThemeLoadButton(Name.DelayCancelButton, 'NameDelayCancelButton');
+
       // insert user popup
       ThemeLoadBasic (InsertUserPopup, 'InsertUserPopup');
       ThemeLoadText  (InsertUserPopup.TextInsertUser , 'InsertUserPopupText');
@@ -3570,27 +3604,36 @@ begin
     HighScores.TextTitle.Text := Language.Translate('SING_HIGH_SCORES_TITLE');
 end;
 
-procedure TTheme.ThemeLoadText(var ThemeText: TThemeText; const Name: string);
+procedure TTheme.ThemeLoadText(var ThemeText: TThemeText; const Name: string; KeepStyle: boolean);
 var
   C: integer;
   SectionList: TThemeSectionList;
+  Defaults: TThemeText;
+  FontFile: string;
 begin
+  Defaults := Default(TThemeText);
+  Defaults.Style := ftRegular;
+  if KeepStyle then Defaults := ThemeText;
   SectionList := GetSectionList(Name);
-  ThemeText.X     := ReadInteger(SectionList, 'X', 0);
-  ThemeText.Y     := ReadInteger(SectionList, 'Y', 0);
+  ThemeText.X     := ReadInteger(SectionList, 'X', Defaults.X);
+  ThemeText.Y     := ReadInteger(SectionList, 'Y', Defaults.Y);
   ThemeText.W     := ReadInteger(SectionList, 'W', 0);
   ThemeText.H     := ReadInteger(SectionList, 'H', 0);
 
   ThemeText.Z     := ReadFloat(SectionList, 'Z', 0);
 
-  ThemeText.ColR  := ReadFloat(SectionList, 'ColR', 0);
-  ThemeText.ColG  := ReadFloat(SectionList, 'ColG', 0);
-  ThemeText.ColB  := ReadFloat(SectionList, 'ColB', 0);
+  ThemeText.ColR  := ReadFloat(SectionList, 'ColR', Defaults.ColR);
+  ThemeText.ColG  := ReadFloat(SectionList, 'ColG', Defaults.ColG);
+  ThemeText.ColB  := ReadFloat(SectionList, 'ColB', Defaults.ColB);
 
-  ThemeText.Font  := ReadInteger(SectionList, 'Font', 0);
-  ThemeText.FontFile := ResolveThemeAsset(Path(ReadString(SectionList, 'FontFile', '')));
-  ThemeText.Style := ReadInteger(SectionList, 'Style', ftRegular);
-  ThemeText.Size  := ReadInteger(SectionList, 'Size', 0);
+  ThemeText.Font  := ReadInteger(SectionList, 'Font', Defaults.Font);
+  FontFile := ReadString(SectionList, 'FontFile', '');
+  if (FontFile = '') and KeepStyle and (ReadString(SectionList, 'Font', '') = '') then
+    ThemeText.FontFile := Defaults.FontFile
+  else
+    ThemeText.FontFile := ResolveThemeAsset(Path(FontFile));
+  ThemeText.Style := ReadInteger(SectionList, 'Style', Defaults.Style);
+  ThemeText.Size  := ReadInteger(SectionList, 'Size', Defaults.Size);
   ThemeText.Align := ReadInteger(SectionList, 'Align', 0);
 
   ThemeText.Text  := Language.Translate(ReadString(SectionList, 'Text', ''));

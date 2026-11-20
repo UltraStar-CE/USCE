@@ -171,6 +171,7 @@ uses
   UInputSource      in 'base\UInputSource.pas',
   UPhoneAudio       in 'base\UPhoneAudio.pas',
   UAudioCalibration in 'base\UAudioCalibration.pas',
+  USlotDelayMeasurement in 'base\USlotDelayMeasurement.pas',
   UAudioCalibrationSessions in 'base\UAudioCalibrationSessions.pas',
   URemoteRelaySocket in 'base\URemoteRelaySocket.pas',
   URemoteRelaySession in 'base\URemoteRelaySession.pas',

@@ -21,8 +21,8 @@ begin
   Ini := TIni.Create;
   RemoteInputProcessor.Clear;
   ExpectCount(0);
-  Ini.PlayerDelay[0] := 24;
-  Ini.PlayerDelay[1] := -18;
+  Ini.SlotDelay[0] := 24;
+  Ini.SlotDelay[1] := -18;
   RemoteInputProcessor.AssignPlayerSlot(0, 'one', 'controller', 1, 31);
   if RemoteInputProcessor.AssignedMicDelayMs(0) <> 31 then
     raise Exception.Create('Assigned phone delay is unavailable');
@@ -32,7 +32,7 @@ begin
   RemoteInputProcessor.SetPlayerDelayMs(1, -7);
   if (RemoteInputProcessor.AssignedMicDelayMs(0) <> 0) or
     (RemoteInputProcessor.AssignedMicDelayMs(1) <> -7) or
-    (Ini.PlayerDelay[0] <> 24) or (Ini.PlayerDelay[1] <> -18) then
+    (Ini.SlotDelay[0] <> 24) or (Ini.SlotDelay[1] <> -18) then
     raise Exception.Create('Moving or adjusting a phone changed a slot delay');
   ExpectCount(2);
   RemoteInputProcessor.ClearFrames;

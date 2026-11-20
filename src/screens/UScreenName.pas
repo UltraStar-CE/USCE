@@ -49,6 +49,7 @@ uses
   UScreenSingController,
   UScreenHighScores,
   UScale,
+  USlotDelayMeasurement,
   UThemes,
   SysUtils,
   sdl2,
@@ -105,8 +106,16 @@ type
       CardPanel, CardFocus, MicFrame: integer;
       MicPreviewCount: integer;
       OwnsMicPreview: boolean;
+      DelayMeasurement: TSlotDelayMeasurement;
+      DelayMeasureButton, DelayApplyButton, DelayCancelButton: integer;
       MicActivity: array[0..UIni.IMaxPlayerCount-1] of single;
       MicClippedUntil: array[0..UIni.IMaxPlayerCount-1] of QWord;
+      function AddDelayButton(const Style: TThemeButton; const Key: UTF8String): integer;
+      procedure DrawDelayButton(Index: integer);
+      function DelaySlots: cardinal;
+      procedure StartDelayMeasurement;
+      procedure DrawDelayMeasurement;
+      procedure ApplyDelayMeasurement;
       procedure UpdateAssignedPlayers(Force: boolean = false);
       function DisplayPlayerName(Index: integer): UTF8String;
       procedure UpdateMicActivity;
@@ -120,6 +129,7 @@ type
       Goto_SingScreen: boolean; //If true then next Screen in SingScreen
 
       constructor Create; override;
+      destructor Destroy; override;
       function ShouldHandleInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; out SuppressKey: boolean): boolean; override;
       function ParseInput(PressedKey: cardinal; CharCode: UCS4Char; PressedDown: boolean; Repeated: boolean = false): boolean; override;
       function ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean; override;
@@ -137,6 +147,7 @@ type
       function NoRepeatColors(ColorP: integer; Interaction: integer; Pos: integer):integer;
       function LocalPlayerCount: integer;
       function ActivePlayerCount: integer;
+      function DelayMeasurementOpen: boolean;
       procedure RefreshPlayers();
       procedure RefreshProfile();
       procedure RefreshColor();
@@ -160,6 +171,7 @@ implementation
 uses
 
   URecord,
+  UAudioCalibration,
   UText,
   UParty,
   URemoteBridgeIPC,
@@ -270,6 +282,22 @@ begin
   if (X > RenderW) then
     X := X - RenderW;
   Y := Round((Y / ScreenH) * RenderH);
+
+  if Assigned(DelayMeasurement) then
+  begin
+    if BtnDown and (MouseButton = SDL_BUTTON_LEFT) then
+      if InRegion(X, Y, Button[DelayCancelButton].GetMouseOverArea) then
+        FreeAndNil(DelayMeasurement)
+      else if InRegion(X, Y, Button[DelayApplyButton].GetMouseOverArea) then
+        ApplyDelayMeasurement;
+    Exit;
+  end;
+  if BtnDown and (MouseButton = SDL_BUTTON_LEFT) and (SelectedPlayerCount > 0) and
+    InRegion(X, Y, Button[DelayMeasureButton].GetMouseOverArea) then
+  begin
+    StartDelayMeasurement;
+    Exit;
+  end;
 
   if Theme.Name.Cards.Enabled and (SelectedPlayerCount > 0) and
      BtnDown and (MouseButton = SDL_BUTTON_LEFT) then
@@ -463,6 +491,20 @@ begin
   Result := true;
   if (PressedDown) then
   begin // Key Down
+    if Assigned(DelayMeasurement) then
+    begin
+      if not Repeated then
+        case PressedKey of
+          SDLK_ESCAPE: FreeAndNil(DelayMeasurement);
+          SDLK_RETURN, SDLK_KP_ENTER: ApplyDelayMeasurement;
+        end;
+      Exit;
+    end;
+    if (PressedKey = SDLK_M) and ((SDL_GetModState and KMOD_CTRL) <> 0) then
+    begin
+      if not Repeated then StartDelayMeasurement;
+      Exit;
+    end;
     if HandleNameSuggestionKey(PressedKey) then
     begin
       PlayerNames[PlayerIndex] := Button[PlayerName].Text[0].Text;
@@ -1233,6 +1275,10 @@ begin
 
   GenerateAvatars();
 
+  DelayMeasureButton := AddDelayButton(Theme.Name.DelayMeasureButton, 'SLOT_DELAY_MEASURE');
+  DelayApplyButton := AddDelayButton(Theme.Name.DelayApplyButton, 'SLOT_DELAY_APPLY');
+  DelayCancelButton := AddDelayButton(Theme.Name.DelayCancelButton, 'SLOT_DELAY_CANCEL');
+
   NumVisibleAvatars := Theme.Name.PlayerScrollAvatar.NumAvatars;
   DistanceVisibleAvatars := Theme.Name.PlayerScrollAvatar.DistanceAvatars;
 
@@ -1341,12 +1387,166 @@ end;
 
 procedure TScreenName.OnHide;
 begin
+  FreeAndNil(DelayMeasurement);
   StopTextInput;
   if OwnsMicPreview then AudioInput.CaptureStop(true);
   OwnsMicPreview := false;
   FillChar(MicActivity, SizeOf(MicActivity), 0);
   FillChar(MicClippedUntil, SizeOf(MicClippedUntil), 0);
   inherited;
+end;
+
+destructor TScreenName.Destroy;
+begin
+  DelayMeasurement.Free;
+  inherited;
+end;
+
+function TScreenName.DelayMeasurementOpen: boolean;
+begin
+  Result := Assigned(DelayMeasurement);
+end;
+
+function TScreenName.DelaySlots: cardinal;
+var LocalCount: integer;
+begin
+  LocalCount := CountIndex;
+  if Party.bPartyGame then LocalCount := SelectedPlayerCount;
+  AudioInputProcessor.ConfiguredPlayerCount(LocalCount, Result);
+end;
+
+procedure TScreenName.StartDelayMeasurement;
+var Slots: cardinal;
+begin
+  Slots := DelaySlots;
+  if Slots = 0 then
+  begin
+    ScreenPopupError.ShowPopup(Language.Translate('SLOT_DELAY_NO_INPUTS'));
+    Exit;
+  end;
+  if SelectedPlayerCount = 0 then Exit;
+  if Ini.SfxVolume = 0 then
+  begin
+    ScreenPopupError.ShowPopup(Language.Translate('SLOT_DELAY_MUTED'));
+    Exit;
+  end;
+  if Ini.MaxFramerateGet < 30 then
+  begin
+    ScreenPopupError.ShowPopup(Language.Translate('SLOT_DELAY_LOW_FPS'));
+    Exit;
+  end;
+  ScreenSong.StopMusicPreview;
+  DelayMeasurement := TSlotDelayMeasurement.Create;
+  UpdateMicActivity;
+  if not DelayMeasurement.Start(Slots) then
+  begin
+    FreeAndNil(DelayMeasurement);
+    ScreenPopupError.ShowPopup(Language.Translate('SLOT_DELAY_OUTPUT_ERROR'));
+  end;
+end;
+
+procedure TScreenName.ApplyDelayMeasurement;
+begin
+  if DelayMeasurement.Measuring or not DelayMeasurement.HasResult then Exit;
+  DelayMeasurement.Apply(DelaySlots);
+  FreeAndNil(DelayMeasurement);
+end;
+
+function TScreenName.AddDelayButton(const Style: TThemeButton; const Key: UTF8String): integer;
+var
+  Appearance: TThemeButton;
+  CaptionStyle: TThemeText;
+begin
+  Appearance := Style;
+  if Length(Appearance.Text) > 0 then CaptionStyle := Appearance.Text[0]
+  else CaptionStyle := Theme.Name.DelayText;
+  Appearance.Text := nil;
+  SetLength(Appearance.Text, 1);
+  CaptionStyle.Text := Language.Translate(Key);
+  CaptionStyle.Align := 1;
+  CaptionStyle.Size := Min(CaptionStyle.Size, Max(12, Appearance.H - 10));
+  CaptionStyle.X := Appearance.W div 2;
+  CaptionStyle.Y := (Appearance.H - CaptionStyle.Size) div 2;
+  Appearance.Text[0] := CaptionStyle;
+  Appearance.Parent := 0;
+  Appearance.Fade := false;
+  Appearance.Reflection := false;
+  Appearance.ScaleMode := lsStretch;
+  Result := AddButton(Appearance);
+  // These actions are navigated by the modal shortcuts and handled by ParseMouse.
+  SetLength(Interactions, Length(Interactions) - 1);
+  Button[Result].Visible := false;
+end;
+
+procedure TScreenName.DrawDelayButton(Index: integer);
+begin
+  Button[Index].Visible := true;
+  Button[Index].Draw;
+  Button[Index].Visible := false;
+end;
+
+procedure TScreenName.DrawDelayMeasurement;
+var Slot, Row, Count, RowsPerColumn: integer;
+    X: real;
+    Fit: TAudioCalibrationResult;
+    Caption: UTF8String;
+  procedure LabelAt(const Value: UTF8String; X, Y: real; Size: integer; WidthFraction: real = 0.9);
+  var Width: real;
+  begin
+    SetFontFamily(ResolveThemeFont(Theme.Name.DelayText.FontFile, Theme.Name.DelayText.Font));
+    SetFontSize(Size);
+    SetFontStyle(Theme.Name.DelayText.Style);
+    SetFontItalic(false);
+    SetFontReflection(false, 0);
+    with Theme.Name.DelayText do SetFontColor(ColR, ColG, ColB, 1);
+    Width := TextWidth(Value);
+    if Width > RenderW * WidthFraction then
+      SetFontSize(Size * RenderW * WidthFraction / Width);
+    SetFontPos(X - TextWidth(Value) / 2, Y);
+    PrintText(Value);
+  end;
+begin
+  if not Assigned(DelayMeasurement) then
+  begin
+    if SelectedPlayerCount > 0 then DrawDelayButton(DelayMeasureButton);
+    Exit;
+  end;
+  Renderer.DrawQuad(0, 0, 0, RenderW, RenderH, 0, 0, 0, 0.82);
+  with Theme.Name.DelayText do
+    LabelAt(Language.Translate('SLOT_DELAY_TITLE'), X, Y, Size);
+  if DelayMeasurement.Measuring then
+    LabelAt(Language.Translate('SLOT_DELAY_LISTENING'), RenderW / 2, 103, 18)
+  else
+  begin
+    Count := 0;
+    for Slot := 0 to UIni.IMaxPlayerCount - 1 do
+      if (DelayMeasurement.Slots and (cardinal(1) shl Slot)) <> 0 then Inc(Count);
+    RowsPerColumn := Min(UIni.IMaxPlayerCount div 2, Max(1, Count));
+    Row := 0;
+    for Slot := 0 to UIni.IMaxPlayerCount - 1 do
+      if (DelayMeasurement.Slots and (cardinal(1) shl Slot)) <> 0 then
+      begin
+        Fit := DelayMeasurement.ResultFor(Slot);
+        if Fit.Accepted then
+          Caption := Format(Language.Translate('SLOT_DELAY_RESULT'), [Slot + 1, Fit.DelayMs, Fit.UncertaintyMs])
+        else
+          Caption := Format(Language.Translate('SLOT_DELAY_NO_RESULT'), [Slot + 1]);
+        X := RenderW / 2;
+        if Count > RowsPerColumn then
+        begin
+          X := RenderW * (1 + 2 * (Row div RowsPerColumn)) / 4;
+          LabelAt(Caption, X, 110 + 29 * (Row mod RowsPerColumn), 17, 0.45);
+        end
+        else
+          LabelAt(Caption, X, 110 + 29 * Row, 17);
+        Inc(Row);
+      end;
+    if DelayMeasurement.HasResult then
+      DrawDelayButton(DelayApplyButton)
+    else
+      LabelAt(Language.Translate('SLOT_DELAY_RETRY_HINT'), RenderW / 2, RenderH - 140, 16);
+  end;
+  DrawDelayButton(DelayCancelButton);
 end;
 
 procedure TScreenName.OnShow;
@@ -1594,7 +1794,7 @@ begin
     FillChar(MicClippedUntil, SizeOf(MicClippedUntil), 0);
   end;
   // Retry after an outgoing singing screen releases its capture at fade end.
-  if (Count > 0) and not AudioInput.IsCapturing then
+  if (CaptureCount > 0) and not AudioInput.IsCapturing then
   begin
     AudioInput.CaptureStart(CaptureCount, true);
     OwnsMicPreview := true;
@@ -1882,6 +2082,13 @@ begin
   end;
 
   UpdateMicActivity;
+  ScreenContinuousPlayback.Update;
+  if Assigned(DelayMeasurement) then
+  begin
+    DelayMeasurement.Update;
+    DrawDelayMeasurement;
+    Exit(true);
+  end;
   Text[NoInputText].Visible := not Party.bPartyGame and
     (CountIndex > 0) and (AssignedPlayerCount = 0);
   if Text[NoInputText].Visible then
@@ -1889,6 +2096,7 @@ begin
   if Theme.Name.Cards.Enabled then
   begin
     DrawCards;
+    DrawDelayMeasurement;
     Result := true;
     Exit;
   end;
@@ -1923,7 +2131,7 @@ begin
   for I := 0 to High(Text) do
     Text[I].Draw;
 
-  ScreenContinuousPlayback.Update;
+  DrawDelayMeasurement;
   Result := true;
 end;
 
