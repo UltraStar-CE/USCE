@@ -28,14 +28,14 @@ type
  TPlayerSlotRect = record X,Y,W,H: integer; end;
  TMouseOverRect = record X,Y,W,H: single; end;
  TText = record Text: string; end;
- TButton = record Selected: boolean; Text: array[0..0] of TText; end;
+ TButton = record Selected, Selectable: boolean; Text: array[0..0] of TText; end;
  TSlide = class procedure SetSelectOpt(Value: integer); end;
  TBase = class
   Interaction: integer;
   function ParseMouse(MouseButton: integer; BtnDown: boolean; X,Y: integer): boolean; virtual;
  end;
  TScreenName = class(TBase)
-  PlayerIndex, AvatarTarget, AvatarCurrent, LevelIndex: integer;
+  PlayerIndex, AvatarTarget, AvatarCurrent, LevelIndex, PlayerSelectIID: integer;
   SelectedPlayerCount: integer;
   PlayerNames: array[0..1] of string;
   PlayerAvatars, PlayerLevel: array[0..1] of integer;
@@ -76,6 +76,7 @@ begin
  Theme.Name.Cards.Rows:=1;Theme.Name.Cards.Panel.H:=100;Theme.Name.Cards.Panel.W:=100;
  Theme.Name.SelectPlayerLevel.X:=10;
  S:=TScreenName.Create;S.SelectedPlayerCount:=2;S.SelectsS[0]:=TSlide.Create;
+ S.Button[PlayerName].Selectable:=true;S.PlayerSelectIID:=7;
  try
   Hit:=PlayerAvatarIID;S.ParseMouse(1,true,40,40);
   Check((Calls=0) and (S.Interaction=PlayerAvatarIID),'avatar click submitted setup');
@@ -84,7 +85,7 @@ begin
   S.ParseMouse(1,true,900,700);
   Check(Calls=0,'external name editor submitted setup');
   Hit:=-1;S.ParseMouse(1,true,240,40);
-  Check((Calls=0) and (S.PlayerIndex=1),'other card was not selected safely');
+  Check((Calls=0) and (S.PlayerIndex=1) and (S.Interaction=PlayerNameIID),'other card was not selected safely');
   Hit:=PlayerSelectVoiceIID;S.ParseMouse(1,true,240,40);
   Check((Calls=1) and (LastX=240) and (LastY=40),'slide lost native coordinates');
   Theme.Name.Cards.LevelSegments:=true;Theme.Name.SelectPlayerLevel.Y:=50;
@@ -93,6 +94,9 @@ begin
   Theme.Name.Cards.EditOutside:=true;
   S.ParseMouse(1,true,40,110);
   Check((Calls=1) and (S.LevelIndex=0),'external difficulty segment submitted setup');
+  S.Button[PlayerName].Selectable:=false;Hit:=-1;
+  S.ParseMouse(1,true,40,40);
+  Check((Calls=1) and (S.PlayerIndex=0) and (S.Interaction=S.PlayerSelectIID),'hidden name editor received focus');
   Theme.Name.Cards.Enabled:=false;Hit:=PlayerNameIID;
   S.ParseMouse(1,true,40,40);Check(Calls=2,'legacy click dispatch changed');
  finally S.SelectsS[0].Free;S.Free;end;

@@ -1,4 +1,5 @@
 'use strict';
+const {upstreamCutoff} = require('./upstream-age.cjs');
 
 // This module runs only from the trusted default branch, never a PR checkout.
 const {upstreamReport} = require('./assessment-report.cjs');
@@ -106,7 +107,7 @@ async function upstreamDelta(github, track, from) {
   const commits = await github.paginate(github.rest.repos.compareCommits, {...repo, base: from, head: to, per_page: 100}, r => r.data.commits);
   return {track, from, to, url: 'https://github.com/' + track.repo + '/compare/' + from + '...' + to,
     total: comparison.data.total_commits,
-    commits: commits.map(c => ({sha: c.sha, url: c.html_url, subject: bounded(c.commit.message.split('\n')[0], 300)})),
+    commits: commits.map(c => ({sha: c.sha, url: c.html_url, authoredAt: c.commit.author?.date, subject: bounded(c.commit.message.split('\n')[0], 300)})),
     files: (comparison.data.files || []).map(f => ({path: f.filename, status: f.status, patch: bounded(f.patch, 16000)})),
     filesTruncated: (comparison.data.files || []).length >= 300};
 }
@@ -137,20 +138,29 @@ async function unrecordedDelta(github, context, base, delta) {
     url: 'https://github.com/' + delta.track.repo + '/compare/' + from + '...' + delta.to};
 }
 
-async function trackUpstream({github, context, core}) {
+async function trackUpstream({github, context, core, now = new Date()}) {
   const base = await baseInfo(github, context);
   for (const track of TRACKS) {
     const from = await checkpoint(github, context, base, track);
-    const delta = await unrecordedDelta(github, context, base, await upstreamDelta(github, track, from));
+    const source = await upstreamDelta(github, track, from);
+    const delta = await unrecordedDelta(github, context, base, source);
     if (!delta) continue;
+    const cutoff = upstreamCutoff(now);
+    const commits = delta.commits.filter(commit => {
+      const authoredAt = Date.parse(commit.authoredAt);
+      if (!Number.isFinite(authoredAt)) throw Error('Missing upstream commit author date');
+      return authoredAt >= cutoff;
+    });
+    if (!commits.length) continue;
+    const filtered = commits.length !== source.commits.length;
     const name = 'automation/upstream-' + track.id + '-' + delta.to.slice(0, 12);
     const content = {repository: track.repo, branch: track.ref, from: delta.from, sha: delta.to,
       meaning: 'Assessed upstream tip, not a claim that changes have been incorporated',
-      comparison: delta.url, commits: delta.commits};
+      comparison: delta.url, commits};
     const pr = await openDraft(github, context, base, name,
       [{path: 'doc/upstream/' + track.id + '-checkpoint.json', content: JSON.stringify(content, null, 2) + '\n'}],
       'Assess upstream ' + track.id + ' changes through ' + delta.to.slice(0, 12),
-      upstreamReport(delta));
+      upstreamReport({...delta, commits, total: commits.length, filtered}));
     core.notice('Upstream assessment: ' + pr.html_url);
   }
 }

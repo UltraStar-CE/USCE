@@ -44,6 +44,7 @@ on:
       - "**/CMakeLists.txt"
       - "release-plan.json"
       - "themes.json"
+      - "!doc/**"
       # ci-build-paths:end
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
@@ -89,6 +90,7 @@ on:
       - "**/CMakeLists.txt"
       - "release-plan.json"
       - "themes.json"
+      - "!doc/**"
       # ci-build-paths:end
 permissions:
   contents: read
@@ -98,6 +100,9 @@ concurrency:
 jobs:
   platforms:
     name: Platforms
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/platform-builds.yml
     with:
       ref: ${{ github.sha }}

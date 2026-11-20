@@ -28,13 +28,7 @@ administrative responsibilities, not a technical veto. Maintainer appointments
 and removals follow the public proposal process. Our current responsibilities
 and roster appear in [MAINTAINERS.md](MAINTAINERS.md).
 
-The project currently has one human developer, dgruss. During this recorded
-solo phase, the maintainer may merge their own PR after required CI passes,
-review findings are addressed, and testing and the absence of independent human
-review are recorded. Direct pushes, force pushes and automatic merges remain
-prohibited. We review this status monthly. The exception ends when a second
-human developer joins the roster, without waiting for that newcomer to earn
-two merged PRs.
+Direct pushes, force pushes and automatic merges are prohibited.
 
 ## Active developers and approvals
 
@@ -48,10 +42,12 @@ feedback; a bare approval or automated review does not qualify.
 We review the roster monthly through a public PR with contribution links.
 Anyone can correct an omission or question a decision through the public
 proposal process. Contribution quality matters; raw commit counts do not define
-it. The initial solo roster is explicitly identified.
+it.
 
-Outside the solo exception, every PR needs **one independent human developer
-approval with four or fewer active developers, and two with more than four**.
+A PR that changes any path outside the root `doc/` and `tools/` directories
+needs **one independent human developer approval with four or fewer active
+developers, and two with more than four**. GitHub enforces this through the
+USCE reviewers team. This approval exemption is separate from CI.
 The author cannot approve their own PR. Maintainers, owners and bots follow the
 same PR route. AI feedback never counts as a required human approval.
 
@@ -59,9 +55,13 @@ When the fifth developer qualifies, we raise the enforced requirement to two
 before further merges. An overdue roster review keeps the existing threshold;
 it never lowers it automatically. Any decrease is publicly recorded after review.
 
-We require passing CI, resolved review discussions and renewed approval when
-code changes invalidate a review. Default and release branches have no bypass
-actors. Administrative rule changes are publicly recorded.
+Every change goes through a PR. A PR changing only paths under the root `doc/`
+directory is exempt from approval and lint, builds and tests. GitHub still
+records a required check that verifies the scope of the changes. All other
+PRs require passing CI. Changes that invalidate a required review need renewed
+approval. All PRs require resolved review discussions. The organization owner
+currently has a temporary PR-only bypass for the approval rule. The separate
+CI and branch rules still apply. Administrative rule changes are publicly recorded.
 
 ## Transparency and reconsideration
 

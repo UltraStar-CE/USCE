@@ -14,6 +14,24 @@ behavior. Do not bundle music or artwork without documented permission.
 - Check that untrusted PRs/issues cannot execute with secrets or write tokens.
 - AI review is advisory and never a required human approval.
 
+### Gameplay, settings, and companion compatibility
+
+- Trace changed actions from their available entry points to the final state
+  change. Include keyboard, mouse, remote commands, and automatic transitions
+  where they reach the same code. Practice takes must stay ineligible for
+  persistent scoring through both automatic and manual submission. A modal
+  that blocks local Continue must also block remote Continue without applying
+  pending changes.
+- Applying settings must preserve unrelated unsaved edits and persist only the
+  values the user applied. Check saved-data changes against existing configs
+  and scores from the supported release. For phone protocol or capability
+  changes, check the currently deployed companion and its supported fallback.
+- For timing, playback, input, or backend changes, trace a normal path and a
+  failure or recovery path. When practical, use the same focused fixture on
+  base and head and exercise the shipped configuration if it differs from the
+  development build. State which results were observed and which follow from
+  code. Report concrete lower-severity regressions that warrant a fix.
+
 ### Review communication
 
 - Write like a considerate, experienced collaborator: direct, conversational and

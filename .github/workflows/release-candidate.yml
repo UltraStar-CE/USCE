@@ -28,6 +28,9 @@ jobs:
   build:
     needs: plan
     if: needs.plan.outputs.version != ''
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/platform-builds.yml
     with:
       ref: ${{ github.sha }}

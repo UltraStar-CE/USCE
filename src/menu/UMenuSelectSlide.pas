@@ -612,22 +612,19 @@ begin
     SetFontStyle(ftRegular);
     SetFontSize(Text.Size);
 
-    // we will remove min. 2 letters by default and replace them w/ points
-    // if the whole text don't fit
-    Len := Length(OptText) - 1;
-
-    while (TextWidth(Result) > MaxLen) and (Len > 0) do
+    Len := Length(OptText);
+    while (Len > 0) and (TextWidth(Result) > MaxLen) do
     begin
-      { ensure that we only cut at full letters }
-      { this code may be a problem if there is a text that
-        consists of many multi byte characters and only few
-        one byte characters }
+      // Drop a complete UTF-8 code point before adding the ellipsis.
       repeat
         Dec(Len);
-      until (byte(OptText[Len]) and 128) = 0;
-      
-      Result := copy(OptText, 1, Len) + '..';
+      until (Len = 0) or ((Byte(OptText[Len + 1]) and $C0) <> $80);
+
+      Result := Copy(OptText, 1, Len) + '..';
     end;
+
+    if TextWidth(Result) > MaxLen then
+      Result := '';
   end;
 end;
 

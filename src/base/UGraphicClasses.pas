@@ -83,6 +83,7 @@ type
    xTop, yTop, xBottom, yBottom : real;
    TotalStarCount   : integer;
    CurrentStarCount : integer;
+   DrawnThisFrame   : boolean;
    Screen           : integer;
  end;
 
@@ -460,15 +461,27 @@ procedure TEffectManager.SpawnRec();
 var
   Xkatze, Ykatze    : real;
   RandomFrame : integer;
-  P : integer; // P as seen on TV as Positionman
+  P, I, RecIndex: integer;
 begin
-
-  //AKI BUG
+  // A hidden note must stop emitting particles even if its sentence never changes.
+  I := 0;
+  while I <= High(Particle) do
+  begin
+    RecIndex := Particle[I].RecIndex;
+    if (RecIndex >= 0) and (RecArray[RecIndex].Screen = ScreenAct) and
+      not RecArray[RecIndex].DrawnThisFrame then
+      Kill(I)
+    else
+      Inc(I);
+  end;
 
   //Spawn a random amount of stars within the given coordinates
   //RandomRange(0,14) <- this one starts at a random  frame, 16 is our last frame - would be senseless to start a particle with 16, cause it would be dead at the next frame
-  for P := 0 to high(RecArray) do
+  for P := 0 to High(RecArray) do
   begin
+    if (RecArray[P].Screen <> ScreenAct) or not RecArray[P].DrawnThisFrame then
+      Continue;
+    RecArray[P].DrawnThisFrame := false;
     while (RecArray[P].TotalStarCount > RecArray[P].CurrentStarCount) do
     begin
       Xkatze := RandomRange(Ceil(RecArray[P].xTop), Ceil(RecArray[P].xBottom));
@@ -611,8 +624,11 @@ begin
     begin
       if (ceil(RecArray[P].xTop) = ceil(Xtop)) and
       (ceil(RecArray[P].yTop) = ceil(Ytop)) and
-      (ScreenAct = RecArray[p].Screen) then
-        exit; // it's already in the array, so we don't have to create a new one
+      (ScreenAct = RecArray[P].Screen) then
+      begin
+        RecArray[P].DrawnThisFrame := true;
+        Exit;
+      end;
     end;
 
   // we got a new position, add the new positions to our array
@@ -624,6 +640,7 @@ begin
     RecArray[NewIndex].yBottom := Ybottom;
     RecArray[NewIndex].TotalStarCount := ceil(Xbottom - Xtop) div 12 + 3;
     RecArray[NewIndex].CurrentStarCount := 0;
+    RecArray[NewIndex].DrawnThisFrame := true;
     RecArray[NewIndex].Screen := ScreenAct;
 end;
 

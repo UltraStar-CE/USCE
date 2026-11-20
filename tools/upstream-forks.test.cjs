@@ -1,14 +1,19 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {activeForks, recentCommits, forkChanges, trackForks} = require('./upstream-forks.cjs');
+const {execFileSync} = require('node:child_process');
+const {mkdtempSync, rmSync} = require('node:fs');
+const {tmpdir} = require('node:os');
+const {join, resolve} = require('node:path');
+const {pathToFileURL} = require('node:url');
+const {activeForks, recentCommits, forkChanges, createAssessedAncestry, trackForks} = require('./upstream-forks.cjs');
 const now = new Date('2026-10-27T23:00:00Z');
 const fork = (full_name = 'contributor/USDX', extra = {}) => ({full_name,
   default_branch: 'master', pushed_at: '2026-10-20T00:00:00Z', ...extra});
 const snapshot = (repository = 'contributor/USDX', head = 'b'.repeat(40)) => ({repository, branch: 'master', head, ahead: 2});
 
 test('discovery includes active forks, excludes old, archived, disabled and our own, and deduplicates pages', () => {
-  const result = activeForks([fork(), fork(), fork('old/USDX', {pushed_at: '2024-10-26T00:00:00Z'}),
+  const result = activeForks([fork(), fork(), fork('old/USDX', {pushed_at: '2026-07-26T00:00:00Z'}),
     fork('archived/USDX', {archived: true}), fork('disabled/USDX', {disabled: true}), fork('UltraStar-CE/USCE')], now, 'UltraStar-CE/USCE');
   assert.deepEqual(result.map(f => f.full_name), ['contributor/USDX']);
   assert.throws(() => activeForks([fork('bad/USDX', {pushed_at: null})], now, 'UltraStar-CE/USCE'));
@@ -53,6 +58,7 @@ function fixture({pending = false, failed = false, previous = null} = {}) {
   }};
   github.paginate = async (method, args, map) => {const response = await method(args); return map ? map(response) : response.data;};
   return {github, context: {repo: {owner: 'UltraStar-CE', repo: 'USCE'}, payload: {repository: {default_branch: 'main'}}},
+    ancestry: {include() {}, has() { return false; }, close() {}},
     core: {notice() {}}, now, proposals, trees, comparisons};
 }
 
@@ -127,16 +133,16 @@ test('complete inventories include later pages; missing pages never publish', as
   }
 });
 
-test('six calendar months use original author dates, inclusive boundary and month-end clamp', () => {
-  const commits = ['2026-04-27T22:59:59Z', '2026-04-27T23:00:00Z', '2026-10-20T00:00:00Z'].map(authoredAt => ({authoredAt}));
+test('three calendar months use original author dates, inclusive boundary and month-end clamp', () => {
+  const commits = ['2026-07-27T22:59:59Z', '2026-07-27T23:00:00Z', '2026-10-20T00:00:00Z'].map(authoredAt => ({authoredAt}));
   assert.deepEqual(recentCommits(commits, now), commits.slice(1));
-  assert.equal(recentCommits([{authoredAt: '2026-04-30T12:00:00Z'}], new Date('2026-10-31T12:00:00Z')).length, 1);
+  assert.equal(recentCommits([{authoredAt: '2026-02-28T12:00:00Z'}], new Date('2026-05-31T12:00:00Z')).length, 1);
   assert.throws(() => recentCommits([{}], now), /author date/);
 });
 test('a fork containing only old commits produces no assessment PR', async () => {
   const x = fixture();
   x.github.rest.repos.compareCommitsWithBasehead = async () => ({data: {ahead_by: 1, behind_by: 0,
-    commits: [{sha: 'b'.repeat(40), commit: {message: 'Old rebased work', author: {name: 'Author', date: '2025-01-01T00:00:00Z'}, committer: {date: '2026-10-20T00:00:00Z'}}}]}});
+    commits: [{sha: 'b'.repeat(40), commit: {message: 'Old rebased work', author: {name: 'Author', date: '2026-07-26T00:00:00Z'}, committer: {date: '2026-10-20T00:00:00Z'}}}]}});
   await trackForks(x);
   assert.equal(x.proposals.length, 0);
 });
@@ -178,15 +184,12 @@ test('a new fork alias excludes ancestors of assessed heads even when old invent
   const x = fixture({previous});
   const change = sha => ({sha, commit: {message: 'Source change',
     author: {name: 'Author', date: '2026-10-20T00:00:00Z'}}});
-  const ancestryCalls = [];
+  const indexed = [];
+  x.ancestry.include = heads => indexed.push(...heads);
+  x.ancestry.has = sha => sha === '5'.repeat(40);
   x.github.rest.repos.compareCommitsWithBasehead = async args => {
-    if (args.basehead.startsWith('9'.repeat(40))) {
-      ancestryCalls.push(args);
-      // A large, divergent comparison needs only its count.
-      return {data: {ahead_by: args.basehead.endsWith('5'.repeat(40)) ? 0 : 2584}};
-    }
-    return {data: {ahead_by: 2, behind_by: 0,
-      commits: [change('5'.repeat(40)), change('6'.repeat(40))]}};
+    assert.equal(args.per_page, 100);
+    return {data: {ahead_by: 2, behind_by: 0, commits: [change('5'.repeat(40)), change('6'.repeat(40))]}};
   };
   await trackForks(x);
   const records = JSON.parse(x.trees[0].tree[0].content).forks;
@@ -194,10 +197,8 @@ test('a new fork alias excludes ancestors of assessed heads even when old invent
   assert.deepEqual(first.newCommits.map(c => c.sha), ['6'.repeat(40)]);
   assert.equal(first.ignoredKnownHistoryCommitCount, 1);
   assert.deepEqual(records[0], previous.forks[0]);
-  assert.deepEqual(ancestryCalls.map(args => [args.basehead, args.per_page, args.page]), [
-    ['9'.repeat(40) + '...' + '5'.repeat(40), 1, undefined],
-    ['9'.repeat(40) + '...' + '6'.repeat(40), 1, undefined],
-  ]);
+  assert.equal(indexed[0], '9'.repeat(40));
+  assert.equal(indexed.filter(head => head === '9'.repeat(40)).length, 1);
 });
 
 test('rediscovering only known ancestry creates no empty assessment PR', async () => {
@@ -205,20 +206,84 @@ test('rediscovering only known ancestry creates no empty assessment PR', async (
     repository: 'old/USDX', branch: 'renamed', head: '9'.repeat(40), commits: [],
     assessment: {decision: 'assessed'}}]};
   const x = fixture({previous});
-  const original = x.github.rest.repos.compareCommitsWithBasehead;
-  x.github.rest.repos.compareCommitsWithBasehead = async args => args.basehead.startsWith('9'.repeat(40))
-    ? {data: {ahead_by: 0, behind_by: 1, commits: []}} : original(args);
+  x.ancestry.has = () => true;
   await trackForks(x);
   assert.equal(x.proposals.length, 0);
 });
 
-test('incomplete ancestry counts fail closed', async () => {
+test('incomplete assessed commit history fails closed and releases the graph', async () => {
   const x = fixture({previous: {repository: 'UltraStar-Deluxe/USDX', forks: [
     {...snapshot('other/USDX', '9'.repeat(40)), commits: []},
   ]}});
-  const compare = x.github.rest.repos.compareCommitsWithBasehead;
-  x.github.rest.repos.compareCommitsWithBasehead = async args => args.per_page === 1
-    ? {data: {ahead_by: null}} : compare(args);
-  await assert.rejects(trackForks(x), /Incomplete assessed ancestry comparison/);
+  let closed = false;
+  x.ancestry.include = () => { throw Error('Incomplete assessed commit history'); };
+  x.ancestry.close = () => { closed = true; };
+  await assert.rejects(trackForks(x), /Incomplete assessed commit history/);
   assert.equal(x.proposals.length, 0);
+  assert.equal(closed, true);
+});
+
+test('the bare commit graph indexes merged ancestors and can extend without source trees', () => {
+  const directory = mkdtempSync(join(resolve(tmpdir()), 'usce-fork-history-test-'));
+  const graph = createAssessedAncestry(pathToFileURL(directory).href);
+  const git = (args, input) => execFileSync('git', ['--git-dir=' + directory, ...args], {
+    input, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'],
+  }).trim();
+  try {
+    git(['init', '--quiet', '--bare', '--template=']);
+    git(['config', 'user.name', 'Test']);
+    git(['config', 'user.email', 'test@example.com']);
+    git(['config', 'uploadpack.allowFilter', 'true']);
+    const tree = git(['mktree'], '');
+    const commit = (message, ...parents) => git(['commit-tree', tree, ...parents.flatMap(p => ['-p', p]), '-m', message]);
+    const root = commit('root');
+    const left = commit('left', root);
+    const right = commit('right', root);
+    const merged = commit('merge', left, right);
+    const other = commit('novel', root);
+    git(['update-ref', 'refs/heads/assessed', merged]);
+    git(['update-ref', 'refs/heads/other', other]);
+    graph.include([merged]);
+    for (const sha of [root, left, right, merged]) assert.equal(graph.has(sha), true);
+    assert.equal(graph.has(other), false);
+    graph.include([other, left]);
+    assert.equal(graph.has(other), true);
+    assert.throws(() => graph.include(['f'.repeat(40)]), /Unable to read assessed commit history/);
+  } finally {
+    graph.close();
+    rmSync(directory, {recursive: true, force: true});
+  }
+});
+
+test('branch inventory stops when the checkpoint batch is full', async () => {
+  const x = fixture();
+  const heads = Array.from({length: 21}, (_, i) => (i + 100).toString(16).padStart(40, '0'));
+  x.github.rest.repos.listBranches = async () => ({
+    data: heads.map((sha, i) => ({name: i ? 'branch-' + i : 'master', commit: {sha}})),
+  });
+  x.github.rest.repos.compareCommitsWithBasehead = async args => {
+    x.comparisons.push(args);
+    const head = args.basehead.split('...')[1];
+    return {data: {ahead_by: 1, behind_by: 0, commits: [{
+      sha: head, commit: {message: 'Change', author: {name: 'Author', date: '2026-10-20T00:00:00Z'}},
+    }]}};
+  };
+  await trackForks(x);
+  assert.equal(x.comparisons.length, 40);
+  assert.equal(JSON.parse(x.trees[0].tree[0].content).forks.length, 20);
+});
+
+test('only the 25 most recently pushed forks have their branches inspected', async () => {
+  const x = fixture();
+  const forks = Array.from({length: 27}, (_, i) => fork('author' + i + '/USDX', {
+    pushed_at: new Date(Date.UTC(2026, 9, 1, i)).toISOString(),
+  }));
+  x.github.rest.repos.listForks = async () => ({data: forks});
+  const visited = [];
+  x.github.rest.repos.listBranches = async ({owner}) => {
+    visited.push(owner);
+    return {data: []};
+  };
+  await trackForks(x);
+  assert.deepEqual(visited, forks.slice(2).reverse().map(f => f.full_name.split('/')[0]));
 });
