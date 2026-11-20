@@ -18873,19 +18873,55 @@
     {
       "repository": "ebertbros/hitsteroke",
       "branch": "hitster",
-      "head": "26d8dfd3d6ead2e96e30bd01dd5e55182f5a1a5b",
-      "upstreamHead": "c8aea5cfc9e3a9da4b56d9538266d2e62d2b9c73",
-      "comparisonBase": "e9df6b44b97a63969171a2d5bf8c8d600f1f31f7",
-      "comparisonKind": "outside-usce",
-      "ahead": 1,
-      "behind": 740,
-      "compareUrl": "https://github.com/UltraStar-CE/USCE/compare/e9df6b44b97a63969171a2d5bf8c8d600f1f31f7...26d8dfd3d6ead2e96e30bd01dd5e55182f5a1a5b",
+      "head": "8047bc6d2749d1752f5e6d98718b182b250391b2",
+      "upstreamHead": "68acb0329cd84df7920fed608618d09f64310faf",
+      "comparisonBase": "26d8dfd3d6ead2e96e30bd01dd5e55182f5a1a5b",
+      "comparisonKind": "since-checkpoint",
+      "ahead": 7,
+      "behind": 0,
+      "compareUrl": "https://github.com/UltraStar-CE/USCE/compare/26d8dfd3d6ead2e96e30bd01dd5e55182f5a1a5b...8047bc6d2749d1752f5e6d98718b182b250391b2",
       "novelCommits": [
         {
-          "sha": "26d8dfd3d6ead2e96e30bd01dd5e55182f5a1a5b",
-          "title": "Hitster karaoke kiosk: remote control, event mode and stand screens",
+          "sha": "dd0d6c15ab8536caef626f84d6c94d5cba2d70e7",
+          "title": "Hitster stand: ratings, timeline, mic meters, bold bonus notes, menus",
           "author": "grzesebe",
-          "authoredAt": "2026-11-19T09:22:48Z"
+          "authoredAt": "2026-11-20T10:55:12Z"
+        },
+        {
+          "sha": "cae92dfea1adbd2c0c81a314e89d784aa02677ab",
+          "title": "Hitster stand: \"Try another card\" when a scanned card has no song",
+          "author": "grzesebe",
+          "authoredAt": "2026-11-20T10:56:58Z"
+        },
+        {
+          "sha": "a36d86308b20d0a1a1ba313f78026789900a3eef",
+          "title": "Hitster cards: Jumbo card database (SKU + card number -> Spotify ID)",
+          "author": "grzesebe",
+          "authoredAt": "2026-11-20T11:22:31Z"
+        },
+        {
+          "sha": "97bb5d4621ab42cd7913fbf3391ea03e53c85234",
+          "title": "Hitster stand: data on an external drive, keep the 16:9 aspect",
+          "author": "grzesebe",
+          "authoredAt": "2026-11-20T11:49:51Z"
+        },
+        {
+          "sha": "70b1bb0d970a92b03cf298245913745bc5a5ac67",
+          "title": "Hitster stand: \"now\" line moving across the notes",
+          "author": "grzesebe",
+          "authoredAt": "2026-11-20T12:36:12Z"
+        },
+        {
+          "sha": "225468fd78ec49ee953749a6eedcd3b3628a9d5d",
+          "title": "Hitster stand: card reveal, animated waiting card, scrolling notes, logos",
+          "author": "grzesebe",
+          "authoredAt": "2026-11-20T15:26:40Z"
+        },
+        {
+          "sha": "8047bc6d2749d1752f5e6d98718b182b250391b2",
+          "title": "Hitster cards: edition tables, song download, scanner daemon",
+          "author": "grzesebe",
+          "authoredAt": "2026-11-20T15:26:41Z"
         }
       ],
       "ignoredKnownHistoryCommitCount": 0,
@@ -18893,21 +18929,99 @@
       "ignoredOldCommitCount": 0,
       "commits": [
         {
-          "sha": "26d8dfd3d6ead2e96e30bd01dd5e55182f5a1a5b",
-          "title": "Hitster karaoke kiosk: remote control, event mode and stand screens",
+          "sha": "dd0d6c15ab8536caef626f84d6c94d5cba2d70e7",
+          "title": "Hitster stand: ratings, timeline, mic meters, bold bonus notes, menus",
           "author": "grzesebe",
-          "authoredAt": "2026-11-19T09:22:48Z"
+          "authoredAt": "2026-11-20T10:55:12Z"
+        },
+        {
+          "sha": "cae92dfea1adbd2c0c81a314e89d784aa02677ab",
+          "title": "Hitster stand: \"Try another card\" when a scanned card has no song",
+          "author": "grzesebe",
+          "authoredAt": "2026-11-20T10:56:58Z"
+        },
+        {
+          "sha": "a36d86308b20d0a1a1ba313f78026789900a3eef",
+          "title": "Hitster cards: Jumbo card database (SKU + card number -> Spotify ID)",
+          "author": "grzesebe",
+          "authoredAt": "2026-11-20T11:22:31Z"
+        },
+        {
+          "sha": "97bb5d4621ab42cd7913fbf3391ea03e53c85234",
+          "title": "Hitster stand: data on an external drive, keep the 16:9 aspect",
+          "author": "grzesebe",
+          "authoredAt": "2026-11-20T11:49:51Z"
+        },
+        {
+          "sha": "70b1bb0d970a92b03cf298245913745bc5a5ac67",
+          "title": "Hitster stand: \"now\" line moving across the notes",
+          "author": "grzesebe",
+          "authoredAt": "2026-11-20T12:36:12Z"
+        },
+        {
+          "sha": "225468fd78ec49ee953749a6eedcd3b3628a9d5d",
+          "title": "Hitster stand: card reveal, animated waiting card, scrolling notes, logos",
+          "author": "grzesebe",
+          "authoredAt": "2026-11-20T15:26:40Z"
+        },
+        {
+          "sha": "8047bc6d2749d1752f5e6d98718b182b250391b2",
+          "title": "Hitster cards: edition tables, song download, scanner daemon",
+          "author": "grzesebe",
+          "authoredAt": "2026-11-20T15:26:41Z"
         }
       ],
       "newCommits": [
         {
-          "sha": "26d8dfd3d6ead2e96e30bd01dd5e55182f5a1a5b",
-          "title": "Hitster karaoke kiosk: remote control, event mode and stand screens",
+          "sha": "dd0d6c15ab8536caef626f84d6c94d5cba2d70e7",
+          "title": "Hitster stand: ratings, timeline, mic meters, bold bonus notes, menus",
           "author": "grzesebe",
-          "authoredAt": "2026-11-19T09:22:48Z"
+          "authoredAt": "2026-11-20T10:55:12Z"
+        },
+        {
+          "sha": "cae92dfea1adbd2c0c81a314e89d784aa02677ab",
+          "title": "Hitster stand: \"Try another card\" when a scanned card has no song",
+          "author": "grzesebe",
+          "authoredAt": "2026-11-20T10:56:58Z"
+        },
+        {
+          "sha": "a36d86308b20d0a1a1ba313f78026789900a3eef",
+          "title": "Hitster cards: Jumbo card database (SKU + card number -> Spotify ID)",
+          "author": "grzesebe",
+          "authoredAt": "2026-11-20T11:22:31Z"
+        },
+        {
+          "sha": "97bb5d4621ab42cd7913fbf3391ea03e53c85234",
+          "title": "Hitster stand: data on an external drive, keep the 16:9 aspect",
+          "author": "grzesebe",
+          "authoredAt": "2026-11-20T11:49:51Z"
+        },
+        {
+          "sha": "70b1bb0d970a92b03cf298245913745bc5a5ac67",
+          "title": "Hitster stand: \"now\" line moving across the notes",
+          "author": "grzesebe",
+          "authoredAt": "2026-11-20T12:36:12Z"
+        },
+        {
+          "sha": "225468fd78ec49ee953749a6eedcd3b3628a9d5d",
+          "title": "Hitster stand: card reveal, animated waiting card, scrolling notes, logos",
+          "author": "grzesebe",
+          "authoredAt": "2026-11-20T15:26:40Z"
+        },
+        {
+          "sha": "8047bc6d2749d1752f5e6d98718b182b250391b2",
+          "title": "Hitster cards: edition tables, song download, scanner daemon",
+          "author": "grzesebe",
+          "authoredAt": "2026-11-20T15:26:41Z"
         }
       ],
       "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      },
+      "previousHead": "26d8dfd3d6ead2e96e30bd01dd5e55182f5a1a5b",
+      "previousAssessment": {
         "decision": "not-adopted",
         "assessedAgainst": "e9df6b44b97a63969171a2d5bf8c8d600f1f31f7",
         "assessedAt": "2026-11-19",
@@ -18917,6 +19031,235 @@
           "https://github.com/UltraStar-CE/USCE/pull/168"
         ],
         "reviewedCommitCount": 1
+      },
+      "assessmentHistory": [
+        {
+          "head": "26d8dfd3d6ead2e96e30bd01dd5e55182f5a1a5b",
+          "commits": [
+            {
+              "sha": "26d8dfd3d6ead2e96e30bd01dd5e55182f5a1a5b",
+              "title": "Hitster karaoke kiosk: remote control, event mode and stand screens",
+              "author": "grzesebe",
+              "authoredAt": "2026-11-19T09:22:48Z"
+            }
+          ],
+          "assessment": {
+            "decision": "not-adopted",
+            "assessedAgainst": "e9df6b44b97a63969171a2d5bf8c8d600f1f31f7",
+            "assessedAt": "2026-11-19",
+            "reason": "The card-scan waiting screen, themed results and timed return form a branded kiosk flow. Keep it in the fork. USCE already has remote controls, library lockdown and continuous playback.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/pull/432",
+              "https://github.com/UltraStar-CE/USCE/pull/168"
+            ],
+            "reviewedCommitCount": 1
+          }
+        }
+      ]
+    },
+    {
+      "repository": "simplykapsel/LisiaNora-USDX",
+      "branch": "feat/usdx-names-and-scores",
+      "head": "c24dc807f57e11f74d241edc027c7503698c8863",
+      "upstreamHead": "68acb0329cd84df7920fed608618d09f64310faf",
+      "comparisonBase": "0faef28b0a17789e454fb2376d9c944ec1f4e8d3",
+      "comparisonKind": "outside-usce",
+      "ahead": 28,
+      "behind": 751,
+      "compareUrl": "https://github.com/UltraStar-CE/USCE/compare/0faef28b0a17789e454fb2376d9c944ec1f4e8d3...c24dc807f57e11f74d241edc027c7503698c8863",
+      "novelCommits": [
+        {
+          "sha": "c24dc807f57e11f74d241edc027c7503698c8863",
+          "title": "Bridge: queue nicknames as player names and scores back to the queue (controlProtocol 3)",
+          "author": "simplykapsel",
+          "authoredAt": "2026-11-19T22:13:18Z"
+        }
+      ],
+      "ignoredKnownHistoryCommitCount": 27,
+      "ignoredUpstreamCommitCount": 0,
+      "ignoredOldCommitCount": 0,
+      "commits": [
+        {
+          "sha": "8371a68e50e72a3b2e5905029ec87f7e91fe41ef",
+          "title": "Prepare Windows x64 development workflow for USDX 2026.9.0",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-22T07:24:14Z"
+        },
+        {
+          "sha": "1c7154e9eb8f0f921133bcbbb67fb244303c5ec2",
+          "title": "Download Lazarus installer directly from SourceForge mirrors",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-22T07:26:55Z"
+        },
+        {
+          "sha": "c6ada6f7ff98f30d0ad4abf0aa5c1f68fa0f122f",
+          "title": "Use verified direct mirror for Lazarus CI installer",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-22T07:29:43Z"
+        },
+        {
+          "sha": "74f79c7670b67633184a28b51d858931ef1da29a",
+          "title": "Select songs from the queue through a local session-bound bridge",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-22T08:12:23Z"
+        },
+        {
+          "sha": "908ee2edb342ed5e15987750337a0919594adc9a",
+          "title": "Require player setup before singing a remotely selected song",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-22T08:28:30Z"
+        },
+        {
+          "sha": "ef5bfe33e5e0b47dd4258176dba729fd33d67520",
+          "title": "Merge pull request #1 from simplykapsel/feature/queue-song-selection",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-22T08:47:11Z"
+        },
+        {
+          "sha": "44899090a43fc3762a1604e2f0f39b1a3f74057c",
+          "title": "Preserve confirmed players when selecting songs from the queue",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-22T10:03:36Z"
+        },
+        {
+          "sha": "234370bc0f61f1db7682aa88a3e32f59cd7286b5",
+          "title": "Merge pull request #2 from simplykapsel/fix/reuse-configured-players",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-22T10:07:23Z"
+        },
+        {
+          "sha": "11386e99eb4d455d521121b380f639d27ae23776",
+          "title": "Condense Windows build and queue protocol documentation",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-22T11:05:56Z"
+        },
+        {
+          "sha": "a43bbeea2738e09ffb1571f50538088b603c9596",
+          "title": "Merge pull request #3 from simplykapsel/docs/windows-release-workflow",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-22T11:09:37Z"
+        },
+        {
+          "sha": "dbdbf16a51bd348f311f0fd411201aac76e94794",
+          "title": "Merge remote-tracking branch 'origin/main'",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-22T12:48:54Z"
+        },
+        {
+          "sha": "276d71d09c2fdef1d411396fa0d3a7217588e67a",
+          "title": "Move Windows bridge and branded launcher into USDX",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-22T13:01:12Z"
+        },
+        {
+          "sha": "ea31021a2520980185243597ac718c2b8c220ee9",
+          "title": "Compare canonical Windows paths in bridge tests",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-22T13:10:06Z"
+        },
+        {
+          "sha": "543d7e376f9d8c73f13b5abe28d68aac0ea5fc7e",
+          "title": "Recover moved queue songs and configure players before selection",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-24T18:33:54Z"
+        },
+        {
+          "sha": "d5f839bd64eca58d82be0f813e8441815d6baa9f",
+          "title": "Default portable launcher to its bundled songs directory",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-24T18:51:53Z"
+        },
+        {
+          "sha": "52821969a31125e9b0d3cb6a964f8e3fb2f5dd5e",
+          "title": "Control song playback from the queue with confirmed Start and Reset",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-24T19:21:41Z"
+        },
+        {
+          "sha": "f361a78b37d23d0edc9bd0bbc2aacc26b4b0e6f8",
+          "title": "Preserve local launcher profiles and configured song directories",
+          "author": "simplykapsel",
+          "authoredAt": "2026-11-12T03:16:11Z"
+        },
+        {
+          "sha": "393c635d8b7eb5b5d03942657a21e2cb303d1428",
+          "title": "Merge UltraStar Deluxe v2026.11.0 and build the portable client with UCRT64",
+          "author": "simplykapsel",
+          "authoredAt": "2026-11-12T03:19:27Z"
+        },
+        {
+          "sha": "d037cadae697a20f1588c6f66c6f7d01255b6f09",
+          "title": "Report game changes over WebSocket and resume pending commands safely",
+          "author": "simplykapsel",
+          "authoredAt": "2026-11-12T03:25:16Z"
+        },
+        {
+          "sha": "ab044d323c077153d7dcc2428d8da34c651ca8ea",
+          "title": "Pass the canonical song library path to the Windows game",
+          "author": "simplykapsel",
+          "authoredAt": "2026-11-12T03:38:26Z"
+        },
+        {
+          "sha": "6f1924c25d7dd0e879951dce50525ca39a9f8ede",
+          "title": "Fall back to a verified Lua mirror when building Windows dependencies",
+          "author": "simplykapsel",
+          "authoredAt": "2026-11-12T03:44:49Z"
+        },
+        {
+          "sha": "cf63e1fcf22e719e487acdcf0858fd493337f143",
+          "title": "Find queue songs in every song directory the game uses",
+          "author": "simplykapsel",
+          "authoredAt": "2026-11-18T00:43:58Z"
+        },
+        {
+          "sha": "e4a0feaf14a71754d951ca9c0e8201e3dc5d98aa",
+          "title": "Bridge: take commands over the queue's WebSocket, react to game status at once",
+          "author": "simplykapsel",
+          "authoredAt": "2026-11-18T00:52:12Z"
+        },
+        {
+          "sha": "779a21c8d6d6ccaea318ff3bf08df8fbfaf425cd",
+          "title": "Merge feature/bridge-websocket: HTTP fallback and status watcher for main's WebSocket bridge",
+          "author": "simplykapsel",
+          "authoredAt": "2026-11-18T04:28:13Z"
+        },
+        {
+          "sha": "f6c4d9734c70d55ae78124d683c22f0d587b4975",
+          "title": "Bridge: skip the library-wide chart search when the catalog path exists",
+          "author": "simplykapsel",
+          "authoredAt": "2026-11-18T20:27:06Z"
+        },
+        {
+          "sha": "180b37e5542b58c2c21e27c546a763d7dda87d20",
+          "title": "Merge fix/bridge-direct-song-lookup: skip the library-wide chart search when the catalog path exists",
+          "author": "simplykapsel",
+          "authoredAt": "2026-11-18T20:28:44Z"
+        },
+        {
+          "sha": "ad592e4c96d24b3ca93071dd1b903473165e1a95",
+          "title": "Bridge: set command deadlines on the local clock",
+          "author": "simplykapsel",
+          "authoredAt": "2026-11-18T21:11:28Z"
+        },
+        {
+          "sha": "c24dc807f57e11f74d241edc027c7503698c8863",
+          "title": "Bridge: queue nicknames as player names and scores back to the queue (controlProtocol 3)",
+          "author": "simplykapsel",
+          "authoredAt": "2026-11-19T22:13:18Z"
+        }
+      ],
+      "newCommits": [
+        {
+          "sha": "c24dc807f57e11f74d241edc027c7503698c8863",
+          "title": "Bridge: queue nicknames as player names and scores back to the queue (controlProtocol 3)",
+          "author": "simplykapsel",
+          "authoredAt": "2026-11-19T22:13:18Z"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
       }
     }
   ],
