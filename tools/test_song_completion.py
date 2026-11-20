@@ -9,7 +9,6 @@ import subprocess
 import tempfile
 
 from song_test_units import unit_flags
-import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -20,9 +19,6 @@ def main():
     args = parser.parse_args()
     if not args.fpc:
         parser.error('FPC was not found; pass --fpc')
-    platform = 'win' if os.name == 'nt' else 'darwin' if sys.platform == 'darwin' else 'freebsd' if sys.platform.startswith('freebsd') else 'linux'
-    if not (ROOT / 'src' / ('config-' + platform + '.inc')).exists():
-        parser.error('Run autogen.sh and configure first')
     with tempfile.TemporaryDirectory(prefix='usce-completion-') as tmp:
         out = Path(tmp)
         command = [args.fpc, '-B', '-Si', '-Ciro', '-gl', '-v0',
