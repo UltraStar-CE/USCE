@@ -82,6 +82,7 @@ type
     fStartTime, fFirstNote: real;
 
     procedure SeekTo(Position: real; ResetScoring: boolean = true);
+    procedure SyncBackgroundVideo;
     procedure LoadNextSong();
     procedure SongError();
     procedure ResetLinesAndLyrics();
@@ -331,7 +332,7 @@ begin
           if (Assigned(fCurrentVideo)) then
           begin
             fCurrentVideo.SetAspectCorrection(BackgroundAspectCorrection);
-            fCurrentVideo.Position := CurrentSong.VideoGAP + AudioPlayback.Position;
+            SyncBackgroundVideo;
           end;
           Log.LogStatus('finished switching to video', 'UScreenSing.ParseInput');
         end
@@ -377,7 +378,8 @@ begin
         else
         begin
           Webcam.Release;
-          fShowWebCam:=false;
+          fShowWebcam := false;
+          SyncBackgroundVideo;
         end;
 
         Exit;
@@ -645,6 +647,13 @@ begin
       end;
   end;
   Result := inherited ParseMouse(MouseButton, BtnDown, MouseX, MouseY);
+end;
+
+procedure TScreenSingController.SyncBackgroundVideo;
+begin
+  // While the camera is visible, the view stops advancing the song video.
+  if Assigned(fCurrentVideo) and not fShowVisualization then
+    fCurrentVideo.Position := CurrentSong.VideoGAP + AudioPlayback.Position;
 end;
 
 procedure TScreenSingController.SeekTo(Position: real; ResetScoring: boolean);
@@ -1953,6 +1962,7 @@ begin
     begin
       Webcam.Release;
       fShowWebcam := false;
+      SyncBackgroundVideo;
       ScreenPopupError.ShowPopup(Language.Translate(ErrorKey));
     end;
   end;
