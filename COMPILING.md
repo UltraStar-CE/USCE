@@ -136,15 +136,17 @@ Omitted options use the saved continuous-playback profile.
 
 The native Ubuntu 22.04 amd64 CI build also produces a `.deb` with the reviewed
 Themes bundle. Download it from the build artifacts or release and install with
-`sudo apt install ./USCE-linux-deb-VERSION.deb`. This resolves runtime dependencies,
-including OpenCV for webcam support. The package ships its own projectM 4
-library for visualizations. Songs, configuration and scores remain in your user
-directory after uninstalling the package.
+`sudo apt install ./USCE-linux-deb-VERSION.deb`. APT resolves the system runtime
+dependencies. The package bundles private OpenCV libraries for webcam support
+and projectM 4 for visualizations. Songs, configuration and scores remain in
+your user directory after uninstalling the package.
 
-For a local package, install OpenCV development libraries and `patchelf` and build projectM 4
-as a shared library in a private prefix. Follow the platform workflow to stage
-its licenses. Configure with `--prefix=/usr --with-opencv --with-libprojectM` and
-include that prefix's `lib/pkgconfig` in `PKG_CONFIG_PATH`. Build the game, stage
+For a local package, install the native build dependencies including `patchelf`.
+Follow the **Build projectM 4** and **Build minimal OpenCV for the DEB** steps in
+the [platform workflow](.github/workflows/platform-builds.yml) to install the
+libraries and their notices in separate private prefixes. Add both prefixes'
+`lib/pkgconfig` directories to `PKG_CONFIG_PATH` before running
+`./configure --prefix=/usr --with-opencv --with-libprojectM`. Build the game, stage
 the native phone receiver, then run:
 
 ```sh
