@@ -429,34 +429,36 @@ begin
     Result := Min(Result, AvailableHeight / (Int64(HighestTone) - Line.BaseNote));
 end;
 
-procedure DrawSingPitchGuides(const Layout: TSingLaneLayout; Top, PitchStep: real);
+procedure DrawSingPitchGuides(const Layout: TSingLaneLayout; Top, PitchStep: real; BaseNote: integer);
 const
-  MinGuideGapPixels = 6;
-  MinorGuideAlpha = 0.7;
+  WholeTone = 2;
+  MinGuideSpacingPixels = 2;
+  DenseGuideSpacingPixels = 8;
+  AlternateGuideAlpha = 0.55;
 var
-  GuideStride, GuideSpacing, MinSpacing, Y: real;
+  GuideAnchor, GuideSpacing, SpacingPixels, Y: real;
   FirstGuide, LastGuide, Guide: integer;
-  HasMinorGuides: boolean;
+  DenseGuides, AlternatePhase: boolean;
   Lines: TLineList;
 begin
-  // Keep strong guides spaced out in compact lanes, with one faint guide between them.
-  GuideStride := 2;
-  MinSpacing := Max(MinSingGuideGap, MinGuideGapPixels * PixelH);
-  while GuideStride * PitchStep < MinSpacing do
-    GuideStride := GuideStride * 2;
-  HasMinorGuides := GuideStride > 2;
-  if HasMinorGuides then
-    GuideStride := GuideStride / 2;
-  GuideSpacing := GuideStride * PitchStep;
-  FirstGuide := Ceil((Top - Layout.RowAnchorY - 0.001) / GuideSpacing);
-  LastGuide := Floor((Layout.GuideBottomY - Layout.RowAnchorY + 0.001) / GuideSpacing);
+  GuideSpacing := WholeTone * PitchStep;
+  SpacingPixels := GuideSpacing * VertexH;
+  if SpacingPixels < MinGuideSpacingPixels then
+    Exit;
+
+  // Keep the guides on the same pitch classes across phrases, even when the lowest note moves.
+  GuideAnchor := SingPitchY(Layout.RowAnchorY, -Ord(Odd(BaseNote)), PitchStep);
+  FirstGuide := Ceil((Top - GuideAnchor - 0.001) / GuideSpacing);
+  LastGuide := Floor((Layout.GuideBottomY - GuideAnchor + 0.001) / GuideSpacing);
   if LastGuide < FirstGuide then
     Exit;
 
+  DenseGuides := (GuideSpacing < MinSingGuideGap) or (SpacingPixels < DenseGuideSpacingPixels);
+  AlternatePhase := (BaseNote and WholeTone) <> 0;
   SetLength(Lines, LastGuide - FirstGuide + 1);
   for Guide := 0 to High(Lines) do
   begin
-    Y := SingPitchY(Layout.RowAnchorY, -(FirstGuide + Guide) * GuideStride, PitchStep);
+    Y := SingPitchY(GuideAnchor, -(FirstGuide + Guide) * WholeTone, PitchStep);
     with Lines[Guide] do
     begin
       X1 := Layout.GridLeft;
@@ -468,8 +470,8 @@ begin
       ColG := Skin_P1_LinesG;
       ColB := Skin_P1_LinesB;
       Alpha := Theme.Sing.GuideAlpha;
-      if HasMinorGuides and Odd(FirstGuide + Guide) then
-        Alpha := Alpha * MinorGuideAlpha;
+      if DenseGuides and (Odd(FirstGuide + Guide) xor AlternatePhase) then
+        Alpha := Alpha * AlternateGuideAlpha;
     end;
   end;
   Renderer.DrawLines(Lines);
@@ -1227,7 +1229,7 @@ begin
         PitchStep := GetSingPitchStep(Lines[TargetLine], Layout, GuideTop, NotesH[PlayerIndex]);
         if (Ini.NoteLines = 1) and ScreenSing.Settings.InputVisible and
            ScreenSing.Settings.NotesVisible[PlayerIndex] then
-          DrawSingPitchGuides(Layout, GuideTop, PitchStep);
+          DrawSingPitchGuides(Layout, GuideTop, PitchStep, Lines[TargetLine].BaseNote);
         SingDrawPlayerBGLine(Layout.GridLeft, Layout.RowAnchorY, Layout.GridRight,
           Lines[TargetLine], PlayerIndex, PitchStep);
         SingDrawLine(Layout.GridLeft, Layout.RowAnchorY, Layout.GridRight,
