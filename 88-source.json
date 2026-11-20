@@ -1,0 +1,8 @@
+{
+  "head": "3299acb35a54fc1b277a912ce362750aead10c5c",
+  "theme_pin": "d1a17193b174e6c59ce0bb73f7b9185a331aa6ec",
+  "theme_overrides": [
+    "game/themes/Modern.ini"
+  ],
+  "additional_themes_from": "37440d4890ed67f9f28739dfb72bce9da7a2c5c6"
+}
