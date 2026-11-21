@@ -16,7 +16,7 @@ uses
 
 type
   TKeymap = record
-    Key:    array of string; //key-combination translated
+    Key:    array of string; // key-combination tokens
     Text:   string;   //description text
   end;
 
@@ -52,6 +52,8 @@ type
     Translation: string;
   end;
 
+  THelpKeyTranslations = array of TKeys;
+
   TEntry = record
     ID:           string;
     Title:        string;
@@ -72,8 +74,10 @@ type
       SEntry:       array of TEntry;
       AEntry:       TEntry;
       List:         array of TLanguageList;
+      KeyNames, DefaultKeyNames: THelpKeyTranslations;
       Implode_Glue1, Implode_Glue2: String;
       procedure LoadLanguage(const Language: String);
+      function GetKeyTranslation(const Key: string): string;
     public
       MaxLines: integer;
       constructor Create;
@@ -124,6 +128,7 @@ begin
     if Uppercase(List[I].Name) = 'ENGLISH' then
     begin
       ChangeLanguage('English');
+      DefaultKeyNames := KeyNames;
 
       SetLength(SEntry, Length(Entry));
 
@@ -178,6 +183,7 @@ end;
 procedure THelp.ChangeLanguage(Language: String);
 begin
   SetLength(Entry, 0);
+  KeyNames := nil;
   Implode_Glue1 := ', ';
   Implode_Glue2 := ' and ';
   try
@@ -185,14 +191,21 @@ begin
   except
     // Help is optional. An unreadable translation uses the English cache.
     SetLength(Entry, 0);
+    KeyNames := nil;
     if not SameText(Language, 'English') then
     begin
       try
         LoadLanguage('English');
       except
         SetLength(Entry, 0);
+        KeyNames := nil;
       end;
     end;
+  end;
+  if (actualID <> '') and not SetHelpID(actualID) then
+  begin
+    AEntry := Default(TEntry);
+    actualID := '';
   end;
 end;
 
@@ -204,7 +217,6 @@ var
   SL :        TStringList;
   num:        Integer;
   I, J:       Integer;
-  Keys:       array of TKeys;
   tempStr:    AnsiString;
   ActSection: integer;
   ActSub:     integer;
@@ -222,42 +234,26 @@ var
     Result := 'ID_' + S;
   end;
 
-  function GetKeyTranslation(Key: string):string;
-  var
-    I:  Integer;
-  begin
-    Result := Key;
-    for I := 0 to Length(Keys) - 1 do
-    begin
-      if Keys[I].Key=Key then
-      begin
-        Result := Keys[I].Translation;
-        break;
-      end;
-    end;
-  end;
-
 begin
   IniFile := nil;
   S := nil;
   try
   IniFile := TIniFile.Create(LanguagesPath.toNative() + Language + '.ini');
 
-  SetLength(Keys, 0);
   //read keys
   S := TStringList.Create;
   IniFile.ReadSectionValues('Keymap', S);
 
-  SetLength(Keys, S.Count);
-  for E := 0 to high(Keys) do
+  SetLength(KeyNames, S.Count);
+  for E := 0 to high(KeyNames) do
   begin
     if S.Names[E] = 'IMPLODE_GLUE1' then
       Implode_Glue1 := S.ValueFromIndex[E]+ ' '
     else if S.Names[E] = 'IMPLODE_GLUE2' then
       Implode_Glue2 := ' ' + S.ValueFromIndex[E] + ' ';
 
-    Keys[E].Key := S.Names[E];
-    Keys[E].Translation := S.ValueFromIndex[E];
+    KeyNames[E].Key := S.Names[E];
+    KeyNames[E].Translation := S.ValueFromIndex[E];
   end;
 
   SetLength(Entry, 0);
@@ -364,7 +360,7 @@ begin
 
               SetLength(Entry[I-1].Sections[ActSection].Keys[ActKey].Key, SL.Count);
               for J := 0 to SL.Count-1 do
-                Entry[I-1].Sections[ActSection].Keys[ActKey].Key[J] := GetKeyTranslation(SL[J]);
+                Entry[I-1].Sections[ActSection].Keys[ActKey].Key[J] := SL[J];
             end;
 
           Finally
@@ -385,6 +381,20 @@ begin
     S.Free;
     IniFile.Free;
   end;
+end;
+
+function THelp.GetKeyTranslation(const Key: string): string;
+var
+  I: Integer;
+begin
+  // The selected language also labels keys in fallback help topics.
+  for I := 0 to High(KeyNames) do
+    if SameText(KeyNames[I].Key, Key) and (KeyNames[I].Translation <> '') then
+      Exit(KeyNames[I].Translation);
+  for I := 0 to High(DefaultKeyNames) do
+    if SameText(DefaultKeyNames[I].Key, Key) and (DefaultKeyNames[I].Translation <> '') then
+      Exit(DefaultKeyNames[I].Translation);
+  Result := Key;
 end;
 
 function THelp.SetHelpID(ID: String):boolean;
@@ -443,7 +453,8 @@ begin
       SetLength(Result.Sections[K].Keys[I].Key, Length(AEntry.Sections[K].Keys[I].Key));
       for J := 0 to Length(AEntry.Sections[K].Keys[I].Key) - 1 do
       begin
-        Result.Sections[K].Keys[I].Key[J] := '[' + AEntry.Sections[K].Keys[I].Key[J] + ']';
+        Result.Sections[K].Keys[I].Key[J] :=
+          '[' + GetKeyTranslation(AEntry.Sections[K].Keys[I].Key[J]) + ']';
       end;
       Result.Sections[K].KeyDescription[I] := AEntry.Sections[K].Keys[I].Text;
     end;
