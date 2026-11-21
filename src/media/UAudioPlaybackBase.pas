@@ -247,12 +247,12 @@ function TAudioPlaybackBase.OpenDecodeStream(const Filename: IPath; const Media:
 var
   i: integer;
 begin
-  // MIDI files are handled by MidiFile/MidiOut so MidiEmu receives events.
+  // The generic audio decoder does not support MIDI files.
   try
     if (LowerCase(ExtractFileExt(Filename.ToNative)) = '.mid') or
        (LowerCase(ExtractFileExt(Filename.ToNative)) = '.midi') then
     begin
-      Log.LogInfo('Skipping generic audio decoder for MIDI file (using MidiEmu): ' + Filename.ToNative, 'TAudioPlaybackBase.OpenDecodeStream');
+      Log.LogInfo('Skipping MIDI file in the generic audio decoder: ' + Filename.ToNative, 'TAudioPlaybackBase.OpenDecodeStream');
       Result := nil;
       Exit;
     end;
