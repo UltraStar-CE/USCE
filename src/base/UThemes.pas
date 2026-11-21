@@ -2605,14 +2605,12 @@ begin
       if ResolveThemeFile('NameDelayText') <> nil then
         ThemeLoadText(Name.DelayText, 'NameDelayText', true);
       Name.DelayHint := Default(TThemeText);
-      with Name.DelayHint do
-      begin
-        X := 16; Y := 548; W := 215; H := 20;
-        Size := 18; ColR := 1; ColG := 1; ColB := 1;
-      end;
       if ResolveThemeFile('NameDelayHint') <> nil then
+      begin
+        LoadColor(Name.DelayHint.ColR, Name.DelayHint.ColG, Name.DelayHint.ColB, 'White');
         ThemeLoadText(Name.DelayHint, 'NameDelayHint', true);
-      Name.DelayHint.Text := Language.Translate('SLOT_DELAY_MEASURE_HINT');
+        Name.DelayHint.Text := Language.Translate('SLOT_DELAY_MEASURE_HINT');
+      end;
       Name.DelayApplyButton := CheckPopup.Button1;
       with Name.DelayApplyButton do
       begin
