@@ -19016,9 +19016,15 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "not-adopted",
+        "assessedAgainst": "5cde5a289b5582746c348cd038c45112b8cda67e",
+        "assessedAt": "2026-11-21",
+        "reason": "Seven commits extend the branded Hitster kiosk with card scanning and song lookup, wider note and score presentation, scrolling notes, and card reveal effects. The viewport and renderer changes support that kiosk flow. USCE already provides general remote controls, library lockdown, and continuous playback.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/432",
+          "https://github.com/UltraStar-CE/USCE/pull/168"
+        ],
+        "reviewedCommitCount": 7
       },
       "previousHead": "26d8dfd3d6ead2e96e30bd01dd5e55182f5a1a5b",
       "previousAssessment": {
@@ -19257,9 +19263,15 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "not-applicable",
+        "assessedAgainst": "5cde5a289b5582746c348cd038c45112b8cda67e",
+        "assessedAt": "2026-11-21",
+        "reason": "The new commit passes per-performance singer names and final scores through LisiaNora Queue controlProtocol 3. USCE exposes its authenticated roster, song lifecycle, and result journal through its native relay. The 27 other commits are previously assessed history.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/432",
+          "https://github.com/UltraStar-CE/USCE/blob/5cde5a289b5582746c348cd038c45112b8cda67e/docs/usce-game-bridge-ipc.md"
+        ],
+        "reviewedCommitCount": 1
       }
     }
   ],
