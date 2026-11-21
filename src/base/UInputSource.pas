@@ -43,7 +43,7 @@ begin
   CachedAt[PlayerIndex] := 0;
   if (LocalCount < 0) and Assigned(ScreenName) and Assigned(ScreenSong) and
      Assigned(Party) and not Party.bPartyGame and (ScreenSong.Mode in [smNormal, smMedley]) then
-    LocalCount := ScreenName.LocalCaptureLimit;
+    LocalCount := ScreenName.LocalPlayerCount;
   if (LocalCount >= 0) and (PlayerIndex >= LocalCount) then Exit;
   AudioInputProcessor.CheckPlayersConfig(IMaxPlayerCount, Local);
   if Local[PlayerIndex] then Result := pisLocal;
