@@ -82,11 +82,12 @@ type
 {$IF Defined(LINUX) or Defined(DARWIN)}
       CaptureIdentity, CaptureModel: UTF8String;
       ActiveIdentity, ActiveAttachment: UTF8String;
+      CapturePCM, ActivePCM: integer;
       ActiveIndex: TPaDeviceIndex;
       CaptureWanted: boolean;
       NextRetry: QWord;
       function CaptureAvailable(Index: TPaDeviceIndex; const Identity, Attachment: UTF8String;
-        Verified: boolean): boolean;
+        PCM: integer; Verified: boolean): boolean;
       function Reopen(): boolean;
       procedure CheckCapture(Now: System.QWord); override;
 {$ENDIF}
@@ -160,16 +161,44 @@ var
   ALSAExtensionChecked: boolean;
   PaAlsaGetInputCard: function(Stream: PPaStream; out Card: cint): TPaError; cdecl;
 
+// PortAudio's ALSA hardware descriptors end in (hw:C,D) or (plughw:C,D).
+// Arbitrary ALSA aliases do not identify a distinct hardware PCM.
+function ALSAHardwareSuffix(const Name: UTF8String; out Card, PCM: integer): integer;
+var
+  Start, Comma: integer;
+  Address, CardText, PCMText: UTF8String;
+begin
+  Result := 0;
+  Start := LastDelimiter('(', Name);
+  if (Start < 2) or (Name[Start - 1] <> ' ') or (Name[Length(Name)] <> ')') then Exit;
+  Address := Copy(Name, Start + 1, Length(Name) - Start - 1);
+  if Copy(Address, 1, 3) = 'hw:' then
+    Delete(Address, 1, 3)
+  else if Copy(Address, 1, 7) = 'plughw:' then
+    Delete(Address, 1, 7)
+  else
+    Exit;
+  Comma := Pos(',', Address);
+  if Comma = 0 then Exit;
+  CardText := Copy(Address, 1, Comma - 1);
+  PCMText := Copy(Address, Comma + 1, MaxInt);
+  if TryStrToInt(CardText, Card) and (Card >= 0) and (IntToStr(Card) = CardText) and
+     TryStrToInt(PCMText, PCM) and (PCM >= 0) and (IntToStr(PCM) = PCMText) then
+    Result := Start - 1;
+end;
+
 function ALSACaptureIdentity(Stream: PPaStream; Device: PPaDeviceInfo;
-  out Serial, Model, Attachment: UTF8String): UTF8String;
+  out Serial, Model, Attachment: UTF8String; out PCM: integer): UTF8String;
 var
   Host: PPaHostApiInfo;
   Card: cint;
+  DeviceCard, DevicePCM: integer;
 begin
   Result := '';
   Serial := '';
   Model := '';
   Attachment := '';
+  PCM := -1;
   if Device = nil then Exit;
   Host := Pa_GetHostApiInfo(Device^.hostApi);
   if (Host = nil) or (Host^._type <> paALSA) then Exit;
@@ -189,6 +218,8 @@ begin
   Card := -1;
   if (PaAlsaGetInputCard(Stream, Card) <> paNoError) or (Card < 0) then Exit;
   Result := USBCaptureIdentity(Card, Serial, Model, Attachment);
+  if (ALSAHardwareSuffix(Device^.name, DeviceCard, DevicePCM) <> 0) and (DeviceCard = Card) then
+    PCM := DevicePCM;
 end;
 {$ENDIF}
 
@@ -199,7 +230,7 @@ function PaMacCore_GetStreamInputDevice(Stream: PPaStream): cuint32; cdecl; exte
 
 {$IF Defined(LINUX) or Defined(DARWIN)}
 function VerifiedCaptureIdentity(Stream: PPaStream; Device: PPaDeviceInfo;
-  out Serial, Model, Attachment: UTF8String): UTF8String;
+  out Serial, Model, Attachment: UTF8String; out PCM: integer): UTF8String;
 {$IFDEF DARWIN}
 var
   Host: PPaHostApiInfo;
@@ -210,12 +241,13 @@ var
 {$ENDIF}
 begin
 {$IFDEF LINUX}
-  Result := ALSACaptureIdentity(Stream, Device, Serial, Model, Attachment);
+  Result := ALSACaptureIdentity(Stream, Device, Serial, Model, Attachment, PCM);
 {$ELSE}
   Result := '';
   Serial := '';
   Model := '';
   Attachment := '';
+  PCM := -1;
   if Device = nil then Exit;
   Host := Pa_GetHostApiInfo(Device^.hostApi);
   if (Host = nil) or (Host^._type <> paCoreAudio) then Exit;
@@ -245,6 +277,14 @@ begin
 end;
 {$ENDIF}
 
+{$IF Defined(LINUX) or Defined(DARWIN)}
+function CapturePCMsOverlap(First, Second: integer): boolean;
+begin
+  // An alias with an unknown PCM may refer to the same capture endpoint.
+  Result := (First < 0) or (Second < 0) or (First = Second);
+end;
+{$ENDIF}
+
 function TPortaudioInputDevice.Open(Index: TPaDeviceIndex; AllowTwin: boolean): boolean;
 var
   Error:       TPaError;
@@ -253,6 +293,7 @@ var
   StreamInfo : PPaStreamInfo;
 {$IF Defined(LINUX) or Defined(DARWIN)}
   Serial, Identity, Model, Attachment: UTF8String;
+  PCM: integer;
   Verified: boolean;
 {$ENDIF}
   {$IFDEF UsePortmixer}
@@ -265,7 +306,7 @@ begin
   deviceInfo := Pa_GetDeviceInfo(Index);
   if (deviceInfo = nil) or (deviceInfo^.maxInputChannels < AudioFormat.Channels) then Exit;
 {$IF Defined(LINUX) or Defined(DARWIN)}
-  if not CaptureAvailable(Index, '', '', true) then Exit;
+  if not CaptureAvailable(Index, '', '', -1, true) then Exit;
 {$ENDIF}
 
   // set input stream parameters
@@ -293,12 +334,13 @@ begin
   end;
 
 {$IF Defined(LINUX) or Defined(DARWIN)}
-  Identity := VerifiedCaptureIdentity(RecordStream, deviceInfo, Serial, Model, Attachment);
+  Identity := VerifiedCaptureIdentity(RecordStream, deviceInfo, Serial, Model, Attachment, PCM);
   Verified := (CaptureIdentity <> '') and (Identity = CaptureIdentity);
-  if (not Verified and
+  if not CapturePCMsOverlap(CapturePCM, PCM) or
+     (not Verified and
       (((CaptureIdentity <> '') and not AllowTwin) or
        ((CaptureModel <> '') and (CaptureModel <> Model)))) or
-     not CaptureAvailable(Index, Identity, Attachment, Verified) then
+     not CaptureAvailable(Index, Identity, Attachment, PCM, Verified) then
   begin
     Close();
     Exit;
@@ -306,6 +348,7 @@ begin
   ActiveIndex := Index;
   ActiveIdentity := Identity;
   ActiveAttachment := Attachment;
+  ActivePCM := PCM;
 {$ENDIF}
   StreamInfo := Pa_GetStreamInfo(RecordStream);
   if (StreamInfo <> nil) then
@@ -435,7 +478,7 @@ end;
 
 {$IF Defined(LINUX) or Defined(DARWIN)}
 function TPortaudioInputDevice.CaptureAvailable(Index: TPaDeviceIndex;
-  const Identity, Attachment: UTF8String; Verified: boolean): boolean;
+  const Identity, Attachment: UTF8String; PCM: integer; Verified: boolean): boolean;
 var
   Device: TAudioInputDevice;
   Other: TPortaudioInputDevice;
@@ -445,10 +488,14 @@ begin
     begin
       Other := TPortaudioInputDevice(Device);
       if (Other.RecordStream <> nil) and
-         ((Other.ActiveIndex = Index) or ((Identity <> '') and (Other.ActiveIdentity = Identity)) or
-          ((Attachment <> '') and (Other.ActiveAttachment = Attachment))) then Exit(false);
+         ((Other.ActiveIndex = Index) or
+          (CapturePCMsOverlap(Other.ActivePCM, PCM) and
+           (((Identity <> '') and (Other.ActiveIdentity = Identity)) or
+            ((Attachment <> '') and (Other.ActiveAttachment = Attachment))))) then Exit(false);
       if not Verified and Other.CaptureWanted and
-         ((Other.PaDeviceIndex = Index) or ((Identity <> '') and (Other.CaptureIdentity = Identity))) then Exit(false);
+         ((Other.PaDeviceIndex = Index) or
+          ((Identity <> '') and (Other.CaptureIdentity = Identity) and
+           CapturePCMsOverlap(Other.CapturePCM, PCM))) then Exit(false);
     end;
   Result := true;
 end;
@@ -456,13 +503,12 @@ end;
 function CaptureName(Info: PPaDeviceInfo): UTF8String;
 {$IFDEF LINUX}
 var
-  Suffix: integer;
+  Suffix, Card, PCM: integer;
 {$ENDIF}
 begin
   Result := ConvertPaStringToUTF8(Info^.name);
 {$IFDEF LINUX}
-  // ALSA's hardware suffix identifies the descriptor, not the model.
-  Suffix := Pos(' (hw:', Result);
+  Suffix := ALSAHardwareSuffix(Result, Card, PCM);
   if Suffix > 0 then SetLength(Result, Suffix - 1);
 {$ENDIF}
 end;
@@ -726,7 +772,7 @@ begin
 
 {$IF Defined(LINUX) or Defined(DARWIN)}
     paDevice.CaptureIdentity := VerifiedCaptureIdentity(stream, paDeviceInfo,
-      paDevice.CaptureSerial, paDevice.CaptureModel, Attachment);
+      paDevice.CaptureSerial, paDevice.CaptureModel, Attachment, paDevice.CapturePCM);
 {$ENDIF}
     // close test-stream
     Pa_CloseStream(stream);
