@@ -614,6 +614,7 @@ type
     TextArtistTitle:  TThemeText;
     PlayerLayoutArea: TPlayerSlotRect;
     PlayerLayoutExtraColsBias: integer;
+    HorizontalBars: boolean;
     LayoutPlayers: integer;
 
     PlayerStatic:     array[1..UIni.IMaxPlayerCount] of AThemeStatic;
@@ -5087,6 +5088,7 @@ begin
   Score.PlayerLayoutArea.W := ReadInteger(SectionList, 'AreaW', ReadInteger(SectionList, 'W', 760));
   Score.PlayerLayoutArea.H := ReadInteger(SectionList, 'AreaH', ReadInteger(SectionList, 'H', 420));
   Score.PlayerLayoutExtraColsBias := ReadInteger(SectionList, 'ExtraColsBias', 0);
+  Score.HorizontalBars := ReadBool(SectionList, 'HorizontalBars', false);
 
   for I := 1 to UIni.IMaxPlayerCount do
   begin

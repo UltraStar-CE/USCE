@@ -1578,6 +1578,7 @@ begin
 
   // the height dependend of the score
   Height2Reach := (Score / MAX_SONG_SCORE) * MaxHeight;
+  NewHeight := Height2Reach;
 
   if (aPlayerScoreScreenDatas[PlayerNumber].Bar_Actual_Height < Height2Reach) then
   begin
@@ -1592,9 +1593,7 @@ begin
     if ( RaiseSmoothness > 0 ) and ( lTmp > 0 ) then
       NewHeight := lTmp / RaiseSmoothness;
 
-  end
-  else
-    NewHeight := Height2Reach;
+  end;
 
   DrawBar(BarType, PlayerNumber, BarStartPosY, NewHeight);
 
@@ -1612,8 +1611,40 @@ var
   BarStartPosX: real;
   SlotIndex: integer;
   Texture: TTexture;
+  SegmentStart, SegmentFraction, SegmentWidth: real;
+  SegmentColor: TRGB;
 begin
   SlotIndex := PlayerPositionMap[PlayerNumber-1].Position;
+
+  if Theme.Score.HorizontalBars then
+  begin
+    SegmentStart := 0;
+    SegmentFraction := Player[PlayerNumber - 1].ScoreInt / MAX_SONG_SCORE;
+    SegmentColor := GetPlayerColor(Ini.PlayerColor[PlayerNumber - 1]);
+    if BarType <> sbtScore then
+    begin
+      SegmentStart := SegmentFraction;
+      SegmentFraction := Player[PlayerNumber - 1].ScoreLineInt / MAX_SONG_SCORE;
+      SegmentColor := GetPlayerLightColor(Ini.PlayerColor[PlayerNumber - 1]);
+    end;
+    if BarType = sbtGolden then
+    begin
+      SegmentStart := SegmentStart + SegmentFraction;
+      SegmentFraction := Player[PlayerNumber - 1].ScoreGoldenInt / MAX_SONG_SCORE;
+      SegmentColor := ColorSqrt(SegmentColor);
+    end;
+
+    with Theme.Score.StaticBackLevel[SlotIndex] do
+    begin
+      if (W <= 0) or (H <= 0) then Exit;
+      SegmentStart := EnsureRange(SegmentStart, 0.0, 1.0);
+      SegmentWidth := Min(NewHeight / H, Min(SegmentFraction, 1.0 - SegmentStart)) * W;
+      if SegmentWidth > 0 then
+        Renderer.DrawQuad(X + SegmentStart * W, Y, ZBars, SegmentWidth, H,
+          SegmentColor.R, SegmentColor.G, SegmentColor.B, Alpha);
+    end;
+    Exit;
+  end;
 
   // this is solely for better readability of the drawing
   Width        := Theme.Score.StaticBackLevel[SlotIndex].W;
