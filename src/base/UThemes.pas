@@ -5125,6 +5125,7 @@ begin
     Score.StaticLevelRound[I] := Default(TThemeStatic);
   end;
 
+  BaseTemplate := Default(TScoreSlotThemeTemplate);
   ThemeLoadStatics(BaseTemplate.PlayerStatic,      'ScorePlayerTemplateStatic');
   ThemeLoadTexts(BaseTemplate.PlayerTexts,         'ScorePlayerTemplateText');
   ThemeLoadStatic(BaseTemplate.AvatarStatic,       'ScorePlayerTemplateAvatar');
