@@ -120,6 +120,7 @@ type
       destructor Destroy; override;
 
       procedure Clear;
+      procedure ResetAnalysis;
 
       // use to analyze sound from buffers to get new pitch
       procedure AnalyzeBuffer;
@@ -146,9 +147,13 @@ type
 
   // soundcard input-devices information
   TAudioInputDevice = class
+    protected
+      procedure ResetCaptureAnalysis;
+      procedure CheckCapture(Now: System.QWord); virtual;
     public
       CfgIndex:      integer;   // index of this device in Ini.InputDeviceConfig
       Name:          UTF8String;    // soundcard name
+      CaptureSerial: UTF8String;    // display only, never a config key
       Source:        array of TAudioInputSource; // soundcard input-sources
       SourceRestore: integer;  // source-index that will be selected after capturing (-1: not detected)
       MicSource:     integer;  // source-index of mic (-1: none detected)
@@ -245,6 +250,7 @@ type
   function ToneAbsToString(const ToneAbs: integer): string;
   procedure UpdatePhoneAudio(CalibrationAllowed: boolean = false);
   procedure LogAudioInputDiagnostics;
+  procedure CheckLocalCaptureDevices;
 
 implementation
 
@@ -261,6 +267,20 @@ var
   PhoneInputLastSamples: array[0..UIni.IMaxPlayerCount-1] of QWord;
   PhoneCalibrationBuffers: array[0..UIni.IMaxPlayerCount-1] of TCaptureBuffer;
   LastAudioDiagnostics: QWord = 0;
+  NextCaptureCheck: QWord = 0;
+
+procedure CheckLocalCaptureDevices;
+var
+  Device: TAudioInputDevice;
+  Now: QWord;
+begin
+  if not Assigned(singleton_AudioInputProcessor) then Exit;
+  Now := GetTickCount64;
+  if Now < NextCaptureCheck then Exit;
+  NextCaptureCheck := Now + 250;
+  for Device in singleton_AudioInputProcessor.DeviceList do
+    Device.CheckCapture(Now);
+end;
 
 procedure LogAudioInputDiagnostics;
 var I: integer;
@@ -340,6 +360,18 @@ begin
 end;
 
 { TAudioInputDevice }
+
+procedure TAudioInputDevice.CheckCapture(Now: System.QWord);
+begin
+end;
+
+procedure TAudioInputDevice.ResetCaptureAnalysis;
+var
+  Channel: TCaptureBuffer;
+begin
+  for Channel in CaptureChannel do
+    if Assigned(Channel) then Channel.ResetAnalysis;
+end;
 
 destructor TAudioInputDevice.Destroy;
 begin
@@ -440,6 +472,11 @@ procedure TCaptureBuffer.Clear;
 begin
   if assigned(LogBuffer) then
     LogBuffer.Clear;
+  ResetAnalysis;
+end;
+
+procedure TCaptureBuffer.ResetAnalysis;
+begin
   LockAnalysisBuffer();
   FillChar(AnalysisBuffer[0], Length(AnalysisBuffer) * SizeOf(SmallInt), 0);
   UnlockAnalysisBuffer();
