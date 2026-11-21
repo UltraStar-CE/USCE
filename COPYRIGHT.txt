@@ -1,8 +1,15 @@
-Ultrastar Deluxe
-Copyright (C) 2007-2026 by the following:
+UltraStar Community Edition (USCE)
 
-If you have contributed to this project then you deserve to be on this
-list.  Open an issue or pull request in UltraStar-CE/USCE and we'll add you.
+USCE is an independently maintained fork of UltraStar Deluxe (USDX),
+which is based on UltraStar by corvus5. Inherited work retains its original
+copyright and attribution. Contributions to USCE are credited in the USCE
+Git history and individual source notices.
+
+USCE project: https://github.com/UltraStar-CE/USCE
+USDX project and contributor history: https://github.com/UltraStar-Deluxe/USDX
+
+UltraStar Deluxe historical contributor list
+Copyright (C) 2007-2016 by the following:
 
 Jay Binks "jaybinks"
 Dirk Dunger "blindy"

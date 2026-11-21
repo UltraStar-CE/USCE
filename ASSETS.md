@@ -2,6 +2,8 @@
 
 The UltraStar Community Edition code is licensed under GPL-2.0-or-later (see [LICENSE](LICENSE)). The licenses of bundled third-party libraries are in `game/LICENSE.*.txt`.
 
+USCE is an independently maintained fork of USDX. The credits below name the original projects and creators whose assets USCE inherits.
+
 This file lists the non-code assets in `game/` with their source and license, as far as they are known. Entries marked **unknown** have no recorded source. If you know where one of them comes from, please open an issue or pull request.
 
 Historical commit hashes refer to USDX or, for the SourceForge SVN era (2007–2016), to the [legacy SVN mirror](https://github.com/UltraStar-Deluxe/legacy-sourceforge-svn-mirror).
