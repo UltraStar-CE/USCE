@@ -25,10 +25,10 @@ type
 var DuplicateSongPopup: TDuplicateSongPopup;
 procedure CheckStartupSongIdentities(ContinueStartup: TStartupContinuation);
 implementation
-uses SysUtils, USongs, USongIdentity, UGraphic, ULanguage, UScreenPopup, UPlaylist,
+uses Math, SysUtils, USongs, USongIdentity, UGraphic, ULanguage, UScreenPopup, UPlaylist,
   UThemes, UUnicodeUtils, UMain, URenderer, UCommon, UCommandLine;
 constructor TDuplicateSongPopup.Create;
-var I: integer; Basic: TThemeBasic;
+var I: integer; Basic: TThemeBasic; Available: single;
 begin
   inherited;
   Basic := TThemeBasic.Create;
@@ -47,6 +47,13 @@ begin
   for I := 0 to 3 do
   begin
     AddButton(Theme.DuplicateSongs.Inputs[I]);
+    with Theme.DuplicateSongs.Inputs[I] do
+    begin
+      Available := W - 2 * Max(0, Text[0].X);
+      if Text[0].W > 0 then Available := Min(Available, Text[0].W);
+    end;
+    Button[I].Text[0].SingleLineWidth := Max(1, Available);
+    Button[I].Text[0].H := 0;
     Button[I].Text[0].Writable := true;
   end;
   AddButton(Theme.DuplicateSongs.Actions[0]);
