@@ -283,7 +283,6 @@ procedure TScreenOptionsGame.ReloadCurrentScreen;
 begin
   Ini.AgeCountry := AgeCountries[AgeCountryIndex];
   ScreenOptionsGame.Free;
-  Language.ChangeLanguage(ILanguage[Ini.Language]);
   Ini.TranslateOptionValues;
   Theme.LoadTheme(Ini.Theme, Ini.Color);
   ScreenOptionsGame := TScreenOptionsGame.Create;
