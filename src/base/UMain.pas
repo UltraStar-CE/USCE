@@ -535,7 +535,12 @@ begin
     rccMenuDown:   Key := SDLK_DOWN;
     rccMenuLeft:   Key := SDLK_LEFT;
     rccMenuRight:  Key := SDLK_RIGHT;
-    rccMenuSelect: Key := SDLK_RETURN;
+    rccMenuSelect:
+      begin
+        if (Display.CurrentScreen = @ScreenName) and ScreenName.DelayMeasurementOpen then
+          Exit(false);
+        Key := SDLK_RETURN;
+      end;
     rccMenuBack:   Key := SDLK_ESCAPE;
     rccGamePause:
       begin
