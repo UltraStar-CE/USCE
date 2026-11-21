@@ -1381,7 +1381,8 @@ begin
   DrawH := Avatar.H;
   ResolveLayoutRect(DrawX, DrawY, DrawW, DrawH, Avatar.ScaleMode);
   // Move the picture and frame together after accounting for the square fit.
-  OffsetX := Text[TextName[SlotIndex]].X - DrawX;
+  with Text[TextName[SlotIndex]] do
+    OffsetX := X + Size * Theme.Score.AvatarNameInset - DrawX;
   Statics[AvatarStaticRef[PlayerNumber]].Texture.X := Avatar.X + OffsetX;
 
   if Theme.Score.AvatarFrameTexture = '' then Exit;
