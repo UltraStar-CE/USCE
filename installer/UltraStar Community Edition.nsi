@@ -426,20 +426,6 @@ Section $(name_section1) Section1
 SectionEnd
 
 ;------------------------------------
-; OPTIONAL SONGS (Section 2)
-;------------------------------------
-
-;disabled because of deprecating sourceforge
-;!include "${path_settings}\files_opt_songs.nsh"
-
-;------------------------------------
-; OPTIONAL THEMES (Section 3)
-;------------------------------------
-
-; No additional themes available 
-; for current version of ultrastardx
-
-;------------------------------------
 ; UNINSTALL (Section 6)
 ;------------------------------------
 
