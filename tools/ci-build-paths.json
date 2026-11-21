@@ -6,7 +6,6 @@
     ".github/workflows/**",
     ".github/actions/**",
     "dists/**",
-    "debian/**",
     "installer/**",
     "icons/**",
     "res/**",

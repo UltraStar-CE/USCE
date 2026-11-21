@@ -340,30 +340,6 @@ uninstall-plugins:
 	$(RM_REC) "$(DESTDIR)$(INSTALL_DATADIR)/plugins"
 
 #################################################
-# Distributable source-package (TODO)
-#################################################
-
-#disttmpdir := $(USCE_PACKAGE_NAME)-$(USCE_VERSION)-src
-disttmpdir := $(USCE_PACKAGE_NAME)-1.1_alpha-src
-# choose all files in SVN that are not deleted
-svn-files := svn status -v | grep -v "^[?D]" | cut -c8- | tr -s " " | cut -f5- -d" "
-
-.PHONY: dist
-dist:
-	@$(svn-files) | while read FILE; do \
-	  if test -d "$$FILE"; then \
-	    echo "MKDIR: $(disttmpdir)/$$FILE"; \
-	    $(MKDIR) "$(disttmpdir)/$$FILE" || exit 1; \
-	  else \
-	    echo "COPY:  $$FILE"; \
-	    cp "$$FILE" "$(disttmpdir)/$$FILE" || exit 1; \
-	  fi; \
-	done
-	tar cvf $(disttmpdir).tar $(disttmpdir)
-	gzip $(disttmpdir).tar
-	$(RM_REC) $(disttmpdir)
-
-#################################################
 # Debian package
 #################################################
 
