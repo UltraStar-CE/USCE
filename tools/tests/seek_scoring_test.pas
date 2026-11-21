@@ -197,8 +197,15 @@ begin
     Check(Screen.HasPendingDelayedScoring(Screen.LastPracticeBeat, true),
       'practice waits for the last beat midpoint at zero delay');
     Check(not Screen.HasPendingDelayedScoring(Screen.LastPracticeBeat),
-      'ordinary end still ignores an undelayed cursor');
+      'ordinary end still ignores an undelayed cursor without a pending capture window');
+    Player[0].LocalCaptureWindowPending := true;
+    Check(Screen.HasPendingDelayedScoring(Screen.LastPracticeBeat),
+      'the scoring tail waits for the final local window even at zero delay');
     Player[0].DetectionBeat := 29;
+    Check(not Screen.HasPendingDelayedScoring(Screen.LastPracticeBeat),
+      'a capture window cannot extend scoring beyond the song or loop boundary');
+    ResetSungPitchReference;
+    Check(not Player[0].LocalCaptureWindowPending, 'a seek clears the pending local window');
     Check(not Screen.HasPendingDelayedScoring(Screen.LastPracticeBeat, true),
       'practice wraps once the last beat is sampled');
     Screen.PracticeLoop := Default(TPracticeLoop);

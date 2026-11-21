@@ -98,6 +98,7 @@ type
     // LineBonus
     DetectionBeat: integer;
     DetectionReady: boolean;
+    LocalCaptureWindowPending: boolean;
     DetectionDelay: integer;
     ScoreLast:      real;    // Last Line Score
 
@@ -283,6 +284,7 @@ end;
 procedure TPlayer.ResetScores();
 begin
   DetectionReady := false;
+  LocalCaptureWindowPending := false;
   _Score := 0;
   _ScoreLine := 0;
   _ScoreGolden := 0;
@@ -954,7 +956,11 @@ end;
 procedure ResetSungPitchReference;
 var I: integer;
 begin
-  for I := 0 to High(Player) do Player[I].HasLastSungTone := false;
+  for I := 0 to High(Player) do
+  begin
+    Player[I].HasLastSungTone := false;
+    Player[I].LocalCaptureWindowPending := false;
+  end;
   ScoringPlaybackPhase := Default(TPlaybackPhase);
   ScoringPlaybackOriginUs := 0;
 end;
@@ -1134,7 +1140,7 @@ begin
   begin
     if (not CurrentSong.isDuet) or (Player[PlayerIndex].Track = CP) then
     begin
-
+      Player[PlayerIndex].LocalCaptureWindowPending := false;
       IsRemotePlayer := RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) and
         not PhoneAudio.Enabled;
       SlotAbsent := (not IsRemotePlayer) and Screen.UsesSelectedLocalRoster and
@@ -1312,6 +1318,7 @@ begin
           if not UsedTimedWindow and NoteAvailable and
              (LocalClockUs < LocalWindowWaitUntilUs) then
           begin
+            Player[PlayerIndex].LocalCaptureWindowPending := true;
             PlayerCurBeat := ActualBeat - 1;
             Break;
           end;
