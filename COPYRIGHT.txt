@@ -7,6 +7,10 @@ USCE contributors are credited in this repository's pull requests, Git
 history, and individual file notices. The project maintainers are Daniel
 Gruss and Tycho Schottdorf. See MAINTAINERS.md for current responsibilities.
 
+Additional USCE contributors:
+- Wiccio: Esperanto translations, Windows installer patch, and testing.
+- Thallion: SDL microphone reconnect patch and hardware testing.
+
 USCE contribution history: https://github.com/UltraStar-CE/USCE
 USDX upstream history: https://github.com/UltraStar-Deluxe/USDX
 
