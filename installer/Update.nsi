@@ -184,9 +184,6 @@ Function pageVersionCheck
 		StrCpy $2 "${version_url}"
 		StrCpy $3 "${installer_version_path}"
 		
-		; NSISdl::download/quiet doesn't work for some reason with the provided url and path, it creates an empty file and times out
-		;NSISdl::download_quiet /TIMEOUT=5000 "$2" "$3"
-		; use inetc for this purpose instead
 		inetc::get /SILENT /CONNECTTIMEOUT 5 "$2" "$3"
 
 		; if download failed
