@@ -2614,6 +2614,7 @@ var
   LocalStartIndex: integer;
   BaseNameIndex: integer;
   VisibleCount: integer;
+  TitleLeft, TitleHeight: real;
 begin
   VS := CatSongs.VisibleSongs;
   UpdateListSelectedText;
@@ -2637,13 +2638,29 @@ begin
       // Set texts
       Text[TextArtist].Size := Theme.Song.TextArtist.Size; // reset in case it was previously decreased by a too long artist
       Text[TextArtist].Text := CatSongs.Song[Interaction].Artist;
-      Text[TextTitle].Size := Theme.Song.TextTitle.Size; // reset in case it was previously decreased by a too long title
-      Text[TextTitle].Text  :=  CatSongs.Song[Interaction].Title;
       if ((Ini.Tabs = 0) or (TSortingType(Ini.Sorting) <> sYear))
         and (CatSongs.Song[Interaction].Year <> 0) then
           Text[TextYear].Text  :=  InttoStr(CatSongs.Song[Interaction].Year)
       else
         Text[TextYear].Text  :=  '';
+      TitleHeight := Theme.Song.TextTitle.H;
+      TitleLeft := Text[TextTitle].X;
+      case Text[TextTitle].Align of
+        1: TitleLeft := TitleLeft - Text[TextTitle].W / 2;
+        2: TitleLeft := TitleLeft - Text[TextTitle].W;
+      end;
+      // The year shares the title column on selected-song cards.
+      if (Text[TextYear].Text <> '') and (Text[TextYear].Size > 0) and
+         (Text[TextYear].Y > Text[TextTitle].Y + 4) and
+         (Text[TextYear].X >= TitleLeft) and
+         (Text[TextYear].X <= TitleLeft + Text[TextTitle].W) then
+      begin
+        if TitleHeight <= 0 then TitleHeight := Text[TextYear].Y - Text[TextTitle].Y - 4
+        else TitleHeight := Min(TitleHeight, Text[TextYear].Y - Text[TextTitle].Y - 4);
+      end;
+      Text[TextTitle].Size := Theme.Song.TextTitle.Size;
+      Text[TextTitle].H := TitleHeight;
+      Text[TextTitle].Text := CatSongs.Song[Interaction].Title;
     end;
 
     SetDuetSingerVisibility(0);
@@ -3759,7 +3776,20 @@ var
   dx:         real;
   dt:         real;
   VideoAlpha: real;
+  FooterY: real;
   I, J:       integer;
+
+  function ReplacedFooterText(Index: integer): boolean;
+  var
+    LegendText: cardinal;
+  begin
+    if (Text[Index].Y < FooterY) or (Text[Index].Y >= RenderH) then Exit(false);
+    for LegendText in TextNonParty do
+      if LegendText = cardinal(Index) then Exit(true);
+    for LegendText in TextParty do
+      if LegendText = cardinal(Index) then Exit(true);
+    Result := false;
+  end;
 
   procedure SetMarkedCardTexture(StaticIndex: integer; const ThemeStatic: TThemeStatic);
   var
@@ -4069,18 +4099,27 @@ begin
     SetMarkedCardTexture(StaticNonParty[I], Theme.Song.StaticNonParty[I]);
 
   // Filter hints replace legend items only; the existing footer bars stay intact.
+  FooterY := RenderH + 8;
+  if ScreenSongJumpto.Visible then
+  begin
+    if Length(Theme.SongJumpto.Footer.Text) > 0 then
+      FooterY := Theme.SongJumpto.Footer.Text[0].Y;
+  end
+  else if ModernKeyboard and (Length(Theme.Song.ModernFooter) > 0) then
+    FooterY := Theme.Song.ModernFooter[0].Y;
+  if FooterY >= RenderH / 2 then FooterY := FooterY - 8
+  else FooterY := RenderH;
+
   for I := 0 to High(Statics) do
   begin
-    if (ModernKeyboard or ScreenSongJumpto.Visible) and (Length(Theme.SongJumpto.Footer.Text) > 0) then
+    if (Statics[I].Texture.Y >= FooterY) and (Statics[I].Texture.Y < RenderH) then
     begin
       J := 0;
       while (J <= High(StaticNonParty)) and (StaticNonParty[J] <> cardinal(I)) do Inc(J);
-      if (J <= High(StaticNonParty)) and
-         (Theme.Song.StaticNonParty[J].Y >= Theme.SongJumpto.Footer.Text[0].Y - 8) then Continue;
+      if J <= High(StaticNonParty) then Continue;
       J := 0;
       while (J <= High(StaticParty)) and (StaticParty[J] <> cardinal(I)) do Inc(J);
-      if (J <= High(StaticParty)) and
-         (Theme.Song.StaticParty[J].Y >= Theme.SongJumpto.Footer.Text[0].Y - 8) then Continue;
+      if J <= High(StaticParty) then Continue;
     end;
     Statics[I].Draw;
   end;
@@ -4088,8 +4127,7 @@ begin
   begin
     // Modern search has one visible query in the header, not a duplicate subtitle.
     if ModernKeyboard and (I = TextCat) then Continue;
-    if (ModernKeyboard or ScreenSongJumpto.Visible) and (Length(Theme.SongJumpto.Footer.Text) > 0) and
-       (Text[I].Y >= Theme.SongJumpto.Footer.Text[0].Y - 8) then Continue;
+    if ReplacedFooterText(I) then Continue;
     Text[I].Draw;
   end;
 

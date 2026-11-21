@@ -1004,7 +1004,7 @@ begin
 end;
 
 procedure TScreenSongJumpto.DrawSuggestions;
-var I, N, S, MaxRows: integer; B: TThemeButton; H, Margin, Bottom: single;
+var I, N, S, MaxRows: integer; B: TThemeButton; H, Margin, Top, Bottom, LeftWidth: single;
 begin
   fSuggestionRows := 0;
   if (Length(fMatches) = 0) or (Length(Statics) = 0) or
@@ -1012,17 +1012,31 @@ begin
   Margin := Theme.SongJumpto.SuggestionMargin;
   fSuggestionX := Statics[0].Texture.X + Statics[0].Texture.W + Theme.SongJumpto.SuggestionGap;
   fSuggestionW := Min(Theme.SongJumpto.SuggestionWidth, RenderW - Margin - fSuggestionX);
-  if fSuggestionW < 80 then begin fSuggestionRows := 0; Exit; end;
-  Bottom := RenderH;
-  for I := 0 to High(fFooter.Statics) do Bottom := Min(Bottom, fFooter.Statics[I].Texture.Y);
-  for I := 0 to High(fFooter.Text) do Bottom := Min(Bottom, fFooter.Text[I].Y - 4);
-  Bottom := Bottom - Margin;
-  MaxRows := Floor((Bottom - Margin) / Theme.SongJumpto.SuggestionRowHeight);
+  if fSuggestionW < 80 then
+  begin
+    LeftWidth := Statics[0].Texture.X - Theme.SongJumpto.SuggestionGap;
+    fSuggestionW := Min(Theme.SongJumpto.SuggestionWidth, LeftWidth - Margin);
+    if fSuggestionW < 80 then Exit;
+    fSuggestionX := LeftWidth - fSuggestionW;
+  end;
+  Top := Margin;
+  Bottom := RenderH - Margin;
+  for I := 0 to High(fFooter.Statics) do
+    with fFooter.Statics[I].Texture do
+      if (H > 0) and (Y >= 0) and (Y < RenderH) then
+        if Y < RenderH / 2 then Top := Max(Top, Y + H + Margin)
+        else Bottom := Min(Bottom, Y - Margin);
+  for I := 0 to High(fFooter.Text) do
+    with fFooter.Text[I] do
+      if (Size > 0) and (Y >= 0) and (Y < RenderH) then
+        if Y < RenderH / 2 then Top := Max(Top, Y + Size + Margin)
+        else Bottom := Min(Bottom, Y - Margin);
+  MaxRows := Floor((Bottom - Top) / Theme.SongJumpto.SuggestionRowHeight);
   if MaxRows < 1 then begin fSuggestionRows := 0; Exit; end;
   fSuggestionRows := Min(Length(fMatches), MaxRows);
   H := fSuggestionRows * Theme.SongJumpto.SuggestionRowHeight;
   S := EnsureRange(fFocus - fFirst, 0, FILTER_SLOTS - 1);
-  fSuggestionY := EnsureRange(Button[fInputs[S]].Y, Margin, Max(Margin, Bottom - H));
+  fSuggestionY := EnsureRange(Button[fInputs[S]].Y, Top, Max(Top, Bottom - H));
   if fSuggestionFocus then
   begin
     if fSuggestionIndex < fSuggestionFirst then fSuggestionFirst := fSuggestionIndex;
