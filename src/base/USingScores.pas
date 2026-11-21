@@ -253,7 +253,7 @@ type
       procedure SetScore(Player: byte; Score: integer);
 
       // spawns a new line bonus popup for the player
-      procedure SpawnPopUp(const PlayerIndex: byte; const Rating: integer; const Score: integer);
+      procedure SpawnPopUp(const PlayerIndex: byte; const LinePerfection: real; const Score: integer);
 
       procedure SetInfoBarMode(const Mode: TSingInfoBarMode);
 
@@ -533,9 +533,12 @@ end;
 {**
  * spawns a new line bonus popup for the player
  *}
-procedure TSingScores.SpawnPopUp(const PlayerIndex: byte; const Rating: integer; const Score: integer);
+procedure TSingScores.SpawnPopUp(const PlayerIndex: byte; const LinePerfection: real; const Score: integer);
+const
+  MaxLineRating = 8;
 var
   Cur: PScorePopUp;
+  Fraction: real;
 begin
   if (PlayerIndex < PlayerCount) then
   begin
@@ -547,12 +550,13 @@ begin
     Cur.Player    := PlayerIndex;
     Cur.TimeStamp := SDL_GetTicks;
 
-    Cur.Rating := EnsureRange(Rating, 0, 8);
+    Fraction := EnsureRange(LinePerfection, 0.0, 1.0);
+    Cur.Rating := Round(Fraction * MaxLineRating);
     if aPlayers[PlayerIndex].HasLineRating then
       Cur.RatingDelta := Cur.Rating / 20 - 0.26
     else
     begin
-      aPlayers[PlayerIndex].RBTarget := Cur.Rating / 8;
+      aPlayers[PlayerIndex].RBTarget := Fraction;
       aPlayers[PlayerIndex].RBPos := aPlayers[PlayerIndex].RBTarget;
       aPlayers[PlayerIndex].HasLineRating := true;
       Cur.RatingDelta := 0;

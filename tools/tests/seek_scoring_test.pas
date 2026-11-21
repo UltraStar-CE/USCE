@@ -129,6 +129,10 @@ begin
     Equal(Screen.Scores.Players[0].Score, MAX_SONG_SCORE - 1,
       'the target updates even when line bonus remains clamped at its maximum');
     // A line whose bonus was already updated during a retry still rates once.
+    // Start below full so the meter cap cannot hide a duplicate adjustment.
+    Screen.Scores.ClearPlayers;
+    Screen.Scores.AddPlayer(nil, Color);
+    Screen.Scores.SpawnPopUp(0, 0.5, Player[0].ScoreTotalInt);
     Screen.Scores.KillAllPopUps;
     RatingBefore := Screen.Scores.Players[0].RBTarget;
     Screen.OnSentenceEnd(0, 0, 0);
@@ -150,9 +154,11 @@ begin
     Screen.Scores.ClearPlayers;
     Screen.Scores.AddPlayer(nil, Color);
     Screen.Scores.AddPlayer(nil, Color);
-    Screen.Scores.SpawnPopUp(0, 8, 1000);
-    Screen.Scores.SpawnPopUp(1, 8, 2000);
-    Screen.Scores.SpawnPopUp(0, 6, 500);
+    Screen.Scores.SpawnPopUp(0, 0.73, 1000);
+    Screen.Scores.SpawnPopUp(1, 0.93, 2000);
+    Equal(Screen.Scores.Players[0].RBPos, 0.73, 'the first line immediately fills the meter to 73%');
+    Equal(Screen.Scores.Players[1].RBPos, 0.93, 'each singer gets their own first-line percentage');
+    Screen.Scores.SpawnPopUp(0, 0.75, 500);
     Screens := 1;
     ScreenAct := 1;
     Screen.Scores.Init;
@@ -171,8 +177,9 @@ begin
     Screen.Scores.Settings.Phase3Time := -1;
     Screen.Scores.Draw(false, false);
     Equal(Screen.Scores.Players[0].ScoreDisplayed, 400, 'revised display cannot restore old popup points');
-    Equal(Screen.Scores.Players[0].RBTarget, RatingBefore + 0.18,
-      'both ratings finish after a downward revision');
+    Equal(Screen.Scores.Players[0].RBTarget, RatingBefore + 0.04,
+      'the later rating finishes after a downward revision');
+    Equal(Screen.Scores.Players[1].RBTarget, 0.93, 'the first rating stays exact after its popup exits');
     Equal(Screen.Scores.Players[1].ScoreDisplayed, 2000, 'other singer points finish');
     Player[0].ResetScores;
     Check(GetPlayerSentenceScore(0, 0, 0, PerBeat), 'initialize loop scoring');
