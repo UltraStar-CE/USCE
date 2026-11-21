@@ -417,7 +417,8 @@ type
     SelectPlayerColor:   TThemeSelectSlide;
     SelectPlayerLevel:   TThemeSelectSlide;
     SelectPlayerVoice:   TThemeSelectSlide;
-    DelayMeasureButton, DelayApplyButton, DelayCancelButton: TThemeButton;
+    DelayHint: TThemeText;
+    DelayApplyButton, DelayCancelButton: TThemeButton;
     DelayText: TThemeText;
   end;
 
@@ -2603,11 +2604,15 @@ begin
       Name.DelayText.ColB := 1;
       if ResolveThemeFile('NameDelayText') <> nil then
         ThemeLoadText(Name.DelayText, 'NameDelayText', true);
-      Name.DelayMeasureButton := CheckPopup.Button1;
-      with Name.DelayMeasureButton do
+      Name.DelayHint := Default(TThemeText);
+      with Name.DelayHint do
       begin
-        X := 482; Y := 86; W := 195; H := 28;
+        X := 16; Y := 548; W := 215; H := 20;
+        Size := 18; ColR := 1; ColG := 1; ColB := 1;
       end;
+      if ResolveThemeFile('NameDelayHint') <> nil then
+        ThemeLoadText(Name.DelayHint, 'NameDelayHint', true);
+      Name.DelayHint.Text := Language.Translate('SLOT_DELAY_MEASURE_HINT');
       Name.DelayApplyButton := CheckPopup.Button1;
       with Name.DelayApplyButton do
       begin
@@ -2618,8 +2623,6 @@ begin
       begin
         X := 410; Y := 500; W := 210; H := 36;
       end;
-      if ResolveThemeFile('NameDelayMeasureButton') <> nil then
-        ThemeLoadButton(Name.DelayMeasureButton, 'NameDelayMeasureButton');
       if ResolveThemeFile('NameDelayApplyButton') <> nil then
         ThemeLoadButton(Name.DelayApplyButton, 'NameDelayApplyButton');
       if ResolveThemeFile('NameDelayCancelButton') <> nil then
