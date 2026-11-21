@@ -119,6 +119,7 @@ implementation
 
 uses
   UGraphic,
+  UFont,
   URenderer,
   UIni,
   UThemes,
@@ -237,14 +238,29 @@ end;
 procedure DrawKeyHint(const Key: UTF8String; X, Y, Z, FontSize, R, G, B, A: real;
   Reflection: boolean; ReflectionSpacing: real);
 var
-  Ascender: real;
+  Font: TFont;
+  Bounds: TBoundsDbl;
+  FrameY, FrameW, FrameH, LabelY, LabelHeight: real;
 begin
-  Ascender := Fonts[CurrentFont.FontFamily][CurrentFont.FontStyle].Font.Ascender;
-  DrawKeyFrame(X, Y + FontSize * 0.02, Z, KeyHintWidth(Key, FontSize),
-    FontSize * 0.83, R, G, B, A, Reflection,
-    ReflectionSpacing + 2 * (Ascender - FontSize * 0.85));
-  SetFontPos(X + FontSize * 0.18, Y);
+  Font := Fonts[CurrentFont.FontFamily][CurrentFont.FontStyle].Font;
+  FrameY := Y + FontSize * 0.02;
+  FrameW := KeyHintWidth(Key, FontSize);
+  FrameH := FontSize * 0.83;
+  DrawKeyFrame(X, FrameY, Z, FrameW, FrameH, R, G, B, A, Reflection,
+    ReflectionSpacing + 2 * (Font.Ascender - FontSize * 0.85));
+  Bounds := Font.BBox(Key, false);
+  LabelHeight := Bounds.Top - Bounds.Bottom;
+  if LabelHeight > FrameH * 0.66 then
+  begin
+    SetFontSize(FontSize * FrameH * 0.66 / LabelHeight);
+    Bounds := Font.BBox(Key, false);
+  end;
+  LabelY := FrameY + FrameH / 2 - Font.Ascender + (Bounds.Top + Bounds.Bottom) / 2;
+  SetFontReflection(Reflection, ReflectionSpacing + 2 * (Y - LabelY));
+  SetFontPos(X + (FrameW - TextWidth(Key)) / 2, LabelY);
   PrintText(Key);
+  SetFontSize(FontSize);
+  SetFontReflection(Reflection, ReflectionSpacing);
 end;
 
 function InlineTextWidth(const Value: UTF8String; BaseStyle: integer; FontSize: real;

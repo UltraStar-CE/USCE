@@ -1879,9 +1879,7 @@ begin
   if (Themes[ThemeNum].BaseTheme <> '') then
     AddBaseThemeChain(Themes[ThemeNum].BaseTheme, 0);
 
-  // Drawn keycaps remain opt-in. An opting-in theme can inherit the labels.
-  if ThemeIni.SectionExists('Keycaps') then
-    KeycapSections := GetSectionList('Keycaps');
+  KeycapSections := GetSectionList('Keycaps');
 end;
 
 procedure TTheme.CloseFile;
@@ -3749,7 +3747,8 @@ begin
     ThemeStatic.ScaleMode := ParseScaleMode(ScaleValue, lsStretch);
   if (ThemeStatic.KeyCap <> '') and (ThemeStatic.W > 0) and (ThemeStatic.H > 0) then
   begin
-    ThemeStatic.Color := ReadString(KeycapSections, 'Color', '');
+    ThemeStatic.Color := ReadString(SectionList, 'KeycapColor',
+      ReadString(KeycapSections, 'Color', ''));
     ThemeStatic.ColR := 0.08;
     ThemeStatic.ColG := 0.12;
     ThemeStatic.ColB := 0.18;
