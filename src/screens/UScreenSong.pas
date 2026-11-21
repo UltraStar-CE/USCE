@@ -378,6 +378,7 @@ uses
   BaseUnix,
   {$ENDIF}
   URemoteSongLibrary,
+  USyncerWeb,
   URecord,
   UInputSource,
   UJoystick,
@@ -918,7 +919,7 @@ begin
     if (SDL_ModState and KMOD_CTRL <> 0) and (SDL_ModState and KMOD_ALT = 0) and
        (PressedKey = SDLK_f) and (SDL_ModState and KMOD_SHIFT = 0) then
     begin
-      if (Songs.SongList.Count > 0) and FreeListMode then ScreenSongJumpto.Visible := true;
+      if ((Songs.SongList.Count > 0) or TSyncerClient.Enabled) and FreeListMode then ScreenSongJumpto.Visible := true;
       Exit;
     end;
     if ModernKeyboard and not ControllerKeyInput then
@@ -928,7 +929,7 @@ begin
          ((SDL_ModState and (KMOD_CTRL or KMOD_ALT) = 0) or
           ((SDL_ModState and KMOD_CTRL <> 0) and (SDL_ModState and KMOD_ALT <> 0))) then
       begin
-        if Songs.SongList.Count > 0 then
+        if (Songs.SongList.Count > 0) or TSyncerClient.Enabled then
           ScreenSongJumpto.SetTypingQuery(ScreenSongJumpto.TypingQuery + UCS4ToUTF8String(CharCode));
         Exit;
       end;
@@ -1214,7 +1215,7 @@ begin
 
       SDLK_J: //Show Jumpto Menu
         begin
-          if (Songs.SongList.Count > 0) and (FreeListMode) then
+          if ((Songs.SongList.Count > 0) or TSyncerClient.Enabled) and FreeListMode then
           begin
             ScreenSongJumpto.Visible := true;
           end;
@@ -3431,6 +3432,8 @@ var
   PlaylistReloaded, PlaylistReapplied: Boolean;
 begin
   SetTextInput(ModernKeyboard);
+  if (Songs.SongList.Count = 0) and TSyncerClient.Enabled then
+    ScreenSongJumpto.SetSearchText('');
   SyncDuetSingerTheme;
 
   isScrolling := true;
@@ -5286,6 +5289,7 @@ var
   OldCategory, P, Item, I, Index, NewIndex: integer;
   OldPosition, OldListTop, GridOffset, Candidate: integer;
   PlaylistPaths, NewIds, VisiblePaths: TStringList;
+  Reloaded: TList;
   Song: TSong;
   EmptyMainMenu, ReloadPreview, ResumeVideoPreview: boolean;
   SavedVideo: IVideo;
@@ -5333,7 +5337,8 @@ begin
      MakeMedley or ScreenSongMenu.Visible or
      ScreenPopupError.Visible or ScreenPopupCheck.Visible or
      ScreenPopupHelp.Visible or ScreenPopupInfo.Visible or
-     ScreenSongJumpto.Visible or ScreenContinuousPlayback.Session.Active or
+     (ScreenSongJumpto.Visible and not ScreenSongJumpto.WaitingForSyncerSong) or
+     ScreenContinuousPlayback.Session.Active or
      not Songs.RefreshReady then Exit;
   SelectedPath := '';
   SavedPreviewEnd := PreviewEnd;
@@ -5358,6 +5363,8 @@ begin
   PlaylistPaths := TStringList.Create;
   NewIds := TStringList.Create;
   VisiblePaths := TStringList.Create;
+  Reloaded := nil;
+  if ScreenSongJumpto.WaitingForSyncerSong then Reloaded := TList.Create;
   try
     for I := 0 to High(CatSongs.Song) do
       if CatSongs.Song[I].Visible then VisiblePaths.Add(SelectionKey(CatSongs.Song[I]));
@@ -5369,7 +5376,7 @@ begin
           PlaylistPaths.Add(TLibraryRefresh.Key(CatSongs.Song[I].Path.Append(CatSongs.Song[I].FileName)))
         else PlaylistPaths.Add('');
       end;
-    if not Songs.PublishRefresh(Retired) then
+    if not Songs.PublishRefresh(Retired, Reloaded) then
     begin
       WriteMessage(Language.Translate('LIBRARY_REFRESH_FAILED'));
       Exit;
@@ -5526,6 +5533,7 @@ begin
         Text[TextYear].Text := '';
         SongScore;
       end;
+      if Assigned(Reloaded) then ScreenSongJumpto.SyncerLibraryUpdated(Reloaded);
       if Songs.LastRefreshMembershipChanged then
         WriteMessage(Language.Translate('LIBRARY_REFRESH_FINISHED'));
     finally
@@ -5534,6 +5542,7 @@ begin
       Retired.Free;
     end;
   finally
+    Reloaded.Free;
     NewIds.Free;
     PlaylistPaths.Free;
     VisiblePaths.Free;
