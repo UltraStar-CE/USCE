@@ -12,8 +12,5 @@ Additional USCE contributors:
 - Thallion: SDL microphone reconnect patch and hardware testing.
 
 USCE contribution history: https://github.com/UltraStar-CE/USCE
-USDX upstream history: https://github.com/UltraStar-Deluxe/USDX
-
-Inherited work retains its original copyrights. The original USDX
-contributor notice ships separately as LICENSE.usdx-attribution.txt
-and is available in game/ in this source tree.
+Inherited work retains its original copyrights.
+Original USDX project and contributor credits: https://github.com/UltraStar-Deluxe/USDX
