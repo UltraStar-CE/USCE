@@ -68,9 +68,6 @@ PUNIT_FLAGS := -Fu.
 PCUNIT_DIR   := $(USCE_BUILD_DIR)/fpc-$(PPROCESSOR)-$(PPLATFORM)
 PCUNIT_FLAGS := -FU$(PCUNIT_DIR)
 
-# Directories added to the includes path
-PINC_FLAGS := -Fi$(USCE_LIB_DIR)/JEDI-SDL/SDL/Pas
-
 ##
 # PFLAGS
 ##
@@ -152,14 +149,6 @@ USCE_BIN_NAME ?= usce$(EXEEXT)
 USCE_BIN := $(USCE_GAME_DIR)/$(USCE_BIN_NAME)
 
 #################################################
-# ProjectM
-#################################################
-
-PROJECTM_CWRAPPER_DIR := $(USCE_LIB_DIR)/projectM/cwrapper
-PROJECTM_CWRAPPER_LIB := $(PROJECTM_CWRAPPER_DIR)/libprojectM-cwrapper.a
-USE_PROJECTM_CWRAPPER := @USE_PROJECTM_CWRAPPER@
-
-#################################################
 # OpenCV
 #################################################
 
@@ -186,9 +175,6 @@ endif
 #################################################
 
 CWRAPPER_LIBS :=
-ifeq ($(USE_PROJECTM_CWRAPPER), yes)
-CWRAPPER_LIBS += $(PROJECTM_CWRAPPER_LIB)
-endif
 
 ifeq ($(USE_OPENCV_CWRAPPER), yes)
 CWRAPPER_LIBS += $(OPENCV_CWRAPPER_LIB)
