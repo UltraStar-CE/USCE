@@ -2083,7 +2083,8 @@ begin
   for PlayerIndex := 0 to PlayersPlay - 1 do
   begin
     if not Player[PlayerIndex].DetectionReady or
-      (not WaitForBeatMidpoint and (Ini.MicDelay + Player[PlayerIndex].DetectionDelay <= 0)) then Continue;
+      (not WaitForBeatMidpoint and not Player[PlayerIndex].LocalCaptureWindowPending and
+       (Ini.MicDelay + Player[PlayerIndex].DetectionDelay <= 0)) then Continue;
     TrackIndex := 0;
     if CurrentSong.isDuet then
       TrackIndex := Player[PlayerIndex].Track;
