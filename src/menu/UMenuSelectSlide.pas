@@ -47,6 +47,7 @@ type
     private
       SelectBool:       boolean;
       FocusOption: integer;
+      FittedCaptionSize: single;
 
       function AdjustOptionTextToFit(OptText: UTF8String): UTF8String;
     public
@@ -155,6 +156,7 @@ type
       procedure SetSelectOpt(Value: integer);
       property SelectedOption: integer read SelectOptInt write SetSelectOpt;
       procedure Draw; override;
+      procedure FitCaption;
       constructor Create(PosX, PosY, W, H, SkipX, SBGW, ColR, ColG, ColB, Int, DColR, DColG, DColB, DInt,
   TColR, TColG, TColB, TInt, TDColR, TDColG, TDColB, TDInt,
   SBGColR, SBGColG, SBGColB, SBGInt, SBGDColR, SBGDColG, SBGDColB, SBGDInt,
@@ -185,7 +187,7 @@ uses
   SysUtils,
   UGraphic,
   ULog,
-  UMenu, UThemes;
+  UMenu, UMenuList, UThemes;
 
 // ------------ Select
 constructor TSelectSlide.Create(PosX, PosY, W, H, SkipX, SBGW, ColR, ColG, ColB, Int, DColR, DColG, DColB, DInt,
@@ -628,9 +630,29 @@ begin
   end;
 end;
 
+procedure TSelectSlide.FitCaption;
+var
+  AvailableWidth: single;
+  CaptionFont, CaptionStyle: integer;
+begin
+  AvailableWidth := Min(Texture.X + Texture.W, TextureSBG.X) - Text.X - 6;
+  if (AvailableWidth <= 0) or (Text.Text = '') then Exit;
+
+  CaptionFont := ResolveThemeFont(Text.FontFile, Text.Font);
+  CaptionStyle := Text.Style;
+  if Theme.BoldSelection and (CaptionStyle = ftRegular) then
+    CaptionStyle := ftBold;
+
+  FittedCaptionSize := Text.Size;
+  while (FittedCaptionSize > 1) and
+      (MeasureTextMaxLineWidth(Text.Text, CaptionFont, CaptionStyle, FittedCaptionSize) > AvailableWidth) do
+    FittedCaptionSize := Max(1, FittedCaptionSize - 1);
+end;
+
 procedure TSelectSlide.Draw;
 var
   SO: integer;
+  CaptionSize, CaptionY: single;
 begin
   if Visible then
   begin
@@ -666,7 +688,19 @@ begin
       Renderer.DrawTexture(self.Tex_SelectS_ArrowR);
     end;
 
-    Text.DrawEmphasized(SelectBool and Theme.BoldSelection);
+    CaptionSize := Text.Size;
+    CaptionY := Text.Y;
+    if (FittedCaptionSize > 0) and (FittedCaptionSize < CaptionSize) then
+    begin
+      Text.Size := FittedCaptionSize;
+      Text.Y := CaptionY + (CaptionSize - FittedCaptionSize) / 2;
+    end;
+    try
+      Text.DrawEmphasized(SelectBool and Theme.BoldSelection);
+    finally
+      Text.Size := CaptionSize;
+      Text.Y := CaptionY;
+    end;
 
     for SO := Low(TextOpt) to High(TextOpt) do
       TextOpt[SO].DrawEmphasized(SelectBool and Theme.BoldSelection and (SO = FocusOption));
