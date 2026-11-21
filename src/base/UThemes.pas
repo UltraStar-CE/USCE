@@ -2606,7 +2606,7 @@ begin
       Name.DelayMeasureButton := CheckPopup.Button1;
       with Name.DelayMeasureButton do
       begin
-        X := 482; Y := 86; W := 300; H := 28;
+        X := 482; Y := 86; W := 195; H := 28;
       end;
       Name.DelayApplyButton := CheckPopup.Button1;
       with Name.DelayApplyButton do
