@@ -1111,7 +1111,7 @@ begin
   ActualTone := 0;
   NoteHit := false;
   LastPracticeBeat := Screen.LastPracticeBeat;
-  if not Screen.ScoringTailActive then
+  if not Screen.ScoringTailActive and Assigned(AudioPlayback) then
   begin
     LocalPlaybackPosition := AudioPlayback.Position;
     LocalClockUs := MonotonicMicroseconds;
