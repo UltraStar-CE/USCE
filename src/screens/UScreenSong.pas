@@ -218,6 +218,7 @@ type
 
       // for chessboard songmenu
       StaticActual: integer;
+      SelectedCoverButton: integer;
       ListSelectedText: array[0..2] of integer;
 
       // for list songmenu
@@ -269,6 +270,8 @@ type
       procedure SetRouletteScrollRefresh;
       procedure SetChessboardScrollRefresh;
       procedure SetListScrollRefresh;
+      procedure UpdateSelectedCover;
+      procedure ClearSharedSelectedCover;
       procedure UpdateListSelectedText;
       procedure SyncDuetSingerTheme;
 
@@ -2161,6 +2164,7 @@ begin
   inherited Create;
 
   MarkedPlaylistSong := -1;
+  SelectedCoverButton := -1;
 
   LoadFromTheme(Theme.Song);
   ModernFooter := TMenu.Create;
@@ -2468,6 +2472,7 @@ var
   Song: TSong;
   Event: TSDL_Event;
 begin
+  ClearSharedSelectedCover;
   for I := 0 to High(Button) do Button[I].Free;
   SetLength(Button, 0);
   SetLength(Interactions, 0);
@@ -2527,6 +2532,7 @@ begin
   if (Length(Button) = 0) or (Length(CatSongs.Song) = 0) then
     Exit;
 
+  ClearSharedSelectedCover;
   for B := 0 to High(Button) do
   begin
     if B > High(CatSongs.Song) then
@@ -3015,29 +3021,52 @@ begin
 
 end;
 
-procedure TScreenSong.SetChessboardScrollRefresh;
+procedure TScreenSong.ClearSharedSelectedCover;
 begin
-  if (Interaction < 0) or (Interaction > High(Button)) then Exit;
+  if SelectedCoverButton < 0 then Exit;
+  Statics[StaticActual].Texture.Free;
+  Statics[StaticActual].Texture := Renderer.CreateEmptyTexture(PATH_NONE);
+  SelectedCoverButton := -1;
+end;
+
+procedure TScreenSong.UpdateSelectedCover;
+var
+  Cover: TTexture;
+begin
   Statics[StaticActual].Visible := true;
   Statics[StaticActual].Texture.Free;
-  if (Button[Interaction].Texture.Name.IsUnset) then
-    Statics[StaticActual].Texture := Renderer.GetTexture(Skin.GetTextureFileName('SongCover'), TEXTURE_TYPE_PLAIN)
+  SelectedCoverButton := -1;
+  if Button[Interaction].Texture.Name.IsUnset then
+    Cover := Renderer.GetTexture(Skin.GetTextureFileName('SongCover'), TEXTURE_TYPE_PLAIN)
   else
-    Statics[StaticActual].Texture := Renderer.LoadTexture(Button[Interaction].Texture.Name);
+  begin
+    LoadCover(Interaction);
+    Cover := Button[Interaction].Texture.Clone();
+    if not Cover.IsEmpty then SelectedCoverButton := Interaction;
+  end;
+  Statics[StaticActual].Texture := Cover;
 
-  Statics[StaticActual].Texture.CornerRadius := Theme.Song.Cover.CornerRadius;
-  Statics[StaticActual].Texture.ScaleMode := Theme.Song.Cover.ScaleMode;
-
-  Statics[StaticActual].Texture.Alpha := 1;
-
-  Statics[StaticActual].Texture.X := Theme.Song.Cover.SelectX;
-  Statics[StaticActual].Texture.Y := Theme.Song.Cover.SelectY;
-  Statics[StaticActual].Texture.W := Theme.Song.Cover.SelectW;
-  Statics[StaticActual].Texture.H := Theme.Song.Cover.SelectH;
-  Statics[StaticActual].Texture.Z := 1;
+  Cover.ColR := 1;
+  Cover.ColG := 1;
+  Cover.ColB := 1;
+  Cover.Int := 1;
+  Cover.CornerRadius := Theme.Song.Cover.CornerRadius;
+  Cover.ScaleMode := Theme.Song.Cover.ScaleMode;
+  Cover.Alpha := 1;
+  Cover.X := Theme.Song.Cover.SelectX;
+  Cover.Y := Theme.Song.Cover.SelectY;
+  Cover.W := Theme.Song.Cover.SelectW;
+  Cover.H := Theme.Song.Cover.SelectH;
+  Cover.Z := 1;
 
   Statics[StaticActual].Reflection := Theme.Song.Cover.SelectReflection;
   Statics[StaticActual].Reflectionspacing := Theme.Song.Cover.SelectReflectionSpacing;
+end;
+
+procedure TScreenSong.SetChessboardScrollRefresh;
+begin
+  if (Interaction < 0) or (Interaction > High(Button)) then Exit;
+  UpdateSelectedCover;
 end;
 
 (**
@@ -3136,25 +3165,7 @@ begin
   UpdateListSelectedText;
   if (Interaction < 0) or (Interaction > High(Button)) then Exit;
 
-  Statics[StaticActual].Visible := true;
-  Statics[StaticActual].Texture.Free;
-  if (Button[Interaction].Texture.Name.IsUnset) then
-    Statics[StaticActual].Texture := Renderer.GetTexture(Skin.GetTextureFileName('SongCover'), TEXTURE_TYPE_PLAIN)
-  else
-    Statics[StaticActual].Texture := Renderer.LoadTexture(Button[Interaction].Texture.Name);
-
-  Statics[StaticActual].Texture.CornerRadius := Theme.Song.Cover.CornerRadius;
-  Statics[StaticActual].Texture.ScaleMode := Theme.Song.Cover.ScaleMode;
-  Statics[StaticActual].Texture.Alpha := 1;
-
-  Statics[StaticActual].Texture.X := Theme.Song.Cover.SelectX;
-  Statics[StaticActual].Texture.Y := Theme.Song.Cover.SelectY;
-  Statics[StaticActual].Texture.W := Theme.Song.Cover.SelectW;
-  Statics[StaticActual].Texture.H := Theme.Song.Cover.SelectH;
-  Statics[StaticActual].Texture.Z := 1;
-
-  Statics[StaticActual].Reflection := Theme.Song.Cover.SelectReflection;
-  Statics[StaticActual].Reflectionspacing := Theme.Song.Cover.SelectReflectionSpacing;
+  UpdateSelectedCover;
 
   for I := 0 to High(StaticsList) do
   begin
@@ -5259,6 +5270,8 @@ end;
 //Detailed Cover Unloading. Unloads the Detailed, uncached Cover of the Song Button
 procedure TScreenSong.UnloadCover(NumberOfButtonInArray: integer);
 begin
+  // A texture clone borrows the tile's GPU image until selection changes.
+  if NumberOfButtonInArray = SelectedCoverButton then Exit;
   // background texture (garbage disposal)
   if ((not Button[NumberOfButtonInArray].Texture.IsEmpty) and (Button[NumberOfButtonInArray].Texture.Name <> Skin.GetTextureFileName('SongCover'))) then
     Button[NumberOfButtonInArray].Texture.Release();
