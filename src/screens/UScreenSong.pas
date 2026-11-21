@@ -262,6 +262,7 @@ type
       procedure SetScroll;
       procedure SetScrollRefresh;
 
+      procedure SetRouletteStrip;
       procedure SetRouletteScroll;
       procedure SetChessboardScroll;
       procedure SetListScroll;
@@ -1999,6 +2000,27 @@ begin
     //LMB anywhere starts
     else if (MouseButton = SDL_BUTTON_LEFT) then
     begin
+      if Theme.Song.Cover.FlatStrip then
+      begin
+        for I := 0 to High(Button) do
+          if Button[I].Visible and InRegion(X, Y, GetSongButtonMouseOverArea(I)) then
+          begin
+            if I = Interaction then
+              ParseInput(SDLK_RETURN, 0, true)
+            else
+            begin
+              OnSongDeSelect;
+              Interaction := I;
+              isScrolling := false;
+              FixSelected;
+              SetScrollRefresh;
+              OnSongSelect;
+            end;
+            Break;
+          end;
+        Exit;
+      end;
+
       if (CatSongs.VisibleSongs =3) or (CatSongs.VisibleSongs = 4) then
       begin
         // select the second visible button left from selected
@@ -2725,6 +2747,38 @@ end;
 (**
  * Roulette
  *)
+procedure TScreenSong.SetRouletteStrip;
+var
+  B, Slot: integer;
+  Zoom: real;
+begin
+  Slot := -(CatSongs.VisibleIndex(Interaction) div Theme.Song.Cover.Cols) *
+    Theme.Song.Cover.Cols;
+  for B := 0 to High(Button) do
+  begin
+    if CatSongs.Song[B].Visible and (Slot >= 0) and (Slot < Theme.Song.Cover.Cols) then
+    begin
+      LoadCover(B);
+      Button[B].Visible := true;
+      Zoom := 1;
+      if B = Interaction then Zoom := 1.18;
+      Button[B].W := Theme.Song.Cover.W * Zoom;
+      Button[B].H := Theme.Song.Cover.H * Zoom;
+      Button[B].X := Theme.Song.Cover.X + Slot * (Theme.Song.Cover.W + Theme.Song.Cover.Padding) -
+        (Button[B].W - Theme.Song.Cover.W) / 2;
+      Button[B].Y := Theme.Song.Cover.Y - (Button[B].H - Theme.Song.Cover.H) / 2;
+      Button[B].Z := 0.9 + (Zoom - 1) / 4;
+      Button[B].Texture.Alpha := 1;
+    end
+    else if Button[B].Visible then
+    begin
+      Button[B].Visible := false;
+      UnloadCover(B);
+    end;
+    if CatSongs.Song[B].Visible then Inc(Slot);
+  end;
+end;
+
 procedure TScreenSong.SetRouletteScroll;
 var
   B:      integer;
@@ -2734,6 +2788,11 @@ var
   Padding:     real;
   X,AutoWidthCorrection:        real;
 begin
+  if Theme.Song.Cover.FlatStrip then
+  begin
+    SetRouletteStrip;
+    Exit;
+  end;
   VS := CatSongs.VisibleSongs();
 
   //calculate Auto-Width-Correction
@@ -2830,6 +2889,11 @@ var
   Z, Z2:  real;
   VS:     integer;
 begin
+  if Theme.Song.Cover.FlatStrip then
+  begin
+    SetRouletteStrip;
+    Exit;
+  end;
   VS := CatSongs.VisibleSongs();
 
   for B := 0 to High(Button) do

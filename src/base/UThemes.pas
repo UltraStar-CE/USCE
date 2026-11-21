@@ -476,6 +476,7 @@ type
       ZoomThumbW: integer;
       ZoomThumbH: integer;
       ZoomThumbStyle: integer;
+      FlatStrip: boolean;
       Tex: string;
     end;
 
@@ -5310,6 +5311,13 @@ begin
   if Song.HasListSelectedText[2] then ThemeLoadText(Song.ListSelectedText[2], 'SongListSelectedYear');
 
   // Song menu modes: 0 - roulette, 1 - chessboard, 2 - list
+  Song.Cover.FlatStrip := (TSongMenuMode(Ini.SongMenu) = smRoulette) and
+    ReadBool(SectionList, 'FlatStrip', false);
+  if Song.Cover.FlatStrip then
+  begin
+    Song.Cover.Cols := EnsureRange(ReadInteger(SectionList, 'Cols', 6), 1, 24);
+    Song.Cover.Padding := Max(0, ReadInteger(SectionList, 'Padding', 8));
+  end;
 
   if (TSongMenuMode(Ini.SongMenu) = smChessboard) then
   begin
