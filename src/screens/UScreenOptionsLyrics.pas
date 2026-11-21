@@ -175,8 +175,10 @@ begin
   WhereAmI := Language.Translate('SING_OPTIONS_LYRICS_WHEREAMI');
   Load;
 
-  // Keep the samples below the last widget, including the Back button.
-  PreviewY := Max(350, Ceil(Widgets[High(Widgets)].Y + Widgets[High(Widgets)].H + 15));
+  PreviewY := Max(350, Ceil(ScrollArea.Y + ScrollArea.H + 15));
+  // Back is outside the scrollable widget area.
+  if Length(Button) > 0 then
+    PreviewY := Max(PreviewY, Ceil(Button[High(Button)].Y + Button[High(Button)].H + 15));
   PreviewHeight := Max(1, Min(40, (530 - PreviewY - 20) div 4));
 
   // lyric sample engine 1

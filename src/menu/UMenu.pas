@@ -2337,6 +2337,7 @@ begin
   ThemeSelect.Y := YNextWidget;
   Result := AddSelectSlide(ThemeSelect, Data, Values);
   SelectS := SelectsS[High(SelectsS)];
+  SelectS.FitCaption;
   SelectS.Scrollable := True;
   Inc(YNextWidget, Round(SelectS.H) + Theme.OptionsSub.WidgetVSpacing);
   NumWidgets := Length(Widgets);
