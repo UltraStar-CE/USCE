@@ -418,6 +418,7 @@ type
     SelectPlayerLevel:   TThemeSelectSlide;
     SelectPlayerVoice:   TThemeSelectSlide;
     SelectPlayerMic:     TThemeSelectSlide;
+    AutoPlacePlayerMic:  boolean;
     DelayMeasureButton, DelayApplyButton, DelayCancelButton: TThemeButton;
     DelayText: TThemeText;
   end;
@@ -2230,7 +2231,8 @@ begin
       Name.SelectPlayerVoice.Y := Name.SelectPlayerLevel.Y + Name.SelectPlayerLevel.H + 5;
       if ThemeIni.SectionExists('NameSelectPlayerVoice') then
         ThemeLoadSelectSlide(Name.SelectPlayerVoice, 'NameSelectPlayerVoice');
-      if ResolveThemeFile('NameSelectPlayerMic') <> nil then
+      Name.AutoPlacePlayerMic := ResolveThemeFile('NameSelectPlayerMic') = nil;
+      if not Name.AutoPlacePlayerMic then
         ThemeLoadSelectSlide(Name.SelectPlayerMic, 'NameSelectPlayerMic')
       else
       begin
@@ -2239,10 +2241,10 @@ begin
           ThemeLoadSelectSlide(Name.SelectPlayerMic, 'OptionsSubSelectSlide');
         with Name.SelectPlayerMic do
         begin
-          X := 520;
-          Y := 516;
+          X := 0;
+          Y := 0;
           W := 0;
-          H := 24;
+          H := 20;
           SBGW := 260;
           SkipX := 0;
           TextSize := 15;
