@@ -273,7 +273,7 @@ var
   Btn: integer;
   MouseX, MouseY: integer;
   Card: TPlayerSlotRect;
-  SegmentBounds, HintBounds: TMouseOverRect;
+  SegmentBounds: TMouseOverRect;
 begin
   Result := true;
 
@@ -294,22 +294,6 @@ begin
         ApplyDelayMeasurement;
     Exit;
   end;
-  if BtnDown and (MouseButton = SDL_BUTTON_LEFT) and Text[DelayHintText].Visible then
-  begin
-    with Theme.Name.DelayHint do
-    begin
-      HintBounds.X := X;
-      HintBounds.Y := Y;
-      HintBounds.W := W;
-      HintBounds.H := H;
-    end;
-    if InRegion(X, Y, HintBounds) then
-    begin
-      StartDelayMeasurement;
-      Exit;
-    end;
-  end;
-
   if Theme.Name.Cards.Enabled and (SelectedPlayerCount > 0) and
      BtnDown and (MouseButton = SDL_BUTTON_LEFT) then
   begin
