@@ -15825,9 +15825,14 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "ported",
+        "assessedAgainst": "d4f6295df6eeb8242b9ba864749a5d2f49130367",
+        "assessedAt": "2026-11-21",
+        "reason": "Adapted 51 current Esperanto text values, preserving the source author, USCE branding and format placeholders. Fourteen keys absent from the current English fallback were left alone.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/455"
+        ],
+        "reviewedCommitCount": 1
       },
       "previousHead": "95dfbf9cfbaa5e025ed0f7ce022e3d5ae78e373c",
       "previousAssessment": {
@@ -19333,9 +19338,14 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "already-covered",
+        "assessedAgainst": "d4f6295df6eeb8242b9ba864749a5d2f49130367",
+        "assessedAt": "2026-11-21",
+        "reason": "USCE main already monitors song folders with native watchers on Windows, Linux and macOS. Its staged refresh preserves selections, filters and playlists and defers changes during unsafe screens and transitions.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/315"
+        ],
+        "reviewedCommitCount": 1
       }
     }
   ],
