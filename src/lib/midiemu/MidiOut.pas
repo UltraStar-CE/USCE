@@ -1,3 +1,6 @@
+// UltraStar Community Edition - Karaoke Game
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 {* UltraStar Deluxe - editor preview synth. *}
 
 unit MidiOut;
