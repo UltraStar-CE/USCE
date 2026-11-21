@@ -67,5 +67,6 @@ It retains a separate capture-time history when the companion and relay supply
 valid timing data. Measure mic delays in player setup to calibrate the assigned
 phone against the game's audio playback clock. With a measured offset, scoring
 uses the matching capture window as soon as it arrives and waits briefly for late
-packets. An unmeasured phone or a companion without capture timestamps can still
-use the live PCM path.
+packets. Apply uses the measured offset with the current slot and companion trims
+as its reference. Later trim changes adjust that offset. An unmeasured phone or a
+companion without capture timestamps can still use the live PCM path.

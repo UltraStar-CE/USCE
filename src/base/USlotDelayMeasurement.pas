@@ -34,7 +34,7 @@ type
 
 implementation
 
-uses SysUtils, URecord, URemoteInput, UPhoneAudio;
+uses SysUtils, UNote, URecord, URemoteInput, UPhoneAudio;
 
 const
   LeadInUs = 250000;
@@ -242,7 +242,8 @@ begin
     begin
       RemoteInputProcessor.GetAssignedPlayerIds(Slot, PlayerId, CalibrationId);
       if PlayerId = FOwners[Slot] then
-        PhoneAudio.Calibration.SetCaptureOffset(CalibrationId, Measurement.DelayMs);
+        PhoneAudio.Calibration.SetCaptureOffset(CalibrationId, Measurement.DelayMs,
+          ConfiguredInputTrimMs(Slot));
       Continue;
     end;
     Baseline := Ini.MicDelay;

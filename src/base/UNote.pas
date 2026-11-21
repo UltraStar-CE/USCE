@@ -187,10 +187,12 @@ function  GetTimeFromBeat(Beat: integer; SelfSong: TSong = nil): real;
 function  ScoringBeatAtOrAfter(Position: real): integer;
 function  GetPlayerSentenceScore(PlayerIndex, Track, SentenceIndex: integer; out Points: real): boolean;
 function  CalculateLinePerfection(LineScore, MaxLineScore: real): real;
+function  ConfiguredInputTrimMs(PlayerIndex: integer): integer;
 
 implementation
 
 uses
+  UAudioCalibrationSessions,
   UPhoneAudio,
   Math,
   StrUtils,
@@ -416,26 +418,17 @@ begin
   Result := BPM * msTime / 60;
 end;
 
-function MeasuredPhoneCaptureOffsetMs(PlayerIndex: integer): integer;
-begin
-  Result := PhoneAudio.Calibration.CaptureOffset(RemoteInputProcessor.AssignedPlayerId(PlayerIndex, true));
-end;
-
-const UnavailablePhoneCaptureOffset = Low(integer);
-
 function ConfiguredInputTrimMs(PlayerIndex: integer): integer;
 begin
   Result := Ini.SlotDelay[PlayerIndex] + RemoteInputProcessor.AssignedMicDelayMs(PlayerIndex);
 end;
 
 function ConfiguredPhoneCaptureOffsetMs(PlayerIndex: integer): integer;
-var Measurement: integer;
 begin
   Result := UnavailablePhoneCaptureOffset;
   if not PhoneAudio.SupportsCaptureTimestamps then Exit;
-  Measurement := MeasuredPhoneCaptureOffsetMs(PlayerIndex);
-  if Measurement >= 0 then
-    Result := Measurement + ConfiguredInputTrimMs(PlayerIndex);
+  Result := PhoneAudio.Calibration.CaptureOffset(
+    RemoteInputProcessor.AssignedPlayerId(PlayerIndex, true), ConfiguredInputTrimMs(PlayerIndex));
 end;
 
 function ConfiguredPlayerDelayMs(PlayerIndex: integer): integer;
@@ -1205,7 +1198,7 @@ begin
           PlayerCurBeat := Min(PlayerCurBeat, Screen.ScoringTailEndBeat);
         // Timing history can become available or reset during the song.
         // Never move the scoring cursor behind a beat already processed.
-        if PhoneAudio.Enabled and (MeasuredPhoneCaptureOffsetMs(PlayerIndex) >= 0) then
+        if CaptureOffsetMs <> UnavailablePhoneCaptureOffset then
           PlayerCurBeat := Max(PlayerOldBeat, PlayerCurBeat);
         PlayerCurBeat := Min(PlayerCurBeat, LastPracticeBeat);
         FirstBeatToAnalyze := PlayerOldBeat + 1;
