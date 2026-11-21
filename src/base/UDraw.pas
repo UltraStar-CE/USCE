@@ -48,6 +48,8 @@ procedure SingDrawOscilloscopes;
 procedure SingDrawOscilloscope(Position: TThemePosition; NrSound: integer);
 procedure SingDrawNoteLines(Left, Top, Right: real; LineSpacing: integer = 15; LineThickness: single = 1);
 procedure SingDrawLyricHelper(CP: integer; Left, LyricsMid, IndicatorOffset: real);
+procedure SingDrawPlayerLine(Left, Top, W: real; Track, PlayerIndex: integer;
+  PitchStep: real; OnlyGaps: boolean = false; DisplayedLine: integer = -1);
 function GetVisibleNoteLine(const Track: TLines; Beat, BPM: real; ShowFreestyle: boolean): integer;
 
 //Draw Editor NoteLines
