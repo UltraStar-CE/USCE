@@ -137,6 +137,9 @@ type
       procedure ApplyMicChoice;
       function BuildMicChoices: integer;
       function HighestRemoteSlot: integer;
+      function InlineCardMic: boolean;
+      function CardEditorScaleY(PlayerID: integer; const Card: TPlayerSlotRect): real;
+      procedure LayoutMicSelector;
       procedure DrawMicSelector;
       procedure UpdateAssignedPlayers(Force: boolean = false);
       function DisplayPlayerName(Index: integer): UTF8String;
@@ -279,7 +282,7 @@ var R: TPlayerSlotRect; SX, SY, SegmentW: real;
 begin
   R := CardRect(PlayerID);
   SX := R.W / Max(1, Theme.Name.Cards.Panel.W);
-  SY := R.H / Max(1, Theme.Name.Cards.Panel.H);
+  SY := CardEditorScaleY(PlayerID, R);
   if (PlayerID = PlayerIndex) and Theme.Name.Cards.EditOutside then
   begin
     R.X := 0; R.Y := 0; SX := 1; SY := 1;
@@ -417,11 +420,99 @@ begin
   RefreshMicSelector;
 end;
 
+function TScreenName.InlineCardMic: boolean;
+begin
+  Result := Theme.Name.Cards.Enabled and not Theme.Name.Cards.EditOutside and
+    Theme.Name.AutoPlacePlayerMic and SelectsS[PlayerMic].Visible;
+end;
+
+function TScreenName.CardEditorScaleY(PlayerID: integer; const Card: TPlayerSlotRect): real;
+var Height: integer;
+begin
+  Height := Card.H;
+  if (PlayerID = PlayerIndex) and InlineCardMic then
+    Height := Max(1, Height - Round(SelectsS[PlayerMic].H) - 8);
+  Result := Height / Max(1, Theme.Name.Cards.Panel.H);
+end;
+
+procedure TScreenName.LayoutMicSelector;
+const
+  Gap = 4;
+  FooterSpace = 55;
+  CardPadding = 15;
+var
+  Anchor: TPlayerSlotRect;
+  Avatar: TThemeButton;
+  I: integer;
+  RightEdge, MicX, MicY, Width, Bottom: single;
+begin
+  if not Theme.Name.AutoPlacePlayerMic then Exit;
+
+  if InlineCardMic then
+  begin
+    Anchor := CardRect(PlayerIndex);
+    MicX := Anchor.X + CardPadding;
+    MicY := Anchor.Y + Anchor.H - SelectsS[PlayerMic].H - Gap;
+    Width := Max(1, Anchor.W - 2 * CardPadding);
+  end
+  else
+  begin
+    with SelectsS[PlayerSelectLevel].TextureSBG do
+    begin
+      Anchor.X := Round(X);
+      Anchor.Y := Round(Y);
+      Anchor.W := Round(W);
+      Anchor.H := Round(H);
+    end;
+    if (Anchor.W < 40) or (Anchor.X >= RenderW) or (Anchor.Y >= RenderH) then
+      with Theme.Name.PlayerButtonName do
+      begin
+        Anchor.X := X;
+        Anchor.Y := Y;
+        Anchor.W := W;
+        Anchor.H := H;
+      end;
+    Bottom := Anchor.Y + Anchor.H;
+    if SelectsS[PlayerSelectVoice].Visible then
+      with SelectsS[PlayerSelectVoice].TextureSBG do
+        Bottom := Max(Bottom, Y + H);
+
+    Width := EnsureRange(Anchor.W, 170, 260);
+    MicX := Anchor.X;
+    MicY := Bottom + Gap;
+    if MicY + SelectsS[PlayerMic].H > RenderH - FooterSpace then
+    begin
+      MicX := Anchor.X + Anchor.W + Gap;
+      MicY := Anchor.Y + (Anchor.H - SelectsS[PlayerMic].H) / 2;
+      RightEdge := RenderW - Gap;
+      Avatar := Theme.Name.PlayerButtonAvatar;
+      if (Avatar.X > MicX) and (Avatar.Y < MicY + SelectsS[PlayerMic].H) and
+         (Avatar.Y + Avatar.H > MicY) then
+        RightEdge := Min(RightEdge, Avatar.X - Gap);
+      if RightEdge - MicX >= 120 then
+        Width := Min(Width, RightEdge - MicX);
+    end;
+  end;
+  with SelectsS[PlayerMic] do
+  begin
+    if not SameValue(SBGW, Width) then
+    begin
+      SBGW := Width;
+      SetSelectOpt(SelectedOption);
+    end;
+    SetX(EnsureRange(MicX, Gap, RenderW - Width - Gap));
+    SetY(MicY);
+    for I := 0 to High(TextOpt) do
+      TextOpt[I].X := TextureSBG.X + TextureSBG.W / 2;
+  end;
+end;
+
 procedure TScreenName.DrawMicSelector;
 var
   Level: single;
 begin
   if not SelectsS[PlayerMic].Visible then Exit;
+  LayoutMicSelector;
   with SelectsS[PlayerMic] do
   begin
     if (Length(MicPickerChoices) > 0) and (PlayerIndex < SelectedLocalPlayerCount) and
@@ -2255,6 +2346,7 @@ begin
         Theme.Name.Cards.NameText.Y, Theme.Name.Cards.NameText.Size, TextColor);
     if I = PlayerIndex then
     begin
+      SY := CardEditorScaleY(I, R);
       if Theme.Name.Cards.EditOutside then
       begin
         R.X := 0; R.Y := 0; SX := 1; SY := 1;
