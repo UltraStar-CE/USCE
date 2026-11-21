@@ -3747,7 +3747,7 @@ begin
   end
   else
     ThemeStatic.ScaleMode := ParseScaleMode(ScaleValue, lsStretch);
-  if ThemeStatic.KeyCap <> '' then
+  if (ThemeStatic.KeyCap <> '') and (ThemeStatic.W > 0) and (ThemeStatic.H > 0) then
   begin
     ThemeStatic.Color := ReadString(KeycapSections, 'Color', '');
     ThemeStatic.ColR := 0.08;
