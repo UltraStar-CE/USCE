@@ -78,6 +78,7 @@ type
       Visible: boolean;
       InlineMarkup: boolean; // opt in for generated rich text, never song/player metadata
       Align:   integer; // 0 = left, 1 = center, 2 = right
+      SingleLineWidth: single; // optional display limit for a single-line editor
 
       // reflection
       Reflection:        boolean;
@@ -451,7 +452,7 @@ var
     isBreak := false;
 
     // exit if there is no need to create tiles
-    if (W <= 0) and (Pos('\n', Value) = 0) then
+    if (SingleLineWidth > 0) or ((W <= 0) and (Pos('\n', Value) = 0)) then
     begin
       Len := 1;
       if StoreTiles then
@@ -605,6 +606,36 @@ var
   Suffix: UTF8String;
   WideSuffix: UnicodeString;
   PrefixWidth: single;
+
+  function VisibleLine(const Value: UTF8String): UTF8String;
+  const Omitted = '...';
+  var
+    Limit: single;
+    Count, LeftBound, RightBound, Middle: integer;
+    Candidate: UTF8String;
+  begin
+    Limit := SingleLineWidth;
+    if SelectBool and Writable then Limit := Limit - TextWidth('|');
+    if TextWidth(Value) <= Limit then Exit(Value);
+    Result := '';
+    if TextWidth(Omitted) > Limit then Exit;
+    Result := Omitted;
+    Count := LengthUTF8(Value);
+    LeftBound := 1;
+    RightBound := Count - 1;
+    while LeftBound <= RightBound do
+    begin
+      Middle := (LeftBound + RightBound) div 2;
+      if SelectBool then Candidate := Omitted + UTF8Copy(Value, Count - Middle + 1, Middle)
+      else Candidate := UTF8Copy(Value, 1, Middle) + Omitted;
+      if TextWidth(Candidate) <= Limit then
+      begin
+        Result := Candidate;
+        LeftBound := Middle + 1;
+      end
+      else RightBound := Middle - 1;
+    end;
+  end;
 begin
   if Visible then
   begin
@@ -697,17 +728,18 @@ begin
       for I := 0 to High(TextTiles) do
       begin
         tmpText2 := TextTiles[I];
+        if SingleLineWidth > 0 then tmpText2 := VisibleLine(tmpText2);
 
         if (not (SelectBool and SelectBlink)) or (I <> High(TextTiles)) then
         begin
-          Text2 := TextTiles[I];
+          Text2 := tmpText2;
         end
         else
         begin
           if (Writable) then
-            Text2 := TextTiles[I] + '|'
+            Text2 := tmpText2 + '|'
           else
-            Text2 := TextTiles[I];
+            Text2 := tmpText2;
         end;
 
         if InlineMarkup and (TextTileBoldStart[I] or (Pos('**', tmpText2) > 0)) then
