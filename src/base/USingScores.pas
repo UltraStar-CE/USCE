@@ -87,6 +87,7 @@ type
     Color:          TRGB;     // the players color
     RBPos:          real;     // cur. percentille of the rating bar
     RBTarget:       real;     // target position of rating bar
+    HasLineRating:  boolean;  // the first scored line sets the starting rating
     RBVisible:      boolean;  // is rating bar drawn
     RemainingPos:   real;     // current percent of remaining-score bar
     RemainingTarget: real;    // target percent of remaining-score bar
@@ -148,6 +149,7 @@ type
     Player:     byte;        // index of the popups player
     TimeStamp:  cardinal;    // timestamp of popups spawn
     Rating:     integer;     // 0 to 8, type of rating (cool, bad, etc.)
+    RatingDelta: real;       // gradual change for lines after the first
     ScoreGiven: integer;     // score that has already been given to the player
     ScoreDiff:  integer;     // difference between cur score at spawn and old score
     Next:       PScorePopUp; // next item in list
@@ -251,7 +253,7 @@ type
       procedure SetScore(Player: byte; Score: integer);
 
       // spawns a new line bonus popup for the player
-      procedure SpawnPopUp(const PlayerIndex: byte; const Rating: integer; const Score: integer);
+      procedure SpawnPopUp(const PlayerIndex: byte; const LinePerfection: real; const Score: integer);
 
       procedure SetInfoBarMode(const Mode: TSingInfoBarMode);
 
@@ -447,6 +449,7 @@ begin
     aPlayers[PlayerCount].Color     := Color;
     aPlayers[PlayerCount].RBPos     := 0.5;
     aPlayers[PlayerCount].RBTarget  := 0.5;
+    aPlayers[PlayerCount].HasLineRating := false;
     aPlayers[PlayerCount].RBVisible := true;
     aPlayers[PlayerCount].RemainingPos := 1.0;
     aPlayers[PlayerCount].RemainingTarget := 1.0;
@@ -530,9 +533,12 @@ end;
 {**
  * spawns a new line bonus popup for the player
  *}
-procedure TSingScores.SpawnPopUp(const PlayerIndex: byte; const Rating: integer; const Score: integer);
+procedure TSingScores.SpawnPopUp(const PlayerIndex: byte; const LinePerfection: real; const Score: integer);
+const
+  MaxLineRating = 8;
 var
   Cur: PScorePopUp;
+  Fraction: real;
 begin
   if (PlayerIndex < PlayerCount) then
   begin
@@ -544,14 +550,17 @@ begin
     Cur.Player    := PlayerIndex;
     Cur.TimeStamp := SDL_GetTicks;
 
-    // limit rating value to 0..8
-    // a higher value would cause a crash when selecting the bg texture
-    if (Rating > 8) then
-      Cur.Rating := 8
-    else if (Rating < 0) then
-      Cur.Rating := 0
+    Fraction := EnsureRange(LinePerfection, 0.0, 1.0);
+    Cur.Rating := Round(Fraction * MaxLineRating);
+    if aPlayers[PlayerIndex].HasLineRating then
+      Cur.RatingDelta := Cur.Rating / 20 - 0.26
     else
-      Cur.Rating := Rating;
+    begin
+      aPlayers[PlayerIndex].RBTarget := Fraction;
+      aPlayers[PlayerIndex].RBPos := aPlayers[PlayerIndex].RBTarget;
+      aPlayers[PlayerIndex].HasLineRating := true;
+      Cur.RatingDelta := 0;
+    end;
 
     Cur.ScoreGiven:= 0;
     if (Players[PlayerIndex].Score < Score) then
@@ -593,12 +602,12 @@ begin
   begin // popup w/ scorechange -> give missing percentille
     aPlayers[Cur.Player].RBTarget := aPlayers[Cur.Player].RBTarget +
                                      (Cur.ScoreDiff - Cur.ScoreGiven) / Cur.ScoreDiff
-                                     * (Cur.Rating / 20 - 0.26);
+                                     * Cur.RatingDelta;
   end
   else
   begin // popup w/o scorechange -> give complete percentille
     aPlayers[Cur.Player].RBTarget := aPlayers[Cur.Player].RBTarget +
-                                     (Cur.Rating / 20 - 0.26);
+                                     Cur.RatingDelta;
   end;
 
   if (aPlayers[Cur.Player].RBTarget > 1) then
@@ -867,7 +876,7 @@ begin
               // change bar positions
               // Zero-point popups apply their rating when removed.
               if PopUp.ScoreDiff > 0 then
-                aPlayers[PopUp.Player].RBTarget := aPlayers[PopUp.Player].RBTarget + ScoreToAdd/PopUp.ScoreDiff * (PopUp.Rating / 20 - 0.26);
+                aPlayers[PopUp.Player].RBTarget := aPlayers[PopUp.Player].RBTarget + ScoreToAdd/PopUp.ScoreDiff * PopUp.RatingDelta;
               if (aPlayers[PopUp.Player].RBTarget > 1) then
                 aPlayers[PopUp.Player].RBTarget := 1
               else if (aPlayers[PopUp.Player].RBTarget < 0) then

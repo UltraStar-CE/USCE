@@ -2295,14 +2295,10 @@ var
   CurrentScore: real;
   Line:      PLine;
   LinePerfection: real;  // perfection of singing performance on the current line
-  Rating:    integer;
   LineScore: real;
   LineBonus: real;
   MaxSongScore: integer; // max. points for the song (without line bonus)
   MaxLineScore: real;    // max. points for the current line
-const
-  // TODO: move this to a better place
-  MAX_LINE_RATING = 8;        // max. rating for singing performance
 begin
   Line := @CurrentSong.Tracks[Track].Lines[SentenceIndex];
 
@@ -2350,9 +2346,8 @@ begin
       CurrentPlayer.SentenceFinalized[Track][SentenceIndex] := true;
 
       // spawn rating pop-up
-      Rating := Round(LinePerfection * MAX_LINE_RATING);
       if Scores <> nil then
-        if ShowEffects then Scores.SpawnPopUp(PlayerIndex, Rating, CurrentPlayer.ScoreTotalInt)
+        if ShowEffects then Scores.SpawnPopUp(PlayerIndex, LinePerfection, CurrentPlayer.ScoreTotalInt)
         else Scores.SetScore(PlayerIndex, CurrentPlayer.ScoreTotalInt);
 
       if (Scores <> nil) then
