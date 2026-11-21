@@ -114,11 +114,11 @@ begin
     Player[0].Note[1] := Player[0].Note[0];
     Player[0].Note[1].IsGap := false;
 
-    SingDrawPlayerLine(0, 100, 120, 0, 0, 15, true, 3);
+    SingDrawPlayerLine(0, 100, 120, 0, 0, 7.5, true, 3);
     if (Trace.DrawCount <> 3) or (Abs(Trace.Center - 100) > 0.01) then
       raise Exception.Create('Gap trace does not match the displayed phrase base pitch');
     Trace.DrawCount := 0;
-    SingDrawPlayerLine(0, 100, 120, 0, 0, 15, true);
+    SingDrawPlayerLine(0, 100, 120, 0, 0, 7.5, true);
     if (Trace.DrawCount <> 3) or (Abs(Trace.Center - 55) > 0.01) then
       raise Exception.Create('Hidden lane no longer uses the scoring phrase base pitch');
   finally
