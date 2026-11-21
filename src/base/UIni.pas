@@ -603,6 +603,7 @@ uses
   UCommandLine,
   UDataBase,
   UDllManager,
+  UHelp,
   ULanguage,
   UPlatform,
   UMain,
@@ -849,6 +850,7 @@ end;
 procedure TIni.TranslateOptionValues;
 var
   I: integer;
+  ActiveLanguage: AnsiString;
   Zeros: string;
   BasePlayerColorNames: array[0..BASE_PLAYER_COLOR_COUNT-1] of UTF8String;
   LeftColor: integer;
@@ -858,9 +860,12 @@ begin
 
   // Load language file, fallback to config language if param is invalid
   if (Params.Language > -1) and (Params.Language < Length(ILanguage)) then
-    ULanguage.Language.ChangeLanguage(ILanguage[Params.Language])
+    ActiveLanguage := ILanguage[Params.Language]
   else
-    ULanguage.Language.ChangeLanguage(ILanguage[Language]);
+    ActiveLanguage := ILanguage[Language];
+  ULanguage.Language.ChangeLanguage(ActiveLanguage);
+  if Assigned(Help) then
+    Help.ChangeLanguage(ActiveLanguage);
 
   IDifficultyTranslated[0]            := ULanguage.Language.Translate('OPTION_VALUE_EASY');
   IDifficultyTranslated[1]            := ULanguage.Language.Translate('OPTION_VALUE_MEDIUM');

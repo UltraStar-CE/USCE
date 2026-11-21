@@ -318,14 +318,14 @@ begin
     else
       DataBase.Init(Params.ScoreFile);
 
+    // Help
+    Log.LogStatus('Load Help', 'Initialization');
+    Help := THelp.Create;
+
     // Ini + Paths
     Log.LogStatus('Load Ini', 'Initialization');
     Ini := TIni.Create;
     Ini.Load;
-
-    // Help
-    Log.LogStatus('Load Help', 'Initialization');
-    Help := THelp.Create;
 
     // it is possible that this is the first run, create a .ini file if neccessary
     Log.LogStatus('Write Ini', 'Initialization');
