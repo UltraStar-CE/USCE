@@ -241,6 +241,7 @@ EOF
 
 task_sdl2() {
 	start_build SDL2 || return 0
+	patch -p1 < "$root/sdl2-capture-endpoint.patch"
 	bash ./autogen.sh
 	sed -i 's/GBM_BO_USE_CURSOR\>/&_64X64/g' src/video/kmsdrm/SDL_kmsdrmmouse.c
 	mkdir -p build

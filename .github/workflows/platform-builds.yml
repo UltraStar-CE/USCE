@@ -438,6 +438,8 @@ jobs:
           sudo apt-get install --no-install-recommends -y fp-compiler
       - name: Test native library notifications
         run: python3 -m unittest discover -s tools -p "test_library*.py" -v
+      - name: Test SDL USB capture reacquisition
+        run: python3 tools/test_sdl_capture_reconnect.py
       - name: Start container builder
         uses: docker/setup-buildx-action@v4
       - name: Generate Dockerfile

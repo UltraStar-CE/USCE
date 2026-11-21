@@ -1,0 +1,37 @@
+--- a/src/audio/alsa/SDL_alsa_audio.c
++++ b/src/audio/alsa/SDL_alsa_audio.c
+@@ -21,0 +22 @@
++#include "SDL_hints.h"
+@@ -766,0 +768,17 @@
++    if (iscapture && this->handle) {
++        const char *tag = SDL_GetHint(SDL_HINT_AUDIO_DEVICE_STREAM_NAME);
++        snd_pcm_info_t *info = NULL;
++        if (tag && SDL_strncmp(tag, "USCE-", 5) == 0 &&
++            ALSA_snd_pcm_info_malloc(&info) >= 0) {
++            if (ALSA_snd_pcm_info(pcm_handle, info) >= 0) {
++                const int card = ALSA_snd_pcm_info_get_card(info);
++                if (card >= 0) {
++                    char card_text[16];
++                    SDL_snprintf(card_text, sizeof(card_text), "%d", card);
++                    SDL_SetHint(tag, card_text);
++                }
++            }
++            ALSA_snd_pcm_info_free(info);
++        }
++    }
++
+--- a/src/audio/pipewire/SDL_pipewire.c
++++ b/src/audio/pipewire/SDL_pipewire.c
+@@ -1160,0 +1161 @@
++    SDL_bool verified_capture;
+@@ -1273,0 +1275,7 @@
++    verified_capture =
++        iscapture && SDL_strncmp(stream_name, "USCE-", 5) == 0 && this->handle;
++    if (verified_capture) {
++        PIPEWIRE_pw_properties_set(props, "node.dont-fallback", "true");
++        PIPEWIRE_pw_properties_set(props, "node.dont-move", "true");
++    }
++
+@@ -1281 +1289 @@
+-    res = PIPEWIRE_pw_stream_connect(priv->stream, iscapture ? PW_DIRECTION_INPUT : PW_DIRECTION_OUTPUT, node_id, STREAM_FLAGS,
++    res = PIPEWIRE_pw_stream_connect(priv->stream, iscapture ? PW_DIRECTION_INPUT : PW_DIRECTION_OUTPUT, node_id, STREAM_FLAGS | (verified_capture ? PW_STREAM_FLAG_DONT_RECONNECT : 0),

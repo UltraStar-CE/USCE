@@ -293,8 +293,12 @@ uses
 {$IFDEF UseBASSPlayback}
   UAudioPlayback_Bass       in 'media\UAudioPlayback_Bass.pas',
 {$ENDIF}
+{$IF Defined(LINUX) and (Defined(UseSDLInput) or Defined(UsePortaudioInput))}
+  UUSBCaptureIdentity      in 'media\UUSBCaptureIdentity.pas',
+{$ENDIF}
 {$IFDEF UseSDLInput}
   UAudioInput_SDL           in 'media\UAudioInput_SDL.pas',
+  UPulseCaptureIdentity    in 'media\UPulseCaptureIdentity.pas',
 {$ENDIF}
 {$IFDEF UsePortaudioPlayback}
   UAudioPlayback_Portaudio  in 'media\UAudioPlayback_Portaudio.pas',
