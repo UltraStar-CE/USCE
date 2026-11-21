@@ -107,6 +107,7 @@ type
       MicPreviewCount: integer;
       OwnsMicPreview: boolean;
       DelayMeasurement: TSlotDelayMeasurement;
+      DelayPausedBgMusic: boolean;
       DelayMeasureButton, DelayApplyButton, DelayCancelButton: integer;
       MicActivity: array[0..UIni.IMaxPlayerCount-1] of single;
       MicClippedUntil: array[0..UIni.IMaxPlayerCount-1] of QWord;
@@ -114,6 +115,7 @@ type
       procedure DrawDelayButton(Index: integer);
       function DelaySlots: cardinal;
       procedure StartDelayMeasurement;
+      procedure CloseDelayMeasurement;
       procedure DrawDelayMeasurement;
       procedure ApplyDelayMeasurement;
       procedure UpdateAssignedPlayers(Force: boolean = false);
@@ -287,7 +289,7 @@ begin
   begin
     if BtnDown and (MouseButton = SDL_BUTTON_LEFT) then
       if InRegion(X, Y, Button[DelayCancelButton].GetMouseOverArea) then
-        FreeAndNil(DelayMeasurement)
+        CloseDelayMeasurement
       else if InRegion(X, Y, Button[DelayApplyButton].GetMouseOverArea) then
         ApplyDelayMeasurement;
     Exit;
@@ -495,7 +497,7 @@ begin
     begin
       if not Repeated then
         case PressedKey of
-          SDLK_ESCAPE: FreeAndNil(DelayMeasurement);
+          SDLK_ESCAPE: CloseDelayMeasurement;
           SDLK_RETURN, SDLK_KP_ENTER: ApplyDelayMeasurement;
         end;
       Exit;
@@ -1387,7 +1389,7 @@ end;
 
 procedure TScreenName.OnHide;
 begin
-  FreeAndNil(DelayMeasurement);
+  CloseDelayMeasurement;
   StopTextInput;
   if OwnsMicPreview then AudioInput.CaptureStop(true);
   OwnsMicPreview := false;
@@ -1436,20 +1438,32 @@ begin
     Exit;
   end;
   ScreenSong.StopMusicPreview;
+  DelayPausedBgMusic := Assigned(SoundLib) and Assigned(SoundLib.BGMusic) and
+    (SoundLib.BGMusic.Status = ssPlaying);
+  if DelayPausedBgMusic then SoundLib.PauseBgMusic;
   DelayMeasurement := TSlotDelayMeasurement.Create;
   UpdateMicActivity;
   if not DelayMeasurement.Start(Slots) then
   begin
-    FreeAndNil(DelayMeasurement);
+    CloseDelayMeasurement;
     ScreenPopupError.ShowPopup(Language.Translate('SLOT_DELAY_OUTPUT_ERROR'));
   end;
+end;
+
+procedure TScreenName.CloseDelayMeasurement;
+begin
+  FreeAndNil(DelayMeasurement);
+  if DelayPausedBgMusic and Assigned(SoundLib) and Assigned(SoundLib.BGMusic) and
+    (SoundLib.BGMusic.Status = ssPaused) then
+    SoundLib.BGMusic.Play;
+  DelayPausedBgMusic := false;
 end;
 
 procedure TScreenName.ApplyDelayMeasurement;
 begin
   if DelayMeasurement.Measuring or not DelayMeasurement.HasResult then Exit;
   DelayMeasurement.Apply(DelaySlots);
-  FreeAndNil(DelayMeasurement);
+  CloseDelayMeasurement;
 end;
 
 function TScreenName.AddDelayButton(const Style: TThemeButton; const Key: UTF8String): integer;
