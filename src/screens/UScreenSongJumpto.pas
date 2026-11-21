@@ -57,6 +57,10 @@ type
     fValueCache: array[TSongFilter] of TSuggestionCache;
     fMatches: array of integer;
     fSyncerResults: TSyncerSongs;
+    fLikesRequest: TSyncerClient;
+    fLikedCharts: TStringList;
+    fLikesNextRefresh: QWord;
+    fLikesCancelled: boolean;
     fSyncerRequest: TSyncerClient;
     fSyncerMode: boolean;
     fSyncerDownloadID: Int64;
@@ -77,6 +81,8 @@ type
     fSlotKinds: array[0..FILTER_SLOTS-1] of integer;
     fInputs, fCategories: array[0..FILTER_SLOTS-1] of integer;
     fActions: array[0..3] of integer;
+    function LikesFilterActive: boolean;
+    function SongMatchesSyncerLikes(Song: TSong): boolean;
     function ResultCount: integer;
     function CanSearchSyncer: boolean;
     procedure StartSyncerSearch;
@@ -103,6 +109,8 @@ type
     procedure ActivateAction(Action: integer);
     procedure MoveFocus(Direction: integer);
   public
+    procedure UpdateLikesFilter;
+    procedure SuspendLikesFilter;
     procedure UpdateFilter;
     procedure FlushChanges;
     procedure LibraryChanged(PreviousCategory: integer);
@@ -184,6 +192,8 @@ var Kind: TSongFilter;
 begin
   for Kind := Low(TSongFilter) to High(TSongFilter) do
   begin fValueCache[Kind].Values.Free; fValueCache[Kind].Keys.Free; end;
+  fLikesRequest.Free;
+  fLikedCharts.Free;
   fSyncerRequest.Free;
   fSuggestions.Free;
   fLockIcons.Free;
@@ -241,10 +251,69 @@ begin
   fChangedTick := SDL_GetTicks;
 end;
 
+function TScreenSongJumpto.LikesFilterActive: boolean;
+var Row: integer;
+begin
+  if (Ini.ExternalSongSearch = 0) or LibraryLockdown.Active then Exit(false);
+  for Row := 0 to High(fRows) do
+    if fRows[Row].Kind = fltSyncerLikes then Exit(true);
+  Result := false;
+end;
+
+function TScreenSongJumpto.SongMatchesSyncerLikes(Song: TSong): boolean;
+begin
+  Result := not Assigned(fLikedCharts) or (TSyncerClient.LikesForSong(fLikedCharts, Song) > 0);
+end;
+
+procedure TScreenSongJumpto.SuspendLikesFilter;
+begin
+  if Assigned(fLikesRequest) then
+  begin
+    fLikesCancelled := true;
+    fLikesRequest.Terminate;
+  end;
+end;
+
+procedure TScreenSongJumpto.UpdateLikesFilter;
+var Active, ChangedMatches: boolean;
+begin
+  Active := LikesFilterActive and (Display.CurrentScreen = @ScreenSong) and (Display.NextScreen = nil);
+  if not Active then SuspendLikesFilter;
+  if Assigned(fLikesRequest) and fLikesRequest.Finished then
+  begin
+    fLikesRequest.WaitFor;
+    if Active and not fLikesCancelled and fLikesRequest.Succeeded then
+    begin
+      ChangedMatches := not Assigned(fLikedCharts) or not fLikedCharts.Equals(fLikesRequest.Likes);
+      if ChangedMatches then
+      begin
+        if not Assigned(fLikedCharts) then
+        begin
+          fLikedCharts := TStringList.Create;
+          fLikedCharts.CaseSensitive := true;
+          fLikedCharts.Sorted := true;
+        end;
+        fLikedCharts.Assign(fLikesRequest.Likes);
+        fPending := true;
+        fSuggestionContext := #1;
+        FlushChanges;
+      end;
+    end;
+    FreeAndNil(fLikesRequest);
+    fLikesNextRefresh := GetTickCount64 + 5000;
+  end;
+  if Active and not Assigned(fLikesRequest) and (GetTickCount64 >= fLikesNextRefresh) and
+    TSyncerClient.Enabled then
+  begin
+    fLikesCancelled := false;
+    fLikesRequest := TSyncerClient.BeginLikes;
+  end;
+end;
+
 function TScreenSongJumpto.CanSearchSyncer: boolean;
 begin
   Result := (fVisSongs = 0) and (ScreenSong.Mode = smNormal) and
-    not fPlaylistSearch and TSyncerClient.Enabled and
+    not fPlaylistSearch and not LikesFilterActive and TSyncerClient.Enabled and
     (SyncerQuery <> '');
 end;
 
@@ -378,10 +447,11 @@ var R: integer;
 begin
   Result := '';
   for R := 0 to High(fRows) do
-    if Trim(fRows[R].Query) <> '' then
+    if (Trim(fRows[R].Query) <> '') or (fRows[R].Kind = fltSyncerLikes) then
     begin
       if Result <> '' then Result := Result + ' / ';
-      Result := Result + Theme.SongJumpto.IType[Ord(fRows[R].Kind)] + ': ' + fRows[R].Query;
+      Result := Result + Theme.SongJumpto.IType[Ord(fRows[R].Kind)];
+      if fRows[R].Kind <> fltSyncerLikes then Result := Result + ': ' + fRows[R].Query;
     end;
 end;
 
@@ -409,6 +479,7 @@ begin
     Button[fInputs[S]].Visible := R < Length(fRows);
     SelectsS[fCategories[S]].Visible := R < Length(fRows);
     if R >= Length(fRows) then Continue;
+    Button[fInputs[S]].Visible := fRows[R].Kind <> fltSyncerLikes;
     fSlotKinds[S] := Ord(fRows[R].Kind);
     UpdateSelectSlideOptions(fCategories[S], Theme.SongJumpto.IType, fSlotKinds[S]);
     Button[fInputs[S]].Text[0].Text := fRows[R].Query;
@@ -657,7 +728,7 @@ begin
     end;
     Exit;
   end;
-  if (fFocus < Length(fRows)) and (IsAlphaNumericChar(CharCode) or
+  if (fFocus < Length(fRows)) and (fRows[fFocus].Kind <> fltSyncerLikes) and (IsAlphaNumericChar(CharCode) or
     IsPunctuationChar(CharCode) or (CharCode = 32)) then
   begin
     fRows[fFocus].Query := fRows[fFocus].Query + UCS4ToUTF8String(CharCode);
@@ -675,7 +746,7 @@ begin
     SDLK_BACKSPACE:
       if fFocus < Length(fRows) then
       begin
-        if fRows[fFocus].Query = '' then RemoveRow(fFocus)
+        if (fRows[fFocus].Query = '') or (fRows[fFocus].Kind = fltSyncerLikes) then RemoveRow(fFocus)
         else
         begin
           S := fFocus - fFirst;
@@ -687,7 +758,8 @@ begin
     SDLK_DOWN:
       if not Repeated then
       begin
-        if (fFocus = High(fRows)) and (Trim(fRows[fFocus].Query) <> '') then AddRow
+        if (fFocus = High(fRows)) and
+           ((Trim(fRows[fFocus].Query) <> '') or (fRows[fFocus].Kind = fltSyncerLikes)) then AddRow
         else MoveFocus(1);
       end;
     SDLK_UP: MoveFocus(-1);
@@ -696,11 +768,13 @@ begin
       if fFocus < Length(fRows) then
       begin
         S := Ord(fRows[fFocus].Kind);
-        if PressedKey = SDLK_LEFT then S := (S + Ord(High(TSongFilter))) mod (Ord(High(TSongFilter)) + 1)
-        else S := (S + 1) mod (Ord(High(TSongFilter)) + 1);
-        if (S = Ord(fltFolder)) and (Ini.FolderFiltering = 0) then
-          if PressedKey = SDLK_LEFT then S := Ord(fltAge) else S := Ord(fltAll);
+        repeat
+          if PressedKey = SDLK_LEFT then S := (S + Ord(High(TSongFilter))) mod (Ord(High(TSongFilter)) + 1)
+          else S := (S + 1) mod (Ord(High(TSongFilter)) + 1);
+        until not (((S = Ord(fltFolder)) and (Ini.FolderFiltering = 0)) or
+          ((S = Ord(fltSyncerLikes)) and not TSyncerClient.Enabled));
         fRows[fFocus].Kind := TSongFilter(S);
+        if TSongFilter(S) = fltSyncerLikes then fRows[fFocus].Query := '';
         Changed;
         FlushChanges;
       end
@@ -796,9 +870,10 @@ begin
 end;
 
 function TScreenSongJumpto.ApplyFilter: cardinal;
-var I: integer; Active: boolean;
+var I: integer; Active, LikesActive: boolean;
 begin
-  Active := false;
+  LikesActive := LikesFilterActive;
+  Active := LikesActive;
   for I := 0 to High(fRows) do Active := Active or (Trim(fRows[I].Query) <> '');
   if fPlaylistSearch and (PlaylistMan.CurPlayList = fPlaylist) then
   begin
@@ -806,12 +881,15 @@ begin
     if not Active then Exit(CatSongs.VisibleSongs);
   end;
   Result := CatSongs.SetFilters(fRows);
-  if fPlaylistSearch and (PlaylistMan.CurPlayList = fPlaylist) then
+  if LikesActive or (fPlaylistSearch and (PlaylistMan.CurPlayList = fPlaylist)) then
   begin
     Result := 0;
     for I := 0 to High(CatSongs.Song) do
     begin
-      if CatSongs.Song[I].Visible and (PlaylistMan.GetIndexbySongID(I) = -1) then
+      if CatSongs.Song[I].Visible and
+        ((LikesActive and not SongMatchesSyncerLikes(CatSongs.Song[I])) or
+         (fPlaylistSearch and (PlaylistMan.CurPlayList = fPlaylist) and
+          (PlaylistMan.GetIndexbySongID(I) = -1))) then
         CatSongs.Song[I].Visible := false;
       if CatSongs.Song[I].Visible then Inc(Result);
     end;
@@ -1055,7 +1133,7 @@ var Context, Query, Value, Region, Key, Term: UTF8String;
     else fValues.Objects[N] := TObject(PtrInt(fValues.Objects[N]) + 1);
   end;
 begin
-  if (fFocus >= Length(fRows)) or (fRows[fFocus].Kind = fltAll) then
+  if (fFocus >= Length(fRows)) or (fRows[fFocus].Kind in [fltAll, fltSyncerLikes]) then
   begin fSuggestionFocus := false; fSuggestionContext := #1; SetLength(fMatches, 0); Exit; end;
   Kind := fRows[fFocus].Kind;
   Region := Ini.AgeCountry;
@@ -1093,6 +1171,9 @@ begin
     Ordered := TStringList.Create;
     try
       Mask := CatSongs.FilterMask(fRows, fFocus);
+      if LikesFilterActive then
+        for I := 0 to High(Mask) do
+          Mask[I] := Mask[I] and SongMatchesSyncerLikes(CatSongs.Song[I]);
       for I := 0 to High(CatSongs.Song) do
       begin
         Song := CatSongs.Song[I];
