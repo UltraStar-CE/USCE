@@ -458,10 +458,6 @@ EOF
 
 task_opencv() {
 	start_build opencv OpenCV || return 0
-	EXTRA_CMAKE_FLAGS=
-	if [ -d "$SRC/ipp-icv-$ARCH" ] ; then
-		EXTRA_CMAKE_FLAGS="$EXTRA_CMAKE_FLAGS -DIPPROOT=$SRC/ipp-icv-$ARCH/icv"
-	fi
 	rm -rf build
 	mkdir -p build
 	cd build
@@ -472,6 +468,7 @@ task_opencv() {
 		-DCMAKE_BUILD_TYPE="Release" \
 		-DDCMAKE_SHARED_LINKER_FLAGS="$LDFLAGS" \
 		-DOPENCV_GENERATE_PKGCONFIG=ON \
+		-DWITH_IPP=OFF \
 		-DBUILD_TESTS=OFF \
 		-DBUILD_opencv_apps=OFF \
 		-DBUILD_opencv_calib3d=OFF \
@@ -508,7 +505,6 @@ task_opencv() {
 		-DWITH_IMGCODEC_SUNRASTER=OFF \
 		-DWITH_IMGCODEC_PXM=OFF \
 		-DWITH_IMGCODEC_PFM=OFF \
-		$EXTRA_CMAKE_FLAGS \
 		..
 	make $makearg
 	make install
