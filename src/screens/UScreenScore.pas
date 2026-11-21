@@ -117,6 +117,7 @@ type
       TextTitle:              integer;
 
       TextArtistTitle:        integer;
+      ResultSongTitle:        UTF8String;
 
       TextName:             array[1..UIni.IMaxPlayerCount] of integer;
       TextScore:            array[1..UIni.IMaxPlayerCount] of integer;
@@ -203,6 +204,7 @@ type
       procedure OnShow; override;
       procedure OnShowFinish; override;
       procedure OnHide; override;
+      procedure OnWindowResized; override;
       function Draw: boolean; override;
   end;
 
@@ -219,7 +221,9 @@ uses
   UHelp,
   ULanguage,
   ULog,
+  UMenuList,
   UMenuStatic,
+  UMenuText,
   UNote,
   UPlayerLayout,
   UPathUtils,
@@ -229,6 +233,7 @@ uses
   UScreenSong,
   USkins,
   USong,
+  UText,
   UTime,
   UUnicodeUtils;
 
@@ -376,9 +381,12 @@ begin
   ScreenScore.Statics[ScreenScore.StaticBoxDark[SlotIndex]].Visible := Visible;
 end;
 
-procedure ApplyScoreSlotTextColors(const ScreenScore: TScreenScore; SlotIndex, TargetPlayer: integer);
+procedure ApplyScoreSlotTexts(const ScreenScore: TScreenScore; SlotIndex, TargetPlayer: integer);
 var
   I: integer;
+  PlayerLabel: UMenuText.TText;
+  LabelText: UTF8String;
+  LabelWidth, TemplateWidth: real;
   procedure ApplyTextColor(TextIndex: integer; const ThemeColor: string);
   var
     Col: TRGB;
@@ -392,7 +400,33 @@ var
   end;
 begin
   for I := 0 to High(ScreenScore.PlayerTexts[SlotIndex]) do
+  begin
     ApplyTextColor(ScreenScore.PlayerTexts[SlotIndex, I], Theme.Score.PlayerTexts[SlotIndex, I].Color);
+    if Theme.Score.PlayerTexts[SlotIndex, I].Text = 'P1' then
+    begin
+      // Keep the number within the space occupied by the themed P1 label.
+      PlayerLabel := ScreenScore.Text[ScreenScore.PlayerTexts[SlotIndex, I]];
+      PlayerLabel.Size := Theme.Score.PlayerTexts[SlotIndex, I].Size;
+      PlayerLabel.Y := Theme.Score.PlayerTexts[SlotIndex, I].Y;
+      LabelText := 'P' + IntToStr(TargetPlayer);
+      if PlayerLabel.Size > 0 then
+      begin
+        SetFontFamily(ResolveThemeFont(PlayerLabel.FontFile, PlayerLabel.Font));
+        SetFontStyle(PlayerLabel.Style);
+        SetFontSize(PlayerLabel.Size);
+        SetFontItalic(false);
+        TemplateWidth := TextWidth('P1');
+        LabelWidth := TextWidth(LabelText);
+        if LabelWidth > TemplateWidth then
+        begin
+          PlayerLabel.Size := PlayerLabel.Size * TemplateWidth / LabelWidth;
+          PlayerLabel.Y := PlayerLabel.Y +
+            (Theme.Score.PlayerTexts[SlotIndex, I].Size - PlayerLabel.Size) / 2;
+        end;
+      end;
+      PlayerLabel.Text := LabelText;
+    end;
+  end;
 
   ApplyTextColor(ScreenScore.TextName[SlotIndex], Theme.Score.TextName[SlotIndex].Color);
   ApplyTextColor(ScreenScore.TextScore[SlotIndex], Theme.Score.TextScore[SlotIndex].Color);
@@ -410,7 +444,7 @@ procedure ApplyScoreSlotPlayerVisuals(const ScreenScore: TScreenScore; SlotIndex
 var
   I: integer;
 begin
-  ApplyScoreSlotTextColors(ScreenScore, SlotIndex, TargetPlayer);
+  ApplyScoreSlotTexts(ScreenScore, SlotIndex, TargetPlayer);
 
   for I := 0 to High(ScreenScore.PlayerStatic[SlotIndex]) do
     ApplyThemeStaticForPlayer(ScreenScore, ScreenScore.PlayerStatic[SlotIndex, I],
@@ -726,7 +760,7 @@ begin
       PlaylistMedley.Stats[CurrentRound].SongArtist;
     Text[TextTitle].Text       := PlaylistMedley.Stats[CurrentRound].SongTitle;
     Text[TextTitle].Visible    := true;
-    Text[TextArtistTitle].Text := IntToStr(CurrentRound+1) + '/' +
+    ResultSongTitle := IntToStr(CurrentRound+1) + '/' +
       IntToStr(Length(PlaylistMedley.Stats)-1) + ': ' +
       PlaylistMedley.Stats[CurrentRound].SongArtist +
       ' - ' + PlaylistMedley.Stats[CurrentRound].SongTitle;
@@ -736,16 +770,17 @@ begin
     begin
       Text[TextArtist].Text      := Language.Translate('SING_TOTAL');
       Text[TextTitle].Visible    := false;
-      Text[TextArtistTitle].Text := Language.Translate('SING_TOTAL');
+      ResultSongTitle := Language.Translate('SING_TOTAL');
     end else
     begin
       Text[TextArtist].Text      := PlaylistMedley.Stats[CurrentRound].SongArtist;
       Text[TextTitle].Text       := PlaylistMedley.Stats[CurrentRound].SongTitle;
       Text[TextTitle].Visible    := true;
-      Text[TextArtistTitle].Text := PlaylistMedley.Stats[CurrentRound].SongArtist + ' - ' +
+      ResultSongTitle := PlaylistMedley.Stats[CurrentRound].SongArtist + ' - ' +
         PlaylistMedley.Stats[CurrentRound].SongTitle;
     end;
   end;
+  SetResultSongTitle(Text[TextArtistTitle], ResultSongTitle, RenderW);
 
   if (ScreenSong.Mode = smMedley) then
   begin
@@ -1164,10 +1199,6 @@ begin
 
   MapPlayersToPosition;
 
-  Text[TextArtist].Text      := CurrentSong.Artist;
-  Text[TextTitle].Text       := CurrentSong.Title;
-  Text[TextArtistTitle].Text := CurrentSong.Artist + ' - ' + CurrentSong.Title;
-
   FillChar(V, SizeOf(V), 0);
   for P := 0 to PlayersPlay - 1 do
     if PlayerPositionMap[P].Position > 0 then
@@ -1270,6 +1301,12 @@ begin
   end;
 
   BarTime := SDL_GetTicks();
+end;
+
+procedure TScreenScore.OnWindowResized;
+begin
+  inherited;
+  SetResultSongTitle(Text[TextArtistTitle], ResultSongTitle, RenderW);
 end;
 
 procedure TScreenScore.OnHide;
