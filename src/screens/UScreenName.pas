@@ -81,7 +81,8 @@ type
       VoiceIndex: integer;
 
       CountIndex:   integer;
-      LocalPlayerCount: integer;
+      ConfirmedLocalPlayerCount: integer;
+      LyricsOnly: boolean;
       RemoteSlots: cardinal;
       AvailableChannels: integer;
       PlayerMic, PlayerMicIID, MicOption: integer;
@@ -119,6 +120,9 @@ type
       DelayMeasureButton, DelayApplyButton, DelayCancelButton: integer;
       MicActivity: array[0..UIni.IMaxPlayerCount-1] of single;
       MicClippedUntil: array[0..UIni.IMaxPlayerCount-1] of QWord;
+      MicPickerIndex, MicPickerPlayer, MicPickerOwner: integer;
+      MicPickerChoices: array of TSetupMicChannel;
+      PendingMic: TSetupMicChannel;
       function AddDelayButton(const Style: TThemeButton; const Key: UTF8String): integer;
       procedure DrawDelayButton(Index: integer);
       function DelaySlots: cardinal;
@@ -126,9 +130,6 @@ type
       procedure CloseDelayMeasurement;
       procedure DrawDelayMeasurement;
       procedure ApplyDelayMeasurement;
-      MicPickerIndex, MicPickerPlayer, MicPickerOwner: integer;
-      MicPickerChoices: array of TSetupMicChannel;
-      PendingMic: TSetupMicChannel;
       procedure RefreshMicSelector;
       function ScanMicDevices: boolean;
       procedure ChangeMic(Delta: integer);
@@ -137,7 +138,6 @@ type
       function BuildMicChoices: integer;
       function HighestRemoteSlot: integer;
       procedure DrawMicSelector;
-      procedure PlaceVoiceBesideMic;
       procedure UpdateAssignedPlayers(Force: boolean = false);
       function DisplayPlayerName(Index: integer): UTF8String;
       function IsRosterGap(Index: integer): boolean;
@@ -171,7 +171,7 @@ type
       function NoRepeatColors(ColorP: integer; Interaction: integer; Pos: integer):integer;
       function ActivePlayerCount: integer;
       function DelayMeasurementOpen: boolean;
-      function LocalCaptureLimit: integer;
+      function LocalPlayerCount: integer;
       procedure RefreshPlayers();
       procedure RefreshProfile();
       procedure RefreshColor();
@@ -194,7 +194,6 @@ implementation
 
 uses
 
-  URecord,
   UAudioCalibration,
   UText,
   UParty,
@@ -348,7 +347,7 @@ begin
     Caption := Language.Translate('SING_OPTIONS_RECORD_NOONE')
   else
     with MicPickerChoices[Choice] do
-      Caption := Format(Language.Translate('SING_SETUP_MIC_CHOICE'), [DeviceName, Channel + 1]);
+      Caption := Format(Language.Translate('SING_SETUP_MIC_CHOICE'), [Channel + 1, DeviceName]);
   MicOption := 0;
   UpdateSelectSlideOptions(PlayerMic,
     [Language.Translate('SING_SETUP_MIC_LABEL') + ' ' + Caption], MicOption);
@@ -416,23 +415,6 @@ begin
   end;
   Ini.SaveRecordingAssignments;
   RefreshMicSelector;
-end;
-
-procedure TScreenName.PlaceVoiceBesideMic;
-var
-  Voice, Mic: TSelectSlide;
-  Offset: real;
-begin
-  Voice := SelectsS[PlayerSelectVoice];
-  Mic := SelectsS[PlayerMic];
-  if not (Voice.Visible and Mic.Visible) then Exit;
-  if (Voice.TextureSBG.Y >= Mic.TextureSBG.Y + Mic.TextureSBG.H) or
-     (Mic.TextureSBG.Y >= Voice.TextureSBG.Y + Voice.TextureSBG.H) then Exit;
-  Offset := Mic.TextureSBG.X + Mic.TextureSBG.W + 8 - Voice.TextureSBG.X;
-  if Voice.TextureSBG.X + Voice.TextureSBG.W + Offset > RenderW then
-    Offset := Mic.TextureSBG.X - Voice.TextureSBG.X - Voice.TextureSBG.W - 8;
-  Voice.SetX(Voice.Texture.X + Offset);
-  Voice.SetSelectOpt(Voice.SelectedOption);
 end;
 
 procedure TScreenName.DrawMicSelector;
@@ -802,7 +784,7 @@ begin
                   Language.Translate('ERROR_PLAYER_NO_DEVICE_ASSIGNMENT'), [I + 1]));
                 Exit;
               end;
-            LocalPlayerCount := SelectedLocalPlayerCount;
+            ConfirmedLocalPlayerCount := SelectedLocalPlayerCount;
             LyricsOnly := CountIndex = LyricsOnlyIndex;
           end;
           if SelectedPlayerCount > 0 then Ini.Players := SelectedPlayerCount - 1;
@@ -1124,18 +1106,20 @@ begin
   Result := Max(0, CountIndex - PhonesOnlyIndex);
 end;
 
-function TScreenName.LocalCaptureLimit: integer;
+function TScreenName.LocalPlayerCount: integer;
 begin
-  if Party.bPartyGame then Exit(-1);
-  Result := LocalPlayerCount;
+  if ConfirmedLocalPlayerCount < 0 then Exit(UIni.IMaxPlayerCount);
+  Result := ConfirmedLocalPlayerCount;
 end;
 
 function TScreenName.ActivePlayerCount: integer;
+var Slots: cardinal;
 begin
   if Party.bPartyGame then Exit(UIni.IPlayersVals[Ini.Players]);
   if LyricsOnly then Exit(0);
-  if LocalPlayerCount < 0 then Exit(AudioInputProcessor.ConfiguredPlayerCount);
-  Result := Max(LocalPlayerCount, HighestRemoteSlot);
+  if ConfirmedLocalPlayerCount < 0 then
+    Exit(AudioInputProcessor.ConfiguredPlayerCount(UIni.IMaxPlayerCount, Slots));
+  Result := Max(ConfirmedLocalPlayerCount, HighestRemoteSlot);
 end;
 
 procedure TScreenName.UpdateAssignedPlayers(Force: boolean);
@@ -1530,13 +1514,12 @@ begin
   PlayerSelectVoice := AddSelectSlide(Theme.Name.SelectPlayerVoice, VoiceIndex, ['']);
   PlayerSelectVoiceIID := High(Interactions);
 
-  MicTheme := Theme.Name.SelectPlayerLevel;
-  Inc(MicTheme.Y, MicTheme.H + 2);
-  MicTheme.Text := '';
-  PlayerMic := AddSelectSlide(MicTheme, MicOption, ['']);
+  Theme.Name.SelectPlayerMic.showArrows := true;
+  Theme.Name.SelectPlayerMic.oneItemOnly := true;
+  PlayerMic := AddSelectSlide(Theme.Name.SelectPlayerMic, MicOption, ['']);
   PlayerMicIID := High(Interactions);
   SelectsS[PlayerMic].Visible := false;
-  LocalPlayerCount := -1;
+  ConfirmedLocalPlayerCount := -1;
   SelectsS[PlayerSelectVoice].Visible := false;
 
   isScrolling := false;
@@ -1858,8 +1841,8 @@ begin
     CountIndex := LyricsOnlyIndex;
     if not LyricsOnly then
     begin
-      Count := LocalPlayerCount;
-      if LocalPlayerCount < 0 then
+      Count := ConfirmedLocalPlayerCount;
+      if ConfirmedLocalPlayerCount < 0 then
       begin
         Count := 0;
         for I := 0 to UIni.IMaxPlayerCount - 1 do
@@ -2285,13 +2268,10 @@ begin
       PlaceSlide(PlayerColor, Theme.Name.SelectPlayerColor);
       PlaceSlide(PlayerSelectLevel, Theme.Name.SelectPlayerLevel);
       PlaceSlide(PlayerSelectVoice, Theme.Name.SelectPlayerVoice);
-      PlaceSlide(PlayerMic, MicTheme);
-      PlaceVoiceBesideMic;
       SelectsS[PlayerColor].Draw;
       if Theme.Name.Cards.LevelSegments then Difficulty(I)
       else SelectsS[PlayerSelectLevel].Draw;
       if SelectsS[PlayerSelectVoice].Visible then SelectsS[PlayerSelectVoice].Draw;
-      DrawMicSelector;
       // Reuse the existing avatar picker, without its large carousel.
       R := CardRect(I);
       SX := R.W / Max(1, Theme.Name.Cards.Panel.W);
@@ -2412,8 +2392,6 @@ begin
     Button[I].Draw;
 
   // SelectsS
-  SelectsS[PlayerSelectVoice].SetX(Theme.Name.SelectPlayerVoice.X);
-  PlaceVoiceBesideMic;
   for I := 0 to High(SelectsS) do
     if I <> PlayerMic then SelectsS[I].Draw;
 

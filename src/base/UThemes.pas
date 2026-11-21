@@ -417,6 +417,7 @@ type
     SelectPlayerColor:   TThemeSelectSlide;
     SelectPlayerLevel:   TThemeSelectSlide;
     SelectPlayerVoice:   TThemeSelectSlide;
+    SelectPlayerMic:     TThemeSelectSlide;
     DelayMeasureButton, DelayApplyButton, DelayCancelButton: TThemeButton;
     DelayText: TThemeText;
   end;
@@ -2210,6 +2211,8 @@ begin
       ThemeLoadSelectSlide(Name.SelectPlayersCount, 'NameSelectPlayerCount');
       // Some older themes place the count control outside the screen.
       // Keep the local player count available when there are no microphones.
+      // Some older themes place the count control outside the screen.
+      // Player setup now needs it to reach lyrics-only and phone-only modes.
       with Name.SelectPlayersCount do
         if (X < 0) or (Y < 0) or (X + W + SkipX + SBGW > 800) or
            (Y + H > 600) or (H <= 1) or (SBGW <= 1) then
