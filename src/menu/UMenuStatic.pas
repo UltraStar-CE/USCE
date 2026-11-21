@@ -63,7 +63,7 @@ implementation
 uses
   Math, UDisplay, UFont, UMenuText, UScale, UText;
 
-procedure DrawNavigationArrows(X, Y, Z, W, H, Alpha: real;
+procedure DrawNavigationArrows(X, Y, Z, W, H, R, G, B, Alpha: real;
   Reflection: boolean; ReflectionSpacing: real);
 var
   Size, CenterX, CenterY, MirrorY, ReflectionAlpha: real;
@@ -74,7 +74,7 @@ var
       ArrowX + DirX * Size, ArrowY + DirY * Size,
       ArrowX + (DirY - DirX) * Size, ArrowY - (DirX + DirY) * Size,
       ArrowX - (DirY + DirX) * Size, ArrowY + (DirX - DirY) * Size,
-      Z, 0.08, 0.12, 0.18, Opacity);
+      Z, R, G, B, Opacity);
   end;
 
 begin
@@ -111,11 +111,11 @@ begin
     if (W <= 0) or (H <= 0) then Exit;
     // Mirror the inset keycap at the original icon's reflection line.
     CapReflectionSpacing := ReflectionSpacing + 8;
-    DrawKeyFrame(X, Y, Texture.Z, W, H, 0.08, 0.12, 0.18, Texture.Alpha,
+    DrawKeyFrame(X, Y, Texture.Z, W, H, Texture.ColR, Texture.ColG, Texture.ColB, Texture.Alpha,
       Reflection, CapReflectionSpacing);
     if KeyCap = '←↑↓→' then
     begin
-      DrawNavigationArrows(X, Y, Texture.Z, W, H, Texture.Alpha,
+      DrawNavigationArrows(X, Y, Texture.Z, W, H, Texture.ColR, Texture.ColG, Texture.ColB, Texture.Alpha,
         Reflection, CapReflectionSpacing);
       Exit;
     end;
@@ -133,7 +133,7 @@ begin
     LabelX := X + (W - TextWidth(KeyCap)) / 2;
     LabelY := Y + H / 2 - Ascender + (Bounds.Top + Bounds.Bottom) / 2;
     SetFontReflection(Reflection, CapReflectionSpacing + 2 * (Y + H - LabelY - Ascender));
-    SetFontColor(0.08, 0.12, 0.18, Texture.Alpha);
+    SetFontColor(Texture.ColR, Texture.ColG, Texture.ColB, Texture.Alpha);
     SetFontZ(Texture.Z);
     SetFontPos(LabelX, LabelY);
     PrintText(KeyCap);
