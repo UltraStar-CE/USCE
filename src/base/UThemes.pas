@@ -1169,6 +1169,7 @@ type
   private
     ThemeIni:         TMemIniFile;
     BaseThemeInis:    array of TMemIniFile;
+    KeycapSections:   TThemeSectionList;
 
     LastThemeBasic:   TThemeBasic;
     DefaultButtonAlpha: real;
@@ -1877,12 +1878,15 @@ begin
   // Load base theme if declared
   if (Themes[ThemeNum].BaseTheme <> '') then
     AddBaseThemeChain(Themes[ThemeNum].BaseTheme, 0);
+
+  KeycapSections := GetSectionList('Keycaps');
 end;
 
 procedure TTheme.CloseFile;
 var
   I: integer;
 begin
+  KeycapSections := nil;
   freeandnil(ThemeIni);
   for I := Low(BaseThemeInis) to High(BaseThemeInis) do
     FreeAndNil(BaseThemeInis[I]);
@@ -3709,11 +3713,10 @@ begin
   end;
 
   ThemeStatic.Tex := ReadString(SectionList, 'Tex', '');
-  // A theme can opt its own keyboard legend textures into drawn keycaps.
-  ThemeStatic.KeyCap := ThemeIni.ReadString('Keycaps', ThemeStatic.Tex, '');
+  ThemeStatic.KeyCap := ReadString(KeycapSections, ThemeStatic.Tex, '');
   {$IFDEF DARWIN}
   if SameText(ThemeStatic.Tex, 'ButtonAlt') and (ThemeStatic.KeyCap <> '') then
-    ThemeStatic.KeyCap := ThemeIni.ReadString('Keycaps', 'ButtonAltMac', ThemeStatic.KeyCap);
+    ThemeStatic.KeyCap := ReadString(KeycapSections, 'ButtonAltMac', ThemeStatic.KeyCap);
   {$ENDIF}
   ThemeStatic.X := ReadInteger(SectionList, 'X', 0);
   ThemeStatic.Y := ReadInteger(SectionList, 'Y', 0);
@@ -3742,6 +3745,15 @@ begin
   end
   else
     ThemeStatic.ScaleMode := ParseScaleMode(ScaleValue, lsStretch);
+  if (ThemeStatic.KeyCap <> '') and (ThemeStatic.W > 0) and (ThemeStatic.H > 0) then
+  begin
+    ThemeStatic.Color := ReadString(SectionList, 'KeycapColor',
+      ReadString(KeycapSections, 'Color', ''));
+    ThemeStatic.ColR := 0.08;
+    ThemeStatic.ColG := 0.12;
+    ThemeStatic.ColB := 0.18;
+    ThemeStatic.Typ := TEXTURE_TYPE_PLAIN;
+  end;
   C := ColorExists(ThemeStatic.Color);
   if C >= 0 then
   begin
@@ -5161,9 +5173,9 @@ end;
 procedure TTheme.ThemeSongLoad;
 var
   I, C: integer;
-  prefix: string;
+  prefix, FooterColor, ConfigurationColor: string;
   Enabled: boolean;
-  SectionLIst: TThemeSectionList;
+  SectionList: TThemeSectionList;
 begin
   case (TSongMenuMode(Ini.SongMenu)) of
     smRoulette: prefix := 'Roulette';
@@ -5198,6 +5210,9 @@ begin
   end;
   if SectionExists('SongSearchText', Enabled) then
     ThemeLoadText(Song.SearchText, 'SongSearchText');
+  SectionList := GetSectionList('SongModernFooter');
+  FooterColor := ReadString(SectionList, 'Color', '');
+  ConfigurationColor := ReadString(SectionList, 'ConfigurationColor', '');
   SetLength(Song.ModernFooter, 5);
   for I := 0 to High(Song.ModernFooter) do
   begin
@@ -5214,6 +5229,10 @@ begin
         3: begin X := 532; Text := Language.Translate('SONG_KEY_MENU'); end;
         4: begin X := 664; Text := Language.Translate('SONG_KEY_PLAYLIST'); end;
       end;
+      if I = 0 then
+        LoadColor(ColR, ColG, ColB, ConfigurationColor)
+      else
+        LoadColor(ColR, ColG, ColB, FooterColor);
     end;
   end;
   if SectionExists('SongModernFooterText1', Enabled) then
