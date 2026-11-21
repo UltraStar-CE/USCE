@@ -54,5 +54,5 @@ explain how we work together.
 USCE builds on [UltraStar Deluxe](https://github.com/UltraStar-Deluxe/USDX),
 which derives from UltraStar by corvus5. Thank you to everyone whose work makes
 this game possible. See [COPYRIGHT.txt](COPYRIGHT.txt) and the Git history for
-authorship, and [LICENSE](LICENSE) for the GPL license. Third-party libraries
-and assets retain their own notices.
+authorship, and [LICENSE](LICENSE) for GPL-2.0-or-later. See [ASSETS.md](ASSETS.md) for asset
+attribution. Third-party libraries and assets retain their own notices.
