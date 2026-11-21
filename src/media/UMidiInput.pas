@@ -40,9 +40,13 @@ type
 
 procedure OpenMidiIn  (CB : TMidiNoteProc);
 procedure CloseMidiIn;
+{$IF DEFINED(LINUX) OR DEFINED(DARWIN)}
+procedure PollMidiIn;
+{$ENDIF}
 
 implementation
 
+{$IF DEFINED(MSWINDOWS)}
 uses
   Dynlibs,
   ULog,
@@ -284,5 +288,165 @@ begin
   end;
   UnloadWinMM;
 end;
+
+{$ELSEIF DEFINED(LINUX) OR DEFINED(DARWIN)}
+
+uses
+  Dynlibs,
+  ULog;
+
+const
+  {$IFDEF DARWIN}
+  PortMidiLibraries: array[0..2] of string = (
+    '/opt/homebrew/lib/libportmidi.dylib', '/usr/local/lib/libportmidi.dylib',
+    'libportmidi.dylib');
+  {$ELSE}
+  PortMidiLibraries: array[0..2] of string = (
+    'libportmidi.so.2', 'libportmidi.so.0', 'libportmidi.so');
+  {$ENDIF}
+  MidiBufferSize = 64;
+
+{$PUSH}
+{$PACKRECORDS C}
+type
+  // Shared prefix of PmDeviceInfo in PortMidi 1.x and 2.x.
+  PPmDeviceInfo = ^TPmDeviceInfo;
+  TPmDeviceInfo = record
+    StructVersion: LongInt;
+    InterfaceName, Name: PAnsiChar;
+    Input: LongInt;
+  end;
+
+  TPmEvent = record
+    Message, Timestamp: LongInt;
+  end;
+  PPmEvent = ^TPmEvent;
+{$POP}
+
+type
+  TPmTimeProc = function(TimeInfo: Pointer): LongInt; cdecl;
+
+var
+  PortMidiHandle: TLibHandle;
+  PortMidiReady: Boolean;
+  InputStream: Pointer;
+  OnNote: TMidiNoteProc;
+  PmInitialize, PmTerminate, PmCountDevices: function: LongInt; cdecl;
+  PmGetDeviceInfo: function(Device: LongInt): PPmDeviceInfo; cdecl;
+  PmOpenInput: function(out Stream: Pointer; Device: LongInt; DriverInfo: Pointer;
+    BufferSize: LongInt; TimeProc: TPmTimeProc; TimeInfo: Pointer): LongInt; cdecl;
+  PmRead: function(Stream: Pointer; Events: PPmEvent; Count: LongInt): LongInt; cdecl;
+  PmClose: function(Stream: Pointer): LongInt; cdecl;
+
+function LoadPortMidi: Boolean;
+var
+  LibName: string;
+begin
+  if PortMidiHandle <> NilHandle then
+    Exit(True);
+
+  for LibName in PortMidiLibraries do
+  begin
+    PortMidiHandle := LoadLibrary(LibName);
+    if PortMidiHandle = NilHandle then
+      Continue;
+    @PmInitialize := GetProcedureAddress(PortMidiHandle, 'Pm_Initialize');
+    @PmTerminate := GetProcedureAddress(PortMidiHandle, 'Pm_Terminate');
+    @PmCountDevices := GetProcedureAddress(PortMidiHandle, 'Pm_CountDevices');
+    @PmGetDeviceInfo := GetProcedureAddress(PortMidiHandle, 'Pm_GetDeviceInfo');
+    @PmOpenInput := GetProcedureAddress(PortMidiHandle, 'Pm_OpenInput');
+    @PmRead := GetProcedureAddress(PortMidiHandle, 'Pm_Read');
+    @PmClose := GetProcedureAddress(PortMidiHandle, 'Pm_Close');
+    if Assigned(PmInitialize) and Assigned(PmTerminate) and Assigned(PmCountDevices) and
+       Assigned(PmGetDeviceInfo) and Assigned(PmOpenInput) and Assigned(PmRead) and
+       Assigned(PmClose) then
+      Exit(True);
+    UnloadLibrary(PortMidiHandle);
+    PortMidiHandle := NilHandle;
+  end;
+  Result := False;
+end;
+
+function MidiTime(TimeInfo: Pointer): LongInt; cdecl;
+begin
+  Result := LongInt(LongWord(GetTickCount64 and $FFFFFFFF));
+end;
+
+procedure OpenMidiIn(CB: TMidiNoteProc);
+var
+  Device: LongInt;
+  Info: PPmDeviceInfo;
+begin
+  if PortMidiReady or not LoadPortMidi then
+    Exit;
+  if PmInitialize() <> 0 then
+    Exit;
+  PortMidiReady := True;
+  for Device := 0 to PmCountDevices() - 1 do
+  begin
+    Info := PmGetDeviceInfo(Device);
+    if (Info = nil) or (Info^.Input = 0) then
+      Continue;
+    {$IFDEF LINUX}
+    // ALSA's built-in loopback normally precedes physical MIDI sources.
+    if AnsiString(Info^.Name) = 'Midi Through Port-0' then
+      Continue;
+    {$ENDIF}
+    if PmOpenInput(InputStream, Device, nil, MidiBufferSize, @MidiTime, nil) = 0 then
+    begin
+      OnNote := CB;
+      Log.LogInfo('Opened MIDI-IN: ' + string(Info^.Name), 'UMidiInput.OpenMidiIn');
+      Exit;
+    end;
+    InputStream := nil;
+  end;
+  CloseMidiIn;
+end;
+
+procedure CloseMidiIn;
+begin
+  OnNote := nil;
+  if InputStream <> nil then
+  begin
+    PmClose(InputStream);
+    InputStream := nil;
+  end;
+  if PortMidiReady then
+  begin
+    PmTerminate();
+    PortMidiReady := False;
+  end;
+  // Keep the library loaded for the life of any native MIDI callbacks.
+end;
+
+procedure PollMidiIn;
+var
+  Events: array[0..MidiBufferSize - 1] of TPmEvent;
+  Count, Index: LongInt;
+  Message: LongWord;
+begin
+  if (InputStream = nil) or not Assigned(OnNote) then
+    Exit;
+  Count := PmRead(InputStream, @Events[0], Length(Events));
+  for Index := 0 to Count - 1 do
+  begin
+    Message := LongWord(Events[Index].Message);
+    if ((Message and $F0) = $90) and ((Message and $8000) = 0) and
+       ((Message and $7F0000) <> 0) then
+      OnNote(Byte((Message shr 8) and $7F));
+  end;
+end;
+
+{$ELSE}
+
+procedure OpenMidiIn(CB: TMidiNoteProc);
+begin
+end;
+
+procedure CloseMidiIn;
+begin
+end;
+
+{$ENDIF}
 
 end.
