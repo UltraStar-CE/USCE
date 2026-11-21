@@ -28,7 +28,12 @@ type
  TPlayerSlotRect = record X,Y,W,H: integer; end;
  TMouseOverRect = record X,Y,W,H: single; end;
  TText = record Text: string; end;
- TButton = record Selected, Selectable: boolean; Text: array[0..0] of TText; end;
+ TButton = object
+  Selected, Selectable: boolean;
+  Text: array[0..0] of TText;
+  Bounds: TMouseOverRect;
+  function GetMouseOverArea: TMouseOverRect;
+ end;
  TMouseClickAction = (maNone, maLeft, maRight);
  TSlide = class
   Visible: boolean;
@@ -46,8 +51,14 @@ type
   SelectedPlayerCount: integer;
   PlayerNames: array[0..1] of string;
   PlayerAvatars, PlayerLevel: array[0..1] of integer;
-  Button: array[0..0] of TButton;
+  Button: array[0..3] of TButton;
+  DelayMeasurement: TObject;
+  DelayMeasureButton, DelayCancelButton, DelayApplyButton: integer;
+  MeasureCalls, CancelCalls, ApplyCalls: integer;
   SelectsS: array[0..1] of TSlide;
+  procedure StartDelayMeasurement;
+  procedure CloseDelayMeasurement;
+  procedure ApplyDelayMeasurement;
   function InRegion(X,Y: single; Bounds: TMouseOverRect): boolean;
   procedure StopTextInput;
   procedure ChangeMic(Delta: integer);
@@ -69,6 +80,11 @@ var
  ScreenW,ScreenH,Screens,RenderW,RenderH: integer;
  Hit,Calls,LastX,LastY: integer; S:TScreenName;
 procedure SetTextInput(Value:boolean); begin end;
+function TButton.GetMouseOverArea: TMouseOverRect;
+begin Result:=Bounds; end;
+procedure TScreenName.StartDelayMeasurement; begin Inc(MeasureCalls); end;
+procedure TScreenName.CloseDelayMeasurement; begin Inc(CancelCalls); end;
+procedure TScreenName.ApplyDelayMeasurement; begin Inc(ApplyCalls); end;
 procedure TSlide.SetSelectOpt(Value:integer); begin end;
 function TSlide.GetMouseOverArea: TMouseOverRect;
 begin Result.X:=100; Result.Y:=200; Result.W:=40; Result.H:=20; end;
@@ -99,8 +115,25 @@ begin
  S:=TScreenName.Create;S.SelectedPlayerCount:=2;S.SelectsS[0]:=TSlide.Create;
  S.PlayerMic:=1;S.PlayerMicIID:=8;S.SelectsS[1]:=TSlide.Create;
  S.Button[PlayerName].Selectable:=true;S.PlayerSelectIID:=7;
+ S.DelayMeasureButton:=1; S.DelayCancelButton:=2; S.DelayApplyButton:=3;
+ S.Button[1].Bounds:=S.SelectsS[1].GetMouseOverArea;
+ S.Button[2].Bounds:=S.Button[1].Bounds;
+ S.Button[3].Bounds:=S.Button[1].Bounds;
+ S.Button[3].Bounds.X:=200;
  try
   S.SelectsS[1].Visible:=true;
+  S.ParseMouse(1,true,210,420);
+  Check((S.MeasureCalls=1) and (S.MicDelta=0) and (Calls=0),'calibration launcher activated mic selector');
+  S.DelayMeasurement:=TObject.Create;
+  try
+   S.ParseMouse(1,true,210,420);
+   Check((S.CancelCalls=1) and (S.MicDelta=0) and (Calls=0),'calibration cancel activated mic selector');
+   S.ParseMouse(1,true,420,420);
+   Check((S.ApplyCalls=1) and (Calls=0),'calibration apply submitted setup');
+   S.ParseMouse(1,true,40,40);
+   Check((S.Interaction=0) and (Calls=0),'modal let card click through');
+  finally S.DelayMeasurement.Free; S.DelayMeasurement:=nil; end;
+  S.Button[1].Bounds.X:=500;
   S.ParseMouse(1,true,210,420);
   Check((Calls=0) and (S.Interaction=S.PlayerMicIID) and (S.MicDelta=-1),'mic left click submitted setup');
   S.ParseMouse(1,true,260,420);

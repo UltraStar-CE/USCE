@@ -74,6 +74,11 @@ use the usual theme button settings. They default to the confirmation popup
 style. `[NameDelayText]` can override the modal's font, text color and title
 position.
 
+### Player setup microphone selector
+
+Themes can override the standard select-slide section `[NameSelectPlayerMic]`.
+The game puts the channel before the device name so narrow rows keep the channel visible.
+
 ### Singing countdown theme settings
 
 The optional `[SingCountdown]` section styles the shared intro, medley and
