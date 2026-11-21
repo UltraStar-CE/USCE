@@ -44,6 +44,8 @@ uses
   UMenu,
   UMenuInteract,
   UMusic,
+  UMenuSelectSlide,
+  URecord,
   UNote,
   UScreenScore,
   UScreenSingController,
@@ -56,6 +58,11 @@ uses
   md5;
 
 type
+  TSetupMicChannel = record
+    DeviceIndex, ConfigIndex, Channel: integer;
+    DeviceName: UTF8String;
+  end;
+
   TScreenName = class(TMenu)
     private
       PlayersCount:  cardinal;
@@ -74,10 +81,12 @@ type
       VoiceIndex: integer;
 
       CountIndex:   integer;
-      NoLocalPlayers: boolean;
-      AssignedPlayerCount: integer;
-      AssignedPlayerSlots: cardinal;
-      NoInputText: integer;
+      ConfirmedLocalPlayerCount: integer;
+      LyricsOnly: boolean;
+      RemoteSlots: cardinal;
+      AvailableChannels: integer;
+      PlayerMic, PlayerMicIID, MicOption: integer;
+      MicDevicesScanned: boolean;
       PlayerIndex:  integer;
       ColorIndex:   integer;
       LevelIndex:   integer;
@@ -104,13 +113,16 @@ type
 
       PlayerAvatarButton: array of integer;
       CardPanel, CardFocus, MicFrame: integer;
-      MicPreviewCount: integer;
+      MicPreviewCount, MicPreviewLocalCount: integer;
       OwnsMicPreview: boolean;
       DelayMeasurement: TSlotDelayMeasurement;
       DelayPausedBgMusic: boolean;
       DelayMeasureButton, DelayApplyButton, DelayCancelButton: integer;
       MicActivity: array[0..UIni.IMaxPlayerCount-1] of single;
       MicClippedUntil: array[0..UIni.IMaxPlayerCount-1] of QWord;
+      MicPickerIndex, MicPickerPlayer, MicPickerOwner: integer;
+      MicPickerChoices: array of TSetupMicChannel;
+      PendingMic: TSetupMicChannel;
       function AddDelayButton(const Style: TThemeButton; const Key: UTF8String): integer;
       procedure DrawDelayButton(Index: integer);
       function DelaySlots: cardinal;
@@ -118,11 +130,24 @@ type
       procedure CloseDelayMeasurement;
       procedure DrawDelayMeasurement;
       procedure ApplyDelayMeasurement;
+      procedure RefreshMicSelector;
+      function ScanMicDevices: boolean;
+      procedure ChangeMic(Delta: integer);
+      function CurrentMicChoiceValid: boolean;
+      procedure ApplyMicChoice;
+      function BuildMicChoices: integer;
+      function HighestRemoteSlot: integer;
+      function InlineCardMic: boolean;
+      function CardEditorScaleY(PlayerID: integer; const Card: TPlayerSlotRect): real;
+      procedure LayoutMicSelector;
+      procedure DrawMicSelector;
       procedure UpdateAssignedPlayers(Force: boolean = false);
       function DisplayPlayerName(Index: integer): UTF8String;
+      function IsRosterGap(Index: integer): boolean;
       procedure UpdateMicActivity;
       function MicColor(PlayerID: integer): TRGB;
       function SelectedPlayerCount: integer;
+      function SelectedLocalPlayerCount: integer;
       function CardRect(Index: integer): TPlayerSlotRect;
       function DifficultySegmentRect(PlayerID, Segment: integer): TMouseOverRect;
       procedure DrawCards;
@@ -147,9 +172,9 @@ type
 
       procedure PlayerColorButton(K: integer);
       function NoRepeatColors(ColorP: integer; Interaction: integer; Pos: integer):integer;
-      function LocalPlayerCount: integer;
       function ActivePlayerCount: integer;
       function DelayMeasurementOpen: boolean;
+      function LocalPlayerCount: integer;
       procedure RefreshPlayers();
       procedure RefreshProfile();
       procedure RefreshColor();
@@ -172,11 +197,11 @@ implementation
 
 uses
 
-  URecord,
   UAudioCalibration,
   UText,
   UParty,
   URemoteBridgeIPC,
+  URemoteInput,
   UInputSource,
   UGraphic,
   UHelp,
@@ -197,6 +222,8 @@ uses
 const
   MicPreviewFreshMs = 250;
   MicClipHoldMs = 500;
+  LyricsOnlyIndex = 0;
+  PhonesOnlyIndex = 1;
 
 function GetNamePlayerSelectBaseBounds: TPlayerSlotRect;
 begin
@@ -255,7 +282,7 @@ var R: TPlayerSlotRect; SX, SY, SegmentW: real;
 begin
   R := CardRect(PlayerID);
   SX := R.W / Max(1, Theme.Name.Cards.Panel.W);
-  SY := R.H / Max(1, Theme.Name.Cards.Panel.H);
+  SY := CardEditorScaleY(PlayerID, R);
   if (PlayerID = PlayerIndex) and Theme.Name.Cards.EditOutside then
   begin
     R.X := 0; R.Y := 0; SX := 1; SY := 1;
@@ -265,6 +292,240 @@ begin
   Result.Y := R.Y + Theme.Name.SelectPlayerLevel.Y * SY;
   Result.W := (SegmentW - 4) * SX;
   Result.H := 29 * SY;
+end;
+
+function TScreenName.ScanMicDevices: boolean;
+begin
+  Result := not MicDevicesScanned and not Party.bPartyGame and not AudioInput.IsCapturing;
+  if not Result then Exit;
+  MicDevicesScanned := true;
+  // Startup only probes assigned microphones. Include free channels in setup.
+  RefreshAudioInputDevices(aimFull);
+end;
+
+procedure ConfirmSetupMicMove(Confirmed: boolean; Data: Pointer);
+begin
+  if Confirmed then TScreenName(Data).ApplyMicChoice;
+end;
+
+function TScreenName.BuildMicChoices: integer;
+var
+  D, C, N, ConfigIndex: integer;
+  Device: TAudioInputDevice;
+begin
+  MicPickerChoices := nil;
+  Result := -1;
+  for D := 0 to High(AudioInputProcessor.DeviceList) do
+  begin
+    Device := AudioInputProcessor.DeviceList[D];
+    if Device = nil then Continue;
+    ConfigIndex := Device.CfgIndex;
+    if (ConfigIndex < 0) or (ConfigIndex > High(Ini.InputDeviceConfig)) then Continue;
+    for C := 0 to Min(Device.AudioFormat.Channels,
+        Length(Ini.InputDeviceConfig[ConfigIndex].ChannelToPlayerMap)) - 1 do
+    begin
+      N := Length(MicPickerChoices);
+      SetLength(MicPickerChoices, N + 1);
+      MicPickerChoices[N].DeviceIndex := D;
+      MicPickerChoices[N].ConfigIndex := ConfigIndex;
+      MicPickerChoices[N].DeviceName := Device.Name;
+      MicPickerChoices[N].Channel := C;
+      if Ini.InputDeviceConfig[ConfigIndex].ChannelToPlayerMap[C] = PlayerIndex + 1 then
+        Result := N;
+    end;
+  end;
+end;
+
+procedure TScreenName.RefreshMicSelector;
+var
+  Choice: integer;
+  Caption: UTF8String;
+begin
+  SelectsS[PlayerMic].Visible := not Party.bPartyGame and (SelectedPlayerCount > 0);
+  if not SelectsS[PlayerMic].Visible then Exit;
+  Choice := BuildMicChoices;
+  if RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) then
+    Caption := Language.Translate('SING_SETUP_MIC_PHONE')
+  else if (PlayerIndex >= SelectedLocalPlayerCount) or (Choice < 0) then
+    Caption := Language.Translate('SING_OPTIONS_RECORD_NOONE')
+  else
+    with MicPickerChoices[Choice] do
+      Caption := Format(Language.Translate('SING_SETUP_MIC_CHOICE'), [Channel + 1, DeviceName]);
+  MicOption := 0;
+  UpdateSelectSlideOptions(PlayerMic,
+    [Language.Translate('SING_SETUP_MIC_LABEL') + ' ' + Caption], MicOption);
+end;
+
+procedure TScreenName.ChangeMic(Delta: integer);
+var Current: integer;
+begin
+  if (PlayerIndex >= SelectedLocalPlayerCount) or RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) then Exit;
+  Current := BuildMicChoices;
+  if Length(MicPickerChoices) = 0 then Exit;
+  if Current < 0 then
+  begin
+    if Delta > 0 then MicPickerIndex := 0
+    else MicPickerIndex := High(MicPickerChoices);
+  end
+  else
+    MicPickerIndex := (Current + Delta + Length(MicPickerChoices)) mod Length(MicPickerChoices);
+  MicPickerPlayer := PlayerIndex;
+  PendingMic := MicPickerChoices[MicPickerIndex];
+  with PendingMic do
+    MicPickerOwner := Ini.InputDeviceConfig[ConfigIndex].ChannelToPlayerMap[Channel];
+  if (MicPickerOwner <> CHANNEL_OFF) and (MicPickerOwner <> PlayerIndex + 1) then
+    ScreenPopupCheck.ShowPopup(Format(Language.Translate('SING_SETUP_MIC_MOVE'),
+      [MicPickerOwner]), @ConfirmSetupMicMove, Self)
+  else
+    ApplyMicChoice;
+end;
+
+function TScreenName.CurrentMicChoiceValid: boolean;
+var
+  Device: TAudioInputDevice;
+begin
+  Result := false;
+  with PendingMic do
+  begin
+    if (DeviceIndex < 0) or (DeviceIndex > High(AudioInputProcessor.DeviceList)) or
+        (ConfigIndex < 0) or (ConfigIndex > High(Ini.InputDeviceConfig)) then Exit;
+    Device := AudioInputProcessor.DeviceList[DeviceIndex];
+    if (Device = nil) or (Device.CfgIndex <> ConfigIndex) or (Device.Name <> DeviceName) then Exit;
+    Result := (Channel < Device.AudioFormat.Channels) and
+      (Channel <= High(Ini.InputDeviceConfig[ConfigIndex].ChannelToPlayerMap));
+  end;
+end;
+
+procedure TScreenName.ApplyMicChoice;
+var
+  D, C, Player: integer;
+begin
+  if not CurrentMicChoiceValid or (MicPickerPlayer >= SelectedLocalPlayerCount) or
+    RemoteInputProcessor.HasAssignedPlayer(MicPickerPlayer) then Exit;
+  with PendingMic do
+  begin
+    if Ini.InputDeviceConfig[ConfigIndex].ChannelToPlayerMap[Channel] <> MicPickerOwner then
+      Exit;
+    if OwnsMicPreview then AudioInput.CaptureStop(true);
+    OwnsMicPreview := false;
+    MicPreviewCount := -1;
+    Player := MicPickerPlayer + 1;
+    for D := 0 to High(Ini.InputDeviceConfig) do
+      for C := 0 to High(Ini.InputDeviceConfig[D].ChannelToPlayerMap) do
+        if Ini.InputDeviceConfig[D].ChannelToPlayerMap[C] = Player then
+          Ini.InputDeviceConfig[D].ChannelToPlayerMap[C] := CHANNEL_OFF;
+    Ini.InputDeviceConfig[ConfigIndex].ChannelToPlayerMap[Channel] := Player;
+  end;
+  Ini.SaveRecordingAssignments;
+  RefreshMicSelector;
+end;
+
+function TScreenName.InlineCardMic: boolean;
+begin
+  Result := Theme.Name.Cards.Enabled and not Theme.Name.Cards.EditOutside and
+    Theme.Name.AutoPlacePlayerMic and SelectsS[PlayerMic].Visible;
+end;
+
+function TScreenName.CardEditorScaleY(PlayerID: integer; const Card: TPlayerSlotRect): real;
+var Height: integer;
+begin
+  Height := Card.H;
+  if (PlayerID = PlayerIndex) and InlineCardMic then
+    Height := Max(1, Height - Round(SelectsS[PlayerMic].H) - 8);
+  Result := Height / Max(1, Theme.Name.Cards.Panel.H);
+end;
+
+procedure TScreenName.LayoutMicSelector;
+const
+  Gap = 4;
+  FooterSpace = 55;
+  CardPadding = 15;
+var
+  Anchor: TPlayerSlotRect;
+  Avatar: TThemeButton;
+  I: integer;
+  RightEdge, MicX, MicY, Width, Bottom: single;
+begin
+  if not Theme.Name.AutoPlacePlayerMic then Exit;
+
+  if InlineCardMic then
+  begin
+    Anchor := CardRect(PlayerIndex);
+    MicX := Anchor.X + CardPadding;
+    MicY := Anchor.Y + Anchor.H - SelectsS[PlayerMic].H - Gap;
+    Width := Max(1, Anchor.W - 2 * CardPadding);
+  end
+  else
+  begin
+    with SelectsS[PlayerSelectLevel].TextureSBG do
+    begin
+      Anchor.X := Round(X);
+      Anchor.Y := Round(Y);
+      Anchor.W := Round(W);
+      Anchor.H := Round(H);
+    end;
+    if (Anchor.W < 40) or (Anchor.X >= RenderW) or (Anchor.Y >= RenderH) then
+      with Theme.Name.PlayerButtonName do
+      begin
+        Anchor.X := X;
+        Anchor.Y := Y;
+        Anchor.W := W;
+        Anchor.H := H;
+      end;
+    Bottom := Anchor.Y + Anchor.H;
+    if SelectsS[PlayerSelectVoice].Visible then
+      with SelectsS[PlayerSelectVoice].TextureSBG do
+        Bottom := Max(Bottom, Y + H);
+
+    Width := EnsureRange(Anchor.W, 170, 260);
+    MicX := Anchor.X;
+    MicY := Bottom + Gap;
+    if MicY + SelectsS[PlayerMic].H > RenderH - FooterSpace then
+    begin
+      MicX := Anchor.X + Anchor.W + Gap;
+      MicY := Anchor.Y + (Anchor.H - SelectsS[PlayerMic].H) / 2;
+      RightEdge := RenderW - Gap;
+      Avatar := Theme.Name.PlayerButtonAvatar;
+      if (Avatar.X > MicX) and (Avatar.Y < MicY + SelectsS[PlayerMic].H) and
+         (Avatar.Y + Avatar.H > MicY) then
+        RightEdge := Min(RightEdge, Avatar.X - Gap);
+      if RightEdge - MicX >= 120 then
+        Width := Min(Width, RightEdge - MicX);
+    end;
+  end;
+  with SelectsS[PlayerMic] do
+  begin
+    if not SameValue(SBGW, Width) then
+    begin
+      SBGW := Width;
+      SetSelectOpt(SelectedOption);
+    end;
+    SetX(EnsureRange(MicX, Gap, RenderW - Width - Gap));
+    SetY(MicY);
+    for I := 0 to High(TextOpt) do
+      TextOpt[I].X := TextureSBG.X + TextureSBG.W / 2;
+  end;
+end;
+
+procedure TScreenName.DrawMicSelector;
+var
+  Level: single;
+begin
+  if not SelectsS[PlayerMic].Visible then Exit;
+  LayoutMicSelector;
+  with SelectsS[PlayerMic] do
+  begin
+    if (Length(MicPickerChoices) > 0) and (PlayerIndex < SelectedLocalPlayerCount) and
+       not RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) then
+    begin
+      Tex_SelectS_ArrowL.Alpha := 1;
+      Tex_SelectS_ArrowR.Alpha := 1;
+    end;
+    Draw;
+  end;
+  Level := EnsureRange(MicActivity[PlayerIndex], 0, 1);
+  with SelectsS[PlayerMic].TextureSBG do
+    Renderer.DrawQuad(X, Y + H - 2, 0, W * Level, 2, 1, 1, 1, 0.9);
 end;
 
 function TScreenName.ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
@@ -284,7 +545,6 @@ begin
   if (X > RenderW) then
     X := X - RenderW;
   Y := Round((Y / ScreenH) * RenderH);
-
   if Assigned(DelayMeasurement) then
   begin
     if BtnDown and (MouseButton = SDL_BUTTON_LEFT) then
@@ -301,6 +561,17 @@ begin
     Exit;
   end;
 
+  if BtnDown and (MouseButton = SDL_BUTTON_LEFT) and SelectsS[PlayerMic].Visible and
+     InRegion(X, Y, SelectsS[PlayerMic].GetMouseOverArea) then
+  begin
+    Interaction := PlayerMicIID;
+    StopTextInput;
+    case SelectsS[PlayerMic].OnClick(X, Y) of
+      maLeft: ChangeMic(-1);
+      maRight: ChangeMic(1);
+    end;
+    Exit;
+  end;
   if Theme.Name.Cards.Enabled and (SelectedPlayerCount > 0) and
      BtnDown and (MouseButton = SDL_BUTTON_LEFT) then
   begin
@@ -507,6 +778,12 @@ begin
       if not Repeated then StartDelayMeasurement;
       Exit;
     end;
+    if (PressedKey = SDLK_I) and ((SDL_GetModState and KMOD_CTRL) <> 0) and
+        not Party.bPartyGame and (SelectedPlayerCount > 0) then
+    begin
+      if not Repeated then Interaction := PlayerMicIID;
+      Exit;
+    end;
     if HandleNameSuggestionKey(PressedKey) then
     begin
       PlayerNames[PlayerIndex] := Button[PlayerName].Text[0].Text;
@@ -579,14 +856,29 @@ begin
       SDLK_RETURN:
         begin
           StopTextInput;
-          UpdateAssignedPlayers(true);
-          if Party.bPartyGame then
-            Ini.Players := CountIndex
-          else
+          UpdateAssignedPlayers;
+          if not Party.bPartyGame then
           begin
-            NoLocalPlayers := CountIndex = 0;
-            if not NoLocalPlayers then Ini.Players := CountIndex - 1;
+            if (CountIndex = PhonesOnlyIndex) and (HighestRemoteSlot = 0) then
+            begin
+              Interaction := PlayersCountIID;
+              ScreenPopupError.ShowPopup(Language.Translate('SING_SETUP_NO_PHONE_MIC'));
+              Exit;
+            end;
+            for I := 0 to SelectedLocalPlayerCount - 1 do
+              if PlayerInputSource(I, SelectedLocalPlayerCount) = pisNone then
+              begin
+                PlayerIndex := I;
+                RefreshProfile;
+                Interaction := PlayerMicIID;
+                ScreenPopupError.ShowPopup(Format(
+                  Language.Translate('ERROR_PLAYER_NO_DEVICE_ASSIGNMENT'), [I + 1]));
+                Exit;
+              end;
+            ConfirmedLocalPlayerCount := SelectedLocalPlayerCount;
+            LyricsOnly := CountIndex = LyricsOnlyIndex;
           end;
+          if SelectedPlayerCount > 0 then Ini.Players := SelectedPlayerCount - 1;
 
           for I := 1 to SelectedPlayerCount do
           begin
@@ -660,6 +952,7 @@ begin
       SDLK_RIGHT:
         begin
           AudioPlayback.PlaySound(SoundLib.Change);
+          if Interaction = PlayerMicIID then ChangeMic(1);
 
           if (Interaction in [PlayersCountIID, PlayerColorIID, PlayerSelectLevelIID, PlayerSelectVoiceIID]) then
             InteractInc;
@@ -706,6 +999,7 @@ begin
       SDLK_LEFT:
         begin
           AudioPlayback.PlaySound(SoundLib.Change);
+          if Interaction = PlayerMicIID then ChangeMic(-1);
 
           if (Interaction in [PlayersCountIID, PlayerColorIID, PlayerSelectLevelIID, PlayerSelectVoiceIID]) then
             InteractDec;
@@ -884,42 +1178,88 @@ begin
   end;
 end;
 
+function TScreenName.HighestRemoteSlot: integer;
+begin
+  for Result := UIni.IMaxPlayerCount downto 1 do
+    if RemoteInputProcessor.HasAssignedPlayer(Result - 1) then Exit;
+  Result := 0;
+end;
+
 function TScreenName.SelectedPlayerCount: integer;
 begin
   if Party.bPartyGame then Exit(UIni.IPlayersVals[CountIndex]);
-  Result := AssignedPlayerCount;
+  if CountIndex = LyricsOnlyIndex then Exit(0);
+  Result := Max(SelectedLocalPlayerCount, HighestRemoteSlot);
+end;
+
+function TScreenName.SelectedLocalPlayerCount: integer;
+begin
+  Result := Max(0, CountIndex - PhonesOnlyIndex);
 end;
 
 function TScreenName.LocalPlayerCount: integer;
 begin
-  if NoLocalPlayers then Exit(0);
-  Result := UIni.IPlayersVals[Ini.Players];
+  if ConfirmedLocalPlayerCount < 0 then Exit(UIni.IMaxPlayerCount);
+  Result := ConfirmedLocalPlayerCount;
 end;
 
 function TScreenName.ActivePlayerCount: integer;
-var
-  Slots: cardinal;
+var Slots: cardinal;
 begin
   if Party.bPartyGame then Exit(UIni.IPlayersVals[Ini.Players]);
-  Result := AudioInputProcessor.ConfiguredPlayerCount(LocalPlayerCount, Slots);
+  if LyricsOnly then Exit(0);
+  if ConfirmedLocalPlayerCount < 0 then
+    Exit(AudioInputProcessor.ConfiguredPlayerCount(UIni.IMaxPlayerCount, Slots));
+  Result := Max(ConfirmedLocalPlayerCount, HighestRemoteSlot);
 end;
 
 procedure TScreenName.UpdateAssignedPlayers(Force: boolean);
 var
-  Count: integer;
   Slots: cardinal;
+  Channels, I, Limit: integer;
+  Options: array of UTF8String;
 begin
   if Party.bPartyGame then Exit;
-  Count := AudioInputProcessor.ConfiguredPlayerCount(CountIndex, Slots);
-  if not Force and (Slots = AssignedPlayerSlots) then Exit;
-  AssignedPlayerSlots := Slots;
-  AssignedPlayerCount := Count;
+  Slots := 0;
+  for I := 0 to UIni.IMaxPlayerCount - 1 do
+    if RemoteInputProcessor.HasAssignedPlayer(I) then
+      Slots := Slots or (cardinal(1) shl I);
+  Channels := 0;
+  for I := 0 to High(AudioInputProcessor.DeviceList) do
+    if Assigned(AudioInputProcessor.DeviceList[I]) then
+      Inc(Channels, AudioInputProcessor.DeviceList[I].AudioFormat.Channels);
+  if not Force and (Slots = RemoteSlots) and (Channels = AvailableChannels) then Exit;
+  RemoteSlots := Slots;
+  AvailableChannels := Channels;
+  Limit := 0;
+  for I := 0 to UIni.IMaxPlayerCount - 1 do
+  begin
+    if (Slots and (cardinal(1) shl I)) = 0 then
+    begin
+      if Channels = 0 then Break;
+      Dec(Channels);
+    end;
+    Inc(Limit);
+  end;
+  Limit := Max(1, Limit);
+  CountIndex := Min(CountIndex, PhonesOnlyIndex + Limit);
+  SetLength(Options, PhonesOnlyIndex + Limit + 1);
+  Options[LyricsOnlyIndex] := Language.Translate('CONTINUOUS_ZERO_PLAYERS');
+  Options[PhonesOnlyIndex] := Language.Translate('SING_SETUP_PHONES_ONLY');
+  for I := 1 to Limit do Options[PhonesOnlyIndex + I] := IntToStr(I);
+  UpdateSelectSlideOptions(PlayersCount, Options, CountIndex);
   if not Force then RefreshPlayers;
+end;
+
+function TScreenName.IsRosterGap(Index: integer): boolean;
+begin
+  Result := not Party.bPartyGame and (Index >= SelectedLocalPlayerCount) and
+    not RemoteInputProcessor.HasAssignedPlayer(Index);
 end;
 
 function TScreenName.DisplayPlayerName(Index: integer): UTF8String;
 begin
-  if not Party.bPartyGame and (AssignedPlayerSlots and (cardinal(1) shl Index) = 0) then
+  if IsRosterGap(Index) then
     Result := Language.Translate('SING_OPTIONS_RECORD_NOONE')
   else
     Result := PlayerNames[Index];
@@ -978,6 +1318,7 @@ begin
   Button[Interactions[PlayerSelectIID].Num].Selectable := Count > 0;
   SelectsS[PlayerColor].Visible := Count > 0;
   SelectsS[PlayerSelectLevel].Visible := Count > 0;
+  if Count = 0 then SelectsS[PlayerMic].Visible := false;
   RefreshVoice;
   for I := 0 to High(PlayerAvatarButton) do Button[PlayerAvatarButton[I]].Visible := false;
   RefreshProfile();
@@ -1019,8 +1360,7 @@ var
   Used: boolean;
 begin
   if SelectedPlayerCount = 0 then Exit;
-  Button[PlayerName].Visible := Party.bPartyGame or
-    (AssignedPlayerSlots and (cardinal(1) shl PlayerIndex) <> 0);
+  Button[PlayerName].Visible := not IsRosterGap(PlayerIndex);
   Button[PlayerName].Selectable := Button[PlayerName].Visible;
   // no-avatar for current player
   Button[PlayerAvatarButton[0]].Texture.Free;
@@ -1029,6 +1369,7 @@ begin
   Button[PlayerName].Text[0].Text := PlayerNames[PlayerIndex];
 
   SelectsS[PlayerSelectLevel].SetSelectOpt(PlayerLevel[PlayerIndex]);
+  RefreshMicSelector;
   RefreshVoice;
 
   Count := SelectedPlayerCount;
@@ -1135,6 +1476,9 @@ begin
     SelectsS[PlayerSelectVoice].SBGColR := Col.R;
     SelectsS[PlayerSelectVoice].SBGColG := Col.G;
     SelectsS[PlayerSelectVoice].SBGColB := Col.B;
+    SelectsS[PlayerMic].SBGColR := Col.R;
+    SelectsS[PlayerMic].SBGColG := Col.G;
+    SelectsS[PlayerMic].SBGColB := Col.B;
 
   end;
   DesCol := GetPlayerColor(K);
@@ -1163,6 +1507,9 @@ begin
     SelectsS[PlayerSelectVoice].SBGDColR := DesCol.R;
     SelectsS[PlayerSelectVoice].SBGDColG := DesCol.G;
     SelectsS[PlayerSelectVoice].SBGDColB := DesCol.B;
+    SelectsS[PlayerMic].SBGDColR := DesCol.R;
+    SelectsS[PlayerMic].SBGDColG := DesCol.G;
+    SelectsS[PlayerMic].SBGDColB := DesCol.B;
 
   end;
   if Skin.ColorizeDefaultAvatars then
@@ -1193,22 +1540,8 @@ constructor TScreenName.Create;
 var
   I: integer;
   WhitePixel: cardinal;
-  Notice: TThemeText;
 begin
   inherited Create;
-  Notice := Theme.Name.PlayerSelectTemplateText;
-  Notice.X := 400;
-  Notice.Y := 300;
-  Notice.W := 620;
-  Notice.Align := 1;
-  Notice.Size := 21;
-  Notice.ColR := 1;
-  Notice.ColG := 1;
-  Notice.ColB := 1;
-  Notice.Reflection := false;
-  Notice.Text := Language.Translate('SING_SETUP_NO_LOCAL_INPUT');
-  NoInputText := AddText(Notice);
-
   LoadFromTheme(Theme.Name);
 
   Theme.Name.SelectPlayersCount.oneItemOnly := true;
@@ -1271,6 +1604,13 @@ begin
   Theme.Name.SelectPlayerVoice.showArrows := true;
   PlayerSelectVoice := AddSelectSlide(Theme.Name.SelectPlayerVoice, VoiceIndex, ['']);
   PlayerSelectVoiceIID := High(Interactions);
+
+  Theme.Name.SelectPlayerMic.showArrows := true;
+  Theme.Name.SelectPlayerMic.oneItemOnly := true;
+  PlayerMic := AddSelectSlide(Theme.Name.SelectPlayerMic, MicOption, ['']);
+  PlayerMicIID := High(Interactions);
+  SelectsS[PlayerMic].Visible := false;
+  ConfirmedLocalPlayerCount := -1;
   SelectsS[PlayerSelectVoice].Visible := false;
 
   isScrolling := false;
@@ -1393,6 +1733,7 @@ begin
   StopTextInput;
   if OwnsMicPreview then AudioInput.CaptureStop(true);
   OwnsMicPreview := false;
+  MicDevicesScanned := false;
   FillChar(MicActivity, SizeOf(MicActivity), 0);
   FillChar(MicClippedUntil, SizeOf(MicClippedUntil), 0);
   inherited;
@@ -1412,7 +1753,9 @@ end;
 function TScreenName.DelaySlots: cardinal;
 var LocalCount: integer;
 begin
-  LocalCount := CountIndex;
+  Result := 0;
+  if SelectedPlayerCount = 0 then Exit;
+  LocalCount := SelectedLocalPlayerCount;
   if Party.bPartyGame then LocalCount := SelectedPlayerCount;
   AudioInputProcessor.ConfiguredPlayerCount(LocalCount, Result);
 end;
@@ -1565,8 +1908,7 @@ end;
 
 procedure TScreenName.OnShow;
 var
-  LocalCounts: array of UTF8String;
-  I: integer;
+  I, Count: integer;
   PreviewEnd: real;
 begin
   inherited;
@@ -1586,11 +1928,21 @@ begin
   end
   else
   begin
-    CountIndex := LocalPlayerCount;
-    SetLength(LocalCounts, Length(IPlayers) + 1);
-    for I := 0 to High(LocalCounts) do
-      LocalCounts[I] := Format(Language.Translate('SING_LOCAL_PLAYER_COUNT'), [I]);
-    UpdateSelectSlideOptions(PlayersCount, LocalCounts, CountIndex);
+    ScanMicDevices;
+    CountIndex := LyricsOnlyIndex;
+    if not LyricsOnly then
+    begin
+      Count := ConfirmedLocalPlayerCount;
+      if ConfirmedLocalPlayerCount < 0 then
+      begin
+        Count := 0;
+        for I := 0 to UIni.IMaxPlayerCount - 1 do
+          if PlayerInputSource(I, UIni.IMaxPlayerCount) = pisLocal then Count := I + 1;
+      end;
+      if (Count > 0) or (HighestRemoteSlot > 0) then
+        CountIndex := PhonesOnlyIndex + Count;
+    end;
+    UpdateAssignedPlayers(true);
   end;
 
   for I := 0 to UIni.IMaxPlayerCount-1 do
@@ -1790,27 +2142,28 @@ end;
 
 procedure TScreenName.UpdateMicActivity;
 var
-  I, Count, CaptureCount: integer;
+  I, Count, LocalCount: integer;
   Target, Threshold, Blend: single;
   NowTicks, LastInput: QWord;
   Clipped: boolean;
   C: TRGB;
 begin
   Count := SelectedPlayerCount;
-  CaptureCount := Count;
-  if not Party.bPartyGame then CaptureCount := Min(Count, CountIndex);
-  if CaptureCount <> MicPreviewCount then
+  LocalCount := -1;
+  if not Party.bPartyGame then LocalCount := SelectedLocalPlayerCount;
+  if (Count <> MicPreviewCount) or (LocalCount <> MicPreviewLocalCount) then
   begin
     if OwnsMicPreview then AudioInput.CaptureStop(true);
     OwnsMicPreview := false;
-    MicPreviewCount := CaptureCount;
+    MicPreviewCount := Count;
+    MicPreviewLocalCount := LocalCount;
     FillChar(MicActivity, SizeOf(MicActivity), 0);
     FillChar(MicClippedUntil, SizeOf(MicClippedUntil), 0);
   end;
   // Retry after an outgoing singing screen releases its capture at fade end.
-  if (CaptureCount > 0) and not AudioInput.IsCapturing then
+  if (Count > 0) and not AudioInput.IsCapturing then
   begin
-    AudioInput.CaptureStart(CaptureCount, true);
+    AudioInput.CaptureStart(Count, true, LocalCount);
     OwnsMicPreview := true;
   end;
   Threshold := IThresholdVals[EnsureRange(Ini.ThresholdIndex, 0, High(IThresholdVals))];
@@ -1819,7 +2172,7 @@ begin
   begin
     Target := 0;
     if OwnsMicPreview and (Party.bPartyGame or
-       (AssignedPlayerSlots and (cardinal(1) shl I) <> 0)) then
+       not IsRosterGap(I)) then
     begin
       LastInput := AudioInputProcessor.Sound[I].LastInputTicks;
       if (LastInput <> 0) and (LastInput <= NowTicks) and
@@ -1993,6 +2346,7 @@ begin
         Theme.Name.Cards.NameText.Y, Theme.Name.Cards.NameText.Size, TextColor);
     if I = PlayerIndex then
     begin
+      SY := CardEditorScaleY(I, R);
       if Theme.Name.Cards.EditOutside then
       begin
         R.X := 0; R.Y := 0; SX := 1; SY := 1;
@@ -2061,10 +2415,17 @@ function TScreenName.Draw: boolean;
 var
   dx: real;
   dt: real;
-  I: integer;
+  I, LocalCount: integer;
 begin
   ScreenSong.UpdateTransitionPreview;
-  UpdateAssignedPlayers;
+  if ScanMicDevices then
+  begin
+    UpdateAssignedPlayers(true);
+    RefreshPlayers;
+    RefreshProfile;
+  end
+  else
+    UpdateAssignedPlayers;
   //inherited Draw;
   //heres a little Hack, that causes the Statics
   //are Drawn after the Buttons because of some Blending Problems.
@@ -2103,13 +2464,10 @@ begin
     DrawDelayMeasurement;
     Exit(true);
   end;
-  Text[NoInputText].Visible := not Party.bPartyGame and
-    (CountIndex > 0) and (AssignedPlayerCount = 0);
-  if Text[NoInputText].Visible then
-    Renderer.DrawQuad(70, 283, 0, 660, 56, 0.08, 0.08, 0.10, 0.9);
   if Theme.Name.Cards.Enabled then
   begin
     DrawCards;
+    DrawMicSelector;
     DrawDelayMeasurement;
     Result := true;
     Exit;
@@ -2117,9 +2475,7 @@ begin
   if SelectedPlayerCount > 0 then SetAvatarScroll;
 
   // set current name = name in list
-  if not Party.bPartyGame and (AssignedPlayerSlots and (cardinal(1) shl PlayerIndex) = 0) then
-    Text[PlayerCurrentText[PlayerIndex]].Text := DisplayPlayerName(PlayerIndex)
-  else
+  if Button[PlayerName].Visible then
     Text[PlayerCurrentText[PlayerIndex]].Text := Button[PlayerName].Text[0].Text;
 
   //Instead of Draw FG Procedure:
@@ -2129,22 +2485,24 @@ begin
 
   // SelectsS
   for I := 0 to High(SelectsS) do
-    SelectsS[I].Draw;
+    if I <> PlayerMic then SelectsS[I].Draw;
 
   // Statics
   for I := 0 to High(Statics) do
     Statics[I].Draw;
 
   // and texts
+  LocalCount := -1;
+  if not Party.bPartyGame then LocalCount := SelectedLocalPlayerCount;
   for I := 0 to SelectedPlayerCount - 1 do
     if Statics[PlayerCurrentAvatar[I]].Visible and (Party.bPartyGame or
-       (AssignedPlayerSlots and (cardinal(1) shl I) <> 0)) then
+       not IsRosterGap(I)) then
       with Statics[PlayerCurrentAvatar[I]].Texture do
-        DrawInputSourceBadge(PlayerInputSource(I, IfThen(Party.bPartyGame, IMaxPlayerCount, CountIndex)),
-          X, Y, W, H, ibsSetup, Alpha, ScaleMode);
+        DrawInputSourceBadge(PlayerInputSource(I, LocalCount), X, Y, W, H, ibsSetup, Alpha, ScaleMode);
   for I := 0 to High(Text) do
     Text[I].Draw;
 
+  DrawMicSelector;
   DrawDelayMeasurement;
   Result := true;
 end;
