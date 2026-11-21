@@ -417,7 +417,9 @@ type
     SelectPlayerColor:   TThemeSelectSlide;
     SelectPlayerLevel:   TThemeSelectSlide;
     SelectPlayerVoice:   TThemeSelectSlide;
-    DelayHint: TThemeText;
+    SelectPlayerMic:     TThemeSelectSlide;
+    AutoPlacePlayerMic:  boolean;
+    DelayHint:           TThemeText;
     DelayApplyButton, DelayCancelButton: TThemeButton;
     DelayText: TThemeText;
   end;
@@ -2206,6 +2208,8 @@ begin
       ThemeLoadSelectSlide(Name.SelectPlayersCount, 'NameSelectPlayerCount');
       // Some older themes place the count control outside the screen.
       // Keep the local player count available when there are no microphones.
+      // Some older themes place the count control outside the screen.
+      // Player setup now needs it to reach lyrics-only and phone-only modes.
       with Name.SelectPlayersCount do
         if (X < 0) or (Y < 0) or (X + W + SkipX + SBGW > 800) or
            (Y + H > 600) or (H <= 1) or (SBGW <= 1) then
@@ -2228,6 +2232,28 @@ begin
       Name.SelectPlayerVoice.Y := Name.SelectPlayerLevel.Y + Name.SelectPlayerLevel.H + 5;
       if ThemeIni.SectionExists('NameSelectPlayerVoice') then
         ThemeLoadSelectSlide(Name.SelectPlayerVoice, 'NameSelectPlayerVoice');
+      Name.AutoPlacePlayerMic := ResolveThemeFile('NameSelectPlayerMic') = nil;
+      if not Name.AutoPlacePlayerMic then
+        ThemeLoadSelectSlide(Name.SelectPlayerMic, 'NameSelectPlayerMic')
+      else
+      begin
+        Name.SelectPlayerMic := Name.SelectPlayerLevel;
+        if Name.SelectPlayerMic.TexSBG = '' then
+          ThemeLoadSelectSlide(Name.SelectPlayerMic, 'OptionsSubSelectSlide');
+        with Name.SelectPlayerMic do
+        begin
+          X := 0;
+          Y := 0;
+          W := 0;
+          H := 20;
+          SBGW := 260;
+          SkipX := 0;
+          TextSize := 15;
+          ArrowW := 16;
+          ArrowH := 18;
+        end;
+      end;
+      Name.SelectPlayerMic.Text := '';
 
       ThemeLoadStatic(NamePlayerSelectTemplate.Frame, 'NamePlayerSelectTemplateFrame');
       ThemeLoadText(NamePlayerSelectTemplate.Text, 'NamePlayerSelectTemplateText');

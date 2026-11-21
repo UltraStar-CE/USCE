@@ -74,7 +74,7 @@ type
       function InitializeRecord(ScanMode: TAudioInputScanMode): boolean;
       function FinalizeRecord: boolean;
       function IsCapturing: boolean;
-      procedure CaptureStart(PlayerCount: integer = -1; MonitorOnly: boolean = false);
+      procedure CaptureStart(PlayerCount: integer = -1; MonitorOnly: boolean = false; LocalLimit: integer = -1);
       procedure CaptureStop(MonitorOnly: boolean = false);
       procedure GetFFTData(var data: TFFTData);
       function GetPCMData(var data: TPCMData): Cardinal;
@@ -270,7 +270,7 @@ begin
   Result := false;
 end;
 
-procedure TAudio_Dummy.CaptureStart(PlayerCount: integer; MonitorOnly: boolean);
+procedure TAudio_Dummy.CaptureStart(PlayerCount: integer; MonitorOnly: boolean; LocalLimit: integer);
 begin
 end;
 

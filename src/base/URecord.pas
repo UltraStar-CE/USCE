@@ -252,7 +252,7 @@ type
       function FinalizeRecord: boolean;   virtual;
 
       function IsCapturing: boolean;
-      procedure CaptureStart(PlayerCount: integer = -1; MonitorOnly: boolean = false);
+      procedure CaptureStart(PlayerCount: integer = -1; MonitorOnly: boolean = false; LocalLimit: integer = -1);
       procedure CaptureStop(MonitorOnly: boolean = false);
   end;
 
@@ -1376,7 +1376,7 @@ begin
   Result := Started;
 end;
 
-procedure TAudioInputBase.CaptureStart(PlayerCount: integer; MonitorOnly: boolean);
+procedure TAudioInputBase.CaptureStart(PlayerCount: integer; MonitorOnly: boolean; LocalLimit: integer);
 var
   S:            integer;
   DeviceIndex:  integer;
@@ -1413,7 +1413,7 @@ begin
     for ChannelIndex := 0 to High(DeviceCfg.ChannelToPlayerMap) do
     begin
       Player := DeviceCfg.ChannelToPlayerMap[ChannelIndex] - 1;
-      if (Player < 0) or (Player >= PlayerCount) then
+      if (Player < 0) or (Player >= PlayerCount) or ((LocalLimit >= 0) and (Player >= LocalLimit)) then
       begin
         Device.LinkCaptureBuffer(ChannelIndex, nil);
       end
