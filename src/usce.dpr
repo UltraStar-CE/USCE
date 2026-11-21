@@ -54,10 +54,6 @@ uses
   cwstring,            // Enable Unicode support
   {$ENDIF}
 
-  {$IFNDEF FPC}
-  ctypes                 in 'lib\ctypes\ctypes.pas', // FPC compatibility types for C libs
-  {$ENDIF}
-
   //------------------------------
   //Includes - 3rd Party Libraries
   //------------------------------
@@ -99,16 +95,12 @@ uses
   projectM      in 'lib\projectM\projectM.pas',
   {$ENDIF}
 
-  MidiCons              in 'lib\midi\MidiCons.pas',
-  MidiFile              in 'lib\midi\MidiFile.pas',
   UMidiInput            in 'media\UMidiInput.pas',
   MidiOut               in 'lib\midiemu\MidiOut.pas',
   MidiAudioSourceStream in 'lib\midiemu\MidiAudioSourceStream.pas',
 
   {$IFDEF MSWINDOWS}
   {$IFDEF FPC}
-  // FPC compatibility file for Allocate/DeallocateHWnd
-  WinAllocation in 'lib\other\WinAllocation.pas',
   Windows,
   {$ENDIF}
   {$ENDIF}
@@ -219,7 +211,6 @@ uses
   UCommandLine      in 'base\UCommandLine.pas',
   URingBuffer       in 'base\URingBuffer.pas',
   USingScores       in 'base\USingScores.pas',
-  USingNotes        in 'base\USingNotes.pas',
   UPathUtils        in 'base\UPathUtils.pas',
   UVoiceParts       in 'base\UVoiceParts.pas',
   UVoiceAssignments in 'base\UVoiceAssignments.pas',
