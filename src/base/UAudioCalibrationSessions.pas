@@ -4,6 +4,9 @@ unit UAudioCalibrationSessions;
 {$IFDEF FPC}{$MODE Delphi}{$H+}{$ENDIF}
 interface
 uses Classes, SysUtils, UAudioCalibration;
+
+const UnavailablePhoneCaptureOffset = Low(integer);
+
 type
   TAudioCalibrationSessions = class
   private
@@ -29,8 +32,8 @@ type
     procedure Observe(Index: integer; NowUs: int64; Tone: integer; Valid: boolean);
     procedure Cancel(Index: integer; const PlayerId, RequestId: UTF8String);
     function EffectivePlayerDelay(Index, GlobalDelayMs, ManualTrimMs: integer): integer;
-    function CaptureOffset(const PlayerId: UTF8String): integer;
-    procedure SetCaptureOffset(const PlayerId: UTF8String; OffsetMs: integer);
+    function CaptureOffset(const PlayerId: UTF8String; TrimMs: integer = 0): integer;
+    procedure SetCaptureOffset(const PlayerId: UTF8String; OffsetMs: integer; TrimMs: integer = 0);
   end;
 implementation
 uses Math, fpjson;
@@ -201,23 +204,27 @@ begin
     Result := EnsureRange(Delay, int64(Low(integer)), int64(High(integer)));
   finally LeaveCriticalSection(FLock); end;
 end;
-function TAudioCalibrationSessions.CaptureOffset(const PlayerId: UTF8String): integer;
+function TAudioCalibrationSessions.CaptureOffset(const PlayerId: UTF8String; TrimMs: integer): integer;
+var Baseline: int64;
 begin
-  Result := -1;
+  Result := UnavailablePhoneCaptureOffset;
   if PlayerId = '' then Exit;
   EnterCriticalSection(FLock);
   try
-    Result := StrToIntDef(FCaptureOffsets.Values[PlayerId], -1);
+    if TryStrToInt64(FCaptureOffsets.Values[PlayerId], Baseline) then
+      Result := EnsureRange(Baseline + TrimMs, int64(Low(integer)) + 1, int64(High(integer)));
   finally LeaveCriticalSection(FLock); end;
 end;
 
-procedure TAudioCalibrationSessions.SetCaptureOffset(const PlayerId: UTF8String; OffsetMs: integer);
+procedure TAudioCalibrationSessions.SetCaptureOffset(const PlayerId: UTF8String;
+  OffsetMs: integer; TrimMs: integer);
 begin
   if (PlayerId = '') or (Pos('=', PlayerId) <> 0) or
     (OffsetMs < 0) or (OffsetMs > AUDIO_CALIBRATION_MAX_DELAY_MS) then Exit;
   EnterCriticalSection(FLock);
   try
-    FCaptureOffsets.Values[PlayerId] := IntToStr(OffsetMs);
+    // Apply the measurement with today's trims. Later edits adjust that baseline.
+    FCaptureOffsets.Values[PlayerId] := IntToStr(int64(OffsetMs) - TrimMs);
   finally LeaveCriticalSection(FLock); end;
 end;
 

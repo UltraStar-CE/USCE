@@ -16,7 +16,14 @@ begin
     Sessions.Tick(1, 'phone-a', true, true, 1000001, Message);
     Assert(Sessions.CaptureOffset('phone-a') = 112);
     Assert(Sessions.CaptureOffset('phone-b') = 64);
-    Assert(Sessions.CaptureOffset('phone-c') = -1);
+    Assert(Sessions.CaptureOffset('phone-c') = UnavailablePhoneCaptureOffset);
+    Sessions.SetCaptureOffset('phone-a', 80, -55);
+    Assert(Sessions.CaptureOffset('phone-a', -55) = 80, 'apply supersedes an old USB trim');
+    Assert(Sessions.CaptureOffset('phone-a', -35) = 100, 'later manual changes are relative');
+    Sessions.SetCaptureOffset('phone-a', 20, 21);
+    Assert(Sessions.CaptureOffset('phone-a', 21) = 20, 'a positive trim may exceed the measurement');
+    Assert(Sessions.CaptureOffset('phone-a', 0) = -1, 'a signed effective offset is still usable');
+    Assert(Sessions.CaptureOffset('phone-b') = 64, 'each phone keeps its own baseline');
     Assert(not Sessions.Queue(-1, 'p', 'id', 0, 1000000));
     Assert(not Sessions.Queue(12, 'p', 'id', 0, 1000000));
     Assert(not Sessions.Queue(0, '', 'id', 0, 1000000));
