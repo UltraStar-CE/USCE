@@ -74,6 +74,7 @@ type
     function GetPosition: real; virtual; abstract;
     procedure GetFrame(Time: Extended); virtual; abstract;
     function Finished: boolean; virtual; abstract;
+    function HasFrame: boolean;
 
     procedure SetScreen(Screen: integer);
     function GetScreen(): integer;
@@ -409,5 +410,10 @@ begin
     Result := 0;
 end;
 
+
+function TVideoPresenter.HasFrame: boolean;
+begin
+  Result := fFrameTexValid;
+end;
 
 end.
