@@ -296,14 +296,6 @@ uses
   ULog;
 
 const
-  {$IFDEF DARWIN}
-  PortMidiLibraries: array[0..2] of string = (
-    '/opt/homebrew/lib/libportmidi.dylib', '/usr/local/lib/libportmidi.dylib',
-    'libportmidi.dylib');
-  {$ELSE}
-  PortMidiLibraries: array[0..2] of string = (
-    'libportmidi.so.2', 'libportmidi.so.0', 'libportmidi.so');
-  {$ENDIF}
   MidiBufferSize = 64;
 
 {$PUSH}
@@ -339,13 +331,19 @@ var
   PmClose: function(Stream: Pointer): LongInt; cdecl;
 
 function LoadPortMidi: Boolean;
+const
+  {$IFDEF DARWIN}
+  LibraryNames: array[0..1] of string = ('libportmidi.2.dylib', 'libportmidi.dylib');
+  {$ELSE}
+  LibraryNames: array[0..2] of string = ('libportmidi.so.2', 'libportmidi.so.0', 'libportmidi.so');
+  {$ENDIF}
 var
   LibName: string;
 begin
   if PortMidiHandle <> NilHandle then
     Exit(True);
 
-  for LibName in PortMidiLibraries do
+  for LibName in LibraryNames do
   begin
     PortMidiHandle := LoadLibrary(LibName);
     if PortMidiHandle = NilHandle then
