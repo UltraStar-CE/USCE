@@ -13,4 +13,9 @@ Additional USCE contributors:
 
 USCE contribution history: https://github.com/UltraStar-CE/USCE
 Inherited work retains its original copyrights.
-Original USDX project and contributor credits: https://github.com/UltraStar-Deluxe/USDX
+The USDX contributor notice included with USCE is in
+
+game/LICENSE.usdx-attribution.txt
+
+The latest version is available in the upstream USDX repository:
+https://github.com/UltraStar-Deluxe/USDX/blob/master/COPYRIGHT.txt
