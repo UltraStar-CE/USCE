@@ -182,6 +182,7 @@ type
       procedure EaseScoreIn(PlayerNumber: integer; ScoreType: TScoreBarType);
 
       procedure DrawPlayerBars;
+      procedure AlignPlayerAvatar(SlotIndex, PlayerNumber: integer);
 
       procedure DrawBar(BarType: TScoreBarType; PlayerNumber: integer; BarStartPosY: single; NewHeight: real);
 
@@ -1365,6 +1366,32 @@ begin
   Result := true;
 end;
 
+procedure TScreenScore.AlignPlayerAvatar(SlotIndex, PlayerNumber: integer);
+var
+  Avatar: TThemeStatic;
+  DrawX, DrawY, DrawW, DrawH, OffsetX: real;
+  I: integer;
+begin
+  if not Theme.Score.AlignAvatarWithName then Exit;
+
+  Avatar := Theme.Score.AvatarStatic[SlotIndex];
+  DrawX := Avatar.X;
+  DrawY := Avatar.Y;
+  DrawW := Avatar.W;
+  DrawH := Avatar.H;
+  ResolveLayoutRect(DrawX, DrawY, DrawW, DrawH, Avatar.ScaleMode);
+  // Move the picture and frame together after accounting for the square fit.
+  with Text[TextName[SlotIndex]] do
+    OffsetX := X + Size * Theme.Score.AvatarNameInset - DrawX;
+  Statics[AvatarStaticRef[PlayerNumber]].Texture.X := Avatar.X + OffsetX;
+
+  if Theme.Score.AvatarFrameTexture = '' then Exit;
+  for I := 0 to High(Theme.Score.PlayerStatic[SlotIndex]) do
+    with Theme.Score.PlayerStatic[SlotIndex, I] do
+      if SameText(Tex, Theme.Score.AvatarFrameTexture) then
+        Statics[PlayerStatic[SlotIndex, I]].Texture.X := X + OffsetX;
+end;
+
 procedure TscreenScore.FillPlayerItems(PlayerNumber: integer);
 var
   SlotIndex: integer;
@@ -1372,6 +1399,7 @@ begin
   SlotIndex := PlayerPositionMap[PlayerNumber-1].Position;
   if (SlotIndex > 0) and (ScreenAct = PlayerPositionMap[PlayerNumber-1].Screen) then
   begin
+    AlignPlayerAvatar(SlotIndex, PlayerNumber);
     Text[TextName[SlotIndex]].Text := Player[PlayerNumber-1].Name;
     // end todo
 

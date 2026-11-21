@@ -614,6 +614,9 @@ type
     TextArtistTitle:  TThemeText;
     PlayerLayoutArea: TPlayerSlotRect;
     PlayerLayoutExtraColsBias: integer;
+    AlignAvatarWithName: boolean;
+    AvatarNameInset: real;
+    AvatarFrameTexture: string;
     LayoutPlayers: integer;
 
     PlayerStatic:     array[1..UIni.IMaxPlayerCount] of AThemeStatic;
@@ -5116,6 +5119,9 @@ begin
   ThemeLoadStatics(BaseTemplate.PlayerStatic,      'ScorePlayerTemplateStatic');
   ThemeLoadTexts(BaseTemplate.PlayerTexts,         'ScorePlayerTemplateText');
   ThemeLoadStatic(BaseTemplate.AvatarStatic,       'ScorePlayerTemplateAvatar');
+  Score.AlignAvatarWithName := ThemeIni.ReadBool('ScorePlayerTemplateAvatar', 'AlignWithName', false);
+  Score.AvatarNameInset := ThemeIni.ReadFloat('ScorePlayerTemplateAvatar', 'NameInset', 0);
+  Score.AvatarFrameTexture := ThemeIni.ReadString('ScorePlayerTemplateAvatar', 'FrameTexture', '');
   ThemeLoadText(BaseTemplate.TextName,             'ScorePlayerTemplateTextName');
   ThemeLoadText(BaseTemplate.TextScore,            'ScorePlayerTemplateTextScore');
   ThemeLoadText(BaseTemplate.TextNotes,            'ScorePlayerTemplateTextNotes');
