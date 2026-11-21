@@ -3770,6 +3770,7 @@ var
   dx:         real;
   dt:         real;
   VideoAlpha: real;
+  VideoReady, WasReady: boolean;
   I, J:       integer;
 
   procedure SetMarkedCardTexture(StaticIndex: integer; const ThemeStatic: TThemeStatic);
@@ -3908,20 +3909,23 @@ begin
     CoverTime := 0;
   end;
 
+  WasReady := Assigned(fCurrentVideo) and fCurrentVideo.HasFrame;
   if HasSelection and Assigned(fCurrentVideo) and (ScreenAct = 1) then
   begin
     fCurrentVideo.GetFrame(CatSongs.Song[Interaction].VideoGAP + AudioPlayback.Position);
     if fCurrentVideo.Finished then StopVideoPreview;
   end;
+  VideoReady := HasSelection and Assigned(fCurrentVideo) and fCurrentVideo.HasFrame;
+  if VideoReady and not WasReady then CoverTime := 1;
 
   //Fading Functions, Only if Covertime is under 5 Seconds
   if (TSongMenuMode(Ini.SongMenu) in [smChessboard, smList]) then
   begin
-    if not(Assigned(fCurrentVideo)) then
+    if not VideoReady then
       Statics[StaticActual].Texture.Alpha := 1
     else
     begin
-      if (CoverTime < 9) and Assigned(fCurrentVideo) then
+      if (CoverTime < 9) then
       begin
 
         //Update Fading Time
@@ -4015,7 +4019,7 @@ begin
   //We draw Buttons for our own
   for I := 0 to High(Button) do
   begin
-    if (TSongMenuMode(Ini.SongMenu) in [smChessboard, smList]) or (((I<>Interaction) or not Assigned(fCurrentVideo) or (VideoAlpha<1) or FinishedMusic)) then
+    if (TSongMenuMode(Ini.SongMenu) in [smChessboard, smList]) or (((I<>Interaction) or not VideoReady or (VideoAlpha<1) or FinishedMusic)) then
     begin
         // todo: there's probably a better way to set the selected one
         //  but it's better than every not-yet-selected button being rendered as selected
@@ -4026,7 +4030,7 @@ begin
 
   //  StopVideoPreview;
 
-  if HasSelection and Assigned(fCurrentVideo) then
+  if VideoReady then
   begin
     fCurrentVideo.SetScreen(ScreenAct);
     fCurrentVideo.Alpha := VideoAlpha;
