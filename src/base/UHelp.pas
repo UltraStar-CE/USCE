@@ -202,6 +202,11 @@ begin
       end;
     end;
   end;
+  if (actualID <> '') and not SetHelpID(actualID) then
+  begin
+    AEntry := Default(TEntry);
+    actualID := '';
+  end;
 end;
 
 procedure THelp.LoadLanguage(const Language: String);
