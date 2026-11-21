@@ -1,26 +1,34 @@
 {
   "repository": "UltraStar-Deluxe/USDX",
   "branch": "master",
-  "from": "c8aea5cfc9e3a9da4b56d9538266d2e62d2b9c73",
-  "sha": "68acb0329cd84df7920fed608618d09f64310faf",
+  "from": "68acb0329cd84df7920fed608618d09f64310faf",
+  "sha": "fcba3732aa3107871497656052b65a80e6d0a13d",
   "meaning": "Assessed upstream tip with dispositions for each change",
-  "comparison": "https://github.com/UltraStar-Deluxe/USDX/compare/c8aea5cfc9e3a9da4b56d9538266d2e62d2b9c73...68acb0329cd84df7920fed608618d09f64310faf",
+  "comparison": "https://github.com/UltraStar-Deluxe/USDX/compare/68acb0329cd84df7920fed608618d09f64310faf...fcba3732aa3107871497656052b65a80e6d0a13d",
   "commits": [
     {
-      "sha": "e1586eeabf2316519c117f68dd7e85c1738a4100",
-      "url": "https://github.com/UltraStar-Deluxe/USDX/commit/e1586eeabf2316519c117f68dd7e85c1738a4100",
-      "authoredAt": "2026-11-19T21:25:54Z",
-      "subject": "chore: remove old unused vendored libraries + demos + OpenCV 2.4 leftovers (#1481)",
-      "disposition": "Merged. USCE removed all 214 files still present. The two MIDI demo files were already absent.",
-      "output": "https://github.com/UltraStar-CE/USCE/pull/434"
+      "sha": "0f0ff6cfc1b302e1c2f0df53fb4f20b975979ea1",
+      "url": "https://github.com/UltraStar-Deluxe/USDX/commit/0f0ff6cfc1b302e1c2f0df53fb4f20b975979ea1",
+      "authoredAt": "2026-11-21T03:03:10Z",
+      "subject": "fix: try improve mouse debounce for video sync",
+      "disposition": "Already covered. USCE cancels pending previews when List or Chessboard selection changes and restarts its preview debounce for direct hover.",
+      "output": "https://github.com/UltraStar-CE/USCE/commit/e09a9ead"
     },
     {
-      "sha": "68acb0329cd84df7920fed608618d09f64310faf",
-      "url": "https://github.com/UltraStar-Deluxe/USDX/commit/68acb0329cd84df7920fed608618d09f64310faf",
-      "authoredAt": "2026-11-19T21:26:45Z",
-      "subject": "fix: remove FFmpeg compile-time version checks from 4.0 - 7.0 bindings (#1480)",
-      "disposition": "Merged as a patch-equivalent cherry-pick.",
-      "output": "https://github.com/UltraStar-CE/USCE/pull/435"
+      "sha": "ac41ce437340625641575b65e18c15596219402c",
+      "url": "https://github.com/UltraStar-Deluxe/USDX/commit/ac41ce437340625641575b65e18c15596219402c",
+      "authoredAt": "2026-11-21T04:31:04Z",
+      "subject": "fix(#1390): reuse the loaded tile texture for the big song cover",
+      "disposition": "Adapted and tested in the open cover-reuse PR. The port borrows the loaded tile image with its own layout and keeps the tile alive while the detail view uses it. The port still awaits independent review.",
+      "output": "https://github.com/UltraStar-CE/USCE/pull/440"
+    },
+    {
+      "sha": "fcba3732aa3107871497656052b65a80e6d0a13d",
+      "url": "https://github.com/UltraStar-Deluxe/USDX/commit/fcba3732aa3107871497656052b65a80e6d0a13d",
+      "authoredAt": "2026-11-21T05:08:12Z",
+      "subject": "fix(#1390): open the preview video only shortly before it becomes visible",
+      "disposition": "Already covered. USCE opens the video separately after the song selection and screen transition have settled, using its existing 150 ms debounce.",
+      "output": "https://github.com/UltraStar-CE/USCE/commit/7f2abf2b"
     }
   ]
 }

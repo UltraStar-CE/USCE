@@ -15790,25 +15790,19 @@
     {
       "repository": "Wiccio/USDX",
       "branch": "patch-4",
-      "head": "95dfbf9cfbaa5e025ed0f7ce022e3d5ae78e373c",
-      "upstreamHead": "7f49e685c7d7affcd0bd6501f46f6af801e4d880",
-      "comparisonBase": "7b4edd33961d1c3be497db089e11f3a98c448a58",
-      "comparisonKind": "outside-usce",
-      "ahead": 2,
-      "behind": 743,
-      "compareUrl": "https://github.com/UltraStar-CE/USCE/compare/7b4edd33961d1c3be497db089e11f3a98c448a58...95dfbf9cfbaa5e025ed0f7ce022e3d5ae78e373c",
+      "head": "eb9923033d8fe6f67a9d00e41a9d0589731b98a0",
+      "upstreamHead": "fcba3732aa3107871497656052b65a80e6d0a13d",
+      "comparisonBase": "95dfbf9cfbaa5e025ed0f7ce022e3d5ae78e373c",
+      "comparisonKind": "since-checkpoint",
+      "ahead": 1,
+      "behind": 0,
+      "compareUrl": "https://github.com/UltraStar-CE/USCE/compare/95dfbf9cfbaa5e025ed0f7ce022e3d5ae78e373c...eb9923033d8fe6f67a9d00e41a9d0589731b98a0",
       "novelCommits": [
         {
-          "sha": "1fa337ffc5d43305e770475364c78b279bc42776",
-          "title": "Create Esperanto.ini",
+          "sha": "eb9923033d8fe6f67a9d00e41a9d0589731b98a0",
+          "title": "Update Esperanto translations",
           "author": "Wiccio",
-          "authoredAt": "2026-10-03T19:15:30Z"
-        },
-        {
-          "sha": "95dfbf9cfbaa5e025ed0f7ce022e3d5ae78e373c",
-          "title": "Update Esperanto.ini",
-          "author": "Wiccio",
-          "authoredAt": "2026-10-22T05:31:49Z"
+          "authoredAt": "2026-11-21T09:13:23Z"
         }
       ],
       "ignoredKnownHistoryCommitCount": 0,
@@ -15816,33 +15810,32 @@
       "ignoredOldCommitCount": 0,
       "commits": [
         {
-          "sha": "1fa337ffc5d43305e770475364c78b279bc42776",
-          "title": "Create Esperanto.ini",
+          "sha": "eb9923033d8fe6f67a9d00e41a9d0589731b98a0",
+          "title": "Update Esperanto translations",
           "author": "Wiccio",
-          "authoredAt": "2026-10-03T19:15:30Z"
-        },
-        {
-          "sha": "95dfbf9cfbaa5e025ed0f7ce022e3d5ae78e373c",
-          "title": "Update Esperanto.ini",
-          "author": "Wiccio",
-          "authoredAt": "2026-10-22T05:31:49Z"
+          "authoredAt": "2026-11-21T09:13:23Z"
         }
       ],
       "newCommits": [
         {
-          "sha": "1fa337ffc5d43305e770475364c78b279bc42776",
-          "title": "Create Esperanto.ini",
+          "sha": "eb9923033d8fe6f67a9d00e41a9d0589731b98a0",
+          "title": "Update Esperanto translations",
           "author": "Wiccio",
-          "authoredAt": "2026-10-03T19:15:30Z"
-        },
-        {
-          "sha": "95dfbf9cfbaa5e025ed0f7ce022e3d5ae78e373c",
-          "title": "Update Esperanto.ini",
-          "author": "Wiccio",
-          "authoredAt": "2026-10-22T05:31:49Z"
+          "authoredAt": "2026-11-21T09:13:23Z"
         }
       ],
       "assessment": {
+        "decision": "ported",
+        "assessedAgainst": "d4f6295df6eeb8242b9ba864749a5d2f49130367",
+        "assessedAt": "2026-11-21",
+        "reason": "Adapted 51 current Esperanto text values, preserving the source author, USCE branding and format placeholders. Fourteen keys absent from the current English fallback were left alone.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/455"
+        ],
+        "reviewedCommitCount": 1
+      },
+      "previousHead": "95dfbf9cfbaa5e025ed0f7ce022e3d5ae78e373c",
+      "previousAssessment": {
         "decision": "already-covered",
         "assessedAgainst": "7b4edd33961d1c3be497db089e11f3a98c448a58",
         "assessedAt": "2026-11-17",
@@ -15855,7 +15848,40 @@
           "https://github.com/UltraStar-CE/USCE/issues/358"
         ],
         "reviewedCommitCount": 2
-      }
+      },
+      "assessmentHistory": [
+        {
+          "head": "95dfbf9cfbaa5e025ed0f7ce022e3d5ae78e373c",
+          "commits": [
+            {
+              "sha": "1fa337ffc5d43305e770475364c78b279bc42776",
+              "title": "Create Esperanto.ini",
+              "author": "Wiccio",
+              "authoredAt": "2026-10-03T19:15:30Z"
+            },
+            {
+              "sha": "95dfbf9cfbaa5e025ed0f7ce022e3d5ae78e373c",
+              "title": "Update Esperanto.ini",
+              "author": "Wiccio",
+              "authoredAt": "2026-10-22T05:31:49Z"
+            }
+          ],
+          "assessment": {
+            "decision": "already-covered",
+            "assessedAgainst": "7b4edd33961d1c3be497db089e11f3a98c448a58",
+            "assessedAt": "2026-11-17",
+            "reason": "Main already localizes and restores Party/Tournament names with its own player counts, ships Esperanto, and uses bounded installer downloads. The Windows resolution form was removed, so its expanded list is not applicable.",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/pull/125",
+              "https://github.com/UltraStar-CE/USCE/pull/372",
+              "https://github.com/UltraStar-CE/USCE/pull/27",
+              "https://github.com/UltraStar-CE/USCE/pull/349",
+              "https://github.com/UltraStar-CE/USCE/issues/358"
+            ],
+            "reviewedCommitCount": 2
+          }
+        }
+      ]
     },
     {
       "repository": "Wiccio/USDX",
@@ -19270,6 +19296,54 @@
         "usceReferences": [
           "https://github.com/UltraStar-CE/USCE/pull/432",
           "https://github.com/UltraStar-CE/USCE/blob/5cde5a289b5582746c348cd038c45112b8cda67e/docs/usce-game-bridge-ipc.md"
+        ],
+        "reviewedCommitCount": 1
+      }
+    },
+    {
+      "repository": "tomkenner/USDX",
+      "branch": "song-autoreload",
+      "head": "60e5e8babc6baa6b1af585319351a48cd06f43d0",
+      "upstreamHead": "fcba3732aa3107871497656052b65a80e6d0a13d",
+      "comparisonBase": "d4f6295df6eeb8242b9ba864749a5d2f49130367",
+      "comparisonKind": "outside-usce",
+      "ahead": 1,
+      "behind": 853,
+      "compareUrl": "https://github.com/UltraStar-CE/USCE/compare/d4f6295df6eeb8242b9ba864749a5d2f49130367...60e5e8babc6baa6b1af585319351a48cd06f43d0",
+      "novelCommits": [
+        {
+          "sha": "60e5e8babc6baa6b1af585319351a48cd06f43d0",
+          "title": "feat: reload songs automatically when the song folders change",
+          "author": "tomkenner",
+          "authoredAt": "2026-11-21T08:19:20Z"
+        }
+      ],
+      "ignoredKnownHistoryCommitCount": 0,
+      "ignoredUpstreamCommitCount": 0,
+      "ignoredOldCommitCount": 0,
+      "commits": [
+        {
+          "sha": "60e5e8babc6baa6b1af585319351a48cd06f43d0",
+          "title": "feat: reload songs automatically when the song folders change",
+          "author": "tomkenner",
+          "authoredAt": "2026-11-21T08:19:20Z"
+        }
+      ],
+      "newCommits": [
+        {
+          "sha": "60e5e8babc6baa6b1af585319351a48cd06f43d0",
+          "title": "feat: reload songs automatically when the song folders change",
+          "author": "tomkenner",
+          "authoredAt": "2026-11-21T08:19:20Z"
+        }
+      ],
+      "assessment": {
+        "decision": "already-covered",
+        "assessedAgainst": "d4f6295df6eeb8242b9ba864749a5d2f49130367",
+        "assessedAt": "2026-11-21",
+        "reason": "USCE main already monitors song folders with native watchers on Windows, Linux and macOS. Its staged refresh preserves selections, filters and playlists and defers changes during unsafe screens and transitions.",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/pull/315"
         ],
         "reviewedCommitCount": 1
       }
