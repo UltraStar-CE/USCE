@@ -157,6 +157,7 @@ type
 
       procedure GetFrame(Time: Extended);
       function Finished: boolean;
+      function HasFrame: boolean;
       procedure Draw();
 
       property Screen: integer read GetScreen;
@@ -532,6 +533,11 @@ end;
 function TVideo_Dummy.GetReflectionSpacing(): double;
 begin
   Result := 0;
+end;
+
+function TVideo_Dummy.HasFrame: boolean;
+begin
+  Result := false;
 end;
 
 function TVideo_Dummy.Finished: boolean;

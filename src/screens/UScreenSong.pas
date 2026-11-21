@@ -3896,6 +3896,7 @@ var
   dx:         real;
   dt:         real;
   VideoAlpha: real;
+  VideoReady, WasReady: boolean;
   FooterY: real;
   I, J, InsertAt: integer;
   RouletteCovers: array of integer;
@@ -4057,20 +4058,23 @@ begin
     CoverTime := 0;
   end;
 
+  WasReady := Assigned(fCurrentVideo) and fCurrentVideo.HasFrame;
   if HasSelection and Assigned(fCurrentVideo) and (ScreenAct = 1) then
   begin
     fCurrentVideo.GetFrame(CatSongs.Song[Interaction].VideoGAP + AudioPlayback.Position);
     if fCurrentVideo.Finished then StopVideoPreview;
   end;
+  VideoReady := HasSelection and Assigned(fCurrentVideo) and fCurrentVideo.HasFrame;
+  if VideoReady and not WasReady then CoverTime := 1;
 
   //Fading Functions, Only if Covertime is under 5 Seconds
   if (TSongMenuMode(Ini.SongMenu) in [smChessboard, smList]) then
   begin
-    if not(Assigned(fCurrentVideo)) then
+    if not VideoReady then
       Statics[StaticActual].Texture.Alpha := 1
     else
     begin
-      if (CoverTime < 9) and Assigned(fCurrentVideo) then
+      if (CoverTime < 9) then
       begin
 
         //Update Fading Time
@@ -4167,7 +4171,7 @@ begin
     for I := 0 to High(Button) do
     begin
       if not Button[I].Visible or
-         ((I = Interaction) and Assigned(fCurrentVideo) and (VideoAlpha >= 1) and not FinishedMusic) then
+         ((I = Interaction) and VideoReady and (VideoAlpha >= 1) and not FinishedMusic) then
         Continue;
       InsertAt := Length(RouletteCovers);
       SetLength(RouletteCovers, InsertAt + 1);
@@ -4193,7 +4197,7 @@ begin
 
   //  StopVideoPreview;
 
-  if HasSelection and Assigned(fCurrentVideo) then
+  if VideoReady then
   begin
     fCurrentVideo.SetScreen(ScreenAct);
     fCurrentVideo.Alpha := VideoAlpha;
