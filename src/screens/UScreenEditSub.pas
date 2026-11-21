@@ -6127,7 +6127,9 @@ begin
   PianoKeysLow := Ini.PianoKeysLow;
   PianoKeysHigh := Ini.PianoKeysHigh;
 
+  {$IFDEF MSWINDOWS}
   OpenMidiIn(OnMidiNote);
+  {$ENDIF}
 end;
 
 destructor TScreenEditSub.Destroy;
@@ -6618,6 +6620,9 @@ end;
 procedure TScreenEditSub.OnShowFinish;
 begin
   inherited;
+  {$IF DEFINED(LINUX) OR DEFINED(DARWIN)}
+  OpenMidiIn(OnMidiNote);
+  {$ENDIF}
   // The outgoing song screen resets the shared playback volume in OnHide,
   // after this editor's OnShow opened its audio. Reapply the editor's setting.
   AudioPlayback.SetVolume(EnsureRange(Ini.AudioVolume, 0, 100) / 100);
@@ -6652,6 +6657,9 @@ var
   NoteIndex: Integer;
   Count:     Integer;
 begin
+  {$IF DEFINED(LINUX) OR DEFINED(DARWIN)}
+  PollMidiIn;
+  {$ENDIF}
   SyncVolumeSlidersFromIni;
   PlayPendingNoteClick;
 
@@ -6967,6 +6975,9 @@ end;
 procedure TScreenEditSub.OnHide;
 begin
   inherited;
+  {$IF DEFINED(LINUX) OR DEFINED(DARWIN)}
+  CloseMidiIn;
+  {$ENDIF}
   CancelPendingNoteClick;
   PressedNoteId := -1;
   StopMidiPlayback;
