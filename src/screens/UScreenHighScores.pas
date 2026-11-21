@@ -692,7 +692,11 @@ end;
 procedure TScreenHighScores.OnWindowResized;
 begin
   inherited;
-  if CurrentSong <> nil then ShowScoresForDifficulty(VisibleDifficulty);
+  if CurrentSong <> nil then
+  begin
+    SetResultSongTitle(Text[TextArtistTitle], CurrentSong.Artist + ' - ' + CurrentSong.Title, RenderW);
+    ShowScoresForDifficulty(VisibleDifficulty);
+  end;
 end;
 
 procedure TScreenHighScores.OnShow;
@@ -721,7 +725,7 @@ begin
   UpdateHeaderText;
   LoadCurrentSongScores;
 
-  Text[TextArtistTitle].Text := CurrentSong.Artist + ' - ' + CurrentSong.Title;
+  SetResultSongTitle(Text[TextArtistTitle], CurrentSong.Artist + ' - ' + CurrentSong.Title, RenderW);
 
   if Ini.HighScoreScreenAllDifficulties then VisibleDifficulty := 3;
   if (VisibleDifficulty < 3) and
