@@ -120,7 +120,7 @@ type
       DelayMeasureButton, DelayApplyButton, DelayCancelButton: integer;
       MicActivity: array[0..UIni.IMaxPlayerCount-1] of single;
       MicClippedUntil: array[0..UIni.IMaxPlayerCount-1] of QWord;
-      MicPickerIndex, MicPickerPlayer, MicPickerOwner: integer;
+      MicPickerPlayer, MicPickerOwner: integer;
       MicPickerChoices: array of TSetupMicChannel;
       PendingMic: TSetupMicChannel;
       function AddDelayButton(const Style: TThemeButton; const Key: UTF8String): integer;
@@ -357,20 +357,31 @@ begin
 end;
 
 procedure TScreenName.ChangeMic(Delta: integer);
-var Current: integer;
+var I, Current, Choice: integer;
 begin
   if (PlayerIndex >= SelectedLocalPlayerCount) or RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) then Exit;
   Current := BuildMicChoices;
   if Length(MicPickerChoices) = 0 then Exit;
+  // Keep browsing from a declined proposal if the same channel still exists.
+  if MicPickerPlayer = PlayerIndex then
+    for I := 0 to High(MicPickerChoices) do
+      with MicPickerChoices[I] do
+        if (DeviceIndex = PendingMic.DeviceIndex) and
+           (ConfigIndex = PendingMic.ConfigIndex) and
+           (DeviceName = PendingMic.DeviceName) and (Channel = PendingMic.Channel) then
+        begin
+          Current := I;
+          Break;
+        end;
   if Current < 0 then
   begin
-    if Delta > 0 then MicPickerIndex := 0
-    else MicPickerIndex := High(MicPickerChoices);
+    if Delta > 0 then Choice := 0
+    else Choice := High(MicPickerChoices);
   end
   else
-    MicPickerIndex := (Current + Delta + Length(MicPickerChoices)) mod Length(MicPickerChoices);
+    Choice := (Current + Delta + Length(MicPickerChoices)) mod Length(MicPickerChoices);
   MicPickerPlayer := PlayerIndex;
-  PendingMic := MicPickerChoices[MicPickerIndex];
+  PendingMic := MicPickerChoices[Choice];
   with PendingMic do
     MicPickerOwner := Ini.InputDeviceConfig[ConfigIndex].ChannelToPlayerMap[Channel];
   if (MicPickerOwner <> CHANNEL_OFF) and (MicPickerOwner <> PlayerIndex + 1) then
@@ -416,6 +427,7 @@ begin
           Ini.InputDeviceConfig[D].ChannelToPlayerMap[C] := CHANNEL_OFF;
     Ini.InputDeviceConfig[ConfigIndex].ChannelToPlayerMap[Channel] := Player;
   end;
+  MicPickerPlayer := -1;
   Ini.SaveRecordingAssignments;
   RefreshMicSelector;
 end;
@@ -877,6 +889,7 @@ begin
               end;
             ConfirmedLocalPlayerCount := SelectedLocalPlayerCount;
             LyricsOnly := CountIndex = LyricsOnlyIndex;
+            if not LyricsOnly then Ini.SetupLocalPlayers := ConfirmedLocalPlayerCount;
           end;
           if SelectedPlayerCount > 0 then Ini.Players := SelectedPlayerCount - 1;
 
@@ -1610,7 +1623,8 @@ begin
   PlayerMic := AddSelectSlide(Theme.Name.SelectPlayerMic, MicOption, ['']);
   PlayerMicIID := High(Interactions);
   SelectsS[PlayerMic].Visible := false;
-  ConfirmedLocalPlayerCount := -1;
+  MicPickerPlayer := -1;
+  ConfirmedLocalPlayerCount := Ini.SetupLocalPlayers;
   SelectsS[PlayerSelectVoice].Visible := false;
 
   isScrolling := false;
@@ -1734,6 +1748,7 @@ begin
   if OwnsMicPreview then AudioInput.CaptureStop(true);
   OwnsMicPreview := false;
   MicDevicesScanned := false;
+  MicPickerPlayer := -1;
   FillChar(MicActivity, SizeOf(MicActivity), 0);
   FillChar(MicClippedUntil, SizeOf(MicClippedUntil), 0);
   inherited;
@@ -1933,13 +1948,13 @@ begin
     if not LyricsOnly then
     begin
       Count := ConfirmedLocalPlayerCount;
-      if ConfirmedLocalPlayerCount < 0 then
+      if Count < 0 then
       begin
         Count := 0;
-        for I := 0 to UIni.IMaxPlayerCount - 1 do
-          if PlayerInputSource(I, UIni.IMaxPlayerCount) = pisLocal then Count := I + 1;
+        if Length(AudioInputProcessor.DeviceList) > 0 then
+          Count := UIni.IPlayersVals[Ini.Players];
       end;
-      if (Count > 0) or (HighestRemoteSlot > 0) then
+      if (ConfirmedLocalPlayerCount >= 0) or (Count > 0) or (HighestRemoteSlot > 0) then
         CountIndex := PhonesOnlyIndex + Count;
     end;
     UpdateAssignedPlayers(true);
