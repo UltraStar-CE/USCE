@@ -79,10 +79,13 @@ type
       FLocalSamples: integer;
       Frequencies: TFrequencyArray;
       Delays: TDelayArray;
+      FractionalDelays: TFrequencyArray;
       fToneCandidates: array[0..MaxToneCandidates-1] of TToneCandidate;
       fToneCandidateCount: integer;
       PhoneGates: array of Byte;
 
+      function AnalysisDecimation: integer;
+      procedure CopyAnalysisWindow(var Window: array of smallint; EndIndex, Count, Factor: integer);
       function GetToneString: string; // converts a tone to its string representation;
       function GetToneCandidate(Index: integer): TToneCandidate;
 
@@ -137,6 +140,7 @@ type
       procedure ResetAnalysis;
 
       // use to analyze sound from buffers to get new pitch
+      function LocalAnalysisRate: double;
       procedure AnalyzeBuffer; overload;
       procedure AnalyzeBuffer(MeasurePhone: boolean); overload;
       procedure AnalyzeBuffer(out WindowCenterUs: int64; MeasurePhone: boolean = false); overload;
@@ -315,7 +319,7 @@ begin
   begin
     Capture := AudioInputProcessor.Sound[I];
     if (Capture.AudioFormat = nil) or (Capture.LastInputTicks = 0) then Continue;
-    WindowMs := Capture.AnalysisBufferSize * 1000 / Capture.AudioFormat.SampleRate;
+    WindowMs := Capture.AnalysisBufferSize * 1000 / Capture.LocalAnalysisRate;
     Log.LogStatus(Format('player=%d rate=%.0f blockMs=%.2f windowMs=%.2f inputAgeMs=%d analysisUs=%.1f tone=%s',
       [I + 1, Capture.AudioFormat.SampleRate, Capture.LastInputBlockMs, WindowMs,
       GetTickCount64 - Capture.LastInputTicks, Capture.LastAnalysisMicroseconds, Capture.ToneString]), 'Audio timing');
@@ -538,20 +542,20 @@ begin
 
   LockAnalysisBuffer();
   try
+    // Retain a complete window that straddles a callback boundary. Limit
+    // growth to the maximum callback frame count representable by SDL.
+    HistorySize := Min(SampleCount, High(Word)) + CaptureWindowSamples * AnalysisDecimation;
+    PreviousSize := Length(AnalysisBuffer);
+    if HistorySize > PreviousSize then
+    begin
+      SetLength(AnalysisBuffer, HistorySize);
+      Move(AnalysisBuffer[0], AnalysisBuffer[HistorySize - PreviousSize],
+        PreviousSize * SizeOf(smallint));
+      FillChar(AnalysisBuffer[0], (HistorySize - PreviousSize) * SizeOf(smallint), 0);
+    end;
+
     if (CaptureEndUs > 0) and (AudioFormat.SampleRate > 0) then
     begin
-      // Retain a complete window that straddles a callback boundary. Limit
-      // growth to the maximum callback frame count representable by SDL.
-      HistorySize := Min(SampleCount, High(Word)) + CaptureWindowSamples;
-      PreviousSize := Length(AnalysisBuffer);
-      if HistorySize > PreviousSize then
-      begin
-        SetLength(AnalysisBuffer, HistorySize);
-        if FLocalSamples > 0 then
-          Move(AnalysisBuffer[PreviousSize - FLocalSamples],
-            AnalysisBuffer[HistorySize - FLocalSamples], FLocalSamples * SizeOf(smallint));
-      end;
-
       BlockUs := Round(SampleCount * 1000000.0 / AudioFormat.SampleRate);
       FLocalBlockUs := BlockUs;
       ExpectedEndUs := FLocalCaptureEndUs + BlockUs;
@@ -650,7 +654,51 @@ begin
   if Unknown then Result := PhoneGateUnknown;
 end;
 
+// Capture history and its timestamps stay at the device rate. Only the
+// selected pitch window is averaged, so the calibrated center stays fixed.
+function TCaptureBuffer.AnalysisDecimation: integer;
+begin
+  Result := 1;
+  if Assigned(AudioFormat) then
+    Result := Max(1, Trunc(AudioFormat.SampleRate / 44100));
+end;
+
+function TCaptureBuffer.LocalAnalysisRate: double;
+begin
+  Result := 0;
+  if Assigned(AudioFormat) then
+    Result := AudioFormat.SampleRate / AnalysisDecimation;
+end;
+
+procedure TCaptureBuffer.CopyAnalysisWindow(var Window: array of smallint;
+  EndIndex, Count, Factor: integer);
+var
+  InputIndex, OutputIndex, Offset, Sum: integer;
+begin
+  InputIndex := EndIndex - Count * Factor;
+  OutputIndex := Length(Window) - Count;
+  if Factor = 1 then
+  begin
+    Move(AnalysisBuffer[InputIndex], Window[OutputIndex], Count * SizeOf(smallint));
+    Exit;
+  end;
+  while OutputIndex < Length(Window) do
+  begin
+    Sum := 0;
+    for Offset := 0 to Factor - 1 do
+      Inc(Sum, AnalysisBuffer[InputIndex + Offset]);
+    Window[OutputIndex] := Sum div Factor;
+    Inc(OutputIndex);
+    Inc(InputIndex, Factor);
+  end;
+end;
+
 procedure TCaptureBuffer.AnalyzeBuffer(out WindowCenterUs: int64; MeasurePhone: boolean);
+var
+  Window: array[0..CaptureWindowSamples-1] of smallint;
+  Factor, Count, Gain: integer;
+  Gate: LongInt;
+  Rate: double;
 begin
   WindowCenterUs := 0;
   if (AnalysisBufferSize <> 512) and (AnalysisBufferSize <> 1024) and
@@ -658,35 +706,44 @@ begin
     AnalysisBufferSize := CaptureWindowSamples;
   LockAnalysisBuffer;
   try
-    if Assigned(AudioFormat) then
-    begin
-      if (FLocalSamples >= AnalysisBufferSize) and (AudioFormat.SampleRate > 0) then
-        WindowCenterUs := FLocalCaptureEndUs - Round(AnalysisBufferSize * 500000.0 / AudioFormat.SampleRate);
-      AnalyzeSamples(AnalysisBuffer, AnalysisBufferSize, AudioFormat.SampleRate, AnalysisGain,
-        AnalysisPhoneGate(AnalysisBufferSize), MeasurePhone);
-    end
+    Factor := AnalysisDecimation;
+    Rate := LocalAnalysisRate;
+    Count := AnalysisBufferSize;
+    Gain := AnalysisGain;
+    Gate := PhoneGateUnknown;
+    if (Rate <= 0) or (Count * Factor > Length(AnalysisBuffer)) then
+      Rate := 0
     else
-      AnalyzeSamples(AnalysisBuffer, AnalysisBufferSize, 0);
+    begin
+      if FLocalSamples >= Count * Factor then
+        WindowCenterUs := FLocalCaptureEndUs - Round(Count * 500000.0 / Rate);
+      CopyAnalysisWindow(Window, Length(AnalysisBuffer), Count, Factor);
+      Gate := AnalysisPhoneGate(Count * Factor);
+    end;
   finally
     UnlockAnalysisBuffer;
   end;
+  AnalyzeSamples(Window, Count, Rate, Gain, Gate, MeasurePhone);
 end;
 
 function TCaptureBuffer.AnalyzeLocalWindow(CenterUs: int64; Count: integer; out WaitUntilUs: int64): boolean;
 var
   Window: array[0..4095] of smallint;
-  Rate: double;
-  EndIndex, Gain: integer;
+  Rate, CaptureRate: double;
+  EndIndex, Gain, Factor, RawCount: integer;
 begin
   Result := false;
   WaitUntilUs := 0;
   LockAnalysisBuffer;
   try
     if (AudioFormat = nil) or (FLocalCaptureEndUs = 0) then Exit;
-    Rate := AudioFormat.SampleRate;
+    CaptureRate := AudioFormat.SampleRate;
+    Factor := AnalysisDecimation;
+    Rate := CaptureRate / Factor;
+    RawCount := Count * Factor;
     if (Rate <= 0) or (Count < 1) or (Count > Length(Window)) then Exit;
-    EndIndex := Length(AnalysisBuffer) - Round((FLocalCaptureEndUs - CenterUs) * Rate / 1000000.0) + Count div 2;
-    if EndIndex - Count < Length(AnalysisBuffer) - FLocalSamples then Exit;
+    EndIndex := Length(AnalysisBuffer) - Round((FLocalCaptureEndUs - CenterUs) * CaptureRate / 1000000.0) + RawCount div 2;
+    if EndIndex - RawCount < Length(AnalysisBuffer) - FLocalSamples then Exit;
     if EndIndex > Length(AnalysisBuffer) then
     begin
       // The window's end can fall just after a callback and wait a full
@@ -694,7 +751,7 @@ begin
       WaitUntilUs := CenterUs + Max(int64(90000), FLocalBlockUs + Ceil((Count div 2) * 1000000.0 / Rate) + 10000);
       Exit;
     end;
-    Move(AnalysisBuffer[EndIndex - Count], Window[Length(Window) - Count], Count * SizeOf(smallint));
+    CopyAnalysisWindow(Window, EndIndex, Count, Factor);
     Gain := AnalysisGain;
   finally
     UnlockAnalysisBuffer;
@@ -886,7 +943,8 @@ begin
   begin
     // Freq(ToneIndex) = 440 Hz * 2^((ToneIndex-33)/12) --> Freq(ToneIndex=0) = 65.4064 Hz = C2
     Frequencies[ToneIndex] := BaseToneFreq * Power(2, (ToneIndex-33)/12);
-    Delays[ToneIndex] := Round(SampleRate/Frequencies[ToneIndex]);
+    FractionalDelays[ToneIndex] := SampleRate / Frequencies[ToneIndex];
+    Delays[ToneIndex] := Round(FractionalDelays[ToneIndex]);
   end;
 end;
 
@@ -972,19 +1030,23 @@ var
   ToneIndex:   integer;
   Correlation: TCorrelationArray;
   SampleIndex: integer; // index of sample to analyze
+  Delay, Offset, Mask: integer;
+  Fraction, Delayed: double;
 begin
+  Mask := Count - 1;
+  Offset := Length(Samples) - Count;
   // accumulate the magnitude differences for samples in Samples
   for ToneIndex := 0 to NumHalftones-1 do
   begin
     Correlation[ToneIndex] := 0;
-    for SampleIndex := 0 to (Count-1) do
+    Delay := Trunc(FractionalDelays[ToneIndex]);
+    Fraction := FractionalDelays[ToneIndex] - Delay;
+    for SampleIndex := 0 to Count - 1 do
     begin
-      // Suggestion for calculation efficiency improvement from deuteragenie:
-      // Replacing 'i mod buffersize' by 'i & (buffersize-1)' when i is positive and buffersize is a power of two should speed the modulo compuation by 5x-10x
-      //Correlation[ToneIndex] += Abs(Samples[(SampleIndex+Delays[ToneIndex]) mod Count] - Samples[SampleIndex]);
-      Correlation[ToneIndex] := Correlation[ToneIndex] + Abs(
-        Samples[Length(Samples)-Count+((SampleIndex+Delays[ToneIndex]) and (Count-1))] -
-        Samples[Length(Samples)-Count+SampleIndex]);
+      Delayed := (1 - Fraction) * Samples[Offset + ((SampleIndex + Delay) and Mask)] +
+        Fraction * Samples[Offset + ((SampleIndex + Delay + 1) and Mask)];
+      Correlation[ToneIndex] := Correlation[ToneIndex] +
+        Abs(Delayed - Samples[Offset + SampleIndex]);
     end;
     Correlation[ToneIndex] := Correlation[ToneIndex] / Count;
   end;

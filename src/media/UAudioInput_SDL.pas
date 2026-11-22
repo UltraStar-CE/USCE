@@ -28,6 +28,7 @@ uses
   UIni,
   ULog,
   UPulseCaptureIdentity,
+  UMediaCore_SDL,
   {$IFDEF LINUX}
   UUSBCaptureIdentity,
   Process, fpjson, jsonparser,
@@ -85,35 +86,6 @@ begin
 end;
 
 {$IFDEF LINUX}
-function PreferredCaptureChannels(DeviceIndex: integer): byte;
-type
-  TGetAudioDeviceSpec = function(Index, IsCapture: cint; Spec: PSDL_AudioSpec): cint; cdecl;
-var
-  LibraryHandle: Pointer;
-  GetAudioDeviceSpec: TGetAudioDeviceSpec;
-  Preferred: TSDL_AudioSpec;
-  Driver: UTF8String;
-begin
-  Result := 0;
-  if GetEnvironmentVariable('SDL_AUDIO_CHANNELS') <> '' then Exit;
-  Driver := SDL_GetCurrentAudioDriver;
-  if (Driver <> 'pulseaudio') and (Driver <> 'pipewire') then Exit;
-
-  // Older SDL releases do not export the preferred-format query.
-  LibraryHandle := SDL_LoadObject('libSDL2-2.0.so.0');
-  if LibraryHandle = nil then LibraryHandle := SDL_LoadObject(SDL_LibName);
-  if LibraryHandle = nil then Exit;
-  try
-    GetAudioDeviceSpec := TGetAudioDeviceSpec(SDL_LoadFunction(LibraryHandle, 'SDL_GetAudioDeviceSpec'));
-    if not Assigned(GetAudioDeviceSpec) then Exit;
-    FillChar(Preferred, SizeOf(Preferred), 0);
-    if (GetAudioDeviceSpec(DeviceIndex, 1, @Preferred) = 0) and (Preferred.channels > 2) then
-      Result := Preferred.channels;
-  finally
-    SDL_UnloadObject(LibraryHandle);
-  end;
-end;
-
 function PipeWireCaptureCard(const Tag: UTF8String): integer;
 var
   Output, Target: string;
@@ -273,7 +245,7 @@ type
 var
   Spec, RequestedSpec, CandidateSpec: TSDL_AudioSpec;
   CandidateID: TSDL_AudioDeviceID;
-  I: integer;
+  I, CaptureLatencyMs: integer;
   Candidate, Family, Key, Serial, Model, Instance: UTF8String;
   Match, BestMatch, ExactMatch: TMatch;
   {$IFDEF LINUX}
@@ -343,9 +315,9 @@ begin
       callback := @MicrophoneCallback;
       userdata := pointer(Self);
 
-      samples := 0;
-      if Ini.InputDeviceConfig[CfgIndex].Latency > 0 then
-        samples := 1 shl Round(Max(Log2(freq / 1000 * Ini.InputDeviceConfig[CfgIndex].Latency), 0));
+      CaptureLatencyMs := Ini.InputDeviceConfig[CfgIndex].Latency;
+      if CaptureLatencyMs <= 0 then CaptureLatencyMs := 20;
+      samples := 1 shl Round(EnsureRange(Log2(freq / 1000 * CaptureLatencyMs), 0, 15));
     end;
 
     OpenedName := SDLName;
@@ -426,11 +398,9 @@ begin
     end;
     if DevID > 0 then
     begin
-      if Ini.InputDeviceConfig[CfgIndex].Latency > 0 then
-        Log.LogStatus('InputDevice "' + Name + '" opened with ' +
-                      IntToStr(spec.samples) + ' samples (' +
-                      IntToStr(round(spec.samples * 1000 / spec.freq)) +
-                      'ms) buffer', 'SDL');
+      Log.LogStatus('InputDevice "' + Name + '" opened: ' + SDLAudioSpecToStr(spec) +
+        ', ' + IntToStr(spec.samples) + ' samples (' +
+        IntToStr(Round(spec.samples * 1000 / spec.freq)) + ' ms) per callback', 'SDL');
       // Keep the original verified identity if a same-model substitute was needed.
       if (OpenedInstance <> '') and ((Identity = '') or (OpenedIdentity = Identity)) then
         USBInstance := OpenedInstance;
@@ -527,10 +497,11 @@ var
   dev:          TSDL_AudioDeviceID;
   deviceName:   UTF8String;
   SDLName, Identity, Serial, Model, Instance: UTF8String;
+  Preferred: TSDL_AudioSpec;
 begin
   Result := false;
 
-  Log.LogInfo('Using ' + SDL_GetCurrentAudioDriver + ' driver', 'SDL');
+  LogSDLAudioInfo(true);
 
   maxDevices := SDL_GetNumAudioDevices(1);
   if maxDevices < 1 then
@@ -568,13 +539,15 @@ begin
     Instance := '';
     if (SDLName <> '') then
     begin
-      {$IFDEF LINUX}
-      spec.channels := PreferredCaptureChannels(i);
-      {$ENDIF}
+      if SDLGetAudioDeviceSpec(i, true, Preferred) then
+      begin
+        if GetEnvironmentVariable('SDL_AUDIO_CHANNELS') = '' then
+          spec.channels := Min(Preferred.channels, 8);
+        if Preferred.freq > 0 then spec.freq := Preferred.freq;
+      end;
       dev := OpenIdentifiedCapture(PChar(SDLName), spec, Identity, Serial, Model, Instance,
         SDL_AUDIO_ALLOW_FREQUENCY_CHANGE or SDL_AUDIO_ALLOW_CHANNELS_CHANGE);
-      {$IFDEF LINUX}
-      if (dev = 0) and (spec.channels > 0) then
+      if (dev = 0) and ((spec.channels > 0) or (spec.freq <> 44100)) then
       begin
         // Keep working with the SDL defaults if this profile cannot be opened.
         spec.freq := 44100;
@@ -584,7 +557,6 @@ begin
         dev := OpenIdentifiedCapture(PChar(SDLName), spec, Identity, Serial, Model, Instance,
           SDL_AUDIO_ALLOW_FREQUENCY_CHANGE or SDL_AUDIO_ALLOW_CHANNELS_CHANGE);
       end;
-      {$ENDIF}
     end
     else
       dev := SDL_OpenAudioDevice(name, 1, @spec, @spec,
