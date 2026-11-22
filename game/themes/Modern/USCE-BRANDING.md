@@ -1,10 +1,14 @@
-# USCE background adaptation
+# USCE backgrounds
 
-The blue, summer, winter and fall menu backgrounds retain their original subjects
-and replace the embedded UltraStar Deluxe logo with the USCE star/microphone
-wordmark. OpenAI image generation performed the logo edit. Outputs were visually
-inspected and converted to the original 800 by 600 JPEG dimensions.
+The menu images named `[bg-main]blue.jpg`, `[bg-main]fall.jpg`,
+`[bg-main]summer.jpg`, and `[bg-main]winter.jpg` use the USCE wordmark
+and original artwork introduced on 2026-11-22. The same artwork is used for
+the revised branded loading PNGs and Modern Blue's widescreen song
+background. [Source and build instructions](https://github.com/UltraStar-CE/Themes/blob/main/.github/artwork-source/README.md)
+record the artwork and wordmark origin.
 
-Original theme creator and asset notices remain unchanged. The game and theme
-repositories use identical image bytes. The corresponding source images and
-prompts are recorded in the USCE game repository's branding directory.
+The 2026-10-16 menu adaptations are documented in
+[their original commit](https://github.com/UltraStar-CE/Themes/commit/63af239).
+The 2026-10-19 edits to inherited loading photos are documented in the
+[loading-screen change](https://github.com/UltraStar-CE/Themes/commit/5cd309f).
+The original theme creator credits and existing notices remain in place.
