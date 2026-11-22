@@ -17,6 +17,9 @@ class PlayerCardMouseTests(unittest.TestCase):
         geometry = 'function TScreenName.DifficultySegmentRect' + production.split(
             'function TScreenName.DifficultySegmentRect', 1)[1].split(
             '\nend;', 1)[0] + '\nend;\n'
+        editor_scale = 'function TScreenName.InlineCardMic' + production.split(
+            'function TScreenName.InlineCardMic', 1)[1].split(
+            'procedure TScreenName.LayoutMicSelector', 1)[0]
         method = production.split(
             'function TScreenName.ParseMouse(', 1)[1]
         method = 'function TScreenName.ParseMouse(' + method.split(
@@ -37,6 +40,7 @@ type
  TMouseClickAction = (maNone, maLeft, maRight);
  TSlide = class
   Visible: boolean;
+  H: single;
   procedure SetSelectOpt(Value: integer);
   function GetMouseOverArea: TMouseOverRect;
   function OnClick(X,Y: single): TMouseClickAction;
@@ -64,6 +68,8 @@ type
   procedure ChangeMic(Delta: integer);
   function InteractAt(X,Y: integer): integer;
   function CardRect(I: integer): TPlayerSlotRect;
+  function InlineCardMic: boolean;
+  function CardEditorScaleY(PlayerID: integer; const Card: TPlayerSlotRect): real;
   function DifficultySegmentRect(PlayerID, Segment: integer): TMouseOverRect;
   procedure RefreshProfile;
   function ParseMouse(MouseButton: integer; BtnDown: boolean; X,Y: integer): boolean; override;
@@ -73,6 +79,7 @@ const SDL_BUTTON_LEFT=1; PlayerName=0; PlayerNameIID=2;
  PlayerSelectVoiceIID=6; PlayerSelectLevel=0;
 var
  Theme: record Name: record
+  AutoPlacePlayerMic: boolean;
   Cards: record Enabled,LevelSegments,EditOutside:boolean; Columns,Rows:integer;
    Panel: record W,H:real; end; end;
   SelectPlayerLevel: record X,Y:real; end;
@@ -104,7 +111,7 @@ begin
 end;
 procedure TScreenName.StopTextInput; begin end;
 procedure TScreenName.ChangeMic(Delta:integer); begin MicDelta:=Delta; end;
-''' + geometry + method + r'''
+''' + editor_scale + geometry + method + r'''
 procedure Check(Value:boolean;const Msg:string);
 begin if not Value then raise Exception.Create(Msg);end;
 begin
@@ -151,6 +158,9 @@ begin
   Theme.Name.Cards.LevelSegments:=true;Theme.Name.SelectPlayerLevel.Y:=50;
   Hit:=PlayerSelectLevelIID;S.ParseMouse(1,true,350,110);
   Check((Calls=1) and (S.LevelIndex=2),'difficulty segment delegated twice');
+  Theme.Name.AutoPlacePlayerMic:=true;S.SelectsS[1].H:=20;
+  S.ParseMouse(1,true,290,80);
+  Check((Calls=1) and (S.LevelIndex=1),'inline mic did not scale difficulty hit area');
   Theme.Name.Cards.EditOutside:=true;
   S.ParseMouse(1,true,40,110);
   Check((Calls=1) and (S.LevelIndex=0),'external difficulty segment submitted setup');
