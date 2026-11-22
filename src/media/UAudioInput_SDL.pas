@@ -85,6 +85,35 @@ begin
 end;
 
 {$IFDEF LINUX}
+function PreferredCaptureChannels(DeviceIndex: integer): byte;
+type
+  TGetAudioDeviceSpec = function(Index, IsCapture: cint; Spec: PSDL_AudioSpec): cint; cdecl;
+var
+  LibraryHandle: Pointer;
+  GetAudioDeviceSpec: TGetAudioDeviceSpec;
+  Preferred: TSDL_AudioSpec;
+  Driver: UTF8String;
+begin
+  Result := 0;
+  if GetEnvironmentVariable('SDL_AUDIO_CHANNELS') <> '' then Exit;
+  Driver := SDL_GetCurrentAudioDriver;
+  if (Driver <> 'pulseaudio') and (Driver <> 'pipewire') then Exit;
+
+  // Older SDL releases do not export the preferred-format query.
+  LibraryHandle := SDL_LoadObject('libSDL2-2.0.so.0');
+  if LibraryHandle = nil then LibraryHandle := SDL_LoadObject(SDL_LibName);
+  if LibraryHandle = nil then Exit;
+  try
+    GetAudioDeviceSpec := TGetAudioDeviceSpec(SDL_LoadFunction(LibraryHandle, 'SDL_GetAudioDeviceSpec'));
+    if not Assigned(GetAudioDeviceSpec) then Exit;
+    FillChar(Preferred, SizeOf(Preferred), 0);
+    if (GetAudioDeviceSpec(DeviceIndex, 1, @Preferred) = 0) and (Preferred.channels > 2) then
+      Result := Preferred.channels;
+  finally
+    SDL_UnloadObject(LibraryHandle);
+  end;
+end;
+
 function PipeWireCaptureCard(const Tag: UTF8String): integer;
 var
   Output, Target: string;
@@ -538,8 +567,25 @@ begin
     Model := '';
     Instance := '';
     if (SDLName <> '') then
+    begin
+      {$IFDEF LINUX}
+      spec.channels := PreferredCaptureChannels(i);
+      {$ENDIF}
       dev := OpenIdentifiedCapture(PChar(SDLName), spec, Identity, Serial, Model, Instance,
-        SDL_AUDIO_ALLOW_FREQUENCY_CHANGE or SDL_AUDIO_ALLOW_CHANNELS_CHANGE)
+        SDL_AUDIO_ALLOW_FREQUENCY_CHANGE or SDL_AUDIO_ALLOW_CHANNELS_CHANGE);
+      {$IFDEF LINUX}
+      if (dev = 0) and (spec.channels > 0) then
+      begin
+        // Keep working with the SDL defaults if this profile cannot be opened.
+        spec.freq := 44100;
+        spec.format := AUDIO_S16SYS;
+        spec.channels := 0;
+        spec.samples := 0;
+        dev := OpenIdentifiedCapture(PChar(SDLName), spec, Identity, Serial, Model, Instance,
+          SDL_AUDIO_ALLOW_FREQUENCY_CHANGE or SDL_AUDIO_ALLOW_CHANNELS_CHANGE);
+      end;
+      {$ENDIF}
+    end
     else
       dev := SDL_OpenAudioDevice(name, 1, @spec, @spec,
         SDL_AUDIO_ALLOW_FREQUENCY_CHANGE or SDL_AUDIO_ALLOW_CHANNELS_CHANGE);
