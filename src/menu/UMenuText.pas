@@ -237,7 +237,7 @@ begin
     Reflection, ReflectionSpacing);
 end;
 
-procedure DrawKeyHint(const Key: UTF8String; X, Y, Z, FontSize, R, G, B, A, RowHeight: real;
+procedure DrawKeyHint(const Key: UTF8String; X, Y, Z, FontSize, R, G, B, A, RowHeight, CaptionCenterY: real;
   Reflection: boolean; ReflectionSpacing: real);
 var
   Font: TFont;
@@ -249,7 +249,7 @@ begin
   FrameH := FontSize * 0.83;
   if RowHeight > 0 then
   begin
-    // The cap and its label share the center of the footer's text row.
+    // Keep the outline centered in the footer row.
     FrameH := Min(RowHeight, FontSize * 0.95);
     FrameY := Y + (RowHeight - FrameH) / 2;
   end
@@ -266,7 +266,7 @@ begin
   begin
     SetFontSize(FontSize * 0.9);
     Bounds := Font.BBox(Key, false);
-    LabelY := FrameY + FrameH / 2 + (Bounds.Top + Bounds.Bottom) / 2 - Font.Ascender;
+    LabelY := CaptionCenterY + (Bounds.Top + Bounds.Bottom) / 2 - Font.Ascender;
     SetFontReflection(Reflection, ReflectionSpacing + 2 * (Y - LabelY));
     SetFontPos(X + (FrameW - Bounds.Left - Bounds.Right) / 2, LabelY);
     PrintText(Key);
@@ -328,11 +328,13 @@ procedure PrintInlineText(const Value: UTF8String; X, Y, Z: real; BaseStyle: int
     FontSize, R, G, B, A: single; InitialBold, Reflection: boolean; ReflectionSpacing, KeyHintRowHeight: real);
 var
   Bold: boolean;
-  CurrentX: real;
+  CurrentX, CaptionCenterY: real;
   MarkerPos: integer;
   Segment: UTF8String;
   StartPos: integer;
   CurrentStyle: integer;
+  CaptionFont: TFont;
+  CaptionBounds: TBoundsDbl;
 
   procedure PrintSegment(const Text: UTF8String);
   var FirstKey, SecondKey: UTF8String;
@@ -350,12 +352,12 @@ var
     SetFontZ(Z);
     if InlineChord(Text, Bold, FirstKey, SecondKey) then
     begin
-      DrawKeyHint(FirstKey, CurrentX, Y, Z, FontSize, R, G, B, A, KeyHintRowHeight, Reflection, ReflectionSpacing);
+      DrawKeyHint(FirstKey, CurrentX, Y, Z, FontSize, R, G, B, A, KeyHintRowHeight, CaptionCenterY, Reflection, ReflectionSpacing);
       CurrentX := CurrentX + KeyHintWidth(FirstKey, FontSize);
       SetFontPos(CurrentX, Y);
       PrintText(' + ');
       CurrentX := CurrentX + TextWidth(' + ');
-      DrawKeyHint(SecondKey, CurrentX, Y, Z, FontSize, R, G, B, A, KeyHintRowHeight, Reflection, ReflectionSpacing);
+      DrawKeyHint(SecondKey, CurrentX, Y, Z, FontSize, R, G, B, A, KeyHintRowHeight, CaptionCenterY, Reflection, ReflectionSpacing);
       CurrentX := CurrentX + KeyHintWidth(SecondKey, FontSize);
     end
     else
@@ -367,6 +369,15 @@ var
   end;
 
 begin
+  CaptionCenterY := Y;
+  if KeyHintRowHeight > 0 then
+  begin
+    SetFontStyle(BaseStyle);
+    SetFontSize(FontSize);
+    CaptionFont := Fonts[CurrentFont.FontFamily][CurrentFont.FontStyle].Font;
+    CaptionBounds := CaptionFont.BBox(UTF8String('H'), false);
+    CaptionCenterY := Y + CaptionFont.Ascender - (CaptionBounds.Top + CaptionBounds.Bottom) / 2;
+  end;
   Bold := InitialBold;
   CurrentX := X;
   StartPos := 1;
