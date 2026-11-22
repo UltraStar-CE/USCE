@@ -3582,7 +3582,7 @@ var
   Quads: TQuadList;
   Padding, AvailableWidth, Size: real;
 
-  procedure DrawLabel(const Value: UTF8String; Style: integer; CenterY, FontSize: real);
+  procedure DrawLabel(const Value: UTF8String; Style: integer; CenterY, FontSize, Shade: real);
   var
     LabelText: UTF8String;
     Bounds: TBoundsDbl;
@@ -3590,6 +3590,7 @@ var
   begin
     if Value = '' then Exit;
     SetFontStyle(Style);
+    ResetFont;
     SetFontSize(FontSize);
     LabelText := StringReplace(StringReplace(Value, #13, ' ', [rfReplaceAll]), #10, ' ', [rfReplaceAll]);
     if TextWidth(LabelText) > AvailableWidth then
@@ -3611,7 +3612,10 @@ var
     SetFontPos(TileX + Padding, CenterY -
       Fonts[CurrentFont.FontFamily][CurrentFont.FontStyle].Font.Ascender +
       (Bounds.Top + Bounds.Bottom) / 2);
+    SetFontZ(Cover.Z + 0.001);
+    SetFontColor(Shade, Shade, Shade, Cover.Alpha);
     PrintText(LabelText);
+    ResetFont;
   end;
 
 begin
@@ -3648,20 +3652,15 @@ begin
   AvailableWidth := TileW - 2 * Padding;
   Size := Min(22, Min(TileW * 0.16, TileH * 0.25));
   if Size < 5 then Exit;
-  ResetFont;
-  SetFontZ(Cover.Z + 0.001);
-  SetFontColor(1, 1, 1, Cover.Alpha);
   if Song.Title = '' then
-    DrawLabel(Song.Artist, ftBold, TileY + TileH * 0.5, Size)
+    DrawLabel(Song.Artist, ftBold, TileY + TileH * 0.5, Size, 1)
   else if Song.Artist = '' then
-    DrawLabel(Song.Title, ftBold, TileY + TileH * 0.5, Size)
+    DrawLabel(Song.Title, ftBold, TileY + TileH * 0.5, Size, 1)
   else
   begin
-    DrawLabel(Song.Title, ftBold, TileY + TileH * 0.40, Size);
-    SetFontColor(0.92, 0.92, 0.92, Cover.Alpha);
-    DrawLabel(Song.Artist, ftRegular, TileY + TileH * 0.65, Size * 0.78);
+    DrawLabel(Song.Title, ftBold, TileY + TileH * 0.40, Size, 1);
+    DrawLabel(Song.Artist, ftRegular, TileY + TileH * 0.65, Size * 0.78, 0.92);
   end;
-  ResetFont;
 end;
 
 procedure TScreenSong.DrawSearchField;
