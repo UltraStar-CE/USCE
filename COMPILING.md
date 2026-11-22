@@ -4,7 +4,7 @@ For linking and running the game, the following libraries are also required:
 - SDL2, SDL2_image
 - FFmpeg 4.0-9.0
 - SQLite 3
-- [BASS](http://www.un4seen.com/bass.html)
+- [BASS](http://www.un4seen.com/bass.html) (Windows only, use `--without-bass` for using SDL instead)
 - some fonts like DejaVu
 - PortAudio
 - Lua 5.1, 5.2, 5.3, 5.4, or 5.5
@@ -82,11 +82,17 @@ check that `make -C dists/windows install` completed successfully, then rerun
   Caught exceptions include their class, message and available stack trace in
   `Error.log` in both normal and debug builds. The report is flushed before the
   error dialog opens. Debug information makes stack addresses more useful.
-* `--with-portaudio`: This is the default on Linux and macOS. Windows uses SDL audio input.
+* `--with-portaudio`: This is the default on Linux and macOS. Windows uses BASS by default.
 * `--without-portaudio`: Use SDL audio input instead.
   This should support newer platforms like PulseAudio and PipeWire.
-  Might not be able to detect the number of channels correctly when used with PulseAudio.
+  Uses the device's preferred channel count and sample rate when SDL reports them.
+  With PulseAudio/PipeWire, channels beyond the first two only arrive separately
+  if the device's channel layout matches SDL's: for 4 channels: FL FR FC LFE with
+  SDL's pulseaudio driver, FL FR RL RR with its pipewire driver.
   Might fix issues experienced when using PortAudio on certain distributions.
+* `--with-bass`: Windows only, the default there for now. Use BASS for audio playback and mic input.
+* `--without-bass`: Windows only. Use SDL for audio playback and microphone input instead of BASS.
+  Run `WITH_BASS=no make -C dists/windows install` so `bass.dll` is not copied into `game/`.
 * `--with-opencv`: Enable webcam support with OpenCV. By default, configure
   auto-detects OpenCV 3+ and disables webcam support if OpenCV is not found.
 * `--without-opencv`: Build without webcam support even if OpenCV is installed.

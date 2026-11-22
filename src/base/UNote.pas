@@ -1096,11 +1096,10 @@ var
   var NoteStartUs, NoteEndUs, HalfWindowUs: int64;
   begin
     Result := Round((Beat + 0.5) * 60000000 / CurrentSong.BPM);
-    if not Assigned(CurrentLineFragment) or not Assigned(CurrentSound.AudioFormat) or
-       (CurrentSound.AudioFormat.SampleRate <= 0) then Exit;
+    if not Assigned(CurrentLineFragment) or (WindowRate <= 0) then Exit;
     NoteStartUs := Round(CurrentLineFragment.StartBeat * 60000000.0 / CurrentSong.BPM);
     NoteEndUs := NoteStartUs + Round(CurrentLineFragment.Duration * 60000000.0 / CurrentSong.BPM);
-    HalfWindowUs := Round(WindowSamples * 500000.0 / CurrentSound.AudioFormat.SampleRate) + 3000;
+    HalfWindowUs := Round(WindowSamples * 500000.0 / WindowRate) + 3000;
     // Keep the window inside a note where it can fit, on either input path.
     if NoteEndUs - NoteStartUs >= 2 * HalfWindowUs then
       Result := EnsureRange(Result, NoteStartUs + HalfWindowUs, NoteEndUs - HalfWindowUs);
@@ -1295,7 +1294,7 @@ begin
         WindowRate := 0;
         if ScoreWhenReady then WindowRate := PhonePcmSampleRate
         else if UseLocalClock and Assigned(CurrentSound.AudioFormat) then
-          WindowRate := CurrentSound.AudioFormat.SampleRate;
+          WindowRate := CurrentSound.LocalAnalysisRate;
         if (WindowRate > 0) and Assigned(CurrentLineFragment) and
            (CurrentLineFragment.Duration * 60.0 / CurrentSong.BPM < WindowSamples / WindowRate) then
           // A full window would combine samples from this note and its neighbors.
