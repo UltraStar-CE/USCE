@@ -993,6 +993,7 @@ begin
   Result := AddText(ThemeText);
   // Rich text is opt-in for trusted theme/language hints, not song metadata.
   Text[Result].InlineMarkup := true;
+  Text[Result].KeyHintRowHeight := ThemeText.H;
   Text[Result].Text := ThemeText.Text;
 end;
 
