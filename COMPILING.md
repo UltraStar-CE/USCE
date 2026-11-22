@@ -86,9 +86,9 @@ check that `make -C dists/windows install` completed successfully, then rerun
 * `--without-portaudio`: Use SDL audio input instead.
   This should support newer platforms like PulseAudio and PipeWire.
   Uses the device's preferred channel count and sample rate when SDL reports them.
-  With PulseAudio/PipeWire, channels beyond the first two only arrive separately
-  if the device's channel layout matches SDL's: for 4 channels: FL FR FC LFE with
-  SDL's pulseaudio driver, FL FR RL RR with its pipewire driver.
+  On PulseAudio and PipeWire, the source layout must match the layout requested
+  by the installed SDL backend to keep channels separate. For example, a quad
+  source (FL FR RL RR) works with both backends on SDL2-compat 2.32.74.
   Might fix issues experienced when using PortAudio on certain distributions.
 * `--with-bass`: Windows only, the default there for now. Use BASS for audio playback and mic input.
 * `--without-bass`: Windows only. Use SDL for audio playback and microphone input instead of BASS.
