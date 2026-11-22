@@ -1,4 +1,4 @@
-﻿{* UltraStar Deluxe - Karaoke Game
+{* UltraStar Deluxe - Karaoke Game
  *
  * UltraStar Deluxe is the legal property of its developers, whose names
  * are too numerous to list here. Please refer to the COPYRIGHT
@@ -3580,7 +3580,7 @@ var
   TileX, TileY, TileW, TileH: single;
   Accent: TRGB;
   Quads: TQuadList;
-  Padding, AvailableWidth, Size: real;
+  Padding, AvailableWidth, Size, Brightness, TextShade: real;
 
   procedure DrawLabel(const Value: UTF8String; Style: integer; CenterY, FontSize, Shade: real);
   var
@@ -3612,7 +3612,7 @@ var
     SetFontPos(TileX + Padding, CenterY -
       Fonts[CurrentFont.FontFamily][CurrentFont.FontStyle].Font.Ascender +
       (Bounds.Top + Bounds.Bottom) / 2);
-    SetFontZ(Cover.Z + 0.001);
+    SetFontZ(Min(Cover.Z, 0.998));
     SetFontColor(Shade, Shade, Shade, Cover.Alpha);
     PrintText(LabelText);
     ResetFont;
@@ -3627,7 +3627,24 @@ begin
   ResolveLayoutRect(TileX, TileY, TileW, TileH, Cover.ScaleMode);
   if (TileW <= 0) or (TileH <= 0) then Exit;
 
-  Accent := GetSystemColor(Skin.Color);
+  with Theme.Main.Buttons[0] do
+  begin
+    Accent.R := ColR;
+    Accent.G := ColG;
+    Accent.B := ColB;
+  end;
+  // Some themes put the button color in the texture instead of the tint.
+  if Max(Accent.R, Max(Accent.G, Accent.B)) -
+     Min(Accent.R, Min(Accent.G, Accent.B)) < 0.05 then
+    Accent := GetSystemColor(Skin.Color);
+  // The chart clock stores four timing units per displayed BPM.
+  Brightness := 0.76;
+  if Song.BPM > 0 then
+    Brightness := 0.86 - 0.16 * EnsureRange((Song.BPM / 4 - 70) / 110, 0.0, 1.0);
+  if Brightness * (0.213 * Accent.R + 0.715 * Accent.G + 0.072 * Accent.B) > 0.47 then
+    TextShade := 0.06
+  else
+    TextShade := 1;
   SetLength(Quads, 1);
   with Quads[0] do
   begin
@@ -3635,15 +3652,15 @@ begin
     Y := TileY;
     W := TileW;
     H := TileH;
-    Z := Cover.Z;
+    Z := Min(Cover.Z, 0.998) - 0.001;
     Gradient := gdVertical;
-    ColR := 0.24 + 0.24 * Accent.R;
-    ColG := 0.24 + 0.24 * Accent.G;
-    ColB := 0.24 + 0.24 * Accent.B;
+    ColR := (Brightness + 0.035) * Accent.R;
+    ColG := (Brightness + 0.035) * Accent.G;
+    ColB := (Brightness + 0.035) * Accent.B;
     Alpha := Cover.Alpha;
-    ColR2 := 0.08 + 0.38 * Accent.R;
-    ColG2 := 0.08 + 0.38 * Accent.G;
-    ColB2 := 0.08 + 0.38 * Accent.B;
+    ColR2 := (Brightness - 0.035) * Accent.R;
+    ColG2 := (Brightness - 0.035) * Accent.G;
+    ColB2 := (Brightness - 0.035) * Accent.B;
     Alpha2 := Cover.Alpha;
   end;
   Renderer.DrawQuads(Quads);
@@ -3653,13 +3670,13 @@ begin
   Size := Min(22, Min(TileW * 0.16, TileH * 0.25));
   if Size < 5 then Exit;
   if Song.Title = '' then
-    DrawLabel(Song.Artist, ftBold, TileY + TileH * 0.5, Size, 1)
+    DrawLabel(Song.Artist, ftBold, TileY + TileH * 0.5, Size, TextShade)
   else if Song.Artist = '' then
-    DrawLabel(Song.Title, ftBold, TileY + TileH * 0.5, Size, 1)
+    DrawLabel(Song.Title, ftBold, TileY + TileH * 0.5, Size, TextShade)
   else
   begin
-    DrawLabel(Song.Title, ftBold, TileY + TileH * 0.40, Size, 1);
-    DrawLabel(Song.Artist, ftRegular, TileY + TileH * 0.65, Size * 0.78, 0.92);
+    DrawLabel(Song.Title, ftBold, TileY + TileH * 0.40, Size, TextShade);
+    DrawLabel(Song.Artist, ftRegular, TileY + TileH * 0.65, Size * 0.78, TextShade);
   end;
 end;
 
