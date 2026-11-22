@@ -780,7 +780,7 @@ begin
         PlaylistMedley.Stats[CurrentRound].SongTitle;
     end;
   end;
-  SetResultSongTitle(Text[TextArtistTitle], ResultSongTitle, RenderW);
+  SetResultSongTitle(Text[TextArtistTitle], ResultSongTitle, Theme.Score.TextArtistTitle.EllipsisWidth);
 
   if (ScreenSong.Mode = smMedley) then
   begin
@@ -1306,7 +1306,7 @@ end;
 procedure TScreenScore.OnWindowResized;
 begin
   inherited;
-  SetResultSongTitle(Text[TextArtistTitle], ResultSongTitle, RenderW);
+  SetResultSongTitle(Text[TextArtistTitle], ResultSongTitle, Theme.Score.TextArtistTitle.EllipsisWidth);
 end;
 
 procedure TScreenScore.OnHide;
