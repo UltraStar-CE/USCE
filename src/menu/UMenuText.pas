@@ -76,6 +76,7 @@ type
       FontFile: IPath;
       Style:   integer;
       Visible: boolean;
+      KeyHintRowHeight: single;
       InlineMarkup: boolean; // opt in for generated rich text, never song/player metadata
       Align:   integer; // 0 = left, 1 = center, 2 = right
       SingleLineWidth: single; // optional display limit for a single-line editor
@@ -236,7 +237,7 @@ begin
     Reflection, ReflectionSpacing);
 end;
 
-procedure DrawKeyHint(const Key: UTF8String; X, Y, Z, FontSize, R, G, B, A: real;
+procedure DrawKeyHint(const Key: UTF8String; X, Y, Z, FontSize, R, G, B, A, RowHeight: real;
   Reflection: boolean; ReflectionSpacing: real);
 var
   Font: TFont;
@@ -247,7 +248,10 @@ begin
   FrameH := FontSize * 0.83;
   // Align all borders in the row using the same cap height.
   CapBounds := Font.BBox(UTF8String('H'), false);
-  FrameY := Y + Font.Ascender - (CapBounds.Top + CapBounds.Bottom + FrameH) / 2;
+  if RowHeight > 0 then
+    FrameY := Y + (RowHeight - FrameH) / 2
+  else
+    FrameY := Y + Font.Ascender - (CapBounds.Top + CapBounds.Bottom + FrameH) / 2;
   FrameOffset := FrameY - (Y + FontSize * 0.02);
   DrawKeyFrame(X, FrameY, Z, KeyHintWidth(Key, FontSize), FrameH, R, G, B, A,
     Reflection, ReflectionSpacing + 2 * (Font.Ascender - FontSize * 0.85 - FrameOffset));
@@ -300,7 +304,7 @@ begin
 end;
 
 procedure PrintInlineText(const Value: UTF8String; X, Y, Z: real; BaseStyle: integer;
-    FontSize, R, G, B, A: single; InitialBold, Reflection: boolean; ReflectionSpacing: real);
+    FontSize, R, G, B, A: single; InitialBold, Reflection: boolean; ReflectionSpacing, KeyHintRowHeight: real);
 var
   Bold: boolean;
   CurrentX: real;
@@ -325,12 +329,12 @@ var
     SetFontZ(Z);
     if InlineChord(Text, Bold, FirstKey, SecondKey) then
     begin
-      DrawKeyHint(FirstKey, CurrentX, Y, Z, FontSize, R, G, B, A, Reflection, ReflectionSpacing);
+      DrawKeyHint(FirstKey, CurrentX, Y, Z, FontSize, R, G, B, A, KeyHintRowHeight, Reflection, ReflectionSpacing);
       CurrentX := CurrentX + KeyHintWidth(FirstKey, FontSize);
       SetFontPos(CurrentX, Y);
       PrintText(' + ');
       CurrentX := CurrentX + TextWidth(' + ');
-      DrawKeyHint(SecondKey, CurrentX, Y, Z, FontSize, R, G, B, A, Reflection, ReflectionSpacing);
+      DrawKeyHint(SecondKey, CurrentX, Y, Z, FontSize, R, G, B, A, KeyHintRowHeight, Reflection, ReflectionSpacing);
       CurrentX := CurrentX + KeyHintWidth(SecondKey, FontSize);
     end
     else
@@ -758,7 +762,7 @@ begin
           end;
 
           PrintInlineText(Text2, X2, Y2, Z, Style, Size, ColR*Int, ColG*Int, ColB*Int, Alpha,
-            TextTileBoldStart[I], Reflection, ReflectionSpacing);
+            TextTileBoldStart[I], Reflection, ReflectionSpacing, KeyHintRowHeight);
         end
         else
         begin
