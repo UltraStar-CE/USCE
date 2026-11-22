@@ -71,6 +71,8 @@ begin
   ScreenSong := TScreenSong(TScreenSong.NewInstance);
   ScreenName := TScreenName(TScreenName.NewInstance);
   Party := TPartyGame(TPartyGame.NewInstance);
+  // The headless fixture supplies PlayersPlay instead of running player setup.
+  Party.bPartyGame := true;
   Theme := TTheme(TTheme.NewInstance);
   Theme.Sing := TThemeSing.Create;
   ScreenSong.Mode := smNormal;
