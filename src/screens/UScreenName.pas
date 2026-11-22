@@ -117,7 +117,7 @@ type
       OwnsMicPreview: boolean;
       DelayMeasurement: TSlotDelayMeasurement;
       DelayPausedBgMusic: boolean;
-      DelayMeasureButton, DelayApplyButton, DelayCancelButton: integer;
+      DelayHintText, DelayApplyButton, DelayCancelButton: integer;
       MicActivity: array[0..UIni.IMaxPlayerCount-1] of single;
       MicClippedUntil: array[0..UIni.IMaxPlayerCount-1] of QWord;
       MicPickerPlayer, MicPickerOwner: integer;
@@ -566,13 +566,6 @@ begin
         ApplyDelayMeasurement;
     Exit;
   end;
-  if BtnDown and (MouseButton = SDL_BUTTON_LEFT) and (SelectedPlayerCount > 0) and
-    InRegion(X, Y, Button[DelayMeasureButton].GetMouseOverArea) then
-  begin
-    StartDelayMeasurement;
-    Exit;
-  end;
-
   if BtnDown and (MouseButton = SDL_BUTTON_LEFT) and SelectsS[PlayerMic].Visible and
      InRegion(X, Y, SelectsS[PlayerMic].GetMouseOverArea) then
   begin
@@ -1631,7 +1624,8 @@ begin
 
   GenerateAvatars();
 
-  DelayMeasureButton := AddDelayButton(Theme.Name.DelayMeasureButton, 'SLOT_DELAY_MEASURE');
+  DelayHintText := AddKeyHint(Theme.Name.DelayHint);
+  Text[DelayHintText].Visible := false;
   DelayApplyButton := AddDelayButton(Theme.Name.DelayApplyButton, 'SLOT_DELAY_APPLY');
   DelayCancelButton := AddDelayButton(Theme.Name.DelayCancelButton, 'SLOT_DELAY_CANCEL');
 
@@ -1878,11 +1872,7 @@ var Slot, Row, Count, RowsPerColumn: integer;
     PrintText(Value);
   end;
 begin
-  if not Assigned(DelayMeasurement) then
-  begin
-    if SelectedPlayerCount > 0 then DrawDelayButton(DelayMeasureButton);
-    Exit;
-  end;
+  if not Assigned(DelayMeasurement) then Exit;
   Renderer.DrawQuad(0, 0, 0, RenderW, RenderH, 0, 0, 0, 0.82);
   with Theme.Name.DelayText do
     LabelAt(Language.Translate('SLOT_DELAY_TITLE'), X, Y, Size);
@@ -2479,11 +2469,11 @@ begin
     DrawDelayMeasurement;
     Exit(true);
   end;
+  Text[DelayHintText].Visible := (SelectedPlayerCount > 0) and (Theme.Name.DelayHint.Size > 0);
   if Theme.Name.Cards.Enabled then
   begin
     DrawCards;
     DrawMicSelector;
-    DrawDelayMeasurement;
     Result := true;
     Exit;
   end;
@@ -2518,7 +2508,6 @@ begin
     Text[I].Draw;
 
   DrawMicSelector;
-  DrawDelayMeasurement;
   Result := true;
 end;
 
