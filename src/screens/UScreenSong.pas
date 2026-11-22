@@ -129,6 +129,7 @@ type
       function SuppressTransitionPreview(Song: TSong): boolean;
       function ModernKeyboard: boolean;
       procedure DrawSearchField;
+      procedure DrawSongCoverTile(const Song: TSong; const Cover: TTexture);
       procedure LayoutSearchHeader;
 
       function HasSelection: boolean;
@@ -2510,8 +2511,8 @@ begin
     if (not CoverFile.IsFile()) then
       Song.Cover := PATH_NONE;
 
-    if (Song.Cover.IsUnset) then
-      CoverFile := Skin.GetTextureFileName('SongCover');
+    if Song.Cover.IsUnset then
+      CoverFile := PATH_NONE;
 
     CoverButton.Texture.Name := CoverFile;
     Song.CoverTex.Free;
@@ -2548,7 +2549,7 @@ begin
         CatSongs.Song[B].Cover := PATH_NONE;
 
       if CatSongs.Song[B].Cover.IsUnset then
-        CoverFile := Skin.GetTextureFileName('SongCover');
+        CoverFile := PATH_NONE;
 
       CatSongs.Song[B].CoverTex := Renderer.CreateEmptyTexture(CoverFile);
     end;
@@ -3036,14 +3037,9 @@ begin
   Statics[StaticActual].Visible := true;
   Statics[StaticActual].Texture.Free;
   SelectedCoverButton := -1;
-  if Button[Interaction].Texture.Name.IsUnset then
-    Cover := Renderer.GetTexture(Skin.GetTextureFileName('SongCover'), TEXTURE_TYPE_PLAIN)
-  else
-  begin
-    LoadCover(Interaction);
-    Cover := Button[Interaction].Texture.Clone();
-    if not Cover.IsEmpty then SelectedCoverButton := Interaction;
-  end;
+  LoadCover(Interaction);
+  Cover := Button[Interaction].Texture.Clone();
+  if not Cover.IsEmpty then SelectedCoverButton := Interaction;
   Statics[StaticActual].Texture := Cover;
 
   Cover.ColR := 1;
@@ -3579,6 +3575,95 @@ begin
   LayoutSearchHeader;
 end;
 
+procedure TScreenSong.DrawSongCoverTile(const Song: TSong; const Cover: TTexture);
+var
+  TileX, TileY, TileW, TileH: single;
+  Accent: TRGB;
+  Quads: TQuadList;
+  Padding, AvailableWidth, Size: real;
+
+  procedure DrawLabel(const Value: UTF8String; Style: integer; CenterY, FontSize: real);
+  var
+    LabelText: UTF8String;
+    Bounds: TBoundsDbl;
+    First, Last, Middle: integer;
+  begin
+    if Value = '' then Exit;
+    SetFontStyle(Style);
+    SetFontSize(FontSize);
+    LabelText := StringReplace(StringReplace(Value, #13, ' ', [rfReplaceAll]), #10, ' ', [rfReplaceAll]);
+    if TextWidth(LabelText) > AvailableWidth then
+    begin
+      if TextWidth('...') > AvailableWidth then Exit;
+      First := 0;
+      Last := LengthUTF8(LabelText);
+      while First < Last do
+      begin
+        Middle := (First + Last + 1) div 2;
+        if TextWidth(UTF8Copy(LabelText, 1, Middle) + '...') <= AvailableWidth then
+          First := Middle
+        else
+          Last := Middle - 1;
+      end;
+      LabelText := UTF8Copy(LabelText, 1, First) + '...';
+    end;
+    Bounds := Fonts[CurrentFont.FontFamily][CurrentFont.FontStyle].Font.BBox(UTF8String('M'), false);
+    SetFontPos(TileX + Padding, CenterY -
+      Fonts[CurrentFont.FontFamily][CurrentFont.FontStyle].Font.Ascender +
+      (Bounds.Top + Bounds.Bottom) / 2);
+    PrintText(LabelText);
+  end;
+
+begin
+  if Cover.Alpha <= 0 then Exit;
+  TileX := Cover.X;
+  TileY := Cover.Y;
+  TileW := Cover.W;
+  TileH := Cover.H;
+  ResolveLayoutRect(TileX, TileY, TileW, TileH, Cover.ScaleMode);
+  if (TileW <= 0) or (TileH <= 0) then Exit;
+
+  Accent := GetSystemColor(Skin.Color);
+  SetLength(Quads, 1);
+  with Quads[0] do
+  begin
+    X := TileX;
+    Y := TileY;
+    W := TileW;
+    H := TileH;
+    Z := Cover.Z;
+    Gradient := gdVertical;
+    ColR := 0.24 + 0.24 * Accent.R;
+    ColG := 0.24 + 0.24 * Accent.G;
+    ColB := 0.24 + 0.24 * Accent.B;
+    Alpha := Cover.Alpha;
+    ColR2 := 0.08 + 0.38 * Accent.R;
+    ColG2 := 0.08 + 0.38 * Accent.G;
+    ColB2 := 0.08 + 0.38 * Accent.B;
+    Alpha2 := Cover.Alpha;
+  end;
+  Renderer.DrawQuads(Quads);
+
+  Padding := Min(TileW, TileH) * 0.10;
+  AvailableWidth := TileW - 2 * Padding;
+  Size := Min(22, Min(TileW * 0.16, TileH * 0.25));
+  if Size < 5 then Exit;
+  ResetFont;
+  SetFontZ(Cover.Z + 0.001);
+  SetFontColor(1, 1, 1, Cover.Alpha);
+  if Song.Title = '' then
+    DrawLabel(Song.Artist, ftBold, TileY + TileH * 0.5, Size)
+  else if Song.Artist = '' then
+    DrawLabel(Song.Title, ftBold, TileY + TileH * 0.5, Size)
+  else
+  begin
+    DrawLabel(Song.Title, ftBold, TileY + TileH * 0.40, Size);
+    SetFontColor(0.92, 0.92, 0.92, Cover.Alpha);
+    DrawLabel(Song.Artist, ftRegular, TileY + TileH * 0.65, Size * 0.78);
+  end;
+  ResetFont;
+end;
+
 procedure TScreenSong.DrawSearchField;
 var
   Query, Shown: UTF8String;
@@ -4021,8 +4106,15 @@ begin
         //  but it's better than every not-yet-selected button being rendered as selected
         Button[I].SetSelect(I = Interaction);
         Button[I].Draw;
+        if Button[I].Visible and Button[I].Texture.IsEmpty and
+           ((TSongMenuMode(Ini.SongMenu) <> smList) or Theme.Song.HasListRowCover) then
+          DrawSongCoverTile(CatSongs.Song[I], Button[I].Texture);
     end;
   end;
+
+  if HasSelection and Statics[StaticActual].Visible and
+     Statics[StaticActual].Texture.IsEmpty then
+    DrawSongCoverTile(CatSongs.Song[Interaction], Statics[StaticActual].Texture);
 
   //  StopVideoPreview;
 
@@ -5273,7 +5365,7 @@ begin
   // A texture clone borrows the tile's GPU image until selection changes.
   if NumberOfButtonInArray = SelectedCoverButton then Exit;
   // background texture (garbage disposal)
-  if ((not Button[NumberOfButtonInArray].Texture.IsEmpty) and (Button[NumberOfButtonInArray].Texture.Name <> Skin.GetTextureFileName('SongCover'))) then
+  if not Button[NumberOfButtonInArray].Texture.IsEmpty then
     Button[NumberOfButtonInArray].Texture.Release();
 end;
 
@@ -5282,7 +5374,7 @@ procedure TScreenSong.LoadCover(NumberOfButtonInArray: integer);
 var
   Tex: TTexture;
 begin
-  If (Button[NumberOfButtonInArray].Texture.IsEmpty) and Assigned(Button[NumberOfButtonInArray].Texture.Name) then
+  If (Button[NumberOfButtonInArray].Texture.IsEmpty) and not Button[NumberOfButtonInArray].Texture.Name.IsUnset then
   begin
     Tex := Renderer.LoadTexture(Button[NumberOfButtonInArray].Texture.Name);
     Tex.ScaleMode := Theme.Song.Cover.ScaleMode;
