@@ -241,22 +241,43 @@ procedure DrawKeyHint(const Key: UTF8String; X, Y, Z, FontSize, R, G, B, A, RowH
   Reflection: boolean; ReflectionSpacing: real);
 var
   Font: TFont;
-  CapBounds: TBoundsDbl;
-  FrameY, FrameH, FrameOffset: real;
+  Bounds: TBoundsDbl;
+  FrameY, FrameH, FrameW, LabelY: real;
 begin
   Font := Fonts[CurrentFont.FontFamily][CurrentFont.FontStyle].Font;
+  FrameW := KeyHintWidth(Key, FontSize);
   FrameH := FontSize * 0.83;
-  // Align all borders in the row using the same cap height.
-  CapBounds := Font.BBox(UTF8String('H'), false);
   if RowHeight > 0 then
-    FrameY := Y + (RowHeight - FrameH) / 2
+  begin
+    // The cap and its label share the center of the footer's text row.
+    FrameH := Min(RowHeight, FontSize * 0.95);
+    FrameY := Y + (RowHeight - FrameH) / 2;
+  end
   else
-    FrameY := Y + Font.Ascender - (CapBounds.Top + CapBounds.Bottom + FrameH) / 2;
-  FrameOffset := FrameY - (Y + FontSize * 0.02);
-  DrawKeyFrame(X, FrameY, Z, KeyHintWidth(Key, FontSize), FrameH, R, G, B, A,
-    Reflection, ReflectionSpacing + 2 * (Font.Ascender - FontSize * 0.85 - FrameOffset));
-  SetFontPos(X + FontSize * 0.18, Y);
-  PrintText(Key);
+  begin
+    Bounds := Font.BBox(UTF8String('H'), false);
+    FrameY := Y + Font.Ascender - (Bounds.Top + Bounds.Bottom + FrameH) / 2;
+  end;
+
+  DrawKeyFrame(X, FrameY, Z, FrameW, FrameH, R, G, B, A, Reflection,
+    ReflectionSpacing + 2 * (Font.Ascender + Y - FrameY - FrameH));
+
+  if RowHeight > 0 then
+  begin
+    SetFontSize(FontSize * 0.9);
+    Bounds := Font.BBox(Key, false);
+    LabelY := FrameY + FrameH / 2 + (Bounds.Top + Bounds.Bottom) / 2 - Font.Ascender;
+    SetFontReflection(Reflection, ReflectionSpacing + 2 * (Y - LabelY));
+    SetFontPos(X + (FrameW - Bounds.Left - Bounds.Right) / 2, LabelY);
+    PrintText(Key);
+    SetFontSize(FontSize);
+    SetFontReflection(Reflection, ReflectionSpacing);
+  end
+  else
+  begin
+    SetFontPos(X + FontSize * 0.18, Y);
+    PrintText(Key);
+  end;
 end;
 
 function InlineTextWidth(const Value: UTF8String; BaseStyle: integer; FontSize: real;
