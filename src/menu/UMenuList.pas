@@ -59,11 +59,11 @@ function ListColumnFromAnchor(X, Width: real; Align: integer): TListColumn;
 procedure PositionListColumnText(Text: TText; const Column: TListColumn);
 procedure SetListCellText(Text: TText; const Column: TListColumn; const Value: UTF8String);
 
-procedure SetResultSongTitle(Text: TText; const Value: UTF8String; CanvasWidth: integer);
+procedure SetResultSongTitle(Text: TText; const Value: UTF8String; EllipsisWidth: integer);
 
 implementation
 
-uses Math, StrUtils, SysUtils, UScale, UText, UUnicodeUtils;
+uses Math, StrUtils, SysUtils, UText, UUnicodeUtils;
 
 procedure CalculateListColumns(const Specs: array of TListColumnSpec;
     Left, Width, RightBound, GapScale, MinGapScale: real;
@@ -139,35 +139,13 @@ begin
   Text.Text := FitTextToWidth(Value, Column.Width, Text.Font, Text.Style, Text.Size);
 end;
 
-procedure SetResultSongTitle(Text: TText; const Value: UTF8String; CanvasWidth: integer);
-var
-  Margin, Width, BackdropWidth: real;
-  Scale: TScaleDebugInfo;
+procedure SetResultSongTitle(Text: TText; const Value: UTF8String; EllipsisWidth: integer);
 begin
-  if (Text.W > 0) or (Text.Size <= 0) then
-  begin
-    Text.Text := Value;
-    Exit;
-  end;
-
-  Margin := CanvasWidth * 0.025;
-  case Text.Align of
-    1: Width := 2 * (Min(Text.X, CanvasWidth - Text.X) - Margin);
-    2: Width := Text.X - Margin;
+  if (EllipsisWidth <= 0) or (Text.Size <= 0) then
+    Text.Text := Value
   else
-    // Left-aligned headings leave room for the logo in the upper-right corner.
-    begin
-      GetScaleDebugInfo(Scale);
-      BackdropWidth := CanvasWidth;
-      // A centered 16:9 backdrop may extend sideways on a wider display.
-      if Scale.ScreenWidth > 0 then
-        BackdropWidth := CanvasWidth * Min(1.0, (16 / 9) * Scale.ScreenHeight / Scale.ScreenWidth);
-      Width := CanvasWidth / 2 + BackdropWidth / 4 - Margin / 2 - Text.X;
-    end;
-  end;
-
-  Text.Text := FitTextToWidth(Value, Max(1, Width),
-    ResolveThemeFont(Text.FontFile, Text.Font), Text.Style, Text.Size);
+    Text.Text := FitTextToWidth(Value, EllipsisWidth,
+      ResolveThemeFont(Text.FontFile, Text.Font), Text.Style, Text.Size);
 end;
 
 function MeasureTextMaxLineWidth(const Value: UTF8String; Font, Style: integer;

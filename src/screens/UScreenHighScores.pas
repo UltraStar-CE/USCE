@@ -694,7 +694,7 @@ begin
   inherited;
   if CurrentSong <> nil then
   begin
-    SetResultSongTitle(Text[TextArtistTitle], CurrentSong.Artist + ' - ' + CurrentSong.Title, RenderW);
+    SetResultSongTitle(Text[TextArtistTitle], CurrentSong.Artist + ' - ' + CurrentSong.Title, Theme.HighScores.TextArtistTitle.EllipsisWidth);
     ShowScoresForDifficulty(VisibleDifficulty);
   end;
 end;
@@ -725,7 +725,7 @@ begin
   UpdateHeaderText;
   LoadCurrentSongScores;
 
-  SetResultSongTitle(Text[TextArtistTitle], CurrentSong.Artist + ' - ' + CurrentSong.Title, RenderW);
+  SetResultSongTitle(Text[TextArtistTitle], CurrentSong.Artist + ' - ' + CurrentSong.Title, Theme.HighScores.TextArtistTitle.EllipsisWidth);
 
   if Ini.HighScoreScreenAllDifficulties then VisibleDifficulty := 3;
   if (VisibleDifficulty < 3) and

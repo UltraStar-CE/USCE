@@ -158,6 +158,7 @@ type
   AThemeStatic = array of TThemeStatic;
 
   TThemeText = record
+    EllipsisWidth: integer;
     X:        integer;
     Y:        integer;
     W:        integer;
@@ -3649,6 +3650,7 @@ begin
   ThemeText.X     := ReadInteger(SectionList, 'X', Defaults.X);
   ThemeText.Y     := ReadInteger(SectionList, 'Y', Defaults.Y);
   ThemeText.W     := ReadInteger(SectionList, 'W', 0);
+  ThemeText.EllipsisWidth := ReadInteger(SectionList, 'EllipsisWidth', 0);
   ThemeText.H     := ReadInteger(SectionList, 'H', 0);
 
   ThemeText.Z     := ReadFloat(SectionList, 'Z', 0);
