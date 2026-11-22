@@ -129,8 +129,6 @@ begin
  S.Button[3].Bounds.X:=200;
  try
   S.SelectsS[1].Visible:=true;
-  S.ParseMouse(1,true,210,420);
-  Check((S.MeasureCalls=1) and (S.MicDelta=0) and (Calls=0),'calibration launcher activated mic selector');
   S.DelayMeasurement:=TObject.Create;
   try
    S.ParseMouse(1,true,210,420);
@@ -140,9 +138,9 @@ begin
    S.ParseMouse(1,true,40,40);
    Check((S.Interaction=0) and (Calls=0),'modal let card click through');
   finally S.DelayMeasurement.Free; S.DelayMeasurement:=nil; end;
-  S.Button[1].Bounds.X:=500;
   S.ParseMouse(1,true,210,420);
-  Check((Calls=0) and (S.Interaction=S.PlayerMicIID) and (S.MicDelta=-1),'mic left click submitted setup');
+  Check((Calls=0) and (S.MeasureCalls=0) and (S.Interaction=S.PlayerMicIID) and
+    (S.MicDelta=-1),'mic left click did not stay within the mic selector');
   S.ParseMouse(1,true,260,420);
   Check((Calls=0) and (S.Interaction=S.PlayerMicIID) and (S.MicDelta=1),'mic right click submitted setup');
   Hit:=PlayerAvatarIID;S.ParseMouse(1,true,40,40);
