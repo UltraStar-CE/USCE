@@ -3580,7 +3580,7 @@ var
   TileX, TileY, TileW, TileH: single;
   Accent: TRGB;
   Quads: TQuadList;
-  Padding, AvailableWidth, Size, Brightness, TextShade: real;
+  Padding, AvailableWidth, Size, Brightness, TextShade, Peak: real;
 
   procedure DrawLabel(const Value: UTF8String; Style: integer; CenterY, FontSize, Shade: real);
   var
@@ -3632,6 +3632,14 @@ begin
     Accent.R := ColR;
     Accent.G := ColG;
     Accent.B := ColB;
+    if SameText(Color, 'ColorLight') then
+    begin
+      // Match the stronger color of the colorized button texture.
+      Peak := Max(Accent.R, Max(Accent.G, Accent.B));
+      Accent.R := Max(0, Peak - (Peak - Accent.R) * 1.6);
+      Accent.G := Max(0, Peak - (Peak - Accent.G) * 1.6);
+      Accent.B := Max(0, Peak - (Peak - Accent.B) * 1.6);
+    end;
   end;
   // Some themes put the button color in the texture instead of the tint.
   if Max(Accent.R, Max(Accent.G, Accent.B)) -
@@ -3641,7 +3649,7 @@ begin
   Brightness := 0.76;
   if Song.BPM > 0 then
     Brightness := 0.86 - 0.16 * EnsureRange((Song.BPM / 4 - 70) / 110, 0.0, 1.0);
-  if Brightness * (0.213 * Accent.R + 0.715 * Accent.G + 0.072 * Accent.B) > 0.47 then
+  if 0.78 * (0.213 * Accent.R + 0.715 * Accent.G + 0.072 * Accent.B) > 0.45 then
     TextShade := 0.06
   else
     TextShade := 1;
