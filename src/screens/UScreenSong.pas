@@ -3879,7 +3879,17 @@ var
   dx:         real;
   dt:         real;
   VideoAlpha: real;
-  I, J:       integer;
+  I, J, InsertAt: integer;
+  RouletteCovers: array of integer;
+
+  procedure DrawCover(Index: integer);
+  begin
+    Button[Index].SetSelect(Index = Interaction);
+    Button[Index].Draw;
+    if Button[Index].Visible and Button[Index].Texture.IsEmpty and
+       ((TSongMenuMode(Ini.SongMenu) <> smList) or Theme.Song.HasListRowCover) then
+      DrawSongCoverTile(CatSongs.Song[Index], Button[Index].Texture);
+  end;
 
   procedure SetMarkedCardTexture(StaticIndex: integer; const ThemeStatic: TThemeStatic);
   var
@@ -4120,21 +4130,32 @@ begin
   else
     VideoAlpha := 1;
 
-  //Instead of Draw FG Procedure:
-  //We draw Buttons for our own
-  for I := 0 to High(Button) do
+  if TSongMenuMode(Ini.SongMenu) = smRoulette then
   begin
-    if (TSongMenuMode(Ini.SongMenu) in [smChessboard, smList]) or (((I<>Interaction) or not Assigned(fCurrentVideo) or (VideoAlpha<1) or FinishedMusic)) then
+    // SetRouletteScroll exposes at most five covers. Draw each cover and
+    // its labels together, from the farthest tile to the closest.
+    for I := 0 to High(Button) do
     begin
-        // todo: there's probably a better way to set the selected one
-        //  but it's better than every not-yet-selected button being rendered as selected
-        Button[I].SetSelect(I = Interaction);
-        Button[I].Draw;
-        if Button[I].Visible and Button[I].Texture.IsEmpty and
-           ((TSongMenuMode(Ini.SongMenu) <> smList) or Theme.Song.HasListRowCover) then
-          DrawSongCoverTile(CatSongs.Song[I], Button[I].Texture);
+      if not Button[I].Visible or
+         ((I = Interaction) and Assigned(fCurrentVideo) and (VideoAlpha >= 1) and not FinishedMusic) then
+        Continue;
+      InsertAt := Length(RouletteCovers);
+      SetLength(RouletteCovers, InsertAt + 1);
+      while InsertAt > 0 do
+      begin
+        J := RouletteCovers[InsertAt - 1];
+        if Button[J].Z <= Button[I].Z then Break;
+        RouletteCovers[InsertAt] := J;
+        Dec(InsertAt);
+      end;
+      RouletteCovers[InsertAt] := I;
     end;
-  end;
+    for I := 0 to High(RouletteCovers) do
+      DrawCover(RouletteCovers[I]);
+  end
+  else
+    for I := 0 to High(Button) do
+      DrawCover(I);
 
   if HasSelection and Statics[StaticActual].Visible and
      Statics[StaticActual].Texture.IsEmpty then
