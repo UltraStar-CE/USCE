@@ -1212,7 +1212,7 @@ end;
 
 function TScreenName.LocalPlayerCount: integer;
 begin
-  if ConfirmedLocalPlayerCount < 0 then Exit(UIni.IMaxPlayerCount);
+  if ConfirmedLocalPlayerCount < 0 then Exit(UIni.IPlayersVals[Ini.Players]);
   Result := ConfirmedLocalPlayerCount;
 end;
 
@@ -1222,7 +1222,7 @@ begin
   if Party.bPartyGame then Exit(UIni.IPlayersVals[Ini.Players]);
   if LyricsOnly then Exit(0);
   if ConfirmedLocalPlayerCount < 0 then
-    Exit(AudioInputProcessor.ConfiguredPlayerCount(UIni.IMaxPlayerCount, Slots));
+    Exit(AudioInputProcessor.ConfiguredPlayerCount(LocalPlayerCount, Slots));
   Result := Max(ConfirmedLocalPlayerCount, HighestRemoteSlot);
 end;
 
