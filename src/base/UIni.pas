@@ -152,6 +152,7 @@ type
 
       // Game
       Players:        integer;
+      SetupLocalPlayers: integer; // -1 uses the legacy player selection
       Difficulty:     integer;
       AgeCountry: UTF8String;
       ContinuousMode: integer;
@@ -1798,6 +1799,8 @@ begin
 
   // Players
   Players := ReadArrayIndex(IPlayers, IniFile, 'Game', 'Players', 0);
+  SetupLocalPlayers := EnsureRange(IniFile.ReadInteger('Game', 'LocalPlayers', -1),
+    -1, IMaxPlayerCount);
 
   // Difficulty
   Difficulty := ReadArrayIndex(IDifficulty, IniFile, 'Game', 'Difficulty', IGNORE_INDEX, 'Medium');
@@ -2575,6 +2578,8 @@ begin
   try
     // Players
     IniFile.WriteString('Game', 'Players', IPlayers[Players]);
+    if SetupLocalPlayers >= 0 then
+      IniFile.WriteInteger('Game', 'LocalPlayers', SetupLocalPlayers);
   finally
     IniFile.Free;
   end;
