@@ -122,7 +122,7 @@ type
     function RequestRefresh(const Target: IPath = nil): boolean;
     function RefreshReady: boolean;
     // Caller releases retired headers after dropping old UI/media references.
-    function PublishRefresh(out Retired: TList): boolean;
+    function PublishRefresh(out Retired: TList; Reloaded: TList = nil): boolean;
   procedure FindFilesByExtension(const Dir: IPath; const Ext: IPath; Recursive: Boolean; var Files: TPathDynArray);
     procedure Sort(Order: TSortingType);
     property  Processing: boolean read fProcessing;
@@ -458,7 +458,7 @@ begin
   Result := true;
 end;
 
-function TSongs.PublishRefresh(out Retired: TList): boolean;
+function TSongs.PublishRefresh(out Retired: TList; Reloaded: TList): boolean;
 var NewList: TList; Old: TSong; Name: IPath; I, Index: integer;
   Loaded: TStringList;
 begin
@@ -481,6 +481,7 @@ begin
         if fRefresh.Entries.Objects[Index] <> nil then
         begin
           NewList.Add(fRefresh.Entries.Objects[Index]);
+          if Assigned(Reloaded) then Reloaded.Add(fRefresh.Entries.Objects[Index]);
         end;
         fRefresh.Entries.Objects[Index] := nil;
         Retired.Add(Old);
@@ -498,6 +499,7 @@ begin
       begin
         LastRefreshMembershipChanged := true;
         NewList.Add(fRefresh.Entries.Objects[I]);
+        if Assigned(Reloaded) then Reloaded.Add(fRefresh.Entries.Objects[I]);
         fRefresh.Entries.Objects[I] := nil;
       end;
     // Refreshes cover only part of the library. Retain failures outside that
