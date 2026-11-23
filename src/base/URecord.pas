@@ -94,7 +94,8 @@ type
 
       procedure ResetToneDiagnostics;
       procedure SetFrequenciesAndDelays(SampleRate: double);
-      procedure AnalyzeSamples(const Samples: array of smallint; Count: integer; SampleRate: double; Gain: integer = 1);
+      procedure AnalyzeSamples(const Samples: array of smallint; Count: integer; SampleRate: double;
+        Gain: integer = 1; MeasureBoost: boolean = false);
       function AnalysisGain: integer;
       // we call it to analyze sound by checking AMDF
       function AnalyzePitch(PDA: TPDAType; const Samples: array of smallint; Count: integer; SampleRate: double): boolean;
@@ -113,6 +114,8 @@ type
       // pitch detection
       // TODO: remove ToneValid, set Tone/ToneAbs=-1 if invalid instead
       ToneValid: boolean;    // true if Tone contains a valid value (otherwise it contains noise)
+      PhoneBoostProbeTone: integer;
+      PhoneAboveHalfMeter: boolean;
       Tone:      integer;    // tone relative to one octave (e.g. C2=C3=C4). Range: 0-11
       ToneAbs:   integer;    // absolute (full range) tone (e.g. C2<>C3). Range: 0..NumHalftones-1
       RawToneValid: boolean;
@@ -136,7 +139,8 @@ type
       procedure AnalyzeBuffer(out WindowCenterUs: int64); overload;
       function AnalyzeLocalWindow(CenterUs: int64; Count: integer; out WaitUntilUs: int64): boolean;
       function HasLocalCapture: boolean;
-      function AnalyzePhoneWindow(PlayerIndex: integer; CenterHostUs: Int64; WindowSamples: integer = 0): boolean;
+      function AnalyzePhoneWindow(PlayerIndex: integer; CenterHostUs: Int64; WindowSamples: integer = 0;
+        MeasureBoost: boolean = false): boolean;
       // Experimental native phone input, mono S16 at 48 kHz. Main thread only.
       procedure SubmitPhonePcm(Samples: pointer; Count: integer);
       procedure LockAnalysisBuffer();
@@ -663,32 +667,73 @@ begin
 end;
 
 procedure TCaptureBuffer.AnalyzeSamples(const Samples: array of smallint; Count: integer; SampleRate: double;
-  Gain: integer);
+  Gain: integer; MeasureBoost: boolean);
+const
+  // The Relay meter is halfway at -36 dBFS RMS.
+  HalfMeterRms = 0.0158489319;
 var
   StartedCounter: UInt64;
+  SumSquares: Int64;
   MaxSample, SampleIndex: integer;
-  MaxVolume: single;
+  MaxVolume, Threshold: single;
+
+  function ProbeHasPeriodicSignal: boolean;
+  var
+    Lag, I, Magnitude, Difference: integer;
+  begin
+    Lag := Delays[ToneAbs];
+    if (Lag <= 0) or (Lag >= Count) then Exit(false);
+    Magnitude := 0;
+    Difference := 0;
+    for I := Length(Samples) - Count + Lag to High(Samples) do
+    begin
+      Inc(Magnitude, Abs(integer(Samples[I])) + Abs(integer(Samples[I - Lag])));
+      Inc(Difference, Abs(integer(Samples[I]) - integer(Samples[I - Lag])));
+    end;
+    Result := (Magnitude > 0) and (Difference * 3 < Magnitude);
+  end;
 begin
   StartedCounter := SDL_GetPerformanceCounter;
   ToneValid := false;
   ToneAbs := -1;
   Tone := -1;
   ResetToneDiagnostics;
+  PhoneBoostProbeTone := -1;
+  PhoneAboveHalfMeter := false;
 
   if SampleRate > 0 then
   begin
     MaxSample := 0;
+    SumSquares := 0;
     for SampleIndex := Length(Samples) - Count to High(Samples) do
+    begin
       MaxSample := Max(MaxSample, Abs(integer(Samples[SampleIndex])));
+      if MeasureBoost then
+        Inc(SumSquares, Sqr(integer(Samples[SampleIndex])));
+    end;
     MaxVolume := MaxSample * Gain / -Low(SmallInt);
-    if MaxVolume >= IThresholdVals[Ini.ThresholdIndex] then
-      ToneValid := AnalyzePitch(PitchAlgorithm, Samples, Count, SampleRate);
+    Threshold := IThresholdVals[Ini.ThresholdIndex];
+    if MeasureBoost then
+      PhoneAboveHalfMeter := SumSquares > Count * Sqr(HalfMeterRms * -Low(SmallInt));
+    if MaxVolume >= Threshold then
+      ToneValid := AnalyzePitch(PitchAlgorithm, Samples, Count, SampleRate)
+    else if MeasureBoost and (MaxVolume < 0.5) and (MaxVolume * 2 >= Threshold) then
+    begin
+      // Doubling this window would clear the threshold without clipping.
+      // Probe for a pitch while keeping the actual scoring result invalid.
+      if AnalyzePitch(PitchAlgorithm, Samples, Count, SampleRate) and ProbeHasPeriodicSignal then
+        PhoneBoostProbeTone := Tone;
+      Tone := -1;
+      ToneAbs := -1;
+      ResetToneDiagnostics;
+    end;
   end;
 
   LastAnalysisMicroseconds := (SDL_GetPerformanceCounter - StartedCounter) * 1000000.0 / SDL_GetPerformanceFrequency;
 end;
 
-function TCaptureBuffer.AnalyzePhoneWindow(PlayerIndex: integer; CenterHostUs: Int64; WindowSamples: integer): boolean;
+function TCaptureBuffer.AnalyzePhoneWindow(PlayerIndex: integer; CenterHostUs: Int64; WindowSamples: integer;
+  MeasureBoost: boolean): boolean;
 var Window: array[0..4095] of SmallInt;
     Count: integer;
     function ReadWindow: boolean;
@@ -709,7 +754,7 @@ begin
     Count := Length(Window) div 2;
     if not ReadWindow then Exit;
   end;
-  AnalyzeSamples(Window, Count, PhonePcmSampleRate);
+  AnalyzeSamples(Window, Count, PhonePcmSampleRate, 1, MeasureBoost);
   Result := true;
 end;
 
