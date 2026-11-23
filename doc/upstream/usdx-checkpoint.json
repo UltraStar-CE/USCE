@@ -1,34 +1,16 @@
 {
   "repository": "UltraStar-Deluxe/USDX",
   "branch": "master",
-  "from": "68acb0329cd84df7920fed608618d09f64310faf",
-  "sha": "fcba3732aa3107871497656052b65a80e6d0a13d",
-  "meaning": "Assessed upstream tip with dispositions for each change",
-  "comparison": "https://github.com/UltraStar-Deluxe/USDX/compare/68acb0329cd84df7920fed608618d09f64310faf...fcba3732aa3107871497656052b65a80e6d0a13d",
+  "from": "fcba3732aa3107871497656052b65a80e6d0a13d",
+  "sha": "b57618df70d3cebd9be5323ed8aaeb0184703078",
+  "meaning": "Assessed upstream tip, not a claim that changes have been incorporated",
+  "comparison": "https://github.com/UltraStar-Deluxe/USDX/compare/fcba3732aa3107871497656052b65a80e6d0a13d...b57618df70d3cebd9be5323ed8aaeb0184703078",
   "commits": [
     {
-      "sha": "0f0ff6cfc1b302e1c2f0df53fb4f20b975979ea1",
-      "url": "https://github.com/UltraStar-Deluxe/USDX/commit/0f0ff6cfc1b302e1c2f0df53fb4f20b975979ea1",
-      "authoredAt": "2026-11-21T03:03:10Z",
-      "subject": "fix: try improve mouse debounce for video sync",
-      "disposition": "Already covered. USCE cancels pending previews when List or Chessboard selection changes and restarts its preview debounce for direct hover.",
-      "output": "https://github.com/UltraStar-CE/USCE/commit/e09a9ead"
-    },
-    {
-      "sha": "ac41ce437340625641575b65e18c15596219402c",
-      "url": "https://github.com/UltraStar-Deluxe/USDX/commit/ac41ce437340625641575b65e18c15596219402c",
-      "authoredAt": "2026-11-21T04:31:04Z",
-      "subject": "fix(#1390): reuse the loaded tile texture for the big song cover",
-      "disposition": "Adapted and tested in the open cover-reuse PR. The port borrows the loaded tile image with its own layout and keeps the tile alive while the detail view uses it. The port still awaits independent review.",
-      "output": "https://github.com/UltraStar-CE/USCE/pull/440"
-    },
-    {
-      "sha": "fcba3732aa3107871497656052b65a80e6d0a13d",
-      "url": "https://github.com/UltraStar-Deluxe/USDX/commit/fcba3732aa3107871497656052b65a80e6d0a13d",
-      "authoredAt": "2026-11-21T05:08:12Z",
-      "subject": "fix(#1390): open the preview video only shortly before it becomes visible",
-      "disposition": "Already covered. USCE opens the video separately after the song selection and screen transition have settled, using its existing 150 ms debounce.",
-      "output": "https://github.com/UltraStar-CE/USCE/commit/7f2abf2b"
+      "sha": "b57618df70d3cebd9be5323ed8aaeb0184703078",
+      "url": "https://github.com/UltraStar-Deluxe/USDX/commit/b57618df70d3cebd9be5323ed8aaeb0184703078",
+      "authoredAt": "2026-11-21T17:49:15Z",
+      "subject": "chore: improve license compliance and document third-party notices"
     }
   ]
 }
