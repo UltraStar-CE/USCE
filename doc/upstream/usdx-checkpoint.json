@@ -2,15 +2,23 @@
   "repository": "UltraStar-Deluxe/USDX",
   "branch": "master",
   "from": "fcba3732aa3107871497656052b65a80e6d0a13d",
-  "sha": "b57618df70d3cebd9be5323ed8aaeb0184703078",
-  "meaning": "Assessed upstream tip, not a claim that changes have been incorporated",
-  "comparison": "https://github.com/UltraStar-Deluxe/USDX/compare/fcba3732aa3107871497656052b65a80e6d0a13d...b57618df70d3cebd9be5323ed8aaeb0184703078",
+  "sha": "2f86d3cf644bca287aa2305b0729d41a5f653439",
+  "meaning": "Upstream tip accounted for in USCE",
+  "comparison": "https://github.com/UltraStar-Deluxe/USDX/compare/fcba3732aa3107871497656052b65a80e6d0a13d...2f86d3cf644bca287aa2305b0729d41a5f653439",
   "commits": [
     {
       "sha": "b57618df70d3cebd9be5323ed8aaeb0184703078",
       "url": "https://github.com/UltraStar-Deluxe/USDX/commit/b57618df70d3cebd9be5323ed8aaeb0184703078",
       "authoredAt": "2026-11-21T17:49:15Z",
-      "subject": "chore: improve license compliance and document third-party notices"
+      "subject": "chore: improve license compliance and document third-party notices",
+      "disposition": "Adapted for USCE in #463, with the fork notice in #464."
+    },
+    {
+      "sha": "2f86d3cf644bca287aa2305b0729d41a5f653439",
+      "url": "https://github.com/UltraStar-Deluxe/USDX/commit/2f86d3cf644bca287aa2305b0729d41a5f653439",
+      "authoredAt": "2026-11-23T00:12:15Z",
+      "subject": "fix(1487): jump the lyrics clock too when skipping with Ctrl+Right, otherwise the next frame analyzes every skipped beat",
+      "disposition": "Already covered by SeekTo, which sets the lyrics clock and updates beats on Ctrl+Right."
     }
   ]
 }
