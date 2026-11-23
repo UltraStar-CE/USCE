@@ -1279,6 +1279,12 @@ begin
 
   UpdateAssignedPlayers(true);
   Count := SelectedPlayerCount;
+  for I := 0 to High(Theme.Name.Text) do
+    if Theme.Name.Text[I].Text = Language.Translate('SING_PLAYER_ENTER_NAME') then
+      Text[I].Visible := Count > 0;
+  for I := 0 to High(Theme.Name.Statics) do
+    if SameText(Theme.Name.Statics[I].Tex, 'ButtonAZ') then
+      Statics[I].Visible := Count > 0;
 
   while (PlayerIndex > Max(0, Count-1)) do
     PlayerIndex := PlayerIndex - 1;
@@ -2059,6 +2065,8 @@ begin
       begin
         Button[B].X := Theme.Name.PlayerAvatar.X;
         Button[B].Y := Theme.Name.PlayerAvatar.Y;
+        Button[B].W := Theme.Name.PlayerAvatar.W;
+        Button[B].H := Theme.Name.PlayerAvatar.H;
 
         AvatarCurrent := AvatarTarget;
 

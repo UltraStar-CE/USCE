@@ -2764,6 +2764,8 @@ begin
   AutoWidthCorrection:= (UGraphic.RenderH/UGraphic.ScreenH)*(UGraphic.ScreenW/UGraphic.RenderW); //ToDo basisbit: width for 2-screen-setup
   if Screens > 1 then
    AutoWidthCorrection:= AutoWidthCorrection / 2;
+  // Keep ultrawide cover heights inside the widescreen layout.
+  AutoWidthCorrection := Min(AutoWidthCorrection, 4 / 3);
   //LoadCover(Interaction);
   // Update positions of all buttons
   for B := 0 to High(Button) do

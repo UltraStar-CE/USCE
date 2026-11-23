@@ -151,6 +151,7 @@ type
       fCancelValue: integer;
       fButtonCount: integer;
       fButtonTextX: real;
+      fDefaultTitle: UTF8String;
 
       procedure ResetLayout;
       procedure ConfigureButtons(const Captions: array of UTF8String; DefaultInteraction: integer);
@@ -168,7 +169,7 @@ type
       procedure ShowPopup(const Msg: UTF8String); overload;
       procedure ShowPopup(const Msg: UTF8String; const Captions: array of UTF8String;
           Handler: TPopupErrorHandler; HandlerData: Pointer; DefaultInteraction: integer;
-          CancelValue: integer); overload;
+          CancelValue: integer; const Title: UTF8String = ''); overload;
       function Draw: boolean; override;
   end;
 
@@ -1837,7 +1838,7 @@ end;
 
 procedure TScreenPopup.ShowPopup(const Msg: UTF8String; const Captions: array of UTF8String;
     Handler: TPopupErrorHandler; HandlerData: Pointer; DefaultInteraction: integer;
-    CancelValue: integer); overload;
+    CancelValue: integer; const Title: UTF8String); overload;
 begin
   Visible := true;
   Background.OnShow;
@@ -1847,6 +1848,11 @@ begin
 
   LayoutPopup(Msg, Captions);
   Text[0].Text := Msg;
+  if Length(Text) > 1 then
+  begin
+    if Title <> '' then Text[1].Text := Title
+    else Text[1].Text := fDefaultTitle;
+  end;
 
   ConfigureButtons(Captions, DefaultInteraction);
 end;
@@ -1856,7 +1862,7 @@ end;
 constructor TScreenPopupError.Create;
 begin
   inherited;
-  Text[1].Text := Language.Translate('MSG_ERROR_TITLE');
+  fDefaultTitle := Language.Translate('MSG_ERROR_TITLE');
 end;
 
 { TScreenPopupInfo }
@@ -1864,7 +1870,7 @@ end;
 constructor TScreenPopupInfo.Create;
 begin
   inherited;
-  Text[1].Text := Language.Translate('MSG_INFO_TITLE');
+  fDefaultTitle := Language.Translate('MSG_INFO_TITLE');
 end;
 
 // Help popup

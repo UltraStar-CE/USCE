@@ -3425,6 +3425,7 @@ begin
   Dec(SongJumpto.FilterActions[0].X, SongJumpto.FilterActions[3].W + 8);
   if ResolveThemeFile('SongJumptoButtonPin') <> nil then
     ThemeLoadButton(SongJumpto.FilterActions[0], 'SongJumptoButtonPin');
+  EnsureText(SongJumpto.FilterActions[0], 20);
 
 end;
 
