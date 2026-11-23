@@ -1055,6 +1055,8 @@ type
 
   TThemePartyTournamentRounds = class(TThemeBasic)
     TextNamePlayer: array[0..1, 0..7] of TThemeButton;
+    BracketLineR, BracketLineG, BracketLineB: real;
+    BracketLineAlpha: real;
     TextWinner: TThemeText;
     TextResult: TThemeText;
     NextPlayers: TThemeText;
@@ -2819,6 +2821,13 @@ begin
       //Party Tournament Rounds
 
       ThemeLoadBasic(PartyTournamentRounds, 'PartyTournamentRounds');
+      SectionList := GetSectionList('PartyTournamentRoundsBracket');
+      with PartyTournamentRounds do
+      begin
+        LoadColor(BracketLineR, BracketLineG, BracketLineB,
+          ReadString(SectionList, 'LineColor', 'White'));
+        BracketLineAlpha := EnsureRange(ReadFloat(SectionList, 'LineAlpha', 0.4), 0.0, 1.0);
+      end;
 
       for I := 0 to 1 do
       begin

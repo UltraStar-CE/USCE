@@ -1647,7 +1647,9 @@ end;
 
 procedure TScreenPartyTournamentRounds.DrawLine(X, Y, W, H: real);
 begin
-  Renderer.DrawQuad(X, Y, 0, W, H, 1, 1, 1, 0.4);
+  with Theme.PartyTournamentRounds do
+    Renderer.DrawQuad(X, Y, 0, W, H, BracketLineR, BracketLineG,
+      BracketLineB, BracketLineAlpha);
 end;
 
 procedure TScreenPartyTournamentRounds.DrawLinePlayer1(X, Y, W, H: real);

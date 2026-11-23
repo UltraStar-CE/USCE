@@ -514,6 +514,16 @@ var
     Column, ColumnCount, TrialRows: integer;
     FullWidth, RequiredWidth, Gap, RightBound: real;
     SingleLayout: TTextListLayout;
+
+    function CompactColumnWidth(Column: integer): real;
+    begin
+      // A flexible column can give unused space to the rest of the table.
+      // Measure its contents without applying the full-width table's minimum.
+      Result := ValueColumnWidth(Definitions[Column].Header, Definitions[Column].Value);
+      if not Table.Column[Column].Flexible then
+        Result := Max(Result, Table.Column[Column].Width);
+    end;
+
   begin
     ColumnCount := EnsureRange(Table.ColumnCount, 0, STAT_DETAIL_MAX_COLUMNS);
     while (ColumnCount > 0) and (Definitions[ColumnCount - 1].Value = scvNone) do
@@ -542,8 +552,7 @@ var
         RequiredWidth := 0;
         for Column := 0 to ColumnCount - 1 do
           RequiredWidth := RequiredWidth + Table.Column[Column].GapBefore +
-              Max(Table.Column[Column].Width,
-              ValueColumnWidth(Definitions[Column].Header, Definitions[Column].Value));
+              CompactColumnWidth(Column);
         if RequiredWidth <= 1 then
         begin
           RowsPerColumn := TrialRows;
@@ -565,8 +574,7 @@ var
     begin
       Specs[Column].Width := Table.Column[Column].Width;
       if ColumnOffset > 0 then
-        Specs[Column].Width := Max(Specs[Column].Width,
-            ValueColumnWidth(Definitions[Column].Header, Definitions[Column].Value))
+        Specs[Column].Width := CompactColumnWidth(Column)
       else if Table.Column[Column].AutoWidth then
         Specs[Column].Width := ValueColumnWidth(Definitions[Column].Header,
             Definitions[Column].Value);
