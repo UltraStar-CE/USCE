@@ -78,10 +78,10 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
     }
     if (old) { old->resetCallbacks(); old->close(); }
   }
-  bool pushLivePcm(const uint8_t *bytes, size_t size, CaptureUpdate update) {
+  bool pushLivePcm(const uint8_t *bytes, size_t size, CaptureUpdate update, uint8_t gate) {
     if (update == CaptureUpdate::superseded) return false;
     if (update == CaptureUpdate::restarted) pcm.reset();
-    if (pcm.push(bytes, size)) state = "receiving PCM";
+    if (pcm.push(bytes, size, Clock::now(), gate)) state = "receiving PCM";
     // A valid duplicate still counts as delivery on its own transport.
     return PcmQueue::validPacket(bytes, size);
   }
@@ -180,14 +180,18 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
                   owner->calibration.push(bytes, data->size());
                   return;
                 }
-                const bool stamped = data->size() == CaptureHistory::stampedPcmBytes;
+                const bool stamped = data->size() == CaptureHistory::stampedPcmBytes ||
+                  data->size() == CaptureHistory::gatedPcmBytes;
                 const auto size = stamped ? CaptureHistory::pcmBytes : data->size();
                 auto update = CaptureUpdate::unavailable;
                 if (stamped && owner->gameClock.ready) {
                   if (!owner->captureHistory) owner->captureHistory = std::make_unique<CaptureHistory>();
                   update = owner->captureHistory->pushStamped(bytes, data->size(), owner->gameClock.nowUs());
                 }
-                if (owner->pushLivePcm(bytes, size, update)) {
+                const auto gate = data->size() == CaptureHistory::gatedPcmBytes
+                  ? bytes[CaptureHistory::stampedPcmBytes] : 0;
+                if (gate <= static_cast<uint8_t>(CaptureHistory::Gate::recoverable) &&
+                    owner->pushLivePcm(bytes, size, update, static_cast<uint8_t>(gate))) {
                   owner->lastDirectPacket = Clock::now();
                   owner->directSequence = PcmQueue::u32(bytes + 4);
                 }
@@ -242,6 +246,10 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
         }
         const auto stamp = m.find("captureEndHostUs");
         const auto epoch = m.find("captureEpoch");
+        const auto field = m.find("micGate");
+        const auto gate = field != m.end() && field->is_number_unsigned() &&
+            field->get<uint64_t>() <= static_cast<uint8_t>(CaptureHistory::Gate::recoverable)
+          ? static_cast<CaptureHistory::Gate>(field->get<uint64_t>()) : CaptureHistory::Gate::unknown;
         auto update = CaptureUpdate::unavailable;
         if (gameClock.ready && stamp != m.end() && stamp->is_number_unsigned() &&
             epoch != m.end() && epoch->is_number_unsigned()) {
@@ -250,10 +258,10 @@ struct Receiver : std::enable_shared_from_this<Receiver> {
           if (endUs <= 9000000000000000ULL && captureEpoch && captureEpoch <= UINT32_MAX) {
             if (!captureHistory) captureHistory = std::make_unique<CaptureHistory>();
             update = captureHistory->push(bytes.data(), bytes.size(), static_cast<int64_t>(endUs),
-                gameClock.nowUs(), static_cast<uint32_t>(captureEpoch));
+                gameClock.nowUs(), static_cast<uint32_t>(captureEpoch), gate);
           }
         }
-        if (pushLivePcm(bytes.data(), bytes.size(), update)) lastRelayPacket = Clock::now();
+        if (pushLivePcm(bytes.data(), bytes.size(), update, static_cast<uint8_t>(gate))) lastRelayPacket = Clock::now();
       }
     } else if (type == "p2p.offer") {
       offer(m);
@@ -466,6 +474,9 @@ int32_t usce_pa_poll(void *p, int16_t *samples, int32_t capacity) {
   return usce_pa_poll_generation(p, samples, capacity, nullptr);
 }
 int32_t usce_pa_poll_generation(void *p, int16_t *samples, int32_t capacity, uint32_t *generation) {
+  return usce_pa_poll_gates(p, samples, capacity, generation, nullptr);
+}
+int32_t usce_pa_poll_gates(void *p, int16_t *samples, int32_t capacity, uint32_t *generation, uint8_t *gates) {
   if (!p || !samples || capacity <= 0 || capacity > 9600) return -1;
   try {
     const auto &self = *static_cast<Handle *>(p);
@@ -475,7 +486,7 @@ int32_t usce_pa_poll_generation(void *p, int16_t *samples, int32_t capacity, uin
     int32_t count;
     {
       std::lock_guard<std::mutex> lock(self->mutex);
-      count = self->pcm.read(samples, capacity);
+      count = self->pcm.read(samples, capacity, Clock::now(), gates);
       if (count > 0 && generation) *generation = self->pcm.captureGeneration;
       const auto now = Clock::now();
       if (count > 0 && self->lastDirectPacket != Clock::time_point{} && now - self->lastDirectPacket < std::chrono::milliseconds(250) &&
@@ -495,12 +506,18 @@ int32_t usce_pa_poll_generation(void *p, int16_t *samples, int32_t capacity, uin
   } catch (...) { return -1; }
 }
 int32_t usce_pa_capture_window(void *p, int64_t targetEndUs, int16_t *samples, uint32_t count) {
+  return usce_pa_capture_window_gate(p, targetEndUs, samples, count, nullptr);
+}
+int32_t usce_pa_capture_window_gate(void *p, int64_t targetEndUs, int16_t *samples, uint32_t count, int32_t *gate) {
   if (!p || targetEndUs <= 0 || targetEndUs > 9000000000000000LL) return -1;
   try {
     const auto &self = *static_cast<Handle *>(p);
     std::lock_guard<std::mutex> lock(self->mutex);
     if (!self->captureHistory) return -1;
-    return self->captureHistory->read(targetEndUs, samples, count) ? 1 : 0;
+    CaptureHistory::Gate decision = CaptureHistory::Gate::unknown;
+    if (!self->captureHistory->read(targetEndUs, samples, count, gate ? &decision : nullptr)) return 0;
+    if (gate) *gate = static_cast<int32_t>(decision);
+    return 1;
   } catch (...) { return -1; }
 }
 int32_t usce_pa_poll_calibration(void *p, int16_t *samples, int32_t capacity) {

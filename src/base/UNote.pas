@@ -185,6 +185,8 @@ procedure FinishPracticePassScoring(Screen: TScreenSingController);
 procedure AddGapSungNote(PlayerIndex, Beat, Tone: integer);
 function  GetMidBeat(Time: real): real;
 function  GetTimeFromBeat(Beat: integer; SelfSong: TSong = nil): real;
+function ConfiguredPhoneCaptureOffsetMs(PlayerIndex: integer): integer;
+function ConfiguredPlayerDelayMs(PlayerIndex: integer): integer;
 function  ScoringBeatAtOrAfter(Position: real): integer;
 function  GetPlayerSentenceScore(PlayerIndex, Track, SentenceIndex: integer; out Points: real): boolean;
 function  CalculateLinePerfection(LineScore, MaxLineScore: real): real;
@@ -1287,7 +1289,8 @@ begin
         end;
 
         WindowSamples := CurrentSound.AnalysisBufferSize;
-        MeasurePhoneBoost := ScoreWhenReady and NoteAvailable and Assigned(CurrentLineFragment) and
+        MeasurePhoneBoost := PhoneAudio.SupportsPhoneThreshold and
+          RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) and NoteAvailable and Assigned(CurrentLineFragment) and
           not IsUnpitchedNote(CurrentNoteType);
         WindowRate := 0;
         if ScoreWhenReady then WindowRate := PhonePcmSampleRate
@@ -1394,7 +1397,7 @@ begin
             if UseLocalClock or (CaptureOffsetMs <> UnavailablePhoneCaptureOffset) then
               CurrentSound.ToneValid := false
             else
-              CurrentSound.AnalyzeBuffer;
+              CurrentSound.AnalyzeBuffer(MeasurePhoneBoost);
           end;
           if (Ini.PitchTrace <> 0) and not NoteAvailable and CurrentSound.ToneValid then
             AddGapSungNote(PlayerIndex, ActualBeat, CurrentSound.Tone);
@@ -1430,15 +1433,16 @@ begin
         else
           Range := 2 - Ini.Difficulty;
 
-        if MeasurePhoneBoost and UsedTimedWindow and (CurNotePoints > 0) and
-           (CurrentSound.ToneValid or (CurrentSound.PhoneBoostProbeTone >= 0)) then
+        if MeasurePhoneBoost and (UsedTimedWindow or (not UseLocalClock and
+           (CaptureOffsetMs = UnavailablePhoneCaptureOffset))) and (CurNotePoints > 0) and
+           (CurrentSound.ToneValid or (CurrentSound.PhoneRecoverableTone >= 0)) then
         begin
           BeatMs := Round(60000 / CurrentSong.BPM);
           Inc(CurrentPlayer.PhonePitchedMs, BeatMs);
           if CurrentSound.PhoneAboveHalfMeter then Inc(CurrentPlayer.PhoneAboveHalfMs, BeatMs);
           if not CurrentSound.ToneValid then
           begin
-            ProbeDistance := Abs((CurrentSound.PhoneBoostProbeTone - CurrentLineFragment.Tone) mod 12);
+            ProbeDistance := Abs((CurrentSound.PhoneRecoverableTone - CurrentLineFragment.Tone) mod 12);
             if Min(ProbeDistance, 12 - ProbeDistance) <= Range then
               Inc(CurrentPlayer.PhoneBoostMisses);
           end;

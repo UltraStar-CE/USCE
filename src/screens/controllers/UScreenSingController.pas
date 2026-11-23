@@ -262,6 +262,8 @@ uses
   UNote,
   URecord,
   URemoteBridgeIPC,
+  UPhoneAudio,
+  UAudioCalibrationSessions,
   URemoteInput,
   UInputSource,
   UParty,
@@ -1790,7 +1792,9 @@ end;
 
 procedure TScreenSingController.SendRemoteLyrics;
 var
-  TrackIndex: integer;
+  TrackIndex, I, CaptureOffsetMs: integer;
+  RestUntilUs: int64;
+  VoiceAssignments: string;
   LineIndex: integer;
   NoteIndex: integer;
   TracksJson: string;
@@ -1814,6 +1818,10 @@ begin
       LyricText := '';
 
     NotesJson := '[';
+    RestUntilUs := 0;
+    if (LineIndex >= 0) and (LineIndex < CurrentSong.Tracks[TrackIndex].High) and
+       (CurrentSong.Tracks[TrackIndex].Lines[LineIndex + 1].HighNote >= 0) then
+      RestUntilUs := Round(GetTimeFromBeat(CurrentSong.Tracks[TrackIndex].Lines[LineIndex + 1].Notes[0].StartBeat) * 1000000);
     if (LineIndex >= 0) and (LineIndex <= CurrentSong.Tracks[TrackIndex].High) then
       for NoteIndex := 0 to CurrentSong.Tracks[TrackIndex].Lines[LineIndex].HighNote do
       begin
@@ -1821,21 +1829,41 @@ begin
         if NoteIndex > 0 then NotesJson := NotesJson + ',';
         NotesJson := NotesJson + '{"text":"' + RemoteJsonEscape(Note.Text) +
           '","startUs":' + IntToStr(Round(GetTimeFromBeat(Note.StartBeat) * 1000000)) +
-          ',"endUs":' + IntToStr(Round(GetTimeFromBeat(Note.StartBeat + Note.Duration) * 1000000)) + '}';
+          ',"endUs":' + IntToStr(Round(GetTimeFromBeat(Note.StartBeat + Note.Duration) * 1000000)) +
+          ',"pitched":' + LowerCase(BoolToStr(not Note.ScoreExcluded and not IsUnpitchedNote(Note.NoteType), true)) + '}';
       end;
     NotesJson := NotesJson + ']';
 
     TracksJson := TracksJson +
       '{"track":' + IntToStr(TrackIndex) +
       ',"line":' + IntToStr(LineIndex) +
+      ',"restUntilUs":' + IntToStr(RestUntilUs) +
       ',"text":"' + RemoteJsonEscape(LyricText) + '","notes":' + NotesJson + '}';
   end;
   TracksJson := TracksJson + ']';
+
+  VoiceAssignments := '[';
+  for I := 0 to High(Player) do
+  begin
+    if I > 0 then VoiceAssignments := VoiceAssignments + ',';
+    TrackIndex := 0;
+    if CurrentSong.isDuet then TrackIndex := Player[I].Track;
+    CaptureOffsetMs := ConfiguredPhoneCaptureOffsetMs(I);
+    if CaptureOffsetMs = UnavailablePhoneCaptureOffset then
+      CaptureOffsetMs := Ini.MicDelay + ConfiguredPlayerDelayMs(I);
+    VoiceAssignments := VoiceAssignments + '{"slot":' + IntToStr(I + 1) +
+      ',"track":' + IntToStr(TrackIndex) + ',"thresholdShiftUs":' +
+        IntToStr(Round((LyricsState.StartTime - CurrentSong.GAP + CaptureOffsetMs) * 1000)) + '}';
+  end;
+  VoiceAssignments := VoiceAssignments + ']';
 
   RemoteBridgeIPC.SendJsonMessage(
     '{"type":"song.lyrics","protocol":1' +
     ',"songSeq":' + IntToStr(RemoteSongSeq) +
     ',"mediaStartUs":' + IntToStr(RemoteMediaStartUs) +
+    RemoteScoringClockFields +
+    ',"phoneThresholdV1":' + LowerCase(BoolToStr(PhoneAudio.SupportsPhoneThreshold, true)) +
+    ',"playerTracks":' + VoiceAssignments +
     ',"tracks":' + TracksJson +
     '}'
   );

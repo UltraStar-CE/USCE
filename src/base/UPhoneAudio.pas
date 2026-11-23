@@ -7,14 +7,24 @@ interface
 
 uses SysUtils, Dynlibs, UAudioCalibrationSessions;
 
+const
+  PhoneGateUnknown = 0;
+  PhoneGateBelow = 1;
+  PhoneGateAbove = 2;
+  PhoneGateRecoverable = 3;
+
 type
   TPaCreate = function(Url, Ice: PAnsiChar): pointer; cdecl;
   TPaDestroy = procedure(Context: pointer); cdecl;
   TPaPoll = function(Context: pointer; Samples: pointer; Capacity: longint): longint; cdecl;
   TPaPollGeneration = function(Context: pointer; Samples: pointer; Capacity: longint;
     Generation: PLongWord): longint; cdecl;
+  TPaPollGates = function(Context: pointer; Samples: pointer; Capacity: longint;
+    Generation: PLongWord; Gates: PByte): longint; cdecl;
   TPaCaptureWindow = function(Context: pointer; EndHostUs: Int64;
     Samples: pointer; Count: LongWord): longint; cdecl;
+  TPaCaptureWindowGate = function(Context: pointer; EndHostUs: Int64;
+    Samples: pointer; Count: LongWord; Gate: PLongInt): longint; cdecl;
   TPaStatus = function(Context: pointer; Buffer: PAnsiChar; Capacity: longint): longint; cdecl;
   TPaSetClock = procedure(Context: pointer; HostTimeUs: int64); cdecl;
   TPaVersion = function: longint; cdecl;
@@ -30,7 +40,9 @@ type
     FDestroy: TPaDestroy;
     FPoll: TPaPoll;
     FPollGeneration: TPaPollGeneration;
+    FPollGates: TPaPollGates;
     FCaptureWindow: TPaCaptureWindow;
+    FCaptureWindowGate: TPaCaptureWindowGate;
     FPollCalibration: TPaPoll;
     FSetClock: TPaSetClock;
     FStatus: TPaStatus;
@@ -45,10 +57,11 @@ type
     procedure Stop;
     function Poll(Samples: pointer; Capacity: integer; PlayerIndex: integer = 0): integer; overload;
     function Poll(Samples: pointer; Capacity, PlayerIndex: integer;
-      out Generation: LongWord): integer; overload;
+      out Generation: LongWord; Gates: PByte = nil): integer; overload;
     function ReadCaptureWindow(PlayerIndex: integer; EndHostUs: Int64;
-      Samples: pointer; Count: LongWord): boolean;
+      Samples: pointer; Count: LongWord; out Gate: LongInt): boolean;
     function SupportsCaptureTimestamps: boolean;
+    function SupportsPhoneThreshold: boolean;
     function PollCalibration(Samples: pointer; Capacity: integer; PlayerIndex: integer): integer;
     function Status(PlayerIndex: integer = 0): UTF8String;
     procedure Signal(const Json: UTF8String);
@@ -109,7 +122,9 @@ begin
     FDestroy := TPaDestroy(GetProcedureAddress(FLibrary, 'usce_pa_destroy'));
     FPoll := TPaPoll(GetProcedureAddress(FLibrary, 'usce_pa_poll'));
     FPollGeneration := TPaPollGeneration(GetProcedureAddress(FLibrary, 'usce_pa_poll_generation'));
+    FPollGates := TPaPollGates(GetProcedureAddress(FLibrary, 'usce_pa_poll_gates'));
     FCaptureWindow := TPaCaptureWindow(GetProcedureAddress(FLibrary, 'usce_pa_capture_window'));
+    FCaptureWindowGate := TPaCaptureWindowGate(GetProcedureAddress(FLibrary, 'usce_pa_capture_window_gate'));
     FPollCalibration := TPaPoll(GetProcedureAddress(FLibrary, 'usce_pa_poll_calibration'));
     FStatus := TPaStatus(GetProcedureAddress(FLibrary, 'usce_pa_status'));
     FSignal := TPaSignal(GetProcedureAddress(FLibrary, 'usce_pa_signal'));
@@ -173,7 +188,7 @@ begin
 end;
 
 function TPhoneAudio.Poll(Samples: pointer; Capacity, PlayerIndex: integer;
-  out Generation: LongWord): integer;
+  out Generation: LongWord; Gates: PByte): integer;
 var Buffer: array[0..131071] of AnsiChar;
     I, Count: integer;
 begin
@@ -183,10 +198,13 @@ begin
     (FContexts[PlayerIndex] <> nil) then
   begin
     FSetClock(FContexts[PlayerIndex], int64(GetTickCount64) * 1000);
-    if Assigned(FPollGeneration) then
+    if (Gates <> nil) and Assigned(FPollGates) then
+      Result := FPollGates(FContexts[PlayerIndex], Samples, Capacity, @Generation, Gates)
+    else if Assigned(FPollGeneration) then
       Result := FPollGeneration(FContexts[PlayerIndex], Samples, Capacity, @Generation)
     else
       Result := FPoll(FContexts[PlayerIndex], Samples, Capacity);
+    if (Gates <> nil) and not Assigned(FPollGates) and (Result > 0) then FillChar(Gates^, Result, 0);
     for I := 1 to 128 do
     begin
       Count := FEvent(FContexts[PlayerIndex], @Buffer[0], Length(Buffer));
@@ -201,13 +219,21 @@ begin
   Result := Enabled and Assigned(FCaptureWindow);
 end;
 
-function TPhoneAudio.ReadCaptureWindow(PlayerIndex: integer; EndHostUs: Int64;
-  Samples: pointer; Count: LongWord): boolean;
+function TPhoneAudio.SupportsPhoneThreshold: boolean;
 begin
-  Result := SupportsCaptureTimestamps and
-    (PlayerIndex >= 0) and (PlayerIndex <= High(FContexts)) and
-    (FContexts[PlayerIndex] <> nil) and
-    (FCaptureWindow(FContexts[PlayerIndex], EndHostUs, Samples, Count) = 1);
+  Result := SupportsCaptureTimestamps and Assigned(FCaptureWindowGate) and Assigned(FPollGates);
+end;
+
+function TPhoneAudio.ReadCaptureWindow(PlayerIndex: integer; EndHostUs: Int64;
+  Samples: pointer; Count: LongWord; out Gate: LongInt): boolean;
+begin
+  Gate := PhoneGateUnknown;
+  if not SupportsCaptureTimestamps or (PlayerIndex < 0) or
+    (PlayerIndex > High(FContexts)) or (FContexts[PlayerIndex] = nil) then Exit(false);
+  if Assigned(FCaptureWindowGate) then
+    Result := FCaptureWindowGate(FContexts[PlayerIndex], EndHostUs, Samples, Count, @Gate) = 1
+  else
+    Result := FCaptureWindow(FContexts[PlayerIndex], EndHostUs, Samples, Count) = 1;
 end;
 
 function TPhoneAudio.PollCalibration(Samples: pointer; Capacity: integer; PlayerIndex: integer): integer;
