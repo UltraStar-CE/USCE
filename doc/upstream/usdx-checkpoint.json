@@ -1,24 +1,59 @@
 {
   "repository": "UltraStar-Deluxe/USDX",
   "branch": "master",
-  "from": "fcba3732aa3107871497656052b65a80e6d0a13d",
-  "sha": "2f86d3cf644bca287aa2305b0729d41a5f653439",
-  "meaning": "Upstream tip accounted for in USCE",
-  "comparison": "https://github.com/UltraStar-Deluxe/USDX/compare/fcba3732aa3107871497656052b65a80e6d0a13d...2f86d3cf644bca287aa2305b0729d41a5f653439",
+  "from": "2f86d3cf644bca287aa2305b0729d41a5f653439",
+  "sha": "e06b7b7ceff13612f6c5f716b4acedadd4a5f141",
+  "meaning": "Assessed upstream tip. Records ancestry and keeps the USCE implementations.",
+  "comparison": "https://github.com/UltraStar-Deluxe/USDX/compare/2f86d3cf644bca287aa2305b0729d41a5f653439...e06b7b7ceff13612f6c5f716b4acedadd4a5f141",
   "commits": [
     {
-      "sha": "b57618df70d3cebd9be5323ed8aaeb0184703078",
-      "url": "https://github.com/UltraStar-Deluxe/USDX/commit/b57618df70d3cebd9be5323ed8aaeb0184703078",
-      "authoredAt": "2026-11-21T17:49:15Z",
-      "subject": "chore: improve license compliance and document third-party notices",
-      "disposition": "Adapted for USCE in #463, with the fork notice in #464."
+      "sha": "622d7bc69641d8d6f5852e27377a95e481528e5c",
+      "url": "https://github.com/UltraStar-CE/USCE/commit/622d7bc69641d8d6f5852e27377a95e481528e5c",
+      "authoredAt": "2026-11-17T14:06:49Z",
+      "subject": "refactor SingDrawLines to have less places where the player-specific areas are defined",
+      "disposition": "Already covered by the USCE singing layout changes"
     },
     {
-      "sha": "2f86d3cf644bca287aa2305b0729d41a5f653439",
-      "url": "https://github.com/UltraStar-Deluxe/USDX/commit/2f86d3cf644bca287aa2305b0729d41a5f653439",
-      "authoredAt": "2026-11-23T00:12:15Z",
-      "subject": "fix(1487): jump the lyrics clock too when skipping with Ctrl+Right, otherwise the next frame analyzes every skipped beat",
-      "disposition": "Already covered by SeekTo, which sets the lyrics clock and updates beats on Ctrl+Right."
+      "sha": "60e5e8babc6baa6b1af585319351a48cd06f43d0",
+      "url": "https://github.com/UltraStar-CE/USCE/commit/60e5e8babc6baa6b1af585319351a48cd06f43d0",
+      "authoredAt": "2026-11-21T08:19:20Z",
+      "subject": "feat: reload songs automatically when the song folders change",
+      "disposition": "Declined the F5 reload implementation. USCE keeps automatic library refresh. Follow-up in USCE #471."
+    },
+    {
+      "sha": "bf54c948f6b37d422a9984fdd0de665f6af3e80c",
+      "url": "https://github.com/UltraStar-CE/USCE/commit/bf54c948f6b37d422a9984fdd0de665f6af3e80c",
+      "authoredAt": "2026-11-23T07:30:08Z",
+      "subject": "Reload songs with F5 instead of watching the song folders",
+      "disposition": "Declined the F5 reload implementation. USCE keeps automatic library refresh. Follow-up in USCE #471."
+    },
+    {
+      "sha": "3a89f3d458e69219a227c0aabbb6a83deceedfe4",
+      "url": "https://github.com/UltraStar-CE/USCE/commit/3a89f3d458e69219a227c0aabbb6a83deceedfe4",
+      "authoredAt": "2026-11-23T17:35:39Z",
+      "subject": "Shorten the comments",
+      "disposition": "Declined the F5 reload implementation. USCE keeps automatic library refresh. Follow-up in USCE #471."
+    },
+    {
+      "sha": "779f3560470525a0ec10edd86cea3e5637b4deae",
+      "url": "https://github.com/UltraStar-CE/USCE/commit/779f3560470525a0ec10edd86cea3e5637b4deae",
+      "authoredAt": "2026-11-23T17:43:46Z",
+      "subject": "Add OpenCategory and SelectSong helpers and reuse them",
+      "disposition": "Declined the F5 reload implementation. USCE keeps automatic library refresh. Follow-up in USCE #471."
+    },
+    {
+      "sha": "0b233942565e62504f0c931ef11e7cc33359dd21",
+      "url": "https://github.com/UltraStar-CE/USCE/commit/0b233942565e62504f0c931ef11e7cc33359dd21",
+      "authoredAt": "2026-11-23T20:19:38Z",
+      "subject": "Merge pull request #1479 from UltraStar-Deluxe/refactor-singdrawlines",
+      "disposition": "Already covered by the USCE singing layout changes"
+    },
+    {
+      "sha": "e06b7b7ceff13612f6c5f716b4acedadd4a5f141",
+      "url": "https://github.com/UltraStar-CE/USCE/commit/e06b7b7ceff13612f6c5f716b4acedadd4a5f141",
+      "authoredAt": "2026-11-23T21:38:55Z",
+      "subject": "Merge pull request #1483 from tomkenner/song-autoreload",
+      "disposition": "Declined the F5 reload implementation. USCE keeps automatic library refresh. Follow-up in USCE #471."
     }
   ]
 }
