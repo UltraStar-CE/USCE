@@ -829,7 +829,7 @@ begin
     if Url = '' then Url := Ini.RemoteBridgeServerUrl;
     if Url = '' then Url := DEFAULT_REMOTE_BRIDGE_SERVER_URL;
     FNativeRelay.Start(Url, GetEnvironmentVariable('USCE_RAW_AUDIO_LIBRARY'), USCE_VERSION,
-      PhoneAudio.SupportsCaptureTimestamps);
+      PhoneAudio.SupportsCaptureTimestamps, PhoneAudio.SupportsPhoneThreshold);
     Log.LogStatus('In-process relay enabled', 'Remote relay');
     PreviousEnd := GetTickCount64;
     while not Terminated do

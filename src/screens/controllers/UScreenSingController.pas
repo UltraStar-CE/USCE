@@ -262,7 +262,6 @@ uses
   UNote,
   URecord,
   URemoteBridgeIPC,
-  UPhoneAudio,
   UAudioCalibrationSessions,
   URemoteInput,
   UInputSource,
@@ -1862,7 +1861,6 @@ begin
     ',"songSeq":' + IntToStr(RemoteSongSeq) +
     ',"mediaStartUs":' + IntToStr(RemoteMediaStartUs) +
     RemoteScoringClockFields +
-    ',"phoneThresholdV1":' + LowerCase(BoolToStr(PhoneAudio.SupportsPhoneThreshold, true)) +
     ',"playerTracks":' + VoiceAssignments +
     ',"tracks":' + TracksJson +
     '}'

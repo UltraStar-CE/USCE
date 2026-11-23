@@ -740,8 +740,8 @@ begin
       MaxSample := Max(MaxSample, Abs(integer(Samples[SampleIndex])));
     MaxVolume := MaxSample * Gain / -Low(SmallInt);
     PhoneAboveHalfMeter := MeasurePhone and (MaxVolume > 0.5);
-    if (Gate = PhoneGateAbove) or
-       ((Gate = PhoneGateUnknown) and (MaxVolume >= IThresholdVals[Ini.ThresholdIndex])) then
+    if (MaxSample > 0) and ((Gate = PhoneGateAbove) or
+       ((Gate = PhoneGateUnknown) and (MaxVolume >= IThresholdVals[Ini.ThresholdIndex]))) then
       ToneValid := AnalyzePitch(PitchAlgorithm, Samples, Count, SampleRate)
     else if MeasurePhone and (Gate = PhoneGateRecoverable) then
     begin
