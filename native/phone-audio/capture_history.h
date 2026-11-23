@@ -6,11 +6,16 @@
 // A missing packet remains a hole until that packet arrives. Reading a
 // window has no effect on subsequent readers or on the live monitoring FIFO.
 class CaptureHistory {
+public:
+  enum class Gate : uint8_t { unknown, below, above, recoverable };
+
+private:
   static constexpr uint32_t samplesPerPacket = 480;
   static constexpr uint32_t packetCount = 128;
   struct Packet {
     int64_t endUs = 0;
     uint32_t sequence = 0, firstSample = 0, captureEpoch = 0;
+    Gate gate = Gate::unknown;
     std::array<int16_t, samplesPerPacket> samples{};
   };
   std::array<Packet, packetCount> packets{};
@@ -25,18 +30,21 @@ public:
   // Direct PCM appends a little-endian host timestamp and capture epoch to UAP1.
   static constexpr size_t pcmBytes = 980;
   static constexpr size_t stampedPcmBytes = pcmBytes + 12;
+  static constexpr size_t gatedPcmBytes = stampedPcmBytes + 1;
 
   Update pushStamped(const uint8_t *data, size_t size, int64_t hostNowUs) {
-    if (size != stampedPcmBytes) return Update::unavailable;
+    if (size != stampedPcmBytes && size != gatedPcmBytes) return Update::unavailable;
     const auto stamp = uint64_t(PcmQueue::u32(data + pcmBytes)) |
       (uint64_t(PcmQueue::u32(data + pcmBytes + 4)) << 32);
     const auto captureEpoch = PcmQueue::u32(data + pcmBytes + 8);
     if (stamp > INT64_MAX || captureEpoch == 0) return Update::unavailable;
-    return push(data, pcmBytes, static_cast<int64_t>(stamp), hostNowUs, captureEpoch);
+    const auto gate = size == gatedPcmBytes ? data[stampedPcmBytes] : 0;
+    if (gate > static_cast<uint8_t>(Gate::recoverable)) return Update::unavailable;
+    return push(data, pcmBytes, static_cast<int64_t>(stamp), hostNowUs, captureEpoch, static_cast<Gate>(gate));
   }
 
   Update push(const uint8_t *data, size_t size, int64_t endUs, int64_t hostNowUs,
-              uint32_t captureEpoch = 0) {
+              uint32_t captureEpoch = 0, Gate gate = Gate::unknown) {
     if (!PcmQueue::validPacket(data, size) || endUs <= 0 || hostNowUs <= 0)
       return Update::unavailable;
     // A timed packet that predates a verified restart must stay out of both
@@ -80,6 +88,7 @@ public:
     packet.sequence = sequence;
     packet.firstSample = PcmQueue::u32(data + 16);
     packet.captureEpoch = captureEpoch;
+    packet.gate = gate;
     for (uint32_t i = 0; i < samplesPerPacket; ++i) {
       const auto sample = uint16_t(data[20 + 2*i]) | (uint16_t(data[21 + 2*i]) << 8);
       packet.samples[i] = static_cast<int16_t>(sample);
@@ -87,7 +96,7 @@ public:
     return update;
   }
 
-  bool read(int64_t targetEndUs, int16_t *out, uint32_t count) {
+  bool read(int64_t targetEndUs, int16_t *out, uint32_t count, Gate *gate = nullptr) {
     if (!out || !count || count > 4096 || targetEndUs <= 0) return false;
     const Packet *end = nullptr;
     int64_t best = 7001;
@@ -118,14 +127,22 @@ public:
       const auto &prev = packets[(end->sequence - i) % packetCount];
       if (!contiguous(prev, next)) return false;
     }
+    bool unknown = false, above = false, recoverable = false;
     for (uint32_t remaining = count, i = 0; remaining != 0; ++i) {
       const auto &packet = packets[(end->sequence - i) % packetCount];
       const auto take = std::min(remaining, samplesPerPacket - skip);
+      if (take == samplesPerPacket && gate) {
+        unknown |= packet.gate == Gate::unknown;
+        above |= packet.gate == Gate::above;
+        recoverable |= packet.gate == Gate::recoverable;
+      }
       remaining -= take;
       const auto stop = packet.samples.end() - skip;
       std::copy(stop - take, stop, out + remaining);
       skip = 0;
     }
+    if (gate) *gate = above ? Gate::above : (unknown || count < 2 * samplesPerPacket) ? Gate::unknown :
+      recoverable ? Gate::recoverable : Gate::below;
     return true;
   }
 private:

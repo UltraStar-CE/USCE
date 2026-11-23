@@ -81,13 +81,15 @@ type
       Delays: TDelayArray;
       fToneCandidates: array[0..MaxToneCandidates-1] of TToneCandidate;
       fToneCandidateCount: integer;
+      PhoneGates: array of Byte;
 
       function GetToneString: string; // converts a tone to its string representation;
       function GetToneCandidate(Index: integer): TToneCandidate;
 
       procedure BoostBuffer(Buffer: PByteArray; Size: integer);
+      function AnalysisPhoneGate(Count: integer): LongInt;
       procedure ProcessNewBuffer(Buffer: PByteArray; BufferSize: integer; AllowRecording: boolean = true;
-        AllowBoost: boolean = true; CaptureEndUs: int64 = 0);
+        AllowBoost: boolean = true; CaptureEndUs: int64 = 0; Gates: PByte = nil);
 
       procedure StartCapture(Format: TAudioFormatInfo);
       procedure StopCapture();
@@ -95,7 +97,7 @@ type
       procedure ResetToneDiagnostics;
       procedure SetFrequenciesAndDelays(SampleRate: double);
       procedure AnalyzeSamples(const Samples: array of smallint; Count: integer; SampleRate: double;
-        Gain: integer = 1; MeasureBoost: boolean = false);
+        Gain: integer = 1; Gate: LongInt = 0; MeasurePhone: boolean = false);
       function AnalysisGain: integer;
       // we call it to analyze sound by checking AMDF
       function AnalyzePitch(PDA: TPDAType; const Samples: array of smallint; Count: integer; SampleRate: double): boolean;
@@ -114,7 +116,7 @@ type
       // pitch detection
       // TODO: remove ToneValid, set Tone/ToneAbs=-1 if invalid instead
       ToneValid: boolean;    // true if Tone contains a valid value (otherwise it contains noise)
-      PhoneBoostProbeTone: integer;
+      PhoneRecoverableTone: integer;
       PhoneAboveHalfMeter: boolean;
       Tone:      integer;    // tone relative to one octave (e.g. C2=C3=C4). Range: 0-11
       ToneAbs:   integer;    // absolute (full range) tone (e.g. C2<>C3). Range: 0..NumHalftones-1
@@ -136,13 +138,14 @@ type
 
       // use to analyze sound from buffers to get new pitch
       procedure AnalyzeBuffer; overload;
-      procedure AnalyzeBuffer(out WindowCenterUs: int64); overload;
+      procedure AnalyzeBuffer(MeasurePhone: boolean); overload;
+      procedure AnalyzeBuffer(out WindowCenterUs: int64; MeasurePhone: boolean = false); overload;
       function AnalyzeLocalWindow(CenterUs: int64; Count: integer; out WaitUntilUs: int64): boolean;
       function HasLocalCapture: boolean;
       function AnalyzePhoneWindow(PlayerIndex: integer; CenterHostUs: Int64; WindowSamples: integer = 0;
-        MeasureBoost: boolean = false): boolean;
+        MeasurePhone: boolean = false): boolean;
       // Experimental native phone input, mono S16 at 48 kHz. Main thread only.
-      procedure SubmitPhonePcm(Samples: pointer; Count: integer);
+      procedure SubmitPhonePcm(Samples: pointer; Count: integer; Gates: PByte = nil);
       procedure LockAnalysisBuffer();
       procedure UnlockAnalysisBuffer();
 
@@ -325,6 +328,7 @@ end;
 
 procedure UpdatePhoneAudio(CalibrationAllowed: boolean);
 var Samples: array[0..9599] of smallint;
+    Gates: array[0..9599] of Byte;
     Count, I: integer;
     Generation: LongWord;
     Capture: TCaptureBuffer;
@@ -336,7 +340,7 @@ begin
   for I := 0 to High(AudioInputProcessor.Sound) do
   begin
     Capture := AudioInputProcessor.Sound[I];
-    Count := PhoneAudio.Poll(@Samples[0], Length(Samples), I, Generation);
+    Count := PhoneAudio.Poll(@Samples[0], Length(Samples), I, Generation, @Gates[0]);
     Owner := RemoteInputProcessor.AssignedPlayerId(I);
     if RemoteInputProcessor.HasAssignedPlayer(I) or (Count > 0) then
       Capture.SubmitPhonePcm(nil, 0);
@@ -345,7 +349,7 @@ begin
       if (Capture.PhoneCaptureGeneration <> 0) and (Generation <> 0) and
         (Capture.PhoneCaptureGeneration <> Generation) then
         Capture.Clear;
-      Capture.SubmitPhonePcm(@Samples[0], Count);
+      Capture.SubmitPhonePcm(@Samples[0], Count, @Gates[0]);
       Capture.PhoneCaptureGeneration := Generation;
       PhoneInputLastSamples[I] := GetTickCount64;
       PhoneInputWasLive[I] := true;
@@ -508,13 +512,14 @@ begin
   FLocalCaptureEndUs := 0;
   FLocalBlockUs := 0;
   FLocalSamples := 0;
+  SetLength(PhoneGates, 0);
   FillChar(AnalysisBuffer[0], Length(AnalysisBuffer) * SizeOf(SmallInt), 0);
   UnlockAnalysisBuffer();
   ResetToneDiagnostics;
 end;
 
 procedure TCaptureBuffer.ProcessNewBuffer(Buffer: PByteArray; BufferSize: integer; AllowRecording: boolean;
-  AllowBoost: boolean; CaptureEndUs: int64);
+  AllowBoost: boolean; CaptureEndUs: int64; Gates: PByte);
 var
   BlockUs, ExpectedEndUs: int64;
   BufferOffset, HistorySize, PreviousSize: integer;
@@ -570,6 +575,16 @@ begin
     // copy new samples to analysis buffer
     Move(Buffer[BufferOffset], AnalysisBuffer[Length(AnalysisBuffer)-SampleCount],
          SampleCount * SizeOf(SmallInt));
+    if Gates = nil then
+      SetLength(PhoneGates, 0)
+    else
+    begin
+      SetLength(PhoneGates, Length(AnalysisBuffer));
+      if SampleCount < Length(PhoneGates) then
+        Move(PhoneGates[SampleCount], PhoneGates[0], Length(PhoneGates) - SampleCount);
+      Move(PByteArray(Gates)^[BufferOffset div SizeOf(SmallInt)],
+        PhoneGates[Length(PhoneGates) - SampleCount], SampleCount);
+    end;
 
   finally
     UnlockAnalysisBuffer();
@@ -609,12 +624,33 @@ begin
 end;
 
 procedure TCaptureBuffer.AnalyzeBuffer;
-var Unused: int64;
 begin
-  AnalyzeBuffer(Unused);
+  AnalyzeBuffer(false);
 end;
 
-procedure TCaptureBuffer.AnalyzeBuffer(out WindowCenterUs: int64);
+procedure TCaptureBuffer.AnalyzeBuffer(MeasurePhone: boolean);
+var Unused: int64;
+begin
+  AnalyzeBuffer(Unused, MeasurePhone);
+end;
+
+function TCaptureBuffer.AnalysisPhoneGate(Count: integer): LongInt;
+var I: integer;
+    Unknown: boolean;
+begin
+  if Length(PhoneGates) < Count then Exit(PhoneGateUnknown);
+  Result := PhoneGateBelow;
+  Unknown := false;
+  for I := Length(PhoneGates) - Count to High(PhoneGates) do
+    case PhoneGates[I] of
+      PhoneGateAbove: Exit(PhoneGateAbove);
+      PhoneGateRecoverable: Result := PhoneGateRecoverable;
+      PhoneGateUnknown: Unknown := true;
+    end;
+  if Unknown then Result := PhoneGateUnknown;
+end;
+
+procedure TCaptureBuffer.AnalyzeBuffer(out WindowCenterUs: int64; MeasurePhone: boolean);
 begin
   WindowCenterUs := 0;
   if (AnalysisBufferSize <> 512) and (AnalysisBufferSize <> 1024) and
@@ -626,7 +662,8 @@ begin
     begin
       if (FLocalSamples >= AnalysisBufferSize) and (AudioFormat.SampleRate > 0) then
         WindowCenterUs := FLocalCaptureEndUs - Round(AnalysisBufferSize * 500000.0 / AudioFormat.SampleRate);
-      AnalyzeSamples(AnalysisBuffer, AnalysisBufferSize, AudioFormat.SampleRate, AnalysisGain);
+      AnalyzeSamples(AnalysisBuffer, AnalysisBufferSize, AudioFormat.SampleRate, AnalysisGain,
+        AnalysisPhoneGate(AnalysisBufferSize), MeasurePhone);
     end
     else
       AnalyzeSamples(AnalysisBuffer, AnalysisBufferSize, 0);
@@ -667,15 +704,14 @@ begin
 end;
 
 procedure TCaptureBuffer.AnalyzeSamples(const Samples: array of smallint; Count: integer; SampleRate: double;
-  Gain: integer; MeasureBoost: boolean);
+  Gain: integer; Gate: LongInt; MeasurePhone: boolean);
 var
   StartedCounter: UInt64;
   MaxSample, SampleIndex: integer;
-  MaxVolume, Threshold: single;
+  MaxVolume: single;
 
-  function ProbeHasPeriodicSignal: boolean;
-  var
-    Lag, I, Magnitude, Difference: integer;
+  function RecoverablePitchIsPeriodic: boolean;
+  var Lag, I, Magnitude, Difference: integer;
   begin
     Lag := Delays[ToneAbs];
     if (Lag <= 0) or (Lag >= Count) then Exit(false);
@@ -694,7 +730,7 @@ begin
   ToneAbs := -1;
   Tone := -1;
   ResetToneDiagnostics;
-  PhoneBoostProbeTone := -1;
+  PhoneRecoverableTone := -1;
   PhoneAboveHalfMeter := false;
 
   if SampleRate > 0 then
@@ -703,17 +739,16 @@ begin
     for SampleIndex := Length(Samples) - Count to High(Samples) do
       MaxSample := Max(MaxSample, Abs(integer(Samples[SampleIndex])));
     MaxVolume := MaxSample * Gain / -Low(SmallInt);
-    Threshold := IThresholdVals[Ini.ThresholdIndex];
-    if MeasureBoost then
-      PhoneAboveHalfMeter := MaxVolume > 0.5;
-    if MaxVolume >= Threshold then
+    PhoneAboveHalfMeter := MeasurePhone and (MaxVolume > 0.5);
+    if (Gate = PhoneGateAbove) or
+       ((Gate = PhoneGateUnknown) and (MaxVolume >= IThresholdVals[Ini.ThresholdIndex])) then
       ToneValid := AnalyzePitch(PitchAlgorithm, Samples, Count, SampleRate)
-    else if MeasureBoost and (MaxVolume < 0.5) and (MaxVolume * 2 >= Threshold) then
+    else if MeasurePhone and (Gate = PhoneGateRecoverable) then
     begin
-      // Doubling this window would clear the threshold without clipping.
-      // Probe for a pitch while keeping the actual scoring result invalid.
-      if AnalyzePitch(PitchAlgorithm, Samples, Count, SampleRate) and ProbeHasPeriodicSignal then
-        PhoneBoostProbeTone := Tone;
+      // The phone identified a window that boost could admit. Check the
+      // pitch for feedback, while leaving the actual score gated off.
+      if AnalyzePitch(PitchAlgorithm, Samples, Count, SampleRate) and RecoverablePitchIsPeriodic then
+        PhoneRecoverableTone := Tone;
       Tone := -1;
       ToneAbs := -1;
       ResetToneDiagnostics;
@@ -724,14 +759,15 @@ begin
 end;
 
 function TCaptureBuffer.AnalyzePhoneWindow(PlayerIndex: integer; CenterHostUs: Int64; WindowSamples: integer;
-  MeasureBoost: boolean): boolean;
+  MeasurePhone: boolean): boolean;
 var Window: array[0..4095] of SmallInt;
     Count: integer;
+    Gate: LongInt;
     function ReadWindow: boolean;
     begin
       Result := PhoneAudio.ReadCaptureWindow(PlayerIndex,
         CenterHostUs + Round(Count * 500000.0 / PhonePcmSampleRate),
-        @Window[Length(Window) - Count], Count);
+        @Window[Length(Window) - Count], Count, Gate);
     end;
 begin
   Result := false;
@@ -745,11 +781,11 @@ begin
     Count := Length(Window) div 2;
     if not ReadWindow then Exit;
   end;
-  AnalyzeSamples(Window, Count, PhonePcmSampleRate, 1, MeasureBoost);
+  AnalyzeSamples(Window, Count, PhonePcmSampleRate, 1, Gate, MeasurePhone);
   Result := true;
 end;
 
-procedure TCaptureBuffer.SubmitPhonePcm(Samples: pointer; Count: integer);
+procedure TCaptureBuffer.SubmitPhonePcm(Samples: pointer; Count: integer; Gates: PByte);
 begin
   if (Count < 0) or (Count > 9600) or ((Count > 0) and (Samples = nil)) then Exit;
   if (fAudioFormat = nil) or (fAudioFormat.SampleRate <> 48000) or
@@ -764,7 +800,7 @@ begin
   // physical-microphone boost, which can severely clip phone PCM.
   // No voice passthrough: avoid playing a delayed phone mic through speakers.
   FreeAndNil(fVoiceStream);
-  if Count > 0 then ProcessNewBuffer(PByteArray(Samples), Count * SizeOf(smallint), false, false);
+  if Count > 0 then ProcessNewBuffer(PByteArray(Samples), Count * SizeOf(smallint), false, false, 0, Gates);
 end;
 
 function TCaptureBuffer.ArrayIndexOfMinimum(const AValues: array of real): Integer;

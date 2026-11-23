@@ -53,6 +53,13 @@ int main() {
   assert(q.read(out, 9600, now) == 1440);
   assert(q.readEndSampleCounter == 4 * 480);
   assert(out[0] == 16384 && out[480] == 0 && out[960] == 16384);
+  PcmQueue gatedQueue;
+  p = packet(1); assert(gatedQueue.push(p.data(), p.size(), now, 3));
+  p = packet(3); assert(gatedQueue.push(p.data(), p.size(), now, 2));
+  uint8_t gates[9600];
+  assert(gatedQueue.read(out, 9600, now, gates) == 1440);
+  assert(gates[479] == 3 && gates[480] == 0 && gates[960] == 2);
+  assert(out[0] == 16384 && out[480] == 0 && out[960] == 16384);
   const auto continuousCapture = q.captureGeneration;
   p = packet(20);
   assert(q.push(p.data(), p.size(), now));
@@ -119,6 +126,27 @@ int main() {
   directCapture.pushStamped(p.data(), p.size(), directStamp + 10000);
   assert(directCapture.read(directStamp, out, 480));
   assert(out[0] == 16384);
+  using Gate = CaptureHistory::Gate;
+  CaptureHistory gatedHistory;
+  auto pushGated = [&](uint32_t sequence, Gate gate) {
+    auto bytes = packet(sequence);
+    const auto endUs = uint64_t{1000000} + sequence * 10000;
+    bytes.resize(CaptureHistory::gatedPcmBytes);
+    for (size_t i = 0; i < 8; ++i)
+      bytes[CaptureHistory::pcmBytes + i] = static_cast<uint8_t>(endUs >> (8 * i));
+    bytes[CaptureHistory::pcmBytes + 8] = 1;
+    bytes.back() = static_cast<uint8_t>(gate);
+    gatedHistory.pushStamped(bytes.data(), bytes.size(), endUs + 10000);
+  };
+  pushGated(1, Gate::unknown);
+  pushGated(2, Gate::recoverable);
+  pushGated(3, Gate::below);
+  pushGated(4, Gate::above);
+  Gate gate = Gate::unknown;
+  assert(gatedHistory.read(1020000, out, 960, &gate) && gate == Gate::unknown);
+  assert(gatedHistory.read(1030000, out, 960, &gate) && gate == Gate::recoverable);
+  assert(gatedHistory.read(1035000, out, 960, &gate) && gate == Gate::below);
+  assert(gatedHistory.read(1040000, out, 960, &gate) && gate == Gate::above && out[959] == 16384);
   // A sequence number alone cannot identify a duplicate on the relay path.
   p = packet(3);
   assert(history.push(p.data(), p.size(), 1030000, 1070000) == CaptureUpdate::retained);

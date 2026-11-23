@@ -14,7 +14,8 @@ public:
   explicit PcmQueue(bool calibration = false) : marker(calibration ? 'C' : 'P') {}
   using Clock = std::chrono::steady_clock;
   static constexpr size_t limit = 9600; // 200 ms, drop oldest on overload.
-  std::deque<int16_t> samples;
+  struct Sample { int16_t value; uint8_t gate; };
+  std::deque<Sample> samples;
   uint64_t packets = 0, gaps = 0, rejected = 0, duplicates = 0, dropped = 0;
   bool haveSequence = false;
   uint32_t sequence = 0;
@@ -35,7 +36,7 @@ public:
     samples.clear(); haveSequence = false; peak = 0; last = {};
     endSampleCounter = readEndSampleCounter = 0;
   }
-  bool push(const uint8_t *data, size_t size, Clock::time_point now = Clock::now()) {
+  bool push(const uint8_t *data, size_t size, Clock::time_point now = Clock::now(), uint8_t gate = 0) {
     if (!validPacket(data, size, marker)) { ++rejected; return false; }
     const auto seq = u32(data + 4), count = u32(data + 12);
     // Forget the old timeline after a stall; never score old buffered sound.
@@ -49,7 +50,7 @@ public:
       if (delta > 1) {
         gaps += uint32_t(delta - 1);
         // Preserve short gaps as silence. Large gaps restart the live window.
-        if (delta <= 11) samples.insert(samples.end(), size_t(delta - 1) * 480, 0);
+        if (delta <= 11) samples.insert(samples.end(), size_t(delta - 1) * 480, {0, 0});
         else {
           samples.clear();
           advanceCaptureGeneration();
@@ -60,7 +61,7 @@ public:
     for (uint32_t i = 0; i < count; ++i) {
       const uint16_t value = uint16_t(data[20 + i * 2]) | (uint16_t(data[21 + i * 2]) << 8);
       const auto sample = static_cast<int16_t>(value);
-      samples.push_back(sample);
+      samples.push_back({sample, gate});
       peak = std::max(peak, std::abs(float(sample)) / 32768.f);
     }
     if (samples.size() > limit) {
@@ -72,10 +73,14 @@ public:
     endSampleCounter = u32(data + 16) + count;
     return true;
   }
-  int32_t read(int16_t *out, int32_t capacity, Clock::time_point now = Clock::now()) {
+  int32_t read(int16_t *out, int32_t capacity, Clock::time_point now = Clock::now(), uint8_t *gates = nullptr) {
     if (last == Clock::time_point{} || now - last > std::chrono::milliseconds(250)) { reset(); return 0; }
     const auto count = std::min(samples.size(), size_t(capacity));
-    for (size_t i = 0; i < count; ++i) { out[i] = samples.front(); samples.pop_front(); }
+    for (size_t i = 0; i < count; ++i) {
+      out[i] = samples.front().value;
+      if (gates) gates[i] = samples.front().gate;
+      samples.pop_front();
+    }
     if (count) readEndSampleCounter = endSampleCounter - uint32_t(samples.size());
     return int32_t(count);
   }
