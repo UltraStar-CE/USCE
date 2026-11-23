@@ -3252,8 +3252,11 @@ begin
   Defaults.Color.R := 1; Defaults.Color.G := 1; Defaults.Color.B := 1;
   Defaults.ServerColor.R := 1; Defaults.ServerColor.G := 0.77; Defaults.ServerColor.B := 0.2;
   Defaults.LocalTexture := ''; Defaults.DirectTexture := ''; Defaults.ServerTexture := '';
+  InputSourceBadges[0] := Defaults;
+  InputSourceBadges[0].Corner := 3;
+  Load(InputSourceBadges[0], 'InputSourceBadge');
+  Load(InputSourceBadges[0], 'NameInputSourceBadge');
   Load(Defaults, 'InputSourceBadge');
-  InputSourceBadges[0] := Defaults; Load(InputSourceBadges[0], 'NameInputSourceBadge');
   InputSourceBadges[1] := Defaults; Load(InputSourceBadges[1], 'SingInputSourceBadge');
   InputSourceBadges[2] := Defaults; Load(InputSourceBadges[2], 'ScoreInputSourceBadge');
 end;

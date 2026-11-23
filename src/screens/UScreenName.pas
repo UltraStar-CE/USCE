@@ -46,6 +46,7 @@ uses
   UMusic,
   UMenuSelectSlide,
   URecord,
+  URenderer,
   UNote,
   UScreenScore,
   UScreenSingController,
@@ -96,6 +97,7 @@ type
       AvatarCurrent: real;
       AvatarTarget:  integer;
 
+      AvatarArrows: array[0..1] of TTexture;
       NumVisibleAvatars:      integer;
       DistanceVisibleAvatars: integer;
 
@@ -140,6 +142,10 @@ type
       function InlineCardMic: boolean;
       function CardEditorScaleY(PlayerID: integer; const Card: TPlayerSlotRect): real;
       procedure LayoutMicSelector;
+      function AvatarArrowBounds(Index: integer): TMouseOverRect;
+      procedure DrawAvatarArrows;
+      procedure DrawAvatarInputBadge(PlayerID, LocalCount: integer; Avatar: TTexture;
+        CornerRadius: single);
       procedure DrawMicSelector;
       procedure UpdateAssignedPlayers(Force: boolean = false);
       function DisplayPlayerName(Index: integer): UTF8String;
@@ -210,7 +216,6 @@ uses
   UMain,
   UMenuButton,
   UPath,
-  URenderer,
   UScreenSong,
   UContinuousPlayback,
   USkins,
@@ -577,6 +582,17 @@ begin
     end;
     Exit;
   end;
+  if Assigned(AvatarArrows[0]) and (SelectedPlayerCount > 0) and
+     (Length(AvatarsList) > 1) and BtnDown and (MouseButton = SDL_BUTTON_LEFT) then
+    for I := 0 to High(AvatarArrows) do
+      if InRegion(X, Y, AvatarArrowBounds(I)) then
+      begin
+        Interaction := PlayerAvatarIID;
+        StopTextInput;
+        if I = 0 then ParseInput(SDLK_LEFT, 0, true)
+        else ParseInput(SDLK_RIGHT, 0, true);
+        Exit;
+      end;
   if Theme.Name.Cards.Enabled and (SelectedPlayerCount > 0) and
      BtnDown and (MouseButton = SDL_BUTTON_LEFT) then
   begin
@@ -1541,6 +1557,7 @@ begin
   SelectsS[PlayerColor].SetSelect(false);
   SelectsS[PlayerSelectLevel].SetSelect(false);
   SelectsS[PlayerSelectVoice].SetSelect(false);
+  SelectsS[PlayerMic].SetSelect(Interaction = PlayerMicIID);
   Button[PlayerName].SetSelect(false);
   Button[PlayerAvatar].SetSelect(false);
 
@@ -1637,6 +1654,11 @@ begin
 
   NumVisibleAvatars := Theme.Name.PlayerScrollAvatar.NumAvatars;
   DistanceVisibleAvatars := Theme.Name.PlayerScrollAvatar.DistanceAvatars;
+  if (NumVisibleAvatars = 1) and not Theme.Name.Cards.Enabled then
+  begin
+    AvatarArrows[0] := UGraphic.Tex_SelectS_ArrowL.Clone;
+    AvatarArrows[1] := UGraphic.Tex_SelectS_ArrowR.Clone;
+  end;
 
   Interaction := 0;
 end;
@@ -1757,6 +1779,8 @@ end;
 destructor TScreenName.Destroy;
 begin
   DelayMeasurement.Free;
+  AvatarArrows[0].Free;
+  AvatarArrows[1].Free;
   inherited;
 end;
 
@@ -2220,8 +2244,57 @@ begin
   Result.B := Result.B + (1 - Result.B) * MicActivity[PlayerID];
 end;
 
+function TScreenName.AvatarArrowBounds(Index: integer): TMouseOverRect;
+const Gap = 5;
+var Avatar: TMouseOverRect;
+begin
+  with Theme.Name.PlayerAvatar do
+  begin
+    Avatar.X := X; Avatar.Y := Y; Avatar.W := W; Avatar.H := H;
+    ResolveLayoutRect(Avatar.X, Avatar.Y, Avatar.W, Avatar.H,
+      Button[PlayerAvatarButton[0]].Texture.ScaleMode);
+  end;
+  Result.W := 20;
+  Result.H := 24;
+  Result.Y := Avatar.Y + (Avatar.H - Result.H) / 2;
+  if Index = 0 then Result.X := Avatar.X - Gap - Result.W
+  else Result.X := Avatar.X + Avatar.W + Gap;
+end;
+
+procedure TScreenName.DrawAvatarArrows;
+var I: integer; Bounds: TMouseOverRect;
+begin
+  if not Assigned(AvatarArrows[0]) or (SelectedPlayerCount = 0) or
+     (Length(AvatarsList) <= 1) then Exit;
+  for I := 0 to High(AvatarArrows) do
+  begin
+    Bounds := AvatarArrowBounds(I);
+    with AvatarArrows[I] do
+    begin
+      X := Bounds.X; Y := Bounds.Y; W := Bounds.W; H := Bounds.H;
+      Z := 1;
+      ScaleMode := lsStretch;
+      Renderer.DrawTexture(AvatarArrows[I]);
+    end;
+  end;
+end;
+
+procedure TScreenName.DrawAvatarInputBadge(PlayerID, LocalCount: integer;
+  Avatar: TTexture; CornerRadius: single);
+const CornerInset = 1 - Sqrt(0.5);
+var Inset: single;
+begin
+  if not Party.bPartyGame and IsRosterGap(PlayerID) then Exit;
+  // Keep the badge inside the rounded corners of the portrait.
+  Inset := CornerRadius * CornerInset;
+  with Avatar do
+    DrawInputSourceBadge(PlayerInputSource(PlayerID, LocalCount),
+      X + W * Inset, Y + H * Inset, W * (1 - 2 * Inset), H * (1 - 2 * Inset),
+      ibsSetup, Alpha, ScaleMode);
+end;
+
 procedure TScreenName.DrawCards;
-var I, First, Last, J: integer;
+var I, First, Last, J, LocalCount: integer;
   R: TPlayerSlotRect;
   SX, SY, AvatarSide: real;
   Panel: TTexture;
@@ -2296,6 +2369,8 @@ var I, First, Last, J: integer;
     end;
   end;
 begin
+  LocalCount := -1;
+  if not Party.bPartyGame then LocalCount := SelectedLocalPlayerCount;
   First := (PlayerIndex div (Theme.Name.Cards.Columns * Theme.Name.Cards.Rows)) * Theme.Name.Cards.Columns * Theme.Name.Cards.Rows;
   Last := Min(SelectedPlayerCount - 1, First + Theme.Name.Cards.Columns * Theme.Name.Cards.Rows - 1);
   for I := First to Last do
@@ -2354,6 +2429,7 @@ begin
         R.Y + (Theme.Name.Cards.Avatar.Y + Theme.Name.Cards.Avatar.H / 2 - 10) * SY);
       PrintText(LabelText);
     end;
+    DrawAvatarInputBadge(I, LocalCount, Statics[PlayerCurrentAvatar[I]].Texture, Panel.CornerRadius);
     if (I = PlayerIndex) and (Theme.Name.Cards.EditOutside or not Button[PlayerName].Visible) then
       Caption(DisplayPlayerName(I), Theme.Name.Cards.NameText.X,
         Theme.Name.Cards.NameText.Y, Theme.Name.Cards.NameText.Size, TextColor);
@@ -2508,10 +2584,10 @@ begin
   LocalCount := -1;
   if not Party.bPartyGame then LocalCount := SelectedLocalPlayerCount;
   for I := 0 to SelectedPlayerCount - 1 do
-    if Statics[PlayerCurrentAvatar[I]].Visible and (Party.bPartyGame or
-       not IsRosterGap(I)) then
-      with Statics[PlayerCurrentAvatar[I]].Texture do
-        DrawInputSourceBadge(PlayerInputSource(I, LocalCount), X, Y, W, H, ibsSetup, Alpha, ScaleMode);
+    if Statics[PlayerCurrentAvatar[I]].Visible then
+      DrawAvatarInputBadge(I, LocalCount, Statics[PlayerCurrentAvatar[I]].Texture,
+        Statics[PlayerCurrentAvatar[I]].Texture.CornerRadius);
+  DrawAvatarArrows;
   for I := 0 to High(Text) do
     Text[I].Draw;
 
