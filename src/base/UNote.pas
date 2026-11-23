@@ -116,6 +116,7 @@ type
     InputSource: integer;
     LastSungTone: integer;
     HasLastSungTone: boolean;
+    PhonePitchedMs, PhoneAboveHalfMs, PhoneBoostMisses: integer;
 
 
     // Scores
@@ -287,6 +288,9 @@ procedure TPlayer.ResetScores();
 begin
   DetectionReady := false;
   LocalCaptureWindowPending := false;
+  PhonePitchedMs := 0;
+  PhoneAboveHalfMs := 0;
+  PhoneBoostMisses := 0;
   _Score := 0;
   _ScoreLine := 0;
   _ScoreGolden := 0;
@@ -1067,6 +1071,8 @@ var
   UsedTimedWindow:     boolean;
   DeadlineBeat:        integer;
   ScoreWhenReady, EarlyReady, UseLocalClock: boolean;
+  MeasurePhoneBoost: boolean;
+  BeatMs, ProbeDistance: integer;
   LocalClockUs, BeatMediaUs, LocalWindowWaitUntilUs: int64;
   WindowSamples: integer;
   WindowRate: double;
@@ -1281,6 +1287,8 @@ begin
         end;
 
         WindowSamples := CurrentSound.AnalysisBufferSize;
+        MeasurePhoneBoost := ScoreWhenReady and NoteAvailable and Assigned(CurrentLineFragment) and
+          not IsUnpitchedNote(CurrentNoteType);
         WindowRate := 0;
         if ScoreWhenReady then WindowRate := PhonePcmSampleRate
         else if UseLocalClock and Assigned(CurrentSound.AudioFormat) then
@@ -1293,7 +1301,8 @@ begin
         EarlyReady := ScoreWhenReady and (ActualBeat > DeadlineBeat);
         if EarlyReady then
         begin
-          UsedTimedWindow := CurrentSound.AnalyzePhoneWindow(PlayerIndex, CaptureCenterForBeat(ActualBeat), WindowSamples);
+          UsedTimedWindow := CurrentSound.AnalyzePhoneWindow(PlayerIndex, CaptureCenterForBeat(ActualBeat),
+            WindowSamples, MeasurePhoneBoost);
           if not UsedTimedWindow then
           begin
             // Keep the cursor on the first pending beat. A later frame
@@ -1368,14 +1377,15 @@ begin
             // Translate the scoring beat's midpoint into the host clock, then
             // add the acoustic offset in the shared clock.
             CaptureCenterHostUs := CaptureCenterForBeat(ActualBeat);
-            UsedTimedWindow := CurrentSound.AnalyzePhoneWindow(PlayerIndex, CaptureCenterHostUs, WindowSamples);
+            UsedTimedWindow := CurrentSound.AnalyzePhoneWindow(PlayerIndex, CaptureCenterHostUs, WindowSamples,
+              MeasurePhoneBoost);
             if not UsedTimedWindow then
               for CaptureShiftUs in CaptureRecoveryShiftsUs do
               begin
                 // At the deadline, prefer nearby contiguous capture over
                 // the unrelated audio currently at the head of the FIFO.
                 UsedTimedWindow := CurrentSound.AnalyzePhoneWindow(PlayerIndex,
-                  CaptureCenterHostUs + CaptureShiftUs, WindowSamples);
+                  CaptureCenterHostUs + CaptureShiftUs, WindowSamples, MeasurePhoneBoost);
                 if UsedTimedWindow then Break;
               end;
           end;
@@ -1415,6 +1425,24 @@ begin
         //LyricsState.Tone := LyricsState.Tone + Round(Random(3)) - 1;
 
         EarnedPoints := 0;
+        if (ScreenSong.Mode = smNormal) or (ScreenSong.Mode = smMedley) then
+          Range := 2 - Player[PlayerIndex].Level
+        else
+          Range := 2 - Ini.Difficulty;
+
+        if MeasurePhoneBoost and UsedTimedWindow and (CurNotePoints > 0) and
+           (CurrentSound.ToneValid or (CurrentSound.PhoneBoostProbeTone >= 0)) then
+        begin
+          BeatMs := Round(60000 / CurrentSong.BPM);
+          Inc(CurrentPlayer.PhonePitchedMs, BeatMs);
+          if CurrentSound.PhoneAboveHalfMeter then Inc(CurrentPlayer.PhoneAboveHalfMs, BeatMs);
+          if not CurrentSound.ToneValid then
+          begin
+            ProbeDistance := Abs((CurrentSound.PhoneBoostProbeTone - CurrentLineFragment.Tone) mod 12);
+            if Min(ProbeDistance, 12 - ProbeDistance) <= Range then
+              Inc(CurrentPlayer.PhoneBoostMisses);
+          end;
+        end;
 
         // add note if possible
         if (CurrentSound.ToneValid and (CurrentLineFragment <> nil)) then
@@ -1429,11 +1457,6 @@ begin
           // half size notes patch
           NoteHit := false;
           ActualTone := CurrentSound.Tone;
-          if (ScreenSong.Mode = smNormal) or (ScreenSong.Mode = smMedley) then
-            Range := 2 - Player[PlayerIndex].Level
-          else
-            Range := 2 - Ini.Difficulty;
-
           // check if the player hit the correct tone within the tolerated range
           if (ScoreFactor[CurrentLineFragment.NoteType] > 0) and
             ((Abs(CurrentLineFragment.Tone - CurrentSound.Tone) <= Range) or IsUnpitchedNote(CurrentLineFragment.NoteType)) then

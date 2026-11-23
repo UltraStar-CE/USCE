@@ -1925,6 +1925,9 @@ begin
       ',"scoreLine":' + IntToStr(Player[I].ScoreLineInt) +
       ',"scoreGolden":' + IntToStr(Player[I].ScoreGoldenInt) +
       ',"scoreTotal":' + IntToStr(Player[I].ScoreTotalInt) +
+      ',"phonePitchedMs":' + IntToStr(Player[I].PhonePitchedMs) +
+      ',"phoneAboveHalfMs":' + IntToStr(Player[I].PhoneAboveHalfMs) +
+      ',"phoneBoostMisses":' + IntToStr(Player[I].PhoneBoostMisses) +
       '}';
   end;
   PlayersJson := PlayersJson + ']';
