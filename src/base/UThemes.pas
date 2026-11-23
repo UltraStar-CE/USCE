@@ -393,8 +393,9 @@ type
       Panel, Focus: TThemeStatic;
       Avatar: TThemePosition;
       NameText: TThemeText;
-      EditOutside, ShowLabel, TintControls, LevelSegments, Initials: boolean;
+      EditOutside, ShowLabel, LevelSegments, Initials: boolean;
     end;
+    TintControls:              boolean;
     PlayerButtonName:          TThemeButton;
     PlayerButtonAvatar:        TThemeButton;
 
@@ -2179,6 +2180,7 @@ begin
 
       // Name
       ThemeLoadBasic(Name, 'Name');
+      Name.TintControls := ReadBool(GetSectionList('Name'), 'TintControls', true);
 
       SectionList := GetSectionList('NameCards');
       Name.Cards.Enabled := ReadBool(SectionList, 'Enabled', false);
@@ -2198,7 +2200,7 @@ begin
         ThemeLoadText(Name.Cards.NameText, 'NameCardName');
         Name.Cards.EditOutside := ReadBool(SectionList, 'EditOutside', false);
         Name.Cards.ShowLabel := ReadBool(SectionList, 'ShowLabel', true);
-        Name.Cards.TintControls := ReadBool(SectionList, 'TintControls', true);
+        Name.TintControls := ReadBool(SectionList, 'TintControls', Name.TintControls);
         Name.Cards.Initials := ReadBool(SectionList, 'Initials', false);
         Name.Cards.LevelSegments := ReadBool(SectionList, 'LevelSegments', false);
       end;

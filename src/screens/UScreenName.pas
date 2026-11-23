@@ -1468,7 +1468,7 @@ begin
 
   Col := GetPlayerLightColor(K);
 
-  if not Theme.Name.Cards.Enabled or Theme.Name.Cards.TintControls then
+  if Theme.Name.TintControls then
   begin
     Button[PlayerName].SelectColR:= Col.R;
     Button[PlayerName].SelectColG:= Col.G;
@@ -1499,7 +1499,7 @@ begin
   Statics[PlayerCurrent[PlayerIndex]].Texture.ColG := DesCol.G;
   Statics[PlayerCurrent[PlayerIndex]].Texture.ColB := DesCol.B;
 
-  if not Theme.Name.Cards.Enabled or Theme.Name.Cards.TintControls then
+  if Theme.Name.TintControls then
   begin
     Button[PlayerName].DeselectColR:= DesCol.R;
     Button[PlayerName].DeselectColG:= DesCol.G;
