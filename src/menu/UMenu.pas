@@ -2322,7 +2322,10 @@ begin
   ThemeButtonBack := Theme.OptionsSub.ButtonBack;
   ThemeButtonBack.Y := Round(ScrollArea.Y + ScrollArea.H + Theme.OptionsSub.ButtonBackVSpacing);
   AddButton(ThemeButtonBack);
-  AddButtonText(20, 3, Theme.Options.Description[OPTIONS_DESC_INDEX_BACK]);
+  if Length(ThemeButtonBack.Text) = 0 then
+    AddButtonText(20, 3, Theme.Options.Description[OPTIONS_DESC_INDEX_BACK])
+  else
+    Button[High(Button)].Text[0].Text := Theme.Options.Description[OPTIONS_DESC_INDEX_BACK];
   Interaction := 0;
 
 end;

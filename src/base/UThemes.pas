@@ -393,8 +393,9 @@ type
       Panel, Focus: TThemeStatic;
       Avatar: TThemePosition;
       NameText: TThemeText;
-      EditOutside, ShowLabel, TintControls, LevelSegments, Initials: boolean;
+      EditOutside, ShowLabel, LevelSegments, Initials: boolean;
     end;
+    TintControls:              boolean;
     PlayerButtonName:          TThemeButton;
     PlayerButtonAvatar:        TThemeButton;
 
@@ -1054,6 +1055,8 @@ type
 
   TThemePartyTournamentRounds = class(TThemeBasic)
     TextNamePlayer: array[0..1, 0..7] of TThemeButton;
+    BracketLineR, BracketLineG, BracketLineB: real;
+    BracketLineAlpha: real;
     TextWinner: TThemeText;
     TextResult: TThemeText;
     NextPlayers: TThemeText;
@@ -2179,6 +2182,7 @@ begin
 
       // Name
       ThemeLoadBasic(Name, 'Name');
+      Name.TintControls := ReadBool(GetSectionList('Name'), 'TintControls', true);
 
       SectionList := GetSectionList('NameCards');
       Name.Cards.Enabled := ReadBool(SectionList, 'Enabled', false);
@@ -2198,7 +2202,7 @@ begin
         ThemeLoadText(Name.Cards.NameText, 'NameCardName');
         Name.Cards.EditOutside := ReadBool(SectionList, 'EditOutside', false);
         Name.Cards.ShowLabel := ReadBool(SectionList, 'ShowLabel', true);
-        Name.Cards.TintControls := ReadBool(SectionList, 'TintControls', true);
+        Name.TintControls := ReadBool(SectionList, 'TintControls', Name.TintControls);
         Name.Cards.Initials := ReadBool(SectionList, 'Initials', false);
         Name.Cards.LevelSegments := ReadBool(SectionList, 'LevelSegments', false);
       end;
@@ -2817,6 +2821,13 @@ begin
       //Party Tournament Rounds
 
       ThemeLoadBasic(PartyTournamentRounds, 'PartyTournamentRounds');
+      SectionList := GetSectionList('PartyTournamentRoundsBracket');
+      with PartyTournamentRounds do
+      begin
+        LoadColor(BracketLineR, BracketLineG, BracketLineB,
+          ReadString(SectionList, 'LineColor', 'White'));
+        BracketLineAlpha := EnsureRange(ReadFloat(SectionList, 'LineAlpha', 0.4), 0.0, 1.0);
+      end;
 
       for I := 0 to 1 do
       begin
@@ -3241,8 +3252,11 @@ begin
   Defaults.Color.R := 1; Defaults.Color.G := 1; Defaults.Color.B := 1;
   Defaults.ServerColor.R := 1; Defaults.ServerColor.G := 0.77; Defaults.ServerColor.B := 0.2;
   Defaults.LocalTexture := ''; Defaults.DirectTexture := ''; Defaults.ServerTexture := '';
+  InputSourceBadges[0] := Defaults;
+  InputSourceBadges[0].Corner := 3;
+  Load(InputSourceBadges[0], 'InputSourceBadge');
+  Load(InputSourceBadges[0], 'NameInputSourceBadge');
   Load(Defaults, 'InputSourceBadge');
-  InputSourceBadges[0] := Defaults; Load(InputSourceBadges[0], 'NameInputSourceBadge');
   InputSourceBadges[1] := Defaults; Load(InputSourceBadges[1], 'SingInputSourceBadge');
   InputSourceBadges[2] := Defaults; Load(InputSourceBadges[2], 'ScoreInputSourceBadge');
 end;
@@ -3425,6 +3439,7 @@ begin
   Dec(SongJumpto.FilterActions[0].X, SongJumpto.FilterActions[3].W + 8);
   if ResolveThemeFile('SongJumptoButtonPin') <> nil then
     ThemeLoadButton(SongJumpto.FilterActions[0], 'SongJumptoButtonPin');
+  EnsureText(SongJumpto.FilterActions[0], 20);
 
 end;
 

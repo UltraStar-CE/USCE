@@ -401,7 +401,7 @@ begin
     if Length(fPresetNames) > 0 then
     begin
       SetLength(Labels, 2);
-      Labels[1] := fPresetNames[fPresetPage];
+      Labels[1] := Format(Language.Translate('FILTER_PRESET_LOAD'), [fPresetNames[fPresetPage]]);
       Title := Format('%s (%d/%d)', [Title, fPresetPage+1, Length(fPresetNames)]);
     end;
     if Length(fPresetNames) > 1 then
@@ -409,7 +409,11 @@ begin
       SetLength(Labels, 3);
       Labels[2] := Language.Translate('FILTER_PRESET_NEXT');
     end;
-    ScreenPopupInfo.ShowPopup(Title, Labels, @PresetChosen, nil, 0, -1);
+    if Length(fPresetNames) = 0 then
+      ScreenPopupInfo.ShowPopup(Language.Translate('FILTER_PRESET_EMPTY'), Labels,
+        @PresetChosen, nil, 0, -1, Title)
+    else
+      ScreenPopupInfo.ShowPopup('', Labels, @PresetChosen, nil, 0, -1, Title);
   except on E: Exception do ScreenPopupError.ShowPopup(E.Message); end;
 end;
 
@@ -435,7 +439,7 @@ end;
 
 procedure TScreenSongJumpto.PromptPresetName;
 begin
-  ScreenPopupInsertUser.ShowTextPrompt(Language.Translate('FILTER_PRESET_TITLE'),
+  ScreenPopupInsertUser.ShowTextPrompt(Language.Translate('FILTER_PRESET_SAVE'),
     'FILTER_PRESET_NAME_HINT', Language.Translate('FILTER_PRESET_SAVE'), @PresetNamed, nil);
 end;
 
