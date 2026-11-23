@@ -453,6 +453,7 @@ type
 
       procedure GetFrame(Time: Extended);
       function Finished: boolean;
+      function HasFrame: boolean;
       procedure Draw();
 
 
