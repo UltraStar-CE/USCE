@@ -21,6 +21,7 @@ type
     FViewsPolicy: LongInt;
     FViewsDirty: boolean;
     FCaptureTimestamps: boolean;
+    FPhoneThreshold: boolean;
     procedure Hello;
     procedure Handle(Message: TJSONObject);
     procedure Heartbeat;
@@ -28,7 +29,8 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-    procedure Start(const Url, LibraryPath, GameVersion: string; CaptureTimestamps: boolean = false);
+    procedure Start(const Url, LibraryPath, GameVersion: string; CaptureTimestamps: boolean = false;
+      PhoneThreshold: boolean = false);
     procedure Stop;
     procedure SetCompanionViews(Policy: LongInt);
     procedure Reconnect;
@@ -80,13 +82,15 @@ begin
   inherited;
 end;
 
-procedure TRemoteRelaySession.Start(const Url, LibraryPath, GameVersion: string; CaptureTimestamps: boolean);
+procedure TRemoteRelaySession.Start(const Url, LibraryPath, GameVersion: string; CaptureTimestamps,
+  PhoneThreshold: boolean);
 begin
   Stop;
   FUrl := NormalizeRelayHostUrl(Url);
   FLibraryPath := LibraryPath;
   FGameVersion := GameVersion;
   FCaptureTimestamps := CaptureTimestamps;
+  FPhoneThreshold := PhoneThreshold;
   FRunning := true;
   FRetryAt := 0;
 end;
@@ -157,6 +161,7 @@ begin
       'p2pDataChannel', 'rawPcmV1', 'audioCalibrationV1']);
     Message.Add('capabilities', Capabilities);
     if FCaptureTimestamps then Capabilities.Add('captureTimestampsV1');
+    if FPhoneThreshold then Capabilities.Add('phoneThresholdV1');
     Message.Add('companionViews', CompanionViewsJson(FViewsPolicy));
     if (FViewsPolicy shr 3) = Ord(cvCatalog) then Message.Add('webApp', 'catalog');
     if FRoomId <> '' then
