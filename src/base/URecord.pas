@@ -668,12 +668,8 @@ end;
 
 procedure TCaptureBuffer.AnalyzeSamples(const Samples: array of smallint; Count: integer; SampleRate: double;
   Gain: integer; MeasureBoost: boolean);
-const
-  // The Relay meter is halfway at -36 dBFS RMS.
-  HalfMeterRms = 0.0158489319;
 var
   StartedCounter: UInt64;
-  SumSquares: Int64;
   MaxSample, SampleIndex: integer;
   MaxVolume, Threshold: single;
 
@@ -704,17 +700,12 @@ begin
   if SampleRate > 0 then
   begin
     MaxSample := 0;
-    SumSquares := 0;
     for SampleIndex := Length(Samples) - Count to High(Samples) do
-    begin
       MaxSample := Max(MaxSample, Abs(integer(Samples[SampleIndex])));
-      if MeasureBoost then
-        Inc(SumSquares, Sqr(integer(Samples[SampleIndex])));
-    end;
     MaxVolume := MaxSample * Gain / -Low(SmallInt);
     Threshold := IThresholdVals[Ini.ThresholdIndex];
     if MeasureBoost then
-      PhoneAboveHalfMeter := SumSquares > Count * Sqr(HalfMeterRms * -Low(SmallInt));
+      PhoneAboveHalfMeter := MaxVolume > 0.5;
     if MaxVolume >= Threshold then
       ToneValid := AnalyzePitch(PitchAlgorithm, Samples, Count, SampleRate)
     else if MeasureBoost and (MaxVolume < 0.5) and (MaxVolume * 2 >= Threshold) then
