@@ -19347,6 +19347,958 @@
         ],
         "reviewedCommitCount": 1
       }
+    },
+    {
+      "repository": "CactusQ/USDX",
+      "branch": "fork-tags-1115",
+      "head": "117a7d35328cd3fd37088591db6e2b237e7ab1ab",
+      "upstreamHead": "e06b7b7ceff13612f6c5f716b4acedadd4a5f141",
+      "comparisonBase": "3f8af9c52f61ebdface82c25589151deed3a8f24",
+      "comparisonKind": "outside-usce",
+      "ahead": 59,
+      "behind": 961,
+      "compareUrl": "https://github.com/UltraStar-CE/USCE/compare/3f8af9c52f61ebdface82c25589151deed3a8f24...117a7d35328cd3fd37088591db6e2b237e7ab1ab",
+      "novelCommits": [
+        {
+          "sha": "8583b739f8e8af0b7333fd3f125ac2d74428d9eb",
+          "title": "longq: multi-value #TAGS (any chart format), tag-aware search + '#Tag_Chip' exact filter, tag list under the search box (Up/Down/Enter), tags on the song card, sorts Recently added / Most played / Popular (#ADDED, score DB TimesPlayed, #POPULARITY) (operator 11-15). WIP: GUI check pending (night)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-15T19:55:39Z"
+        },
+        {
+          "sha": "354a389be2672fe5470e2f63923e26362392a143",
+          "title": "longq: LONGQ_TAGS_DRYRUN headless check for tags, tag list and the new sorts (longq/tags_check.sh)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-15T20:08:51Z"
+        },
+        {
+          "sha": "d29cc4d175a1517e88b7b67af80af0cf245fe16f",
+          "title": "longq autotest: LONGQ_AUTOTEST_TAGSHOT screenshots of the tag card, search tag list, picked row, chip filter",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-15T23:14:11Z"
+        },
+        {
+          "sha": "d581139b123985c187e01cc2da0a3b97639cac9b",
+          "title": "Song card tags: ASCII separator (middle dot rendered as mojibake)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-16T06:03:12Z"
+        },
+        {
+          "sha": "117a7d35328cd3fd37088591db6e2b237e7ab1ab",
+          "title": "longq tags dry run: also checks 'top 1', classics, club, crowd (party tags 11-17)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-17T06:52:49Z"
+        }
+      ],
+      "ignoredKnownHistoryCommitCount": 54,
+      "ignoredUpstreamCommitCount": 0,
+      "ignoredOldCommitCount": 0,
+      "commits": [
+        {
+          "sha": "755a4014dea67b73a02c31ab55cf86791f4ecc96",
+          "title": "longq: separate macOS data/log dir (UltraStar Deluxe longq)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-09T19:19:10Z"
+        },
+        {
+          "sha": "817d9c4a6a330cef476c82838d992c2b0afea83b",
+          "title": "longq: seek +/-5 s and skip-intro without counting skipped notes as misses",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-09T19:22:36Z"
+        },
+        {
+          "sha": "2bee3147944498099b4c271fd0ae519be74fc608",
+          "title": "longq: build tooling (arm64 kit from upstream release dmg, rebuild.sh)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-09T19:22:37Z"
+        },
+        {
+          "sha": "c3000750173e5d1899ac9a48b117fba0da482cac",
+          "title": "longq: reading line (romaji/kanji) from optional <chart>.reading file",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-09T19:28:03Z"
+        },
+        {
+          "sha": "a00b78d055dccf71903c36652408247c7e4885fb",
+          "title": "longq: scripted self-test (LONGQ_AUTOTEST env), off by default",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-09T19:31:15Z"
+        },
+        {
+          "sha": "cfbb0baab1bdd1e82b1352ecf855d3fe541e1d4c",
+          "title": "longq: furigana/romanization annotations, reading size, S skip to next note",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-09T20:41:10Z"
+        },
+        {
+          "sha": "3d81251906c4f421e39acf2cd038391e3426e744",
+          "title": "longq: autotest checks for S skip, count-in, video sync, Shift+S; selftest RES",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-09T20:41:12Z"
+        },
+        {
+          "sha": "81f55ddd7fd3cae11fc39c4b93c0e2d42b379736",
+          "title": "longq: data dir override (USDX_DATA_NAME / longq_datadir) for the promoted install",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-09T20:46:26Z"
+        },
+        {
+          "sha": "2372f03ec4c86495a4a078194a2b9b6e02202c7e",
+          "title": "longq: ruby +10% for kana metrics; dictionary readings for kanji compounds",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-09T22:22:45Z"
+        },
+        {
+          "sha": "ef269641929598ce504194b57bb04910efa31203",
+          "title": "longq: projectM 4 visualizer with blurred-cover blend and bass pulse",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-09T22:22:46Z"
+        },
+        {
+          "sha": "364b861d04142875c12e3cfbc81273a4d48f4809",
+          "title": "longq: fix crash on backward seek with visualizer; flash-screened preset pack; autotest FPS",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-09T23:24:57Z"
+        },
+        {
+          "sha": "945d85b491664e397646fa00025af00d245cfe2c",
+          "title": "longq: annotations above the line at stock bar geometry; seek soak + borderless selftest",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-10T18:20:46Z"
+        },
+        {
+          "sha": "6655f058940d2cb2ff7b78721c4523d58f071d1b",
+          "title": "longq: lyric-version picker, one song-list entry per song",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-10T18:19:07Z"
+        },
+        {
+          "sha": "9fa53789931b3efed98c33f308527ba3d345d001",
+          "title": "longq: lyric versions in the song menu (Enter -> Lyrics row -> Enter sings), options toggle, remembered pick",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-10T18:23:41Z"
+        },
+        {
+          "sha": "10fee37c350353bdab20b55fb4cad0c88937fcef",
+          "title": "longq: seek keys 1/2/3/4 (-15/-5/+5/+15 s), S-skip floor 6 s, invisible test runs",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-10T18:31:49Z"
+        },
+        {
+          "sha": "2951944db148d035b220481a541e62ba2d1d4aee",
+          "title": "longq: cover-art visualizer for songs without video, audio health counters",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-10T19:58:20Z"
+        },
+        {
+          "sha": "58e1dc1b599f4d0e0a4fb3166f99b2d2f344b30e",
+          "title": "longq: test runs never show a window, daytime guard",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-10T20:19:27Z"
+        },
+        {
+          "sha": "f21184e9910fc2e90b2bc4a0f68d728830ab5316",
+          "title": "longq: Y2K + Aero visualizer colours follow the cover palette, darker lyric zone",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-10T21:31:07Z"
+        },
+        {
+          "sha": "86c4608a75e83d4f150e067f9ca64fc0f277dab2",
+          "title": "longq: Aurora visualizer colours follow the cover palette",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-10T22:02:18Z"
+        },
+        {
+          "sha": "cc8488e7f1582ba99e4931d270c4c050ce7f4ec2",
+          "title": "longq: versions_check falls back to staged_songs for fixture charts",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-10T23:50:40Z"
+        },
+        {
+          "sha": "613e70a0e1ef916916be2fd949ec15474cddfb76",
+          "title": "longq: hidden test runs stay windowed and unblocked",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T06:33:28Z"
+        },
+        {
+          "sha": "5d900e4e7f443a76cb3688c56f9ad4f4ebe589e2",
+          "title": "longq: reading annotations greyed + semi-transparent, 85% size, double line (ruby above + romaji below), Reading space Grow/Overlay; reading_gen --refresh",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T06:09:33Z"
+        },
+        {
+          "sha": "681dc7a081eece261a4d6c17671c0f88de4e0cc2",
+          "title": "longq: reading_frames.sh renders hidden self-test screenshots of one chart with config overrides (night only)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T06:33:51Z"
+        },
+        {
+          "sha": "16d6caf33373d920a414e2325212a680d4472437",
+          "title": "longq: reading_frames.sh kill -9 after timeout, NICE env",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T06:47:47Z"
+        },
+        {
+          "sha": "4dc6a50598c54c82bacfcdc923502020e6229816",
+          "title": "longq: grown reading slot keeps the stock lyric size; lyric sits below/above the extra room",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T06:49:58Z"
+        },
+        {
+          "sha": "aac1d38f1f7087f3336b4d8c8b12c42e1a9cd754",
+          "title": "longq: Star Tunnel visualizer darkens the lyric zone",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T06:55:05Z"
+        },
+        {
+          "sha": "5cb5026f2cf06c95b9e624066603eb84c422029c",
+          "title": "longq: reading_frames.sh copies the JPG screenshots (paths with spaces)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T07:05:53Z"
+        },
+        {
+          "sha": "2ff1ab3ae3d1abe0320ba501312f25808648df71",
+          "title": "longq: hidden test runs never open a native message box",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T07:11:49Z"
+        },
+        {
+          "sha": "9159e2726645c54e79019411323b59cf4cb7191b",
+          "title": "longq: visualizer keeps its template on seeks, analyses the whole song, half-time mood BPM",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T07:30:23Z"
+        },
+        {
+          "sha": "c28debbe2fc5732af6201e9ea7b915ce728414f4",
+          "title": "longq: version picker fixes from the first visual check, menu screenshot autotest",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T07:57:19Z"
+        },
+        {
+          "sha": "edfc86f949c0ce7d3106c8a2f734cefacd720595",
+          "title": "longq: merge furigana-display (reading line above/below, kanji+furigana) for the all-features build",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T14:21:54Z"
+        },
+        {
+          "sha": "dcf1243fb2fa4642a1de643811aa9c4709bca4bd",
+          "title": "longq: song menu Lyrics row gets its own row (Up/Down no longer skip 2 items), H = help, help lists seek 1-4 + L",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T14:44:00Z"
+        },
+        {
+          "sha": "8569e1779790ed046be7f85df1aea1110c6a8651",
+          "title": "longq: rewind keeps the points sung before the line it lands on (score snapshot per line start), was a reset to 0",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T14:45:54Z"
+        },
+        {
+          "sha": "5642b8c854c9d18d62e6dbd8ef24be6178a247e7",
+          "title": "longq: layout reading stack: romaji under the current line, compact lines, lyric box never reaches the notes; CJK picker = + ROMAJI / original",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T16:47:24Z"
+        },
+        {
+          "sha": "86f90dda1c0dcf6b8eeb1738c4fab82f9d89021e",
+          "title": "longq: viz vivid neon palette, drum-reactive (kick/808, snare, hats), energy-adaptive drive, neon_ring template, low EQ bars",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T17:00:27Z"
+        },
+        {
+          "sha": "ed1a8a8ad0e28399845c08317850e98832524734",
+          "title": "longq: transpose [ / ] (-6..+6 semitones, tempo kept, notes follow, per-song memory); no song preview stream when Preview volume is Off",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T17:19:30Z"
+        },
+        {
+          "sha": "1dcd8308f993506fc74cebbffd5bc1561dc8ad23",
+          "title": "longq: viz star_tunnel strips out of phase (was 8 flashes/s on drops), kick glow eases off on bright pixels, calmer sparkle + single-hue haze",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T17:50:53Z"
+        },
+        {
+          "sha": "79686624aba70d33b5d12027d9e21866d08f6cec",
+          "title": "longq: vocals volume applies in song-select preview (#INSTRUMENTAL opened with the mix, crossfaded by Vocals Volume)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T18:04:34Z"
+        },
+        {
+          "sha": "fe478a6c184f59be214336c4f9ab7cdd290cd8a0",
+          "title": "longq: fixed golden bonus pool (normal 8000 + golden 1000 + lines 1000 when a track has bonus notes), +N pop on a hit bonus note, Bonus h/t spots on the score screen",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T17:22:12Z"
+        },
+        {
+          "sha": "fc960567e1f6235fd507f4c0d7a0234cfec79e90",
+          "title": "longq: bonus INSIDE 10000 final, pool normal 8500 + bonus 500 + lines 1000; total shows 10000 only when flawless (9999 cap on rounding, 9990 after a seek skip)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T18:19:32Z"
+        },
+        {
+          "sha": "9569b9c17fa0853b9b1c4d52041a6c1a7d2b5f59",
+          "title": "longq: GUI test gate also refuses 00:00-00:59 (operator no-GUI window is 09:00-01:00)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T19:14:18Z"
+        },
+        {
+          "sha": "cf788533d66ad24ead468b24a4caf30317df901c",
+          "title": "longq: hidden_test.sh sets [Game] Players from LONGQ_AUTOTEST_PLAYERS (4p autotest crashed with ERangeError on a Players=3 config)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-12T06:43:08Z"
+        },
+        {
+          "sha": "1afdacc63113640f1ce930725467b0844e175298",
+          "title": "longq: transpose shifter without range/overflow checks ({$R-}{$Q-}), was 5x slower under the game's -Ciro: late audio callbacks at +3 dropped from 49-171 to 9-23 per song (key 0: 3-6, machine load 22-28); autotest logs shifter time/calls/resets",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-12T07:49:29Z"
+        },
+        {
+          "sha": "db19918193c3d402066482b8290c18ae5e8dd195",
+          "title": "longq: rewind lands on the target's line (finding 8293), R needs a 2nd press, Shift+Left/Right = 10 songs, sung bars follow a key change",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-12T14:41:08Z"
+        },
+        {
+          "sha": "b6e194fb53bc86068320ab09b93af9cb034b8083",
+          "title": "longq: help lists Shift+Left/Right (10 songs) and the double-R restart",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-12T14:46:35Z"
+        },
+        {
+          "sha": "3b0c58713afd00b511f9d3a01eb88c0105692744",
+          "title": "longq: cover visualizer cycles through the song's mood-set looks every 20 s (1.5 s crossfade) by default; Ctrl+Tab still pins a look (operator 11-12)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-12T14:51:28Z"
+        },
+        {
+          "sha": "1d52ccd5798187c3e8f225b537a3ab0235f13feb",
+          "title": "longq: romaji under the next lyric line too (88 % of the current-line romaji, next-line colour)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-12T15:17:51Z"
+        },
+        {
+          "sha": "ffaa66476ad584c7d4a014b1df4b806158c96fd7",
+          "title": "longq: never probe/list/auto-assign iPhone/iPad/Continuity microphones (operator 11-08 'disable iphone mic as an audio interface or options'); LONGQ_ALLOW_IPHONE_MIC=1 restores",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-13T16:12:14Z"
+        },
+        {
+          "sha": "2799f5759fb37a515468ce20ac633dfce3a6d421",
+          "title": "longq: decode-ahead thread for song audio (music + karaoke/vocals stems): callback only copies, same output buffer (no added latency), position minus ring fill keeps sync; empty ring falls back to stock synchronous decode; LONGQ_NO_PREFETCH=1 disables; autotest logs 'prefetch empty' (operator 11-10 'still underruns', 'crackling')",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-13T16:29:02Z"
+        },
+        {
+          "sha": "997b7be35c1148ce8e0de078361921742757190f",
+          "title": "longq: prefetch ring uses plain pointer offsets (PByteArray caps at 32 KB, 1.5 s ring = 264 KB -> ERangeError at song start in night autotest 11-14)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-14T06:22:10Z"
+        },
+        {
+          "sha": "cc41d2e000bcebecea44fa01014f69ea7c52da5e",
+          "title": "longq autotest: clamp seek-key expectation at 0 when line 0 starts before the audio (false FAIL want -3.40 on Violent Crimes)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-14T06:30:50Z"
+        },
+        {
+          "sha": "e27572bddc4d4051777e1541bada8f9df669ff13",
+          "title": "longq: prefetch worker masks FPU exceptions like the SoftMixer callback (swresample fcvtzs trapped -> EAccessViolation at song start, 11-14 night)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-14T07:28:00Z"
+        },
+        {
+          "sha": "1605dbca9cfb9f1122705f7ae1e9aaadb35abcd6",
+          "title": "longq: version labels never show ORIGINAL/AI/Native/tag text (operator 11-15): picker = KR/JP/CN + Romaji, Duet/Solo, Adlibs only, Studio/MV audio, else 'Version N'; single-version songs and score/highscore/jukebox/medley titles drop version tags ([VIDEO], (fixed), [한글]); CJK language falls back to the chart's script. Live dump: 0 tag labels in 1285 entries",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-15T18:54:41Z"
+        },
+        {
+          "sha": "db96a42a385ca91abcb0e78101298281ec35ef90",
+          "title": "longq: Studio / MV / Live picker labels exactly (operator 11-15), Studio version is the group default; (Live) is a version tag. Live dump: 0 tag labels in 1287 entries, dry run fails 0",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-15T19:26:48Z"
+        },
+        {
+          "sha": "8583b739f8e8af0b7333fd3f125ac2d74428d9eb",
+          "title": "longq: multi-value #TAGS (any chart format), tag-aware search + '#Tag_Chip' exact filter, tag list under the search box (Up/Down/Enter), tags on the song card, sorts Recently added / Most played / Popular (#ADDED, score DB TimesPlayed, #POPULARITY) (operator 11-15). WIP: GUI check pending (night)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-15T19:55:39Z"
+        },
+        {
+          "sha": "354a389be2672fe5470e2f63923e26362392a143",
+          "title": "longq: LONGQ_TAGS_DRYRUN headless check for tags, tag list and the new sorts (longq/tags_check.sh)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-15T20:08:51Z"
+        },
+        {
+          "sha": "d29cc4d175a1517e88b7b67af80af0cf245fe16f",
+          "title": "longq autotest: LONGQ_AUTOTEST_TAGSHOT screenshots of the tag card, search tag list, picked row, chip filter",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-15T23:14:11Z"
+        },
+        {
+          "sha": "d581139b123985c187e01cc2da0a3b97639cac9b",
+          "title": "Song card tags: ASCII separator (middle dot rendered as mojibake)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-16T06:03:12Z"
+        },
+        {
+          "sha": "117a7d35328cd3fd37088591db6e2b237e7ab1ab",
+          "title": "longq tags dry run: also checks 'top 1', classics, club, crowd (party tags 11-17)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-17T06:52:49Z"
+        }
+      ],
+      "newCommits": [
+        {
+          "sha": "8583b739f8e8af0b7333fd3f125ac2d74428d9eb",
+          "title": "longq: multi-value #TAGS (any chart format), tag-aware search + '#Tag_Chip' exact filter, tag list under the search box (Up/Down/Enter), tags on the song card, sorts Recently added / Most played / Popular (#ADDED, score DB TimesPlayed, #POPULARITY) (operator 11-15). WIP: GUI check pending (night)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-15T19:55:39Z"
+        },
+        {
+          "sha": "354a389be2672fe5470e2f63923e26362392a143",
+          "title": "longq: LONGQ_TAGS_DRYRUN headless check for tags, tag list and the new sorts (longq/tags_check.sh)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-15T20:08:51Z"
+        },
+        {
+          "sha": "d29cc4d175a1517e88b7b67af80af0cf245fe16f",
+          "title": "longq autotest: LONGQ_AUTOTEST_TAGSHOT screenshots of the tag card, search tag list, picked row, chip filter",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-15T23:14:11Z"
+        },
+        {
+          "sha": "d581139b123985c187e01cc2da0a3b97639cac9b",
+          "title": "Song card tags: ASCII separator (middle dot rendered as mojibake)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-16T06:03:12Z"
+        },
+        {
+          "sha": "117a7d35328cd3fd37088591db6e2b237e7ab1ab",
+          "title": "longq tags dry run: also checks 'top 1', classics, club, crowd (party tags 11-17)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-17T06:52:49Z"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "CactusQ/USDX",
+      "branch": "golden",
+      "head": "44b5307e564fd008cd3a1433019e094ebb4e2deb",
+      "upstreamHead": "e06b7b7ceff13612f6c5f716b4acedadd4a5f141",
+      "comparisonBase": "3f8af9c52f61ebdface82c25589151deed3a8f24",
+      "comparisonKind": "outside-usce",
+      "ahead": 35,
+      "behind": 961,
+      "compareUrl": "https://github.com/UltraStar-CE/USCE/compare/3f8af9c52f61ebdface82c25589151deed3a8f24...44b5307e564fd008cd3a1433019e094ebb4e2deb",
+      "novelCommits": [
+        {
+          "sha": "32f9d91111733359e45020341c933b5c2e466ecf",
+          "title": "longq: fixed golden bonus pool (normal 8000 + golden 1000 + lines 1000 when a track has bonus notes), +N pop on a hit bonus note, Bonus h/t spots on the score screen",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T17:22:12Z"
+        },
+        {
+          "sha": "44b5307e564fd008cd3a1433019e094ebb4e2deb",
+          "title": "longq: bonus INSIDE 10000 final, pool normal 8500 + bonus 500 + lines 1000; total shows 10000 only when flawless (9999 cap on rounding, 9990 after a seek skip)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T18:19:32Z"
+        }
+      ],
+      "ignoredKnownHistoryCommitCount": 33,
+      "ignoredUpstreamCommitCount": 0,
+      "ignoredOldCommitCount": 0,
+      "commits": [
+        {
+          "sha": "755a4014dea67b73a02c31ab55cf86791f4ecc96",
+          "title": "longq: separate macOS data/log dir (UltraStar Deluxe longq)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-09T19:19:10Z"
+        },
+        {
+          "sha": "817d9c4a6a330cef476c82838d992c2b0afea83b",
+          "title": "longq: seek +/-5 s and skip-intro without counting skipped notes as misses",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-09T19:22:36Z"
+        },
+        {
+          "sha": "2bee3147944498099b4c271fd0ae519be74fc608",
+          "title": "longq: build tooling (arm64 kit from upstream release dmg, rebuild.sh)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-09T19:22:37Z"
+        },
+        {
+          "sha": "c3000750173e5d1899ac9a48b117fba0da482cac",
+          "title": "longq: reading line (romaji/kanji) from optional <chart>.reading file",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-09T19:28:03Z"
+        },
+        {
+          "sha": "a00b78d055dccf71903c36652408247c7e4885fb",
+          "title": "longq: scripted self-test (LONGQ_AUTOTEST env), off by default",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-09T19:31:15Z"
+        },
+        {
+          "sha": "cfbb0baab1bdd1e82b1352ecf855d3fe541e1d4c",
+          "title": "longq: furigana/romanization annotations, reading size, S skip to next note",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-09T20:41:10Z"
+        },
+        {
+          "sha": "3d81251906c4f421e39acf2cd038391e3426e744",
+          "title": "longq: autotest checks for S skip, count-in, video sync, Shift+S; selftest RES",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-09T20:41:12Z"
+        },
+        {
+          "sha": "81f55ddd7fd3cae11fc39c4b93c0e2d42b379736",
+          "title": "longq: data dir override (USDX_DATA_NAME / longq_datadir) for the promoted install",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-09T20:46:26Z"
+        },
+        {
+          "sha": "2372f03ec4c86495a4a078194a2b9b6e02202c7e",
+          "title": "longq: ruby +10% for kana metrics; dictionary readings for kanji compounds",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-09T22:22:45Z"
+        },
+        {
+          "sha": "ef269641929598ce504194b57bb04910efa31203",
+          "title": "longq: projectM 4 visualizer with blurred-cover blend and bass pulse",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-09T22:22:46Z"
+        },
+        {
+          "sha": "364b861d04142875c12e3cfbc81273a4d48f4809",
+          "title": "longq: fix crash on backward seek with visualizer; flash-screened preset pack; autotest FPS",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-09T23:24:57Z"
+        },
+        {
+          "sha": "945d85b491664e397646fa00025af00d245cfe2c",
+          "title": "longq: annotations above the line at stock bar geometry; seek soak + borderless selftest",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-10T18:20:46Z"
+        },
+        {
+          "sha": "6655f058940d2cb2ff7b78721c4523d58f071d1b",
+          "title": "longq: lyric-version picker, one song-list entry per song",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-10T18:19:07Z"
+        },
+        {
+          "sha": "9fa53789931b3efed98c33f308527ba3d345d001",
+          "title": "longq: lyric versions in the song menu (Enter -> Lyrics row -> Enter sings), options toggle, remembered pick",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-10T18:23:41Z"
+        },
+        {
+          "sha": "10fee37c350353bdab20b55fb4cad0c88937fcef",
+          "title": "longq: seek keys 1/2/3/4 (-15/-5/+5/+15 s), S-skip floor 6 s, invisible test runs",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-10T18:31:49Z"
+        },
+        {
+          "sha": "2951944db148d035b220481a541e62ba2d1d4aee",
+          "title": "longq: cover-art visualizer for songs without video, audio health counters",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-10T19:58:20Z"
+        },
+        {
+          "sha": "58e1dc1b599f4d0e0a4fb3166f99b2d2f344b30e",
+          "title": "longq: test runs never show a window, daytime guard",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-10T20:19:27Z"
+        },
+        {
+          "sha": "f21184e9910fc2e90b2bc4a0f68d728830ab5316",
+          "title": "longq: Y2K + Aero visualizer colours follow the cover palette, darker lyric zone",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-10T21:31:07Z"
+        },
+        {
+          "sha": "86c4608a75e83d4f150e067f9ca64fc0f277dab2",
+          "title": "longq: Aurora visualizer colours follow the cover palette",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-10T22:02:18Z"
+        },
+        {
+          "sha": "cc8488e7f1582ba99e4931d270c4c050ce7f4ec2",
+          "title": "longq: versions_check falls back to staged_songs for fixture charts",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-10T23:50:40Z"
+        },
+        {
+          "sha": "613e70a0e1ef916916be2fd949ec15474cddfb76",
+          "title": "longq: hidden test runs stay windowed and unblocked",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T06:33:28Z"
+        },
+        {
+          "sha": "5d900e4e7f443a76cb3688c56f9ad4f4ebe589e2",
+          "title": "longq: reading annotations greyed + semi-transparent, 85% size, double line (ruby above + romaji below), Reading space Grow/Overlay; reading_gen --refresh",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T06:09:33Z"
+        },
+        {
+          "sha": "681dc7a081eece261a4d6c17671c0f88de4e0cc2",
+          "title": "longq: reading_frames.sh renders hidden self-test screenshots of one chart with config overrides (night only)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T06:33:51Z"
+        },
+        {
+          "sha": "16d6caf33373d920a414e2325212a680d4472437",
+          "title": "longq: reading_frames.sh kill -9 after timeout, NICE env",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T06:47:47Z"
+        },
+        {
+          "sha": "4dc6a50598c54c82bacfcdc923502020e6229816",
+          "title": "longq: grown reading slot keeps the stock lyric size; lyric sits below/above the extra room",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T06:49:58Z"
+        },
+        {
+          "sha": "aac1d38f1f7087f3336b4d8c8b12c42e1a9cd754",
+          "title": "longq: Star Tunnel visualizer darkens the lyric zone",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T06:55:05Z"
+        },
+        {
+          "sha": "5cb5026f2cf06c95b9e624066603eb84c422029c",
+          "title": "longq: reading_frames.sh copies the JPG screenshots (paths with spaces)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T07:05:53Z"
+        },
+        {
+          "sha": "2ff1ab3ae3d1abe0320ba501312f25808648df71",
+          "title": "longq: hidden test runs never open a native message box",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T07:11:49Z"
+        },
+        {
+          "sha": "9159e2726645c54e79019411323b59cf4cb7191b",
+          "title": "longq: visualizer keeps its template on seeks, analyses the whole song, half-time mood BPM",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T07:30:23Z"
+        },
+        {
+          "sha": "c28debbe2fc5732af6201e9ea7b915ce728414f4",
+          "title": "longq: version picker fixes from the first visual check, menu screenshot autotest",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T07:57:19Z"
+        },
+        {
+          "sha": "edfc86f949c0ce7d3106c8a2f734cefacd720595",
+          "title": "longq: merge furigana-display (reading line above/below, kanji+furigana) for the all-features build",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T14:21:54Z"
+        },
+        {
+          "sha": "dcf1243fb2fa4642a1de643811aa9c4709bca4bd",
+          "title": "longq: song menu Lyrics row gets its own row (Up/Down no longer skip 2 items), H = help, help lists seek 1-4 + L",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T14:44:00Z"
+        },
+        {
+          "sha": "8569e1779790ed046be7f85df1aea1110c6a8651",
+          "title": "longq: rewind keeps the points sung before the line it lands on (score snapshot per line start), was a reset to 0",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T14:45:54Z"
+        },
+        {
+          "sha": "32f9d91111733359e45020341c933b5c2e466ecf",
+          "title": "longq: fixed golden bonus pool (normal 8000 + golden 1000 + lines 1000 when a track has bonus notes), +N pop on a hit bonus note, Bonus h/t spots on the score screen",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T17:22:12Z"
+        },
+        {
+          "sha": "44b5307e564fd008cd3a1433019e094ebb4e2deb",
+          "title": "longq: bonus INSIDE 10000 final, pool normal 8500 + bonus 500 + lines 1000; total shows 10000 only when flawless (9999 cap on rounding, 9990 after a seek skip)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T18:19:32Z"
+        }
+      ],
+      "newCommits": [
+        {
+          "sha": "32f9d91111733359e45020341c933b5c2e466ecf",
+          "title": "longq: fixed golden bonus pool (normal 8000 + golden 1000 + lines 1000 when a track has bonus notes), +N pop on a hit bonus note, Bonus h/t spots on the score screen",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T17:22:12Z"
+        },
+        {
+          "sha": "44b5307e564fd008cd3a1433019e094ebb4e2deb",
+          "title": "longq: bonus INSIDE 10000 final, pool normal 8500 + bonus 500 + lines 1000; total shows 10000 only when flawless (9999 cap on rounding, 9990 after a seek skip)",
+          "author": "Long Nguyen",
+          "authoredAt": "2026-11-11T18:19:32Z"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "Erik1000/USDX",
+      "branch": "master",
+      "head": "551f457be929e21d4657f7477cf2cb89c0663221",
+      "upstreamHead": "e06b7b7ceff13612f6c5f716b4acedadd4a5f141",
+      "comparisonBase": "3f8af9c52f61ebdface82c25589151deed3a8f24",
+      "comparisonKind": "outside-usce",
+      "ahead": 1,
+      "behind": 938,
+      "compareUrl": "https://github.com/UltraStar-CE/USCE/compare/3f8af9c52f61ebdface82c25589151deed3a8f24...551f457be929e21d4657f7477cf2cb89c0663221",
+      "novelCommits": [
+        {
+          "sha": "551f457be929e21d4657f7477cf2cb89c0663221",
+          "title": "feat: add companion status and queue playlist support",
+          "author": "Erik1000",
+          "authoredAt": "2026-11-23T22:42:05Z"
+        }
+      ],
+      "ignoredKnownHistoryCommitCount": 0,
+      "ignoredUpstreamCommitCount": 0,
+      "ignoredOldCommitCount": 0,
+      "commits": [
+        {
+          "sha": "551f457be929e21d4657f7477cf2cb89c0663221",
+          "title": "feat: add companion status and queue playlist support",
+          "author": "Erik1000",
+          "authoredAt": "2026-11-23T22:42:05Z"
+        }
+      ],
+      "newCommits": [
+        {
+          "sha": "551f457be929e21d4657f7477cf2cb89c0663221",
+          "title": "feat: add companion status and queue playlist support",
+          "author": "Erik1000",
+          "authoredAt": "2026-11-23T22:42:05Z"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
+    },
+    {
+      "repository": "simplykapsel/LisiaNora-USDX",
+      "branch": "develop",
+      "head": "0482d7a7a2d20a978a78cbd6a819ce03957d63d3",
+      "upstreamHead": "e06b7b7ceff13612f6c5f716b4acedadd4a5f141",
+      "comparisonBase": "3f8af9c52f61ebdface82c25589151deed3a8f24",
+      "comparisonKind": "outside-usce",
+      "ahead": 29,
+      "behind": 961,
+      "compareUrl": "https://github.com/UltraStar-CE/USCE/compare/3f8af9c52f61ebdface82c25589151deed3a8f24...0482d7a7a2d20a978a78cbd6a819ce03957d63d3",
+      "novelCommits": [
+        {
+          "sha": "0482d7a7a2d20a978a78cbd6a819ce03957d63d3",
+          "title": "Merge pull request #4 from simplykapsel/feat/usdx-names-and-scores",
+          "author": "simplykapsel",
+          "authoredAt": "2026-11-23T19:09:34Z"
+        }
+      ],
+      "ignoredKnownHistoryCommitCount": 28,
+      "ignoredUpstreamCommitCount": 0,
+      "ignoredOldCommitCount": 0,
+      "commits": [
+        {
+          "sha": "8371a68e50e72a3b2e5905029ec87f7e91fe41ef",
+          "title": "Prepare Windows x64 development workflow for USDX 2026.9.0",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-22T07:24:14Z"
+        },
+        {
+          "sha": "1c7154e9eb8f0f921133bcbbb67fb244303c5ec2",
+          "title": "Download Lazarus installer directly from SourceForge mirrors",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-22T07:26:55Z"
+        },
+        {
+          "sha": "c6ada6f7ff98f30d0ad4abf0aa5c1f68fa0f122f",
+          "title": "Use verified direct mirror for Lazarus CI installer",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-22T07:29:43Z"
+        },
+        {
+          "sha": "74f79c7670b67633184a28b51d858931ef1da29a",
+          "title": "Select songs from the queue through a local session-bound bridge",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-22T08:12:23Z"
+        },
+        {
+          "sha": "908ee2edb342ed5e15987750337a0919594adc9a",
+          "title": "Require player setup before singing a remotely selected song",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-22T08:28:30Z"
+        },
+        {
+          "sha": "ef5bfe33e5e0b47dd4258176dba729fd33d67520",
+          "title": "Merge pull request #1 from simplykapsel/feature/queue-song-selection",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-22T08:47:11Z"
+        },
+        {
+          "sha": "44899090a43fc3762a1604e2f0f39b1a3f74057c",
+          "title": "Preserve confirmed players when selecting songs from the queue",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-22T10:03:36Z"
+        },
+        {
+          "sha": "234370bc0f61f1db7682aa88a3e32f59cd7286b5",
+          "title": "Merge pull request #2 from simplykapsel/fix/reuse-configured-players",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-22T10:07:23Z"
+        },
+        {
+          "sha": "11386e99eb4d455d521121b380f639d27ae23776",
+          "title": "Condense Windows build and queue protocol documentation",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-22T11:05:56Z"
+        },
+        {
+          "sha": "a43bbeea2738e09ffb1571f50538088b603c9596",
+          "title": "Merge pull request #3 from simplykapsel/docs/windows-release-workflow",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-22T11:09:37Z"
+        },
+        {
+          "sha": "dbdbf16a51bd348f311f0fd411201aac76e94794",
+          "title": "Merge remote-tracking branch 'origin/main'",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-22T12:48:54Z"
+        },
+        {
+          "sha": "276d71d09c2fdef1d411396fa0d3a7217588e67a",
+          "title": "Move Windows bridge and branded launcher into USDX",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-22T13:01:12Z"
+        },
+        {
+          "sha": "ea31021a2520980185243597ac718c2b8c220ee9",
+          "title": "Compare canonical Windows paths in bridge tests",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-22T13:10:06Z"
+        },
+        {
+          "sha": "543d7e376f9d8c73f13b5abe28d68aac0ea5fc7e",
+          "title": "Recover moved queue songs and configure players before selection",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-24T18:33:54Z"
+        },
+        {
+          "sha": "d5f839bd64eca58d82be0f813e8441815d6baa9f",
+          "title": "Default portable launcher to its bundled songs directory",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-24T18:51:53Z"
+        },
+        {
+          "sha": "52821969a31125e9b0d3cb6a964f8e3fb2f5dd5e",
+          "title": "Control song playback from the queue with confirmed Start and Reset",
+          "author": "simplykapsel",
+          "authoredAt": "2026-09-24T19:21:41Z"
+        },
+        {
+          "sha": "f361a78b37d23d0edc9bd0bbc2aacc26b4b0e6f8",
+          "title": "Preserve local launcher profiles and configured song directories",
+          "author": "simplykapsel",
+          "authoredAt": "2026-11-12T03:16:11Z"
+        },
+        {
+          "sha": "393c635d8b7eb5b5d03942657a21e2cb303d1428",
+          "title": "Merge UltraStar Deluxe v2026.11.0 and build the portable client with UCRT64",
+          "author": "simplykapsel",
+          "authoredAt": "2026-11-12T03:19:27Z"
+        },
+        {
+          "sha": "d037cadae697a20f1588c6f66c6f7d01255b6f09",
+          "title": "Report game changes over WebSocket and resume pending commands safely",
+          "author": "simplykapsel",
+          "authoredAt": "2026-11-12T03:25:16Z"
+        },
+        {
+          "sha": "ab044d323c077153d7dcc2428d8da34c651ca8ea",
+          "title": "Pass the canonical song library path to the Windows game",
+          "author": "simplykapsel",
+          "authoredAt": "2026-11-12T03:38:26Z"
+        },
+        {
+          "sha": "6f1924c25d7dd0e879951dce50525ca39a9f8ede",
+          "title": "Fall back to a verified Lua mirror when building Windows dependencies",
+          "author": "simplykapsel",
+          "authoredAt": "2026-11-12T03:44:49Z"
+        },
+        {
+          "sha": "cf63e1fcf22e719e487acdcf0858fd493337f143",
+          "title": "Find queue songs in every song directory the game uses",
+          "author": "simplykapsel",
+          "authoredAt": "2026-11-18T00:43:58Z"
+        },
+        {
+          "sha": "e4a0feaf14a71754d951ca9c0e8201e3dc5d98aa",
+          "title": "Bridge: take commands over the queue's WebSocket, react to game status at once",
+          "author": "simplykapsel",
+          "authoredAt": "2026-11-18T00:52:12Z"
+        },
+        {
+          "sha": "779a21c8d6d6ccaea318ff3bf08df8fbfaf425cd",
+          "title": "Merge feature/bridge-websocket: HTTP fallback and status watcher for main's WebSocket bridge",
+          "author": "simplykapsel",
+          "authoredAt": "2026-11-18T04:28:13Z"
+        },
+        {
+          "sha": "f6c4d9734c70d55ae78124d683c22f0d587b4975",
+          "title": "Bridge: skip the library-wide chart search when the catalog path exists",
+          "author": "simplykapsel",
+          "authoredAt": "2026-11-18T20:27:06Z"
+        },
+        {
+          "sha": "180b37e5542b58c2c21e27c546a763d7dda87d20",
+          "title": "Merge fix/bridge-direct-song-lookup: skip the library-wide chart search when the catalog path exists",
+          "author": "simplykapsel",
+          "authoredAt": "2026-11-18T20:28:44Z"
+        },
+        {
+          "sha": "ad592e4c96d24b3ca93071dd1b903473165e1a95",
+          "title": "Bridge: set command deadlines on the local clock",
+          "author": "simplykapsel",
+          "authoredAt": "2026-11-18T21:11:28Z"
+        },
+        {
+          "sha": "c24dc807f57e11f74d241edc027c7503698c8863",
+          "title": "Bridge: queue nicknames as player names and scores back to the queue (controlProtocol 3)",
+          "author": "simplykapsel",
+          "authoredAt": "2026-11-19T22:13:18Z"
+        },
+        {
+          "sha": "0482d7a7a2d20a978a78cbd6a819ce03957d63d3",
+          "title": "Merge pull request #4 from simplykapsel/feat/usdx-names-and-scores",
+          "author": "simplykapsel",
+          "authoredAt": "2026-11-23T19:09:34Z"
+        }
+      ],
+      "newCommits": [
+        {
+          "sha": "0482d7a7a2d20a978a78cbd6a819ce03957d63d3",
+          "title": "Merge pull request #4 from simplykapsel/feat/usdx-names-and-scores",
+          "author": "simplykapsel",
+          "authoredAt": "2026-11-23T19:09:34Z"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
     }
   ],
   "unavailableForks": []
