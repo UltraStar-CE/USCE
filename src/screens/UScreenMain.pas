@@ -127,6 +127,11 @@ begin
         UGraphic.LoadScreens(Log.Title);
       end;
 
+      SDLK_F5: begin
+        if not Repeated then Songs.LoadSongList;
+        Exit;
+      end;
+
       SDLK_T: begin
         FadeTo(@ScreenStatMain, SoundLib.Start);
         Exit;

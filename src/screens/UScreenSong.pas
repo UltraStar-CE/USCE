@@ -1526,6 +1526,14 @@ begin
           ScreenPopupHelp.ShowPopup();
         end;
 
+      SDLK_F5:
+        begin
+          if not Repeated and (Mode = smNormal) and not MakeMedley and
+             (Length(PlaylistMedley.Song) = 0) then
+            Songs.LoadSongList;
+          Exit;
+        end;
+
       SDLK_RETURN:
         begin
           CloseMessage();
