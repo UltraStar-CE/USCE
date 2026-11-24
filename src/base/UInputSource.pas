@@ -7,7 +7,8 @@ type TPlayerInputSource = (pisNone, pisLocal, pisDirect, pisServer);
 function PlayerInputSource(PlayerIndex: integer; LocalCount: integer = -1): TPlayerInputSource;
 procedure DrawInputSourceBadge(Source: TPlayerInputSource; X, Y, W, H: single;
   Screen: TInputBadgeScreen = ibsSetup; Opacity: single = 1;
-  LayoutMode: TLayoutScaleMode = lsStretch);
+  LayoutMode: TLayoutScaleMode = lsStretch; MicConflict: boolean = false);
+procedure DrawMicConflictBadge(X, Y, Size, Opacity: single);
 procedure ReleaseInputSourceBadges;
 implementation
 uses Math, SysUtils, Types, UIni, URecord, URemoteInput, UPhoneAudio, URenderer,
@@ -113,9 +114,20 @@ begin
   for Source:=pisLocal to pisServer do FreeAndNil(Glyphs[Source]);
 end;
 
+procedure DrawMicConflictBadge(X, Y, Size, Opacity: single);
+begin
+  Renderer.DrawRoundedOutline(X, Y, 1, Size, Size, 1, 0.73, 0.15, Opacity,
+    Size * 0.2, Size * 0.1, false, 0);
+  Renderer.DrawQuad(X + Size * 0.44, Y + Size * 0.22, 1,
+    Size * 0.12, Size * 0.35, 1, 0.73, 0.15, Opacity);
+  Renderer.DrawQuad(X + Size * 0.44, Y + Size * 0.68, 1,
+    Size * 0.12, Size * 0.12, 1, 0.73, 0.15, Opacity);
+end;
+
 procedure DrawInputSourceBadge(Source: TPlayerInputSource; X, Y, W, H: single;
-  Screen: TInputBadgeScreen; Opacity: single; LayoutMode: TLayoutScaleMode);
-var Size,Inset: single; Style: TInputSourceBadgeTheme; Texture: TTexture; Custom: string;
+  Screen: TInputBadgeScreen; Opacity: single; LayoutMode: TLayoutScaleMode;
+  MicConflict: boolean);
+var Size,Inset,WarningX: single; Style: TInputSourceBadgeTheme; Texture: TTexture; Custom: string;
 begin
   if (Source=pisNone) or (W<=0) or (H<=0) then Exit;
   ResolveLayoutRect(X,Y,W,H,LayoutMode);
@@ -149,5 +161,11 @@ begin
     Texture.ColR:=Style.Color.R; Texture.ColG:=Style.Color.G; Texture.ColB:=Style.Color.B;
   end;
   Renderer.DrawTexture(Texture);
+  if MicConflict then
+  begin
+    if Style.Corner in [1,3] then WarningX := X - Size * 0.95
+    else WarningX := X + Size * 1.1;
+    DrawMicConflictBadge(WarningX, Y, Size * 0.85, Opacity);
+  end;
 end;
 end.
