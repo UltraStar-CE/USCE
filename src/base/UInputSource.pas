@@ -145,33 +145,38 @@ end;
 procedure DrawMicConflictBadge(X, Y, Size, Opacity: single);
 var
   Style: TInputSourceBadgeTheme;
-  Texture: TTexture;
+  Texture, CustomTexture: TTexture;
   TextureFile: IPath;
 begin
   Style := Theme.InputSourceBadges[Ord(ibsSetup)];
-  Texture := nil;
+  CustomTexture := nil;
   if Style.ConflictTexture <> '' then
   begin
     TextureFile := Skin.GetTextureFileName(Style.ConflictTexture);
     if TextureFile.IsFile then
-      Texture := Renderer.GetTexture(TextureFile, TEXTURE_TYPE_TRANSPARENT);
+      CustomTexture := Renderer.GetTexture(TextureFile, TEXTURE_TYPE_TRANSPARENT);
   end;
+  Texture := CustomTexture;
   if Texture = nil then
   begin
     if MicConflictGlyph = nil then MicConflictGlyph := CreateMicConflictGlyph;
     Texture := MicConflictGlyph;
   end;
-  Texture.X := X;
-  Texture.Y := Y;
-  Texture.Z := 1;
-  Texture.W := Size;
-  Texture.H := Size;
-  Texture.ScaleMode := lsUniform;
-  Texture.Alpha := Opacity;
-  Texture.ColR := Style.ConflictColor.R;
-  Texture.ColG := Style.ConflictColor.G;
-  Texture.ColB := Style.ConflictColor.B;
-  Renderer.DrawTexture(Texture);
+  try
+    Texture.X := X;
+    Texture.Y := Y;
+    Texture.Z := 1;
+    Texture.W := Size;
+    Texture.H := Size;
+    Texture.ScaleMode := lsUniform;
+    Texture.Alpha := Opacity;
+    Texture.ColR := Style.ConflictColor.R;
+    Texture.ColG := Style.ConflictColor.G;
+    Texture.ColB := Style.ConflictColor.B;
+    Renderer.DrawTexture(Texture);
+  finally
+    CustomTexture.Free;
+  end;
 end;
 
 procedure DrawInputSourceBadge(Source: TPlayerInputSource; X, Y, W, H: single;
@@ -199,18 +204,22 @@ begin
     if Glyphs[Source]=nil then Glyphs[Source]:=CreateBadgeGlyph(Source);
     Texture:=Glyphs[Source];
   end;
-  Texture.X:=X; Texture.Y:=Y; Texture.Z:=1; Texture.W:=Size; Texture.H:=Size;
-  Texture.ScaleMode:=lsUniform;
-  Texture.Alpha:=Style.Alpha*EnsureRange(Opacity,0.0,1.0);
-  if Source=pisServer then
-  begin
-    Texture.ColR:=Style.ServerColor.R; Texture.ColG:=Style.ServerColor.G; Texture.ColB:=Style.ServerColor.B;
-  end
-  else
-  begin
-    Texture.ColR:=Style.Color.R; Texture.ColG:=Style.Color.G; Texture.ColB:=Style.Color.B;
+  try
+    Texture.X:=X; Texture.Y:=Y; Texture.Z:=1; Texture.W:=Size; Texture.H:=Size;
+    Texture.ScaleMode:=lsUniform;
+    Texture.Alpha:=Style.Alpha*EnsureRange(Opacity,0.0,1.0);
+    if Source=pisServer then
+    begin
+      Texture.ColR:=Style.ServerColor.R; Texture.ColG:=Style.ServerColor.G; Texture.ColB:=Style.ServerColor.B;
+    end
+    else
+    begin
+      Texture.ColR:=Style.Color.R; Texture.ColG:=Style.Color.G; Texture.ColB:=Style.Color.B;
+    end;
+    Renderer.DrawTexture(Texture);
+  finally
+    if Custom<>'' then Texture.Free;
   end;
-  Renderer.DrawTexture(Texture);
   if MicConflict then
   begin
     if Style.Corner in [1,3] then WarningX := X - Size * 1.1
