@@ -406,7 +406,8 @@ begin
      not CurrentMicChoiceValid then Exit;
   with PendingMic do
     Owner := Ini.InputDeviceConfig[ConfigIndex].ChannelToPlayerMap[Channel];
-  if (Owner <> CHANNEL_OFF) and (Owner <> MicPickerPlayer + 1) then
+  if (Owner > CHANNEL_OFF) and (Owner <= SelectedLocalPlayerCount) and
+     (Owner <> MicPickerPlayer + 1) and not RemoteInputProcessor.HasAssignedPlayer(Owner - 1) then
     Result := Owner - 1;
 end;
 
