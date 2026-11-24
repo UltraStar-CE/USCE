@@ -122,7 +122,7 @@ type
       DelayHintText, DelayApplyButton, DelayCancelButton: integer;
       MicActivity: array[0..UIni.IMaxPlayerCount-1] of single;
       MicClippedUntil: array[0..UIni.IMaxPlayerCount-1] of QWord;
-      MicPickerPlayer, MicPickerOwner: integer;
+      MicPickerPlayer: integer;
       MicPickerChoices: array of TSetupMicChannel;
       PendingMic: TSetupMicChannel;
       function AddDelayButton(const Style: TThemeButton; const Key: UTF8String): integer;
@@ -135,6 +135,8 @@ type
       procedure RefreshMicSelector;
       function ScanMicDevices: boolean;
       procedure ChangeMic(Delta: integer);
+      function PendingMicIndex: integer;
+      function ConflictingMicOwner: integer;
       function CurrentMicChoiceValid: boolean;
       procedure ApplyMicChoice;
       function BuildMicChoices: integer;
@@ -144,6 +146,7 @@ type
       procedure LayoutMicSelector;
       function AvatarArrowBounds(Index: integer): TMouseOverRect;
       procedure DrawAvatarArrows;
+      procedure DrawAvatarFocus(PlayerID: integer);
       procedure DrawAvatarInputBadge(PlayerID, LocalCount: integer; Avatar: TTexture;
         CornerRadius: single);
       procedure DrawMicSelector;
@@ -308,11 +311,6 @@ begin
   RefreshAudioInputDevices(aimFull);
 end;
 
-procedure ConfirmSetupMicMove(Confirmed: boolean; Data: Pointer);
-begin
-  if Confirmed then TScreenName(Data).ApplyMicChoice;
-end;
-
 function TScreenName.BuildMicChoices: integer;
 var
   D, C, N, ConfigIndex: integer;
@@ -349,6 +347,8 @@ begin
   SelectsS[PlayerMic].Visible := not Party.bPartyGame and (SelectedPlayerCount > 0);
   if not SelectsS[PlayerMic].Visible then Exit;
   Choice := BuildMicChoices;
+  if (MicPickerPlayer = PlayerIndex) and (ConflictingMicOwner >= 0) then
+    Choice := PendingMicIndex;
   if RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) then
     Caption := Language.Translate('SING_SETUP_MIC_PHONE')
   else if (PlayerIndex >= SelectedLocalPlayerCount) or (Choice < 0) then
@@ -357,27 +357,33 @@ begin
     with MicPickerChoices[Choice] do
       Caption := Format(Language.Translate('SING_SETUP_MIC_CHOICE'), [Channel + 1, DeviceName]);
   MicOption := 0;
-  UpdateSelectSlideOptions(PlayerMic,
-    [Language.Translate('SING_SETUP_MIC_LABEL') + ' ' + Caption], MicOption);
+  UpdateSelectSlideOptions(PlayerMic, [Caption], MicOption);
+end;
+
+function TScreenName.PendingMicIndex: integer;
+var I: integer;
+begin
+  for I := 0 to High(MicPickerChoices) do
+    with MicPickerChoices[I] do
+      if (DeviceIndex = PendingMic.DeviceIndex) and
+         (ConfigIndex = PendingMic.ConfigIndex) and
+         (DeviceName = PendingMic.DeviceName) and (Channel = PendingMic.Channel) then
+        Exit(I);
+  Result := -1;
 end;
 
 procedure TScreenName.ChangeMic(Delta: integer);
-var I, Current, Choice: integer;
+var Current, Choice, PendingIndex: integer;
 begin
   if (PlayerIndex >= SelectedLocalPlayerCount) or RemoteInputProcessor.HasAssignedPlayer(PlayerIndex) then Exit;
   Current := BuildMicChoices;
   if Length(MicPickerChoices) = 0 then Exit;
-  // Keep browsing from a declined proposal if the same channel still exists.
+  // Keep browsing from the displayed channel when it is occupied.
   if MicPickerPlayer = PlayerIndex then
-    for I := 0 to High(MicPickerChoices) do
-      with MicPickerChoices[I] do
-        if (DeviceIndex = PendingMic.DeviceIndex) and
-           (ConfigIndex = PendingMic.ConfigIndex) and
-           (DeviceName = PendingMic.DeviceName) and (Channel = PendingMic.Channel) then
-        begin
-          Current := I;
-          Break;
-        end;
+  begin
+    PendingIndex := PendingMicIndex;
+    if PendingIndex >= 0 then Current := PendingIndex;
+  end;
   if Current < 0 then
   begin
     if Delta > 0 then Choice := 0
@@ -387,13 +393,21 @@ begin
     Choice := (Current + Delta + Length(MicPickerChoices)) mod Length(MicPickerChoices);
   MicPickerPlayer := PlayerIndex;
   PendingMic := MicPickerChoices[Choice];
+  if ConflictingMicOwner < 0 then ApplyMicChoice
+  else RefreshMicSelector;
+end;
+
+function TScreenName.ConflictingMicOwner: integer;
+var Owner: integer;
+begin
+  Result := -1;
+  if (MicPickerPlayer < 0) or (MicPickerPlayer >= SelectedLocalPlayerCount) or
+     RemoteInputProcessor.HasAssignedPlayer(MicPickerPlayer) or
+     not CurrentMicChoiceValid then Exit;
   with PendingMic do
-    MicPickerOwner := Ini.InputDeviceConfig[ConfigIndex].ChannelToPlayerMap[Channel];
-  if (MicPickerOwner <> CHANNEL_OFF) and (MicPickerOwner <> PlayerIndex + 1) then
-    ScreenPopupCheck.ShowPopup(Format(Language.Translate('SING_SETUP_MIC_MOVE'),
-      [MicPickerOwner]), @ConfirmSetupMicMove, Self)
-  else
-    ApplyMicChoice;
+    Owner := Ini.InputDeviceConfig[ConfigIndex].ChannelToPlayerMap[Channel];
+  if (Owner <> CHANNEL_OFF) and (Owner <> MicPickerPlayer + 1) then
+    Result := Owner - 1;
 end;
 
 function TScreenName.CurrentMicChoiceValid: boolean;
@@ -420,8 +434,7 @@ begin
     RemoteInputProcessor.HasAssignedPlayer(MicPickerPlayer) then Exit;
   with PendingMic do
   begin
-    if Ini.InputDeviceConfig[ConfigIndex].ChannelToPlayerMap[Channel] <> MicPickerOwner then
-      Exit;
+    if ConflictingMicOwner >= 0 then Exit;
     if OwnsMicPreview then AudioInput.CaptureStop(true);
     OwnsMicPreview := false;
     MicPreviewCount := -1;
@@ -527,6 +540,7 @@ end;
 procedure TScreenName.DrawMicSelector;
 var
   Level: single;
+  Owner: integer;
 begin
   if not SelectsS[PlayerMic].Visible then Exit;
   LayoutMicSelector;
@@ -541,8 +555,14 @@ begin
     Draw;
   end;
   Level := EnsureRange(MicActivity[PlayerIndex], 0, 1);
+  Owner := ConflictingMicOwner;
   with SelectsS[PlayerMic].TextureSBG do
-    Renderer.DrawQuad(X, Y + H - 2, 0, W * Level, 2, 1, 1, 1, 0.9);
+  begin
+    if (Owner >= 0) and ((MicPickerPlayer = PlayerIndex) or (Owner = PlayerIndex)) then
+      DrawMicConflictBadge(EnsureRange(X + W + 3, 0, RenderW - 12), Y + (H - 12) / 2, 12, 1);
+    if (Owner < 0) or (MicPickerPlayer <> PlayerIndex) then
+      Renderer.DrawQuad(X, Y + H - 2, 0, W * Level, 2, 1, 1, 1, 0.9);
+  end;
 end;
 
 function TScreenName.ParseMouse(MouseButton: integer; BtnDown: boolean; X, Y: integer): boolean;
@@ -884,6 +904,13 @@ begin
             begin
               Interaction := PlayersCountIID;
               ScreenPopupError.ShowPopup(Language.Translate('SING_SETUP_NO_PHONE_MIC'));
+              Exit;
+            end;
+            if ConflictingMicOwner >= 0 then
+            begin
+              PlayerIndex := MicPickerPlayer;
+              RefreshProfile;
+              Interaction := PlayerMicIID;
               Exit;
             end;
             for I := 0 to SelectedLocalPlayerCount - 1 do
@@ -2279,18 +2306,36 @@ begin
   end;
 end;
 
+procedure TScreenName.DrawAvatarFocus(PlayerID: integer);
+const Padding = 3;
+begin
+  if (Interaction <> PlayerAvatarIID) or (PlayerID <> PlayerIndex) or
+     not Statics[PlayerCurrentAvatar[PlayerID]].Visible then Exit;
+  with Statics[PlayerCurrentAvatar[PlayerID]].Texture do
+    Renderer.DrawQuad(X - Padding, Y - Padding, Z, W + 2 * Padding,
+      H + 2 * Padding, 1, 1, 1, 0.8);
+end;
+
 procedure TScreenName.DrawAvatarInputBadge(PlayerID, LocalCount: integer;
   Avatar: TTexture; CornerRadius: single);
 const CornerInset = 1 - Sqrt(0.5);
-var Inset: single;
+var
+  Inset: single;
+  Owner: integer;
+  Conflict: boolean;
+  Source: TPlayerInputSource;
 begin
   if not Party.bPartyGame and IsRosterGap(PlayerID) then Exit;
+  Owner := ConflictingMicOwner;
+  Conflict := (Owner >= 0) and ((PlayerID = Owner) or (PlayerID = MicPickerPlayer));
+  Source := PlayerInputSource(PlayerID, LocalCount);
+  if Conflict then Source := pisLocal;
   // Keep the badge inside the rounded corners of the portrait.
   Inset := CornerRadius * CornerInset;
   with Avatar do
-    DrawInputSourceBadge(PlayerInputSource(PlayerID, LocalCount),
+    DrawInputSourceBadge(Source,
       X + W * Inset, Y + H * Inset, W * (1 - 2 * Inset), H * (1 - 2 * Inset),
-      ibsSetup, Alpha, ScaleMode);
+      ibsSetup, Alpha, ScaleMode, Conflict);
 end;
 
 procedure TScreenName.DrawCards;
@@ -2404,6 +2449,7 @@ begin
       ScaleMode := lsStretch;
       CornerRadius := Theme.Name.PlayerSelectTemplateAvatar.CornerRadius;
     end;
+    DrawAvatarFocus(I);
     Statics[PlayerCurrentAvatar[I]].Draw;
     C := MicColor(I);
     Panel := Statics[MicFrame].Texture;
@@ -2577,6 +2623,7 @@ begin
     if I <> PlayerMic then SelectsS[I].Draw;
 
   // Statics
+  if SelectedPlayerCount > 0 then DrawAvatarFocus(PlayerIndex);
   for I := 0 to High(Statics) do
     Statics[I].Draw;
 
