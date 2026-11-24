@@ -16,6 +16,7 @@ uses Math, SysUtils, Types, UIni, URecord, URemoteInput, UPhoneAudio, URenderer,
 var CachedAt: array[0..IMaxPlayerCount-1] of QWord;
     CachedSource: array[0..IMaxPlayerCount-1] of TPlayerInputSource;
     Glyphs: array[pisLocal..pisServer] of TTexture;
+    MicConflictGlyph: TTexture;
 function PlayerInputSource(PlayerIndex: integer; LocalCount: integer): TPlayerInputSource;
 var Local: TBooleanDynArray; Data: TJSONData;
 begin
@@ -112,16 +113,46 @@ procedure ReleaseInputSourceBadges;
 var Source: TPlayerInputSource;
 begin
   for Source:=pisLocal to pisServer do FreeAndNil(Glyphs[Source]);
+  FreeAndNil(MicConflictGlyph);
+end;
+
+function CreateMicConflictGlyph: TTexture;
+const Resolution = 64;
+var
+  Pixels: array[0..Resolution * Resolution * 4 - 1] of byte;
+  PX, PY, Offset: integer;
+  X, Y, Edge, Mark: double;
+begin
+  for PY := 0 to Resolution - 1 do
+    for PX := 0 to Resolution - 1 do
+    begin
+      X := (PX + 0.5) * 24 / Resolution;
+      Y := (PY + 0.5) * 24 / Resolution;
+      Edge := Max(Y - 22, (Abs(X - 12) - (Y - 2) * 0.55) / 1.14);
+      Mark := Min(SegmentDistance(X, Y, 12, 10, 12, 15) - 1.25,
+        Hypot(X - 12, Y - 18.5) - 1.35);
+      Mark := EnsureRange(0.5 - Mark * Resolution / 24, 0.0, 1.0);
+      Offset := (PY * Resolution + PX) * 4;
+      Pixels[Offset] := Round(255 - Mark * 223);
+      Pixels[Offset + 1] := Round(186 - Mark * 160);
+      Pixels[Offset + 2] := Round(38 - Mark * 26);
+      Pixels[Offset + 3] := Round(EnsureRange(0.5 - Edge * Resolution / 24, 0.0, 1.0) * 255);
+    end;
+  Result := Renderer.CreateTexture(PChar(@Pixels[0]), nil, Resolution, Resolution,
+    TEXTURE_TYPE_TRANSPARENT);
 end;
 
 procedure DrawMicConflictBadge(X, Y, Size, Opacity: single);
 begin
-  Renderer.DrawRoundedOutline(X, Y, 1, Size, Size, 1, 0.73, 0.15, Opacity,
-    Size * 0.2, Size * 0.1, false, 0);
-  Renderer.DrawQuad(X + Size * 0.44, Y + Size * 0.22, 1,
-    Size * 0.12, Size * 0.35, 1, 0.73, 0.15, Opacity);
-  Renderer.DrawQuad(X + Size * 0.44, Y + Size * 0.68, 1,
-    Size * 0.12, Size * 0.12, 1, 0.73, 0.15, Opacity);
+  if MicConflictGlyph = nil then MicConflictGlyph := CreateMicConflictGlyph;
+  MicConflictGlyph.X := X;
+  MicConflictGlyph.Y := Y;
+  MicConflictGlyph.Z := 1;
+  MicConflictGlyph.W := Size;
+  MicConflictGlyph.H := Size;
+  MicConflictGlyph.ScaleMode := lsUniform;
+  MicConflictGlyph.Alpha := Opacity;
+  Renderer.DrawTexture(MicConflictGlyph);
 end;
 
 procedure DrawInputSourceBadge(Source: TPlayerInputSource; X, Y, W, H: single;
@@ -163,9 +194,9 @@ begin
   Renderer.DrawTexture(Texture);
   if MicConflict then
   begin
-    if Style.Corner in [1,3] then WarningX := X - Size * 0.95
+    if Style.Corner in [1,3] then WarningX := X - Size * 1.1
     else WarningX := X + Size * 1.1;
-    DrawMicConflictBadge(WarningX, Y, Size * 0.85, Opacity);
+    DrawMicConflictBadge(WarningX, Y, Size, Opacity);
   end;
 end;
 end.
