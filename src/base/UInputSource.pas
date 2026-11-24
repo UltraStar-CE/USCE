@@ -128,9 +128,9 @@ begin
     begin
       X := (PX + 0.5) * 24 / Resolution;
       Y := (PY + 0.5) * 24 / Resolution;
-      Shape := Abs(Max(Y - 21, (Abs(X - 12) - (Y - 3) * 0.55) / 1.14)) - 1.15;
-      Mark := Min(SegmentDistance(X, Y, 12, 10, 12, 15) - 1.25,
-        Hypot(X - 12, Y - 17.7) - 1.25);
+      Shape := Abs(Max(Y - 22, (Abs(X - 12) - (Y - 3) * 0.55) / 1.14)) - 1.1;
+      Mark := Min(SegmentDistance(X, Y, 12, 10, 12, 13.8) - 1.3,
+        Hypot(X - 12, Y - 17.1) - 1.13);
       Shape := Min(Shape, Mark);
       Offset := (PY * Resolution + PX) * 4;
       Pixels[Offset] := 255;
