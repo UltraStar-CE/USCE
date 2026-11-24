@@ -12,7 +12,7 @@ procedure DrawMicConflictBadge(X, Y, Size, Opacity: single);
 procedure ReleaseInputSourceBadges;
 implementation
 uses Math, SysUtils, Types, UIni, URecord, URemoteInput, UPhoneAudio, URenderer,
-  UThemes, USkins, USong, UGraphic, UParty, fpjson, jsonparser;
+  UThemes, USkins, USong, UGraphic, UParty, UPath, fpjson, jsonparser;
 var CachedAt: array[0..IMaxPlayerCount-1] of QWord;
     CachedSource: array[0..IMaxPlayerCount-1] of TPlayerInputSource;
     Glyphs: array[pisLocal..pisServer] of TTexture;
@@ -121,38 +121,57 @@ const Resolution = 64;
 var
   Pixels: array[0..Resolution * Resolution * 4 - 1] of byte;
   PX, PY, Offset: integer;
-  X, Y, Edge, Mark: double;
+  X, Y, Shape, Mark: double;
 begin
   for PY := 0 to Resolution - 1 do
     for PX := 0 to Resolution - 1 do
     begin
       X := (PX + 0.5) * 24 / Resolution;
       Y := (PY + 0.5) * 24 / Resolution;
-      Edge := Max(Y - 22, (Abs(X - 12) - (Y - 2) * 0.55) / 1.14);
+      Shape := Abs(Max(Y - 21, (Abs(X - 12) - (Y - 3) * 0.55) / 1.14)) - 1.15;
       Mark := Min(SegmentDistance(X, Y, 12, 10, 12, 15) - 1.25,
-        Hypot(X - 12, Y - 18.5) - 1.35);
-      Mark := EnsureRange(0.5 - Mark * Resolution / 24, 0.0, 1.0);
+        Hypot(X - 12, Y - 17.7) - 1.25);
+      Shape := Min(Shape, Mark);
       Offset := (PY * Resolution + PX) * 4;
-      Pixels[Offset] := Round(255 - Mark * 223);
-      Pixels[Offset + 1] := Round(186 - Mark * 160);
-      Pixels[Offset + 2] := Round(38 - Mark * 26);
-      Pixels[Offset + 3] := Round(EnsureRange(0.5 - Edge * Resolution / 24, 0.0, 1.0) * 255);
+      Pixels[Offset] := 255;
+      Pixels[Offset + 1] := 255;
+      Pixels[Offset + 2] := 255;
+      Pixels[Offset + 3] := Round(EnsureRange(0.5 - Shape * Resolution / 24, 0.0, 1.0) * 255);
     end;
   Result := Renderer.CreateTexture(PChar(@Pixels[0]), nil, Resolution, Resolution,
     TEXTURE_TYPE_TRANSPARENT);
 end;
 
 procedure DrawMicConflictBadge(X, Y, Size, Opacity: single);
+var
+  Style: TInputSourceBadgeTheme;
+  Texture: TTexture;
+  TextureFile: IPath;
 begin
-  if MicConflictGlyph = nil then MicConflictGlyph := CreateMicConflictGlyph;
-  MicConflictGlyph.X := X;
-  MicConflictGlyph.Y := Y;
-  MicConflictGlyph.Z := 1;
-  MicConflictGlyph.W := Size;
-  MicConflictGlyph.H := Size;
-  MicConflictGlyph.ScaleMode := lsUniform;
-  MicConflictGlyph.Alpha := Opacity;
-  Renderer.DrawTexture(MicConflictGlyph);
+  Style := Theme.InputSourceBadges[Ord(ibsSetup)];
+  Texture := nil;
+  if Style.ConflictTexture <> '' then
+  begin
+    TextureFile := Skin.GetTextureFileName(Style.ConflictTexture);
+    if TextureFile.IsFile then
+      Texture := Renderer.GetTexture(TextureFile, TEXTURE_TYPE_TRANSPARENT);
+  end;
+  if Texture = nil then
+  begin
+    if MicConflictGlyph = nil then MicConflictGlyph := CreateMicConflictGlyph;
+    Texture := MicConflictGlyph;
+  end;
+  Texture.X := X;
+  Texture.Y := Y;
+  Texture.Z := 1;
+  Texture.W := Size;
+  Texture.H := Size;
+  Texture.ScaleMode := lsUniform;
+  Texture.Alpha := Opacity;
+  Texture.ColR := Style.ConflictColor.R;
+  Texture.ColG := Style.ConflictColor.G;
+  Texture.ColB := Style.ConflictColor.B;
+  Renderer.DrawTexture(Texture);
 end;
 
 procedure DrawInputSourceBadge(Source: TPlayerInputSource; X, Y, W, H: single;

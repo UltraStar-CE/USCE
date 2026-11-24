@@ -1169,8 +1169,8 @@ type
     Visible: boolean;
     Size, Inset, Alpha: single;
     Corner: integer; // 0 top-left, 1 top-right, 2 bottom-left, 3 bottom-right
-    Color, ServerColor: TRGB;
-    LocalTexture, DirectTexture, ServerTexture: string;
+    Color, ServerColor, ConflictColor: TRGB;
+    LocalTexture, DirectTexture, ServerTexture, ConflictTexture: string;
   end;
 
   TTheme = class
@@ -3242,16 +3242,22 @@ var Defaults: TInputSourceBadgeTheme;
     Badge.ServerColor.R := EnsureRange(ReadFloat(Sections, 'ServerRed', Badge.ServerColor.R), 0.0, 1.0);
     Badge.ServerColor.G := EnsureRange(ReadFloat(Sections, 'ServerGreen', Badge.ServerColor.G), 0.0, 1.0);
     Badge.ServerColor.B := EnsureRange(ReadFloat(Sections, 'ServerBlue', Badge.ServerColor.B), 0.0, 1.0);
+    Badge.ConflictColor.R := EnsureRange(ReadFloat(Sections, 'ConflictRed', Badge.ConflictColor.R), 0.0, 1.0);
+    Badge.ConflictColor.G := EnsureRange(ReadFloat(Sections, 'ConflictGreen', Badge.ConflictColor.G), 0.0, 1.0);
+    Badge.ConflictColor.B := EnsureRange(ReadFloat(Sections, 'ConflictBlue', Badge.ConflictColor.B), 0.0, 1.0);
     Badge.LocalTexture := ReadString(Sections, 'LocalTexture', Badge.LocalTexture);
     Badge.DirectTexture := ReadString(Sections, 'DirectTexture', Badge.DirectTexture);
     Badge.ServerTexture := ReadString(Sections, 'ServerTexture', Badge.ServerTexture);
+    Badge.ConflictTexture := ReadString(Sections, 'ConflictTexture', Badge.ConflictTexture);
   end;
 begin
   Defaults.Visible := true; Defaults.Size := 16; Defaults.Inset := 3;
   Defaults.Corner := 1; Defaults.Alpha := 1;
   Defaults.Color.R := 1; Defaults.Color.G := 1; Defaults.Color.B := 1;
   Defaults.ServerColor.R := 1; Defaults.ServerColor.G := 0.77; Defaults.ServerColor.B := 0.2;
+  Defaults.ConflictColor.R := 1; Defaults.ConflictColor.G := 0.63; Defaults.ConflictColor.B := 0.13;
   Defaults.LocalTexture := ''; Defaults.DirectTexture := ''; Defaults.ServerTexture := '';
+  Defaults.ConflictTexture := '';
   InputSourceBadges[0] := Defaults;
   InputSourceBadges[0].Corner := 3;
   Load(InputSourceBadges[0], 'InputSourceBadge');
