@@ -539,6 +539,7 @@ begin
 end;
 
 procedure TScreenName.DrawMicSelector;
+const WarningSize = 16;
 var
   Level: single;
   Owner: integer;
@@ -560,7 +561,8 @@ begin
   with SelectsS[PlayerMic].TextureSBG do
   begin
     if (Owner >= 0) and ((MicPickerPlayer = PlayerIndex) or (Owner = PlayerIndex)) then
-      DrawMicConflictBadge(EnsureRange(X + W + 3, 0, RenderW - 12), Y + (H - 12) / 2, 12, 1);
+      DrawMicConflictBadge(EnsureRange(X + W + 3, 0, RenderW - WarningSize),
+        Y + (H - WarningSize) / 2, WarningSize, 1);
     if (Owner < 0) or (MicPickerPlayer <> PlayerIndex) then
       Renderer.DrawQuad(X, Y + H - 2, 0, W * Level, 2, 1, 1, 1, 0.9);
   end;
