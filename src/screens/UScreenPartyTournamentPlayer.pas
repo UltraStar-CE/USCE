@@ -219,7 +219,7 @@ begin
             if isAlternate then
               Ini.NameTemplate[TemplateIndex] := Button[Interactions[Interaction].Num].Text[0].Text
             else
-              Button[Interactions[Interaction].Num].Text[0].Text := Ini.NameTemplate[TemplateIndex];
+              Button[Interactions[Interaction].Num].Text[0].ApplyNameTemplate(Ini.NameTemplate[TemplateIndex]);
         end;
       SDLK_BACKSPACE:
         begin
