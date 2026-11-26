@@ -90,6 +90,7 @@ type
       NameSuggestionWidth: single;
       Writable: boolean;
       procedure TypeNameCharacter(const Value: UTF8String);
+      procedure ApplyNameTemplate(const Value: UTF8String);
       procedure DeleteNameCharacter;
       procedure SuggestRecentName;
       function AcceptNameSuggestion: boolean;
@@ -139,6 +140,13 @@ begin
   Text := Edited;
   NameEditing := true;
   SuggestRecentName;
+end;
+
+procedure TText.ApplyNameTemplate(const Value: UTF8String);
+begin
+  Text := Value;
+  NameEditing := true;
+  NamePrediction := '';
 end;
 
 procedure TText.DeleteNameCharacter;
