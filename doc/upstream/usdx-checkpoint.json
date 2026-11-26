@@ -3,32 +3,36 @@
   "branch": "master",
   "from": "e06b7b7ceff13612f6c5f716b4acedadd4a5f141",
   "sha": "a26ed91d72a0082e461bf323e631cf532639f121",
-  "meaning": "Assessed upstream tip, not a claim that changes have been incorporated",
+  "meaning": "Assessed upstream tip. Records ancestry and keeps the USCE implementations.",
   "comparison": "https://github.com/UltraStar-Deluxe/USDX/compare/e06b7b7ceff13612f6c5f716b4acedadd4a5f141...a26ed91d72a0082e461bf323e631cf532639f121",
   "commits": [
     {
       "sha": "fb7258db983588e7638ed9376b110f1e7615caf0",
       "url": "https://github.com/UltraStar-Deluxe/USDX/commit/fb7258db983588e7638ed9376b110f1e7615caf0",
       "authoredAt": "2026-10-10T21:19:40Z",
-      "subject": "Initialize localized tournament player names"
+      "subject": "Initialize localized tournament player names",
+      "disposition": "Already implemented: localized tournament defaults use IPlayerTranslated and retain custom names (USCE #108 and #372)."
     },
     {
       "sha": "0af0b530fd5f6ede5133d15cd522624ec2351924",
       "url": "https://github.com/UltraStar-Deluxe/USDX/commit/0af0b530fd5f6ede5133d15cd522624ec2351924",
       "authoredAt": "2026-10-11T06:38:19Z",
-      "subject": "Enable tournament player name editing and text input"
+      "subject": "Enable tournament player name editing and text input",
+      "disposition": "Already implemented: tournament names use shared per-field editing, keyboard and mouse input and SDL input lifecycle (USCE #108)."
     },
     {
       "sha": "3294858e61bd627bc4dde864660e831c79b08f40",
       "url": "https://github.com/UltraStar-Deluxe/USDX/commit/3294858e61bd627bc4dde864660e831c79b08f40",
       "authoredAt": "2026-10-25T09:35:35Z",
-      "subject": "Preserve tournament player names when returning from options"
+      "subject": "Preserve tournament player names when returning from options",
+      "disposition": "Already implemented: FRestoreNames preserves edited tournament names after returning from settings (USCE #108)."
     },
     {
       "sha": "a26ed91d72a0082e461bf323e631cf532639f121",
       "url": "https://github.com/UltraStar-Deluxe/USDX/commit/a26ed91d72a0082e461bf323e631cf532639f121",
       "authoredAt": "2026-11-25T13:10:17Z",
-      "subject": "Merge pull request #1450 from Wiccio/tournament-player-names-pr"
+      "subject": "Merge pull request #1450 from Wiccio/tournament-player-names-pr",
+      "disposition": "Merge of the three assessed commits. Its first-parent diff contains only UIni and the tournament player screen."
     }
   ]
 }
