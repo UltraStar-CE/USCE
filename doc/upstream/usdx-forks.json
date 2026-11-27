@@ -20299,6 +20299,67 @@
         "usceReferences": [],
         "reason": ""
       }
+    },
+    {
+      "repository": "complexlogic/USDX",
+      "branch": "mac-build",
+      "head": "d552d7097cdada7d87dd6955a0b7a32e781f131e",
+      "upstreamHead": "0cdb09d663b88497f4248721384b7c0ce86089c7",
+      "comparisonBase": "d97be9c0b1a33ed7254f9eb4e0c9e03092de05bf",
+      "comparisonKind": "outside-usce",
+      "ahead": 2,
+      "behind": 968,
+      "compareUrl": "https://github.com/UltraStar-CE/USCE/compare/d97be9c0b1a33ed7254f9eb4e0c9e03092de05bf...d552d7097cdada7d87dd6955a0b7a32e781f131e",
+      "novelCommits": [
+        {
+          "sha": "02c7523a0a747a421dcdcc402fe308a769ff4faa",
+          "title": "test",
+          "author": "complexlogic",
+          "authoredAt": "2026-11-27T13:45:27Z"
+        },
+        {
+          "sha": "d552d7097cdada7d87dd6955a0b7a32e781f131e",
+          "title": "update",
+          "author": "complexlogic",
+          "authoredAt": "2026-11-27T14:10:31Z"
+        }
+      ],
+      "ignoredKnownHistoryCommitCount": 0,
+      "ignoredUpstreamCommitCount": 0,
+      "ignoredOldCommitCount": 0,
+      "commits": [
+        {
+          "sha": "02c7523a0a747a421dcdcc402fe308a769ff4faa",
+          "title": "test",
+          "author": "complexlogic",
+          "authoredAt": "2026-11-27T13:45:27Z"
+        },
+        {
+          "sha": "d552d7097cdada7d87dd6955a0b7a32e781f131e",
+          "title": "update",
+          "author": "complexlogic",
+          "authoredAt": "2026-11-27T14:10:31Z"
+        }
+      ],
+      "newCommits": [
+        {
+          "sha": "02c7523a0a747a421dcdcc402fe308a769ff4faa",
+          "title": "test",
+          "author": "complexlogic",
+          "authoredAt": "2026-11-27T13:45:27Z"
+        },
+        {
+          "sha": "d552d7097cdada7d87dd6955a0b7a32e781f131e",
+          "title": "update",
+          "author": "complexlogic",
+          "authoredAt": "2026-11-27T14:10:31Z"
+        }
+      ],
+      "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      }
     }
   ],
   "unavailableForks": []
