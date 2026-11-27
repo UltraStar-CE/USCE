@@ -1,38 +1,24 @@
 {
   "repository": "UltraStar-Deluxe/USDX",
   "branch": "master",
-  "from": "e06b7b7ceff13612f6c5f716b4acedadd4a5f141",
-  "sha": "a26ed91d72a0082e461bf323e631cf532639f121",
+  "from": "a26ed91d72a0082e461bf323e631cf532639f121",
+  "sha": "0cdb09d663b88497f4248721384b7c0ce86089c7",
   "meaning": "Assessed upstream tip. Records ancestry and keeps the USCE implementations.",
-  "comparison": "https://github.com/UltraStar-Deluxe/USDX/compare/e06b7b7ceff13612f6c5f716b4acedadd4a5f141...a26ed91d72a0082e461bf323e631cf532639f121",
+  "comparison": "https://github.com/UltraStar-Deluxe/USDX/compare/a26ed91d72a0082e461bf323e631cf532639f121...0cdb09d663b88497f4248721384b7c0ce86089c7",
   "commits": [
     {
-      "sha": "fb7258db983588e7638ed9376b110f1e7615caf0",
-      "url": "https://github.com/UltraStar-Deluxe/USDX/commit/fb7258db983588e7638ed9376b110f1e7615caf0",
-      "authoredAt": "2026-10-10T21:19:40Z",
-      "subject": "Initialize localized tournament player names",
-      "disposition": "Already implemented: localized tournament defaults use IPlayerTranslated and retain custom names (USCE #108 and #372)."
+      "sha": "ad369b13de286b53b7ca759a56155f4527323bac",
+      "url": "https://github.com/UltraStar-Deluxe/USDX/commit/ad369b13de286b53b7ca759a56155f4527323bac",
+      "authoredAt": "2026-11-26T21:05:59Z",
+      "subject": "feat(#330,#594): Add SDL audio option for Windows, native mic channels/rate and rate-independent pitch detection (#1488)",
+      "disposition": "Adapted in merged USCE #468. Same SDL audio options, device channel and rate negotiation, short auto chunks, and rate-independent pitch detection. USCE keeps BASS as Windows default and retains the PCM timestamps and phone microphone gates."
     },
     {
-      "sha": "0af0b530fd5f6ede5133d15cd522624ec2351924",
-      "url": "https://github.com/UltraStar-Deluxe/USDX/commit/0af0b530fd5f6ede5133d15cd522624ec2351924",
-      "authoredAt": "2026-10-11T06:38:19Z",
-      "subject": "Enable tournament player name editing and text input",
-      "disposition": "Already implemented: tournament names use shared per-field editing, keyboard and mouse input and SDL input lifecycle (USCE #108)."
-    },
-    {
-      "sha": "3294858e61bd627bc4dde864660e831c79b08f40",
-      "url": "https://github.com/UltraStar-Deluxe/USDX/commit/3294858e61bd627bc4dde864660e831c79b08f40",
-      "authoredAt": "2026-10-25T09:35:35Z",
-      "subject": "Preserve tournament player names when returning from options",
-      "disposition": "Already implemented: FRestoreNames preserves edited tournament names after returning from settings (USCE #108)."
-    },
-    {
-      "sha": "a26ed91d72a0082e461bf323e631cf532639f121",
-      "url": "https://github.com/UltraStar-Deluxe/USDX/commit/a26ed91d72a0082e461bf323e631cf532639f121",
-      "authoredAt": "2026-11-25T13:10:17Z",
-      "subject": "Merge pull request #1450 from Wiccio/tournament-player-names-pr",
-      "disposition": "Merge of the three assessed commits. Its first-parent diff contains only UIni and the tournament player screen."
+      "sha": "0cdb09d663b88497f4248721384b7c0ce86089c7",
+      "url": "https://github.com/UltraStar-Deluxe/USDX/commit/0cdb09d663b88497f4248721384b7c0ce86089c7",
+      "authoredAt": "2026-11-26T00:06:23Z",
+      "subject": "fix(party): fix tournament name editing after backspace or name template",
+      "disposition": "Adapted in merged USCE #480. Templates continue editing and Backspace already takes that path in USCE."
     }
   ]
 }
