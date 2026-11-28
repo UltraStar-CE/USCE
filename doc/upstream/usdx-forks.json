@@ -20303,25 +20303,25 @@
     {
       "repository": "complexlogic/USDX",
       "branch": "mac-build",
-      "head": "d552d7097cdada7d87dd6955a0b7a32e781f131e",
+      "head": "3e5db6dd99904a712229b75d1d8a30e6d14da401",
       "upstreamHead": "0cdb09d663b88497f4248721384b7c0ce86089c7",
-      "comparisonBase": "d97be9c0b1a33ed7254f9eb4e0c9e03092de05bf",
-      "comparisonKind": "outside-usce",
+      "comparisonBase": "d552d7097cdada7d87dd6955a0b7a32e781f131e",
+      "comparisonKind": "since-checkpoint",
       "ahead": 2,
-      "behind": 968,
-      "compareUrl": "https://github.com/UltraStar-CE/USCE/compare/d97be9c0b1a33ed7254f9eb4e0c9e03092de05bf...d552d7097cdada7d87dd6955a0b7a32e781f131e",
+      "behind": 1,
+      "compareUrl": "https://github.com/UltraStar-CE/USCE/compare/d552d7097cdada7d87dd6955a0b7a32e781f131e...3e5db6dd99904a712229b75d1d8a30e6d14da401",
       "novelCommits": [
         {
-          "sha": "02c7523a0a747a421dcdcc402fe308a769ff4faa",
-          "title": "test",
-          "author": "complexlogic",
-          "authoredAt": "2026-11-27T13:45:27Z"
-        },
-        {
-          "sha": "d552d7097cdada7d87dd6955a0b7a32e781f131e",
+          "sha": "7e981e4fd2b86ec3dbba07d8236192b219385e08",
           "title": "update",
           "author": "complexlogic",
-          "authoredAt": "2026-11-27T14:10:31Z"
+          "authoredAt": "2026-11-28T03:39:57Z"
+        },
+        {
+          "sha": "3e5db6dd99904a712229b75d1d8a30e6d14da401",
+          "title": "update",
+          "author": "complexlogic",
+          "authoredAt": "2026-11-28T04:42:26Z"
         }
       ],
       "ignoredKnownHistoryCommitCount": 0,
@@ -20329,33 +20329,39 @@
       "ignoredOldCommitCount": 0,
       "commits": [
         {
-          "sha": "02c7523a0a747a421dcdcc402fe308a769ff4faa",
-          "title": "test",
-          "author": "complexlogic",
-          "authoredAt": "2026-11-27T13:45:27Z"
-        },
-        {
-          "sha": "d552d7097cdada7d87dd6955a0b7a32e781f131e",
+          "sha": "7e981e4fd2b86ec3dbba07d8236192b219385e08",
           "title": "update",
           "author": "complexlogic",
-          "authoredAt": "2026-11-27T14:10:31Z"
+          "authoredAt": "2026-11-28T03:39:57Z"
+        },
+        {
+          "sha": "3e5db6dd99904a712229b75d1d8a30e6d14da401",
+          "title": "update",
+          "author": "complexlogic",
+          "authoredAt": "2026-11-28T04:42:26Z"
         }
       ],
       "newCommits": [
         {
-          "sha": "02c7523a0a747a421dcdcc402fe308a769ff4faa",
-          "title": "test",
-          "author": "complexlogic",
-          "authoredAt": "2026-11-27T13:45:27Z"
-        },
-        {
-          "sha": "d552d7097cdada7d87dd6955a0b7a32e781f131e",
+          "sha": "7e981e4fd2b86ec3dbba07d8236192b219385e08",
           "title": "update",
           "author": "complexlogic",
-          "authoredAt": "2026-11-27T14:10:31Z"
+          "authoredAt": "2026-11-28T03:39:57Z"
+        },
+        {
+          "sha": "3e5db6dd99904a712229b75d1d8a30e6d14da401",
+          "title": "update",
+          "author": "complexlogic",
+          "authoredAt": "2026-11-28T04:42:26Z"
         }
       ],
       "assessment": {
+        "decision": "pending",
+        "usceReferences": [],
+        "reason": ""
+      },
+      "previousHead": "d552d7097cdada7d87dd6955a0b7a32e781f131e",
+      "previousAssessment": {
         "decision": "not-adopted",
         "usceReferences": [
           "https://github.com/UltraStar-CE/USCE/blob/4af2539300482f84e4ffb82cd1a59aec14148c74/.github/workflows/platform-builds.yml"
@@ -20367,7 +20373,39 @@
           "https://github.com/complexlogic/USDX/actions/runs/46013561763",
           "https://github.com/complexlogic/USDX/actions/runs/46108808414"
         ]
-      }
+      },
+      "assessmentHistory": [
+        {
+          "head": "d552d7097cdada7d87dd6955a0b7a32e781f131e",
+          "commits": [
+            {
+              "sha": "02c7523a0a747a421dcdcc402fe308a769ff4faa",
+              "title": "test",
+              "author": "complexlogic",
+              "authoredAt": "2026-11-27T13:45:27Z"
+            },
+            {
+              "sha": "d552d7097cdada7d87dd6955a0b7a32e781f131e",
+              "title": "update",
+              "author": "complexlogic",
+              "authoredAt": "2026-11-27T14:10:31Z"
+            }
+          ],
+          "assessment": {
+            "decision": "not-adopted",
+            "usceReferences": [
+              "https://github.com/UltraStar-CE/USCE/blob/4af2539300482f84e4ffb82cd1a59aec14148c74/.github/workflows/platform-builds.yml"
+            ],
+            "reason": "This fork tests an ARM-hosted Intel cross-build and a custom macOS dependency and compiler prefix. USCE has passing native Intel and Apple Silicon builds with runner retries. The intake revision and the rewritten follow-up both failed at Build Dependencies on both macOS targets. The follow-up matrix, deployment target and FFmpeg edits did not yield a tested package or runtime fix for USCE.",
+            "assessedSourceHead": "3e5db6dd99904a712229b75d1d8a30e6d14da401",
+            "sourceCompare": "https://github.com/complexlogic/USDX/compare/d552d7097cdada7d87dd6955a0b7a32e781f131e...3e5db6dd99904a712229b75d1d8a30e6d14da401",
+            "evidence": [
+              "https://github.com/complexlogic/USDX/actions/runs/46013561763",
+              "https://github.com/complexlogic/USDX/actions/runs/46108808414"
+            ]
+          }
+        }
+      ]
     }
   ],
   "unavailableForks": []
