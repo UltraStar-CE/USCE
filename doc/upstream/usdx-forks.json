@@ -20356,9 +20356,17 @@
         }
       ],
       "assessment": {
-        "decision": "pending",
-        "usceReferences": [],
-        "reason": ""
+        "decision": "not-adopted",
+        "usceReferences": [
+          "https://github.com/UltraStar-CE/USCE/blob/4af2539300482f84e4ffb82cd1a59aec14148c74/.github/workflows/platform-builds.yml"
+        ],
+        "reason": "This fork tests an ARM-hosted Intel cross-build and a custom macOS dependency and compiler prefix. USCE has passing native Intel and Apple Silicon builds with runner retries. The intake revision and the rewritten follow-up both failed at Build Dependencies on both macOS targets. The follow-up matrix, deployment target and FFmpeg edits did not yield a tested package or runtime fix for USCE.",
+        "assessedSourceHead": "3e5db6dd99904a712229b75d1d8a30e6d14da401",
+        "sourceCompare": "https://github.com/complexlogic/USDX/compare/d552d7097cdada7d87dd6955a0b7a32e781f131e...3e5db6dd99904a712229b75d1d8a30e6d14da401",
+        "evidence": [
+          "https://github.com/complexlogic/USDX/actions/runs/46013561763",
+          "https://github.com/complexlogic/USDX/actions/runs/46108808414"
+        ]
       }
     }
   ],
